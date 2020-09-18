@@ -1,10 +1,11 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader
 
-import CustomImplicits._
-import com.xiaomi.infra.pegasus.spark.{HDFSFileSystem, JNILibraryLoader}
-import org.apache.commons.logging.{Log, LogFactory}
+import com.xiaomi.infra.pegasus.spark.JNILibraryLoader
+import com.xiaomi.infra.pegasus.spark.bulkloader.CustomImplicits._
+import org.apache.commons.logging.LogFactory
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
+
 import scala.collection.JavaConverters._
 
 class PegasusRecordRDD(data: RDD[(PegasusKey, PegasusValue)]) {
@@ -15,7 +16,7 @@ class PegasusRecordRDD(data: RDD[(PegasusKey, PegasusValue)]) {
 
     var rdd = data
     if (config.getAdvancedConfig.enableDistinct) {
-      rdd = rdd.distinct()
+      rdd = rdd.reduceByKey((value1, value2) => value2)
     }
 
     if (config.getAdvancedConfig.enableSort) {
