@@ -32,7 +32,10 @@ public:
         dsn::fail::setup();
         dsn::fail::cfg("send_hotkey_detect_request", "return()");
     };
+    ~hotspot_partition_test() { dsn::fail::teardown(); }
+
     hotspot_partition_calculator calculator;
+
     std::vector<row_data> generate_row_data()
     {
         std::vector<row_data> test_rows;
@@ -43,6 +46,7 @@ public:
         }
         return test_rows;
     }
+
     std::vector<std::vector<double>> get_calculator_result(const hot_partition_counters &counters)
     {
         std::vector<std::vector<double>> result;
@@ -54,6 +58,7 @@ public:
         }
         return result;
     }
+
     void test_policy_in_scenarios(std::vector<row_data> scenario,
                                   std::vector<std::vector<double>> &expect_result,
                                   hotspot_partition_calculator &calculator)
@@ -63,12 +68,14 @@ public:
         std::vector<std::vector<double>> result = get_calculator_result(calculator._hot_points);
         ASSERT_EQ(result, expect_result);
     }
+
     void aggregate_analyse_data(std::vector<row_data> scenario,
                                 hotspot_partition_calculator &calculator)
     {
         calculator.data_aggregate(std::move(scenario));
         calculator.data_analyse();
     }
+
     void clear_calculator_histories(hotspot_partition_calculator &calculator)
     {
         calculator._partitions_stat_histories.clear();
@@ -112,11 +119,11 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
 
 TEST_F(hotspot_partition_test, send_hotkey_detect_request)
 {
-    const int HOT_SCENARIO_0_READ_HOT_PARTITION = 7;
-    const int HOT_SCENARIO_0_WRITE_HOT_PARTITION = 0;
+    const int READ_HOT_PARTITION = 7;
+    const int WRITE_HOT_PARTITION = 0;
     std::vector<row_data> test_rows = generate_row_data();
-    test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
-    test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
+    test_rows[READ_HOT_PARTITION].get_qps = 5000.0;
+    test_rows[WRITE_HOT_PARTITION].put_qps = 5000.0;
     for (int i = 0; i < FLAGS_occurrence_threshold; i++) {
         aggregate_analyse_data(test_rows, calculator);
     }
@@ -125,7 +132,8 @@ TEST_F(hotspot_partition_test, send_hotkey_detect_request)
     ASSERT_EQ(calculator._hotpartition_pool, expect_result);
 
     test_rows = generate_row_data();
-    for (int i = 0; i < 50; i++) {
+    const int back_to_normal = 50;
+    for (int i = 0; i < back_to_normal; i++) {
         aggregate_analyse_data(test_rows, calculator);
     }
     expect_result = {{0, 50}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {50, 0}};

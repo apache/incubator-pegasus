@@ -48,18 +48,18 @@ DSN_DEFINE_bool("pegasus.collector",
                 false,
                 "auto detect hot key in the hot paritition");
 
-// if hot_partition_counter >= FLAGS_hotpartition_threshold, This partition is a hot partition
 DSN_DEFINE_int32("pegasus.collector",
                  hot_partition_threshold,
                  3,
-                 "threshold of hotspot partition value");
+                 "threshold of hotspot partition value,if hot_partition_counter >= "
+                 "FLAGS_hotpartition_threshold, This partition is a hot partition");
 
-// if one partition's _over_threshold_times_read/write >= FLAGS_occurrence_threshold
-// collctor will ask the corresponding partition to start hotkey detection
 DSN_DEFINE_int32("pegasus.collector",
                  occurrence_threshold,
                  100,
-                 "hot paritiotion occurrence times'threshold to send rpc to detect hotkey");
+                 "hot paritiotion occurrence times'threshold to send rpc to detect hotkey,if one "
+                 "partition's _over_threshold_times_read/write >= FLAGS_occurrence_threshold "
+                 "collctor will ask the corresponding partition to start hotkey detection");
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
@@ -164,7 +164,6 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
                          _app_name,
                          index);
-                FAIL_POINT_INJECT_F("send_hotkey_detect_request", [](dsn::string_view) {});
                 send_hotkey_detect_request(_app_name,
                                            index,
                                            (data_type == dsn::apps::hotkey_type::type::READ)
@@ -179,13 +178,13 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     }
 }
 
-// TODO:（TangYanzhao) call this function to start hotkey detection
 /*static*/ void hotspot_partition_calculator::send_hotkey_detect_request(
     const std::string &app_name,
     const uint64_t partition_index,
     const dsn::apps::hotkey_type::type hotkey_type,
     const dsn::apps::hotkey_detect_action::type action)
 {
+    FAIL_POINT_INJECT_F("send_hotkey_detect_request", [](dsn::string_view) {});
     auto request = std::make_unique<dsn::apps::hotkey_detect_request>();
     request->type = hotkey_type;
     request->action = action;
