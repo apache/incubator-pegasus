@@ -10,8 +10,10 @@ import (
 
 // MetaClient has methods to query the MetaServer for metadata.
 type MetaClient interface {
+	// Retrieve table info of the specified table name.
 	GetTableInfo(tableName string) (*TableInfo, error)
 
+	// Retrieve all the ReplicaServer nodes in the Pegasus cluster.
 	ListNodes() ([]*NodeInfo, error)
 }
 

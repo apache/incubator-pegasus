@@ -5,9 +5,21 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/XiaoMi/pegasus-go-client/session"
+	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
+
+func init() {
+	// Sets pegasus-go-client logger to logrus.
+	pegalog.SetLogger(log.StandardLogger())
+
+	// Registers RPC handler for remote command.
+	session.RegisterRPCResultHandler("RPC_CLI_CLI_CALL_ACK", func() session.RpcResponseResult {
+		return &RemoteCmdServiceCallCommandResult{Success: new(string)}
+	})
+}
 
 // RemoteCmdClient is a client to call remote command to a Pegasus ReplicaServer.
 type RemoteCmdClient struct {
@@ -44,9 +56,12 @@ func (c *RemoteCmdClient) GetPerfCounters(filter string) ([]*PerfCounter, error)
 	return ret, nil
 }
 
-func (c *RemoteCmdClient) call(cmd string, args []string) (cmdResult string, err error) {
+func (c *RemoteCmdClient) call(command string, arguments []string) (cmdResult string, err error) {
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
-	res, err := c.session.CallWithGpid(ctx, &base.Gpid{}, &Command{Cmd: cmd, Arguments: args}, "RPC_CLI_CLI_CALL")
+	thriftArgs := &RemoteCmdServiceCallCommandArgs{
+		Cmd: &Command{Cmd: command, Arguments: arguments},
+	}
+	res, err := c.session.CallWithGpid(ctx, &base.Gpid{}, thriftArgs, "RPC_CLI_CLI_CALL")
 	if err != nil {
 		return "", err
 	}
