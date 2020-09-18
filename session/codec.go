@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
@@ -112,6 +113,29 @@ func (p *PegasusCodec) String() string {
 	return "pegasus"
 }
 
+// RegisterRPCResultHandler registers an external RPC that's not including in
+// pegasus-go-client.
+//
+// The following example registers an response handler for Pegasus's remote-command RPC.
+// Usage:
+//
+// ```go
+//   RegisterRpcResultHandler("RPC_CLI_CLI_CALL_ACK", func() RpcResponseResult {
+//     return &RemoteCmdServiceCallCommandResult{Success: new(string)}
+//   })
+// ```
+func RegisterRPCResultHandler(responseAck string, handler func() RpcResponseResult) {
+	nameToResultMapLock.Lock()
+	defer nameToResultMapLock.Unlock()
+	_, found := nameToResultMap[responseAck]
+	if found {
+		panic(fmt.Sprintf("register an registered RPC result handler: %s", responseAck))
+	} else {
+		nameToResultMap[responseAck] = handler
+	}
+}
+
+var nameToResultMapLock sync.Mutex
 var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK": func() RpcResponseResult {
 		return &rrdb.MetaQueryCfgResult{
