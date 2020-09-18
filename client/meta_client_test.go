@@ -15,8 +15,8 @@ func TestMetaClientListNodes(t *testing.T) {
 
 func TestMetaClientTableInfo(t *testing.T) {
 	metaClient := NewMetaClient("127.0.0.1:34601")
-	tb, err := metaClient.GetTableInfo("temp")
+	tables, err := metaClient.ListTables()
 	assert.Nil(t, err)
-	assert.Equal(t, tb.AppID, 2)
-	assert.Equal(t, tb.PartitionCount, 8)
+	assert.Equal(t, len(tables), 2)
+	assert.Equal(t, tables[0].AppID, 1)
 }

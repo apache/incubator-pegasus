@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
 )
 
 // MetaClient has methods to query the MetaServer for metadata.
 type MetaClient interface {
-	// Retrieve table info of the specified table name.
-	GetTableInfo(tableName string) (*TableInfo, error)
+	// Retrieve all tables in the cluster.
+	ListTables() ([]*TableInfo, error)
 
 	// Retrieve all the ReplicaServer nodes in the Pegasus cluster.
 	ListNodes() ([]*NodeInfo, error)
@@ -46,25 +48,30 @@ type httpMetaClient struct {
 	hclient *http.Client
 }
 
-func (h *httpMetaClient) GetTableInfo(tableName string) (*TableInfo, error) {
-	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/app?name=%s", h.metaAddr, tableName))
+func (h *httpMetaClient) ListTables() ([]*TableInfo, error) {
+	resp, err := h.hclient.Get(fmt.Sprintf("http://%s/meta/apps", h.metaAddr))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get table info: %s", err.Error())
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
 
-	partitionCount, found := gjson.GetBytes(body, "general").Map()["partition_count"]
-	if !found {
-		return nil, fmt.Errorf("invalid partition_count from meta server: %s", string(body))
+	var results []*TableInfo
+	appMap := gjson.GetBytes(body, "general_info").Map()
+	for appIDStr, appInfo := range appMap {
+		appID, err := strconv.Atoi(appIDStr)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("unable to parse app ID: \"%s\"", appIDStr))
+		}
+		partitionCount, found := appInfo.Map()["partition_count"]
+		if !found {
+			return nil, fmt.Errorf("invalid partition_count from meta server: %s", string(body))
+		}
+		results = append(results, &TableInfo{
+			PartitionCount: int(partitionCount.Int()),
+			AppID:          appID,
+		})
 	}
-	appID, found := gjson.GetBytes(body, "general").Map()["app_id"]
-	if !found {
-		return nil, fmt.Errorf("invalid app_id from meta server: %s", string(body))
-	}
-	return &TableInfo{
-		PartitionCount: int(partitionCount.Int()),
-		AppID:          int(appID.Int()),
-	}, nil
+	return results, nil
 }
 
 func (h *httpMetaClient) ListNodes() ([]*NodeInfo, error) {
