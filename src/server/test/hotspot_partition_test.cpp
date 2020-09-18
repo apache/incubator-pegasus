@@ -24,6 +24,8 @@
 namespace pegasus {
 namespace server {
 
+DSN_DECLARE_int32(occurrence_threshold);
+
 class hotspot_partition_test : public pegasus_server_test_base
 {
 public:
@@ -69,11 +71,16 @@ public:
         ASSERT_EQ(result, expect_result);
     }
 
-    void aggregate_analyse_data(std::vector<row_data> scenario,
-                                hotspot_partition_calculator &calculator)
+    void aggregate_analyse_data(hotspot_partition_calculator &calculator,
+                                std::vector<row_data> scenario,
+                                std::vector<std::array<int, 2>> &expect_result,
+                                int loop_times)
     {
-        calculator.data_aggregate(std::move(scenario));
-        calculator.data_analyse();
+        for (int i = 0; i < loop_times; i++) {
+            calculator.data_aggregate(scenario);
+            calculator.data_analyse();
+        }
+        ASSERT_EQ(calculator._hotpartition_pool, expect_result);
     }
 
     void clear_calculator_histories(hotspot_partition_calculator &calculator)
@@ -124,20 +131,20 @@ TEST_F(hotspot_partition_test, send_hotkey_detect_request)
     std::vector<row_data> test_rows = generate_row_data();
     test_rows[READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[WRITE_HOT_PARTITION].put_qps = 5000.0;
-    for (int i = 0; i < FLAGS_occurrence_threshold; i++) {
-        aggregate_analyse_data(test_rows, calculator);
-    }
     std::vector<std::array<int, 2>> expect_result = {
         {0, 100}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {100, 0}};
-    ASSERT_EQ(calculator._hotpartition_pool, expect_result);
-
-    test_rows = generate_row_data();
-    const int back_to_normal = 50;
-    for (int i = 0; i < back_to_normal; i++) {
-        aggregate_analyse_data(test_rows, calculator);
-    }
-    expect_result = {{0, 50}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {50, 0}};
-    ASSERT_EQ(calculator._hotpartition_pool, expect_result);
+    aggregate_analyse_data(calculator, test_rows, expect_result, FLAGS_occurrence_threshold);
+    const int back_to_normal = 30;
+    const int hotpartition_count = FLAGS_occurrence_threshold - back_to_normal;
+    expect_result = {{0, hotpartition_count},
+                     {0, 0},
+                     {0, 0},
+                     {0, 0},
+                     {0, 0},
+                     {0, 0},
+                     {0, 0},
+                     {hotpartition_count, 0}};
+    aggregate_analyse_data(calculator, generate_row_data(), expect_result, back_to_normal);
 }
 
 } // namespace server

@@ -26,8 +26,6 @@
 namespace pegasus {
 namespace server {
 
-DSN_DECLARE_int32(occurrence_threshold);
-
 // stores the whole histories of all partitions in one table
 typedef std::list<std::vector<hotspot_partition_stat>> stat_histories;
 // hot_partition_counters c[index_of_partitions][type_of_read(0)/write(1)_stat]
