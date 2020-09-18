@@ -1,5 +1,10 @@
 package aggregate
 
+import (
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/pegasus-kv/collector/client"
+)
+
 var allMetricNames []string = []string{
 	"get_qps",
 	"multi_get_qps",
@@ -43,4 +48,46 @@ var allMetricNames []string = []string{
 	"check_and_mutate_bytes",
 	"read_bytes",
 	"write_bytes",
+}
+
+type PartitionStats struct {
+	Gpid base.Gpid
+
+	// perfCounter's name -> the value.
+	Stats map[string]float64
+}
+
+func (s *PartitionStats) update(pc *partitionPerfCounter) {
+	s.Stats[pc.name] = pc.value
+}
+
+type TableStats struct {
+	TableName  string
+	Partitions map[int]*PartitionStats
+
+	// The aggregated value of table metrics.
+	// perfCounter's name -> the value.
+	Stats map[string]float64
+}
+
+func newTableStats(info *client.TableInfo) *TableStats {
+	tb := &TableStats{
+		TableName:  info.TableName,
+		Partitions: make(map[int]*PartitionStats),
+	}
+	for i := 0; i < info.PartitionCount; i++ {
+		tb.Partitions[i] = &PartitionStats{
+			Gpid:  base.Gpid{Appid: int32(info.AppID), PartitionIndex: int32(i)},
+			Stats: make(map[string]float64),
+		}
+	}
+	return tb
+}
+
+func (tb *TableStats) aggregate() {
+	for _, part := range tb.Partitions {
+		for name, value := range part.Stats {
+			tb.Stats[name] += value
+		}
+	}
 }

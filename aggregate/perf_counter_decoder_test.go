@@ -25,4 +25,7 @@ func TestDecodePartitionPerfCounter(t *testing.T) {
 	assert.NotNil(t, perfCounter)
 	assert.Equal(t, perfCounter.gpid.Appid, int32(1))
 	assert.Equal(t, perfCounter.gpid.PartitionIndex, int32(1))
+
+	// ensure perfcounter name has replica id stripped off.
+	assert.NotContains(t, perfCounter.name, "@")
 }

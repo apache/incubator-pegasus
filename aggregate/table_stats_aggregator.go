@@ -3,7 +3,6 @@ package aggregate
 import (
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/pegasus-kv/collector/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -24,7 +23,7 @@ func NewTableStatsAggregator() TableStatsAggregator {
 	return &tableStatsAggregator{
 		aggregateInterval: viper.GetDuration("metrics.report_interval"),
 		metaClient:        client.NewMetaClient(metaAddr),
-		tables:            make(map[int]*tableStats),
+		tables:            make(map[int]*TableStats),
 	}
 }
 
@@ -32,7 +31,7 @@ type tableStatsAggregator struct {
 	aggregateInterval time.Duration
 
 	metaClient client.MetaClient
-	tables     map[int]*tableStats
+	tables     map[int]*TableStats
 }
 
 func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
@@ -105,7 +104,7 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*client.TableInfo) {
 	for appID, tb := range ag.tables {
 		// disappeared table, delete it
 		if _, found := currentTableSet[appID]; !found {
-			log.Infof("remove table from collector: {AppID: %d, PartitionCount: %d}", appID, len(tb.partitions))
+			log.Infof("remove table from collector: {AppID: %d, PartitionCount: %d}", appID, len(tb.Partitions))
 			delete(ag.tables, appID)
 		}
 	}
@@ -117,48 +116,10 @@ func (ag *tableStatsAggregator) updatePartitionStat(pc *partitionPerfCounter) {
 		// Ignore the perf-counter because there's currently no such table
 		return
 	}
-	part, found := tb.partitions[int(pc.gpid.PartitionIndex)]
+	part, found := tb.Partitions[int(pc.gpid.PartitionIndex)]
 	if !found {
 		log.Errorf("no such partition %+v, perf-counter \"%s\"", pc.gpid, pc.name)
 		return
 	}
 	part.update(pc)
-}
-
-type partitionStats struct {
-	gpid base.Gpid
-
-	// perfCounter's name -> the value.
-	stats map[string]float64
-}
-
-func (s *partitionStats) update(pc *partitionPerfCounter) {
-	s.stats[pc.name] = pc.value
-}
-
-type tableStats struct {
-	tableName  string
-	partitions map[int]*partitionStats
-
-	// The aggregated value of table metrics.
-	// perfCounter's name -> the value.
-	stats map[string]float64
-}
-
-func newTableStats(info *client.TableInfo) *tableStats {
-	tb := &tableStats{
-		tableName:  info.TableName,
-		partitions: make(map[int]*partitionStats),
-	}
-	for i := 0; i < info.PartitionCount; i++ {
-		tb.partitions[i] = &partitionStats{
-			gpid:  base.Gpid{Appid: int32(info.AppID), PartitionIndex: int32(i)},
-			stats: make(map[string]float64),
-		}
-	}
-	return tb
-}
-
-func (tb *tableStats) aggregate() {
-
 }

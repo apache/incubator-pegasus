@@ -11,12 +11,12 @@ import (
 func TestUpdateLocalTableMap(t *testing.T) {
 	ag := &tableStatsAggregator{
 		metaClient: client.NewMetaClient("127.0.0.1:34601"),
-		tables:     make(map[int]*tableStats),
+		tables:     make(map[int]*TableStats),
 	}
 	ag.updateTableMap()
 	assert.Equal(t, len(ag.tables), 2)
-	assert.Equal(t, len(ag.tables[1].partitions), 4)
-	assert.Equal(t, len(ag.tables[2].partitions), 8)
+	assert.Equal(t, len(ag.tables[1].Partitions), 4)
+	assert.Equal(t, len(ag.tables[2].Partitions), 8)
 
 	tables := []*client.TableInfo{
 		{AppID: 1, TableName: "stat", PartitionCount: 4},
@@ -25,26 +25,26 @@ func TestUpdateLocalTableMap(t *testing.T) {
 	}
 	ag.doUpdateTableMap(tables)
 	assert.Equal(t, len(ag.tables), 3)
-	assert.Equal(t, len(ag.tables[3].partitions), 16)
+	assert.Equal(t, len(ag.tables[3].Partitions), 16)
 
 	tables = []*client.TableInfo{
 		{AppID: 1, TableName: "stat", PartitionCount: 4},
 	}
 	ag.doUpdateTableMap(tables)
 	assert.Equal(t, len(ag.tables), 1)
-	assert.Equal(t, len(ag.tables[1].partitions), 4)
+	assert.Equal(t, len(ag.tables[1].Partitions), 4)
 }
 
 func TestUpdatePartitionStats(t *testing.T) {
 	ag := &tableStatsAggregator{
-		tables: make(map[int]*tableStats),
+		tables: make(map[int]*TableStats),
 	}
 	tables := []*client.TableInfo{
 		{AppID: 1, TableName: "stat", PartitionCount: 4},
 	}
 	ag.doUpdateTableMap(tables)
 	assert.Contains(t, ag.tables, 1)
-	assert.Contains(t, ag.tables[1].partitions, 1)
+	assert.Contains(t, ag.tables[1].Partitions, 1)
 
 	c := client.NewRemoteCmdClient("127.0.0.1:34801")
 	pcs, err := c.GetPerfCounters("@")
@@ -60,5 +60,5 @@ func TestUpdatePartitionStats(t *testing.T) {
 			break
 		}
 	}
-	assert.Contains(t, ag.tables[1].partitions[1].stats, perfCounter.name)
+	assert.Contains(t, ag.tables[1].Partitions[1].Stats, perfCounter.name)
 }
