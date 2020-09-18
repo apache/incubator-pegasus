@@ -21,10 +21,16 @@
 
 #include <dsn/utility/flags.h>
 #include <dsn/tool-api/zlocks.h>
+#include <dsn/dist/failure_detector/fd.code.definition.h>
 
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_auth);
+
+inline bool in_white_list(task_code code)
+{
+    return is_negotiation_message(code) || fd::is_failure_detector_message(code);
+}
 
 negotiation_map negotiation_service::_negotiations;
 zrwlock_nr negotiation_service::_lock;
@@ -79,12 +85,18 @@ void negotiation_service::on_rpc_disconnected(rpc_session *session)
     }
 }
 
+bool negotiation_service::on_rpc_recv_msg(message_ex *msg)
+{
+    return in_white_list(msg->rpc_code()) || msg->io_session->is_negotiation_succeed();
+}
+
 void init_join_point()
 {
     rpc_session::on_rpc_session_connected.put_back(negotiation_service::on_rpc_connected,
                                                    "security");
     rpc_session::on_rpc_session_disconnected.put_back(negotiation_service::on_rpc_disconnected,
                                                       "security");
+    rpc_session::on_rpc_recv_message.put_native(negotiation_service::on_rpc_recv_msg);
 }
 } // namespace security
 } // namespace dsn

@@ -32,6 +32,7 @@ class negotiation_service : public serverlet<negotiation_service>,
 public:
     static void on_rpc_connected(rpc_session *session);
     static void on_rpc_disconnected(rpc_session *session);
+    static bool on_rpc_recv_msg(message_ex *msg);
 
     void open_service();
 

@@ -21,6 +21,8 @@
 
 #include <gtest/gtest.h>
 #include <dsn/utility/flags.h>
+#include <dsn/dist/failure_detector/fd.code.definition.h>
+#include <http/http_server_impl.h>
 
 namespace dsn {
 namespace security {
@@ -40,9 +42,21 @@ public:
         return rpc;
     }
 
+    rpc_session_ptr create_fake_session()
+    {
+        std::unique_ptr<tools::sim_network_provider> sim_net(
+            new tools::sim_network_provider(nullptr, nullptr));
+        return sim_net->create_server_session(rpc_address("localhost", 10086), rpc_session_ptr());
+    }
+
     void on_negotiation_request(negotiation_rpc rpc)
     {
         negotiation_service::instance().on_negotiation_request(rpc);
+    }
+
+    bool on_rpc_recv_msg(message_ex *msg)
+    {
+        return negotiation_service::instance().on_rpc_recv_msg(msg);
     }
 };
 
@@ -55,6 +69,33 @@ TEST_F(negotiation_service_test, disable_auth)
         on_negotiation_request(rpc);
 
         ASSERT_EQ(rpc.response().status, negotiation_status::type::SASL_AUTH_DISABLE);
+    }
+}
+
+TEST_F(negotiation_service_test, on_rpc_recv_msg)
+{
+    struct
+    {
+        task_code rpc_code;
+        bool negotiation_succeed;
+        bool return_value;
+    } tests[] = {{RPC_NEGOTIATION, true, true},
+                 {RPC_NEGOTIATION_ACK, true, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING, true, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, true, true},
+                 {RPC_NEGOTIATION, false, true},
+                 {RPC_HTTP_SERVICE, true, true},
+                 {RPC_HTTP_SERVICE, false, false}};
+
+    for (const auto &test : tests) {
+        message_ptr msg = dsn::message_ex::create_request(test.rpc_code, 0, 0);
+        auto sim_session = create_fake_session();
+        msg->io_session = sim_session;
+        if (test.negotiation_succeed) {
+            sim_session->set_negotiation_succeed();
+        }
+
+        ASSERT_EQ(test.return_value, on_rpc_recv_msg(msg));
     }
 }
 } // namespace security
