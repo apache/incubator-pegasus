@@ -71,11 +71,13 @@ func (ag *tableStatsAggregator) aggregate() {
 			ag.updatePartitionStat(perfCounter)
 		}
 	}
+
+	var batchTableStats []TableStats
 	for _, table := range ag.tables {
 		table.aggregate()
-
-		hooksManager.afterTablStatsEmitted(*table)
+		batchTableStats = append(batchTableStats, *table)
 	}
+	hooksManager.afterTablStatsEmitted(batchTableStats)
 }
 
 // Some tables may disappear (be dropped) or first show up.

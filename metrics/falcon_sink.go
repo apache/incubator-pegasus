@@ -12,11 +12,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Sink is the destination where the metrics are reported to.
-type Sink interface {
+type metricSnapshot struct {
+	name  string
+	value float64
+	tags  map[string]string
+}
 
-	// Report the snapshot of metrics to the monitoring system. No retry even if it failed.
-	Report()
+// metricSink is the destination where the metrics are reported to.
+type metricSink interface {
+
+	// Report the snapshot of metrics to the monitoring system. The report can possibly fail.
+	report(snapshots []*metricSnapshot)
 }
 
 type falconConfig struct {
@@ -34,7 +40,7 @@ type falconSink struct {
 }
 
 type falconMetricData struct {
-	endpoint    string  // local host
+	endpoint    string  // the cluster name
 	metric      string  // metric name
 	timestamp   int64   // the reporting time in unix seconds
 	step        int32   // the reporting time interval in seconds
@@ -43,7 +49,7 @@ type falconMetricData struct {
 	tags        string
 }
 
-func (sink *falconSink) load() {
+func (sink *falconSink) init() {
 	sink.cfg = &falconConfig{
 		falconAgentHost:       viper.GetString("falcon_agent.host"),
 		falconAgentPort:       viper.GetUint32("falcon_agent.port"),
@@ -54,19 +60,28 @@ func (sink *falconSink) load() {
 	}
 }
 
-func (sink *falconSink) Report() {
+func (sink *falconSink) report(snapshots []*metricSnapshot) {
 	metric := &falconMetricData{
-		endpoint:    "",
+		endpoint:    sink.cfg.clusterName,
 		step:        int32(sink.cfg.metricsReportInterval.Seconds()),
 		counterType: "GAUGE",
-		tags:        fmt.Sprintf("service=pegasus,cluster=%s,job=collector,port=%d", sink.cfg.clusterName, sink.cfg.port),
 	}
 	buf := "["
-	snapshots := getAllSnapshots()
 	for _, sn := range snapshots {
 		metric.metric = sn.name
 		metric.value = sn.value
 		metric.timestamp = time.Now().Unix()
+
+		firstTag := true
+		for k, v := range sn.tags {
+			if firstTag {
+				firstTag = false
+			} else {
+				metric.tags += ","
+			}
+			metric.tags += k + "=" + v
+		}
+
 		buf += sink.snapshotJSONString(metric) + ","
 	}
 	buf += "]"

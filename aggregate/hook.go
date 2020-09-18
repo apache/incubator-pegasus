@@ -2,8 +2,9 @@ package aggregate
 
 import "sync"
 
-// HookAfterTableStatEmitted is a hook of event that a new TableStats is generated.
-type HookAfterTableStatEmitted func(stat TableStats)
+// HookAfterTableStatEmitted is a hook of event that new TableStats are generated.
+// Each call of the hook handles a batch of tables.
+type HookAfterTableStatEmitted func(stats []TableStats)
 
 // AddHookAfterTableStatEmitted adds a hook of event that a new TableStats is generated.
 func AddHookAfterTableStatEmitted(hk HookAfterTableStatEmitted) {
@@ -30,12 +31,12 @@ type tableStatsHooksManager struct {
 	droppedHooks []HookAfterTableDropped
 }
 
-func (m *tableStatsHooksManager) afterTablStatsEmitted(stat TableStats) {
+func (m *tableStatsHooksManager) afterTablStatsEmitted(stats []TableStats) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	for _, hook := range m.emittedHooks {
-		hook(stat)
+		hook(stats)
 	}
 }
 
