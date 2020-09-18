@@ -44,7 +44,7 @@ DSN_DEFINE_int64("pegasus.collector",
                  "data");
 
 DSN_DEFINE_bool("pegasus.collector",
-                enable_hotkey_auto_detect,
+                enable_hotkey_detect,
                 false,
                 "auto detect hot key in the hot paritition");
 
@@ -147,7 +147,7 @@ void hotspot_partition_calculator::data_analyse()
         stat_histories_analyse(data_type, hot_points);
         update_hot_point(data_type, hot_points);
     }
-    if (!FLAGS_enable_hotkey_auto_detect) {
+    if (!FLAGS_enable_hotkey_detect) {
         return;
     }
     for (int data_type = 0; data_type <= 1; data_type++) {

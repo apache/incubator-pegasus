@@ -131,11 +131,18 @@ TEST_F(hotspot_partition_test, send_hotkey_detect_request)
     std::vector<row_data> test_rows = generate_row_data();
     test_rows[READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[WRITE_HOT_PARTITION].put_qps = 5000.0;
-    std::vector<std::array<int, 2>> expect_result = {
-        {0, 100}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {100, 0}};
+    int hotpartition_count = FLAGS_occurrence_threshold;
+    std::vector<std::array<int, 2>> expect_result = {{0, hotpartition_count},
+                                                     {0, 0},
+                                                     {0, 0},
+                                                     {0, 0},
+                                                     {0, 0},
+                                                     {0, 0},
+                                                     {0, 0},
+                                                     {hotpartition_count, 0}};
     aggregate_analyse_data(calculator, test_rows, expect_result, FLAGS_occurrence_threshold);
     const int back_to_normal = 30;
-    const int hotpartition_count = FLAGS_occurrence_threshold - back_to_normal;
+    hotpartition_count = FLAGS_occurrence_threshold - back_to_normal;
     expect_result = {{0, hotpartition_count},
                      {0, 0},
                      {0, 0},
