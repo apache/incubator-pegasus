@@ -1,7 +1,6 @@
 package aggregate
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/pegasus-kv/collector/client"
@@ -43,22 +42,11 @@ func TestUpdatePartitionStats(t *testing.T) {
 		{AppID: 1, TableName: "stat", PartitionCount: 4},
 	}
 	ag.doUpdateTableMap(tables)
-	assert.Contains(t, ag.tables, 1)
-	assert.Contains(t, ag.tables[1].Partitions, 1)
 
-	c := client.NewRemoteCmdClient("127.0.0.1:34801")
-	pcs, err := c.GetPerfCounters("@")
-	assert.Nil(t, err)
+	pc := decodePartitionPerfCounter(&client.PerfCounter{Name: "replica*app.pegasus*recent.abnormal.count@1.2", Value: 100})
+	assert.NotNil(t, pc)
 
-	var perfCounter *partitionPerfCounter
-	for _, pc := range pcs {
-		if strings.Contains(pc.Name, "@1.1") {
-			perfCounter, err = decodePartitionPerfCounter(pc)
-			assert.Nil(t, err)
-
-			ag.updatePartitionStat(perfCounter)
-			break
-		}
-	}
-	assert.Contains(t, ag.tables[1].Partitions[1].Stats, perfCounter.name)
+	ag.updatePartitionStat(pc)
+	assert.Contains(t, ag.tables[1].Partitions[2].Stats, pc.name)
+	assert.Equal(t, ag.tables[1].Partitions[2].Stats[pc.name], float64(100))
 }

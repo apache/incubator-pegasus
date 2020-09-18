@@ -63,9 +63,8 @@ func (ag *tableStatsAggregator) aggregate() {
 			return
 		}
 		for _, p := range perfCounters {
-			perfCounter, err := decodePartitionPerfCounter(p)
-			if err != nil {
-				log.Error(err)
+			perfCounter := decodePartitionPerfCounter(p)
+			if perfCounter == nil {
 				continue
 			}
 			ag.updatePartitionStat(perfCounter)

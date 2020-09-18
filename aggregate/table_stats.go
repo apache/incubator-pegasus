@@ -76,6 +76,7 @@ func newTableStats(info *client.TableInfo) *TableStats {
 	tb := &TableStats{
 		TableName:  info.TableName,
 		Partitions: make(map[int]*PartitionStats),
+		Stats:      make(map[string]float64),
 	}
 	for i := 0; i < info.PartitionCount; i++ {
 		tb.Partitions[i] = &PartitionStats{

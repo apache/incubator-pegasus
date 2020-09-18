@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/pegasus-kv/collector/aggregate"
 	"github.com/pegasus-kv/collector/metrics"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -65,6 +66,10 @@ func main() {
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
 		tom.Kill(errors.New("collector terminates")) // kill other goroutines
+	})
+	tom.Go(func() error {
+		aggregate.NewTableStatsAggregator().Start(tom)
+		return nil
 	})
 	tom.Go(func() error {
 		metrics.NewReporter().Start(tom)

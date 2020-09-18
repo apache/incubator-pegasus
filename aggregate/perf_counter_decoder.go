@@ -1,7 +1,6 @@
 package aggregate
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -16,20 +15,22 @@ type partitionPerfCounter struct {
 }
 
 // decodePartitionPerfCounter implements the v1 version of metric decoding.
-func decodePartitionPerfCounter(pc *client.PerfCounter) (*partitionPerfCounter, error) {
-	idx := strings.Index(pc.Name, "@")
+func decodePartitionPerfCounter(pc *client.PerfCounter) *partitionPerfCounter {
+	idx := strings.LastIndex(pc.Name, "@")
 	gpidStr := pc.Name[idx+1:]
 	appIDAndPartitionID := strings.Split(gpidStr, ".")
 	if len(appIDAndPartitionID) != 2 {
-		return nil, fmt.Errorf("invalid perf-counter \"%s\"", pc.Name)
+		// special case: in some mis-desgined metrics, what follows after a '@' may not be a replica id
+		return nil
 	}
+	appIDAndPartitionID = appIDAndPartitionID[:2] // "AppID.PartitionIndex"
 	appID, err := strconv.Atoi(appIDAndPartitionID[0])
 	if err != nil {
-		return nil, fmt.Errorf("invalid AppID from perf-counter \"%s\": %s", pc.Name, err)
+		return nil
 	}
 	partitionIndex, err := strconv.Atoi(appIDAndPartitionID[1])
 	if err != nil {
-		return nil, fmt.Errorf("invalid PartitionIndex from perf-counter \"%s\": %s", pc.Name, err)
+		return nil
 	}
 	return &partitionPerfCounter{
 		name: pc.Name[:idx], // strip out the replica id
@@ -38,7 +39,7 @@ func decodePartitionPerfCounter(pc *client.PerfCounter) (*partitionPerfCounter, 
 			PartitionIndex: int32(partitionIndex),
 		},
 		value: pc.Value,
-	}, nil
+	}
 }
 
 // TODO(wutao1): implement the v2 version of metric decoding according to
