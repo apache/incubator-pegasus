@@ -24,6 +24,7 @@ rm -rf $TMP_DIR
 mkdir -p $TMP_DIR
 $thrift --gen java rrdb.thrift
 $thrift --gen java replication.thrift 
+$thrift --gen java security.thrift 
 
 for gen_file in `find $TMP_DIR -name "*.java"`; do
     cat apache-licence-template $gen_file > $gen_file.tmp

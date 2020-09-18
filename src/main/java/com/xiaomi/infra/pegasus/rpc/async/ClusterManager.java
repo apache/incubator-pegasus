@@ -56,14 +56,13 @@ public class ClusterManager extends Cluster {
     replicaGroup = getEventLoopGroupInstance(opts.getAsyncWorkers());
     metaGroup = getEventLoopGroupInstance(1);
     tableGroup = getEventLoopGroupInstance(1);
+    enableAuth = opts.isEnableAuth();
 
     metaList = opts.getMetaServers().split(",");
     // the constructor of meta session is depend on the replicaSessions,
     // so the replicaSessions should be initialized earlier
     metaSession =
         new MetaSession(this, metaList, (int) opts.getMetaQueryTimeout().toMillis(), 10, metaGroup);
-
-    this.enableAuth = opts.isEnableAuth();
   }
 
   public EventExecutor getExecutor() {

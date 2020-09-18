@@ -210,12 +210,10 @@ public class ReplicaSession {
   }
 
   private void startNegotiation(Channel activeChannel) {
-    logger.info("{}: mark session state negotiation");
     if (enableAuth) {
       negotiation = new Negotiation(this);
       negotiation.start();
     } else {
-      logger.info("{}: mark session state connected");
       markSessionConnected(activeChannel);
     }
   }
