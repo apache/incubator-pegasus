@@ -13,25 +13,25 @@ type prometheusSink struct {
 	cfg *prometheusConfig
 }
 
-func (sink *prometheusSink) load() {
+func (sink *prometheusSink) init() {
 	sink.cfg = &prometheusConfig{}
 	viper.Unmarshal(sink.cfg)
 }
 
-func (sink *prometheusSink) Report() {
+func (sink *prometheusSink) report(snapshots []*metricSnapshot) {
 
 }
 
-// NewSink creates a Sink which is a monitoring system.
-func NewSink() Sink {
+// newSink creates a Sink which is a monitoring system.
+func newSink() metricSink {
 	cfgSink := viper.Get("metrics.sink")
 	if cfgSink == "falcon" {
 		sink := &falconSink{}
-		sink.load()
+		sink.init()
 		return sink
 	} else if cfgSink == "prometheus" {
 		sink := &prometheusSink{}
-		sink.load()
+		sink.init()
 		return sink
 	} else {
 		log.Fatalf("invalid metrics_sink = %s", cfgSink)

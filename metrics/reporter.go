@@ -28,7 +28,7 @@ type pegasusReporter struct {
 
 func (reporter *pegasusReporter) Start(tom *tomb.Tomb) {
 	ticker := time.NewTicker(reporter.reportInterval)
-	sink := NewSink()
+	sink := newSink()
 	aggregate.AddHookAfterTableStatEmitted(func(stats []aggregate.TableStats) {
 		// periodically take snapshot of all the metrics and push them to the sink.
 		var snapshots []*metricSnapshot
@@ -37,10 +37,16 @@ func (reporter *pegasusReporter) Start(tom *tomb.Tomb) {
 				snapshots = append(snapshots, &metricSnapshot{
 					name:  name,
 					value: value,
+					tags: map[string]string{
+						"table":  stat.TableName,
+						"entity": "table",
+					},
 				})
 			}
 		}
-		sink.report(snapshots)
+		go func() { // run asynchronously to avoid blocking in the hook
+			sink.report(snapshots)
+		}()
 	})
 	for {
 		select {
