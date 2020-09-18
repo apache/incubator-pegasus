@@ -49,12 +49,13 @@ func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
 }
 
 func (ag *tableStatsAggregator) aggregate() {
+	ag.updateTableMap()
+
 	nodes, err := ag.metaClient.ListNodes()
 	if err != nil {
 		log.Error(err)
 		return
 	}
-
 	for _, n := range nodes {
 		rcmdClient := client.NewRemoteCmdClient(n.Addr)
 		perfCounters, err := rcmdClient.GetPerfCounters("@")
@@ -63,8 +64,16 @@ func (ag *tableStatsAggregator) aggregate() {
 			return
 		}
 		for _, p := range perfCounters {
-			ag.decodePartitionStat(p)
+			perfCounter, err := decodePartitionPerfCounter(p)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			ag.updatePartitionStat(perfCounter)
 		}
+	}
+	for _, table := range ag.tables {
+		table.aggregate()
 	}
 }
 
@@ -85,8 +94,8 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*client.TableInfo) {
 	for _, tb := range tables {
 		currentTableSet[tb.AppID] = nil
 		if _, found := ag.tables[tb.AppID]; !found {
-			// non-exisistent table before, create it
-			ag.tables[tb.AppID] = newTableStats(tb.AppID, tb.PartitionCount)
+			// non-exisistent table, create it
+			ag.tables[tb.AppID] = newTableStats(tb)
 			log.Infof("found new table: %+v", tb)
 
 			// TODO(wutao1): some tables may have partitions splitted,
@@ -102,8 +111,18 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*client.TableInfo) {
 	}
 }
 
-func (s *tableStatsAggregator) decodePartitionStat(counter *client.PerfCounter) {
-
+func (ag *tableStatsAggregator) updatePartitionStat(pc *partitionPerfCounter) {
+	tb, found := ag.tables[int(pc.gpid.Appid)]
+	if !found {
+		// Ignore the perf-counter because there's currently no such table
+		return
+	}
+	part, found := tb.partitions[int(pc.gpid.PartitionIndex)]
+	if !found {
+		log.Errorf("no such partition %+v, perf-counter \"%s\"", pc.gpid, pc.name)
+		return
+	}
+	part.update(pc)
 }
 
 type partitionStats struct {
@@ -113,7 +132,12 @@ type partitionStats struct {
 	stats map[string]float64
 }
 
+func (s *partitionStats) update(pc *partitionPerfCounter) {
+	s.stats[pc.name] = pc.value
+}
+
 type tableStats struct {
+	tableName  string
 	partitions map[int]*partitionStats
 
 	// The aggregated value of table metrics.
@@ -121,12 +145,20 @@ type tableStats struct {
 	stats map[string]float64
 }
 
-func newTableStats(appID int, partitionCount int) *tableStats {
-	tb := &tableStats{partitions: make(map[int]*partitionStats)}
-	for i := 0; i < partitionCount; i++ {
+func newTableStats(info *client.TableInfo) *tableStats {
+	tb := &tableStats{
+		tableName:  info.TableName,
+		partitions: make(map[int]*partitionStats),
+	}
+	for i := 0; i < info.PartitionCount; i++ {
 		tb.partitions[i] = &partitionStats{
-			gpid: base.Gpid{Appid: int32(appID), PartitionIndex: int32(i)},
+			gpid:  base.Gpid{Appid: int32(info.AppID), PartitionIndex: int32(i)},
+			stats: make(map[string]float64),
 		}
 	}
 	return tb
+}
+
+func (tb *tableStats) aggregate() {
+
 }

@@ -32,7 +32,7 @@ func decodePartitionPerfCounter(pc *client.PerfCounter) (*partitionPerfCounter, 
 		return nil, fmt.Errorf("invalid PartitionIndex from perf-counter \"%s\": %s", pc.Name, err)
 	}
 	return &partitionPerfCounter{
-		name: pc.Name,
+		name: pc.Name[:idx], // strip out the replica id
 		gpid: base.Gpid{
 			Appid:          int32(appID),
 			PartitionIndex: int32(partitionIndex),
