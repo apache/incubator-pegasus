@@ -21,6 +21,7 @@ type MetaClient interface {
 
 // TableInfo is the information of a specified table.
 type TableInfo struct {
+	TableName      string
 	AppID          int
 	PartitionCount int
 }
@@ -62,11 +63,16 @@ func (h *httpMetaClient) ListTables() ([]*TableInfo, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("unable to parse app ID: \"%s\"", appIDStr))
 		}
+		appName, found := appInfo.Map()["app_name"]
+		if !found {
+			return nil, fmt.Errorf("invalid app_name from meta server: %s", string(body))
+		}
 		partitionCount, found := appInfo.Map()["partition_count"]
 		if !found {
 			return nil, fmt.Errorf("invalid partition_count from meta server: %s", string(body))
 		}
 		results = append(results, &TableInfo{
+			TableName:      appName.Str,
 			PartitionCount: int(partitionCount.Int()),
 			AppID:          appID,
 		})

@@ -19,4 +19,5 @@ func TestMetaClientTableInfo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(tables), 2)
 	assert.Equal(t, tables[0].AppID, 1)
+	assert.Equal(t, tables[0].TableName, "stat")
 }

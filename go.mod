@@ -3,9 +3,9 @@ module github.com/pegasus-kv/collector
 go 1.13
 
 require (
-	git.apache.org/thrift.git v0.13.0
-	github.com/XiaoMi/pegasus-go-client v0.0.0-20200509085530-e2f054e1ad99
+	github.com/XiaoMi/pegasus-go-client v0.0.0-20200918134039-68dacaebc61b
 	github.com/apache/thrift v0.13.0
+	github.com/pkg/errors v0.8.1
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.7.0
