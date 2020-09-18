@@ -549,6 +549,14 @@ struct row_data
 
     double get_total_cu() const { return recent_read_cu + recent_write_cu; }
 
+    double get_total_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
+
+    double get_total_write_qps() const
+    {
+        return put_qps + remove_qps + multi_put_qps + multi_remove_qps + check_and_set_qps +
+               check_and_mutate_qps;
+    }
+
     std::string row_name;
     int32_t app_id = 0;
     int32_t partition_count = 0;

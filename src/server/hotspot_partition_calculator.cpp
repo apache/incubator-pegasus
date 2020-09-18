@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <math.h>
 #include <dsn/dist/fmt_logging.h>
+#include <rrdb/rrdb_types.h>
 #include <dsn/utility/flags.h>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/group_address.h>
@@ -41,67 +42,91 @@ DSN_DEFINE_int64("pegasus.collector",
                  "eliminate outdated historical "
                  "data");
 
-void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partitions)
+void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
-    while (_partition_stat_histories.size() > FLAGS_max_hotspot_store_size - 1) {
-        _partition_stat_histories.pop();
+    while (_partitions_stat_histories.size() >= FLAGS_max_hotspot_store_size) {
+        _partitions_stat_histories.pop_front();
     }
-    std::vector<hotspot_partition_data> temp(partitions.size());
-    // TODO refactor the data structure
-    for (int i = 0; i < partitions.size(); i++) {
-        temp[i] = std::move(hotspot_partition_data(partitions[i]));
+    std::vector<hotspot_partition_stat> temp;
+    for (const auto &partition_stat : partition_stats) {
+        temp.emplace_back(hotspot_partition_stat(partition_stat));
     }
-    _partition_stat_histories.emplace(temp);
+    _partitions_stat_histories.emplace_back(temp);
 }
 
 void hotspot_partition_calculator::init_perf_counter(int partition_count)
 {
-    std::string counter_name;
-    std::string counter_desc;
-    for (int i = 0; i < partition_count; i++) {
-        string partition_desc = _app_name + '.' + std::to_string(i);
-        counter_name = fmt::format("app.stat.hotspots@{}", partition_desc);
-        counter_desc = fmt::format("statistic the hotspots of app {}", partition_desc);
-        _hot_points[i].init_app_counter(
-            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
+    for (int data_type = 0; data_type <= 1; data_type++) {
+        for (int i = 0; i < partition_count; i++) {
+            string partition_desc =
+                _app_name + '.' +
+                (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write." : "read.") +
+                std::to_string(i);
+            std::string counter_name = fmt::format("app.stat.hotspots@{}", partition_desc);
+            std::string counter_desc =
+                fmt::format("statistic the hotspots of app {}", partition_desc);
+            _hot_points[i][data_type].init_app_counter(
+                "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
+        }
+    }
+}
+
+void hotspot_partition_calculator::stat_histories_analyse(int data_type,
+                                                          std::vector<int> &hot_points)
+{
+    double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
+    int sample_count = 0;
+    for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
+        for (const auto &partition_stat : one_partition_stat_histories) {
+            table_qps_sum += partition_stat.total_qps[data_type];
+            sample_count++;
+        }
+    }
+    if (sample_count <= 1) {
+        ddebug("_partitions_stat_histories size <= 1, not enough data for calculation");
+        return;
+    }
+    table_qps_avg = table_qps_sum / sample_count;
+    for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
+        for (const auto &partition_stat : one_partition_stat_histories) {
+            standard_deviation += pow((partition_stat.total_qps[data_type] - table_qps_avg), 2);
+        }
+    }
+    standard_deviation = sqrt(standard_deviation / (sample_count - 1));
+    const auto &anly_data = _partitions_stat_histories.back();
+    int hot_point_size = _hot_points.size();
+    hot_points.resize(hot_point_size);
+    for (int i = 0; i < hot_point_size; i++) {
+        double hot_point = 0;
+        if (standard_deviation != 0) {
+            hot_point = (anly_data[i].total_qps[data_type] - table_qps_avg) / standard_deviation;
+        }
+        // perf_counter->set can only be unsigned uint64_t
+        // use ceil to guarantee conversion results
+        hot_points[i] = ceil(std::max(hot_point, double(0)));
+    }
+}
+
+void hotspot_partition_calculator::update_hot_point(int data_type, std::vector<int> &hot_points)
+{
+    dcheck_eq(_hot_points.size(), hot_points.size());
+    int size = hot_points.size();
+    for (int i = 0; i < size; i++) {
+        _hot_points[i][data_type].get()->set(hot_points[i]);
     }
 }
 
 void hotspot_partition_calculator::data_analyse()
 {
-    dassert(_partition_stat_histories.back().size() == _hot_points.size(),
-            "partition counts error, please check");
-    std::vector<double> data_samples;
-    data_samples.reserve(_partition_stat_histories.size() * _hot_points.size());
-    auto temp_data = _partition_stat_histories;
-    double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
-    int sample_count = 0;
-    while (!temp_data.empty()) {
-        for (const auto &partition_data : temp_data.front()) {
-            if (partition_data.total_qps - 1.00 > 0) {
-                data_samples.push_back(partition_data.total_qps);
-                table_qps_sum += partition_data.total_qps;
-                sample_count++;
-            }
-        }
-        temp_data.pop();
-    }
-    if (sample_count == 0) {
-        ddebug("_partition_stat_histories size == 0");
-        return;
-    }
-    table_qps_avg = table_qps_sum / sample_count;
-    for (const auto &data_sample : data_samples) {
-        standard_deviation += pow((data_sample - table_qps_avg), 2);
-    }
-    standard_deviation = sqrt(standard_deviation / sample_count);
-    const auto &anly_data = _partition_stat_histories.back();
-    for (int i = 0; i < _hot_points.size(); i++) {
-        double hot_point = (anly_data[i].total_qps - table_qps_avg) / standard_deviation;
-        // perf_counter->set can only be unsigned __int64
-        // use ceil to guarantee conversion results
-        hot_point = ceil(std::max(hot_point, double(0)));
-        _hot_points[i]->set(hot_point);
+    dassert(_partitions_stat_histories.back().size() == _hot_points.size(),
+            "The number of partitions in this table has changed, and hotspot analysis cannot be "
+            "performed,in %s",
+            _app_name.c_str());
+    for (int data_type = 0; data_type <= 1; data_type++) {
+        // data_type 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
+        std::vector<int> hot_points;
+        stat_histories_analyse(data_type, hot_points);
+        update_hot_point(data_type, hot_points);
     }
 }
 
