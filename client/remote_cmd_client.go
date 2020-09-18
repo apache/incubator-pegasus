@@ -41,11 +41,12 @@ func NewRemoteCmdClient(addr string) *RemoteCmdClient {
 
 // GetPerfCounters retrieves all perf-counters matched with `filter` from the remote node.
 func (c *RemoteCmdClient) GetPerfCounters(filter string) ([]*PerfCounter, error) {
-	result, err := c.call("perf-counters", []string{filter})
+	result, err := c.call("perf-counters-by-substr", []string{filter})
 	if err != nil {
 		return nil, err
 	}
-	perfCounters := gjson.Parse(result).Get("counters").Array()
+	resultJSON := gjson.Parse(result)
+	perfCounters := resultJSON.Get("counters").Array()
 	var ret []*PerfCounter
 	for _, perfCounter := range perfCounters {
 		ret = append(ret, &PerfCounter{
