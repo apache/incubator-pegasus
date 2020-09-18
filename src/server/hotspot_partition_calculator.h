@@ -18,11 +18,14 @@
 #pragma once
 
 #include "hotspot_partition_stat.h"
+#include <dsn/utility/flags.h>
 #include <gtest/gtest_prod.h>
 #include <dsn/perf_counter/perf_counter.h>
 
 namespace pegasus {
 namespace server {
+
+DSN_DECLARE_int32(occurrence_threshold);
 
 // stores the whole histories of all partitions in one table
 typedef std::list<std::vector<hotspot_partition_stat>> stat_histories;
@@ -36,7 +39,7 @@ class hotspot_partition_calculator
 {
 public:
     hotspot_partition_calculator(const std::string &app_name, int partition_count)
-        : _app_name(app_name), _hot_points(partition_count)
+        : _app_name(app_name), _hot_points(partition_count), _hotpartition_pool(partition_count)
     {
         init_perf_counter(partition_count);
     }
@@ -55,6 +58,7 @@ private:
     void stat_histories_analyse(int data_type, std::vector<int> &hot_points);
     // set hot_point to corresponding perf_counter
     void update_hot_point(int data_type, std::vector<int> &hot_points);
+    void detect_hotkey_in_hotpartition(int data_type);
 
     const std::string _app_name;
     void init_perf_counter(int perf_counter_count);
@@ -63,7 +67,10 @@ private:
     // saving historical data can improve accuracy
     stat_histories _partitions_stat_histories;
 
+    std::vector<std::array<int, 2>> _hotpartition_pool;
+
     friend class hotspot_partition_test;
+    FRIEND_TEST(hotspot_partition_test, send_hotkey_detect_request);
 };
 
 } // namespace server

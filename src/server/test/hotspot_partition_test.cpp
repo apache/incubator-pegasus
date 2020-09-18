@@ -19,6 +19,7 @@
 
 #include "pegasus_server_test_base.h"
 #include <gtest/gtest.h>
+#include <dsn/utility/fail_point.h>
 
 namespace pegasus {
 namespace server {
@@ -26,7 +27,11 @@ namespace server {
 class hotspot_partition_test : public pegasus_server_test_base
 {
 public:
-    hotspot_partition_test() : calculator("TEST", 8){};
+    hotspot_partition_test() : calculator("TEST", 8)
+    {
+        dsn::fail::setup();
+        dsn::fail::cfg("send_hotkey_detect_request", "return()");
+    };
     hotspot_partition_calculator calculator;
     std::vector<row_data> generate_row_data()
     {
@@ -57,6 +62,16 @@ public:
         calculator.data_analyse();
         std::vector<std::vector<double>> result = get_calculator_result(calculator._hot_points);
         ASSERT_EQ(result, expect_result);
+    }
+    void aggregate_analyse_data(std::vector<row_data> scenario,
+                                hotspot_partition_calculator &calculator)
+    {
+        calculator.data_aggregate(std::move(scenario));
+        calculator.data_analyse();
+    }
+    void clear_calculator_histories(hotspot_partition_calculator &calculator)
+    {
+        calculator._partitions_stat_histories.clear();
     }
 };
 
@@ -92,6 +107,29 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     test_rows[HOT_SCENARIO_1_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 4, 0, 0, 0, 0}, {0, 0, 4, 0, 0, 0, 0, 0}};
     test_policy_in_scenarios(test_rows, expect_vector, calculator);
+    clear_calculator_histories(calculator);
+}
+
+TEST_F(hotspot_partition_test, send_hotkey_detect_request)
+{
+    const int HOT_SCENARIO_0_READ_HOT_PARTITION = 7;
+    const int HOT_SCENARIO_0_WRITE_HOT_PARTITION = 0;
+    std::vector<row_data> test_rows = generate_row_data();
+    test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
+    test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
+    for (int i = 0; i < FLAGS_occurrence_threshold; i++) {
+        aggregate_analyse_data(test_rows, calculator);
+    }
+    std::vector<std::array<int, 2>> expect_result = {
+        {0, 100}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {100, 0}};
+    ASSERT_EQ(calculator._hotpartition_pool, expect_result);
+
+    test_rows = generate_row_data();
+    for (int i = 0; i < 50; i++) {
+        aggregate_analyse_data(test_rows, calculator);
+    }
+    expect_result = {{0, 50}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {50, 0}};
+    ASSERT_EQ(calculator._hotpartition_pool, expect_result);
 }
 
 } // namespace server
