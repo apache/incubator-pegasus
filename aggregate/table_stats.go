@@ -50,6 +50,7 @@ var allMetricNames []string = []string{
 	"write_bytes",
 }
 
+// PartitionStats is a set of metrics retrieved from this partition.
 type PartitionStats struct {
 	Gpid base.Gpid
 
@@ -61,6 +62,7 @@ func (s *PartitionStats) update(pc *partitionPerfCounter) {
 	s.Stats[pc.name] = pc.value
 }
 
+// TableStats has the aggregated metrics for this table.
 type TableStats struct {
 	TableName  string
 	Partitions map[int]*PartitionStats

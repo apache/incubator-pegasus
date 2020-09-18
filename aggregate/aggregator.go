@@ -73,6 +73,8 @@ func (ag *tableStatsAggregator) aggregate() {
 	}
 	for _, table := range ag.tables {
 		table.aggregate()
+
+		hooksManager.afterTablStatsEmitted(*table)
 	}
 }
 
@@ -106,6 +108,8 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*client.TableInfo) {
 		if _, found := currentTableSet[appID]; !found {
 			log.Infof("remove table from collector: {AppID: %d, PartitionCount: %d}", appID, len(tb.Partitions))
 			delete(ag.tables, appID)
+
+			hooksManager.afterTableDropped(appID)
 		}
 	}
 }
