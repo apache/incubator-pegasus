@@ -130,13 +130,9 @@ then
     cd ..
 fi
 
-cd $ROOT
-PEGASUS_GIT_COMMIT="None"
-if ! git rev-parse HEAD; then
-    if [ -f "$(dirname ${ROOT})"/GIT_COMMIT ]; then
-        PEGASUS_GIT_COMMIT=$(cat $(dirname ${ROOT})/GIT_COMMIT)
-    fi
-else
+cd "$ROOT" || exit 1
+PEGASUS_GIT_COMMIT="non-git-repo"
+if git rev-parse HEAD; then # this is a git repo
     PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
 fi
 echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
