@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
@@ -30,6 +31,10 @@ type RemoteCmdClient struct {
 type PerfCounter struct {
 	Name  string
 	Value float64
+}
+
+func (p *PerfCounter) String() string {
+	return fmt.Sprintf("{Name: %s, Value: %f}", p.Name, p.Value)
 }
 
 // NewRemoteCmdClient returns an instance of RemoteCmdClient.

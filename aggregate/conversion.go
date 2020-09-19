@@ -44,3 +44,12 @@ var v1Tov2MetricsConversion []string = map[string]string{
 	{"replica*app.pegasus*rdb.bf_point_negatives": "rdb_bf_point_negatives"},
 	{"replica*app.pegasus*rdb.bf_point_negatives": "rdb_bf_point_negatives"},
 }
+
+func convertV1ToV2(pc *partitionPerfCounter) bool {
+	v2Name, found := v1Tov2MetricsConversion[pc.name]
+	if !found { // ignored
+		return false
+	}
+	pc.name = v2Name
+	return true
+}

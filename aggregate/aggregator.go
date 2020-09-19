@@ -67,6 +67,9 @@ func (ag *tableStatsAggregator) aggregate() {
 			if perfCounter == nil {
 				continue
 			}
+			if !convertV1ToV2(perfCounter) {
+				continue
+			}
 			ag.updatePartitionStat(perfCounter)
 		}
 	}
