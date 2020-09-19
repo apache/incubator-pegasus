@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/XiaoMi/pegasus-go-client v0.0.0-20200918134039-68dacaebc61b
 	github.com/apache/thrift v0.13.0
+	github.com/gin-gonic/gin v1.6.3
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.7.0

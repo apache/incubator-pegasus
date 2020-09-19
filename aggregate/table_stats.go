@@ -1,6 +1,8 @@
 package aggregate
 
 import (
+	"time"
+
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/pegasus-kv/collector/client"
 )
@@ -19,8 +21,13 @@ func (s *PartitionStats) update(pc *partitionPerfCounter) {
 
 // TableStats has the aggregated metrics for this table.
 type TableStats struct {
-	TableName  string
+	TableName string
+	AppID     int
+
 	Partitions map[int]*PartitionStats
+
+	// the time when the stats was generated
+	Timestamp time.Time
 
 	// The aggregated value of table metrics.
 	// perfCounter's name -> the value.
@@ -30,8 +37,10 @@ type TableStats struct {
 func newTableStats(info *client.TableInfo) *TableStats {
 	tb := &TableStats{
 		TableName:  info.TableName,
+		AppID:      info.AppID,
 		Partitions: make(map[int]*PartitionStats),
 		Stats:      make(map[string]float64),
+		Timestamp:  time.Now(),
 	}
 	for i := 0; i < info.PartitionCount; i++ {
 		tb.Partitions[i] = &PartitionStats{

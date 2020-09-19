@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/pegasus-kv/collector/aggregate"
-	"github.com/pegasus-kv/collector/metrics"
+	"github.com/pegasus-kv/collector/webui"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -63,16 +63,14 @@ func main() {
 		return
 	}
 
+	webui.StartWebServer()
+
 	tom := &tomb.Tomb{}
 	setupSignalHandler(func() {
 		tom.Kill(errors.New("collector terminates")) // kill other goroutines
 	})
 	tom.Go(func() error {
 		aggregate.NewTableStatsAggregator().Start(tom)
-		return nil
-	})
-	tom.Go(func() error {
-		metrics.NewReporter().Start(tom)
 		return nil
 	})
 	select {
