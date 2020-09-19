@@ -12,19 +12,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type metricSnapshot struct {
-	name  string
-	value float64
-	tags  map[string]string
-}
-
-// metricSink is the destination where the metrics are reported to.
-type metricSink interface {
-
-	// Report the snapshot of metrics to the monitoring system. The report can possibly fail.
-	report(snapshots []*metricSnapshot)
-}
-
 type falconConfig struct {
 	falconAgentHost     string
 	falconAgentPort     uint32
@@ -49,7 +36,8 @@ type falconMetricData struct {
 	tags        string
 }
 
-func (sink *falconSink) init() {
+func newFalconSink() *falconSink {
+	sink := &falconSink{}
 	sink.cfg = &falconConfig{
 		falconAgentHost:       viper.GetString("falcon_agent.host"),
 		falconAgentPort:       viper.GetUint32("falcon_agent.port"),
@@ -58,9 +46,10 @@ func (sink *falconSink) init() {
 		port:                  viper.GetUint32("port"),
 		metricsReportInterval: viper.GetDuration("metrics.report_interval"),
 	}
+	return sink
 }
 
-func (sink *falconSink) report(snapshots []*metricSnapshot) {
+func (sink *falconSink) Report(snapshots []*MetricSnapshot) {
 	metric := &falconMetricData{
 		endpoint:    sink.cfg.clusterName,
 		step:        int32(sink.cfg.metricsReportInterval.Seconds()),
