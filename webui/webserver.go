@@ -7,6 +7,7 @@ import (
 func StartWebServer() {
 	app := iris.New()
 	app.Get("/", indexHandler)
+	app.Get("/tables", tablesHandler)
 
 	// Register the view engine to the views,
 	// this will load the templates.

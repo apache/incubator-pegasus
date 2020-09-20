@@ -26,19 +26,14 @@
         <table class="table is-bordered is-striped">
             <thead>
                 <tr>
-                    <th>Perf-Counter</th>
-                    {{range .PerfIDs}}
-                    <th>{{.}}</th>
-                    {{end}}
+                    <th>Table Name</th>
+                    <th>Link</th>
                 </tr>
             </thead>
             <tbody>
-                {{range .PerfCounters}}
+                {{range .Tables}}
                 <tr>
-                    <td>{{.PerfCounter}}</td>
-                    {{range .Values}}
-                    <td>{{.}}</td>
-                    {{end}}
+                    <td>{{.TableName}}</td>
                 </tr>
                 {{end}}
             </tbody>

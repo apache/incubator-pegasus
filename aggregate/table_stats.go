@@ -59,6 +59,7 @@ func newTableStats(info *client.TableInfo) *TableStats {
 }
 
 func (tb *TableStats) aggregate() {
+	tb.Timestamp = time.Now()
 	for _, part := range tb.Partitions {
 		for name, value := range part.Stats {
 			tb.Stats[name] += value

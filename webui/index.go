@@ -1,8 +1,6 @@
 package webui
 
 import (
-	"strconv"
-
 	"github.com/kataras/iris/v12"
 	"github.com/pegasus-kv/collector/aggregate"
 	"github.com/pegasus-kv/collector/client"
@@ -12,6 +10,8 @@ import (
 var indexPageClusterStats = []string{
 	"write_bytes",
 	"read_bytes",
+	"write_qps",
+	"read_qps",
 }
 
 func renderIndexClusterCharts(ctx iris.Context) {
@@ -36,8 +36,8 @@ func renderIndexClusterCharts(ctx iris.Context) {
 	ctx.ViewData("PerfCounters", PerfCounters)
 
 	var PerfIDs []string
-	for i := 1; i <= len(snapshots); i++ {
-		PerfIDs = append(PerfIDs, strconv.Itoa(i))
+	for _, sn := range snapshots {
+		PerfIDs = append(PerfIDs, sn.Timestamp.Format("15:04:00"))
 	}
 	ctx.ViewData("PerfIDs", PerfIDs)
 }
@@ -48,6 +48,7 @@ func indexHandler(ctx iris.Context) {
 	metaClient := client.NewMetaClient(viper.GetString("meta_server"))
 	tables, err := metaClient.ListTables()
 	if err != nil {
+		ctx.ResponseWriter().WriteString("Failed to list tables from MetaServer")
 		ctx.StatusCode(iris.StatusInternalServerError)
 		return
 	}
