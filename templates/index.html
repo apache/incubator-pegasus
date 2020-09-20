@@ -10,11 +10,30 @@
 </head>
 
 <section class="section">
-    <div class="container">
+    <nav class="navbar">
         <h1 class="title">
             Pegasus Collector
         </h1>
-    </div>
+    </nav>
+</section>
+<section class="section">
+    <main>
+        <table class="table is-bordered is-striped">
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Tables}}
+                <tr>
+                    <td>{{.TableName}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </main>
 </section>
 
 </html>

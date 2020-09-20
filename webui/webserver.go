@@ -1,27 +1,20 @@
 package webui
 
 import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
+	"github.com/kataras/iris/v12"
 )
 
 func StartWebServer() {
-	engine := gin.Default()
-	engine.LoadHTMLGlob("templates/*")
+	app := iris.New()
+	app.Get("/", indexHandler)
 
-	engine.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{})
-	})
-
-	engine.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{
-			"status": 404,
-			"error":  "page not exists",
-		})
-	})
+	// Register the view engine to the views,
+	// this will load the templates.
+	tmpl := iris.HTML("./templates", ".html")
+	tmpl.Reload(true)
+	app.RegisterView(tmpl)
 
 	go func() {
-		engine.Run(":34111")
+		app.Listen(":8080")
 	}()
 }

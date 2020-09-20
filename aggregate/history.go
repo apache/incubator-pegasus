@@ -42,11 +42,13 @@ type historyStore struct {
 	tables map[int]*tableStatsHistory
 }
 
-var globalHistoryStore historyStore
+var globalHistoryStore = &historyStore{
+	tables: make(map[int]*tableStatsHistory),
+}
 
 func init() {
 	AddHookAfterTableStatEmitted(func(stats []TableStats) {
-		s := &globalHistoryStore
+		s := globalHistoryStore
 
 		s.lock.Lock()
 		defer s.lock.Unlock()
@@ -60,7 +62,7 @@ func init() {
 		}
 	})
 	AddHookAfterTableDropped(func(appID int) {
-		s := &globalHistoryStore
+		s := globalHistoryStore
 
 		s.lock.Lock()
 		defer s.lock.Unlock()
