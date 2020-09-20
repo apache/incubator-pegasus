@@ -9,15 +9,35 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
 </head>
 
-<section class="section">
-    <nav class="navbar">
+<nav class="navbar" style="padding-top: 2rem; padding-bottom: 2rem; padding-left: 1rem;">
+    <div class="container">
         <h1 class="title">
             Pegasus Collector
         </h1>
-    </nav>
-</section>
-<section class="section">
-    <main>
+    </div>
+</nav>
+<main>
+    <div class="container" style="padding: 1rem;">
+        <table class="table is-bordered is-striped">
+            <thead>
+                <tr>
+                    <th>Perf-Counter</th>
+                    {{range .PerfIDs}}
+                    <th>{{.}}</th>
+                    {{end}}
+                </tr>
+            </thead>
+            <tbody>
+                {{range .PerfCounters}}
+                <tr>
+                    <td>{{.PerfCounter}}</td>
+                    {{range .Values}}
+                    <td>{{.}}</td>
+                    {{end}}
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
         <table class="table is-bordered is-striped">
             <thead>
                 <tr>
@@ -33,7 +53,7 @@
                 {{end}}
             </tbody>
         </table>
-    </main>
-</section>
+    </div>
+</main>
 
 </html>

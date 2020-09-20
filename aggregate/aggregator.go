@@ -32,6 +32,7 @@ type tableStatsAggregator struct {
 
 	metaClient client.MetaClient
 	tables     map[int]*TableStats
+	allStats   *ClusterStats
 }
 
 func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
@@ -67,7 +68,7 @@ func (ag *tableStatsAggregator) aggregate() {
 			if perfCounter == nil {
 				continue
 			}
-			if !convertV1ToV2(perfCounter) {
+			if !aggregatable(perfCounter) {
 				continue
 			}
 			ag.updatePartitionStat(perfCounter)
@@ -79,7 +80,21 @@ func (ag *tableStatsAggregator) aggregate() {
 		table.aggregate()
 		batchTableStats = append(batchTableStats, *table)
 	}
-	hooksManager.afterTablStatsEmitted(batchTableStats)
+	ag.aggregateClusterStats()
+	hooksManager.afterTablStatsEmitted(batchTableStats, *ag.allStats)
+}
+
+func (ag *tableStatsAggregator) aggregateClusterStats() {
+	ag.allStats = &ClusterStats{
+		Stats:     make(map[string]float64),
+		Timestamp: time.Now(),
+	}
+	for _, table := range ag.tables {
+		for k, v := range table.Stats {
+			ag.allStats.Stats[k] += v
+		}
+	}
+	extendStats(&ag.allStats.Stats)
 }
 
 // Some tables may disappear (be dropped) or first show up.

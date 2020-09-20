@@ -43,11 +43,21 @@ var v1Tov2MetricsConversion = map[string]string{
 	"replica*app.pegasus*rdb.bf_point_negatives":                   "rdb_bf_point_negatives",
 }
 
-func convertV1ToV2(pc *partitionPerfCounter) bool {
+var aggregatableSet = map[string]interface{}{
+	"read_qps":    nil,
+	"write_qps":   nil,
+	"read_bytes":  nil,
+	"write_bytes": nil,
+}
+
+// aggregatable returns whether the counter is to be aggregated on collector,
+// including v1Tov2MetricsConversion and aggregatableSet.
+func aggregatable(pc *partitionPerfCounter) bool {
 	v2Name, found := v1Tov2MetricsConversion[pc.name]
-	if !found { // ignored
-		return false
+	if found { // ignored
+		pc.name = v2Name
+		return true // listed above are all aggregatable
 	}
-	pc.name = v2Name
-	return true
+	_, found = aggregatableSet[pc.name]
+	return found
 }
