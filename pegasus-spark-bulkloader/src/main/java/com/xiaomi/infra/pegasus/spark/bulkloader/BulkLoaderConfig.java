@@ -2,6 +2,7 @@ package com.xiaomi.infra.pegasus.spark.bulkloader;
 
 import com.xiaomi.infra.pegasus.spark.CommonConfig;
 import com.xiaomi.infra.pegasus.spark.FDSConfig;
+import com.xiaomi.infra.pegasus.spark.FlowController.RateLimiterConfig;
 import com.xiaomi.infra.pegasus.spark.HDFSConfig;
 import java.io.Serializable;
 
@@ -14,7 +15,7 @@ import java.io.Serializable;
  * <DataPathRoot>/<ClusterName>/<TableName>/<PartitionIndex>/<FileIndex>.sst => RocksDB SST File
  */
 public class BulkLoaderConfig extends CommonConfig {
-  private AdvancedConfig advancedConfig = new AdvancedConfig();
+  private AdvancedConfig advancedConfig;
 
   private String dataPathRoot = "/pegasus-bulkloader";
   private int tableId;
@@ -22,10 +23,12 @@ public class BulkLoaderConfig extends CommonConfig {
 
   public BulkLoaderConfig(HDFSConfig hdfsConfig, String clusterName, String tableName) {
     super(hdfsConfig, clusterName, tableName);
+    setAdvancedConfig(new AdvancedConfig());
   }
 
   public BulkLoaderConfig(FDSConfig fdsConfig, String clusterName, String tableName) {
     super(fdsConfig, clusterName, tableName);
+    setAdvancedConfig(new AdvancedConfig());
   }
 
   /**
@@ -75,6 +78,19 @@ public class BulkLoaderConfig extends CommonConfig {
    */
   public BulkLoaderConfig setAdvancedConfig(AdvancedConfig advancedConfig) {
     this.advancedConfig = advancedConfig;
+    return this;
+  }
+
+  /**
+   * set RateLimiter config to control request flow, detail see {@link
+   * com.xiaomi.infra.pegasus.spark.FlowController}
+   *
+   * @param rateLimiterConfig
+   * @return this
+   */
+  @Override
+  public BulkLoaderConfig setRateLimiterConfig(RateLimiterConfig rateLimiterConfig) {
+    super.setRateLimiterConfig(rateLimiterConfig);
     return this;
   }
 

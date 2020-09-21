@@ -1,5 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader;
 
+import com.xiaomi.infra.pegasus.spark.FlowController;
 import com.xiaomi.infra.pegasus.spark.PegasusSparkException;
 import com.xiaomi.infra.pegasus.spark.RemoteFileSystem;
 import com.xiaomi.infra.pegasus.spark.RocksDBOptions;
@@ -35,14 +36,13 @@ class BulkLoader {
 
   private RemoteFileSystem remoteFileSystem;
   private SstFileWriterWrapper sstFileWriterWrapper;
+  private FlowController flowController;
 
   private Iterator<Tuple2<PegasusKey, PegasusValue>> dataResourceIterator;
 
   BulkLoader(
       BulkLoaderConfig config, Iterator<Tuple2<PegasusKey, PegasusValue>> iterator, int partitionId)
       throws PegasusSparkException {
-
-    this.remoteFileSystem = config.getRemoteFileSystem();
 
     String dataPathPrefix =
         config.getRemoteFileSystemURL()
@@ -68,9 +68,21 @@ class BulkLoader {
             config.getTablePartitionCount());
     this.dataMetaInfo = new DataMetaInfo();
 
+    this.remoteFileSystem = config.getRemoteFileSystem();
     this.sstFileWriterWrapper =
         new SstFileWriterWrapper(
             new RocksDBOptions(config.getRemoteFileSystemURL(), config.getRemoteFileSystemPort()));
+
+    if (config.getRateLimiterConfig() != null) {
+      long qps = config.getRateLimiterConfig().getQps();
+      long megabytes = config.getRateLimiterConfig().getMegabytes();
+      double factor = config.getRateLimiterConfig().getBurstFactor();
+
+      this.flowController =
+          new FlowController(config.getTablePartitionCount(), factor)
+              .withMBytesLimiter(megabytes)
+              .withQPSLimiter(qps);
+    }
   }
 
   void start() throws PegasusSparkException {
@@ -121,6 +133,11 @@ class BulkLoader {
         curSSTFileName = curFileIndex + BULK_DATA_FILE_SUFFIX;
 
         sstFileWriterWrapper.openWithRetry(partitionPath + curSSTFileName);
+      }
+
+      if (flowController != null) {
+        flowController.acquireQPS();
+        flowController.acquireBytes(record._1.data().length + record._2.data().length);
       }
 
       curFileSize += sstFileWriterWrapper.writeWithRetry(record._1.data(), record._2.data());
