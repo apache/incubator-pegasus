@@ -34,14 +34,11 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int64("pegasus.collector",
-                 max_hotspot_store_size,
-                 100,
-                 "the max count of historical data "
-                 "stored in calculator, The FIFO "
-                 "queue design is used to "
-                 "eliminate outdated historical "
-                 "data");
+DSN_DEFINE_int64("pegasus.collector", max_hotspot_store_size, 100, "the max count of historical "
+                                                                   "data stored in calculator, The "
+                                                                   "FIFO queue design is used to "
+                                                                   "eliminate outdated historical "
+                                                                   "data");
 
 DSN_DEFINE_bool("pegasus.collector",
                 enable_hotkey_detect,
@@ -57,7 +54,7 @@ DSN_DEFINE_int32("pegasus.collector",
 DSN_DEFINE_int32("pegasus.collector",
                  occurrence_threshold,
                  100,
-                 "hot paritiotion occurrence times'threshold to send rpc to detect hotkey");
+                 "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
