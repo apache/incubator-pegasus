@@ -80,7 +80,7 @@ public:
             calculator.data_aggregate(scenario);
             calculator.data_analyse();
         }
-        ASSERT_EQ(calculator._hotpartition_pool, expect_result);
+        ASSERT_EQ(calculator._hotpartition_counter, expect_result);
     }
 
     void clear_calculator_histories(hotspot_partition_calculator &calculator)

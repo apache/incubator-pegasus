@@ -38,7 +38,7 @@ class hotspot_partition_calculator
 {
 public:
     hotspot_partition_calculator(const std::string &app_name, int partition_count)
-        : _app_name(app_name), _hot_points(partition_count), _hotpartition_pool(partition_count)
+        : _app_name(app_name), _hot_points(partition_count), _hotpartition_counter(partition_count)
     {
         init_perf_counter(partition_count);
     }
@@ -66,7 +66,11 @@ private:
     // saving historical data can improve accuracy
     stat_histories _partitions_stat_histories;
 
-    std::vector<std::array<int, 2>> _hotpartition_pool;
+    // _hotpartition_counter p[index_of_partitions][type_of_read(0)/write(1)_stat]
+    // it's a counter to find partitions that often exceed the threshold
+    // If the hot_point of some partitions are always high, calculator will send a RPC to detect
+    // hotkey on the replica automatically
+    std::vector<std::array<int, 2>> _hotpartition_counter;
 
     friend class hotspot_partition_test;
     FRIEND_TEST(hotspot_partition_test, send_hotkey_detect_request);

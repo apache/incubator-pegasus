@@ -157,7 +157,7 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
 {
     for (int index = 0; index < _hot_points.size(); index++) {
         if (_hot_points[index][data_type].get()->get_value() >= FLAGS_hot_partition_threshold) {
-            if (++_hotpartition_pool[index][data_type] >= FLAGS_occurrence_threshold) {
+            if (++_hotpartition_counter[index][data_type] >= FLAGS_occurrence_threshold) {
                 derror_f("Find a {} hot partition {}.{}",
                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
                          _app_name,
@@ -170,8 +170,8 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                                            dsn::apps::hotkey_detect_action::type::START);
             }
         } else {
-            _hotpartition_pool[index][data_type] =
-                std::max(_hotpartition_pool[index][data_type] - 1, 0);
+            _hotpartition_counter[index][data_type] =
+                std::max(_hotpartition_counter[index][data_type] - 1, 0);
         }
     }
 }
