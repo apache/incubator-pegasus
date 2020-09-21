@@ -37,9 +37,9 @@ namespace server {
 DSN_DEFINE_int64("pegasus.collector",
                  max_hotspot_store_size,
                  100,
-                 "the max count of historical "
-                 "data stored in calculator, The "
-                 "FIFO queue design is used to "
+                 "the max count of historical data "
+                 "stored in calculator, The FIFO "
+                 "queue design is used to "
                  "eliminate outdated historical "
                  "data");
 
