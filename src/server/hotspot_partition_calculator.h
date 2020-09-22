@@ -17,9 +17,11 @@
 
 #pragma once
 
-#include "hotspot_partition_stat.h"
 #include <gtest/gtest_prod.h>
+
 #include <dsn/perf_counter/perf_counter.h>
+#include <dsn/utility/flags.h>
+#include "hotspot_partition_stat.h"
 
 namespace pegasus {
 namespace server {
@@ -36,7 +38,7 @@ class hotspot_partition_calculator
 {
 public:
     hotspot_partition_calculator(const std::string &app_name, int partition_count)
-        : _app_name(app_name), _hot_points(partition_count)
+        : _app_name(app_name), _hot_points(partition_count), _hotpartition_counter(partition_count)
     {
         init_perf_counter(partition_count);
     }
@@ -55,6 +57,7 @@ private:
     void stat_histories_analyse(int data_type, std::vector<int> &hot_points);
     // set hot_point to corresponding perf_counter
     void update_hot_point(int data_type, std::vector<int> &hot_points);
+    void detect_hotkey_in_hotpartition(int data_type);
 
     const std::string _app_name;
     void init_perf_counter(int perf_counter_count);
@@ -62,6 +65,12 @@ private:
     hot_partition_counters _hot_points;
     // saving historical data can improve accuracy
     stat_histories _partitions_stat_histories;
+
+    // _hotpartition_counter p[index_of_partitions][type_of_read(0)/write(1)_stat]
+    // it's a counter to find partitions that often exceed the threshold
+    // If the hot_point of some partitions are always high, calculator will send a RPC to detect
+    // hotkey on the replica automatically
+    std::vector<std::array<int, 2>> _hotpartition_counter;
 
     friend class hotspot_partition_test;
 };

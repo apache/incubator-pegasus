@@ -19,15 +19,25 @@
 
 #include "pegasus_server_test_base.h"
 #include <gtest/gtest.h>
+#include <dsn/utility/fail_point.h>
 
 namespace pegasus {
 namespace server {
 
+DSN_DECLARE_int32(occurrence_threshold);
+
 class hotspot_partition_test : public pegasus_server_test_base
 {
 public:
-    hotspot_partition_test() : calculator("TEST", 8){};
+    hotspot_partition_test() : calculator("TEST", 8)
+    {
+        dsn::fail::setup();
+        dsn::fail::cfg("send_hotkey_detect_request", "return()");
+    };
+    ~hotspot_partition_test() { dsn::fail::teardown(); }
+
     hotspot_partition_calculator calculator;
+
     std::vector<row_data> generate_row_data()
     {
         std::vector<row_data> test_rows;
@@ -38,6 +48,12 @@ public:
         }
         return test_rows;
     }
+
+    std::vector<std::array<int, 2>> generate_result()
+    {
+        return {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}};
+    }
+
     std::vector<std::vector<double>> get_calculator_result(const hot_partition_counters &counters)
     {
         std::vector<std::vector<double>> result;
@@ -49,15 +65,28 @@ public:
         }
         return result;
     }
+
     void test_policy_in_scenarios(std::vector<row_data> scenario,
-                                  std::vector<std::vector<double>> &expect_result,
-                                  hotspot_partition_calculator &calculator)
+                                  std::vector<std::vector<double>> &expect_result)
     {
         calculator.data_aggregate(std::move(scenario));
         calculator.data_analyse();
         std::vector<std::vector<double>> result = get_calculator_result(calculator._hot_points);
         ASSERT_EQ(result, expect_result);
     }
+
+    void aggregate_analyse_data(std::vector<row_data> scenario,
+                                std::vector<std::array<int, 2>> &expect_result,
+                                int loop_times)
+    {
+        for (int i = 0; i < loop_times; i++) {
+            calculator.data_aggregate(scenario);
+            calculator.data_analyse();
+        }
+        ASSERT_EQ(calculator._hotpartition_counter, expect_result);
+    }
+
+    void clear_calculator_histories() { calculator._partitions_stat_histories.clear(); }
 };
 
 TEST_F(hotspot_partition_test, hotspot_partition_policy)
@@ -66,7 +95,7 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     std::vector<row_data> test_rows = generate_row_data();
     std::vector<std::vector<double>> expect_vector = {{0, 0, 0, 0, 0, 0, 0, 0},
                                                       {0, 0, 0, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector, calculator);
+    test_policy_in_scenarios(test_rows, expect_vector);
 
     // Insert hotspot scenario_0 data to test
     test_rows = generate_row_data();
@@ -75,14 +104,14 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 0, 0, 0, 0, 4}, {4, 0, 0, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector, calculator);
+    test_policy_in_scenarios(test_rows, expect_vector);
 
     // Insert hotspot scenario_0 data to test again
     test_rows = generate_row_data();
     test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 0, 0, 0, 0, 4}, {4, 0, 0, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector, calculator);
+    test_policy_in_scenarios(test_rows, expect_vector);
 
     // Insert hotspot scenario_1 data to test again
     test_rows = generate_row_data();
@@ -91,7 +120,25 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     test_rows[HOT_SCENARIO_1_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_1_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 4, 0, 0, 0, 0}, {0, 0, 4, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector, calculator);
+    test_policy_in_scenarios(test_rows, expect_vector);
+    clear_calculator_histories();
+}
+
+TEST_F(hotspot_partition_test, send_hotkey_detect_request)
+{
+    const int READ_HOT_PARTITION = 7;
+    const int WRITE_HOT_PARTITION = 0;
+    std::vector<row_data> test_rows = generate_row_data();
+    test_rows[READ_HOT_PARTITION].get_qps = 5000.0;
+    test_rows[WRITE_HOT_PARTITION].put_qps = 5000.0;
+    auto expect_result = generate_result();
+    expect_result[READ_HOT_PARTITION][0] = FLAGS_occurrence_threshold;
+    expect_result[WRITE_HOT_PARTITION][1] = FLAGS_occurrence_threshold;
+    aggregate_analyse_data(test_rows, expect_result, FLAGS_occurrence_threshold);
+    const int back_to_normal = 30;
+    expect_result[READ_HOT_PARTITION][0] = FLAGS_occurrence_threshold - back_to_normal;
+    expect_result[WRITE_HOT_PARTITION][1] = FLAGS_occurrence_threshold - back_to_normal;
+    aggregate_analyse_data(generate_row_data(), expect_result, back_to_normal);
 }
 
 } // namespace server

@@ -29,6 +29,7 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/tool-api/task_tracker.h>
 #include "pegasus_read_service.h"
+#include <dsn/utility/fail_point.h>
 
 namespace pegasus {
 namespace server {
@@ -41,6 +42,22 @@ DSN_DEFINE_int64("pegasus.collector",
                  "queue design is used to "
                  "eliminate outdated historical "
                  "data");
+
+DSN_DEFINE_bool("pegasus.collector",
+                enable_hotkey_detect,
+                false,
+                "auto detect hot key in the hot paritition");
+
+DSN_DEFINE_int32("pegasus.collector",
+                 hot_partition_threshold,
+                 3,
+                 "threshold of hotspot partition value, if app.stat.hotspots >= "
+                 "FLAGS_hotpartition_threshold, this partition is a hot partition");
+
+DSN_DEFINE_int32("pegasus.collector",
+                 occurrence_threshold,
+                 100,
+                 "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
@@ -128,15 +145,44 @@ void hotspot_partition_calculator::data_analyse()
         stat_histories_analyse(data_type, hot_points);
         update_hot_point(data_type, hot_points);
     }
+    if (!FLAGS_enable_hotkey_detect) {
+        return;
+    }
+    for (int data_type = 0; data_type <= 1; data_type++) {
+        detect_hotkey_in_hotpartition(data_type);
+    }
 }
 
-// TODO:（TangYanzhao) call this function to start hotkey detection
+void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
+{
+    for (int index = 0; index < _hot_points.size(); index++) {
+        if (_hot_points[index][data_type].get()->get_value() >= FLAGS_hot_partition_threshold) {
+            if (++_hotpartition_counter[index][data_type] >= FLAGS_occurrence_threshold) {
+                derror_f("Find a {} hot partition {}.{}",
+                         (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
+                         _app_name,
+                         index);
+                send_hotkey_detect_request(_app_name,
+                                           index,
+                                           (data_type == dsn::apps::hotkey_type::type::READ)
+                                               ? dsn::apps::hotkey_type::type::READ
+                                               : dsn::apps::hotkey_type::type::WRITE,
+                                           dsn::apps::hotkey_detect_action::type::START);
+            }
+        } else {
+            _hotpartition_counter[index][data_type] =
+                std::max(_hotpartition_counter[index][data_type] - 1, 0);
+        }
+    }
+}
+
 /*static*/ void hotspot_partition_calculator::send_hotkey_detect_request(
     const std::string &app_name,
     const uint64_t partition_index,
     const dsn::apps::hotkey_type::type hotkey_type,
     const dsn::apps::hotkey_detect_action::type action)
 {
+    FAIL_POINT_INJECT_F("send_hotkey_detect_request", [](dsn::string_view) {});
     auto request = std::make_unique<dsn::apps::hotkey_detect_request>();
     request->type = hotkey_type;
     request->action = action;
