@@ -73,7 +73,6 @@ private:
     std::vector<std::array<int, 2>> _hotpartition_counter;
 
     friend class hotspot_partition_test;
-    FRIEND_TEST(hotspot_partition_test, send_hotkey_detect_request);
 };
 
 } // namespace server
