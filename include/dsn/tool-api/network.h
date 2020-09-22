@@ -207,6 +207,7 @@ public:
     static join_point<void, rpc_session *> on_rpc_session_connected;
     static join_point<void, rpc_session *> on_rpc_session_disconnected;
     static join_point<bool, message_ex *> on_rpc_recv_message;
+    static join_point<bool, message_ex *> on_rpc_send_message;
     /*@}*/
 public:
     rpc_session(connection_oriented_network &net,
@@ -232,6 +233,11 @@ public:
     bool cancel(message_ex *request);
     bool delay_recv(int delay_ms);
     bool on_recv_message(message_ex *msg, int delay_ms);
+    /// ret value:
+    ///    true  - pend succeed
+    ///    false - pend failed
+    bool try_pend_message(message_ex *msg);
+    void clear_pending_messages();
 
     /// interfaces for security authentication,
     /// you can ignore them if you don't enable auth
@@ -275,7 +281,10 @@ protected:
     volatile session_state _connect_state;
 
     bool negotiation_succeed = false;
-    // TODO(zlw): add send pending message
+    // when the negotiation of a session isn't succeed,
+    // all messages are queued in _pending_messages.
+    // after connected, all of them are moved to "_messages"
+    std::vector<message_ex *> _pending_messages;
 
     // messages are sent in batch, firstly all messages are linked together
     // in a doubly-linked list "_messages".

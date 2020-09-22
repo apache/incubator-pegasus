@@ -20,7 +20,6 @@
 #include "server_negotiation.h"
 
 #include <dsn/cpp/serverlet.h>
-#include <dsn/tool-api/zlocks.h>
 
 namespace dsn {
 namespace security {
@@ -33,6 +32,7 @@ public:
     static void on_rpc_connected(rpc_session *session);
     static void on_rpc_disconnected(rpc_session *session);
     static bool on_rpc_recv_msg(message_ex *msg);
+    static bool on_rpc_send_msg(message_ex *msg);
 
     void open_service();
 
@@ -42,7 +42,7 @@ private:
     friend class utils::singleton<negotiation_service>;
     friend class negotiation_service_test;
 
-    static zrwlock_nr _lock; // [
+    static utils::rw_lock_nr _lock; // [
     static negotiation_map _negotiations;
     //]
 };

@@ -24,7 +24,6 @@
  * THE SOFTWARE.
  */
 
-#include "runtime/security/negotiation_utils.h"
 #include "message_parser_manager.h"
 #include "runtime/rpc/rpc_engine.h"
 
@@ -40,9 +39,12 @@ namespace dsn {
     rpc_session::on_rpc_session_disconnected("rpc.session.disconnected");
 /*static*/ join_point<bool, message_ex *>
     rpc_session::on_rpc_recv_message("rpc.session.recv.message");
+/*static*/ join_point<bool, message_ex *>
+    rpc_session::on_rpc_send_message("rpc.session.send.message");
 
 rpc_session::~rpc_session()
 {
+    clear_pending_messages();
     clear_send_queue(false);
 
     {
@@ -250,8 +252,13 @@ int rpc_session::prepare_parser()
 void rpc_session::send_message(message_ex *msg)
 {
     msg->add_ref(); // released in on_send_completed
-
     msg->io_session = this;
+
+    // ignore msg if join point return false
+    if (dsn_unlikely(!on_rpc_send_message.execute(msg, true))) {
+        msg->release_ref();
+        return;
+    }
 
     dassert(_parser, "parser should not be null when send");
     _parser->prepare_on_send(msg);
@@ -262,11 +269,7 @@ void rpc_session::send_message(message_ex *msg)
         msg->dl.insert_before(&_messages);
         ++_message_count;
 
-        // Attention: here we only allow two cases to send message:
-        //  case 1: session's state is SS_CONNECTED
-        //  case 2: session is sending negotiation message
-        if ((SS_CONNECTED == _connect_state || security::is_negotiation_message(msg->rpc_code())) &&
-            !_is_sending_next) {
+        if ((SS_CONNECTED == _connect_state) && !_is_sending_next) {
             _is_sending_next = true;
             sig = _message_sent + 1;
             unlink_message_for_send();
@@ -397,7 +400,7 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
     msg->io_session = this;
 
     // ignore msg if join point return false
-    if (!on_rpc_recv_message.execute(msg, true)) {
+    if (dsn_unlikely(!on_rpc_recv_message.execute(msg, true))) {
         delete msg;
         return false;
     }
@@ -437,12 +440,45 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
     return true;
 }
 
-void rpc_session::set_negotiation_succeed()
+bool rpc_session::try_pend_message(message_ex *msg)
+{
+    // if negotiation is not succeed, we should pend msg,
+    // in order to resend it when the negotiation is succeed
+    if (dsn_unlikely(!negotiation_succeed)) {
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        if (!negotiation_succeed) {
+            msg->add_ref();
+            _pending_messages.push_back(msg);
+            return true;
+        }
+    }
+    return false;
+}
+
+void rpc_session::clear_pending_messages()
 {
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
-    negotiation_succeed = true;
+    for (auto msg : _pending_messages) {
+        msg->release_ref();
+    }
+    _pending_messages.clear();
+}
 
-    // todo(zlw): resend pending messages when negotiation is succeed
+void rpc_session::set_negotiation_succeed()
+{
+    std::vector<message_ex *> swapped_pending_msgs;
+    {
+        utils::auto_lock<utils::ex_lock_nr> l(_lock);
+        negotiation_succeed = true;
+
+        _pending_messages.swap(swapped_pending_msgs);
+    }
+
+    // resend the pending messages
+    for (auto msg : swapped_pending_msgs) {
+        send_message(msg);
+        msg->release_ref();
+    }
 }
 
 bool rpc_session::is_negotiation_succeed() const
@@ -451,7 +487,7 @@ bool rpc_session::is_negotiation_succeed() const
     // Because negotiation_succeed only transfered from false to true.
     // So if it is true now, it will not change in the later.
     // But if it is false now, maybe it will change soon. So we should use lock to protect it.
-    if (negotiation_succeed) {
+    if (dsn_likely(negotiation_succeed)) {
         return negotiation_succeed;
     } else {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);

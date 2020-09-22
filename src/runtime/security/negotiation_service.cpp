@@ -27,13 +27,18 @@ namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_auth);
 
+inline bool is_negotiation_message(dsn::task_code code)
+{
+    return code == RPC_NEGOTIATION || code == RPC_NEGOTIATION_ACK;
+}
+
 inline bool in_white_list(task_code code)
 {
     return is_negotiation_message(code) || fd::is_failure_detector_message(code);
 }
 
 negotiation_map negotiation_service::_negotiations;
-zrwlock_nr negotiation_service::_lock;
+utils::rw_lock_nr negotiation_service::_lock;
 
 negotiation_service::negotiation_service() : serverlet("negotiation_service") {}
 
@@ -56,7 +61,7 @@ void negotiation_service::on_negotiation_request(negotiation_rpc rpc)
 
     server_negotiation *srv_negotiation = nullptr;
     {
-        zauto_read_lock l(_lock);
+        utils::auto_read_lock l(_lock);
         srv_negotiation =
             static_cast<server_negotiation *>(_negotiations[rpc.dsn_request()->io_session].get());
     }
@@ -72,7 +77,7 @@ void negotiation_service::on_rpc_connected(rpc_session *session)
     std::unique_ptr<negotiation> nego = security::create_negotiation(session->is_client(), session);
     nego->start();
     {
-        zauto_write_lock l(_lock);
+        utils::auto_write_lock l(_lock);
         _negotiations[session] = std::move(nego);
     }
 }
@@ -80,7 +85,7 @@ void negotiation_service::on_rpc_connected(rpc_session *session)
 void negotiation_service::on_rpc_disconnected(rpc_session *session)
 {
     {
-        zauto_write_lock l(_lock);
+        utils::auto_write_lock l(_lock);
         _negotiations.erase(session);
     }
 }
@@ -90,6 +95,12 @@ bool negotiation_service::on_rpc_recv_msg(message_ex *msg)
     return in_white_list(msg->rpc_code()) || msg->io_session->is_negotiation_succeed();
 }
 
+bool negotiation_service::on_rpc_send_msg(message_ex *msg)
+{
+    // if try_pend_message return true, it means the msg is pended to the resend message queue
+    return in_white_list(msg->rpc_code()) || !msg->io_session->try_pend_message(msg);
+}
+
 void init_join_point()
 {
     rpc_session::on_rpc_session_connected.put_back(negotiation_service::on_rpc_connected,
@@ -97,6 +108,7 @@ void init_join_point()
     rpc_session::on_rpc_session_disconnected.put_back(negotiation_service::on_rpc_disconnected,
                                                       "security");
     rpc_session::on_rpc_recv_message.put_native(negotiation_service::on_rpc_recv_msg);
+    rpc_session::on_rpc_send_message.put_native(negotiation_service::on_rpc_send_msg);
 }
 } // namespace security
 } // namespace dsn
