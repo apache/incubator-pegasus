@@ -43,19 +43,6 @@ public:
                                       dsn::task_code code,
                                       const create_file_callback &cb,
                                       dsn::task_tracker *tracker) override;
-    //
-    // Attention:
-    //  delete file directly on fds, will not enter trash
-    //
-    virtual dsn::task_ptr delete_file(const delete_file_request &req,
-                                      dsn::task_code code,
-                                      const delete_file_callback &cb,
-                                      dsn::task_tracker *tracker) override;
-
-    virtual dsn::task_ptr exist(const exist_request &req,
-                                dsn::task_code code,
-                                const exist_callback &cb,
-                                dsn::task_tracker *tracker) override;
 
     //
     // Attention：

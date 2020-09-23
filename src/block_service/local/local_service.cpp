@@ -169,68 +169,6 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
     return tsk;
 }
 
-dsn::task_ptr local_service::delete_file(const delete_file_request &req,
-                                         dsn::task_code code,
-                                         const delete_file_callback &cb,
-                                         task_tracker *tracker)
-{
-    delete_file_future_ptr tsk(new delete_file_future(code, cb, 0));
-    tsk->set_tracker(tracker);
-
-    auto delete_file_background = [this, req, tsk]() {
-        delete_file_response resp;
-        resp.err = ERR_OK;
-        dinfo("delete file(%s)", req.file_name.c_str());
-
-        // delete the meta data file.
-        std::string meta_file = utils::filesystem::path_combine(_root, get_metafile(req.file_name));
-        if (utils::filesystem::file_exists(meta_file)) {
-            if (!utils::filesystem::remove_path(meta_file)) {
-                resp.err = ERR_FS_INTERNAL;
-            }
-        }
-
-        // if "delete meta data file ok" or "meta data file not found", then delete the real file
-        if (resp.err == ERR_OK) {
-            std::string file = utils::filesystem::path_combine(_root, req.file_name);
-            if (::dsn::utils::filesystem::file_exists(file)) {
-                if (!::dsn::utils::filesystem::remove_path(file)) {
-                    resp.err = ERR_FS_INTERNAL;
-                }
-            } else {
-                resp.err = ERR_OBJECT_NOT_FOUND;
-            }
-        }
-
-        tsk->enqueue_with(resp);
-    };
-
-    tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(delete_file_background));
-    return tsk;
-}
-
-dsn::task_ptr local_service::exist(const exist_request &req,
-                                   dsn::task_code code,
-                                   const exist_callback &cb,
-                                   task_tracker *tracker)
-{
-    exist_future_ptr tsk(new exist_future(code, cb, 0));
-    tsk->set_tracker(tracker);
-    auto exist_background = [this, req, tsk]() {
-        exist_response resp;
-        std::string meta_file = utils::filesystem::path_combine(_root, get_metafile(req.path));
-        if (utils::filesystem::path_exists(meta_file)) {
-            resp.err = ERR_OK;
-        } else {
-            resp.err = ERR_OBJECT_NOT_FOUND;
-        }
-        tsk->enqueue_with(resp);
-    };
-
-    tasking::enqueue(LPC_LOCAL_SERVICE_CALL, nullptr, std::move(exist_background));
-    return tsk;
-}
-
 dsn::task_ptr local_service::remove_path(const remove_path_request &req,
                                          dsn::task_code code,
                                          const remove_path_callback &cb,

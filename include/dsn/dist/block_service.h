@@ -89,56 +89,6 @@ typedef future_task<create_file_response> create_file_future;
 typedef dsn::ref_ptr<create_file_future> create_file_future_ptr;
 
 /**
- * @brief The delete_file_request struct, use to delete a file
- * file_name: a valid absolute path string, which "/" as splitter
- */
-struct delete_file_request
-{
-    std::string file_name;
-};
-
-/**
- * @brief The delete_file_response struct
- *  err: ERR_OK: delete file succeed
- *       ERR_OBJECT_NOT_FOUND: the file doesn't exist
- *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
- *          which we can't handle
- */
-struct delete_file_response
-{
-    dsn::error_code err;
-};
-typedef std::function<void(const delete_file_response &)> delete_file_callback;
-typedef future_task<delete_file_response> delete_file_future;
-typedef dsn::ref_ptr<delete_file_future> delete_file_future_ptr;
-
-/**
- * @brief The exist_request struct
- *  path: a valid absolute path string, which point to file or directory, which "/" as splitter
- */
-struct exist_request
-{
-    std::string path;
-};
-
-/**
- * @brief The exist_response struct
- *  err: ERR_OK: request succeed, path is exist
- *       ERR_OBJECT_NOT_FOUND, request succeed, path is not exist
- *       ERR_TIMEOUT: request timeout
- *       ERR_FS_INTERNAL: an internal error occured in the service implementation
- *          which we can't handle
- */
-struct exist_response
-{
-    dsn::error_code err;
-};
-typedef std::function<void(const exist_response &)> exist_callback;
-typedef future_task<exist_response> exist_future;
-typedef dsn::ref_ptr<exist_future> exist_future_ptr;
-
-/**
  * @brief The remove_path_request struct
  *  path: a valid absolute path string, which point to file or directory, which "/" as splitter
  *  recursive: if path point to a non-empty directory, and if recursive = true, then all the
@@ -331,30 +281,6 @@ public:
                                       const create_file_callback &cb,
                                       dsn::task_tracker *tracker = nullptr) = 0;
 
-    /**
-     * @brief delete_file
-     * @param req, ref {@link #delete_file_request}
-     * @param code, a task_code, describe how the callback executed
-     * @param callback, called when get the list result
-     * @param tracker
-     * @return a task which represent the async operation
-     */
-    virtual dsn::task_ptr delete_file(const delete_file_request &req,
-                                      dsn::task_code code,
-                                      const delete_file_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr) = 0;
-    /**
-     * @brief exist
-     * @param req, ref {@link #exist_request}
-     * @param code, a task_code, describe how the callback executed
-     * @param callback, called when get the list result
-     * @param tracker
-     * @return a task which represent the async operation
-     */
-    virtual dsn::task_ptr exist(const exist_request &req,
-                                dsn::task_code code,
-                                const exist_callback &cb,
-                                dsn::task_tracker *tracker = nullptr) = 0;
     /**
      * @brief remove_path
      * @param req, ref {@link #remove_path_request}

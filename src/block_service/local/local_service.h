@@ -24,16 +24,6 @@ public:
                                       const create_file_callback &cb,
                                       dsn::task_tracker *tracker = nullptr) override;
 
-    virtual dsn::task_ptr delete_file(const delete_file_request &req,
-                                      dsn::task_code code,
-                                      const delete_file_callback &cb,
-                                      dsn::task_tracker *tracker = nullptr) override;
-
-    virtual dsn::task_ptr exist(const exist_request &req,
-                                dsn::task_code code,
-                                const exist_callback &cb,
-                                dsn::task_tracker *tracker = nullptr) override;
-
     virtual dsn::task_ptr remove_path(const remove_path_request &req,
                                       dsn::task_code code,
                                       const remove_path_callback &cb,
