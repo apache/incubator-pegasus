@@ -31,7 +31,7 @@ type tableStatsHooksManager struct {
 	droppedHooks []HookAfterTableDropped
 }
 
-func (m *tableStatsHooksManager) afterTablStatsEmitted(stats []TableStats, allStat ClusterStats) {
+func (m *tableStatsHooksManager) afterTableStatsEmitted(stats []TableStats, allStat ClusterStats) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 

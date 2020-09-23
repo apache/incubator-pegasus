@@ -81,7 +81,7 @@ func (ag *tableStatsAggregator) aggregate() {
 		batchTableStats = append(batchTableStats, *table)
 	}
 	ag.aggregateClusterStats()
-	hooksManager.afterTablStatsEmitted(batchTableStats, *ag.allStats)
+	hooksManager.afterTableStatsEmitted(batchTableStats, *ag.allStats)
 }
 
 func (ag *tableStatsAggregator) aggregateClusterStats() {

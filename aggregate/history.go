@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+const (
+	historyMaxCapacity = 10
+)
+
 // threadSafeHistory is a time-ordered queue of stats.
 type threadSafeHistory struct {
 	lock sync.RWMutex
@@ -41,9 +45,10 @@ type historyStore struct {
 
 var globalHistoryStore = &historyStore{
 	tables:  make(map[int]*threadSafeHistory),
-	cluster: newHistory(5),
+	cluster: newHistory(historyMaxCapacity),
 }
 
+// SnapshotClusterStats takes a snapshot from the history and
 func SnapshotClusterStats() []ClusterStats {
 	s := globalHistoryStore
 
@@ -72,7 +77,7 @@ func initHistoryStore() {
 		for _, stat := range stats {
 			history, found := s.tables[stat.AppID]
 			if !found {
-				history = newHistory(10)
+				history = newHistory(historyMaxCapacity)
 				s.tables[stat.AppID] = history
 			}
 			history.emit(&stat)

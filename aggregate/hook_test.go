@@ -21,7 +21,7 @@ func TestAddHook(t *testing.T) {
 
 	ch := make(chan interface{})
 	go func() {
-		hooksManager.afterTablStatsEmitted([]TableStats{t1, t2}, all)
+		hooksManager.afterTableStatsEmitted([]TableStats{t1, t2}, all)
 		ch <- nil
 	}()
 	<-ch
