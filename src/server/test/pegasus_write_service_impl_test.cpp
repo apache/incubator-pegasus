@@ -217,5 +217,31 @@ TEST_F(incr_test, invalid_incr)
     ASSERT_EQ(resp.new_value, 100);
 }
 
+TEST_F(incr_test, fail_on_get)
+{
+    dsn::fail::setup();
+    dsn::fail::cfg("db_get", "100%1*return()");
+    // when db_get failed, incr should return an error.
+
+    req.increment = 10;
+    _write_impl->incr(1, req, resp);
+    ASSERT_EQ(resp.error, FAIL_DB_GET);
+
+    dsn::fail::teardown();
+}
+
+TEST_F(incr_test, fail_on_put)
+{
+    dsn::fail::setup();
+    dsn::fail::cfg("db_write_batch_put", "100%1*return()");
+    // when rocksdb put failed, incr should return an error.
+
+    req.increment = 10;
+    _write_impl->incr(1, req, resp);
+    ASSERT_EQ(resp.error, FAIL_DB_WRITE_BATCH_PUT);
+
+    dsn::fail::teardown();
+}
+
 } // namespace server
 } // namespace pegasus
