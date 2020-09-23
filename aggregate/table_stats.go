@@ -34,7 +34,9 @@ type TableStats struct {
 	Stats map[string]float64
 }
 
-// ClusterStats is the aggregated metrics for all the tables in this cluster.
+// ClusterStats is the aggregated metrics for all the TableStats in this cluster.
+// For example, 3 tables with "write_qps" [25, 70, 100] are summed up to
+// `Stats: {"write_qps" : 195}`.
 type ClusterStats struct {
 	Timestamp time.Time
 

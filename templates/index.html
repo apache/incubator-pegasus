@@ -9,21 +9,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.0/css/bulma.min.css">
 </head>
 
-<nav class="navbar is-info" style="padding-left: 2rem;">
+<nav class="navbar is-light" style="padding-left: 2rem;">
     <div class="navbar-brand">
         <a class="navbar-item" href="/"><strong>Pegasus Collector</strong></a>
     </div>
-    <div class="navbar-menu">
-        <div class="navbar-start">
-            <a class="navbar-item" href="/tables">
-                Tables
-            </a>
-        </div>
-    </div>
 </nav>
 <main>
-    <div class="container" style="padding: 1rem;">
-        <table class="table is-bordered is-striped">
+    <div class="container" style="padding: 3rem;">
+        <h1 class="title" style="padding-bottom: 1rem;">Cluster Stats</h1>
+        <table class="table is-bordered is-striped is-fullwidth">
             <thead>
                 <tr>
                     <th>Perf-Counter</th>
@@ -39,6 +33,24 @@
                     {{range .Values}}
                     <td>{{.}}</td>
                     {{end}}
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    <div class="container" style="padding: 3rem;">
+        <h1 class="title" style="padding-bottom: 1rem;">Tables</h1>
+        <table class="table is-bordered is-striped is-fullwidth">
+            <thead>
+                <tr>
+                    <th>Table Name</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Tables}}
+                <tr>
+                    <td>{{.TableName}}</td>
                 </tr>
                 {{end}}
             </tbody>

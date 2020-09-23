@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/pegasus-kv/collector/aggregate"
+	"github.com/pegasus-kv/collector/usage"
 	"github.com/pegasus-kv/collector/webui"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -71,6 +72,10 @@ func main() {
 	})
 	tom.Go(func() error {
 		aggregate.NewTableStatsAggregator().Start(tom)
+		return nil
+	})
+	tom.Go(func() error {
+		usage.NewTableUsageRecorder().Start(tom)
 		return nil
 	})
 	select {

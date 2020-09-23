@@ -60,6 +60,10 @@ func SnapshotClusterStats() []ClusterStats {
 }
 
 func init() {
+	initHistoryStore()
+}
+
+func initHistoryStore() {
 	AddHookAfterTableStatEmitted(func(stats []TableStats, allStat ClusterStats) {
 		s := globalHistoryStore
 
@@ -68,13 +72,14 @@ func init() {
 		for _, stat := range stats {
 			history, found := s.tables[stat.AppID]
 			if !found {
-				history = newHistory(5)
+				history = newHistory(10)
 				s.tables[stat.AppID] = history
 			}
 			history.emit(&stat)
 		}
 		s.cluster.emit(&allStat)
 	})
+
 	AddHookAfterTableDropped(func(appID int) {
 		s := globalHistoryStore
 

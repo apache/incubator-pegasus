@@ -4,7 +4,7 @@ import "sync"
 
 // HookAfterTableStatEmitted is a hook of event that new TableStats are generated.
 // Each call of the hook handles a batch of tables.
-type HookAfterTableStatEmitted func(stats []TableStats, allStat ClusterStats)
+type HookAfterTableStatEmitted func(stats []TableStats, allStats ClusterStats)
 
 // AddHookAfterTableStatEmitted adds a hook of event that a new TableStats is generated.
 func AddHookAfterTableStatEmitted(hk HookAfterTableStatEmitted) {
