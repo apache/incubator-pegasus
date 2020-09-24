@@ -48,7 +48,7 @@ See our documentation on [Pegasus Website][website].
 
 ## Client drivers
 
-Pegasus has support for serveral languages.
+Pegasus has support for serveral languages:
 
 - [Java](https://github.com/xiaomi/pegasus-java-client) (The most actively-developed)
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
@@ -56,6 +56,12 @@ Pegasus has support for serveral languages.
 - [Python](https://github.com/xiaomi/pegasus-python-client)
 - [Node.js](https://github.com/xiaomi/pegasus-nodejs-client)
 - [Scala](https://github.com/xiaomi/pegasus-scala-client)
+
+## Contact us
+
+- Send mails to Apache Pegasus dev mailing list: dev@pegasus.apache.org. This is officially where topics around development, community, and problems are discussed. Please remember to subsribe the mail list via dev-subscribe@pegasus.apache.org.
+
+- Github Issues: submit an issue when you have any idea to improve Pegasus, and when you encountered some bugs or problems.
 
 ## Related Projects
 
