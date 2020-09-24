@@ -6,15 +6,27 @@ import com.xiaomi.infra.pegasus.base.blob;
 import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.operator.negotiation_operator;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
+import java.util.HashMap;
+import javax.security.auth.Subject;
+import javax.security.sasl.Sasl;
 import org.slf4j.Logger;
 
 public class Negotiation {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(Negotiation.class);
   private negotiation_status status;
   private ReplicaSession session;
+  private String serviceName; // used for SASL authentication
+  private String serviceFqdn; // name used for SASL authentication
+  private final HashMap<String, Object> props = new HashMap<String, Object>();
+  private final Subject subject;
 
-  public Negotiation(ReplicaSession session) {
+  public Negotiation(
+      ReplicaSession session, Subject subject, String serviceName, String serviceFqdn) {
     this.session = session;
+    this.subject = subject;
+    this.serviceName = serviceName;
+    this.serviceFqdn = serviceFqdn;
+    this.props.put(Sasl.QOP, "auth");
   }
 
   public void start() {

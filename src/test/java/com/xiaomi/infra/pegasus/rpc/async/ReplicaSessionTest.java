@@ -15,6 +15,7 @@ import com.xiaomi.infra.pegasus.operator.rrdb_get_operator;
 import com.xiaomi.infra.pegasus.operator.rrdb_put_operator;
 import com.xiaomi.infra.pegasus.rpc.KeyHasher;
 import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession.ConnState;
+import com.xiaomi.infra.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import com.xiaomi.infra.pegasus.tools.Toollet;
 import com.xiaomi.infra.pegasus.tools.Tools;
 import io.netty.channel.EventLoopGroup;
@@ -279,7 +280,8 @@ public class ReplicaSessionTest {
 
     long start = System.currentTimeMillis();
     EventLoopGroup rpcGroup = new NioEventLoopGroup(4);
-    ReplicaSession rs = new ReplicaSession(addr, rpcGroup, 1000, false);
+    ReplicaSession rs =
+        new ReplicaSession(addr, rpcGroup, 1000, (ReplicaSessionInterceptorManager) null);
     rs.tryConnect().awaitUninterruptibly();
     long end = System.currentTimeMillis();
     Assert.assertEquals((end - start) / 1000, 1); // ensure connect failed within 1sec

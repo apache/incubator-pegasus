@@ -16,7 +16,7 @@ import com.xiaomi.infra.pegasus.replication.query_cfg_response;
 import com.xiaomi.infra.pegasus.rpc.InternalTableOptions;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.Table;
-import com.xiaomi.infra.pegasus.rpc.interceptor.InterceptorManager;
+import com.xiaomi.infra.pegasus.rpc.interceptor.TableInterceptorManager;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.EventExecutor;
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class TableHandler extends Table {
   AtomicBoolean inQuerying_;
   long lastQueryTime_;
   int backupRequestDelayMs;
-  private InterceptorManager interceptorManager;
+  private TableInterceptorManager interceptorManager;
 
   public TableHandler(ClusterManager mgr, String name, InternalTableOptions internalTableOptions)
       throws ReplicationException {
@@ -109,7 +109,7 @@ public class TableHandler extends Table {
     inQuerying_ = new AtomicBoolean(false);
     lastQueryTime_ = 0;
 
-    this.interceptorManager = new InterceptorManager(internalTableOptions.tableOptions());
+    this.interceptorManager = new TableInterceptorManager(internalTableOptions.tableOptions());
   }
 
   public ReplicaConfiguration getReplicaConfig(int index) {

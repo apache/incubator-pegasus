@@ -10,7 +10,7 @@ import org.mockito.Mockito;
 public class NegotiationTest {
   @Test
   public void testStart() {
-    Negotiation negotiation = new Negotiation(null);
+    Negotiation negotiation = new Negotiation(null, null, "", "");
     Negotiation mockNegotiation = Mockito.spy(negotiation);
 
     Mockito.doNothing().when(mockNegotiation).send(any(), any());

@@ -6,6 +6,7 @@ package com.xiaomi.infra.pegasus.rpc.async;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -39,10 +40,13 @@ public class ReplicaSession {
   }
 
   public ReplicaSession(
-      rpc_address address, EventLoopGroup rpcGroup, int socketTimeout, boolean enableAuth) {
+      rpc_address address,
+      EventLoopGroup rpcGroup,
+      int socketTimeout,
+      ReplicaSessionInterceptorManager interceptorManager) {
     this.address = address;
     this.rpcGroup = rpcGroup;
-    this.enableAuth = enableAuth;
+    this.interceptorManager = interceptorManager;
 
     final ReplicaSession this_ = this;
     boot = new Bootstrap();
@@ -74,7 +78,7 @@ public class ReplicaSession {
       EventLoopGroup rpcGroup,
       int socketTimeout,
       MessageResponseFilter filter) {
-    this(address, rpcGroup, socketTimeout, false);
+    this(address, rpcGroup, socketTimeout, (ReplicaSessionInterceptorManager) null);
     this.filter = filter;
   }
 
@@ -209,19 +213,12 @@ public class ReplicaSession {
     }
   }
 
-  private void startNegotiation(Channel activeChannel) {
-    if (enableAuth) {
-      negotiation = new Negotiation(this);
-      negotiation.start();
-    } else {
-      markSessionConnected(activeChannel);
-    }
-  }
-
   private void markSessionConnected(Channel activeChannel) {
     VolatileFields newCache = new VolatileFields();
     newCache.state = ConnState.CONNECTED;
     newCache.nettyChannel = activeChannel;
+
+    interceptorManager.onConnected(this);
 
     synchronized (pendingSend) {
       if (fields.state != ConnState.CONNECTING) {
@@ -379,7 +376,7 @@ public class ReplicaSession {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
       logger.info("Channel {} for session {} is active", ctx.channel().toString(), name());
-      startNegotiation(ctx.channel());
+      markSessionConnected(ctx.channel());
     }
 
     @Override
@@ -432,8 +429,7 @@ public class ReplicaSession {
   private final rpc_address address;
   private Bootstrap boot;
   private EventLoopGroup rpcGroup;
-  private boolean enableAuth;
-  private Negotiation negotiation;
+  private ReplicaSessionInterceptorManager interceptorManager;
 
   // Session will be actively closed if all the rpcs across `sessionResetTimeWindowMs`
   // are timed out, in that case we suspect that the server is unavailable.
