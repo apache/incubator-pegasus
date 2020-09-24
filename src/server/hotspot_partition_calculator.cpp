@@ -183,7 +183,7 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     const dsn::apps::hotkey_detect_action::type action)
 {
     FAIL_POINT_INJECT_F("send_hotkey_detect_request", [](dsn::string_view) {});
-    auto request = std::make_unique<dsn::apps::hotkey_detect_request>();
+    auto request = dsn::make_unique<dsn::apps::hotkey_detect_request>();
     request->type = hotkey_type;
     request->action = action;
     ddebug_f("{} {} hotkey detection in {}.{}",
