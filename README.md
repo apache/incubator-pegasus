@@ -16,7 +16,7 @@ Please use [releases][github-release] instead of the `master` branch in order to
 
 Apache Pegasus is a distributed key-value storage system which is designed to be:
 
-- **horizontally scalable** distributed using hash-based partitioning
+- **horizontally scalable**: distributed using hash-based partitioning
 - **strongly consistent**: ensured by [PacificA][PacificA] consensus protocol
 - **high-performance**: using [RocksDB][pegasus-rocksdb] as underlying storage engine
 - **simple**: well-defined, easy-to-use APIs
@@ -50,7 +50,7 @@ See our documentation on [Pegasus Website][website].
 
 Pegasus has support for serveral languages:
 
-- [Java](https://github.com/xiaomi/pegasus-java-client) (The most actively-developed)
+- [Java](https://github.com/xiaomi/pegasus-java-client)
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
 - [Go](https://github.com/xiaomi/pegasus-go-client)
 - [Python](https://github.com/xiaomi/pegasus-python-client)
@@ -59,7 +59,7 @@ Pegasus has support for serveral languages:
 
 ## Contact us
 
-- Send mails to Apache Pegasus dev mailing list: dev@pegasus.apache.org. This is officially where topics around development, community, and problems are discussed. Please remember to subsribe the mail list via dev-subscribe@pegasus.apache.org.
+- Send mails to Apache Pegasus dev mailing list: dev@pegasus.apache.org. This is the place where topics around development, community, and problems are officially discussed. Please remember to subsribe the mail list via dev-subscribe@pegasus.apache.org.
 
 - Github Issues: submit an issue when you have any idea to improve Pegasus, and when you encountered some bugs or problems.
 
