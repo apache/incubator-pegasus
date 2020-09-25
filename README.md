@@ -68,7 +68,6 @@ Pegasus has support for serveral languages:
 Submodules:
 
 - [rDSN](https://github.com/xiaomi/rdsn)
-- [RocksDB](https://github.com/xiaomi/pegasus-rocksdb)
 
 Test tools:
 
