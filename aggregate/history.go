@@ -48,7 +48,7 @@ var globalHistoryStore = &historyStore{
 	cluster: newHistory(historyMaxCapacity),
 }
 
-// SnapshotClusterStats takes a snapshot from the history and
+// SnapshotClusterStats takes a snapshot from the history. The returned array is ordered by time.
 func SnapshotClusterStats() []ClusterStats {
 	s := globalHistoryStore
 

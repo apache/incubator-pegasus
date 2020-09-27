@@ -28,7 +28,7 @@ type pegasusDetector struct {
 	detectInterval  time.Duration
 	detectTableName string
 
-	// timeout of a single failure detection RPC
+	// timeout of a single detect
 	detectTimeout time.Duration
 
 	detectHashKeys [][]byte

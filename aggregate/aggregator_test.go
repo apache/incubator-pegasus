@@ -14,8 +14,8 @@ func TestUpdateLocalTableMap(t *testing.T) {
 	}
 	ag.updateTableMap()
 	assert.Equal(t, len(ag.tables), 2)
-	assert.Equal(t, len(ag.tables[1].Partitions), 4)
-	assert.Equal(t, len(ag.tables[2].Partitions), 8)
+	assert.Equal(t, len(ag.tables[1].Partitions), 4) // test
+	assert.Equal(t, len(ag.tables[2].Partitions), 8) // stat
 
 	tables := []*client.TableInfo{
 		{AppID: 1, TableName: "stat", PartitionCount: 4},
