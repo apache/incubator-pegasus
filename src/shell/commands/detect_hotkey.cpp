@@ -26,26 +26,18 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              int partition_index,
                              std::string &err_info)
 {
-    std::string hotkey_action_check = hotkey_action;
-    std::string hotkey_type_check = hotkey_type;
-    std::transform(
-        hotkey_type_check.begin(), hotkey_type_check.end(), hotkey_type_check.begin(), tolower);
-    std::transform(hotkey_action_check.begin(),
-                   hotkey_action_check.end(),
-                   hotkey_action_check.begin(),
-                   tolower);
-    if (hotkey_type_check == "read") {
+    if (std::strcasecmp(hotkey_type, "read")) {
         req.type = dsn::replication::hotkey_type::type::READ;
-    } else if (hotkey_type_check == "write") {
+    } else if (std::strcasecmp(hotkey_type, "write")) {
         req.type = dsn::replication::hotkey_type::type::WRITE;
     } else {
         err_info = fmt::format("\"{}\" is an invalid hotkey type (should be 'read' or 'write')\n",
                                hotkey_type);
         return false;
     }
-    if (hotkey_action_check == "start") {
+    if (std::strcasecmp(hotkey_action, "start")) {
         req.action = dsn::replication::detect_action::START;
-    } else if (hotkey_action_check == "stop") {
+    } else if (std::strcasecmp(hotkey_action, "stop")) {
         req.action = dsn::replication::detect_action::STOP;
     } else {
         err_info =
