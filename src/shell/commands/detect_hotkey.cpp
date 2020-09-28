@@ -33,7 +33,7 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
     std::transform(hotkey_action_check.begin(),
                    hotkey_action_check.end(),
                    hotkey_action_check.begin(),
-                   ::tolower);
+                   tolower);
     if (hotkey_type_check == "read") {
         req.type = dsn::replication::hotkey_type::type::READ;
     } else if (hotkey_type_check == "write") {
