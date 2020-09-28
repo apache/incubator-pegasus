@@ -1546,7 +1546,7 @@ void replication_ddl_client::query_disk_info(
         query_disk_info_rpcs.emplace(target,
                                      query_disk_info_rpc(std::move(request), RPC_QUERY_DISK_INFO));
     }
-    call_rpcs_async(query_disk_info_rpcs, resps);
+    call_rpcs_sync(query_disk_info_rpcs, resps);
 }
 
 error_with<start_bulk_load_response>
@@ -1578,6 +1578,19 @@ replication_ddl_client::query_bulk_load(const std::string &app_name)
     auto req = make_unique<query_bulk_load_request>();
     req->app_name = app_name;
     return call_rpc_sync(query_bulk_load_rpc(std::move(req), RPC_CM_QUERY_BULK_LOAD_STATUS));
+}
+
+error_code replication_ddl_client::detect_hotkey(const dsn::rpc_address &target,
+                                                 detect_hotkey_request &req,
+                                                 detect_hotkey_response &resp)
+{
+    std::map<dsn::rpc_address, detect_hotkey_rpc> detect_hotkey_rpcs;
+    auto request = make_unique<detect_hotkey_request>(req);
+    detect_hotkey_rpcs.emplace(target, detect_hotkey_rpc(std::move(request), RPC_DETECT_HOTKEY));
+    std::map<dsn::rpc_address, error_with<detect_hotkey_response>> resps;
+    call_rpcs_sync(detect_hotkey_rpcs, resps);
+    resp = resps.begin()->second.get_value();
+    return resps.begin()->second.get_error().code();
 }
 
 } // namespace replication

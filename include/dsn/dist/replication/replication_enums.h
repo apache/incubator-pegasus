@@ -88,4 +88,14 @@ ENUM_REG(replication::ingestion_status::IS_RUNNING)
 ENUM_REG(replication::ingestion_status::IS_SUCCEED)
 ENUM_REG(replication::ingestion_status::IS_FAILED)
 ENUM_END2(replication::ingestion_status::type, ingestion_status)
+
+ENUM_BEGIN2(replication::hotkey_type::type, hotkey_type, replication::hotkey_type::READ)
+ENUM_REG(replication::hotkey_type::READ)
+ENUM_REG(replication::hotkey_type::WRITE)
+ENUM_END2(replication::hotkey_type::type, hotkey_type)
+
+ENUM_BEGIN2(replication::detect_action::type, detect_action, replication::detect_action::START)
+ENUM_REG(replication::detect_action::START)
+ENUM_REG(replication::detect_action::STOP)
+ENUM_END2(replication::detect_action::type, detect_action)
 }

@@ -1071,6 +1071,33 @@ struct query_bulk_load_response
     7:optional string                                       hint_msg;
 }
 
+enum hotkey_type
+{
+    READ,
+    WRITE
+}
+
+enum detect_action
+{
+    START,
+    STOP
+}
+
+struct detect_hotkey_request {
+    1: hotkey_type type
+    2: detect_action action
+    3: dsn.gpid pid;
+}
+
+struct detect_hotkey_response {
+    // Possible error:
+    // - ERR_OK: start/stop hotkey detect succeed
+    // - ERR_OBJECT_NOT_FOUND: replica not found
+    // - ERR_SERVICE_ALREADY_EXIST: hotkey detection is running now
+    1: dsn.error_code err;
+    2: optional string err_hint;
+}
+
 /*
 service replica_s
 {
