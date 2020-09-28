@@ -69,6 +69,7 @@ bool validate_ip(shell_context *sc,
         if (ip_str == node.first.to_std_string()) {
             target_address = node.first;
             not_find_ip = false;
+            break;
         }
     }
     if (not_find_ip) {

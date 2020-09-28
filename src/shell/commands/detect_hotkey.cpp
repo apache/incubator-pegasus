@@ -76,6 +76,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
             cmd({"-a", "--app_id"}).str());
         return false;
     }
+
     int partition_index;
     if (!dsn::buf2int32(cmd({"-p", "--partition_index"}).str(), partition_index)) {
         fmt::print(stderr,
@@ -84,8 +85,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
                    cmd({"-p", "--partition_index"}).str());
         return false;
     }
-    std::string hotkey_action = cmd({"-c", "--hotkey_action"}).str();
-    std::string hotkey_type = cmd({"-t", "--hotkey_type"}).str();
+
     dsn::rpc_address target_address;
     std::string err_info;
 
@@ -94,6 +94,8 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
+    std::string hotkey_action = cmd({"-c", "--hotkey_action"}).str();
+    std::string hotkey_type = cmd({"-t", "--hotkey_type"}).str();
     dsn::replication::detect_hotkey_request req;
     if (!generate_hotkey_request(
             req, hotkey_action, hotkey_type, app_id, partition_index, err_info)) {
