@@ -16,7 +16,8 @@
 // under the License.
 
 #include "shell/commands.h"
-#include "shell/validate_utils.h"
+#include "shell/argh.h"
+#include "shell/command_helper.h"
 #include <dsn/dist/replication/replication_types.h>
 
 bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
@@ -26,18 +27,18 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              int partition_index,
                              std::string &err_info)
 {
-    if (std::strcasecmp(hotkey_type, "read")) {
+    if (strcasecmp(hotkey_type.c_str(), "read")) {
         req.type = dsn::replication::hotkey_type::type::READ;
-    } else if (std::strcasecmp(hotkey_type, "write")) {
+    } else if (strcasecmp(hotkey_type.c_str(), "write")) {
         req.type = dsn::replication::hotkey_type::type::WRITE;
     } else {
         err_info = fmt::format("\"{}\" is an invalid hotkey type (should be 'read' or 'write')\n",
                                hotkey_type);
         return false;
     }
-    if (std::strcasecmp(hotkey_action, "start")) {
+    if (strcasecmp(hotkey_action.c_str(), "start")) {
         req.action = dsn::replication::detect_action::START;
-    } else if (std::strcasecmp(hotkey_action, "stop")) {
+    } else if (strcasecmp(hotkey_action.c_str(), "stop")) {
         req.action = dsn::replication::detect_action::STOP;
     } else {
         err_info =
@@ -52,7 +53,8 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
 // TODO: (Tangyanzhao) merge hotspot_partition_calculator::send_detect_hotkey_request
 bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 {
-    // detect_hotkey [-a|--app_id] [-p|--partition_index][-c|--hotkey_action][-t|--hotkey_type]
+    // detect_hotkey
+    // [-a|--app_id][-p|--partition_index][-c|--hotkey_action][-t|--hotkey_type][-d|--address]
     const std::set<std::string> &params = {"a",
                                            "app_id",
                                            "p",
@@ -87,13 +89,13 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     }
 
     dsn::rpc_address target_address;
-    std::string err_info;
-
-    if (!validate_ip(sc, cmd({"-d", "--address"}).str(), target_address, err_info)) {
-        fmt::print(stderr, err_info);
+    std::string ip_str = cmd({"-d", "--address"}).str();
+    if (!target_address.from_string_ipv4(ip_str.c_str())) {
+        fmt::print("invalid ip, error={} \n", ip_str);
         return false;
     }
 
+    std::string err_info;
     std::string hotkey_action = cmd({"-c", "--hotkey_action"}).str();
     std::string hotkey_type = cmd({"-t", "--hotkey_type"}).str();
     dsn::replication::detect_hotkey_request req;

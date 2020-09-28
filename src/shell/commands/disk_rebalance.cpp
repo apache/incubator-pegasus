@@ -5,7 +5,7 @@
 #include "shell/commands.h"
 #include "shell/argh.h"
 #include "shell/command_output.h"
-#include "shell/validate_utils.h"
+#include "shell/command_helper.h"
 
 #include <math.h>
 #include <fmt/ostream.h>

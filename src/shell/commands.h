@@ -25,7 +25,6 @@
 #include <pegasus/error.h>
 
 #include "command_executor.h"
-#include "command_utils.h"
 #include "command_helper.h"
 #include "args.h"
 

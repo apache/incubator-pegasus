@@ -5,6 +5,43 @@
 #pragma once
 
 #include <map>
+#include <string>
+#include <set>
+
+#include "shell/argh.h"
+#include <dsn/dist/fmt_logging.h>
+#include "command_executor.h"
+
+inline bool validate_cmd(const argh::parser &cmd,
+                         const std::set<std::string> &params,
+                         const std::set<std::string> &flags)
+{
+    if (cmd.size() > 1) {
+        fmt::print(stderr, "too many params!\n");
+        return false;
+    }
+
+    for (const auto &param : cmd.params()) {
+        if (params.find(param.first) == params.end()) {
+            fmt::print(stderr, "unknown param {} = {}\n", param.first, param.second);
+            return false;
+        }
+    }
+
+    for (const auto &flag : cmd.flags()) {
+        if (params.find(flag) != params.end()) {
+            fmt::print(stderr, "missing value of {}\n", flag);
+            return false;
+        }
+
+        if (flags.find(flag) == flags.end()) {
+            fmt::print(stderr, "unknown flag {}\n", flag);
+            return false;
+        }
+    }
+
+    return true;
+}
 
 #define verify_logged(exp, ...)                                                                    \
     do {                                                                                           \
