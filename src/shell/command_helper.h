@@ -35,6 +35,7 @@
 
 #include "command_executor.h"
 #include "command_utils.h"
+#include "validate_utils.h"
 
 using namespace dsn::replication;
 

@@ -5,44 +5,13 @@
 #include "shell/commands.h"
 #include "shell/argh.h"
 #include "shell/command_output.h"
+#include "shell/validate_utils.h"
 
 #include <math.h>
 #include <fmt/ostream.h>
 #include <dsn/utility/errors.h>
 #include <dsn/utility/output_utils.h>
-#include <dsn/utility/string_conv.h>
 #include <dsn/dist/replication/duplication_common.h>
-
-bool validate_cmd(const argh::parser &cmd,
-                  const std::set<std::string> &params,
-                  const std::set<std::string> &flags)
-{
-    if (cmd.size() > 1) {
-        fmt::print(stderr, "too many params!\n");
-        return false;
-    }
-
-    for (const auto &param : cmd.params()) {
-        if (params.find(param.first) == params.end()) {
-            fmt::print(stderr, "unknown param {} = {}\n", param.first, param.second);
-            return false;
-        }
-    }
-
-    for (const auto &flag : cmd.flags()) {
-        if (params.find(flag) != params.end()) {
-            fmt::print(stderr, "missing value of {}\n", flag);
-            return false;
-        }
-
-        if (flags.find(flag) == flags.end()) {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
-    }
-
-    return true;
-}
 
 bool query_disk_info(
     shell_context *sc,

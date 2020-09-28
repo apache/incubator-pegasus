@@ -262,3 +262,7 @@ bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args);
 bool restart_bulk_load(command_executor *e, shell_context *sc, arguments args);
 
 bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+// == detect hotkey (see 'commands/detect_hotkey.cpp') == //
+
+bool detect_hotkey(command_executor *e, shell_context *sc, arguments args);
