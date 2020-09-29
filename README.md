@@ -3,7 +3,7 @@
 [pegasus-rocksdb]: https://github.com/xiaomi/pegasus-rocksdb
 [facebook-rocksdb]: https://github.com/facebook/rocksdb
 [hbase]: https://hbase.apache.org/
-[website]: https://pegasus-kv.github.io
+[website]: https://pegasus.apache.org
 
 ![pegasus-logo](docs/media-img/pegasus-logo.png)
 
