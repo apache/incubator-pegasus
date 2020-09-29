@@ -54,7 +54,8 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
 bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 {
     // detect_hotkey
-    // <-a|--app_id><-p|--partition_index><-c|--hotkey_action><-t|--hotkey_type><-d|--address>
+    // <-a|--app_id str><-p|--partition_index num><-t|--hotkey_type read|write>
+    // <-c|--detect_action start|stop><-d|--address str>
     const std::set<std::string> params = {"a",
                                           "app_id",
                                           "p",
@@ -73,19 +74,13 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     int app_id;
     if (!dsn::buf2int32(cmd({"-a", "--app_id"}).str(), app_id)) {
-        fmt::print(
-            stderr,
-            "\"{}\" is a invalid app_id, you should use `app` to check related information\n",
-            cmd({"-a", "--app_id"}).str());
+        fmt::print(stderr, "\"{}\" is an invalid num\n", cmd({"-a", "--app_id"}).str());
         return false;
     }
 
     int partition_index;
     if (!dsn::buf2int32(cmd({"-p", "--partition_index"}).str(), partition_index)) {
-        fmt::print(stderr,
-                   "\"{}\" is a invalid partition index, you should use `app` to check related "
-                   "information\n",
-                   cmd({"-p", "--partition_index"}).str());
+        fmt::print(stderr, "\"{}\" is an invalid num\n", cmd({"-p", "--partition_index"}).str());
         return false;
     }
 
