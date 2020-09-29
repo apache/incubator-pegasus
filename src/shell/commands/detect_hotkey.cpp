@@ -17,7 +17,6 @@
 
 #include "shell/commands.h"
 #include "shell/argh.h"
-#include "shell/command_helper.h"
 #include <dsn/dist/replication/replication_types.h>
 
 bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
@@ -36,6 +35,7 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                                hotkey_type);
         return false;
     }
+
     if (!strcasecmp(hotkey_action.c_str(), "start")) {
         req.action = dsn::replication::detect_action::START;
     } else if (!strcasecmp(hotkey_action.c_str(), "stop")) {
@@ -54,7 +54,7 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
 bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 {
     // detect_hotkey
-    // [-a|--app_id][-p|--partition_index][-c|--hotkey_action][-t|--hotkey_type][-d|--address]
+    // <-a|--app_id><-p|--partition_index><-c|--hotkey_action><-t|--hotkey_type><-d|--address>
     const std::set<std::string> params = {"a",
                                           "app_id",
                                           "p",

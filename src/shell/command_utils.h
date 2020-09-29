@@ -10,7 +10,6 @@
 
 #include "shell/argh.h"
 #include <dsn/dist/fmt_logging.h>
-#include "command_executor.h"
 
 inline bool validate_cmd(const argh::parser &cmd,
                          const std::set<std::string> &params,
