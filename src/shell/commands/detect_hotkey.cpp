@@ -27,18 +27,18 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              int partition_index,
                              std::string &err_info)
 {
-    if (strcasecmp(hotkey_type.c_str(), "read")) {
+    if (!strcasecmp(hotkey_type.c_str(), "read")) {
         req.type = dsn::replication::hotkey_type::type::READ;
-    } else if (strcasecmp(hotkey_type.c_str(), "write")) {
+    } else if (!strcasecmp(hotkey_type.c_str(), "write")) {
         req.type = dsn::replication::hotkey_type::type::WRITE;
     } else {
         err_info = fmt::format("\"{}\" is an invalid hotkey type (should be 'read' or 'write')\n",
                                hotkey_type);
         return false;
     }
-    if (strcasecmp(hotkey_action.c_str(), "start")) {
+    if (!strcasecmp(hotkey_action.c_str(), "start")) {
         req.action = dsn::replication::detect_action::START;
-    } else if (strcasecmp(hotkey_action.c_str(), "stop")) {
+    } else if (!strcasecmp(hotkey_action.c_str(), "stop")) {
         req.action = dsn::replication::detect_action::STOP;
     } else {
         err_info =
@@ -55,21 +55,22 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 {
     // detect_hotkey
     // [-a|--app_id][-p|--partition_index][-c|--hotkey_action][-t|--hotkey_type][-d|--address]
-    const std::set<std::string> &params = {"a",
-                                           "app_id",
-                                           "p",
-                                           "partition_index",
-                                           "c",
-                                           "hotkey_action",
-                                           "t",
-                                           "hotkey_type",
-                                           "d",
-                                           "address"};
+    const std::set<std::string> params = {"a",
+                                          "app_id",
+                                          "p",
+                                          "partition_index",
+                                          "c",
+                                          "hotkey_action",
+                                          "t",
+                                          "hotkey_type",
+                                          "d",
+                                          "address"};
     const std::set<std::string> flags = {};
     argh::parser cmd(args.argc, args.argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
     if (!validate_cmd(cmd, params, flags)) {
         return false;
     }
+
     int app_id;
     if (!dsn::buf2int32(cmd({"-a", "--app_id"}).str(), app_id)) {
         fmt::print(
@@ -125,8 +126,6 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
                    resp.err_hint);
         return false;
     }
-
-    fmt::print(stderr, "YES\n");
 
     return true;
 }
