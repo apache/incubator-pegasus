@@ -476,8 +476,8 @@ static command_executor commands[] = {
     },
     {
         "detect_hotkey",
-        "start or stop hotkey detection on the replica",
-        "<-a|--app_id str> "
+        "start or stop hotkey detection on a replica of a replica server",
+        "<-a|--app_id num> "
         "<-p|--partition_index num> "
         "<-t|--hotkey_type read|write> "
         "<-c|--detect_action start|stop> "
