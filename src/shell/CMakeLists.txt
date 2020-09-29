@@ -43,7 +43,6 @@ set(MY_BOOST_LIBS
 SET(CMAKE_INSTALL_RPATH ".")
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
-
 add_definitions(-Wno-attributes)
 
 dsn_add_executable()
