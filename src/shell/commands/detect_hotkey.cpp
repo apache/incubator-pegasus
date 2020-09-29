@@ -85,13 +85,13 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     }
 
     dsn::rpc_address target_address;
+    std::string err_info;
     std::string ip_str = cmd({"-d", "--address"}).str();
-    if (!target_address.from_string_ipv4(ip_str.c_str())) {
-        fmt::print("invalid ip, error={}\n", ip_str);
+    if (!validate_ip(sc, ip_str, target_address, err_info)) {
+        fmt::print("{}\n", err_info);
         return false;
     }
-
-    std::string err_info;
+    
     std::string hotkey_action = cmd({"-c", "--hotkey_action"}).str();
     std::string hotkey_type = cmd({"-t", "--hotkey_type"}).str();
     dsn::replication::detect_hotkey_request req;

@@ -9,6 +9,7 @@
 #include <set>
 
 #include "shell/argh.h"
+#include "command_executor.h"
 #include <dsn/dist/fmt_logging.h>
 
 inline bool validate_cmd(const argh::parser &cmd,
@@ -41,6 +42,11 @@ inline bool validate_cmd(const argh::parser &cmd,
 
     return true;
 }
+
+bool validate_ip(shell_context *sc,
+                 const std::string &ip_str,
+                 /*out*/ dsn::rpc_address &target_address,
+                 /*out*/ std::string &err_info);
 
 #define verify_logged(exp, ...)                                                                    \
     do {                                                                                           \
