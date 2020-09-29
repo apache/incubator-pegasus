@@ -475,6 +475,16 @@ static command_executor commands[] = {
         cancel_bulk_load,
     },
     {
+        "detect_hotkey",
+        "start or stop hotkey detection on a replica of a replica server",
+        "<-a|--app_id num> "
+        "<-p|--partition_index num> "
+        "<-t|--hotkey_type read|write> "
+        "<-c|--detect_action start|stop> "
+        "<-d|--address str>",
+        detect_hotkey,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {
