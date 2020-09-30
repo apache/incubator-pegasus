@@ -48,8 +48,8 @@ public:
     void data_analyse();
     static void send_hotkey_detect_request(const std::string &app_name,
                                            const uint64_t partition_index,
-                                           const dsn::apps::hotkey_type::type hotkey_type,
-                                           const dsn::apps::hotkey_detect_action::type action);
+                                           const dsn::replication::hotkey_type::type hotkey_type,
+                                           const dsn::replication::detect_action::type action);
 
 private:
     // empirical rule to calculate hot point of each partition

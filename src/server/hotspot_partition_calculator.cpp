@@ -164,10 +164,10 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                          index);
                 send_hotkey_detect_request(_app_name,
                                            index,
-                                           (data_type == dsn::apps::hotkey_type::type::READ)
-                                               ? dsn::apps::hotkey_type::type::READ
-                                               : dsn::apps::hotkey_type::type::WRITE,
-                                           dsn::apps::hotkey_detect_action::type::START);
+                                           (data_type == dsn::replication::hotkey_type::type::READ)
+                                               ? dsn::replication::hotkey_type::type::READ
+                                               : dsn::replication::hotkey_type::type::WRITE,
+                                           dsn::replication::detect_action::type::START);
             }
         } else {
             _hotpartition_counter[index][data_type] =
@@ -179,16 +179,16 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
 /*static*/ void hotspot_partition_calculator::send_hotkey_detect_request(
     const std::string &app_name,
     const uint64_t partition_index,
-    const dsn::apps::hotkey_type::type hotkey_type,
-    const dsn::apps::hotkey_detect_action::type action)
+    const dsn::replication::hotkey_type::type hotkey_type,
+    const dsn::replication::detect_action::type action)
 {
     FAIL_POINT_INJECT_F("send_hotkey_detect_request", [](dsn::string_view) {});
-    auto request = dsn::make_unique<dsn::apps::hotkey_detect_request>();
+    auto request = dsn::make_unique<dsn::replication::hotkey_detect_request>();
     request->type = hotkey_type;
     request->action = action;
     ddebug_f("{} {} hotkey detection in {}.{}",
-             (action == dsn::apps::hotkey_detect_action::STOP) ? "Stop" : "Start",
-             (hotkey_type == dsn::apps::hotkey_type::WRITE) ? "write" : "read",
+             (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index);
     dsn::rpc_address meta_server;

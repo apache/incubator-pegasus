@@ -17,81 +17,53 @@
 #include <thrift/cxxfunctional.h>
 #include <dsn/service_api_cpp.h>
 
-namespace dsn {
-namespace apps {
 
-struct filter_type
-{
-    enum type
-    {
-        FT_NO_FILTER = 0,
-        FT_MATCH_ANYWHERE = 1,
-        FT_MATCH_PREFIX = 2,
-        FT_MATCH_POSTFIX = 3
-    };
+namespace dsn { namespace apps {
+
+struct filter_type {
+  enum type {
+    FT_NO_FILTER = 0,
+    FT_MATCH_ANYWHERE = 1,
+    FT_MATCH_PREFIX = 2,
+    FT_MATCH_POSTFIX = 3
+  };
 };
 
-extern const std::map<int, const char *> _filter_type_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _filter_type_VALUES_TO_NAMES;
 
-struct cas_check_type
-{
-    enum type
-    {
-        CT_NO_CHECK = 0,
-        CT_VALUE_NOT_EXIST = 1,
-        CT_VALUE_NOT_EXIST_OR_EMPTY = 2,
-        CT_VALUE_EXIST = 3,
-        CT_VALUE_NOT_EMPTY = 4,
-        CT_VALUE_MATCH_ANYWHERE = 5,
-        CT_VALUE_MATCH_PREFIX = 6,
-        CT_VALUE_MATCH_POSTFIX = 7,
-        CT_VALUE_BYTES_LESS = 8,
-        CT_VALUE_BYTES_LESS_OR_EQUAL = 9,
-        CT_VALUE_BYTES_EQUAL = 10,
-        CT_VALUE_BYTES_GREATER_OR_EQUAL = 11,
-        CT_VALUE_BYTES_GREATER = 12,
-        CT_VALUE_INT_LESS = 13,
-        CT_VALUE_INT_LESS_OR_EQUAL = 14,
-        CT_VALUE_INT_EQUAL = 15,
-        CT_VALUE_INT_GREATER_OR_EQUAL = 16,
-        CT_VALUE_INT_GREATER = 17
-    };
+struct cas_check_type {
+  enum type {
+    CT_NO_CHECK = 0,
+    CT_VALUE_NOT_EXIST = 1,
+    CT_VALUE_NOT_EXIST_OR_EMPTY = 2,
+    CT_VALUE_EXIST = 3,
+    CT_VALUE_NOT_EMPTY = 4,
+    CT_VALUE_MATCH_ANYWHERE = 5,
+    CT_VALUE_MATCH_PREFIX = 6,
+    CT_VALUE_MATCH_POSTFIX = 7,
+    CT_VALUE_BYTES_LESS = 8,
+    CT_VALUE_BYTES_LESS_OR_EQUAL = 9,
+    CT_VALUE_BYTES_EQUAL = 10,
+    CT_VALUE_BYTES_GREATER_OR_EQUAL = 11,
+    CT_VALUE_BYTES_GREATER = 12,
+    CT_VALUE_INT_LESS = 13,
+    CT_VALUE_INT_LESS_OR_EQUAL = 14,
+    CT_VALUE_INT_EQUAL = 15,
+    CT_VALUE_INT_GREATER_OR_EQUAL = 16,
+    CT_VALUE_INT_GREATER = 17
+  };
 };
 
-extern const std::map<int, const char *> _cas_check_type_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _cas_check_type_VALUES_TO_NAMES;
 
-struct mutate_operation
-{
-    enum type
-    {
-        MO_PUT = 0,
-        MO_DELETE = 1
-    };
+struct mutate_operation {
+  enum type {
+    MO_PUT = 0,
+    MO_DELETE = 1
+  };
 };
 
-extern const std::map<int, const char *> _mutate_operation_VALUES_TO_NAMES;
-
-struct hotkey_type
-{
-    enum type
-    {
-        READ = 0,
-        WRITE = 1
-    };
-};
-
-extern const std::map<int, const char *> _hotkey_type_VALUES_TO_NAMES;
-
-struct hotkey_detect_action
-{
-    enum type
-    {
-        START = 0,
-        STOP = 1
-    };
-};
-
-extern const std::map<int, const char *> _hotkey_detect_action_VALUES_TO_NAMES;
+extern const std::map<int, const char*> _mutate_operation_VALUES_TO_NAMES;
 
 class update_request;
 
@@ -139,1938 +111,1718 @@ class duplicate_request;
 
 class duplicate_response;
 
-class hotkey_detect_request;
-
-class hotkey_detect_response;
-
-typedef struct _update_request__isset
-{
-    _update_request__isset() : key(false), value(false), expire_ts_seconds(false) {}
-    bool key : 1;
-    bool value : 1;
-    bool expire_ts_seconds : 1;
+typedef struct _update_request__isset {
+  _update_request__isset() : key(false), value(false), expire_ts_seconds(false) {}
+  bool key :1;
+  bool value :1;
+  bool expire_ts_seconds :1;
 } _update_request__isset;
 
-class update_request
-{
-public:
-    update_request(const update_request &);
-    update_request(update_request &&);
-    update_request &operator=(const update_request &);
-    update_request &operator=(update_request &&);
-    update_request() : expire_ts_seconds(0) {}
+class update_request {
+ public:
 
-    virtual ~update_request() throw();
-    ::dsn::blob key;
-    ::dsn::blob value;
-    int32_t expire_ts_seconds;
+  update_request(const update_request&);
+  update_request(update_request&&);
+  update_request& operator=(const update_request&);
+  update_request& operator=(update_request&&);
+  update_request() : expire_ts_seconds(0) {
+  }
 
-    _update_request__isset __isset;
+  virtual ~update_request() throw();
+   ::dsn::blob key;
+   ::dsn::blob value;
+  int32_t expire_ts_seconds;
 
-    void __set_key(const ::dsn::blob &val);
+  _update_request__isset __isset;
 
-    void __set_value(const ::dsn::blob &val);
+  void __set_key(const  ::dsn::blob& val);
 
-    void __set_expire_ts_seconds(const int32_t val);
+  void __set_value(const  ::dsn::blob& val);
 
-    bool operator==(const update_request &rhs) const
-    {
-        if (!(key == rhs.key))
-            return false;
-        if (!(value == rhs.value))
-            return false;
-        if (!(expire_ts_seconds == rhs.expire_ts_seconds))
-            return false;
-        return true;
-    }
-    bool operator!=(const update_request &rhs) const { return !(*this == rhs); }
+  void __set_expire_ts_seconds(const int32_t val);
 
-    bool operator<(const update_request &) const;
+  bool operator == (const update_request & rhs) const
+  {
+    if (!(key == rhs.key))
+      return false;
+    if (!(value == rhs.value))
+      return false;
+    if (!(expire_ts_seconds == rhs.expire_ts_seconds))
+      return false;
+    return true;
+  }
+  bool operator != (const update_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const update_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(update_request &a, update_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const update_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const update_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _update_response__isset
-{
-    _update_response__isset()
-        : error(false), app_id(false), partition_index(false), decree(false), server(false)
-    {
-    }
-    bool error : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool decree : 1;
-    bool server : 1;
+typedef struct _update_response__isset {
+  _update_response__isset() : error(false), app_id(false), partition_index(false), decree(false), server(false) {}
+  bool error :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool decree :1;
+  bool server :1;
 } _update_response__isset;
 
-class update_response
-{
-public:
-    update_response(const update_response &);
-    update_response(update_response &&);
-    update_response &operator=(const update_response &);
-    update_response &operator=(update_response &&);
-    update_response() : error(0), app_id(0), partition_index(0), decree(0), server() {}
+class update_response {
+ public:
 
-    virtual ~update_response() throw();
-    int32_t error;
-    int32_t app_id;
-    int32_t partition_index;
-    int64_t decree;
-    std::string server;
+  update_response(const update_response&);
+  update_response(update_response&&);
+  update_response& operator=(const update_response&);
+  update_response& operator=(update_response&&);
+  update_response() : error(0), app_id(0), partition_index(0), decree(0), server() {
+  }
 
-    _update_response__isset __isset;
+  virtual ~update_response() throw();
+  int32_t error;
+  int32_t app_id;
+  int32_t partition_index;
+  int64_t decree;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _update_response__isset __isset;
 
-    void __set_app_id(const int32_t val);
+  void __set_error(const int32_t val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_decree(const int64_t val);
+  void __set_partition_index(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_decree(const int64_t val);
 
-    bool operator==(const update_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const update_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const update_response &) const;
+  bool operator == (const update_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const update_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const update_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(update_response &a, update_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const update_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const update_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _read_response__isset
-{
-    _read_response__isset()
-        : error(false), value(false), app_id(false), partition_index(false), server(false)
-    {
-    }
-    bool error : 1;
-    bool value : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool server : 1;
+typedef struct _read_response__isset {
+  _read_response__isset() : error(false), value(false), app_id(false), partition_index(false), server(false) {}
+  bool error :1;
+  bool value :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool server :1;
 } _read_response__isset;
 
-class read_response
-{
-public:
-    read_response(const read_response &);
-    read_response(read_response &&);
-    read_response &operator=(const read_response &);
-    read_response &operator=(read_response &&);
-    read_response() : error(0), app_id(0), partition_index(0), server() {}
+class read_response {
+ public:
 
-    virtual ~read_response() throw();
-    int32_t error;
-    ::dsn::blob value;
-    int32_t app_id;
-    int32_t partition_index;
-    std::string server;
+  read_response(const read_response&);
+  read_response(read_response&&);
+  read_response& operator=(const read_response&);
+  read_response& operator=(read_response&&);
+  read_response() : error(0), app_id(0), partition_index(0), server() {
+  }
 
-    _read_response__isset __isset;
+  virtual ~read_response() throw();
+  int32_t error;
+   ::dsn::blob value;
+  int32_t app_id;
+  int32_t partition_index;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _read_response__isset __isset;
 
-    void __set_value(const ::dsn::blob &val);
+  void __set_error(const int32_t val);
 
-    void __set_app_id(const int32_t val);
+  void __set_value(const  ::dsn::blob& val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_partition_index(const int32_t val);
 
-    bool operator==(const read_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(value == rhs.value))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const read_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const read_response &) const;
+  bool operator == (const read_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(value == rhs.value))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const read_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const read_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(read_response &a, read_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const read_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const read_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _ttl_response__isset
-{
-    _ttl_response__isset()
-        : error(false), ttl_seconds(false), app_id(false), partition_index(false), server(false)
-    {
-    }
-    bool error : 1;
-    bool ttl_seconds : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool server : 1;
+typedef struct _ttl_response__isset {
+  _ttl_response__isset() : error(false), ttl_seconds(false), app_id(false), partition_index(false), server(false) {}
+  bool error :1;
+  bool ttl_seconds :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool server :1;
 } _ttl_response__isset;
 
-class ttl_response
-{
-public:
-    ttl_response(const ttl_response &);
-    ttl_response(ttl_response &&);
-    ttl_response &operator=(const ttl_response &);
-    ttl_response &operator=(ttl_response &&);
-    ttl_response() : error(0), ttl_seconds(0), app_id(0), partition_index(0), server() {}
+class ttl_response {
+ public:
 
-    virtual ~ttl_response() throw();
-    int32_t error;
-    int32_t ttl_seconds;
-    int32_t app_id;
-    int32_t partition_index;
-    std::string server;
+  ttl_response(const ttl_response&);
+  ttl_response(ttl_response&&);
+  ttl_response& operator=(const ttl_response&);
+  ttl_response& operator=(ttl_response&&);
+  ttl_response() : error(0), ttl_seconds(0), app_id(0), partition_index(0), server() {
+  }
 
-    _ttl_response__isset __isset;
+  virtual ~ttl_response() throw();
+  int32_t error;
+  int32_t ttl_seconds;
+  int32_t app_id;
+  int32_t partition_index;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _ttl_response__isset __isset;
 
-    void __set_ttl_seconds(const int32_t val);
+  void __set_error(const int32_t val);
 
-    void __set_app_id(const int32_t val);
+  void __set_ttl_seconds(const int32_t val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_partition_index(const int32_t val);
 
-    bool operator==(const ttl_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(ttl_seconds == rhs.ttl_seconds))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const ttl_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const ttl_response &) const;
+  bool operator == (const ttl_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(ttl_seconds == rhs.ttl_seconds))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const ttl_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const ttl_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(ttl_response &a, ttl_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const ttl_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const ttl_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _count_response__isset
-{
-    _count_response__isset()
-        : error(false), count(false), app_id(false), partition_index(false), server(false)
-    {
-    }
-    bool error : 1;
-    bool count : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool server : 1;
+typedef struct _count_response__isset {
+  _count_response__isset() : error(false), count(false), app_id(false), partition_index(false), server(false) {}
+  bool error :1;
+  bool count :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool server :1;
 } _count_response__isset;
 
-class count_response
-{
-public:
-    count_response(const count_response &);
-    count_response(count_response &&);
-    count_response &operator=(const count_response &);
-    count_response &operator=(count_response &&);
-    count_response() : error(0), count(0), app_id(0), partition_index(0), server() {}
+class count_response {
+ public:
 
-    virtual ~count_response() throw();
-    int32_t error;
-    int64_t count;
-    int32_t app_id;
-    int32_t partition_index;
-    std::string server;
+  count_response(const count_response&);
+  count_response(count_response&&);
+  count_response& operator=(const count_response&);
+  count_response& operator=(count_response&&);
+  count_response() : error(0), count(0), app_id(0), partition_index(0), server() {
+  }
 
-    _count_response__isset __isset;
+  virtual ~count_response() throw();
+  int32_t error;
+  int64_t count;
+  int32_t app_id;
+  int32_t partition_index;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _count_response__isset __isset;
 
-    void __set_count(const int64_t val);
+  void __set_error(const int32_t val);
 
-    void __set_app_id(const int32_t val);
+  void __set_count(const int64_t val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_partition_index(const int32_t val);
 
-    bool operator==(const count_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(count == rhs.count))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const count_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const count_response &) const;
+  bool operator == (const count_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(count == rhs.count))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const count_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const count_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(count_response &a, count_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const count_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const count_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _key_value__isset
-{
-    _key_value__isset() : key(false), value(false) {}
-    bool key : 1;
-    bool value : 1;
+typedef struct _key_value__isset {
+  _key_value__isset() : key(false), value(false) {}
+  bool key :1;
+  bool value :1;
 } _key_value__isset;
 
-class key_value
-{
-public:
-    key_value(const key_value &);
-    key_value(key_value &&);
-    key_value &operator=(const key_value &);
-    key_value &operator=(key_value &&);
-    key_value() {}
+class key_value {
+ public:
 
-    virtual ~key_value() throw();
-    ::dsn::blob key;
-    ::dsn::blob value;
+  key_value(const key_value&);
+  key_value(key_value&&);
+  key_value& operator=(const key_value&);
+  key_value& operator=(key_value&&);
+  key_value() {
+  }
 
-    _key_value__isset __isset;
+  virtual ~key_value() throw();
+   ::dsn::blob key;
+   ::dsn::blob value;
 
-    void __set_key(const ::dsn::blob &val);
+  _key_value__isset __isset;
 
-    void __set_value(const ::dsn::blob &val);
+  void __set_key(const  ::dsn::blob& val);
 
-    bool operator==(const key_value &rhs) const
-    {
-        if (!(key == rhs.key))
-            return false;
-        if (!(value == rhs.value))
-            return false;
-        return true;
-    }
-    bool operator!=(const key_value &rhs) const { return !(*this == rhs); }
+  void __set_value(const  ::dsn::blob& val);
 
-    bool operator<(const key_value &) const;
+  bool operator == (const key_value & rhs) const
+  {
+    if (!(key == rhs.key))
+      return false;
+    if (!(value == rhs.value))
+      return false;
+    return true;
+  }
+  bool operator != (const key_value &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const key_value & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(key_value &a, key_value &b);
 
-inline std::ostream &operator<<(std::ostream &out, const key_value &obj)
+inline std::ostream& operator<<(std::ostream& out, const key_value& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _multi_put_request__isset
-{
-    _multi_put_request__isset() : hash_key(false), kvs(false), expire_ts_seconds(false) {}
-    bool hash_key : 1;
-    bool kvs : 1;
-    bool expire_ts_seconds : 1;
+typedef struct _multi_put_request__isset {
+  _multi_put_request__isset() : hash_key(false), kvs(false), expire_ts_seconds(false) {}
+  bool hash_key :1;
+  bool kvs :1;
+  bool expire_ts_seconds :1;
 } _multi_put_request__isset;
 
-class multi_put_request
-{
-public:
-    multi_put_request(const multi_put_request &);
-    multi_put_request(multi_put_request &&);
-    multi_put_request &operator=(const multi_put_request &);
-    multi_put_request &operator=(multi_put_request &&);
-    multi_put_request() : expire_ts_seconds(0) {}
+class multi_put_request {
+ public:
 
-    virtual ~multi_put_request() throw();
-    ::dsn::blob hash_key;
-    std::vector<key_value> kvs;
-    int32_t expire_ts_seconds;
+  multi_put_request(const multi_put_request&);
+  multi_put_request(multi_put_request&&);
+  multi_put_request& operator=(const multi_put_request&);
+  multi_put_request& operator=(multi_put_request&&);
+  multi_put_request() : expire_ts_seconds(0) {
+  }
 
-    _multi_put_request__isset __isset;
+  virtual ~multi_put_request() throw();
+   ::dsn::blob hash_key;
+  std::vector<key_value>  kvs;
+  int32_t expire_ts_seconds;
 
-    void __set_hash_key(const ::dsn::blob &val);
+  _multi_put_request__isset __isset;
 
-    void __set_kvs(const std::vector<key_value> &val);
+  void __set_hash_key(const  ::dsn::blob& val);
 
-    void __set_expire_ts_seconds(const int32_t val);
+  void __set_kvs(const std::vector<key_value> & val);
 
-    bool operator==(const multi_put_request &rhs) const
-    {
-        if (!(hash_key == rhs.hash_key))
-            return false;
-        if (!(kvs == rhs.kvs))
-            return false;
-        if (!(expire_ts_seconds == rhs.expire_ts_seconds))
-            return false;
-        return true;
-    }
-    bool operator!=(const multi_put_request &rhs) const { return !(*this == rhs); }
+  void __set_expire_ts_seconds(const int32_t val);
 
-    bool operator<(const multi_put_request &) const;
+  bool operator == (const multi_put_request & rhs) const
+  {
+    if (!(hash_key == rhs.hash_key))
+      return false;
+    if (!(kvs == rhs.kvs))
+      return false;
+    if (!(expire_ts_seconds == rhs.expire_ts_seconds))
+      return false;
+    return true;
+  }
+  bool operator != (const multi_put_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const multi_put_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(multi_put_request &a, multi_put_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const multi_put_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const multi_put_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _multi_remove_request__isset
-{
-    _multi_remove_request__isset() : hash_key(false), sort_keys(false), max_count(false) {}
-    bool hash_key : 1;
-    bool sort_keys : 1;
-    bool max_count : 1;
+typedef struct _multi_remove_request__isset {
+  _multi_remove_request__isset() : hash_key(false), sort_keys(false), max_count(false) {}
+  bool hash_key :1;
+  bool sort_keys :1;
+  bool max_count :1;
 } _multi_remove_request__isset;
 
-class multi_remove_request
-{
-public:
-    multi_remove_request(const multi_remove_request &);
-    multi_remove_request(multi_remove_request &&);
-    multi_remove_request &operator=(const multi_remove_request &);
-    multi_remove_request &operator=(multi_remove_request &&);
-    multi_remove_request() : max_count(0) {}
+class multi_remove_request {
+ public:
 
-    virtual ~multi_remove_request() throw();
-    ::dsn::blob hash_key;
-    std::vector<::dsn::blob> sort_keys;
-    int64_t max_count;
+  multi_remove_request(const multi_remove_request&);
+  multi_remove_request(multi_remove_request&&);
+  multi_remove_request& operator=(const multi_remove_request&);
+  multi_remove_request& operator=(multi_remove_request&&);
+  multi_remove_request() : max_count(0) {
+  }
 
-    _multi_remove_request__isset __isset;
+  virtual ~multi_remove_request() throw();
+   ::dsn::blob hash_key;
+  std::vector< ::dsn::blob>  sort_keys;
+  int64_t max_count;
 
-    void __set_hash_key(const ::dsn::blob &val);
+  _multi_remove_request__isset __isset;
 
-    void __set_sort_keys(const std::vector<::dsn::blob> &val);
+  void __set_hash_key(const  ::dsn::blob& val);
 
-    void __set_max_count(const int64_t val);
+  void __set_sort_keys(const std::vector< ::dsn::blob> & val);
 
-    bool operator==(const multi_remove_request &rhs) const
-    {
-        if (!(hash_key == rhs.hash_key))
-            return false;
-        if (!(sort_keys == rhs.sort_keys))
-            return false;
-        if (!(max_count == rhs.max_count))
-            return false;
-        return true;
-    }
-    bool operator!=(const multi_remove_request &rhs) const { return !(*this == rhs); }
+  void __set_max_count(const int64_t val);
 
-    bool operator<(const multi_remove_request &) const;
+  bool operator == (const multi_remove_request & rhs) const
+  {
+    if (!(hash_key == rhs.hash_key))
+      return false;
+    if (!(sort_keys == rhs.sort_keys))
+      return false;
+    if (!(max_count == rhs.max_count))
+      return false;
+    return true;
+  }
+  bool operator != (const multi_remove_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const multi_remove_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(multi_remove_request &a, multi_remove_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const multi_remove_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const multi_remove_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _multi_remove_response__isset
-{
-    _multi_remove_response__isset()
-        : error(false),
-          count(false),
-          app_id(false),
-          partition_index(false),
-          decree(false),
-          server(false)
-    {
-    }
-    bool error : 1;
-    bool count : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool decree : 1;
-    bool server : 1;
+typedef struct _multi_remove_response__isset {
+  _multi_remove_response__isset() : error(false), count(false), app_id(false), partition_index(false), decree(false), server(false) {}
+  bool error :1;
+  bool count :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool decree :1;
+  bool server :1;
 } _multi_remove_response__isset;
 
-class multi_remove_response
-{
-public:
-    multi_remove_response(const multi_remove_response &);
-    multi_remove_response(multi_remove_response &&);
-    multi_remove_response &operator=(const multi_remove_response &);
-    multi_remove_response &operator=(multi_remove_response &&);
-    multi_remove_response() : error(0), count(0), app_id(0), partition_index(0), decree(0), server()
-    {
-    }
+class multi_remove_response {
+ public:
 
-    virtual ~multi_remove_response() throw();
-    int32_t error;
-    int64_t count;
-    int32_t app_id;
-    int32_t partition_index;
-    int64_t decree;
-    std::string server;
+  multi_remove_response(const multi_remove_response&);
+  multi_remove_response(multi_remove_response&&);
+  multi_remove_response& operator=(const multi_remove_response&);
+  multi_remove_response& operator=(multi_remove_response&&);
+  multi_remove_response() : error(0), count(0), app_id(0), partition_index(0), decree(0), server() {
+  }
 
-    _multi_remove_response__isset __isset;
+  virtual ~multi_remove_response() throw();
+  int32_t error;
+  int64_t count;
+  int32_t app_id;
+  int32_t partition_index;
+  int64_t decree;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _multi_remove_response__isset __isset;
 
-    void __set_count(const int64_t val);
+  void __set_error(const int32_t val);
 
-    void __set_app_id(const int32_t val);
+  void __set_count(const int64_t val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_decree(const int64_t val);
+  void __set_partition_index(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_decree(const int64_t val);
 
-    bool operator==(const multi_remove_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(count == rhs.count))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const multi_remove_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const multi_remove_response &) const;
+  bool operator == (const multi_remove_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(count == rhs.count))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const multi_remove_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const multi_remove_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(multi_remove_response &a, multi_remove_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const multi_remove_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const multi_remove_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _multi_get_request__isset
-{
-    _multi_get_request__isset()
-        : hash_key(false),
-          sort_keys(false),
-          max_kv_count(false),
-          max_kv_size(false),
-          no_value(false),
-          start_sortkey(false),
-          stop_sortkey(false),
-          start_inclusive(false),
-          stop_inclusive(false),
-          sort_key_filter_type(false),
-          sort_key_filter_pattern(false),
-          reverse(false)
-    {
-    }
-    bool hash_key : 1;
-    bool sort_keys : 1;
-    bool max_kv_count : 1;
-    bool max_kv_size : 1;
-    bool no_value : 1;
-    bool start_sortkey : 1;
-    bool stop_sortkey : 1;
-    bool start_inclusive : 1;
-    bool stop_inclusive : 1;
-    bool sort_key_filter_type : 1;
-    bool sort_key_filter_pattern : 1;
-    bool reverse : 1;
+typedef struct _multi_get_request__isset {
+  _multi_get_request__isset() : hash_key(false), sort_keys(false), max_kv_count(false), max_kv_size(false), no_value(false), start_sortkey(false), stop_sortkey(false), start_inclusive(false), stop_inclusive(false), sort_key_filter_type(false), sort_key_filter_pattern(false), reverse(false) {}
+  bool hash_key :1;
+  bool sort_keys :1;
+  bool max_kv_count :1;
+  bool max_kv_size :1;
+  bool no_value :1;
+  bool start_sortkey :1;
+  bool stop_sortkey :1;
+  bool start_inclusive :1;
+  bool stop_inclusive :1;
+  bool sort_key_filter_type :1;
+  bool sort_key_filter_pattern :1;
+  bool reverse :1;
 } _multi_get_request__isset;
 
-class multi_get_request
-{
-public:
-    multi_get_request(const multi_get_request &);
-    multi_get_request(multi_get_request &&);
-    multi_get_request &operator=(const multi_get_request &);
-    multi_get_request &operator=(multi_get_request &&);
-    multi_get_request()
-        : max_kv_count(0),
-          max_kv_size(0),
-          no_value(0),
-          start_inclusive(0),
-          stop_inclusive(0),
-          sort_key_filter_type((filter_type::type)0),
-          reverse(0)
-    {
-    }
+class multi_get_request {
+ public:
 
-    virtual ~multi_get_request() throw();
-    ::dsn::blob hash_key;
-    std::vector<::dsn::blob> sort_keys;
-    int32_t max_kv_count;
-    int32_t max_kv_size;
-    bool no_value;
-    ::dsn::blob start_sortkey;
-    ::dsn::blob stop_sortkey;
-    bool start_inclusive;
-    bool stop_inclusive;
-    filter_type::type sort_key_filter_type;
-    ::dsn::blob sort_key_filter_pattern;
-    bool reverse;
+  multi_get_request(const multi_get_request&);
+  multi_get_request(multi_get_request&&);
+  multi_get_request& operator=(const multi_get_request&);
+  multi_get_request& operator=(multi_get_request&&);
+  multi_get_request() : max_kv_count(0), max_kv_size(0), no_value(0), start_inclusive(0), stop_inclusive(0), sort_key_filter_type((filter_type::type)0), reverse(0) {
+  }
 
-    _multi_get_request__isset __isset;
+  virtual ~multi_get_request() throw();
+   ::dsn::blob hash_key;
+  std::vector< ::dsn::blob>  sort_keys;
+  int32_t max_kv_count;
+  int32_t max_kv_size;
+  bool no_value;
+   ::dsn::blob start_sortkey;
+   ::dsn::blob stop_sortkey;
+  bool start_inclusive;
+  bool stop_inclusive;
+  filter_type::type sort_key_filter_type;
+   ::dsn::blob sort_key_filter_pattern;
+  bool reverse;
 
-    void __set_hash_key(const ::dsn::blob &val);
+  _multi_get_request__isset __isset;
 
-    void __set_sort_keys(const std::vector<::dsn::blob> &val);
+  void __set_hash_key(const  ::dsn::blob& val);
 
-    void __set_max_kv_count(const int32_t val);
+  void __set_sort_keys(const std::vector< ::dsn::blob> & val);
 
-    void __set_max_kv_size(const int32_t val);
+  void __set_max_kv_count(const int32_t val);
 
-    void __set_no_value(const bool val);
+  void __set_max_kv_size(const int32_t val);
 
-    void __set_start_sortkey(const ::dsn::blob &val);
+  void __set_no_value(const bool val);
 
-    void __set_stop_sortkey(const ::dsn::blob &val);
+  void __set_start_sortkey(const  ::dsn::blob& val);
 
-    void __set_start_inclusive(const bool val);
+  void __set_stop_sortkey(const  ::dsn::blob& val);
 
-    void __set_stop_inclusive(const bool val);
+  void __set_start_inclusive(const bool val);
 
-    void __set_sort_key_filter_type(const filter_type::type val);
+  void __set_stop_inclusive(const bool val);
 
-    void __set_sort_key_filter_pattern(const ::dsn::blob &val);
+  void __set_sort_key_filter_type(const filter_type::type val);
 
-    void __set_reverse(const bool val);
+  void __set_sort_key_filter_pattern(const  ::dsn::blob& val);
 
-    bool operator==(const multi_get_request &rhs) const
-    {
-        if (!(hash_key == rhs.hash_key))
-            return false;
-        if (!(sort_keys == rhs.sort_keys))
-            return false;
-        if (!(max_kv_count == rhs.max_kv_count))
-            return false;
-        if (!(max_kv_size == rhs.max_kv_size))
-            return false;
-        if (!(no_value == rhs.no_value))
-            return false;
-        if (!(start_sortkey == rhs.start_sortkey))
-            return false;
-        if (!(stop_sortkey == rhs.stop_sortkey))
-            return false;
-        if (!(start_inclusive == rhs.start_inclusive))
-            return false;
-        if (!(stop_inclusive == rhs.stop_inclusive))
-            return false;
-        if (!(sort_key_filter_type == rhs.sort_key_filter_type))
-            return false;
-        if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
-            return false;
-        if (!(reverse == rhs.reverse))
-            return false;
-        return true;
-    }
-    bool operator!=(const multi_get_request &rhs) const { return !(*this == rhs); }
+  void __set_reverse(const bool val);
 
-    bool operator<(const multi_get_request &) const;
+  bool operator == (const multi_get_request & rhs) const
+  {
+    if (!(hash_key == rhs.hash_key))
+      return false;
+    if (!(sort_keys == rhs.sort_keys))
+      return false;
+    if (!(max_kv_count == rhs.max_kv_count))
+      return false;
+    if (!(max_kv_size == rhs.max_kv_size))
+      return false;
+    if (!(no_value == rhs.no_value))
+      return false;
+    if (!(start_sortkey == rhs.start_sortkey))
+      return false;
+    if (!(stop_sortkey == rhs.stop_sortkey))
+      return false;
+    if (!(start_inclusive == rhs.start_inclusive))
+      return false;
+    if (!(stop_inclusive == rhs.stop_inclusive))
+      return false;
+    if (!(sort_key_filter_type == rhs.sort_key_filter_type))
+      return false;
+    if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
+      return false;
+    if (!(reverse == rhs.reverse))
+      return false;
+    return true;
+  }
+  bool operator != (const multi_get_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const multi_get_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(multi_get_request &a, multi_get_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const multi_get_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const multi_get_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _multi_get_response__isset
-{
-    _multi_get_response__isset()
-        : error(false), kvs(false), app_id(false), partition_index(false), server(false)
-    {
-    }
-    bool error : 1;
-    bool kvs : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool server : 1;
+typedef struct _multi_get_response__isset {
+  _multi_get_response__isset() : error(false), kvs(false), app_id(false), partition_index(false), server(false) {}
+  bool error :1;
+  bool kvs :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool server :1;
 } _multi_get_response__isset;
 
-class multi_get_response
-{
-public:
-    multi_get_response(const multi_get_response &);
-    multi_get_response(multi_get_response &&);
-    multi_get_response &operator=(const multi_get_response &);
-    multi_get_response &operator=(multi_get_response &&);
-    multi_get_response() : error(0), app_id(0), partition_index(0), server() {}
+class multi_get_response {
+ public:
 
-    virtual ~multi_get_response() throw();
-    int32_t error;
-    std::vector<key_value> kvs;
-    int32_t app_id;
-    int32_t partition_index;
-    std::string server;
+  multi_get_response(const multi_get_response&);
+  multi_get_response(multi_get_response&&);
+  multi_get_response& operator=(const multi_get_response&);
+  multi_get_response& operator=(multi_get_response&&);
+  multi_get_response() : error(0), app_id(0), partition_index(0), server() {
+  }
 
-    _multi_get_response__isset __isset;
+  virtual ~multi_get_response() throw();
+  int32_t error;
+  std::vector<key_value>  kvs;
+  int32_t app_id;
+  int32_t partition_index;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _multi_get_response__isset __isset;
 
-    void __set_kvs(const std::vector<key_value> &val);
+  void __set_error(const int32_t val);
 
-    void __set_app_id(const int32_t val);
+  void __set_kvs(const std::vector<key_value> & val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_partition_index(const int32_t val);
 
-    bool operator==(const multi_get_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(kvs == rhs.kvs))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const multi_get_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const multi_get_response &) const;
+  bool operator == (const multi_get_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(kvs == rhs.kvs))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const multi_get_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const multi_get_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(multi_get_response &a, multi_get_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const multi_get_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const multi_get_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _incr_request__isset
-{
-    _incr_request__isset() : key(false), increment(false), expire_ts_seconds(false) {}
-    bool key : 1;
-    bool increment : 1;
-    bool expire_ts_seconds : 1;
+typedef struct _incr_request__isset {
+  _incr_request__isset() : key(false), increment(false), expire_ts_seconds(false) {}
+  bool key :1;
+  bool increment :1;
+  bool expire_ts_seconds :1;
 } _incr_request__isset;
 
-class incr_request
-{
-public:
-    incr_request(const incr_request &);
-    incr_request(incr_request &&);
-    incr_request &operator=(const incr_request &);
-    incr_request &operator=(incr_request &&);
-    incr_request() : increment(0), expire_ts_seconds(0) {}
+class incr_request {
+ public:
 
-    virtual ~incr_request() throw();
-    ::dsn::blob key;
-    int64_t increment;
-    int32_t expire_ts_seconds;
+  incr_request(const incr_request&);
+  incr_request(incr_request&&);
+  incr_request& operator=(const incr_request&);
+  incr_request& operator=(incr_request&&);
+  incr_request() : increment(0), expire_ts_seconds(0) {
+  }
 
-    _incr_request__isset __isset;
+  virtual ~incr_request() throw();
+   ::dsn::blob key;
+  int64_t increment;
+  int32_t expire_ts_seconds;
 
-    void __set_key(const ::dsn::blob &val);
+  _incr_request__isset __isset;
 
-    void __set_increment(const int64_t val);
+  void __set_key(const  ::dsn::blob& val);
 
-    void __set_expire_ts_seconds(const int32_t val);
+  void __set_increment(const int64_t val);
 
-    bool operator==(const incr_request &rhs) const
-    {
-        if (!(key == rhs.key))
-            return false;
-        if (!(increment == rhs.increment))
-            return false;
-        if (!(expire_ts_seconds == rhs.expire_ts_seconds))
-            return false;
-        return true;
-    }
-    bool operator!=(const incr_request &rhs) const { return !(*this == rhs); }
+  void __set_expire_ts_seconds(const int32_t val);
 
-    bool operator<(const incr_request &) const;
+  bool operator == (const incr_request & rhs) const
+  {
+    if (!(key == rhs.key))
+      return false;
+    if (!(increment == rhs.increment))
+      return false;
+    if (!(expire_ts_seconds == rhs.expire_ts_seconds))
+      return false;
+    return true;
+  }
+  bool operator != (const incr_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const incr_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(incr_request &a, incr_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const incr_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const incr_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _incr_response__isset
-{
-    _incr_response__isset()
-        : error(false),
-          new_value(false),
-          app_id(false),
-          partition_index(false),
-          decree(false),
-          server(false)
-    {
-    }
-    bool error : 1;
-    bool new_value : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool decree : 1;
-    bool server : 1;
+typedef struct _incr_response__isset {
+  _incr_response__isset() : error(false), new_value(false), app_id(false), partition_index(false), decree(false), server(false) {}
+  bool error :1;
+  bool new_value :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool decree :1;
+  bool server :1;
 } _incr_response__isset;
 
-class incr_response
-{
-public:
-    incr_response(const incr_response &);
-    incr_response(incr_response &&);
-    incr_response &operator=(const incr_response &);
-    incr_response &operator=(incr_response &&);
-    incr_response() : error(0), new_value(0), app_id(0), partition_index(0), decree(0), server() {}
+class incr_response {
+ public:
 
-    virtual ~incr_response() throw();
-    int32_t error;
-    int64_t new_value;
-    int32_t app_id;
-    int32_t partition_index;
-    int64_t decree;
-    std::string server;
+  incr_response(const incr_response&);
+  incr_response(incr_response&&);
+  incr_response& operator=(const incr_response&);
+  incr_response& operator=(incr_response&&);
+  incr_response() : error(0), new_value(0), app_id(0), partition_index(0), decree(0), server() {
+  }
 
-    _incr_response__isset __isset;
+  virtual ~incr_response() throw();
+  int32_t error;
+  int64_t new_value;
+  int32_t app_id;
+  int32_t partition_index;
+  int64_t decree;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _incr_response__isset __isset;
 
-    void __set_new_value(const int64_t val);
+  void __set_error(const int32_t val);
 
-    void __set_app_id(const int32_t val);
+  void __set_new_value(const int64_t val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_decree(const int64_t val);
+  void __set_partition_index(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_decree(const int64_t val);
 
-    bool operator==(const incr_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(new_value == rhs.new_value))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const incr_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const incr_response &) const;
+  bool operator == (const incr_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(new_value == rhs.new_value))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const incr_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const incr_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(incr_response &a, incr_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const incr_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const incr_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _check_and_set_request__isset
-{
-    _check_and_set_request__isset()
-        : hash_key(false),
-          check_sort_key(false),
-          check_type(false),
-          check_operand(false),
-          set_diff_sort_key(false),
-          set_sort_key(false),
-          set_value(false),
-          set_expire_ts_seconds(false),
-          return_check_value(false)
-    {
-    }
-    bool hash_key : 1;
-    bool check_sort_key : 1;
-    bool check_type : 1;
-    bool check_operand : 1;
-    bool set_diff_sort_key : 1;
-    bool set_sort_key : 1;
-    bool set_value : 1;
-    bool set_expire_ts_seconds : 1;
-    bool return_check_value : 1;
+typedef struct _check_and_set_request__isset {
+  _check_and_set_request__isset() : hash_key(false), check_sort_key(false), check_type(false), check_operand(false), set_diff_sort_key(false), set_sort_key(false), set_value(false), set_expire_ts_seconds(false), return_check_value(false) {}
+  bool hash_key :1;
+  bool check_sort_key :1;
+  bool check_type :1;
+  bool check_operand :1;
+  bool set_diff_sort_key :1;
+  bool set_sort_key :1;
+  bool set_value :1;
+  bool set_expire_ts_seconds :1;
+  bool return_check_value :1;
 } _check_and_set_request__isset;
 
-class check_and_set_request
-{
-public:
-    check_and_set_request(const check_and_set_request &);
-    check_and_set_request(check_and_set_request &&);
-    check_and_set_request &operator=(const check_and_set_request &);
-    check_and_set_request &operator=(check_and_set_request &&);
-    check_and_set_request()
-        : check_type((cas_check_type::type)0),
-          set_diff_sort_key(0),
-          set_expire_ts_seconds(0),
-          return_check_value(0)
-    {
-    }
+class check_and_set_request {
+ public:
 
-    virtual ~check_and_set_request() throw();
-    ::dsn::blob hash_key;
-    ::dsn::blob check_sort_key;
-    cas_check_type::type check_type;
-    ::dsn::blob check_operand;
-    bool set_diff_sort_key;
-    ::dsn::blob set_sort_key;
-    ::dsn::blob set_value;
-    int32_t set_expire_ts_seconds;
-    bool return_check_value;
+  check_and_set_request(const check_and_set_request&);
+  check_and_set_request(check_and_set_request&&);
+  check_and_set_request& operator=(const check_and_set_request&);
+  check_and_set_request& operator=(check_and_set_request&&);
+  check_and_set_request() : check_type((cas_check_type::type)0), set_diff_sort_key(0), set_expire_ts_seconds(0), return_check_value(0) {
+  }
 
-    _check_and_set_request__isset __isset;
+  virtual ~check_and_set_request() throw();
+   ::dsn::blob hash_key;
+   ::dsn::blob check_sort_key;
+  cas_check_type::type check_type;
+   ::dsn::blob check_operand;
+  bool set_diff_sort_key;
+   ::dsn::blob set_sort_key;
+   ::dsn::blob set_value;
+  int32_t set_expire_ts_seconds;
+  bool return_check_value;
 
-    void __set_hash_key(const ::dsn::blob &val);
+  _check_and_set_request__isset __isset;
 
-    void __set_check_sort_key(const ::dsn::blob &val);
+  void __set_hash_key(const  ::dsn::blob& val);
 
-    void __set_check_type(const cas_check_type::type val);
+  void __set_check_sort_key(const  ::dsn::blob& val);
 
-    void __set_check_operand(const ::dsn::blob &val);
+  void __set_check_type(const cas_check_type::type val);
 
-    void __set_set_diff_sort_key(const bool val);
+  void __set_check_operand(const  ::dsn::blob& val);
 
-    void __set_set_sort_key(const ::dsn::blob &val);
+  void __set_set_diff_sort_key(const bool val);
 
-    void __set_set_value(const ::dsn::blob &val);
+  void __set_set_sort_key(const  ::dsn::blob& val);
 
-    void __set_set_expire_ts_seconds(const int32_t val);
+  void __set_set_value(const  ::dsn::blob& val);
 
-    void __set_return_check_value(const bool val);
+  void __set_set_expire_ts_seconds(const int32_t val);
 
-    bool operator==(const check_and_set_request &rhs) const
-    {
-        if (!(hash_key == rhs.hash_key))
-            return false;
-        if (!(check_sort_key == rhs.check_sort_key))
-            return false;
-        if (!(check_type == rhs.check_type))
-            return false;
-        if (!(check_operand == rhs.check_operand))
-            return false;
-        if (!(set_diff_sort_key == rhs.set_diff_sort_key))
-            return false;
-        if (!(set_sort_key == rhs.set_sort_key))
-            return false;
-        if (!(set_value == rhs.set_value))
-            return false;
-        if (!(set_expire_ts_seconds == rhs.set_expire_ts_seconds))
-            return false;
-        if (!(return_check_value == rhs.return_check_value))
-            return false;
-        return true;
-    }
-    bool operator!=(const check_and_set_request &rhs) const { return !(*this == rhs); }
+  void __set_return_check_value(const bool val);
 
-    bool operator<(const check_and_set_request &) const;
+  bool operator == (const check_and_set_request & rhs) const
+  {
+    if (!(hash_key == rhs.hash_key))
+      return false;
+    if (!(check_sort_key == rhs.check_sort_key))
+      return false;
+    if (!(check_type == rhs.check_type))
+      return false;
+    if (!(check_operand == rhs.check_operand))
+      return false;
+    if (!(set_diff_sort_key == rhs.set_diff_sort_key))
+      return false;
+    if (!(set_sort_key == rhs.set_sort_key))
+      return false;
+    if (!(set_value == rhs.set_value))
+      return false;
+    if (!(set_expire_ts_seconds == rhs.set_expire_ts_seconds))
+      return false;
+    if (!(return_check_value == rhs.return_check_value))
+      return false;
+    return true;
+  }
+  bool operator != (const check_and_set_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const check_and_set_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(check_and_set_request &a, check_and_set_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const check_and_set_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const check_and_set_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _check_and_set_response__isset
-{
-    _check_and_set_response__isset()
-        : error(false),
-          check_value_returned(false),
-          check_value_exist(false),
-          check_value(false),
-          app_id(false),
-          partition_index(false),
-          decree(false),
-          server(false)
-    {
-    }
-    bool error : 1;
-    bool check_value_returned : 1;
-    bool check_value_exist : 1;
-    bool check_value : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool decree : 1;
-    bool server : 1;
+typedef struct _check_and_set_response__isset {
+  _check_and_set_response__isset() : error(false), check_value_returned(false), check_value_exist(false), check_value(false), app_id(false), partition_index(false), decree(false), server(false) {}
+  bool error :1;
+  bool check_value_returned :1;
+  bool check_value_exist :1;
+  bool check_value :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool decree :1;
+  bool server :1;
 } _check_and_set_response__isset;
 
-class check_and_set_response
-{
-public:
-    check_and_set_response(const check_and_set_response &);
-    check_and_set_response(check_and_set_response &&);
-    check_and_set_response &operator=(const check_and_set_response &);
-    check_and_set_response &operator=(check_and_set_response &&);
-    check_and_set_response()
-        : error(0),
-          check_value_returned(0),
-          check_value_exist(0),
-          app_id(0),
-          partition_index(0),
-          decree(0),
-          server()
-    {
-    }
+class check_and_set_response {
+ public:
 
-    virtual ~check_and_set_response() throw();
-    int32_t error;
-    bool check_value_returned;
-    bool check_value_exist;
-    ::dsn::blob check_value;
-    int32_t app_id;
-    int32_t partition_index;
-    int64_t decree;
-    std::string server;
+  check_and_set_response(const check_and_set_response&);
+  check_and_set_response(check_and_set_response&&);
+  check_and_set_response& operator=(const check_and_set_response&);
+  check_and_set_response& operator=(check_and_set_response&&);
+  check_and_set_response() : error(0), check_value_returned(0), check_value_exist(0), app_id(0), partition_index(0), decree(0), server() {
+  }
 
-    _check_and_set_response__isset __isset;
+  virtual ~check_and_set_response() throw();
+  int32_t error;
+  bool check_value_returned;
+  bool check_value_exist;
+   ::dsn::blob check_value;
+  int32_t app_id;
+  int32_t partition_index;
+  int64_t decree;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _check_and_set_response__isset __isset;
 
-    void __set_check_value_returned(const bool val);
+  void __set_error(const int32_t val);
 
-    void __set_check_value_exist(const bool val);
+  void __set_check_value_returned(const bool val);
 
-    void __set_check_value(const ::dsn::blob &val);
+  void __set_check_value_exist(const bool val);
 
-    void __set_app_id(const int32_t val);
+  void __set_check_value(const  ::dsn::blob& val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_decree(const int64_t val);
+  void __set_partition_index(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_decree(const int64_t val);
 
-    bool operator==(const check_and_set_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(check_value_returned == rhs.check_value_returned))
-            return false;
-        if (!(check_value_exist == rhs.check_value_exist))
-            return false;
-        if (!(check_value == rhs.check_value))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const check_and_set_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const check_and_set_response &) const;
+  bool operator == (const check_and_set_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(check_value_returned == rhs.check_value_returned))
+      return false;
+    if (!(check_value_exist == rhs.check_value_exist))
+      return false;
+    if (!(check_value == rhs.check_value))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const check_and_set_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const check_and_set_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(check_and_set_response &a, check_and_set_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const check_and_set_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const check_and_set_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _mutate__isset
-{
-    _mutate__isset() : operation(false), sort_key(false), value(false), set_expire_ts_seconds(false)
-    {
-    }
-    bool operation : 1;
-    bool sort_key : 1;
-    bool value : 1;
-    bool set_expire_ts_seconds : 1;
+typedef struct _mutate__isset {
+  _mutate__isset() : operation(false), sort_key(false), value(false), set_expire_ts_seconds(false) {}
+  bool operation :1;
+  bool sort_key :1;
+  bool value :1;
+  bool set_expire_ts_seconds :1;
 } _mutate__isset;
 
-class mutate
-{
-public:
-    mutate(const mutate &);
-    mutate(mutate &&);
-    mutate &operator=(const mutate &);
-    mutate &operator=(mutate &&);
-    mutate() : operation((mutate_operation::type)0), set_expire_ts_seconds(0) {}
+class mutate {
+ public:
 
-    virtual ~mutate() throw();
-    mutate_operation::type operation;
-    ::dsn::blob sort_key;
-    ::dsn::blob value;
-    int32_t set_expire_ts_seconds;
+  mutate(const mutate&);
+  mutate(mutate&&);
+  mutate& operator=(const mutate&);
+  mutate& operator=(mutate&&);
+  mutate() : operation((mutate_operation::type)0), set_expire_ts_seconds(0) {
+  }
 
-    _mutate__isset __isset;
+  virtual ~mutate() throw();
+  mutate_operation::type operation;
+   ::dsn::blob sort_key;
+   ::dsn::blob value;
+  int32_t set_expire_ts_seconds;
 
-    void __set_operation(const mutate_operation::type val);
+  _mutate__isset __isset;
 
-    void __set_sort_key(const ::dsn::blob &val);
+  void __set_operation(const mutate_operation::type val);
 
-    void __set_value(const ::dsn::blob &val);
+  void __set_sort_key(const  ::dsn::blob& val);
 
-    void __set_set_expire_ts_seconds(const int32_t val);
+  void __set_value(const  ::dsn::blob& val);
 
-    bool operator==(const mutate &rhs) const
-    {
-        if (!(operation == rhs.operation))
-            return false;
-        if (!(sort_key == rhs.sort_key))
-            return false;
-        if (!(value == rhs.value))
-            return false;
-        if (!(set_expire_ts_seconds == rhs.set_expire_ts_seconds))
-            return false;
-        return true;
-    }
-    bool operator!=(const mutate &rhs) const { return !(*this == rhs); }
+  void __set_set_expire_ts_seconds(const int32_t val);
 
-    bool operator<(const mutate &) const;
+  bool operator == (const mutate & rhs) const
+  {
+    if (!(operation == rhs.operation))
+      return false;
+    if (!(sort_key == rhs.sort_key))
+      return false;
+    if (!(value == rhs.value))
+      return false;
+    if (!(set_expire_ts_seconds == rhs.set_expire_ts_seconds))
+      return false;
+    return true;
+  }
+  bool operator != (const mutate &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const mutate & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(mutate &a, mutate &b);
 
-inline std::ostream &operator<<(std::ostream &out, const mutate &obj)
+inline std::ostream& operator<<(std::ostream& out, const mutate& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _check_and_mutate_request__isset
-{
-    _check_and_mutate_request__isset()
-        : hash_key(false),
-          check_sort_key(false),
-          check_type(false),
-          check_operand(false),
-          mutate_list(false),
-          return_check_value(false)
-    {
-    }
-    bool hash_key : 1;
-    bool check_sort_key : 1;
-    bool check_type : 1;
-    bool check_operand : 1;
-    bool mutate_list : 1;
-    bool return_check_value : 1;
+typedef struct _check_and_mutate_request__isset {
+  _check_and_mutate_request__isset() : hash_key(false), check_sort_key(false), check_type(false), check_operand(false), mutate_list(false), return_check_value(false) {}
+  bool hash_key :1;
+  bool check_sort_key :1;
+  bool check_type :1;
+  bool check_operand :1;
+  bool mutate_list :1;
+  bool return_check_value :1;
 } _check_and_mutate_request__isset;
 
-class check_and_mutate_request
-{
-public:
-    check_and_mutate_request(const check_and_mutate_request &);
-    check_and_mutate_request(check_and_mutate_request &&);
-    check_and_mutate_request &operator=(const check_and_mutate_request &);
-    check_and_mutate_request &operator=(check_and_mutate_request &&);
-    check_and_mutate_request() : check_type((cas_check_type::type)0), return_check_value(0) {}
+class check_and_mutate_request {
+ public:
 
-    virtual ~check_and_mutate_request() throw();
-    ::dsn::blob hash_key;
-    ::dsn::blob check_sort_key;
-    cas_check_type::type check_type;
-    ::dsn::blob check_operand;
-    std::vector<mutate> mutate_list;
-    bool return_check_value;
+  check_and_mutate_request(const check_and_mutate_request&);
+  check_and_mutate_request(check_and_mutate_request&&);
+  check_and_mutate_request& operator=(const check_and_mutate_request&);
+  check_and_mutate_request& operator=(check_and_mutate_request&&);
+  check_and_mutate_request() : check_type((cas_check_type::type)0), return_check_value(0) {
+  }
 
-    _check_and_mutate_request__isset __isset;
+  virtual ~check_and_mutate_request() throw();
+   ::dsn::blob hash_key;
+   ::dsn::blob check_sort_key;
+  cas_check_type::type check_type;
+   ::dsn::blob check_operand;
+  std::vector<mutate>  mutate_list;
+  bool return_check_value;
 
-    void __set_hash_key(const ::dsn::blob &val);
+  _check_and_mutate_request__isset __isset;
 
-    void __set_check_sort_key(const ::dsn::blob &val);
+  void __set_hash_key(const  ::dsn::blob& val);
 
-    void __set_check_type(const cas_check_type::type val);
+  void __set_check_sort_key(const  ::dsn::blob& val);
 
-    void __set_check_operand(const ::dsn::blob &val);
+  void __set_check_type(const cas_check_type::type val);
 
-    void __set_mutate_list(const std::vector<mutate> &val);
+  void __set_check_operand(const  ::dsn::blob& val);
 
-    void __set_return_check_value(const bool val);
+  void __set_mutate_list(const std::vector<mutate> & val);
 
-    bool operator==(const check_and_mutate_request &rhs) const
-    {
-        if (!(hash_key == rhs.hash_key))
-            return false;
-        if (!(check_sort_key == rhs.check_sort_key))
-            return false;
-        if (!(check_type == rhs.check_type))
-            return false;
-        if (!(check_operand == rhs.check_operand))
-            return false;
-        if (!(mutate_list == rhs.mutate_list))
-            return false;
-        if (!(return_check_value == rhs.return_check_value))
-            return false;
-        return true;
-    }
-    bool operator!=(const check_and_mutate_request &rhs) const { return !(*this == rhs); }
+  void __set_return_check_value(const bool val);
 
-    bool operator<(const check_and_mutate_request &) const;
+  bool operator == (const check_and_mutate_request & rhs) const
+  {
+    if (!(hash_key == rhs.hash_key))
+      return false;
+    if (!(check_sort_key == rhs.check_sort_key))
+      return false;
+    if (!(check_type == rhs.check_type))
+      return false;
+    if (!(check_operand == rhs.check_operand))
+      return false;
+    if (!(mutate_list == rhs.mutate_list))
+      return false;
+    if (!(return_check_value == rhs.return_check_value))
+      return false;
+    return true;
+  }
+  bool operator != (const check_and_mutate_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const check_and_mutate_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(check_and_mutate_request &a, check_and_mutate_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const check_and_mutate_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const check_and_mutate_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _check_and_mutate_response__isset
-{
-    _check_and_mutate_response__isset()
-        : error(false),
-          check_value_returned(false),
-          check_value_exist(false),
-          check_value(false),
-          app_id(false),
-          partition_index(false),
-          decree(false),
-          server(false)
-    {
-    }
-    bool error : 1;
-    bool check_value_returned : 1;
-    bool check_value_exist : 1;
-    bool check_value : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool decree : 1;
-    bool server : 1;
+typedef struct _check_and_mutate_response__isset {
+  _check_and_mutate_response__isset() : error(false), check_value_returned(false), check_value_exist(false), check_value(false), app_id(false), partition_index(false), decree(false), server(false) {}
+  bool error :1;
+  bool check_value_returned :1;
+  bool check_value_exist :1;
+  bool check_value :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool decree :1;
+  bool server :1;
 } _check_and_mutate_response__isset;
 
-class check_and_mutate_response
-{
-public:
-    check_and_mutate_response(const check_and_mutate_response &);
-    check_and_mutate_response(check_and_mutate_response &&);
-    check_and_mutate_response &operator=(const check_and_mutate_response &);
-    check_and_mutate_response &operator=(check_and_mutate_response &&);
-    check_and_mutate_response()
-        : error(0),
-          check_value_returned(0),
-          check_value_exist(0),
-          app_id(0),
-          partition_index(0),
-          decree(0),
-          server()
-    {
-    }
+class check_and_mutate_response {
+ public:
 
-    virtual ~check_and_mutate_response() throw();
-    int32_t error;
-    bool check_value_returned;
-    bool check_value_exist;
-    ::dsn::blob check_value;
-    int32_t app_id;
-    int32_t partition_index;
-    int64_t decree;
-    std::string server;
+  check_and_mutate_response(const check_and_mutate_response&);
+  check_and_mutate_response(check_and_mutate_response&&);
+  check_and_mutate_response& operator=(const check_and_mutate_response&);
+  check_and_mutate_response& operator=(check_and_mutate_response&&);
+  check_and_mutate_response() : error(0), check_value_returned(0), check_value_exist(0), app_id(0), partition_index(0), decree(0), server() {
+  }
 
-    _check_and_mutate_response__isset __isset;
+  virtual ~check_and_mutate_response() throw();
+  int32_t error;
+  bool check_value_returned;
+  bool check_value_exist;
+   ::dsn::blob check_value;
+  int32_t app_id;
+  int32_t partition_index;
+  int64_t decree;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _check_and_mutate_response__isset __isset;
 
-    void __set_check_value_returned(const bool val);
+  void __set_error(const int32_t val);
 
-    void __set_check_value_exist(const bool val);
+  void __set_check_value_returned(const bool val);
 
-    void __set_check_value(const ::dsn::blob &val);
+  void __set_check_value_exist(const bool val);
 
-    void __set_app_id(const int32_t val);
+  void __set_check_value(const  ::dsn::blob& val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_decree(const int64_t val);
+  void __set_partition_index(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_decree(const int64_t val);
 
-    bool operator==(const check_and_mutate_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(check_value_returned == rhs.check_value_returned))
-            return false;
-        if (!(check_value_exist == rhs.check_value_exist))
-            return false;
-        if (!(check_value == rhs.check_value))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(decree == rhs.decree))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const check_and_mutate_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const check_and_mutate_response &) const;
+  bool operator == (const check_and_mutate_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(check_value_returned == rhs.check_value_returned))
+      return false;
+    if (!(check_value_exist == rhs.check_value_exist))
+      return false;
+    if (!(check_value == rhs.check_value))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(decree == rhs.decree))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const check_and_mutate_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const check_and_mutate_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(check_and_mutate_response &a, check_and_mutate_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const check_and_mutate_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const check_and_mutate_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _get_scanner_request__isset
-{
-    _get_scanner_request__isset()
-        : start_key(false),
-          stop_key(false),
-          start_inclusive(false),
-          stop_inclusive(false),
-          batch_size(false),
-          no_value(false),
-          hash_key_filter_type(false),
-          hash_key_filter_pattern(false),
-          sort_key_filter_type(false),
-          sort_key_filter_pattern(false)
-    {
-    }
-    bool start_key : 1;
-    bool stop_key : 1;
-    bool start_inclusive : 1;
-    bool stop_inclusive : 1;
-    bool batch_size : 1;
-    bool no_value : 1;
-    bool hash_key_filter_type : 1;
-    bool hash_key_filter_pattern : 1;
-    bool sort_key_filter_type : 1;
-    bool sort_key_filter_pattern : 1;
+typedef struct _get_scanner_request__isset {
+  _get_scanner_request__isset() : start_key(false), stop_key(false), start_inclusive(false), stop_inclusive(false), batch_size(false), no_value(false), hash_key_filter_type(false), hash_key_filter_pattern(false), sort_key_filter_type(false), sort_key_filter_pattern(false) {}
+  bool start_key :1;
+  bool stop_key :1;
+  bool start_inclusive :1;
+  bool stop_inclusive :1;
+  bool batch_size :1;
+  bool no_value :1;
+  bool hash_key_filter_type :1;
+  bool hash_key_filter_pattern :1;
+  bool sort_key_filter_type :1;
+  bool sort_key_filter_pattern :1;
 } _get_scanner_request__isset;
 
-class get_scanner_request
-{
-public:
-    get_scanner_request(const get_scanner_request &);
-    get_scanner_request(get_scanner_request &&);
-    get_scanner_request &operator=(const get_scanner_request &);
-    get_scanner_request &operator=(get_scanner_request &&);
-    get_scanner_request()
-        : start_inclusive(0),
-          stop_inclusive(0),
-          batch_size(0),
-          no_value(0),
-          hash_key_filter_type((filter_type::type)0),
-          sort_key_filter_type((filter_type::type)0)
-    {
-    }
+class get_scanner_request {
+ public:
 
-    virtual ~get_scanner_request() throw();
-    ::dsn::blob start_key;
-    ::dsn::blob stop_key;
-    bool start_inclusive;
-    bool stop_inclusive;
-    int32_t batch_size;
-    bool no_value;
-    filter_type::type hash_key_filter_type;
-    ::dsn::blob hash_key_filter_pattern;
-    filter_type::type sort_key_filter_type;
-    ::dsn::blob sort_key_filter_pattern;
+  get_scanner_request(const get_scanner_request&);
+  get_scanner_request(get_scanner_request&&);
+  get_scanner_request& operator=(const get_scanner_request&);
+  get_scanner_request& operator=(get_scanner_request&&);
+  get_scanner_request() : start_inclusive(0), stop_inclusive(0), batch_size(0), no_value(0), hash_key_filter_type((filter_type::type)0), sort_key_filter_type((filter_type::type)0) {
+  }
 
-    _get_scanner_request__isset __isset;
+  virtual ~get_scanner_request() throw();
+   ::dsn::blob start_key;
+   ::dsn::blob stop_key;
+  bool start_inclusive;
+  bool stop_inclusive;
+  int32_t batch_size;
+  bool no_value;
+  filter_type::type hash_key_filter_type;
+   ::dsn::blob hash_key_filter_pattern;
+  filter_type::type sort_key_filter_type;
+   ::dsn::blob sort_key_filter_pattern;
 
-    void __set_start_key(const ::dsn::blob &val);
+  _get_scanner_request__isset __isset;
 
-    void __set_stop_key(const ::dsn::blob &val);
+  void __set_start_key(const  ::dsn::blob& val);
 
-    void __set_start_inclusive(const bool val);
+  void __set_stop_key(const  ::dsn::blob& val);
 
-    void __set_stop_inclusive(const bool val);
+  void __set_start_inclusive(const bool val);
 
-    void __set_batch_size(const int32_t val);
+  void __set_stop_inclusive(const bool val);
 
-    void __set_no_value(const bool val);
+  void __set_batch_size(const int32_t val);
 
-    void __set_hash_key_filter_type(const filter_type::type val);
+  void __set_no_value(const bool val);
 
-    void __set_hash_key_filter_pattern(const ::dsn::blob &val);
+  void __set_hash_key_filter_type(const filter_type::type val);
 
-    void __set_sort_key_filter_type(const filter_type::type val);
+  void __set_hash_key_filter_pattern(const  ::dsn::blob& val);
 
-    void __set_sort_key_filter_pattern(const ::dsn::blob &val);
+  void __set_sort_key_filter_type(const filter_type::type val);
 
-    bool operator==(const get_scanner_request &rhs) const
-    {
-        if (!(start_key == rhs.start_key))
-            return false;
-        if (!(stop_key == rhs.stop_key))
-            return false;
-        if (!(start_inclusive == rhs.start_inclusive))
-            return false;
-        if (!(stop_inclusive == rhs.stop_inclusive))
-            return false;
-        if (!(batch_size == rhs.batch_size))
-            return false;
-        if (!(no_value == rhs.no_value))
-            return false;
-        if (!(hash_key_filter_type == rhs.hash_key_filter_type))
-            return false;
-        if (!(hash_key_filter_pattern == rhs.hash_key_filter_pattern))
-            return false;
-        if (!(sort_key_filter_type == rhs.sort_key_filter_type))
-            return false;
-        if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
-            return false;
-        return true;
-    }
-    bool operator!=(const get_scanner_request &rhs) const { return !(*this == rhs); }
+  void __set_sort_key_filter_pattern(const  ::dsn::blob& val);
 
-    bool operator<(const get_scanner_request &) const;
+  bool operator == (const get_scanner_request & rhs) const
+  {
+    if (!(start_key == rhs.start_key))
+      return false;
+    if (!(stop_key == rhs.stop_key))
+      return false;
+    if (!(start_inclusive == rhs.start_inclusive))
+      return false;
+    if (!(stop_inclusive == rhs.stop_inclusive))
+      return false;
+    if (!(batch_size == rhs.batch_size))
+      return false;
+    if (!(no_value == rhs.no_value))
+      return false;
+    if (!(hash_key_filter_type == rhs.hash_key_filter_type))
+      return false;
+    if (!(hash_key_filter_pattern == rhs.hash_key_filter_pattern))
+      return false;
+    if (!(sort_key_filter_type == rhs.sort_key_filter_type))
+      return false;
+    if (!(sort_key_filter_pattern == rhs.sort_key_filter_pattern))
+      return false;
+    return true;
+  }
+  bool operator != (const get_scanner_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const get_scanner_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(get_scanner_request &a, get_scanner_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const get_scanner_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const get_scanner_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _scan_request__isset
-{
-    _scan_request__isset() : context_id(false) {}
-    bool context_id : 1;
+typedef struct _scan_request__isset {
+  _scan_request__isset() : context_id(false) {}
+  bool context_id :1;
 } _scan_request__isset;
 
-class scan_request
-{
-public:
-    scan_request(const scan_request &);
-    scan_request(scan_request &&);
-    scan_request &operator=(const scan_request &);
-    scan_request &operator=(scan_request &&);
-    scan_request() : context_id(0) {}
+class scan_request {
+ public:
 
-    virtual ~scan_request() throw();
-    int64_t context_id;
+  scan_request(const scan_request&);
+  scan_request(scan_request&&);
+  scan_request& operator=(const scan_request&);
+  scan_request& operator=(scan_request&&);
+  scan_request() : context_id(0) {
+  }
 
-    _scan_request__isset __isset;
+  virtual ~scan_request() throw();
+  int64_t context_id;
 
-    void __set_context_id(const int64_t val);
+  _scan_request__isset __isset;
 
-    bool operator==(const scan_request &rhs) const
-    {
-        if (!(context_id == rhs.context_id))
-            return false;
-        return true;
-    }
-    bool operator!=(const scan_request &rhs) const { return !(*this == rhs); }
+  void __set_context_id(const int64_t val);
 
-    bool operator<(const scan_request &) const;
+  bool operator == (const scan_request & rhs) const
+  {
+    if (!(context_id == rhs.context_id))
+      return false;
+    return true;
+  }
+  bool operator != (const scan_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const scan_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(scan_request &a, scan_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const scan_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const scan_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _scan_response__isset
-{
-    _scan_response__isset()
-        : error(false),
-          kvs(false),
-          context_id(false),
-          app_id(false),
-          partition_index(false),
-          server(false)
-    {
-    }
-    bool error : 1;
-    bool kvs : 1;
-    bool context_id : 1;
-    bool app_id : 1;
-    bool partition_index : 1;
-    bool server : 1;
+typedef struct _scan_response__isset {
+  _scan_response__isset() : error(false), kvs(false), context_id(false), app_id(false), partition_index(false), server(false) {}
+  bool error :1;
+  bool kvs :1;
+  bool context_id :1;
+  bool app_id :1;
+  bool partition_index :1;
+  bool server :1;
 } _scan_response__isset;
 
-class scan_response
-{
-public:
-    scan_response(const scan_response &);
-    scan_response(scan_response &&);
-    scan_response &operator=(const scan_response &);
-    scan_response &operator=(scan_response &&);
-    scan_response() : error(0), context_id(0), app_id(0), partition_index(0), server() {}
+class scan_response {
+ public:
 
-    virtual ~scan_response() throw();
-    int32_t error;
-    std::vector<key_value> kvs;
-    int64_t context_id;
-    int32_t app_id;
-    int32_t partition_index;
-    std::string server;
+  scan_response(const scan_response&);
+  scan_response(scan_response&&);
+  scan_response& operator=(const scan_response&);
+  scan_response& operator=(scan_response&&);
+  scan_response() : error(0), context_id(0), app_id(0), partition_index(0), server() {
+  }
 
-    _scan_response__isset __isset;
+  virtual ~scan_response() throw();
+  int32_t error;
+  std::vector<key_value>  kvs;
+  int64_t context_id;
+  int32_t app_id;
+  int32_t partition_index;
+  std::string server;
 
-    void __set_error(const int32_t val);
+  _scan_response__isset __isset;
 
-    void __set_kvs(const std::vector<key_value> &val);
+  void __set_error(const int32_t val);
 
-    void __set_context_id(const int64_t val);
+  void __set_kvs(const std::vector<key_value> & val);
 
-    void __set_app_id(const int32_t val);
+  void __set_context_id(const int64_t val);
 
-    void __set_partition_index(const int32_t val);
+  void __set_app_id(const int32_t val);
 
-    void __set_server(const std::string &val);
+  void __set_partition_index(const int32_t val);
 
-    bool operator==(const scan_response &rhs) const
-    {
-        if (!(error == rhs.error))
-            return false;
-        if (!(kvs == rhs.kvs))
-            return false;
-        if (!(context_id == rhs.context_id))
-            return false;
-        if (!(app_id == rhs.app_id))
-            return false;
-        if (!(partition_index == rhs.partition_index))
-            return false;
-        if (!(server == rhs.server))
-            return false;
-        return true;
-    }
-    bool operator!=(const scan_response &rhs) const { return !(*this == rhs); }
+  void __set_server(const std::string& val);
 
-    bool operator<(const scan_response &) const;
+  bool operator == (const scan_response & rhs) const
+  {
+    if (!(error == rhs.error))
+      return false;
+    if (!(kvs == rhs.kvs))
+      return false;
+    if (!(context_id == rhs.context_id))
+      return false;
+    if (!(app_id == rhs.app_id))
+      return false;
+    if (!(partition_index == rhs.partition_index))
+      return false;
+    if (!(server == rhs.server))
+      return false;
+    return true;
+  }
+  bool operator != (const scan_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const scan_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(scan_response &a, scan_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const scan_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _duplicate_request__isset
-{
-    _duplicate_request__isset()
-        : timestamp(false),
-          task_code(false),
-          raw_message(false),
-          cluster_id(false),
-          verify_timetag(false)
-    {
-    }
-    bool timestamp : 1;
-    bool task_code : 1;
-    bool raw_message : 1;
-    bool cluster_id : 1;
-    bool verify_timetag : 1;
+typedef struct _duplicate_request__isset {
+  _duplicate_request__isset() : timestamp(false), task_code(false), raw_message(false), cluster_id(false), verify_timetag(false) {}
+  bool timestamp :1;
+  bool task_code :1;
+  bool raw_message :1;
+  bool cluster_id :1;
+  bool verify_timetag :1;
 } _duplicate_request__isset;
 
-class duplicate_request
-{
-public:
-    duplicate_request(const duplicate_request &);
-    duplicate_request(duplicate_request &&);
-    duplicate_request &operator=(const duplicate_request &);
-    duplicate_request &operator=(duplicate_request &&);
-    duplicate_request() : timestamp(0), cluster_id(0), verify_timetag(0) {}
+class duplicate_request {
+ public:
 
-    virtual ~duplicate_request() throw();
-    int64_t timestamp;
-    ::dsn::task_code task_code;
-    ::dsn::blob raw_message;
-    int8_t cluster_id;
-    bool verify_timetag;
+  duplicate_request(const duplicate_request&);
+  duplicate_request(duplicate_request&&);
+  duplicate_request& operator=(const duplicate_request&);
+  duplicate_request& operator=(duplicate_request&&);
+  duplicate_request() : timestamp(0), cluster_id(0), verify_timetag(0) {
+  }
 
-    _duplicate_request__isset __isset;
+  virtual ~duplicate_request() throw();
+  int64_t timestamp;
+   ::dsn::task_code task_code;
+   ::dsn::blob raw_message;
+  int8_t cluster_id;
+  bool verify_timetag;
 
-    void __set_timestamp(const int64_t val);
+  _duplicate_request__isset __isset;
 
-    void __set_task_code(const ::dsn::task_code &val);
+  void __set_timestamp(const int64_t val);
 
-    void __set_raw_message(const ::dsn::blob &val);
+  void __set_task_code(const  ::dsn::task_code& val);
 
-    void __set_cluster_id(const int8_t val);
+  void __set_raw_message(const  ::dsn::blob& val);
 
-    void __set_verify_timetag(const bool val);
+  void __set_cluster_id(const int8_t val);
 
-    bool operator==(const duplicate_request &rhs) const
-    {
-        if (__isset.timestamp != rhs.__isset.timestamp)
-            return false;
-        else if (__isset.timestamp && !(timestamp == rhs.timestamp))
-            return false;
-        if (__isset.task_code != rhs.__isset.task_code)
-            return false;
-        else if (__isset.task_code && !(task_code == rhs.task_code))
-            return false;
-        if (__isset.raw_message != rhs.__isset.raw_message)
-            return false;
-        else if (__isset.raw_message && !(raw_message == rhs.raw_message))
-            return false;
-        if (__isset.cluster_id != rhs.__isset.cluster_id)
-            return false;
-        else if (__isset.cluster_id && !(cluster_id == rhs.cluster_id))
-            return false;
-        if (__isset.verify_timetag != rhs.__isset.verify_timetag)
-            return false;
-        else if (__isset.verify_timetag && !(verify_timetag == rhs.verify_timetag))
-            return false;
-        return true;
-    }
-    bool operator!=(const duplicate_request &rhs) const { return !(*this == rhs); }
+  void __set_verify_timetag(const bool val);
 
-    bool operator<(const duplicate_request &) const;
+  bool operator == (const duplicate_request & rhs) const
+  {
+    if (__isset.timestamp != rhs.__isset.timestamp)
+      return false;
+    else if (__isset.timestamp && !(timestamp == rhs.timestamp))
+      return false;
+    if (__isset.task_code != rhs.__isset.task_code)
+      return false;
+    else if (__isset.task_code && !(task_code == rhs.task_code))
+      return false;
+    if (__isset.raw_message != rhs.__isset.raw_message)
+      return false;
+    else if (__isset.raw_message && !(raw_message == rhs.raw_message))
+      return false;
+    if (__isset.cluster_id != rhs.__isset.cluster_id)
+      return false;
+    else if (__isset.cluster_id && !(cluster_id == rhs.cluster_id))
+      return false;
+    if (__isset.verify_timetag != rhs.__isset.verify_timetag)
+      return false;
+    else if (__isset.verify_timetag && !(verify_timetag == rhs.verify_timetag))
+      return false;
+    return true;
+  }
+  bool operator != (const duplicate_request &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const duplicate_request & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(duplicate_request &a, duplicate_request &b);
 
-inline std::ostream &operator<<(std::ostream &out, const duplicate_request &obj)
+inline std::ostream& operator<<(std::ostream& out, const duplicate_request& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _duplicate_response__isset
-{
-    _duplicate_response__isset() : error(false), error_hint(false) {}
-    bool error : 1;
-    bool error_hint : 1;
+typedef struct _duplicate_response__isset {
+  _duplicate_response__isset() : error(false), error_hint(false) {}
+  bool error :1;
+  bool error_hint :1;
 } _duplicate_response__isset;
 
-class duplicate_response
-{
-public:
-    duplicate_response(const duplicate_response &);
-    duplicate_response(duplicate_response &&);
-    duplicate_response &operator=(const duplicate_response &);
-    duplicate_response &operator=(duplicate_response &&);
-    duplicate_response() : error(0), error_hint() {}
+class duplicate_response {
+ public:
 
-    virtual ~duplicate_response() throw();
-    int32_t error;
-    std::string error_hint;
+  duplicate_response(const duplicate_response&);
+  duplicate_response(duplicate_response&&);
+  duplicate_response& operator=(const duplicate_response&);
+  duplicate_response& operator=(duplicate_response&&);
+  duplicate_response() : error(0), error_hint() {
+  }
 
-    _duplicate_response__isset __isset;
+  virtual ~duplicate_response() throw();
+  int32_t error;
+  std::string error_hint;
 
-    void __set_error(const int32_t val);
+  _duplicate_response__isset __isset;
 
-    void __set_error_hint(const std::string &val);
+  void __set_error(const int32_t val);
 
-    bool operator==(const duplicate_response &rhs) const
-    {
-        if (__isset.error != rhs.__isset.error)
-            return false;
-        else if (__isset.error && !(error == rhs.error))
-            return false;
-        if (__isset.error_hint != rhs.__isset.error_hint)
-            return false;
-        else if (__isset.error_hint && !(error_hint == rhs.error_hint))
-            return false;
-        return true;
-    }
-    bool operator!=(const duplicate_response &rhs) const { return !(*this == rhs); }
+  void __set_error_hint(const std::string& val);
 
-    bool operator<(const duplicate_response &) const;
+  bool operator == (const duplicate_response & rhs) const
+  {
+    if (__isset.error != rhs.__isset.error)
+      return false;
+    else if (__isset.error && !(error == rhs.error))
+      return false;
+    if (__isset.error_hint != rhs.__isset.error_hint)
+      return false;
+    else if (__isset.error_hint && !(error_hint == rhs.error_hint))
+      return false;
+    return true;
+  }
+  bool operator != (const duplicate_response &rhs) const {
+    return !(*this == rhs);
+  }
 
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+  bool operator < (const duplicate_response & ) const;
 
-    virtual void printTo(std::ostream &out) const;
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+  virtual void printTo(std::ostream& out) const;
 };
 
 void swap(duplicate_response &a, duplicate_response &b);
 
-inline std::ostream &operator<<(std::ostream &out, const duplicate_response &obj)
+inline std::ostream& operator<<(std::ostream& out, const duplicate_response& obj)
 {
-    obj.printTo(out);
-    return out;
+  obj.printTo(out);
+  return out;
 }
 
-typedef struct _hotkey_detect_request__isset
-{
-    _hotkey_detect_request__isset() : type(false), action(false) {}
-    bool type : 1;
-    bool action : 1;
-} _hotkey_detect_request__isset;
-
-class hotkey_detect_request
-{
-public:
-    hotkey_detect_request(const hotkey_detect_request &);
-    hotkey_detect_request(hotkey_detect_request &&);
-    hotkey_detect_request &operator=(const hotkey_detect_request &);
-    hotkey_detect_request &operator=(hotkey_detect_request &&);
-    hotkey_detect_request() : type((hotkey_type::type)0), action((hotkey_detect_action::type)0) {}
-
-    virtual ~hotkey_detect_request() throw();
-    hotkey_type::type type;
-    hotkey_detect_action::type action;
-
-    _hotkey_detect_request__isset __isset;
-
-    void __set_type(const hotkey_type::type val);
-
-    void __set_action(const hotkey_detect_action::type val);
-
-    bool operator==(const hotkey_detect_request &rhs) const
-    {
-        if (!(type == rhs.type))
-            return false;
-        if (!(action == rhs.action))
-            return false;
-        return true;
-    }
-    bool operator!=(const hotkey_detect_request &rhs) const { return !(*this == rhs); }
-
-    bool operator<(const hotkey_detect_request &) const;
-
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-
-    virtual void printTo(std::ostream &out) const;
-};
-
-void swap(hotkey_detect_request &a, hotkey_detect_request &b);
-
-inline std::ostream &operator<<(std::ostream &out, const hotkey_detect_request &obj)
-{
-    obj.printTo(out);
-    return out;
-}
-
-typedef struct _hotkey_detect_response__isset
-{
-    _hotkey_detect_response__isset() : err(false), err_hint(false) {}
-    bool err : 1;
-    bool err_hint : 1;
-} _hotkey_detect_response__isset;
-
-class hotkey_detect_response
-{
-public:
-    hotkey_detect_response(const hotkey_detect_response &);
-    hotkey_detect_response(hotkey_detect_response &&);
-    hotkey_detect_response &operator=(const hotkey_detect_response &);
-    hotkey_detect_response &operator=(hotkey_detect_response &&);
-    hotkey_detect_response() : err(0), err_hint() {}
-
-    virtual ~hotkey_detect_response() throw();
-    int32_t err;
-    std::string err_hint;
-
-    _hotkey_detect_response__isset __isset;
-
-    void __set_err(const int32_t val);
-
-    void __set_err_hint(const std::string &val);
-
-    bool operator==(const hotkey_detect_response &rhs) const
-    {
-        if (!(err == rhs.err))
-            return false;
-        if (__isset.err_hint != rhs.__isset.err_hint)
-            return false;
-        else if (__isset.err_hint && !(err_hint == rhs.err_hint))
-            return false;
-        return true;
-    }
-    bool operator!=(const hotkey_detect_response &rhs) const { return !(*this == rhs); }
-
-    bool operator<(const hotkey_detect_response &) const;
-
-    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
-    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
-
-    virtual void printTo(std::ostream &out) const;
-};
-
-void swap(hotkey_detect_response &a, hotkey_detect_response &b);
-
-inline std::ostream &operator<<(std::ostream &out, const hotkey_detect_response &obj)
-{
-    obj.printTo(out);
-    return out;
-}
-}
-} // namespace
+}} // namespace
 
 #endif
