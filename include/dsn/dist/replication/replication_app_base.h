@@ -242,6 +242,13 @@ public:
 
     virtual ingestion_status::type get_ingestion_status() { return ingestion_status::IS_INVALID; }
 
+    virtual void on_detect_hotkey(const detect_hotkey_request &req,
+                                  /*out*/ detect_hotkey_response &resp)
+    {
+        resp.err = dsn::ERR_OBJECT_NOT_FOUND;
+        resp.__set_err_hint("on_detect_hotkey implementation not found");
+    }
+
 public:
     //
     // utility functions to be used by app

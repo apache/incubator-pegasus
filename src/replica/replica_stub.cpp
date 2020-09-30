@@ -2784,7 +2784,7 @@ void replica_stub::on_detect_hotkey(detect_hotkey_rpc rpc)
 
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
-        response.err = ERR_OK;
+        rep->on_detect_hotkey(request, response);
     } else {
         response.err = ERR_OBJECT_NOT_FOUND;
         response.err_hint = fmt::format("not find the replica {} \n", request.pid);

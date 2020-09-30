@@ -459,5 +459,11 @@ void replica::init_table_level_latency_counters()
         }
     }
 }
+
+void replica::on_detect_hotkey(const detect_hotkey_request &req, detect_hotkey_response &resp)
+{
+    _app->on_detect_hotkey(req, resp);
+}
+
 } // namespace replication
 } // namespace dsn
