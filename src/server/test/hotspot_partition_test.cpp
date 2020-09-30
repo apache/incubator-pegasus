@@ -32,7 +32,7 @@ public:
     hotspot_partition_test() : calculator("TEST", 8)
     {
         dsn::fail::setup();
-        dsn::fail::cfg("send_hotkey_detect_request", "return()");
+        dsn::fail::cfg("send_detect_hotkey_request", "return()");
     };
     ~hotspot_partition_test() { dsn::fail::teardown(); }
 
@@ -124,7 +124,7 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     clear_calculator_histories();
 }
 
-TEST_F(hotspot_partition_test, send_hotkey_detect_request)
+TEST_F(hotspot_partition_test, send_detect_hotkey_request)
 {
     const int READ_HOT_PARTITION = 7;
     const int WRITE_HOT_PARTITION = 0;
