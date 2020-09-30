@@ -91,7 +91,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
         fmt::print("{}\n", err_info);
         return false;
     }
-    
+
     std::string hotkey_action = cmd({"-c", "--hotkey_action"}).str();
     std::string hotkey_type = cmd({"-t", "--hotkey_type"}).str();
     dsn::replication::detect_hotkey_request req;
