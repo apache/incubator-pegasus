@@ -88,7 +88,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     std::string err_info;
     std::string ip_str = cmd({"-d", "--address"}).str();
     if (!validate_ip(sc, ip_str, target_address, err_info)) {
-        fmt::print("{}\n", err_info);
+        fmt::print(stderr, "{}\n", err_info);
         return false;
     }
 
