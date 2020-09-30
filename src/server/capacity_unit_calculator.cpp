@@ -3,13 +3,21 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include "capacity_unit_calculator.h"
+
 #include <dsn/utility/config_api.h>
 #include <rocksdb/status.h>
+#include "hotkey_collector.h"
 
 namespace pegasus {
 namespace server {
 
-capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_base(r)
+capacity_unit_calculator::capacity_unit_calculator(
+    replica_base *r,
+    std::shared_ptr<hotkey_collector> read_hotkey_collector,
+    std::shared_ptr<hotkey_collector> write_hotkey_collector)
+    : replica_base(r),
+      _read_hotkey_collector(read_hotkey_collector),
+      _write_hotkey_collector(write_hotkey_collector)
 {
     _read_capacity_unit_size =
         dsn_config_get_value_uint64("pegasus.server",
@@ -96,6 +104,8 @@ void capacity_unit_calculator::add_get_cu(int32_t status,
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
+
+    _read_hotkey_collector->capture_raw_key(key, key.size() + value.size());
 
     if (status == rocksdb::Status::kNotFound) {
         add_read_cu(1);

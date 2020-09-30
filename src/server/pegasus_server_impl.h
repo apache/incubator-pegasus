@@ -28,6 +28,7 @@ namespace server {
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
+class hotkey_collector;
 
 class pegasus_server_impl : public pegasus_read_service
 {
@@ -318,6 +319,9 @@ private:
 
     ::dsn::error_code flush_all_family_columns(bool wait);
 
+    void on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
+                          dsn::replication::detect_hotkey_response &resp) override;
+
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
@@ -381,6 +385,9 @@ private:
         dsn::replication::ingestion_status::IS_INVALID};
 
     dsn::task_tracker _tracker;
+
+    std::shared_ptr<hotkey_collector> _read_hotkey_collector;
+    std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;

@@ -22,6 +22,7 @@
 #include "capacity_unit_calculator.h"
 #include "pegasus_server_write.h"
 #include "meta_store.h"
+#include "hotkey_collector.h"
 
 using namespace dsn::literals::chrono_literals;
 
@@ -1485,7 +1486,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     });
 
     // initialize cu calculator and write service after server being initialized.
-    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(this);
+    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
+        this, _read_hotkey_collector, _write_hotkey_collector);
     _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
 
     return ::dsn::ERR_OK;
@@ -2796,6 +2798,29 @@ void pegasus_server_impl::set_ingestion_status(dsn::replication::ingestion_statu
                    dsn::enum_to_string(_ingestion_status),
                    dsn::enum_to_string(status));
     _ingestion_status = status;
+}
+
+void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
+                                           dsn::replication::detect_hotkey_response &resp)
+{
+
+    if (req.action != dsn::replication::detect_action::START &&
+        req.action != dsn::replication::detect_action::STOP) {
+        resp.err = ::dsn::ERR_OBJECT_NOT_FOUND;
+        resp.__set_err_hint("invalid detect_action");
+        return;
+    }
+
+    if (req.type != dsn::replication::hotkey_type::READ &&
+        req.type != dsn::replication::hotkey_type::WRITE) {
+        resp.err = ::dsn::ERR_OBJECT_NOT_FOUND;
+        resp.__set_err_hint("invalid hotkey_type");
+        return;
+    }
+
+    auto collector = req.type == dsn::replication::hotkey_type::READ ? _read_hotkey_collector
+                                                                     : _write_hotkey_collector;
+    collector->handle_operation(req, resp);
 }
 
 } // namespace server

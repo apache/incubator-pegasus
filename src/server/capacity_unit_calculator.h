@@ -11,10 +11,14 @@
 namespace pegasus {
 namespace server {
 
+class hotkey_collector;
+
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
 public:
-    explicit capacity_unit_calculator(replica_base *r);
+    capacity_unit_calculator(replica_base *r,
+                             std::shared_ptr<hotkey_collector> read_hotkey_collector,
+                             std::shared_ptr<hotkey_collector> write_hotkey_collector);
 
     void add_get_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_multi_get_cu(int32_t status,
@@ -70,6 +74,9 @@ private:
     ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
+
+    std::shared_ptr<hotkey_collector> _read_hotkey_collector;
+    std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 };
 
 } // namespace server

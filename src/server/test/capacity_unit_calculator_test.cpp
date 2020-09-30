@@ -6,6 +6,7 @@
 #include "server/capacity_unit_calculator.h"
 
 #include <dsn/dist/replication/replica_base.h>
+#include "server/hotkey_collector.h"
 
 namespace pegasus {
 namespace server {
@@ -26,7 +27,8 @@ public:
     }
 
     explicit mock_capacity_unit_calculator(dsn::replication::replica_base *r)
-        : capacity_unit_calculator(r)
+        : capacity_unit_calculator(
+              r, std::make_shared<hotkey_collector>(), std::make_shared<hotkey_collector>())
     {
     }
 
