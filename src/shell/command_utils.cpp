@@ -42,6 +42,6 @@ bool validate_ip(shell_context *sc,
         }
     }
 
-    err_info = fmt::format("invalid ip:port={}, can't find it in metas", ip_str);
+    err_info = fmt::format("invalid ip:port={}, can't find it in the cluster", ip_str);
     return false;
 }
