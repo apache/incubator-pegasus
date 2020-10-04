@@ -2804,15 +2804,15 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
                                            dsn::replication::detect_hotkey_response &resp)
 {
 
-    if (req.action != dsn::replication::detect_action::START &&
-        req.action != dsn::replication::detect_action::STOP) {
+    if (dsn_unlikely(req.action != dsn::replication::detect_action::START &&
+                     req.action != dsn::replication::detect_action::STOP)) {
         resp.err = dsn::ERR_OBJECT_NOT_FOUND;
         resp.__set_err_hint("invalid detect_action");
         return;
     }
 
-    if (req.type != dsn::replication::hotkey_type::READ &&
-        req.type != dsn::replication::hotkey_type::WRITE) {
+    if (dsn_unlikely(req.type != dsn::replication::hotkey_type::READ &&
+                     req.type != dsn::replication::hotkey_type::WRITE)) {
         resp.err = dsn::ERR_OBJECT_NOT_FOUND;
         resp.__set_err_hint("invalid hotkey_type");
         return;
