@@ -20,15 +20,12 @@
 #include <algorithm>
 #include <math.h>
 #include <dsn/dist/fmt_logging.h>
-#include <rrdb/rrdb_types.h>
 #include <dsn/utility/flags.h>
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/tool-api/group_address.h>
 #include <dsn/utility/error_code.h>
-#include <rrdb/rrdb_types.h>
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/tool-api/task_tracker.h>
-#include "pegasus_read_service.h"
 #include <dsn/utility/fail_point.h>
 
 namespace pegasus {
@@ -44,7 +41,7 @@ DSN_DEFINE_int64("pegasus.collector",
                  "data");
 
 DSN_DEFINE_bool("pegasus.collector",
-                enable_hotkey_detect,
+                enable_detect_hotkey,
                 false,
                 "auto detect hot key in the hot paritition");
 
@@ -145,7 +142,7 @@ void hotspot_partition_calculator::data_analyse()
         stat_histories_analyse(data_type, hot_points);
         update_hot_point(data_type, hot_points);
     }
-    if (!FLAGS_enable_hotkey_detect) {
+    if (!FLAGS_enable_detect_hotkey) {
         return;
     }
     for (int data_type = 0; data_type <= 1; data_type++) {
@@ -162,12 +159,12 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
                          _app_name,
                          index);
-                send_hotkey_detect_request(_app_name,
+                send_detect_hotkey_request(_app_name,
                                            index,
-                                           (data_type == dsn::apps::hotkey_type::type::READ)
-                                               ? dsn::apps::hotkey_type::type::READ
-                                               : dsn::apps::hotkey_type::type::WRITE,
-                                           dsn::apps::hotkey_detect_action::type::START);
+                                           (data_type == dsn::replication::hotkey_type::type::READ)
+                                               ? dsn::replication::hotkey_type::type::READ
+                                               : dsn::replication::hotkey_type::type::WRITE,
+                                           dsn::replication::detect_action::type::START);
             }
         } else {
             _hotpartition_counter[index][data_type] =
@@ -176,19 +173,19 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     }
 }
 
-/*static*/ void hotspot_partition_calculator::send_hotkey_detect_request(
+/*static*/ void hotspot_partition_calculator::send_detect_hotkey_request(
     const std::string &app_name,
     const uint64_t partition_index,
-    const dsn::apps::hotkey_type::type hotkey_type,
-    const dsn::apps::hotkey_detect_action::type action)
+    const dsn::replication::hotkey_type::type hotkey_type,
+    const dsn::replication::detect_action::type action)
 {
-    FAIL_POINT_INJECT_F("send_hotkey_detect_request", [](dsn::string_view) {});
-    auto request = dsn::make_unique<dsn::apps::hotkey_detect_request>();
+    FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
+    auto request = dsn::make_unique<dsn::replication::detect_hotkey_request>();
     request->type = hotkey_type;
     request->action = action;
     ddebug_f("{} {} hotkey detection in {}.{}",
-             (action == dsn::apps::hotkey_detect_action::STOP) ? "Stop" : "Start",
-             (hotkey_type == dsn::apps::hotkey_type::WRITE) ? "write" : "read",
+             (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
              app_name,
              partition_index);
     dsn::rpc_address meta_server;
@@ -199,6 +196,7 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
         meta_server.group_address()->add(address);
     }
     auto cluster_name = dsn::replication::get_current_cluster_name();
+    // TODO: (Tangyanzhao) refactor partition_resolver to replication_ddl_client
     auto resolver = partition_resolver::get_resolver(cluster_name, meta_servers, app_name.c_str());
     dsn::task_tracker tracker;
     detect_hotkey_rpc rpc(
