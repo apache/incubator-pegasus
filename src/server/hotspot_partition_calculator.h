@@ -46,10 +46,10 @@ public:
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
     void data_analyse();
-    static void send_hotkey_detect_request(const std::string &app_name,
+    static void send_detect_hotkey_request(const std::string &app_name,
                                            const uint64_t partition_index,
-                                           const dsn::apps::hotkey_type::type hotkey_type,
-                                           const dsn::apps::hotkey_detect_action::type action);
+                                           const dsn::replication::hotkey_type::type hotkey_type,
+                                           const dsn::replication::detect_action::type action);
 
 private:
     // empirical rule to calculate hot point of each partition
@@ -71,6 +71,8 @@ private:
     // If the hot_point of some partitions are always high, calculator will send a RPC to detect
     // hotkey on the replica automatically
     std::vector<std::array<int, 2>> _hotpartition_counter;
+
+    typedef dsn::rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
 
     friend class hotspot_partition_test;
 };
