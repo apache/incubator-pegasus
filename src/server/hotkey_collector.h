@@ -63,8 +63,9 @@ namespace server {
 class hotkey_collector
 {
 public:
-    // size: the cu size of raw_key/hash_key calculated by `capacity_unit_calculator`
+    // size: the cu size of raw_key/hash_key + value calculated by `capacity_unit_calculator`
     void capture_raw_key(const dsn::blob &raw_key, uint64_t size);
+    void capture_hash_key(const dsn::blob &hash_key, uint64_t size);
     void handle_operation(const dsn::replication::detect_hotkey_request &req,
                           dsn::replication::detect_hotkey_response &resp);
 };

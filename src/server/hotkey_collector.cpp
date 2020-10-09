@@ -27,5 +27,7 @@ void hotkey_collector::handle_operation(const dsn::replication::detect_hotkey_re
 
 void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, uint64_t size) {}
 
+void hotkey_collector::capture_hash_key(const ::dsn::blob &hash_key, uint64_t size) {}
+
 } // namespace server
 } // namespace pegasus
