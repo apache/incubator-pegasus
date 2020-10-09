@@ -20,6 +20,7 @@
 namespace pegasus {
 namespace server {
 
+// TODO: (Tangyanzhao) implement these functions
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
                                   dsn::replication::detect_hotkey_response &resp)
 {
