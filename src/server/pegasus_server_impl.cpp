@@ -2820,7 +2820,7 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
 
     auto collector = req.type == dsn::replication::hotkey_type::READ ? _read_hotkey_collector
                                                                      : _write_hotkey_collector;
-    collector->handle_operation(req, resp);
+    collector->handle_rpc(req, resp);
 }
 
 } // namespace server
