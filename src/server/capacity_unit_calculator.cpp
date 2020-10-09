@@ -19,6 +19,9 @@ capacity_unit_calculator::capacity_unit_calculator(
       _read_hotkey_collector(read_hotkey_collector),
       _write_hotkey_collector(write_hotkey_collector)
 {
+    dassert(_read_hotkey_collector != nullptr, "read hotkey collector is a nullptr");
+    dassert(_write_hotkey_collector != nullptr, "write hotkey collector is a nullptr");
+
     _read_capacity_unit_size =
         dsn_config_get_value_uint64("pegasus.server",
                                     "perf_counter_read_capacity_unit_size",

@@ -21,7 +21,7 @@ namespace pegasus {
 namespace server {
 
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
-                                        dsn::replication::detect_hotkey_response &resp)
+                                  dsn::replication::detect_hotkey_response &resp)
 {
 }
 
