@@ -12,6 +12,7 @@
 #include "meta_store.h"
 #include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
+#include "hotkey_collector.h"
 
 namespace pegasus {
 namespace server {
@@ -41,6 +42,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
+
+    _read_hotkey_collector = std::make_shared<hotkey_collector>();
+    _write_hotkey_collector = std::make_shared<hotkey_collector>();
 
     _verbose_log = dsn_config_get_value_bool("pegasus.server",
                                              "rocksdb_verbose_log",
