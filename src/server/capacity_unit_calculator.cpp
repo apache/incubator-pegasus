@@ -189,12 +189,12 @@ void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::b
     count_read_data(hash_key, key_type::HASH_KEY, 1);
 }
 
-void capacity_unit_calculator::add_ttl_cu(int32_t status, const dsn::blob &raw_key)
+void capacity_unit_calculator::add_ttl_cu(int32_t status, const dsn::blob &key)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
-    count_read_data(raw_key, key_type::RAW_KEY, 1);
+    count_read_data(key, key_type::RAW_KEY, 1);
 }
 
 void capacity_unit_calculator::add_put_cu(int32_t status,

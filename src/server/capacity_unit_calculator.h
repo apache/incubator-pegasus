@@ -33,7 +33,7 @@ public:
                      const std::vector<::dsn::apps::key_value> &kvs,
                      const dsn::blob &hash_key_filter_pattern = dsn::blob());
     void add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key = dsn::blob());
-    void add_ttl_cu(int32_t status, const dsn::blob &raw_key = dsn::blob());
+    void add_ttl_cu(int32_t status, const dsn::blob &key = dsn::blob());
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
