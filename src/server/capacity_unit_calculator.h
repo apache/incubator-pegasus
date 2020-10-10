@@ -29,11 +29,9 @@ public:
     void add_multi_get_cu(int32_t status,
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
-    void add_scan_cu(int32_t status,
-                     const std::vector<::dsn::apps::key_value> &kvs,
-                     const dsn::blob &hash_key_filter_pattern = dsn::blob());
-    void add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key = dsn::blob());
-    void add_ttl_cu(int32_t status, const dsn::blob &key = dsn::blob());
+    void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
+    void add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key);
+    void add_ttl_cu(int32_t status, const dsn::blob &key);
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
@@ -43,7 +41,7 @@ public:
     void add_multi_remove_cu(int32_t status,
                              const dsn::blob &hash_key,
                              const std::vector<::dsn::blob> &sort_keys);
-    void add_incr_cu(int32_t status, const dsn::blob &key = dsn::blob());
+    void add_incr_cu(int32_t status, const dsn::blob &key);
     void add_check_and_set_cu(int32_t status,
                               const dsn::blob &hash_key,
                               const dsn::blob &check_sort_key,

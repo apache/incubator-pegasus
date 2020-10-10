@@ -160,8 +160,7 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
 }
 
 void capacity_unit_calculator::add_scan_cu(int32_t status,
-                                           const std::vector<::dsn::apps::key_value> &kvs,
-                                           const dsn::blob &hash_key_filter_pattern)
+                                           const std::vector<::dsn::apps::key_value> &kvs)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
         status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
@@ -169,16 +168,14 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
     }
 
     if (status == rocksdb::Status::kNotFound) {
-        count_read_data(hash_key_filter_pattern, key_type::HASH_KEY, 1);
+        add_read_cu(1);
         return;
     }
 
-    int64_t data_size = 0;
     for (const auto &kv : kvs) {
-        data_size += kv.key.size() + kv.value.size();
+        _pfc_scan_bytes->add(kv.key.size() + kv.value.size());
+        count_read_data(kv.key, key_type::RAW_KEY, kv.key.size() + kv.value.size());
     }
-    count_read_data(hash_key_filter_pattern, key_type::HASH_KEY, data_size);
-    _pfc_scan_bytes->add(data_size);
 }
 
 void capacity_unit_calculator::add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key)
