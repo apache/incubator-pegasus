@@ -176,7 +176,7 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
     for (const auto &kv : kvs) {
         data_size += kv.key.size() + kv.value.size();
         // special case of count_read_data
-        _read_hotkey_collector->capture_hash_key(kv.key, kv.key.size() + kv.value.size());
+        _read_hotkey_collector->capture_raw_key(kv.key, kv.key.size() + kv.value.size());
     }
     add_read_cu(data_size);
     _pfc_scan_bytes->add(data_size);
