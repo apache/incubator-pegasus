@@ -63,9 +63,10 @@ namespace server {
 class hotkey_collector
 {
 public:
+    // TODO: (Tangyanzhao) capture_*_key should be consistent with hotspot detection
     // size: the cu size of raw_key/hash_key + value calculated by `capacity_unit_calculator`
-    void capture_raw_key(const dsn::blob &raw_key, uint64_t size);
-    void capture_hash_key(const dsn::blob &hash_key, uint64_t size);
+    void capture_raw_key(const dsn::blob &raw_key, int64_t size);
+    void capture_hash_key(const dsn::blob &hash_key, int64_t size);
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 };
