@@ -398,20 +398,6 @@ fds_file_object::fds_file_object(fds_service *s,
 {
 }
 
-fds_file_object::fds_file_object(fds_service *s,
-                                 const std::string &name,
-                                 const std::string &fds_path,
-                                 const std::string &md5,
-                                 uint64_t size)
-    : block_file(name),
-      _service(s),
-      _fds_path(fds_path),
-      _md5sum(md5),
-      _size(size),
-      _has_meta_synced(true)
-{
-}
-
 fds_file_object::~fds_file_object() {}
 
 error_code fds_file_object::get_file_meta()
@@ -572,7 +558,7 @@ error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
         return err;
     }
 
-    ddebug("start to check meta data after successfully wrote data to fds");
+    ddebug("start to synchronize meta data after successfully wrote data to fds");
     err = get_file_meta();
     if (err == ERR_OK) {
         transfered_bytes = _size;
@@ -653,14 +639,6 @@ dsn::task_ptr fds_file_object::read(const read_request &req,
 {
     read_future_ptr t(new read_future(code, cb, 0));
     t->set_tracker(tracker);
-    read_response resp;
-    if (_has_meta_synced && _md5sum.empty()) {
-        derror("fds read failed: meta not synced or md5sum empty when read (%s)",
-               _fds_path.c_str());
-        resp.err = dsn::ERR_OBJECT_NOT_FOUND;
-        t->enqueue_with(resp);
-        return t;
-    }
 
     add_ref();
     auto read_in_background = [this, req, t]() {
@@ -691,14 +669,6 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
     download_future_ptr t(new download_future(code, cb, 0));
     t->set_tracker(tracker);
     download_response resp;
-    if (_has_meta_synced && _md5sum.empty()) {
-        derror("fds download failed: meta not synced or md5sum empty when download (%s)",
-               _fds_path.c_str());
-        resp.err = dsn::ERR_OBJECT_NOT_FOUND;
-        resp.downloaded_size = 0;
-        t->enqueue_with(resp);
-        return t;
-    }
 
     std::shared_ptr<std::ofstream> handle(new std::ofstream(
         req.output_local_name, std::ios::binary | std::ios::out | std::ios::trunc));
@@ -722,9 +692,16 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
         resp.err =
             get_content_in_batches(req.remote_pos, req.remote_length, *handle, transfered_size);
         resp.downloaded_size = 0;
-        if (handle->tellp() != -1)
+        if (resp.err == ERR_OK && handle->tellp() != -1) {
             resp.downloaded_size = handle->tellp();
+        }
         handle->close();
+        if (resp.err != ERR_OK && dsn::utils::filesystem::file_exists(req.output_local_name)) {
+            derror_f("fail to download file {} from fds, remove localfile {}",
+                     _fds_path,
+                     req.output_local_name);
+            dsn::utils::filesystem::remove_path(req.output_local_name);
+        }
         t->enqueue_with(resp);
         release_ref();
     };

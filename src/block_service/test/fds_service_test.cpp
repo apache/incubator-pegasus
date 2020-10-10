@@ -118,19 +118,18 @@ void FDSClientTest::TearDown() {}
 
 DEFINE_TASK_CODE(lpc_btest, TASK_PRIORITY_HIGH, dsn::THREAD_POOL_DEFAULT)
 
-// TODO(zhangyifan): the test could not pass, should fix.
 TEST_F(FDSClientTest, test_basic_operation)
 {
-    const char *files[] = {"/fdstest1/test1/test1",
-                           "/fdstest1/test1/test2",
-                           "/fdstest1/test2/test1",
-                           "/fdstest1/test2/test2",
-                           "/fdstest2/test2",
-                           "/fdstest3",
-                           "/fds_rootfile",
+    const char *files[] = {"/fdstest/fdstest1/test1/test1",
+                           "/fdstest/fdstest1/test1/test2",
+                           "/fdstest/fdstest1/test2/test1",
+                           "/fdstest/fdstest1/test2/test2",
+                           "/fdstest/fdstest2/test2",
+                           "/fdstest/fdstest3",
+                           "/fdstest/fds_rootfile",
                            nullptr};
     // ensure prefix_path is the prefix of some file in files
-    std::string prefix_path = std::string("/fdstest1/test1");
+    std::string prefix_path = std::string("/fdstest/fdstest1/test1");
     int total_files;
 
     std::shared_ptr<fds_service> s = std::make_shared<fds_service>();
@@ -264,12 +263,12 @@ TEST_F(FDSClientTest, test_basic_operation)
         std::cout << "test ls files" << std::endl;
 
         // list the root
-        std::cout << "list the root" << std::endl;
+        std::cout << "list the test root" << std::endl;
         std::vector<ls_entry> root = {
             {"fdstest1", true}, {"fdstest2", true}, {"fdstest3", false}, {"fds_rootfile", false}};
         std::sort(root.begin(), root.end(), entry_cmp);
 
-        s->list_dir(ls_request{"/"},
+        s->list_dir(ls_request{"/fdstest"},
                     lpc_btest,
                     [&l_resp](const ls_response &resp) { l_resp = resp; },
                     nullptr)
@@ -390,7 +389,7 @@ TEST_F(FDSClientTest, test_basic_operation)
     // try to read a non-exist file
     {
         std::cout << "test try to read non-exist file" << std::endl;
-        s->create_file(create_file_request{"fds_hellword", true},
+        s->create_file(create_file_request{"non_exist_file", true},
                        lpc_btest,
                        [&cf_resp](const create_file_response &r) { cf_resp = r; },
                        nullptr)
@@ -639,7 +638,6 @@ generate_file(const char *filename, unsigned long long file_size, char *block, u
     close(fd);
 }
 
-// TODO(zhangyifan): the test could not pass, should fix.
 TEST_F(FDSClientTest, test_concurrent_upload_download)
 {
     char block[1024];
@@ -756,7 +754,7 @@ TEST_F(FDSClientTest, test_concurrent_upload_download)
         for (unsigned int i = 0; i < total_files; ++i) {
             block_file_ptr p = block_files[i];
             dsn::task_ptr t =
-                p->download(download_request{filenames[i] + ".b"},
+                p->download(download_request{filenames[i] + ".b", 0, -1},
                             lpc_btest,
                             [&filenames, &filesize, &md5, i, p](const download_response &dr) {
                                 printf("file %s download finished\n", filenames[i].c_str());

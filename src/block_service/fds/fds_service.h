@@ -68,11 +68,6 @@ class fds_file_object : public block_file
 {
 public:
     fds_file_object(fds_service *s, const std::string &name, const std::string &fds_path);
-    fds_file_object(fds_service *s,
-                    const std::string &name,
-                    const std::string &fds_path,
-                    const std::string &md5,
-                    uint64_t size);
 
     virtual ~fds_file_object();
     virtual uint64_t get_size() override { return _size; }
