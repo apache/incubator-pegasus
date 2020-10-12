@@ -39,3 +39,7 @@ github:
     merge:   false
     # disable rebase button:
     rebase:  false
+
+notifications:
+  commits: commits@pegasus.apache.org
+  pullrequests: commits@pegasus.apache.org
