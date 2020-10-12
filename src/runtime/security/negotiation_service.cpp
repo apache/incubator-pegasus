@@ -26,6 +26,7 @@
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_auth);
+DSN_DECLARE_bool(mandatory_auth);
 
 inline bool is_negotiation_message(dsn::task_code code)
 {
@@ -92,13 +93,15 @@ void negotiation_service::on_rpc_disconnected(rpc_session *session)
 
 bool negotiation_service::on_rpc_recv_msg(message_ex *msg)
 {
-    return in_white_list(msg->rpc_code()) || msg->io_session->is_negotiation_succeed();
+    return !FLAGS_mandatory_auth || in_white_list(msg->rpc_code()) ||
+           msg->io_session->is_negotiation_succeed();
 }
 
 bool negotiation_service::on_rpc_send_msg(message_ex *msg)
 {
     // if try_pend_message return true, it means the msg is pended to the resend message queue
-    return in_white_list(msg->rpc_code()) || !msg->io_session->try_pend_message(msg);
+    return !FLAGS_mandatory_auth || in_white_list(msg->rpc_code()) ||
+           !msg->io_session->try_pend_message(msg);
 }
 
 void init_join_point()

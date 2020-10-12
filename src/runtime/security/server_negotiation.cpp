@@ -153,6 +153,7 @@ void server_negotiation::succ_negotiation(negotiation_rpc rpc)
     negotiation_response &response = rpc.response();
     _status = response.status = negotiation_status::type::SASL_SUCC;
     _session->set_negotiation_succeed();
+    ddebug_f("{}: negotiation succeed", _name);
 }
 } // namespace security
 } // namespace dsn
