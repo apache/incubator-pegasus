@@ -12,11 +12,6 @@ namespace pegasus {
 namespace server {
 
 class hotkey_collector;
-enum class key_type
-{
-    RAW_KEY = 0,
-    HASH_KEY
-};
 
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
@@ -64,9 +59,6 @@ protected:
 #endif
 
 private:
-    void count_read_data(const dsn::blob &key, key_type type, int64_t size);
-    void count_write_data(const dsn::blob &key, key_type type, int64_t size);
-
     uint64_t _read_capacity_unit_size;
     uint64_t _write_capacity_unit_size;
     uint32_t _log_read_cu_size;
