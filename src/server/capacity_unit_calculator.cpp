@@ -138,11 +138,11 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
 
     if (status == rocksdb::Status::kNotFound) {
         add_read_cu(1);
-        _read_hotkey_collector->capture_raw_key(hash_key, key_count);
+        _read_hotkey_collector->capture_hash_key(hash_key, key_count);
         return;
     }
     add_read_cu(data_size);
-    _read_hotkey_collector->capture_raw_key(hash_key, key_count);
+    _read_hotkey_collector->capture_hash_key(hash_key, key_count);
 }
 
 void capacity_unit_calculator::add_scan_cu(int32_t status,
