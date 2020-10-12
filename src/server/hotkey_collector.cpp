@@ -26,12 +26,12 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
 {
 }
 
-void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t size)
+void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 {
     // TODO: (Tangyanzhao) Add a judgment sentence to check if it is a raw key
 }
 
-void hotkey_collector::capture_hash_key(const ::dsn::blob &hash_key, int64_t size) {}
+void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight) {}
 
 } // namespace server
 } // namespace pegasus
