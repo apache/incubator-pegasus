@@ -795,7 +795,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
         resp.count = -1;
     }
 
-    _cu_calculator->add_sortkey_count_cu(resp.error, hash_key);
+    _cu_calculator->add_sortkey_count_cu(resp.error);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -857,7 +857,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
         }
     }
 
-    _cu_calculator->add_ttl_cu(resp.error, key);
+    _cu_calculator->add_ttl_cu(resp.error);
 }
 
 void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
@@ -1486,8 +1486,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     });
 
     // initialize cu calculator and write service after server being initialized.
-    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
-        this, _read_hotkey_collector, _write_hotkey_collector);
+    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(this);
     _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
 
     return ::dsn::ERR_OK;

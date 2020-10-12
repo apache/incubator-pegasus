@@ -6,7 +6,6 @@
 #include "server/capacity_unit_calculator.h"
 
 #include <dsn/dist/replication/replica_base.h>
-#include "server/hotkey_collector.h"
 
 namespace pegasus {
 namespace server {
@@ -27,8 +26,7 @@ public:
     }
 
     explicit mock_capacity_unit_calculator(dsn::replication::replica_base *r)
-        : capacity_unit_calculator(
-              r, std::make_shared<hotkey_collector>(), std::make_shared<hotkey_collector>())
+        : capacity_unit_calculator(r)
     {
     }
 
@@ -202,7 +200,7 @@ TEST_F(capacity_unit_calculator_test, scan)
 TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_sortkey_count_cu(i, dsn::blob());
+        _cal->add_sortkey_count_cu(i);
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -216,7 +214,7 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
 TEST_F(capacity_unit_calculator_test, ttl)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_ttl_cu(i, dsn::blob());
+        _cal->add_ttl_cu(i);
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -302,7 +300,7 @@ TEST_F(capacity_unit_calculator_test, multi_remove)
 TEST_F(capacity_unit_calculator_test, incr)
 {
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_incr_cu(i, dsn::blob());
+        _cal->add_incr_cu(i);
         if (i == rocksdb::Status::kOk) {
             ASSERT_EQ(_cal->read_cu, 1);
             ASSERT_EQ(_cal->write_cu, 1);
