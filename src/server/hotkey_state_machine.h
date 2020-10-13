@@ -19,39 +19,40 @@
 
 #include <dsn/utility/enum_helper.h>
 
-//                      hotkey_collector
-//                       state machine
-//                         +--------+
-//  data has been cleared, |        |
-//  ready to start         |  STOP  <-----------+
-//                         |        |           |
-//                         +---+----+           |
-//                             |                |
-//                         Receive start rpc    Time out
-//                             |                |
-//                         +---v----+           |
-//   is running coarse     |        |           |
-//   capture and analysis  | COARSE +-----------^
-//                         |        |           |
-//                         +---+----+           |
-//                             |                |
-//                         Find a hot bucket    Time out
-//                             |                |
-//                         +---v----+           |
-//   is running fine       |        |           |
-//   capture and analysis  |  FINE  +-----------+
-//                         |        |
-//                         +---+----+
-//                             |
-//                         Find a hotkey
-//                             |
-//                         +---v----+
-//   capture and analyse   |        |
-//   is done, ready to get | FINISH |
-//   the result            |        |
-//                         +--------+
 namespace pegasus {
 namespace server {
+
+//                     hotkey_collector
+//                      state machine
+//                        +--------+
+// data has been cleared, |        |
+// ready to start         |  STOP  <-----------+-------------+
+//                        |        |           |             |
+//                        +---+----+           |             |
+//                            +                +             |
+//                        Receive START rpc    Time out      |
+//                            +                +             |
+//                        +---v----+           |             |
+//  is running coarse     |        |           |             |
+//  capture and analysis  | COARSE +----------->       Receive STOP rpc
+//                        |        |           |             |
+//                        +---+----+           |             |
+//                            +                +             |
+//                        Find a hot bucket    Time out      |
+//                            +                +             |
+//                        +---v----+           |             |
+//  is running fine       |        |           |             |
+//  capture and analysis  |  FINE  +-----------+             |
+//                        |        |                         |
+//                        +---+----+                         |
+//                            +                              |
+//                        Find a hotkey                      |
+//                            +                              |
+//                        +---v----+                         |
+//  capture and analyse   |        |                         |
+//  is done, ready to get | FINISH +-------------------------+
+//  the result            |        |
+//                        +--------+
 
 enum class collector_state
 {
