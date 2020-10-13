@@ -4,7 +4,7 @@ import com.github.rholder.retry.RetryException;
 import com.github.rholder.retry.Retryer;
 import com.xiaomi.infra.pegasus.spark.PegasusSparkException;
 import com.xiaomi.infra.pegasus.spark.RocksDBOptions;
-import com.xiaomi.infra.pegasus.spark.Tools;
+import com.xiaomi.infra.pegasus.spark.utils.AutoRetryer;
 import java.util.concurrent.ExecutionException;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.SstFileWriter;
@@ -13,8 +13,8 @@ import org.rocksdb.SstFileWriter;
 class SstFileWriterWrapper {
 
   private SstFileWriter sstFileWriter;
-  private Retryer<Boolean> booleanRetryer = Tools.getDefaultRetryer();
-  private Retryer<Integer> integerRetryer = Tools.getDefaultRetryer();
+  private Retryer<Boolean> booleanRetryer = AutoRetryer.getDefaultRetryer();
+  private Retryer<Integer> integerRetryer = AutoRetryer.getDefaultRetryer();
 
   SstFileWriterWrapper(RocksDBOptions rocksDBOptions) {
     this.sstFileWriter = new SstFileWriter(rocksDBOptions.envOptions, rocksDBOptions.options);

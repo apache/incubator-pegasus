@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader;
 
-import com.xiaomi.infra.pegasus.spark.Tools;
+import com.xiaomi.infra.pegasus.spark.utils.JsonParser;
 import java.util.ArrayList;
 
 class DataMetaInfo {
@@ -22,6 +22,6 @@ class DataMetaInfo {
   }
 
   String toJsonString() {
-    return Tools.gson.toJson(this);
+    return JsonParser.getGson().toJson(this);
   }
 }

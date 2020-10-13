@@ -1,7 +1,7 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader
 
-import com.xiaomi.infra.pegasus.spark.JNILibraryLoader
 import com.xiaomi.infra.pegasus.spark.bulkloader.CustomImplicits._
+import com.xiaomi.infra.pegasus.spark.utils.JNILibraryLoader
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD

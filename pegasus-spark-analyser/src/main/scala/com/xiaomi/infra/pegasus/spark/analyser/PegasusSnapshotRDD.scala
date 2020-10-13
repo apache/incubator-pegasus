@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.analyser
 
-import com.xiaomi.infra.pegasus.spark.JNILibraryLoader
+import com.xiaomi.infra.pegasus.spark.utils.JNILibraryLoader
 import org.apache.commons.logging.LogFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{Partition, SparkContext, TaskContext}

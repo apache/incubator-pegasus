@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader;
 
-import com.xiaomi.infra.pegasus.spark.Tools;
+import com.xiaomi.infra.pegasus.spark.utils.JsonParser;
 
 class BulkLoadInfo {
 
@@ -17,6 +17,6 @@ class BulkLoadInfo {
   }
 
   String toJsonString() {
-    return Tools.gson.toJson(this);
+    return JsonParser.getGson().toJson(this);
   }
 }

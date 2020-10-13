@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader
 
-import com.xiaomi.infra.pegasus.spark.Tools
+import com.xiaomi.infra.pegasus.spark.utils.Comparator
 import org.apache.spark.rdd.RDD
 
 /**
@@ -18,7 +18,7 @@ object CustomImplicits {
   implicit val basePegasusKey: Ordering[PegasusKey] =
     new Ordering[PegasusKey] {
       override def compare(x: PegasusKey, y: PegasusKey): Int = {
-        Tools.compare(x.data, y.data)
+        Comparator.bytesCompare(x.data, y.data)
       }
     }
 

@@ -1,4 +1,4 @@
-package com.xiaomi.infra.pegasus.spark;
+package com.xiaomi.infra.pegasus.spark.utils;
 
 import com.revinate.guava.util.concurrent.RateLimiter;
 import java.io.Serializable;

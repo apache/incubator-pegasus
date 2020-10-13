@@ -1,10 +1,10 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader;
 
-import com.xiaomi.infra.pegasus.spark.FlowController;
 import com.xiaomi.infra.pegasus.spark.PegasusSparkException;
 import com.xiaomi.infra.pegasus.spark.RemoteFileSystem;
 import com.xiaomi.infra.pegasus.spark.RocksDBOptions;
 import com.xiaomi.infra.pegasus.spark.bulkloader.DataMetaInfo.FileInfo;
+import com.xiaomi.infra.pegasus.spark.utils.FlowController;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.Iterator;

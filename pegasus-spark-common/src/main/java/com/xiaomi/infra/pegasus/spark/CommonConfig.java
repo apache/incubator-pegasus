@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.spark;
 
-import com.xiaomi.infra.pegasus.spark.FlowController.RateLimiterConfig;
+import com.xiaomi.infra.pegasus.spark.utils.FlowController.RateLimiterConfig;
 import java.io.Serializable;
 
 /** The config class contains the common config for coldBackupConfig and bulkLoadConfig */

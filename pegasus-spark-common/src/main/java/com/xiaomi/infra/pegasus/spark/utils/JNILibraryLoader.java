@@ -1,5 +1,6 @@
-package com.xiaomi.infra.pegasus.spark;
+package com.xiaomi.infra.pegasus.spark.utils;
 
+import com.xiaomi.infra.pegasus.spark.PegasusSparkException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
