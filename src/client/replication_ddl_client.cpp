@@ -1593,5 +1593,14 @@ error_code replication_ddl_client::detect_hotkey(const dsn::rpc_address &target,
     return resps.begin()->second.get_error().code();
 }
 
+error_with<start_partition_split_response>
+replication_ddl_client::start_partition_split(const std::string &app_name, int new_partition_count)
+{
+    auto req = make_unique<start_partition_split_request>();
+    req->__set_app_name(app_name);
+    req->__set_new_partition_count(new_partition_count);
+    return call_rpc_sync(start_split_rpc(std::move(req), RPC_CM_START_PARTITION_SPLIT));
+}
+
 } // namespace replication
 } // namespace dsn

@@ -191,6 +191,10 @@ public:
                              detect_hotkey_request &req,
                              detect_hotkey_response &resp);
 
+    // partition split
+    error_with<start_partition_split_response> start_partition_split(const std::string &app_name,
+                                                                     int partition_count);
+
 private:
     bool static valid_app_char(int c);
 
