@@ -23,6 +23,21 @@
 namespace pegasus {
 namespace server {
 
+// TODO: (Tangyanzhao) detect_result::hot_bucket_index should be -1 when hotkey_collector construct
+struct detect_result
+{
+    int hot_bucket_index;
+    std::string hotkey;
+};
+
+class internal_collector_base
+{
+public:
+    virtual void capture_data(const dsn::blob &hash_key, uint64_t weight);
+    virtual void analyse_data();
+    virtual bool get_analysis_result(/*out*/ detect_result &result);
+};
+
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
 //    separately.
@@ -69,6 +84,26 @@ public:
     void capture_hash_key(const dsn::blob &hash_key, int64_t weight);
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
+
+private:
+    detect_result _result;
+    std::unique_ptr<internal_collector_base> collector;
+};
+
+class hotkey_coarse_data_collector : public internal_collector_base
+{
+public:
+    void capture_data(const dsn::blob &hash_key, uint64_t size);
+    void analyse_data();
+    virtual bool get_analysis_result(/*out*/ detect_result &result);
+};
+
+class hotkey_fine_data_collector : public internal_collector_base
+{
+public:
+    void capture_data(const dsn::blob &hash_key, uint64_t size);
+    void analyse_data();
+    virtual bool get_analysis_result(/*out*/ detect_result &result);
 };
 
 } // namespace server

@@ -31,7 +31,10 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
     // TODO: (Tangyanzhao) Add a judgment sentence to check if it is a raw key
 }
 
-void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight) {}
+void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
+{
+    collector->capture_data(hash_key, weight);
+}
 
 } // namespace server
 } // namespace pegasus
