@@ -19,8 +19,6 @@
 
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/replica_base.h>
-#include <dsn/dist/fmt_logging.h>
 #include "hotkey_state_machine.h"
 
 namespace pegasus {
