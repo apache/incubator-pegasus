@@ -33,14 +33,15 @@ class meta_split_service
 {
 public:
     explicit meta_split_service(meta_service *meta);
+
+private:
     // client -> meta to start split
-    void app_partition_split(app_partition_split_rpc rpc);
+    void start_partition_split(start_split_rpc rpc);
 
     // primary parent -> meta_server to register child
     void register_child_on_meta(register_child_rpc rpc);
 
-private:
-    void do_app_partition_split(std::shared_ptr<app_state> app, app_partition_split_rpc rpc);
+    void do_start_partition_split(std::shared_ptr<app_state> app, start_split_rpc rpc);
 
     // meta -> remote storage to update child replica config
     dsn::task_ptr add_child_on_remote_storage(register_child_rpc rpc, bool create_new);
@@ -48,6 +49,9 @@ private:
     on_add_child_on_remote_storage_reply(error_code ec, register_child_rpc rpc, bool create_new);
 
 private:
+    friend class meta_service;
+    friend class meta_split_service_test;
+
     meta_service *_meta_svc;
     server_state *_state;
 

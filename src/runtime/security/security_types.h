@@ -147,8 +147,7 @@ inline std::ostream &operator<<(std::ostream &out, const negotiation_response &o
     obj.printTo(out);
     return out;
 }
-
-} // namespace security
-} // namespace dsn
+}
+} // namespace
 
 #endif

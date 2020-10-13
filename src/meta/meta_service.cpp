@@ -452,8 +452,9 @@ void meta_service::register_rpc_handlers()
         RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::ddd_diagnose);
-    register_rpc_handler_with_rpc_holder(
-        RPC_CM_APP_PARTITION_SPLIT, "app_partition_split", &meta_service::on_app_partition_split);
+    register_rpc_handler_with_rpc_holder(RPC_CM_START_PARTITION_SPLIT,
+                                         "start_partition_split",
+                                         &meta_service::on_start_partition_split);
     register_rpc_handler_with_rpc_holder(RPC_CM_REGISTER_CHILD_REPLICA,
                                          "register_child_on_meta",
                                          &meta_service::on_register_child_on_meta);
@@ -976,15 +977,19 @@ void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
     response.err = ERR_OK;
 }
 
-void meta_service::on_app_partition_split(app_partition_split_rpc rpc)
+void meta_service::on_start_partition_split(start_split_rpc rpc)
 {
     if (!check_status(rpc)) {
         return;
     }
-
+    if (_split_svc == nullptr) {
+        derror_f("meta doesn't support partition split");
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      tracker(),
-                     [this, rpc]() { _split_svc->app_partition_split(std::move(rpc)); },
+                     [this, rpc]() { _split_svc->start_partition_split(std::move(rpc)); },
                      server_state::sStateHash);
 }
 

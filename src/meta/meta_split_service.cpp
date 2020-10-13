@@ -25,6 +25,7 @@
  */
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 
 #include "meta_split_service.h"
 #include "meta_state_service_utils.h"
@@ -38,7 +39,7 @@ meta_split_service::meta_split_service(meta_service *meta_srv)
     _state = meta_srv->get_server_state();
 }
 
-void meta_split_service::app_partition_split(app_partition_split_rpc rpc)
+void meta_split_service::start_partition_split(start_split_rpc rpc)
 {
     const auto &request = rpc.request();
     auto &response = rpc.response();
@@ -49,28 +50,24 @@ void meta_split_service::app_partition_split(app_partition_split_rpc rpc)
         zauto_write_lock l(app_lock());
 
         app = _state->get_app(request.app_name);
-        if (!app || app->status != app_status::AS_AVAILABLE) {
-            response.err = ERR_APP_NOT_EXIST;
-            dwarn_f("client({}) sent split request with invalid app({}), app is not existed or "
-                    "unavailable",
-                    rpc.remote_address().to_string(),
-                    request.app_name);
+        if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
+            derror_f("app({}) is not existed or not available", request.app_name);
+            response.err = app == nullptr ? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
+            response.hint_msg = fmt::format(
+                "app {}", response.err == ERR_APP_NOT_EXIST ? "not existed" : "dropped");
+
             return;
         }
-
-        response.app_id = app->app_id;
-        response.partition_count = app->partition_count;
 
         // new_partition_count != old_partition_count*2
         if (request.new_partition_count != app->partition_count * 2) {
             response.err = ERR_INVALID_PARAMETERS;
-            dwarn_f("client({}) sent split request with wrong partition count: app({}), partition "
-                    "count({}),"
-                    "new_partition_count({})",
-                    rpc.remote_address().to_string(),
-                    request.app_name,
-                    app->partition_count,
-                    request.new_partition_count);
+            derror_f("wrong partition count: app({}), partition count({}), new_partition_count({})",
+                     request.app_name,
+                     app->partition_count,
+                     request.new_partition_count);
+            response.hint_msg =
+                fmt::format("wrong partition_count, should be {}", app->partition_count * 2);
             return;
         }
 
@@ -92,15 +89,15 @@ void meta_split_service::app_partition_split(app_partition_split_rpc rpc)
              request.app_name,
              request.new_partition_count);
 
-    do_app_partition_split(std::move(app), std::move(rpc));
+    do_start_partition_split(std::move(app), std::move(rpc));
 }
 
-void meta_split_service::do_app_partition_split(std::shared_ptr<app_state> app,
-                                                app_partition_split_rpc rpc)
+void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app,
+                                                  start_split_rpc rpc)
 {
     auto on_write_storage_complete = [app, rpc, this]() {
-        ddebug_f("app({}) update partition count on remote storage, new partition count is {}",
-                 app->app_name.c_str(),
+        ddebug_f("app({}) update partition count on remote storage, new partition_count = {}",
+                 app->app_name,
                  app->partition_count * 2);
 
         zauto_write_lock l(app_lock());
@@ -118,7 +115,6 @@ void meta_split_service::do_app_partition_split(std::shared_ptr<app_state> app,
 
         auto &response = rpc.response();
         response.err = ERR_OK;
-        response.partition_count = app->partition_count;
     };
 
     if (app->init_partition_count <= 0) {
@@ -132,6 +128,7 @@ void meta_split_service::do_app_partition_split(std::shared_ptr<app_state> app,
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
 
+// TODO(heyuchen): refactor this function
 void meta_split_service::register_child_on_meta(register_child_rpc rpc)
 {
     const auto &request = rpc.request();

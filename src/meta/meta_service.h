@@ -179,7 +179,7 @@ private:
     void initialize_duplication_service();
 
     // split
-    void on_app_partition_split(app_partition_split_rpc rpc);
+    void on_start_partition_split(start_split_rpc rpc);
     void on_register_child_on_meta(register_child_rpc rpc);
 
     // bulk load

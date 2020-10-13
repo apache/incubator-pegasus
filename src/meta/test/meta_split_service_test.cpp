@@ -44,17 +44,16 @@ public:
         create_app(NAME, PARTITION_COUNT);
     }
 
-    app_partition_split_response start_partition_split(const std::string &app_name,
-                                                       int new_partition_count)
+    error_code start_partition_split(const std::string &app_name, int new_partition_count)
     {
-        auto request = dsn::make_unique<app_partition_split_request>();
+        auto request = dsn::make_unique<start_partition_split_request>();
         request->app_name = app_name;
         request->new_partition_count = new_partition_count;
 
-        app_partition_split_rpc rpc(std::move(request), RPC_CM_APP_PARTITION_SPLIT);
-        split_svc().app_partition_split(rpc);
+        start_split_rpc rpc(std::move(request), RPC_CM_START_PARTITION_SPLIT);
+        split_svc().start_partition_split(rpc);
         wait_all();
-        return rpc.response();
+        return rpc.response().err;
     }
 
     register_child_response
@@ -117,26 +116,30 @@ public:
     const uint32_t CHILD_INDEX = 4;
 };
 
+// TODO(heyuchen): refactor start split unit tests
 TEST_F(meta_split_service_test, start_split_with_not_existed_app)
 {
-    auto resp = start_partition_split("table_not_exist", PARTITION_COUNT);
-    ASSERT_EQ(resp.err, ERR_APP_NOT_EXIST);
+    auto err = start_partition_split("table_not_exist", PARTITION_COUNT);
+    ASSERT_EQ(err, ERR_APP_NOT_EXIST);
 }
 
 TEST_F(meta_split_service_test, start_split_with_wrong_params)
 {
-    auto resp = start_partition_split(NAME, PARTITION_COUNT);
-    ASSERT_EQ(resp.err, ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(resp.partition_count, PARTITION_COUNT);
+    auto app = find_app(NAME);
+    auto err = start_partition_split(NAME, PARTITION_COUNT);
+    ASSERT_EQ(err, ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(app->partition_count, PARTITION_COUNT);
 }
 
 TEST_F(meta_split_service_test, start_split_succeed)
 {
-    auto resp = start_partition_split(NAME, NEW_PARTITION_COUNT);
-    ASSERT_EQ(resp.err, ERR_OK);
-    ASSERT_EQ(resp.partition_count, NEW_PARTITION_COUNT);
+    auto app = find_app(NAME);
+    auto err = start_partition_split(NAME, NEW_PARTITION_COUNT);
+    ASSERT_EQ(err, ERR_OK);
+    ASSERT_EQ(app->partition_count, NEW_PARTITION_COUNT);
 }
 
+// TODO(heyuchen): refactor register unit tests
 TEST_F(meta_split_service_test, register_child_with_wrong_ballot)
 {
     auto resp = register_child(PARENT_BALLOT - 1, invalid_ballot);

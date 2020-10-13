@@ -831,20 +831,21 @@ struct ddd_diagnose_response
 /////////////////// split-related structs ////////////////////
 
 // client to meta server to start partition split
-struct app_partition_split_request
+struct start_partition_split_request
 {
-    1:string                 app_name;
-    2:i32                    new_partition_count;
+    1:string    app_name;
+    2:i32       new_partition_count;
 }
 
-struct app_partition_split_response
+struct start_partition_split_response
 {
-    1:dsn.error_code         err;
-    2:i32                    app_id;
-    // app current partition count
-    // if split succeed, partition_count = new partition_count
-    // if split failed, partition_count = original partition_count
-    3:i32                    partition_count;
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_PARAMETERS: if the given new_partition_count != old_partition_count * 2
+    // - ERR_BUSY - if app is already executing partition split
+    1:dsn.error_code    err;
+    2:string            hint_msg;
 }
 
 // child to primary parent, notifying that itself has caught up with parent

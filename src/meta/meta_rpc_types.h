@@ -26,8 +26,7 @@ namespace replication {
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
     app_env_rpc;
 typedef rpc_holder<ddd_diagnose_request, ddd_diagnose_response> ddd_diagnose_rpc;
-typedef rpc_holder<app_partition_split_request, app_partition_split_response>
-    app_partition_split_rpc;
+typedef rpc_holder<start_partition_split_request, start_partition_split_response> start_split_rpc;
 typedef rpc_holder<configuration_query_by_node_request, configuration_query_by_node_response>
     configuration_query_by_node_rpc;
 typedef rpc_holder<configuration_query_by_index_request, configuration_query_by_index_response>
