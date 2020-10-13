@@ -46,7 +46,7 @@ namespace server {
 //  is done, ready to get | FINISH +-------------------------+
 //  the result            +--------+
 
-enum class collector_state
+enum class hotkey_collector_state
 {
     STOP,
     COARSE,
@@ -54,12 +54,12 @@ enum class collector_state
     FINISH
 };
 
-ENUM_BEGIN2(collector_state, collector_state, collector_state::STOP)
-ENUM_REG(collector_state::STOP)
-ENUM_REG(collector_state::COARSE)
-ENUM_REG(collector_state::FINE)
-ENUM_REG(collector_state::FINISH)
-ENUM_END2(collector_state, collector_state)
+ENUM_BEGIN2(hotkey_collector_state, hotkey_collector_state, hotkey_collector_state::STOP)
+ENUM_REG(hotkey_collector_state::STOP)
+ENUM_REG(hotkey_collector_state::COARSE)
+ENUM_REG(hotkey_collector_state::FINE)
+ENUM_REG(hotkey_collector_state::FINISH)
+ENUM_END2(hotkey_collector_state, hotkey_collector_state)
 
 } // namespace server
 } // namespace pegasus

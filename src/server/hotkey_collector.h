@@ -72,7 +72,7 @@ public:
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 
 private:
-    std::atomic<collector_state> _state;
+    std::atomic<hotkey_collector_state> _state;
 };
 
 } // namespace server
