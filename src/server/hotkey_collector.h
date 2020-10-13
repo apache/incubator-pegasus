@@ -19,6 +19,8 @@
 
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
+#include <dsn/dist/replication/replica_base.h>
+#include <dsn/dist/fmt_logging.h>
 
 namespace pegasus {
 namespace server {
@@ -60,15 +62,23 @@ namespace server {
 //    |                    |  |                     Hotkey                         |
 //    +--------------------+  +----------------------------------------------------+
 
-class hotkey_collector
+class hotkey_collector : public dsn::replication::replica_base
 {
 public:
+    hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
+                     dsn::replication::replica_base *r_base);
     // TODO: (Tangyanzhao) capture_*_key should be consistent with hotspot detection
     // weight: calculate the weight according to the specific situation
     void capture_raw_key(const dsn::blob &raw_key, int64_t weight);
     void capture_hash_key(const dsn::blob &hash_key, int64_t weight);
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
+
+private:
+    const dsn::replication::hotkey_type::type _hotkey_type;
+
+    bool start_detect(/*out*/ std::string &err_hint);
+    void stop_detect();
 };
 
 } // namespace server
