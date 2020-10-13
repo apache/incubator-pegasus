@@ -19,6 +19,9 @@
 
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
+#include <dsn/dist/replication/replica_base.h>
+#include <dsn/dist/fmt_logging.h>
+#include "hotkey_state_machine.h"
 
 namespace pegasus {
 namespace server {
@@ -69,6 +72,9 @@ public:
     void capture_hash_key(const dsn::blob &hash_key, int64_t weight);
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
+
+private:
+    std::atomic<collector_state> _state;
 };
 
 } // namespace server
