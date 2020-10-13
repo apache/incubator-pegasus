@@ -123,11 +123,9 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
 {
     int64_t data_size = 0;
     int64_t multi_get_bytes = 0;
-    int64_t key_count = 0;
     for (const auto &kv : kvs) {
         multi_get_bytes += kv.key.size() + kv.value.size();
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
-        key_count++;
     }
     _pfc_multi_get_bytes->add(hash_key.size() + multi_get_bytes);
 
@@ -136,6 +134,7 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
         return;
     }
 
+    uint64_t key_count = kvs.size();
     if (status == rocksdb::Status::kNotFound) {
         add_read_cu(1);
         _read_hotkey_collector->capture_hash_key(hash_key, key_count);
@@ -158,10 +157,10 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
         return;
     }
 
+    // TODO: (Tangyanzhao) hotkey detect in scan
     int64_t data_size = 0;
     for (const auto &kv : kvs) {
         data_size += kv.key.size() + kv.value.size();
-        _read_hotkey_collector->capture_raw_key(kv.key, 1);
     }
     add_read_cu(data_size);
     _pfc_scan_bytes->add(data_size);
@@ -215,9 +214,10 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
     for (const auto &kv : kvs) {
         multi_put_bytes += kv.key.size() + kv.value.size();
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
-        _write_hotkey_collector->capture_raw_key(kv.key, 1);
     }
     _pfc_multi_put_bytes->add(hash_key.size() + multi_put_bytes);
+    uint64_t key_count = kvs.size();
+    _write_hotkey_collector->capture_raw_key(hash_key, key_count);
 
     if (status != rocksdb::Status::kOk) {
         return;
@@ -236,8 +236,9 @@ void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
     int64_t data_size = 0;
     for (const auto &sort_key : sort_keys) {
         data_size += hash_key.size() + sort_key.size();
-        _write_hotkey_collector->capture_hash_key(hash_key, 1);
     }
+    uint64_t key_count = sort_keys.size();
+    _write_hotkey_collector->capture_hash_key(hash_key, key_count);
     add_write_cu(data_size);
 }
 
@@ -284,11 +285,9 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
 {
     int64_t data_size = 0;
     int64_t check_and_mutate_bytes = 0;
-    int64_t key_count = 0;
     for (const auto &m : mutate_list) {
         check_and_mutate_bytes += m.sort_key.size() + m.value.size();
         data_size += hash_key.size() + m.sort_key.size() + m.value.size();
-        key_count++;
     }
     _pfc_check_and_mutate_bytes->add(hash_key.size() + check_sort_key.size() +
                                      check_and_mutate_bytes);
@@ -297,7 +296,7 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
         status != rocksdb::Status::kTryAgain) {
         return;
     }
-
+    uint64_t key_count = mutate_list.size();
     if (status == rocksdb::Status::kOk) {
         add_write_cu(data_size);
         _write_hotkey_collector->capture_hash_key(hash_key, key_count);
