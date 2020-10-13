@@ -24,35 +24,27 @@ namespace server {
 
 //                     hotkey_collector
 //                      state machine
-//                        +--------+
-// data has been cleared, |        |
+// data has been cleared, +--------+
 // ready to start         |  STOP  <-----------+-------------+
-//                        |        |           |             |
 //                        +---+----+           |             |
-//                            +                +             |
-//                        Receive START rpc    Time out      |
-//                            +                +             |
-//                        +---v----+           |             |
-//  is running coarse     |        |           |             |
-//  capture and analysis  | COARSE +----------->       Receive STOP rpc
-//                        |        |           |             |
+//                            |                |             |
+//                        Receive START RPC  Time out        |
+//                            |                +             |
+//  is running coarse     +---v----+           |             |
+//  capture and analysis  | COARSE +-----------^       Receive STOP RPC
 //                        +---+----+           |             |
-//                            +                +             |
-//                        Find a hot bucket    Time out      |
-//                            +                +             |
-//                        +---v----+           |             |
-//  is running fine       |        |           |             |
+//                            |                +             |
+//                        Find a hot bucket  Time out        |
+//                            |                +             |
+//  is running fine       +---v----+           |             |
 //  capture and analysis  |  FINE  +-----------+             |
-//                        |        |                         |
 //                        +---+----+                         |
-//                            +                              |
+//                            |                              |
 //                        Find a hotkey                      |
-//                            +                              |
-//                        +---v----+                         |
-//  capture and analyse   |        |                         |
+//                            |                              |
+//  capture and analyse   +---v----+                         |
 //  is done, ready to get | FINISH +-------------------------+
-//  the result            |        |
-//                        +--------+
+//  the result            +--------+
 
 enum class collector_state
 {
