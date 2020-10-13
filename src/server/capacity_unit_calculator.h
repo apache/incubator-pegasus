@@ -11,18 +11,22 @@
 namespace pegasus {
 namespace server {
 
+class hotkey_collector;
+
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
 public:
-    explicit capacity_unit_calculator(replica_base *r);
+    capacity_unit_calculator(replica_base *r,
+                             std::shared_ptr<hotkey_collector> read_hotkey_collector,
+                             std::shared_ptr<hotkey_collector> write_hotkey_collector);
 
     void add_get_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_multi_get_cu(int32_t status,
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
     void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
-    void add_sortkey_count_cu(int32_t status);
-    void add_ttl_cu(int32_t status);
+    void add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key);
+    void add_ttl_cu(int32_t status, const dsn::blob &key);
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
@@ -32,7 +36,7 @@ public:
     void add_multi_remove_cu(int32_t status,
                              const dsn::blob &hash_key,
                              const std::vector<::dsn::blob> &sort_keys);
-    void add_incr_cu(int32_t status);
+    void add_incr_cu(int32_t status, const dsn::blob &key);
     void add_check_and_set_cu(int32_t status,
                               const dsn::blob &hash_key,
                               const dsn::blob &check_sort_key,
@@ -70,6 +74,27 @@ private:
     ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
+
+    /*
+        hotkey capturing weight rules:
+            add_get_cu: whether find the key or not, weight = 1(read_collector),
+            add_multi_get_cu: weight = returned sortkey count(read_collector),
+            add_scan_cu : not capture now,
+            add_sortkey_count_cu: weight = 1(read_collector),
+            add_ttl_cu: weight = 1(read_collector),
+            add_put_cu: weight = 1(write_collector),
+            add_remove_cu: weight = 1(write_collector),
+            add_multi_put_cu: weight = returned sortkey count(write_collector),
+            add_multi_remove_cu: weight = returned sortkey count(write_collector),
+            add_incr_cu: if find the key, weight = 1(write_collector),
+                         else weight = 1(read_collector)
+            add_check_and_set_cu: if find the key, weight = 1(write_collector),
+                         else weight = 1(read_collector)
+            add_check_and_mutate_cu: if find the key, weight = mutate_list size
+                                     else weight = 1
+    */
+    std::shared_ptr<hotkey_collector> _read_hotkey_collector;
+    std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 };
 
 } // namespace server
