@@ -17,6 +17,8 @@
 
 #include "hotkey_collector.h"
 
+#include "base/pegasus_key_schema.h"
+
 namespace pegasus {
 namespace server {
 
@@ -28,12 +30,15 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
 
 void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 {
-    // TODO: (Tangyanzhao) Add a judgment sentence to check if it is a raw key
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(raw_key, hash_key, sort_key);
+    capture_hash_key(hash_key, weight);
 }
-
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
-    collector->capture_data(hash_key, weight);
+    if (collector != nullptr) {
+        collector->capture_data(hash_key, weight);
+    }
 }
 
 } // namespace server
