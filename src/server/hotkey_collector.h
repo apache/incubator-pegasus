@@ -19,7 +19,7 @@
 
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
-#include "hotkey_state_machine.h"
+#include "hotkey_collector_state.h"
 
 namespace pegasus {
 namespace server {

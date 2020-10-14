@@ -23,7 +23,7 @@ namespace pegasus {
 namespace server {
 
 //                     hotkey_collector
-//                      state machine
+//                      collector state
 // data has been cleared, +--------+
 // ready to start         |  STOP  <-----------+-------------+
 //                        +---+----+           |             |
