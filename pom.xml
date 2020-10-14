@@ -362,11 +362,8 @@
             <exclude>src/assembly/*</exclude>
             <exclude>src/test/**</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/client/**</exclude>
-            <exclude>src/main/java/com/xiaomi/infra/pegasus/rpc/*</exclude>
-            <exclude>src/main/java/com/xiaomi/infra/pegasus/example/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/tools/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/operator/*</exclude>
-            <exclude>src/main/java/com/xiaomi/infra/pegasus/rpc/async/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/base/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/metrics/*</exclude>
             <exclude>idl/*</exclude>
