@@ -3,6 +3,7 @@ package com.xiaomi.infra.pegasus.spark.analyser;
 import com.xiaomi.infra.pegasus.spark.CommonConfig;
 import com.xiaomi.infra.pegasus.spark.FDSConfig;
 import com.xiaomi.infra.pegasus.spark.HDFSConfig;
+import com.xiaomi.infra.pegasus.spark.utils.FlowController.RateLimiterConfig;
 
 /**
  * ColdBackupConfig is used when you manipulate the cold-backup data. <br>
@@ -91,6 +92,20 @@ public class ColdBackupConfig extends CommonConfig implements Config {
   public ColdBackupConfig setReadOptions(int maxFileOpenCount, long readAheadSize) {
     this.readAheadSize = readAheadSize * MB_UNIT;
     this.fileOpenCount = maxFileOpenCount;
+    return this;
+  }
+
+  /**
+   * set RateLimiter config to control request flow that include `qpsLimiter` and `bytesLimiter`,
+   * detail see {@link com.xiaomi.infra.pegasus.spark.utils.FlowController} and {@link
+   * RateLimiterConfig}
+   *
+   * @param rateLimiterConfig see {@link RateLimiterConfig}
+   * @return this
+   */
+  @Override
+  public ColdBackupConfig setRateLimiterConfig(RateLimiterConfig rateLimiterConfig) {
+    super.setRateLimiterConfig(rateLimiterConfig);
     return this;
   }
 

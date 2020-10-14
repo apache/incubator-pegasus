@@ -25,14 +25,11 @@ public abstract class CommonConfig implements Serializable {
   }
 
   private void initConfig(HDFSConfig config, String clusterName, String tableName) {
+    this.rateLimiterConfig = new RateLimiterConfig();
     this.remoteFileSystemURL = config.getUrl();
     this.remoteFileSystemPort = config.getPort();
     this.clusterName = clusterName;
     this.tableName = tableName;
-  }
-
-  public RateLimiterConfig getRateLimiterConfig() {
-    return rateLimiterConfig;
   }
 
   public CommonConfig setRateLimiterConfig(RateLimiterConfig rateLimiterConfig) {
@@ -58,6 +55,10 @@ public abstract class CommonConfig implements Serializable {
 
   public RemoteFileSystem getRemoteFileSystem() {
     return remoteFileSystem;
+  }
+
+  public RateLimiterConfig getRateLimiterConfig() {
+    return rateLimiterConfig;
   }
 
   public String getRemoteFileSystemURL() {

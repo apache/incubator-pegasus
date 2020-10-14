@@ -3,6 +3,7 @@ package com.xiaomi.infra.pegasus.spark.analyser;
 import com.xiaomi.infra.pegasus.spark.PegasusSparkException;
 import com.xiaomi.infra.pegasus.spark.RemoteFileSystem;
 import com.xiaomi.infra.pegasus.spark.RocksDBOptions;
+import com.xiaomi.infra.pegasus.spark.utils.FlowController;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -22,6 +23,7 @@ class ColdBackupLoader implements PegasusLoader {
 
   private ColdBackupConfig coldBackupConfig;
   private RemoteFileSystem remoteFileSystem;
+  private FlowController flowController;
   private Map<Integer, String> checkpointUrls = new HashMap<>();
   private final int partitionCount;
 
@@ -49,6 +51,8 @@ class ColdBackupLoader implements PegasusLoader {
     partitionCount = getCount(metaPrefix);
     initCheckpointUrls(metaPrefix, partitionCount);
 
+    flowController = new FlowController(partitionCount, config.getRateLimiterConfig());
+
     LOG.info("init fds default config and get the data urls");
   }
 
@@ -73,7 +77,7 @@ class ColdBackupLoader implements PegasusLoader {
     RocksDB rocksDB = RocksDB.openReadOnly(rocksDBOptions.options, checkpointUrls.get(pid));
     RocksIterator rocksIterator = rocksDB.newIterator(rocksDBOptions.readOptions);
     return new ColdBackupScanner(
-        coldBackupConfig.getDataVersion(), rocksDBOptions, rocksDB, rocksIterator);
+        coldBackupConfig.getDataVersion(), rocksDBOptions, rocksDB, rocksIterator, flowController);
   }
 
   private void initCheckpointUrls(String prefix, int count) throws PegasusSparkException {
@@ -173,16 +177,19 @@ class ColdBackupLoader implements PegasusLoader {
     RocksDBOptions rocksDBOptions;
     RocksDB rocksDB;
     RocksIterator rocksIterator;
+    FlowController flowController;
 
     ColdBackupScanner(
         DataVersion scannerVersion,
         RocksDBOptions rocksDBOptions,
         RocksDB rocksDB,
-        RocksIterator rocksIterator) {
+        RocksIterator rocksIterator,
+        FlowController flowController) {
       this.scannerVersion = scannerVersion;
       this.rocksDBOptions = rocksDBOptions;
       this.rocksDB = rocksDB;
       this.rocksIterator = rocksIterator;
+      this.flowController = flowController;
     }
 
     @Override
@@ -197,6 +204,12 @@ class ColdBackupLoader implements PegasusLoader {
 
     @Override
     public void next() {
+      // `flowControl` initialized by `RateLimiterConfig` whose `qps` and `bytes` are both 0
+      // default, which means if you don't set custom config value > 0 , it will not limit and
+      // return immediately
+      flowController.acquireQPS();
+      flowController.acquireBytes(rocksIterator.key().length + rocksIterator.value().length);
+
       rocksIterator.next();
     }
 

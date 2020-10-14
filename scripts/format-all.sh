@@ -5,6 +5,7 @@ PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
 cd "${PROJECT_DIR}" || exit 1
 
 SRC_FILES=(pegasus-spark-common/src/main/java/com/xiaomi/infra/pegasus/spark/*.java
+           pegasus-spark-common/src/main/java/com/xiaomi/infra/pegasus/spark/utils/*.java
            pegasus-spark-analyser/src/main/java/com/xiaomi/infra/pegasus/spark/analyser/*.java
            pegasus-spark-bulkloader/src/main/java/com/xiaomi/infra/pegasus/spark/bulkloader/*.java
            )

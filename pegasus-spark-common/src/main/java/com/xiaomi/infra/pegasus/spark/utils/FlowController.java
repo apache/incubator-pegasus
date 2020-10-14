@@ -13,7 +13,7 @@ public class FlowController {
     public RateLimiterConfig() {
       this.megabytes = 0;
       this.qps = 0;
-      this.burstFactor = 1;
+      this.burstFactor = 1.5;
     }
 
     /**
@@ -41,7 +41,7 @@ public class FlowController {
     }
 
     /**
-     * set the burst factor, the burstRate = baseRate * burstFactor, default 1 means no burst
+     * set the burst factor, the burstRate = baseRate * burstFactor, default is 1.5
      *
      * @param burstFactor
      * @return
@@ -68,47 +68,62 @@ public class FlowController {
   private RateLimiter bytesLimiter;
   private RateLimiter qpsLimiter;
 
-  private int partitionCount;
-  private double burstFactor;
-
-  public FlowController(int partitionCount, double burstFactor) {
-    this.partitionCount = partitionCount;
-    this.burstFactor = burstFactor;
-  }
-
-  public FlowController withMBytesLimiter(long megabytes) {
-    if (megabytes <= 0) {
-      return this;
+  /**
+   * FlowController constructor using partitionCount and RateLimiterConfig
+   *
+   * @param partitionCount spark partition count, generally is task parallelism, if
+   *     RateLimiterConfig rate limit is `rate`, the one partition rate is `rate / partitionCount`
+   * @param config RateLimiterConfig include `qps` and `byte` limit, if their value is 0, won't
+   *     create RateLimiter
+   */
+  public FlowController(int partitionCount, RateLimiterConfig config) {
+    if (config.megabytes > 0) {
+      this.bytesLimiter =
+          RateLimiter.create(
+              1.0 * (config.megabytes << 20) / partitionCount,
+              (config.megabytes << 20) * config.burstFactor / partitionCount);
     }
 
-    this.bytesLimiter =
-        RateLimiter.create(
-            1.0 * (megabytes << 20) / partitionCount,
-            (megabytes << 20) * burstFactor / partitionCount);
-    return this;
+    if (config.qps > 0) {
+      this.qpsLimiter =
+          RateLimiter.create(
+              1.0 * config.qps / partitionCount, config.qps * config.burstFactor / partitionCount);
+    }
   }
 
-  public FlowController withQPSLimiter(long qps) {
-    if (qps <= 0) {
-      return this;
+  /**
+   * Acquires the given bytes number of permits from {@link #bytesLimiter}, blocking until the
+   * request can be granted. Tells the amount of time slept, if any.
+   *
+   * @param bytes the number of permits to acquire
+   * @return time spent sleeping to enforce rate, in seconds; The follow case means no limiter and
+   *     return 0:
+   *     <p>case1: bytesLimiter = null means no bytes limiter
+   *     <p>case2: bytes acquire is 0
+   *     <p>case3: token is enough
+   * @throws IllegalArgumentException if the bytes is negative
+   */
+  public double acquireBytes(int bytes) {
+    if (bytesLimiter == null || bytes == 0) {
+      return 0;
     }
 
-    this.qpsLimiter =
-        RateLimiter.create(1.0 * qps / partitionCount, qps * burstFactor / partitionCount);
-    return this;
+    return bytesLimiter.acquire(bytes);
   }
 
-  public void acquireBytes(int bytes) {
-    if (bytesLimiter == null) {
-      return;
-    }
-    bytesLimiter.acquire(bytes);
-  }
-
-  public void acquireQPS() {
+  /**
+   * Acquires a single permits from {@link #qpsLimiter}, blocking until the request can be granted.
+   * Tells the amount of time slept, if any.
+   *
+   * @return time spent sleeping to enforce rate, in seconds; The follow case means no limiter and
+   *     return 0:
+   *     <p>case1: qpsLimiter = null means no bytes limiter
+   *     <p>case2: token is enough
+   */
+  public double acquireQPS() {
     if (qpsLimiter == null) {
-      return;
+      return 0;
     }
-    qpsLimiter.acquire();
+    return qpsLimiter.acquire();
   }
 }
