@@ -108,5 +108,13 @@ public:
     virtual bool get_analysis_result(/*out*/ detect_result &result);
 };
 
+class hotkey_empty_data_collector : public internal_collector_base
+{
+public:
+    void capture_data(const dsn::blob &hash_key, uint64_t size);
+    void analyse_data();
+    virtual bool get_analysis_result(/*out*/ detect_result &result);
+};
+
 } // namespace server
 } // namespace pegasus
