@@ -25,13 +25,13 @@ namespace server {
 //                          hotkey_collector
 //                               state
 // data has been cleared, +----------------+
-// ready to start         |     STOPED     |<--------------+------------+
+// ready to start         |    STOPPED     |<--------------+------------+
 //                        +-------+--------+               |            |
 //                                |                        |            |
 //                           Receive START RPC           Timeout        |
 //                                |                        +            |
 //  is running COARSE     +-------v--------+               |            |
-//  capture and analysis  |COARSE_DETECTING+---------------^   Receive STOPED RPC
+//  capture and analysis  |COARSE_DETECTING+---------------^   Receive STOPPED RPC
 //                        +-------+--------+               |            |
 //                                |                        +            |
 //                           Find a hot bucket           Timeout        |
@@ -48,14 +48,14 @@ namespace server {
 
 enum class hotkey_collector_state
 {
-    STOPED,
+    STOPPED,
     COARSE_DETECTING,
     FINE_DETECTING,
     FINISHED
 };
 
-ENUM_BEGIN2(hotkey_collector_state, hotkey_collector_state, hotkey_collector_state::STOPED)
-ENUM_REG(hotkey_collector_state::STOPED)
+ENUM_BEGIN2(hotkey_collector_state, hotkey_collector_state, hotkey_collector_state::STOPPED)
+ENUM_REG(hotkey_collector_state::STOPPED)
 ENUM_REG(hotkey_collector_state::COARSE_DETECTING)
 ENUM_REG(hotkey_collector_state::FINE_DETECTING)
 ENUM_REG(hotkey_collector_state::FINISHED)
