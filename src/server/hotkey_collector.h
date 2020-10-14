@@ -19,6 +19,7 @@
 
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
+#include "hotkey_collector_state.h"
 
 namespace pegasus {
 namespace server {
@@ -88,6 +89,7 @@ public:
 private:
     detect_result _result;
     std::unique_ptr<internal_collector_base> collector;
+    std::atomic<hotkey_collector_state> _state;
 };
 
 class hotkey_coarse_data_collector : public internal_collector_base

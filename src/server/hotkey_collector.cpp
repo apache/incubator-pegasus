@@ -35,6 +35,7 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
     pegasus_restore_key(raw_key, hash_key, sort_key);
     capture_hash_key(hash_key, weight);
 }
+
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
     if (collector != nullptr) {
