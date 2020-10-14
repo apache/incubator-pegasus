@@ -28,13 +28,13 @@ namespace server {
 // ready to start         |    STOPED    |<--------------+------------+
 //                        +------+-------+               |            |
 //                               |                       |            |
-//                          Receive START RPC         Time out        |
+//                          Receive START RPC          Timeout        |
 //                               |                       +            |
 //  is running COARSE     +------v-------+               |            |
 //  capture and analysis  |COARSE_FINDING+---------------^   Receive STOPED RPC
 //                        +------+-------+               |            |
 //                               |                       +            |
-//                          Find a hot bucket         Time out        |
+//                          Find a hot bucket          Timeout        |
 //                               |                       +            |
 //  is running FINE       +------v-------+               |            |
 //  capture and analysis  | FINE_FINDING |+--------------+            |
