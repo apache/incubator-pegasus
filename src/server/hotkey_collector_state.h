@@ -22,42 +22,42 @@
 namespace pegasus {
 namespace server {
 
-//                        hotkey_collector
-//                             state
-// data has been cleared, +--------------+
-// ready to start         |    STOPED    |<--------------+------------+
-//                        +------+-------+               |            |
-//                               |                       |            |
-//                          Receive START RPC          Timeout        |
-//                               |                       +            |
-//  is running COARSE     +------v-------+               |            |
-//  capture and analysis  |COARSE_FINDING+---------------^   Receive STOPED RPC
-//                        +------+-------+               |            |
-//                               |                       +            |
-//                          Find a hot bucket          Timeout        |
-//                               |                       +            |
-//  is running FINE       +------v-------+               |            |
-//  capture and analysis  | FINE_FINDING |+--------------+            |
-//                        +------+-------+                            |
-//                               |                                    |
-//                          Find a hotkey                             |
-//                               |                                    |
-//  capture and analyse   +------v-------+                            |
-//  is done, ready to get |   FINISHED   |+---------------------------+
-//  the result            +--------------+
+//                          hotkey_collector
+//                               state
+// data has been cleared, +----------------+
+// ready to start         |     STOPED     |<--------------+------------+
+//                        +-------+--------+               |            |
+//                                |                        |            |
+//                           Receive START RPC           Timeout        |
+//                                |                        +            |
+//  is running COARSE     +-------v--------+               |            |
+//  capture and analysis  |COARSE_DETECTING+---------------^   Receive STOPED RPC
+//                        +-------+--------+               |            |
+//                                |                        +            |
+//                           Find a hot bucket           Timeout        |
+//                                |                        +            |
+//  is running FINE       +-------v--------+               |            |
+//  capture and analysis  | FINE_DETECTING |+--------------+            |
+//                        +-------+--------+                            |
+//                                |                                     |
+//                           Find a hotkey                              |
+//                                |                                     |
+//  capture and analyse   +-------v--------+                            |
+//  is done, ready to get |    FINISHED    |+---------------------------+
+//  the result            +----------------+
 
 enum class hotkey_collector_state
 {
     STOPED,
-    COARSE_FINDING,
-    FINE_FINDING,
+    COARSE_DETECTING,
+    FINE_DETECTING,
     FINISHED
 };
 
 ENUM_BEGIN2(hotkey_collector_state, hotkey_collector_state, hotkey_collector_state::STOPED)
 ENUM_REG(hotkey_collector_state::STOPED)
-ENUM_REG(hotkey_collector_state::COARSE_FINDING)
-ENUM_REG(hotkey_collector_state::FINE_FINDING)
+ENUM_REG(hotkey_collector_state::COARSE_DETECTING)
+ENUM_REG(hotkey_collector_state::FINE_DETECTING)
 ENUM_REG(hotkey_collector_state::FINISHED)
 ENUM_END2(hotkey_collector_state, hotkey_collector_state)
 
