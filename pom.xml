@@ -360,12 +360,13 @@
             <!--TODO(wutao): fix all the following files-->
             <exclude>dev-support/*</exclude>
             <exclude>src/assembly/*</exclude>
-            <exclude>src/test/**</exclude>
+            <exclude>src/test/resource/pegasus.properties</exclude>
+            <exclude>src/test/java/com/xiaomi/infra/pegasus/client/*</exclude>
+            <exclude>src/test/java/com/xiaomi/infra/pegasus/operator/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/client/**</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/tools/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/operator/*</exclude>
             <exclude>src/main/java/com/xiaomi/infra/pegasus/base/*</exclude>
-            <exclude>src/main/java/com/xiaomi/infra/pegasus/metrics/*</exclude>
             <exclude>idl/*</exclude>
             <exclude>configuration/*</exclude>
             <exclude>dev-support/*</exclude>
