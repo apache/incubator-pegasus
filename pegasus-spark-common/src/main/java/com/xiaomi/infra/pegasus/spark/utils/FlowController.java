@@ -126,4 +126,22 @@ public class FlowController {
     }
     return qpsLimiter.acquire();
   }
+
+  /**
+   * Acquires the given request number of permits from {@link #qpsLimiter}, blocking until the
+   * request can be granted. Tells the amount of time slept, if any.
+   *
+   * @return time spent sleeping to enforce rate, in seconds; The follow case means no limiter and
+   *     return 0:
+   *     <p>case1: qpsLimiter = null means no bytes limiter
+   *     <p>case2: request acquire is 0
+   *     <p>case3: token is enough
+   * @throws IllegalArgumentException if the request is negative
+   */
+  public double acquireQPS(int request) {
+    if (qpsLimiter == null || request == 0) {
+      return 0;
+    }
+    return qpsLimiter.acquire(request);
+  }
 }

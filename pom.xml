@@ -8,7 +8,7 @@
   <groupId>com.xiaomi.infra</groupId>
   <artifactId>pegasus-spark</artifactId>
   <packaging>pom</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.1-SNAPSHOT</version>
   <modules>
     <module>pegasus-spark-common</module>
     <module>pegasus-spark-analyser</module>

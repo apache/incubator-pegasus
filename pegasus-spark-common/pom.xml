@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.xiaomi.infra</groupId>
     <artifactId>pegasus-spark</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -24,7 +24,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.13.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -103,6 +103,12 @@
       <groupId>org.rocksdb</groupId>
       <artifactId>rocksdbjni</artifactId>
       <version>6.6.4-mdh6.6.4-hdfs</version>
+    </dependency>
+    <!--The version add `Serializable` for some class, it will be replaced by release version-->
+    <dependency>
+      <groupId>com.xiaomi.infra</groupId>
+      <artifactId>pegasus-client</artifactId>
+      <version>1.11.10-for-spark-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>

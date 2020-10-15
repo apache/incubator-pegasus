@@ -1,5 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader
 
+import com.xiaomi.infra.pegasus.client.SetItem
 import com.xiaomi.infra.pegasus.spark.utils.Comparator
 import org.apache.spark.rdd.RDD
 
@@ -31,4 +32,12 @@ object CustomImplicits {
       rdd: RDD[(PegasusKey, PegasusValue)]
   ): PegasusRecordRDD =
     new PegasusRecordRDD(rdd)
+
+  /**
+    * The implicit method of converting RDD[SetItem) to PegasusSetItemRDD
+    * @param rdd
+    * @return PegasusSetItemRDD
+    */
+  implicit def convertFromSetItem(rdd: RDD[SetItem]): PegasusSetItemRDD =
+    new PegasusSetItemRDD(rdd)
 }

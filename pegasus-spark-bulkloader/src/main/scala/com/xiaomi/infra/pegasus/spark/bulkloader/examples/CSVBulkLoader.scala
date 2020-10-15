@@ -29,6 +29,8 @@ object CSVBulkLoader {
     ).setTableId(20)
       .setTablePartitionCount(32)
 
+    // This example only shows how to convert CSV file to PegasusFile, actually any data source that
+    // can be converted RDD can be also converted to PegasusFile.
     // Note: if the partition size > 2G before "saveAsPegasusFile", you need
     // sc.textFile("data.csv").repartition(n), and let the partition size < 2G
     sc.textFile("data.csv")
