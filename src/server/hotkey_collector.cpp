@@ -36,9 +36,8 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
 
 void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 {
-    dsn::blob temp_raw_key, hash_key, sort_key;
-    temp_raw_key = raw_key;
-    pegasus_restore_key(temp_raw_key, hash_key, sort_key);
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(raw_key, hash_key, sort_key);
     capture_hash_key(hash_key, weight);
 }
 
