@@ -23,9 +23,8 @@ namespace server {
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
-    : replica_base(r_base), _state(collector_state::STOP), _hotkey_type(hotkey_type)
+    : replica_base(r_base), _state(hotkey_collector_state::STOPPED), _hotkey_type(hotkey_type)
 {
-    _collector_start_time = dsn_now_s();
 }
 
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
@@ -54,9 +53,37 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight) {}
 
-bool hotkey_collector::start_detect(std::string &err_hint) {}
+bool hotkey_collector::start_detect(std::string &err_hint)
+{
+    auto now_state = _state.load();
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+    case hotkey_collector_state::FINE_DETECTING:
+        err_hint = fmt::format("still detecting {} hotkey, state is {}",
+                               dsn::enum_to_string(_hotkey_type),
+                               enum_to_string(now_state));
+        return false;
+    case hotkey_collector_state::FINISHED:
+        err_hint = fmt::format(
+            "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
+            dsn::enum_to_string(_hotkey_type));
+        return false;
+    case hotkey_collector_state::STOPPED:
+        // TODO: (Tangyanzhao) start coarse detecting
+        _state.store(hotkey_collector_state::COARSE_DETECTING);
+        ddebug_replica("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
+        return true;
+    default:
+        err_hint = "invalid collector state";
+        return false;
+    }
+}
 
-void hotkey_collector::stop_detect() {}
+void hotkey_collector::stop_detect()
+{
+    _state.store(hotkey_collector_state::STOPPED);
+    derror_replica("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
+}
 
 } // namespace server
 } // namespace pegasus
