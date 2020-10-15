@@ -3,4 +3,4 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #pragma once
-#define PEGASUS_VERSION "2.1.0-RC3"
+#define PEGASUS_VERSION "2.1.0"
