@@ -50,9 +50,5 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
 
 void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
 
-void hotkey_empty_data_collector::capture_data(const dsn::blob &hash_key, uint64_t size) {}
-
-void hotkey_empty_data_collector::analyse_data() {}
-
 } // namespace server
 } // namespace pegasus
