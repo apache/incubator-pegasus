@@ -76,7 +76,7 @@ public:
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 
 private:
-    std::unique_ptr<internal_collector_base> _collector;
+    std::unique_ptr<internal_collector_base> _internal_collector;
     std::atomic<hotkey_collector_state> _state;
 };
 

@@ -23,7 +23,8 @@
 namespace pegasus {
 namespace server {
 
-hotkey_collector::hotkey_collector() : _collector(dsn::make_unique<hotkey_empty_data_collector>())
+hotkey_collector::hotkey_collector()
+    : _internal_collector(dsn::make_unique<hotkey_empty_data_collector>())
 {
 }
 
@@ -44,10 +45,10 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
     // TODO: (Tangyanzhao) add a unit test to ensure data integrity
-    _collector->capture_data(hash_key, weight);
+    _internal_collector->capture_data(hash_key, weight);
 }
 
-void hotkey_collector::analyse_data() { _collector->analyse_data(); }
+void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
 
 void hotkey_empty_data_collector::capture_data(const dsn::blob &hash_key, uint64_t size) {}
 
