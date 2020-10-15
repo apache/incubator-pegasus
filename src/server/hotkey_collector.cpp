@@ -17,10 +17,15 @@
 
 #include "hotkey_collector.h"
 
+#include <dsn/utility/smart_pointers.h>
 #include "base/pegasus_key_schema.h"
 
 namespace pegasus {
 namespace server {
+
+hotkey_collector::hotkey_collector() : _collector(dsn::make_unique<hotkey_empty_data_collector>())
+{
+}
 
 // TODO: (Tangyanzhao) implement these functions
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
@@ -32,19 +37,20 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 {
     dsn::blob temp_raw_key, hash_key, sort_key;
     temp_raw_key = raw_key;
-    pegasus_restore_key(raw_key, hash_key, sort_key);
+    pegasus_restore_key(temp_raw_key, hash_key, sort_key);
     capture_hash_key(hash_key, weight);
 }
 
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
-    if (合法状态) {
-        if (collector != nullptr) {
-
-            collector->capture_data(hash_key, weight);
-        }
-    }
+    _collector->capture_data(hash_key, weight);
 }
+
+void hotkey_collector::analyse_data() { _collector->analyse_data(); }
+
+void hotkey_empty_data_collector::capture_data(const dsn::blob &hash_key, uint64_t size) {}
+
+void hotkey_empty_data_collector::analyse_data() {}
 
 } // namespace server
 } // namespace pegasus

@@ -6,7 +6,6 @@
 #include "server/capacity_unit_calculator.h"
 
 #include <dsn/dist/replication/replica_base.h>
-#include "pegasus_key_schema.h"
 #include "server/hotkey_collector.h"
 
 namespace pegasus {
@@ -51,11 +50,11 @@ protected:
     std::unique_ptr<mock_capacity_unit_calculator> _cal;
 
 public:
-    dsn::blob key;
+    const dsn::blob key = dsn::blob::create_from_bytes("key");
+
     capacity_unit_calculator_test() : pegasus_server_test_base()
     {
         _cal = dsn::make_unique<mock_capacity_unit_calculator>(_server.get());
-        pegasus_generate_key(key, dsn::blob::create_from_bytes("h"), dsn::blob());
     }
 
     void test_init()
