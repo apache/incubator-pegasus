@@ -24,8 +24,6 @@
 namespace pegasus {
 namespace server {
 
-class internal_collector_base;
-
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
 //    separately.
