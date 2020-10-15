@@ -625,6 +625,13 @@ bool replica::is_same_ballot_status_change_allowed(partition_status::type olds,
 bool replica::update_local_configuration(const replica_configuration &config,
                                          bool same_ballot /* = false*/)
 {
+    FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
+        auto old_status = status();
+        _config = config;
+        ddebug_replica("update status from {} to {}", enum_to_string(old_status), status());
+        return true;
+    });
+
     dassert(config.ballot > get_ballot() || (same_ballot && config.ballot == get_ballot()),
             "invalid ballot, %" PRId64 " VS %" PRId64 "",
             config.ballot,

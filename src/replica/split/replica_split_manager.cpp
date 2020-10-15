@@ -805,10 +805,11 @@ void replica_split_manager::child_handle_split_error(
     const std::string &error_msg) // on child partition
 {
     if (status() != partition_status::PS_ERROR) {
-        dwarn_replica("partition split failed because {}", error_msg);
-        // TODO(heyuchen):
-        // convert child partition_status from PS_PARTITION_SPLIT to PS_ERROR in further pull
-        // request
+        derror_replica("child partition split failed because {}, parent = {}",
+                       error_msg,
+                       _replica->_split_states.parent_gpid);
+        // TODO(heyuchen): add perf-counter (split_failed_count)
+        _replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
     }
 }
 

@@ -397,33 +397,36 @@ TEST_F(replica_split_test, copy_prepare_list_succeed)
     cleanup_child_split_context();
 }
 
-// TODO(heyuchen): refactor child_learn_states unit tests
-TEST_F(replica_split_test, learn_states_succeed)
+// child_learn_states tests
+TEST_F(replica_split_test, child_learn_states_tests)
 {
-    generate_child(true, false);
-    // mock_child_split_context(true, false);
+    generate_child();
 
-    // fail::setup();
-    fail::cfg("replica_child_apply_private_logs", "return()");
-    fail::cfg("replica_child_catch_up_states", "return()");
-    test_child_learn_states();
-    // fail::teardown();
-    ASSERT_EQ(_child_replica->status(), partition_status::PS_PARTITION_SPLIT);
+    // Test cases:
+    // - mock replay private log error
+    // - child learn states succeed
+    struct child_learn_state_test
+    {
+        bool mock_replay_log_error;
+        partition_status::type expected_child_status;
+    } tests[] = {{true, partition_status::PS_ERROR}, {false, partition_status::PS_PARTITION_SPLIT}};
+    for (auto test : tests) {
+        fail::setup();
+        fail::cfg("replica_child_catch_up_states", "return()");
+        fail::cfg("replica_stub_split_replica_exec", "return()");
+        if (test.mock_replay_log_error) {
+            fail::cfg("replica_child_apply_private_logs", "return(ERR_INVALID_STATE)");
+        } else {
+            fail::cfg("replica_child_apply_private_logs", "return()");
+        }
+        mock_child_split_context(true, false);
+        test_child_learn_states();
+        ASSERT_EQ(_child_replica->status(), test.expected_child_status);
 
-    cleanup_prepare_list(_child_replica);
-    cleanup_child_split_context();
-}
-
-TEST_F(replica_split_test, learn_states_with_replay_private_log_error)
-{
-    generate_child(true, false);
-
-    fail::cfg("replica_child_apply_private_logs", "return(error)");
-    fail::cfg("replica_child_catch_up_states", "return()");
-    test_child_learn_states();
-    // TODO(heyuchen): child should be equal to error(after implement child_handle_split_error)
-    cleanup_prepare_list(_child_replica);
-    cleanup_child_split_context();
+        cleanup_prepare_list(_child_replica);
+        cleanup_child_split_context();
+        fail::teardown();
+    }
 }
 
 // child_apply_private_logs test
