@@ -35,7 +35,7 @@ DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_P
 DSN_DEFINE_int32("pegasus.server",
                  hotkey_analyse_time_interval_s,
                  10,
-                 "hotkey_analyse_time_interval_s, in second");
+                 "hotkey analyse interval in seconds");
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
