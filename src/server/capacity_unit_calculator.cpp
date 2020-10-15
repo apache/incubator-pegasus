@@ -217,7 +217,7 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
     }
     _pfc_multi_put_bytes->add(hash_key.size() + multi_put_bytes);
     uint64_t key_count = kvs.size();
-    _write_hotkey_collector->capture_raw_key(hash_key, key_count);
+    _write_hotkey_collector->capture_hash_key(hash_key, key_count);
 
     if (status != rocksdb::Status::kOk) {
         return;
