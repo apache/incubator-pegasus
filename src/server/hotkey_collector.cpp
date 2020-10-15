@@ -43,6 +43,7 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
+    // TODO: (Tangyanzhao) add a unit test to ensure data integrity
     _collector->capture_data(hash_key, weight);
 }
 

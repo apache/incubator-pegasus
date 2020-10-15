@@ -87,20 +87,6 @@ public:
     virtual void analyse_data() = 0;
 };
 
-class hotkey_coarse_data_collector : public internal_collector_base
-{
-public:
-    void capture_data(const dsn::blob &hash_key, uint64_t size);
-    void analyse_data();
-};
-
-class hotkey_fine_data_collector : public internal_collector_base
-{
-public:
-    void capture_data(const dsn::blob &hash_key, uint64_t size);
-    void analyse_data();
-};
-
 // used in hotkey_collector_state::STOPPED and hotkey_collector_state::FINISHED, avoid null pointers
 class hotkey_empty_data_collector : public internal_collector_base
 {
