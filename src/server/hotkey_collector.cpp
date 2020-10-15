@@ -62,11 +62,13 @@ bool hotkey_collector::start_detect(std::string &err_hint)
         err_hint = fmt::format("still detecting {} hotkey, state is {}",
                                dsn::enum_to_string(_hotkey_type),
                                enum_to_string(now_state));
+        ddebug_replica(err_hint);
         return false;
     case hotkey_collector_state::FINISHED:
         err_hint = fmt::format(
             "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
             dsn::enum_to_string(_hotkey_type));
+        ddebug_replica(err_hint);
         return false;
     case hotkey_collector_state::STOPPED:
         // TODO: (Tangyanzhao) start coarse detecting
@@ -75,6 +77,7 @@ bool hotkey_collector::start_detect(std::string &err_hint)
         return true;
     default:
         err_hint = "invalid collector state";
+        ddebug_replica(err_hint);
         return false;
     }
 }
