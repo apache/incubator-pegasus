@@ -89,8 +89,8 @@ public:
 class hotkey_empty_data_collector : public internal_collector_base
 {
 public:
-    void capture_data(const dsn::blob &hash_key, uint64_t size);
-    void analyse_data();
+    void capture_data(const dsn::blob &hash_key, uint64_t size) {}
+    void analyse_data() {}
 };
 
 } // namespace server
