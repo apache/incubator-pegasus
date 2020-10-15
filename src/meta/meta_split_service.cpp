@@ -71,17 +71,13 @@ void meta_split_service::start_partition_split(start_split_rpc rpc)
             return;
         }
 
-        for (const auto &partition_config : app->partitions) {
-            // partition already during split
-            if (partition_config.ballot < 0) {
-                response.err = ERR_BUSY;
-                dwarn_f("app is already during partition split, client({}) sent repeated split "
-                        "request: app({}), new_partition_count({})",
-                        rpc.remote_address().to_string(),
-                        request.app_name,
-                        request.new_partition_count);
-                return;
-            }
+        if (app->helpers->split_states.splitting_count > 0) {
+            response.err = ERR_BUSY;
+            auto err_msg =
+                fmt::format("app({}) is already executing partition split", request.app_name);
+            derror_f("{}", err_msg);
+            response.hint_msg = err_msg;
+            return;
         }
     }
 
@@ -101,15 +97,18 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
                  app->partition_count * 2);
 
         zauto_write_lock l(app_lock());
+        app->helpers->split_states.splitting_count = app->partition_count;
         app->partition_count *= 2;
         app->helpers->contexts.resize(app->partition_count);
         app->partitions.resize(app->partition_count);
 
         for (int i = 0; i < app->partition_count; ++i) {
             app->helpers->contexts[i].config_owner = &app->partitions[i];
-            if (i >= app->partition_count / 2) {
+            if (i >= app->partition_count / 2) { // child partitions
                 app->partitions[i].ballot = invalid_ballot;
                 app->partitions[i].pid = gpid(app->app_id, i);
+            } else { // parent partitions
+                app->helpers->split_states.status[i] = split_status::SPLITTING;
             }
         }
 

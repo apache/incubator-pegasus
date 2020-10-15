@@ -93,6 +93,7 @@ public:
 
     void mock_parent_split_context(partition_status::type status)
     {
+        parent_set_split_status(split_status::SPLITTING);
         _parent_split_mgr->_child_gpid = CHILD_GPID;
         _parent_split_mgr->_child_init_ballot = INIT_BALLOT;
         _parent_replica->set_partition_status(status);
@@ -182,15 +183,16 @@ public:
     }
 
     /// test functions
-
-    void test_on_add_child(ballot b, gpid req_child_gpid)
+    void test_parent_start_split(ballot b, gpid req_child_gpid, split_status::type status)
     {
+        parent_set_split_status(status);
+
         group_check_request req;
         req.config.ballot = b;
         req.config.status = partition_status::PS_PRIMARY;
         req.__set_child_gpid(req_child_gpid);
 
-        _parent_split_mgr->on_add_child(req);
+        _parent_split_mgr->parent_start_split(req);
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
@@ -297,6 +299,12 @@ public:
     }
     bool child_is_caught_up() { return _child_replica->_split_states.is_caught_up; }
 
+    split_status::type parent_get_split_status() { return _parent_split_mgr->_split_status; }
+    void parent_set_split_status(split_status::type status)
+    {
+        _parent_split_mgr->_split_status = status;
+    }
+
     primary_context get_replica_primary_context(mock_replica_ptr rep)
     {
         return rep->_primary_states;
@@ -305,7 +313,12 @@ public:
     {
         return _parent_replica->_primary_states.sync_send_write_request;
     }
-    bool is_parent_not_in_split() { return (_parent_split_mgr->_child_gpid.get_app_id() == 0); }
+    bool is_parent_not_in_split()
+    {
+        return _parent_split_mgr->_child_gpid.get_app_id() == 0 &&
+               _parent_split_mgr->_child_init_ballot == 0 &&
+               _parent_split_mgr->_split_status == split_status::NOT_SPLIT;
+    }
 
 public:
     const std::string APP_NAME = "split_table";
@@ -335,29 +348,40 @@ public:
     learn_state _mock_learn_state;
 };
 
-// TODO(heyuchen): refactor add child unit tests
-TEST_F(replica_split_test, add_child_wrong_ballot)
-{
-    ballot WRONG_BALLOT = 2;
-    test_on_add_child(WRONG_BALLOT, CHILD_GPID);
-    ASSERT_EQ(stub->get_replica(CHILD_GPID), nullptr);
-}
-
-TEST_F(replica_split_test, add_child_with_child_existed)
-{
-    _parent_split_mgr->set_child_gpid(CHILD_GPID);
-    test_on_add_child(INIT_BALLOT, CHILD_GPID);
-    ASSERT_EQ(stub->get_replica(CHILD_GPID), nullptr);
-}
-
-TEST_F(replica_split_test, add_child_succeed)
+// parent_start_split tests
+TEST_F(replica_split_test, parent_start_split_tests)
 {
     fail::cfg("replica_stub_create_child_replica_if_not_found", "return()");
     fail::cfg("replica_child_init_replica", "return()");
 
-    test_on_add_child(INIT_BALLOT, CHILD_GPID);
-    ASSERT_NE(stub->get_replica(CHILD_GPID), nullptr);
-    stub->get_replica(CHILD_GPID)->tracker()->wait_outstanding_tasks();
+    ballot WRONG_BALLOT = 2;
+
+    // Test cases:
+    // - wrong ballot
+    // - partition has already executing splitting
+    // - old add child request
+    // - start succeed
+    struct start_split_test
+    {
+        ballot req_ballot;
+        gpid req_child_gpid;
+        split_status::type local_split_status;
+        split_status::type expected_split_status;
+        bool start_split_succeed;
+    } tests[] = {
+        {WRONG_BALLOT, CHILD_GPID, split_status::NOT_SPLIT, split_status::NOT_SPLIT, false},
+        {INIT_BALLOT, CHILD_GPID, split_status::SPLITTING, split_status::SPLITTING, false},
+        {INIT_BALLOT, PARENT_GPID, split_status::NOT_SPLIT, split_status::NOT_SPLIT, false},
+        {INIT_BALLOT, CHILD_GPID, split_status::NOT_SPLIT, split_status::SPLITTING, true}};
+    for (auto test : tests) {
+        test_parent_start_split(test.req_ballot, test.req_child_gpid, test.local_split_status);
+        ASSERT_EQ(parent_get_split_status(), test.expected_split_status);
+        if (test.start_split_succeed) {
+            ASSERT_EQ(_parent_split_mgr->get_partition_version(), OLD_PARTITION_COUNT - 1);
+            stub->get_replica(CHILD_GPID)->tracker()->wait_outstanding_tasks();
+            ASSERT_EQ(stub->get_replica(CHILD_GPID)->status(), partition_status::PS_INACTIVE);
+        }
+    }
 }
 
 // parent_check_states tests

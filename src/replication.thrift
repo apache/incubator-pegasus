@@ -158,6 +158,16 @@ struct learn_notify_response
     3:i64                   signature; // learning signature
 }
 
+// partition split status
+enum split_status
+{
+    NOT_SPLIT,
+    SPLITTING,
+    PAUSING,
+    PAUSED,
+    CANCELING
+}
+
 struct group_check_request
 {
     1:dsn.layer2.app_info   app;

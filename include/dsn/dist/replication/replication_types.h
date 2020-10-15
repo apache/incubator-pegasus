@@ -77,6 +77,20 @@ struct learner_status
 
 extern const std::map<int, const char *> _learner_status_VALUES_TO_NAMES;
 
+struct split_status
+{
+    enum type
+    {
+        NOT_SPLIT = 0,
+        SPLITTING = 1,
+        PAUSING = 2,
+        PAUSED = 3,
+        CANCELING = 4
+    };
+};
+
+extern const std::map<int, const char *> _split_status_VALUES_TO_NAMES;
+
 struct config_type
 {
     enum type

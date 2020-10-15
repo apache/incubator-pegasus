@@ -109,34 +109,40 @@ public:
     }
 
     const std::string NAME = "split_table";
-    const uint32_t PARTITION_COUNT = 4;
-    const uint32_t NEW_PARTITION_COUNT = 8;
-    const uint32_t PARENT_BALLOT = 3;
-    const uint32_t PARENT_INDEX = 0;
-    const uint32_t CHILD_INDEX = 4;
+    const int32_t PARTITION_COUNT = 4;
+    const int32_t NEW_PARTITION_COUNT = 8;
+    const int32_t PARENT_BALLOT = 3;
+    const int32_t PARENT_INDEX = 0;
+    const int32_t CHILD_INDEX = 4;
 };
 
-// TODO(heyuchen): refactor start split unit tests
-TEST_F(meta_split_service_test, start_split_with_not_existed_app)
+// start split unit tests
+TEST_F(meta_split_service_test, start_split_test)
 {
-    auto err = start_partition_split("table_not_exist", PARTITION_COUNT);
-    ASSERT_EQ(err, ERR_APP_NOT_EXIST);
-}
+    // Test case:
+    // - app not existed
+    // - wrong partition_count
+    // - app already splitting
+    // - start split succeed
+    struct start_test
+    {
+        std::string app_name;
+        int32_t new_partition_count;
+        bool need_mock_splitting;
+        error_code expected_err;
+        int32_t expected_partition_count;
+    } tests[] = {{"table_not_exist", PARTITION_COUNT, false, ERR_APP_NOT_EXIST, PARTITION_COUNT},
+                 {NAME, PARTITION_COUNT, false, ERR_INVALID_PARAMETERS, PARTITION_COUNT},
+                 {NAME, NEW_PARTITION_COUNT, true, ERR_BUSY, PARTITION_COUNT},
+                 {NAME, NEW_PARTITION_COUNT, false, ERR_OK, NEW_PARTITION_COUNT}};
 
-TEST_F(meta_split_service_test, start_split_with_wrong_params)
-{
-    auto app = find_app(NAME);
-    auto err = start_partition_split(NAME, PARTITION_COUNT);
-    ASSERT_EQ(err, ERR_INVALID_PARAMETERS);
-    ASSERT_EQ(app->partition_count, PARTITION_COUNT);
-}
-
-TEST_F(meta_split_service_test, start_split_succeed)
-{
-    auto app = find_app(NAME);
-    auto err = start_partition_split(NAME, NEW_PARTITION_COUNT);
-    ASSERT_EQ(err, ERR_OK);
-    ASSERT_EQ(app->partition_count, NEW_PARTITION_COUNT);
+    for (auto test : tests) {
+        auto app = find_app(NAME);
+        app->helpers->split_states.splitting_count = test.need_mock_splitting ? PARTITION_COUNT : 0;
+        ASSERT_EQ(start_partition_split(test.app_name, test.new_partition_count),
+                  test.expected_err);
+        ASSERT_EQ(app->partition_count, test.expected_partition_count);
+    }
 }
 
 // TODO(heyuchen): refactor register unit tests

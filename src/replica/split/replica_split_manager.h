@@ -35,8 +35,8 @@ public:
     void set_child_gpid(gpid pid) { _child_gpid = pid; }
 
 private:
-    // parent partition create child
-    void on_add_child(const group_check_request &request);
+    // parent partition start split
+    void parent_start_split(const group_check_request &request);
 
     // child replica initialize config and state info
     void child_init_replica(gpid parent_gpid, rpc_address primary_address, ballot init_ballot);
@@ -118,6 +118,8 @@ private:
     friend class replica;
     friend class replica_stub;
     friend class replica_split_test;
+
+    split_status::type _split_status{split_status::NOT_SPLIT};
 
     // _child_gpid = gpid({app_id},{pidx}+{old_partition_count}) for parent partition
     // _child_gpid.app_id = 0 for parent partition not in partition split and child partition

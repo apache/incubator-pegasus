@@ -35,7 +35,8 @@ replica_split_manager::replica_split_manager(replica *r)
 replica_split_manager::~replica_split_manager() {}
 
 // ThreadPool: THREAD_POOL_REPLICATION
-void replica_split_manager::on_add_child(const group_check_request &request) // on parent partition
+void replica_split_manager::parent_start_split(
+    const group_check_request &request) // on parent partition
 {
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY &&
         (status() != partition_status::PS_INACTIVE || !_replica->_inactive_is_transient)) {
@@ -53,14 +54,12 @@ void replica_split_manager::on_add_child(const group_check_request &request) // 
         return;
     }
 
-    gpid child_gpid = request.child_gpid;
-    if (_child_gpid == child_gpid) {
-        dwarn_replica("child replica({}) is already existed, might be partition splitting, ignore "
-                      "this request",
-                      child_gpid);
+    if (_split_status == split_status::SPLITTING) {
+        dwarn_replica("partition is already splitting, ignore this request");
         return;
     }
 
+    gpid child_gpid = request.child_gpid;
     if (child_gpid.get_partition_index() < _replica->_app_info.partition_count) {
         dwarn_replica(
             "receive old add child request, child_gpid={}, partition_count={}, ignore this request",
@@ -69,6 +68,11 @@ void replica_split_manager::on_add_child(const group_check_request &request) // 
         return;
     }
 
+    // TODO(heyuchen): if partition is primary, reset split related varieties
+
+    _partition_version.store(_replica->_app_info.partition_count - 1);
+
+    _split_status = split_status::SPLITTING;
     _child_gpid = child_gpid;
     _child_init_ballot = get_ballot();
 
@@ -137,12 +141,15 @@ bool replica_split_manager::parent_check_states() // on parent partition
 {
     FAIL_POINT_INJECT_F("replica_parent_check_states", [](dsn::string_view) { return true; });
 
-    if (_child_init_ballot != get_ballot() || _child_gpid.get_app_id() == 0 ||
+    if (_split_status != split_status::SPLITTING || _child_init_ballot != get_ballot() ||
+        _child_gpid.get_app_id() == 0 ||
         (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY &&
          (status() != partition_status::PS_INACTIVE || !_replica->_inactive_is_transient))) {
-        dwarn_replica("parent wrong states: status({}), init_ballot({}) VS current_ballot({}), "
+        dwarn_replica("parent wrong states: status({}), split_status({}), init_ballot({}) VS "
+                      "current_ballot({}), "
                       "child_gpid({})",
                       enum_to_string(status()),
+                      enum_to_string(_split_status),
                       _child_init_ballot,
                       get_ballot(),
                       _child_gpid);
@@ -541,8 +548,12 @@ void replica_split_manager::parent_handle_child_catch_up(
     const notify_catch_up_request &request,
     notify_cacth_up_response &response) // on primary parent
 {
-    if (status() != partition_status::PS_PRIMARY) {
-        derror_replica("status is {}", enum_to_string(status()));
+    if (status() != partition_status::PS_PRIMARY || _split_status != split_status::SPLITTING) {
+        derror_replica(
+            "wrong partition status or wrong split status, partition_status={}, split_status={}",
+            enum_to_string(status()),
+            enum_to_string(_split_status));
+
         response.err = ERR_INVALID_STATE;
         return;
     }
@@ -798,6 +809,7 @@ void replica_split_manager::parent_cleanup_split_context() // on parent partitio
 {
     _child_gpid.set_app_id(0);
     _child_init_ballot = 0;
+    _split_status = split_status::NOT_SPLIT;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

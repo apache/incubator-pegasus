@@ -65,6 +65,16 @@ const std::map<int, const char *> _learner_status_VALUES_TO_NAMES(
     ::apache::thrift::TEnumIterator(6, _klearner_statusValues, _klearner_statusNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
+int _ksplit_statusValues[] = {split_status::NOT_SPLIT,
+                              split_status::SPLITTING,
+                              split_status::PAUSING,
+                              split_status::PAUSED,
+                              split_status::CANCELING};
+const char *_ksplit_statusNames[] = {"NOT_SPLIT", "SPLITTING", "PAUSING", "PAUSED", "CANCELING"};
+const std::map<int, const char *> _split_status_VALUES_TO_NAMES(
+    ::apache::thrift::TEnumIterator(5, _ksplit_statusValues, _ksplit_statusNames),
+    ::apache::thrift::TEnumIterator(-1, NULL, NULL));
+
 int _kconfig_typeValues[] = {config_type::CT_INVALID,
                              config_type::CT_ASSIGN_PRIMARY,
                              config_type::CT_UPGRADE_TO_PRIMARY,

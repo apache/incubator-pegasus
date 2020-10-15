@@ -21,6 +21,7 @@ ENUM_REG(replication::partition_status::PS_ERROR)
 ENUM_REG(replication::partition_status::PS_PRIMARY)
 ENUM_REG(replication::partition_status::PS_SECONDARY)
 ENUM_REG(replication::partition_status::PS_POTENTIAL_SECONDARY)
+ENUM_REG(replication::partition_status::PS_PARTITION_SPLIT)
 ENUM_END2(replication::partition_status::type, partition_status)
 
 ENUM_BEGIN2(replication::read_semantic::type,
@@ -98,4 +99,12 @@ ENUM_BEGIN2(replication::detect_action::type, detect_action, replication::detect
 ENUM_REG(replication::detect_action::START)
 ENUM_REG(replication::detect_action::STOP)
 ENUM_END2(replication::detect_action::type, detect_action)
+
+ENUM_BEGIN2(replication::split_status::type, split_status, replication::split_status::NOT_SPLIT)
+ENUM_REG(replication::split_status::NOT_SPLIT)
+ENUM_REG(replication::split_status::SPLITTING)
+ENUM_REG(replication::split_status::PAUSING)
+ENUM_REG(replication::split_status::PAUSED)
+ENUM_REG(replication::split_status::CANCELING)
+ENUM_END2(replication::split_status::type, split_status)
 }
