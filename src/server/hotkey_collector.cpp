@@ -19,6 +19,7 @@
 
 #include <dsn/utility/smart_pointers.h>
 #include <dsn/utility/flags.h>
+#include <boost/functional/hash.hpp>
 #include "base/pegasus_key_schema.h"
 
 namespace pegasus {
@@ -29,8 +30,17 @@ DSN_DEFINE_int32("pegasus.server",
                  3,
                  "the threshold of variance calculate to find the outliers");
 
-hotkey_collector::hotkey_collector()
-    : _internal_collector(dsn::make_unique<hotkey_empty_data_collector>())
+DSN_DEFINE_int32("pegasus.server",
+                 data_capture_hash_bucket_num,
+                 37,
+                 "the number of data capture hash buckets");
+
+hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
+                                   dsn::replication::replica_base *r_base)
+    : replica_base(r_base),
+      _state(hotkey_collector_state::STOPPED),
+      _hotkey_type(hotkey_type),
+      _internal_collector(std::make_shared<hotkey_empty_data_collector>(this))
 {
 }
 
@@ -53,10 +63,16 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
     _internal_collector->capture_data(hash_key, weight);
 }
 
-void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
+void hotkey_collector::analyse_data() { _internal_collector->analyse_data(_result); }
+
+/*static*/ int hotkey_collector::get_bucket_id(dsn::string_view data)
+{
+    size_t hash_value = boost::hash_range(data.begin(), data.end());
+    return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
+}
 
 hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
-    : replica_base(base), _hash_buckets(FLAGS_data_capture_hash_bucket_num)
+    : internal_collector_base(base), _hash_buckets(FLAGS_data_capture_hash_bucket_num)
 {
     for (std::atomic<uint64_t> &bucket : _hash_buckets) {
         bucket.store(0);
@@ -65,37 +81,17 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
 
 void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    _hash_buckets[hotkey_collector::get_bucket_id(hash_key)].fetch_add(size);
+    _hash_buckets[hotkey_collector::get_bucket_id(hash_key)].fetch_add(weight);
 }
 
-void hotkey_coarse_data_collector::analyse_data()
+void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 {
     std::vector<uint64_t> buckets(FLAGS_data_capture_hash_bucket_num);
     for (int i = 0; i < buckets.size(); i++) {
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
     }
-    int result = variance_calc(buckets, FLAGS_coarse_data_variance_threshold);
-    if (result >= 0) {
-        return result;
-    }
-    derror_replica("Can't find a hot bucket in coarse analysis");
-    return -1;
-}
-
-explicit hotkey_coarse_data_collector::hotkey_coarse_data_collector()
-    : get_bucket_id(hotkey_collector::get_bucket_id),
-      _hash_buckets(FLAGS_data_capture_hash_bucket_num)
-{
-    for (std::atomic<uint64_t> &bucket : _hash_buckets) {
-        bucket.store(0);
-    }
-}
-
-/*static*/ int hotkey_collector::get_bucket_id(dsn::string_view data)
-{
-    size_t hash_value = boost::hash_range(data.begin(), data.end());
-    return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
+    result = variance_calc(buckets, FLAGS_coarse_data_variance_threshold);
 }
 
 detect_hotkey_result

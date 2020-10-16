@@ -30,6 +30,7 @@ class internal_collector_base;
 struct detect_hotkey_result
 {
     int coarse_bucket_index;
+    detect_hotkey_result() : coarse_bucket_index(-1) {}
 };
 
 //    hotkey_collector is responsible to find the hot keys after the partition
@@ -83,23 +84,27 @@ public:
     static int get_bucket_id(dsn::string_view data);
 
 private:
-    std::unique_ptr<internal_collector_base> _internal_collector;
+    // replace shared_ptr
+    std::shared_ptr<internal_collector_base> _internal_collector;
     std::atomic<hotkey_collector_state> _state;
+    detect_hotkey_result _result;
 };
 
 class internal_collector_base : public dsn::replication::replica_base
 {
 public:
+    explicit internal_collector_base(replica_base *base) : replica_base(base){};
     virtual void capture_data(const dsn::blob &hash_key, uint64_t weight) = 0;
-    virtual void analyse_data() = 0;
+    virtual void analyse_data(detect_hotkey_result &result) = 0;
 };
 
 // used in hotkey_collector_state::STOPPED and hotkey_collector_state::FINISHED, avoid null pointers
 class hotkey_empty_data_collector : public internal_collector_base
 {
 public:
-    void capture_data(const dsn::blob &hash_key, uint64_t weight) {}
-    void analyse_data() {}
+    explicit hotkey_empty_data_collector(replica_base *base);
+    void capture_data(const dsn::blob &hash_key, uint64_t weight) override {}
+    void analyse_data(detect_hotkey_result &result) override {}
 };
 
 typedef std::function<int(dsn::string_view)> hash_method;
@@ -107,10 +112,12 @@ typedef std::function<int(dsn::string_view)> hash_method;
 class hotkey_coarse_data_collector : public internal_collector_base
 {
 public:
-    hotkey_coarse_data_collector();
-    void capture_data(const dsn::blob &hash_key, uint64_t weight) {}
-    void analyse_data() {}
+    explicit hotkey_coarse_data_collector(replica_base *base);
+    void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
+    void analyse_data(detect_hotkey_result &result) override;
+
 private:
+    detect_hotkey_result variance_calc(const std::vector<uint64_t> &data_samples, int threshold);
     hash_method get_bucket_id;
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
