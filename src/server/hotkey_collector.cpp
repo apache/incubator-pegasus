@@ -47,6 +47,7 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
     default:
         resp.err = dsn::ERR_INVALID_VERSION;
         resp.__set_err_hint("can't find this detect_action");
+        dwarn_replica("can't find this detect_action");
     }
 }
 
@@ -76,27 +77,27 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         hint = fmt::format("still detecting {} hotkey, state is {}",
                            dsn::enum_to_string(_hotkey_type),
                            enum_to_string(now_state));
-        ddebug_replica(hint.c_str());
+        ddebug_replica(hint);
         return;
     case hotkey_collector_state::FINISHED:
         resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
         hint = fmt::format(
             "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
             dsn::enum_to_string(_hotkey_type));
-        ddebug_replica(hint.c_str());
+        ddebug_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
         // TODO: (Tangyanzhao) start coarse detecting
         _state.store(hotkey_collector_state::COARSE_DETECTING);
         resp.err = dsn::ERR_OK;
         hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
-        ddebug_replica(hint.c_str());
+        ddebug_replica(hint);
         return;
     default:
         hint = "invalid collector state";
         resp.err = dsn::ERR_INVALID_VERSION;
-        resp.__set_err_hint(hint.c_str());
-        dwarn_replica(hint.c_str());
+        resp.__set_err_hint(hint);
+        dwarn_replica(hint);
     }
 }
 
@@ -107,7 +108,7 @@ void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &
     resp.err = dsn::ERR_OK;
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
-    derror_replica(hint.c_str());
+    derror_replica(hint);
 }
 
 } // namespace server
