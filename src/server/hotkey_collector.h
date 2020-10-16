@@ -20,6 +20,7 @@
 #include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
 #include "hotkey_collector_state.h"
+#include <dsn/dist/replication/replica_base.h>
 
 namespace pegasus {
 namespace server {
@@ -29,7 +30,7 @@ class internal_collector_base;
 struct detect_hotkey_result
 {
     int coarse_bucket_index;
-}
+};
 
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
@@ -86,7 +87,7 @@ private:
     std::atomic<hotkey_collector_state> _state;
 };
 
-class internal_collector_base
+class internal_collector_base : public dsn::replication::replica_base
 {
 public:
     virtual void capture_data(const dsn::blob &hash_key, uint64_t weight) = 0;

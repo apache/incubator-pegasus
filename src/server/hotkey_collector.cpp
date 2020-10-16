@@ -98,8 +98,9 @@ explicit hotkey_coarse_data_collector::hotkey_coarse_data_collector()
     return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
 }
 
-detect_hotkey_result hotkey_collector::variance_calc(const std::vector<uint64_t> &data_samples,
-                                                     int threshold)
+detect_hotkey_result
+hotkey_coarse_data_collector::variance_calc(const std::vector<uint64_t> &data_samples,
+                                            int threshold)
 {
     detect_hotkey_result result;
     int data_size = data_samples.size();
@@ -116,7 +117,8 @@ detect_hotkey_result hotkey_collector::variance_calc(const std::vector<uint64_t>
     // in case of sample size too small
     if (data_size < 3 || total < data_size) {
         derror("Data samples too small");
-        return -1;
+        result.coarse_bucket_index = -1;
+        return result;
     }
     double avg = (total - data_samples[hot_index]) / (data_size - 1);
     double sd = 0;
@@ -127,7 +129,9 @@ detect_hotkey_result hotkey_collector::variance_calc(const std::vector<uint64_t>
     }
     sd = sqrt(sd / (data_size - 2));
     double hot_point = (hot_value - avg) / sd;
-    return hot_point > threshold ? hot_index : -1;
+    hot_point > threshold ? result.coarse_bucket_index = hot_index
+                          : result.coarse_bucket_index = -1;
+    return result;
 }
 
 } // namespace server
