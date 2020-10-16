@@ -17,11 +17,9 @@
 
 #pragma once
 
-#include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/replica_base.h>
-#include <dsn/dist/fmt_logging.h>
 #include "hotkey_collector_state.h"
+#include <dsn/dist/replication/replica_base.h>
 
 namespace pegasus {
 namespace server {
@@ -79,12 +77,15 @@ public:
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 
 private:
-    bool start_detect(/*out*/ std::string &err_hint);
-    void stop_detect();
+    bool is_detecting_now();
+    bool is_detecting_finished();
+    bool is_ready_to_detect();
+    void return_normal_resp(dsn::replication::detect_hotkey_response &resp, std::string hint);
+    void return_err_resp(dsn::replication::detect_hotkey_response &resp, std::string hint);
 
     std::atomic<hotkey_collector_state> _state;
     const dsn::replication::hotkey_type::type _hotkey_type;
-    std::unique_ptr<internal_collector_base> _internal_collector;
+    std::shared_ptr<internal_collector_base> _internal_collector;
 };
 
 class internal_collector_base

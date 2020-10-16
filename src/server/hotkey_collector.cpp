@@ -20,6 +20,7 @@
 
 #include <dsn/utility/smart_pointers.h>
 #include "base/pegasus_key_schema.h"
+#include <dsn/dist/fmt_logging.h>
 
 namespace pegasus {
 namespace server {
@@ -29,27 +30,39 @@ hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_ty
     : replica_base(r_base),
       _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
-      _internal_collector(dsn::make_unique<hotkey_empty_data_collector>())
+      _internal_collector(std::make_shared<hotkey_empty_data_collector>())
 {
 }
 
-// TODO: (Tangyanzhao) implement these functions
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
                                   dsn::replication::detect_hotkey_response &resp)
 {
-    if (req.action == dsn::replication::detect_action::START) {
-        std::string err_hint;
-        if (start_detect(err_hint)) {
-            resp.err = dsn::ERR_OK;
-        } else {
-            resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
-            resp.__set_err_hint(err_hint.c_str());
+    switch (req.action) {
+    case dsn::replication::detect_action::START:
+        if (is_detecting_now()) {
+            return_err_resp(resp,
+                            fmt::format("still detecting {} hotkey, state is {}",
+                                        dsn::enum_to_string(_hotkey_type),
+                                        enum_to_string(_state.load())));
         }
-        return;
-    } else {
-        stop_detect();
-        resp.err = dsn::ERR_OK;
-        return;
+        if (is_detecting_finished()) {
+            return_err_resp(resp,
+                            fmt::format("still detecting {} hotkey, state is {}",
+                                        dsn::enum_to_string(_hotkey_type),
+                                        enum_to_string(_state.load())));
+        }
+        if (is_ready_to_detect()) {
+            _state.store(hotkey_collector_state::COARSE_DETECTING);
+            return_normal_resp(
+                resp,
+                fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type)));
+        }
+    case dsn::replication::detect_action::STOP:
+        _state.store(hotkey_collector_state::STOPPED);
+        _internal_collector.reset();
+        return_normal_resp(
+            resp,
+            fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type)));
     }
 }
 
@@ -68,39 +81,35 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
 
 void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
 
-bool hotkey_collector::start_detect(std::string &err_hint)
+bool hotkey_collector::is_detecting_now()
 {
-    auto now_state = _state.load();
-    switch (_state.load()) {
-    case hotkey_collector_state::COARSE_DETECTING:
-    case hotkey_collector_state::FINE_DETECTING:
-        err_hint = fmt::format("still detecting {} hotkey, state is {}",
-                               dsn::enum_to_string(_hotkey_type),
-                               enum_to_string(now_state));
-        ddebug_replica(err_hint);
-        return false;
-    case hotkey_collector_state::FINISHED:
-        err_hint = fmt::format(
-            "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
-            dsn::enum_to_string(_hotkey_type));
-        ddebug_replica(err_hint);
-        return false;
-    case hotkey_collector_state::STOPPED:
-        // TODO: (Tangyanzhao) start coarse detecting
-        _state.store(hotkey_collector_state::COARSE_DETECTING);
-        ddebug_replica("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
-        return true;
-    default:
-        err_hint = "invalid collector state";
-        ddebug_replica(err_hint);
-        return false;
-    }
+    return (_state.load() == hotkey_collector_state::COARSE_DETECTING ||
+            _state.load() == hotkey_collector_state::FINE_DETECTING);
 }
 
-void hotkey_collector::stop_detect()
+bool hotkey_collector::is_detecting_finished()
 {
-    _state.store(hotkey_collector_state::STOPPED);
-    derror_replica("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
+    return (_state.load() == hotkey_collector_state::FINISHED);
+}
+
+bool hotkey_collector::is_ready_to_detect()
+{
+    return (_state.load() == hotkey_collector_state::STOPPED);
+}
+
+void hotkey_collector::return_err_resp(dsn::replication::detect_hotkey_response &resp,
+                                       std::string hint)
+{
+    ddebug_replica(hint);
+    resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
+    resp.__set_err_hint(hint.c_str());
+}
+
+void hotkey_collector::return_normal_resp(dsn::replication::detect_hotkey_response &resp,
+                                          std::string hint)
+{
+    dinfo_replica(hint);
+    resp.err = dsn::ERR_OK;
 }
 
 } // namespace server
