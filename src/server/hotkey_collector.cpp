@@ -16,8 +16,8 @@
 // under the License.
 
 #include "hotkey_collector.h"
-#include <dsn/dist/replication/replication_enums.h>
 
+#include <dsn/dist/replication/replication_enums.h>
 #include <dsn/utility/smart_pointers.h>
 #include "base/pegasus_key_schema.h"
 #include <dsn/dist/fmt_logging.h>
