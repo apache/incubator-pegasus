@@ -26,6 +26,11 @@ namespace server {
 
 class internal_collector_base;
 
+struct detect_hotkey_result
+{
+    int coarse_bucket_index;
+}
+
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
 //    separately.
@@ -74,6 +79,7 @@ public:
     void analyse_data();
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
+    static int get_bucket_id(dsn::string_view data);
 
 private:
     std::unique_ptr<internal_collector_base> _internal_collector;
@@ -91,8 +97,21 @@ public:
 class hotkey_empty_data_collector : public internal_collector_base
 {
 public:
-    void capture_data(const dsn::blob &hash_key, uint64_t size) {}
+    void capture_data(const dsn::blob &hash_key, uint64_t weight) {}
     void analyse_data() {}
+};
+
+typedef std::function<int(dsn::string_view)> hash_method;
+
+class hotkey_coarse_data_collector : public internal_collector_base
+{
+public:
+    hotkey_coarse_data_collector();
+    void capture_data(const dsn::blob &hash_key, uint64_t weight) {}
+    void analyse_data() {}
+private:
+    hash_method get_bucket_id;
+    std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
 } // namespace server
