@@ -15,6 +15,7 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <dsn/utility/flags.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
@@ -30,6 +31,11 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+DSN_DEFINE_int32("pegasus.server",
+                 hotkey_analyse_time_interval_s,
+                 10,
+                 "hotkey analyse interval in seconds");
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
@@ -1489,6 +1495,16 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
         this, _read_hotkey_collector, _write_hotkey_collector);
     _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
+
+    ::dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
+                                  &_tracker,
+                                  [this]() { _read_hotkey_collector->analyse_data(); },
+                                  std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
+
+    ::dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
+                                  &_tracker,
+                                  [this]() { _write_hotkey_collector->analyse_data(); },
+                                  std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
 
     return ::dsn::ERR_OK;
 }

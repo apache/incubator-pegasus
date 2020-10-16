@@ -26,6 +26,8 @@
 namespace pegasus {
 namespace server {
 
+class internal_collector_base;
+
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
 //    separately.
@@ -72,6 +74,7 @@ public:
     // weight: calculate the weight according to the specific situation
     void capture_raw_key(const dsn::blob &raw_key, int64_t weight);
     void capture_hash_key(const dsn::blob &hash_key, int64_t weight);
+    void analyse_data();
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 
@@ -81,6 +84,22 @@ private:
 
     std::atomic<hotkey_collector_state> _state;
     const dsn::replication::hotkey_type::type _hotkey_type;
+    std::unique_ptr<internal_collector_base> _internal_collector;
+};
+
+class internal_collector_base
+{
+public:
+    virtual void capture_data(const dsn::blob &hash_key, uint64_t weight) = 0;
+    virtual void analyse_data() = 0;
+};
+
+// used in hotkey_collector_state::STOPPED and hotkey_collector_state::FINISHED, avoid null pointers
+class hotkey_empty_data_collector : public internal_collector_base
+{
+public:
+    void capture_data(const dsn::blob &hash_key, uint64_t size) {}
+    void analyse_data() {}
 };
 
 } // namespace server

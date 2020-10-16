@@ -18,15 +18,22 @@
 #include "hotkey_collector.h"
 #include <dsn/dist/replication/replication_enums.h>
 
+#include <dsn/utility/smart_pointers.h>
+#include "base/pegasus_key_schema.h"
+
 namespace pegasus {
 namespace server {
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
-    : replica_base(r_base), _state(hotkey_collector_state::STOPPED), _hotkey_type(hotkey_type)
+    : replica_base(r_base),
+      _state(hotkey_collector_state::STOPPED),
+      _hotkey_type(hotkey_type),
+      _internal_collector(dsn::make_unique<hotkey_empty_data_collector>())
 {
 }
 
+// TODO: (Tangyanzhao) implement these functions
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
                                   dsn::replication::detect_hotkey_response &resp)
 {
@@ -48,10 +55,18 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
 
 void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 {
-    // TODO: (Tangyanzhao) Add a judgment sentence to check if it is a raw key
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(raw_key, hash_key, sort_key);
+    capture_hash_key(hash_key, weight);
 }
 
-void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight) {}
+void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
+{
+    // TODO: (Tangyanzhao) add a unit test to ensure data integrity
+    _internal_collector->capture_data(hash_key, weight);
+}
+
+void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
 
 bool hotkey_collector::start_detect(std::string &err_hint)
 {
