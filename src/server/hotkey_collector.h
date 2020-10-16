@@ -77,12 +77,8 @@ public:
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 
 private:
-    bool is_detecting_now();
-    bool is_detecting_finished();
-    bool is_ready_to_detect();
-    void return_normal_resp(dsn::replication::detect_hotkey_response &resp, std::string hint);
-    void return_err_resp(dsn::replication::detect_hotkey_response &resp, std::string hint);
-
+    void on_start_detect(dsn::replication::detect_hotkey_response &resp);
+    void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
     std::atomic<hotkey_collector_state> _state;
     const dsn::replication::hotkey_type::type _hotkey_type;
     std::shared_ptr<internal_collector_base> _internal_collector;

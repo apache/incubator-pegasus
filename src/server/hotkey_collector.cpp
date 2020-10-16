@@ -39,30 +39,14 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
 {
     switch (req.action) {
     case dsn::replication::detect_action::START:
-        if (is_detecting_now()) {
-            return_err_resp(resp,
-                            fmt::format("still detecting {} hotkey, state is {}",
-                                        dsn::enum_to_string(_hotkey_type),
-                                        enum_to_string(_state.load())));
-        }
-        if (is_detecting_finished()) {
-            return_err_resp(resp,
-                            fmt::format("still detecting {} hotkey, state is {}",
-                                        dsn::enum_to_string(_hotkey_type),
-                                        enum_to_string(_state.load())));
-        }
-        if (is_ready_to_detect()) {
-            _state.store(hotkey_collector_state::COARSE_DETECTING);
-            return_normal_resp(
-                resp,
-                fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type)));
-        }
+        on_start_detect(resp);
+        return;
     case dsn::replication::detect_action::STOP:
-        _state.store(hotkey_collector_state::STOPPED);
-        _internal_collector.reset();
-        return_normal_resp(
-            resp,
-            fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type)));
+        on_stop_detect(resp);
+        return;
+    default:
+        resp.err = dsn::ERR_INVALID_VERSION;
+        resp.__set_err_hint("can't find this detect_action");
     }
 }
 
@@ -81,35 +65,49 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
 
 void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
 
-bool hotkey_collector::is_detecting_now()
+void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
 {
-    return (_state.load() == hotkey_collector_state::COARSE_DETECTING ||
-            _state.load() == hotkey_collector_state::FINE_DETECTING);
+    auto now_state = _state.load();
+    std::string hint;
+    switch (now_state) {
+    case hotkey_collector_state::COARSE_DETECTING:
+    case hotkey_collector_state::FINE_DETECTING:
+        resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
+        hint = fmt::format("still detecting {} hotkey, state is {}",
+                           dsn::enum_to_string(_hotkey_type),
+                           enum_to_string(now_state));
+        ddebug_replica(hint.c_str());
+        return;
+    case hotkey_collector_state::FINISHED:
+        resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
+        hint = fmt::format(
+            "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
+            dsn::enum_to_string(_hotkey_type));
+        ddebug_replica(hint.c_str());
+        return;
+    case hotkey_collector_state::STOPPED:
+        // TODO: (Tangyanzhao) start coarse detecting
+        _state.store(hotkey_collector_state::COARSE_DETECTING);
+        resp.err = dsn::ERR_OK;
+        hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
+        ddebug_replica(hint.c_str());
+        return;
+    default:
+        hint = "invalid collector state";
+        resp.err = dsn::ERR_INVALID_VERSION;
+        resp.__set_err_hint(hint.c_str());
+        ddebug_replica(hint.c_str());
+    }
 }
 
-bool hotkey_collector::is_detecting_finished()
+void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
 {
-    return (_state.load() == hotkey_collector_state::FINISHED);
-}
-
-bool hotkey_collector::is_ready_to_detect()
-{
-    return (_state.load() == hotkey_collector_state::STOPPED);
-}
-
-void hotkey_collector::return_err_resp(dsn::replication::detect_hotkey_response &resp,
-                                       std::string hint)
-{
-    ddebug_replica(hint);
-    resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
-    resp.__set_err_hint(hint.c_str());
-}
-
-void hotkey_collector::return_normal_resp(dsn::replication::detect_hotkey_response &resp,
-                                          std::string hint)
-{
-    dinfo_replica(hint);
+    _state.store(hotkey_collector_state::STOPPED);
+    _internal_collector.reset();
     resp.err = dsn::ERR_OK;
+    std::string hint =
+        fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
+    derror_replica(hint.c_str());
 }
 
 } // namespace server
