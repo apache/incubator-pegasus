@@ -96,7 +96,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         hint = "invalid collector state";
         resp.err = dsn::ERR_INVALID_VERSION;
         resp.__set_err_hint(hint.c_str());
-        ddebug_replica(hint.c_str());
+        dwarn_replica(hint.c_str());
     }
 }
 
