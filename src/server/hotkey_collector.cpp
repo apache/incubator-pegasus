@@ -45,9 +45,10 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
         on_stop_detect(resp);
         return;
     default:
+        std::string hint = fmt::format("{}: can't find this detect action", req.action);
         resp.err = dsn::ERR_INVALID_VERSION;
-        resp.__set_err_hint("can't find this detect_action");
-        dwarn_replica("can't find this detect_action");
+        resp.__set_err_hint(hint);
+        dwarn_replica(hint);
     }
 }
 
@@ -98,6 +99,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         resp.err = dsn::ERR_INVALID_VERSION;
         resp.__set_err_hint(hint);
         dwarn_replica(hint);
+        dassert(false, "invalid collector state");
     }
 }
 
