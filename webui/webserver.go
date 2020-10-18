@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kataras/iris/v12"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // StartWebServer starts an iris-powered HTTP server.
@@ -12,6 +13,10 @@ func StartWebServer() {
 	app := iris.New()
 	app.Get("/", indexHandler)
 	app.Get("/tables", tablesHandler)
+	app.Get("/metrics", func(ctx iris.Context) {
+		handler := promhttp.Handler()
+		handler.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+	})
 
 	iris.RegisterOnInterrupt(func() {
 		// gracefully shutdown on interrupt

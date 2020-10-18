@@ -1,17 +1,11 @@
 package metrics
 
 import (
-	"net/http"
 	"sync"
 
 	"github.com/pegasus-kv/collector/aggregate"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-func init() {
-	http.Handle("/metrics", promhttp.Handler())
-}
 
 type prometheusMetricFamily struct {
 	metrics map[string]prometheus.Gauge
@@ -41,6 +35,9 @@ func newPrometheusSink() *prometheusSink {
 	aggregate.AddHookAfterTableDropped(func(appID int) {
 		// remove the metrics family belongs to the table
 		sink.tableLock.Lock()
+		for _, gauge := range sink.tableMap[appID].metrics {
+			prometheus.Unregister(gauge)
+		}
 		delete(sink.tableMap, appID)
 		sink.tableLock.Unlock()
 	})
@@ -79,13 +76,18 @@ func (sink *prometheusSink) newClusterMetricFamily() *prometheusMetricFamily {
 }
 
 func (sink *prometheusSink) newMetricFamily(labels map[string]string) *prometheusMetricFamily {
-	mfamily := &prometheusMetricFamily{}
+	mfamily := &prometheusMetricFamily{
+		metrics: make(map[string]prometheus.Gauge),
+	}
 	for _, m := range sink.allTrackedMetrics {
+		// create and register a gauge
 		opts := prometheus.GaugeOpts{
 			Name:        m,
 			ConstLabels: labels,
 		}
-		mfamily.metrics[m] = prometheus.NewGauge(opts)
+		gauge := prometheus.NewGauge(opts)
+		prometheus.MustRegister(gauge)
+		mfamily.metrics[m] = gauge
 	}
 	return mfamily
 }

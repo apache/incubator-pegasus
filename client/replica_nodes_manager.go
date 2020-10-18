@@ -12,7 +12,7 @@ type ReplicaNodesManager struct {
 
 // UpdateNodes
 func (m *ReplicaNodesManager) UpdateNodes(nodes []*NodeInfo) {
-	var newNodes map[string]*RemoteCmdClient
+	newNodes := make(map[string]*RemoteCmdClient)
 	for _, n := range nodes {
 		node, found := m.nodes[n.Addr]
 		if !found {
@@ -27,6 +27,7 @@ func (m *ReplicaNodesManager) UpdateNodes(nodes []*NodeInfo) {
 			client.Close()
 		}
 	}
+	m.nodes = newNodes
 }
 
 // MustFindNode returns the node of address `addr`.
