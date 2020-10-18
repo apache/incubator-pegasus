@@ -31,13 +31,6 @@ type prometheusSink struct {
 	allTrackedMetrics []string
 }
 
-func (sink *prometheusSink) dropTable(appID int) {
-	// remove the metrics family belongs to the table
-	sink.tableLock.Lock()
-	delete(sink.tableMap, appID)
-	sink.tableLock.Unlock()
-}
-
 func newPrometheusSink() *prometheusSink {
 	sink := &prometheusSink{
 		tableMap:          make(map[int]*prometheusMetricFamily),
@@ -46,7 +39,10 @@ func newPrometheusSink() *prometheusSink {
 	sink.clusterMetric = sink.newClusterMetricFamily()
 
 	aggregate.AddHookAfterTableDropped(func(appID int) {
-		sink.dropTable(appID)
+		// remove the metrics family belongs to the table
+		sink.tableLock.Lock()
+		delete(sink.tableMap, appID)
+		sink.tableLock.Unlock()
 	})
 	return sink
 }
@@ -60,6 +56,7 @@ func (sink *prometheusSink) Report(stats []aggregate.TableStats, allStats aggreg
 		var found bool
 		if mfamily, found = sink.tableMap[table.AppID]; !found {
 			mfamily = sink.newTableMetricFamily(table.TableName)
+			// insert table metrics family
 			sink.tableMap[table.AppID] = mfamily
 		}
 		fillStatsIntoGauges(table.Stats, mfamily)

@@ -74,3 +74,8 @@ func (c *RemoteCmdClient) call(command string, arguments []string) (cmdResult st
 	ret, _ := res.(*RemoteCmdServiceCallCommandResult)
 	return ret.GetSuccess(), nil
 }
+
+// Close terminates the session to replica.
+func (c *RemoteCmdClient) Close() {
+	c.session.Close()
+}

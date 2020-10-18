@@ -11,6 +11,8 @@ import (
 
 // TableStatsAggregator aggregates the metric on each partition into table-level metrics.
 // It's reponsible for all tables in the pegasus cluster.
+// After all TableStats have been collected, TableStatsAggregator sums them up into a
+// ClusterStats. Users of this pacakage can use the hooks to watch every changes of the stats.
 type TableStatsAggregator interface {
 
 	// Start reporting until the ctx cancelled. This method will block the current thread.
@@ -24,6 +26,7 @@ func NewTableStatsAggregator() TableStatsAggregator {
 		aggregateInterval: viper.GetDuration("metrics.report_interval"),
 		metaClient:        client.NewMetaClient(metaAddr),
 		tables:            make(map[int]*TableStats),
+		nodes:             client.NewReplicaNodesManager(),
 	}
 }
 
@@ -33,6 +36,8 @@ type tableStatsAggregator struct {
 	metaClient client.MetaClient
 	tables     map[int]*TableStats
 	allStats   *ClusterStats
+
+	nodes *client.ReplicaNodesManager
 }
 
 func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
@@ -51,13 +56,15 @@ func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
 func (ag *tableStatsAggregator) aggregate() {
 	ag.updateTableMap()
 
+	// TODO(wutao1): reduce meta queries for listing nodes
 	nodes, err := ag.metaClient.ListNodes()
 	if err != nil {
 		log.Error(err)
 		return
 	}
+	ag.nodes.UpdateNodes(nodes)
 	for _, n := range nodes {
-		rcmdClient := client.NewRemoteCmdClient(n.Addr)
+		rcmdClient := ag.nodes.MustFindNode(n.Addr)
 		perfCounters, err := rcmdClient.GetPerfCounters("@")
 		if err != nil {
 			log.Errorf("unable to query perf-counters: %s", err)
