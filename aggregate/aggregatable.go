@@ -61,3 +61,15 @@ func aggregatable(pc *partitionPerfCounter) bool {
 	_, found = aggregatableSet[pc.name]
 	return found
 }
+
+// AllMetrics returns metrics tracked within this collector.
+// The sets of metrics from cluster level and table level are completely equal.
+func AllMetrics() (res []string) {
+	for _, newName := range v1Tov2MetricsConversion {
+		res = append(res, newName)
+	}
+	for name := range aggregatableSet {
+		res = append(res, name)
+	}
+	return res
+}

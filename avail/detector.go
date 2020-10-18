@@ -9,19 +9,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Detector periodically checks the availability of the remote Pegasus cluster.
+// Detector periodically checks the service availability of the Pegasus cluster.
 type Detector interface {
 
 	// Start detection until the ctx cancelled. This method will block the current thread.
 	Start(ctx context.Context) error
 }
 
-// NewDetector returns a detector of service availability.
+// NewDetector returns a service-availability detector.
 func NewDetector(client pegasus.Client) Detector {
 	return &pegasusDetector{client: client}
 }
 
 type pegasusDetector struct {
+	// client reads and writes periodically to a specified table.
 	client      pegasus.Client
 	detectTable pegasus.TableConnector
 
@@ -62,8 +63,14 @@ func (d *pegasusDetector) Start(rootCtx context.Context) error {
 		}
 
 		// periodically set/get a configured Pegasus table.
-
+		d.detect();
 	}
+	return nil
+}
+
+
+func (d *pegasusDetector) detect() {
+
 }
 
 func (d *pegasusDetector) generateHashKeys() {

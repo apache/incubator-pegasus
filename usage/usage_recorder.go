@@ -3,6 +3,7 @@ package usage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
 	"github.com/pegasus-kv/collector/aggregate"
@@ -33,16 +34,43 @@ type tableUsageRecorder struct {
 	usageStatApp string
 }
 
-func (recorder *tableUsageRecorder) Start(tom *tomb.Tomb) {
+func (rec *tableUsageRecorder) Start(tom *tomb.Tomb) {
+	if rec.usageStatApp == "" {
+		// if no stat app is specified, usage recorder is considered as disabled.
+	}
+
+	metaServer := viper.GetString("meta_server")
+	rec.client = pegasus.NewClient(pegasus.Config{MetaServers: []string{metaServer}})
+	for {
+		var err error
+		rec.table, err = rec.client.OpenTable(tom.Context(nil), rec.usageStatApp)
+		if err != nil {
+			// retry indefinitely
+			log.Errorf("failed to open table: %s", err.Error())
+			sleepWait(tom, 15*time.Second)
+			continue
+		}
+		break
+	}
+
 	aggregate.AddHookAfterTableStatEmitted(func(stats []aggregate.TableStats, allStat aggregate.ClusterStats) {
 		rootCtx := tom.Context(nil)
 		for _, s := range stats {
-			recorder.writeTableUsage(rootCtx, &s)
+			rec.writeTableUsage(rootCtx, &s)
 		}
 	})
 }
 
-func (recorder *tableUsageRecorder) writeTableUsage(ctx context.Context, tb *aggregate.TableStats) {
+func sleepWait(tom *tomb.Tomb, waitTime time.Duration) {
+	ticker := time.NewTicker(waitTime)
+	select {
+	case <-tom.Dying():
+		return
+	case <-ticker.C:
+	}
+}
+
+func (rec *tableUsageRecorder) writeTableUsage(ctx context.Context, tb *aggregate.TableStats) {
 	hashKey := []byte(fmt.Sprintf("%d", tb.Timestamp.Unix()))
 	sortkey := []byte("cu")
 
@@ -54,7 +82,7 @@ func (recorder *tableUsageRecorder) writeTableUsage(ctx context.Context, tb *agg
 		maxRetryCount := 10
 		for maxRetryCount > 0 {
 			// TODO(wutao): set rpc timeout
-			err := recorder.table.Set(ctx, hashKey, sortkey, value)
+			err := rec.table.Set(ctx, hashKey, sortkey, value)
 			if err == nil {
 				break
 			}

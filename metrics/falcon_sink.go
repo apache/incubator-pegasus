@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pegasus-kv/collector/aggregate"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -49,43 +50,69 @@ func newFalconSink() *falconSink {
 	return sink
 }
 
-func (sink *falconSink) Report(snapshots []*MetricSnapshot) {
-	metric := &falconMetricData{
+func (m *falconMetricData) setData(name string, value float64, tags map[string]string) {
+	m.metric = name
+	m.value = value
+	m.timestamp = time.Now().Unix()
+
+	firstTag := true
+	for k, v := range tags {
+		if firstTag {
+			firstTag = false
+		} else {
+			m.tags += ","
+		}
+		m.tags += k + "=" + v
+	}
+}
+
+func (m *falconMetricData) toJSON() []byte {
+	result, err := json.Marshal(m)
+	if err != nil {
+		log.Fatal("failed to marshall falcon metric to json: ", err)
+	}
+	return result
+}
+
+type falconDataSerializer struct {
+	buf *bytes.Buffer
+
+	mdata *falconMetricData
+}
+
+func (s *falconDataSerializer) serialize(stats []aggregate.TableStats, allStats aggregate.ClusterStats) {
+	s.buf.WriteString("[")
+	for _, table := range stats {
+		for name, value := range table.Stats {
+			s.mdata.setData(name, value, map[string]string{
+				"entity": "table",
+				"table":  name,
+			})
+		}
+		s.buf.Write(s.mdata.toJSON())
+	}
+	for name, value := range allStats.Stats {
+		s.mdata.setData(name, value, map[string]string{
+			"entity": "cluster",
+		})
+		s.buf.Write(s.mdata.toJSON())
+	}
+}
+
+func (sink *falconSink) Report(stats []aggregate.TableStats, allStats aggregate.ClusterStats) {
+	serializer := &falconDataSerializer{
+		buf: bytes.NewBuffer(nil),
+	}
+	serializer.mdata = &falconMetricData{
 		endpoint:    sink.cfg.clusterName,
 		step:        int32(sink.cfg.metricsReportInterval.Seconds()),
 		counterType: "GAUGE",
 	}
-	buf := "["
-	for _, sn := range snapshots {
-		metric.metric = sn.name
-		metric.value = sn.value
-		metric.timestamp = time.Now().Unix()
-
-		firstTag := true
-		for k, v := range sn.tags {
-			if firstTag {
-				firstTag = false
-			} else {
-				metric.tags += ","
-			}
-			metric.tags += k + "=" + v
-		}
-
-		buf += sink.snapshotJSONString(metric) + ","
-	}
-	buf += "]"
-	sink.postHTTPData(buf)
+	serializer.serialize(stats, allStats)
+	sink.postHTTPData(serializer.buf.Bytes())
 }
 
-func (sink *falconSink) snapshotJSONString(m *falconMetricData) string {
-	json, err := json.Marshal(m)
-	if err != nil {
-		log.Fatal("failed to marshall falcon metric to json: ", err)
-	}
-	return string(json)
-}
-
-func (sink *falconSink) postHTTPData(data string) {
+func (sink *falconSink) postHTTPData(data []byte) {
 	url := fmt.Sprintf("http://%s:%d/%s", sink.cfg.falconAgentHost, sink.cfg.falconAgentPort, sink.cfg.falconAgentHTTPPath)
 	resp, err := http.Post(url, "application/x-www-form-urlencoded", bytes.NewReader([]byte(data)))
 	if err == nil && resp.StatusCode != http.StatusOK {

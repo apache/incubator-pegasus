@@ -80,6 +80,7 @@ func aggregateCustomStats(elements []string, stats *map[string]float64, resultNa
 	(*stats)[resultName] = aggregated
 }
 
+// Extends the stat with read_qps/read_bytes/write_qps/write_bytes.
 func extendStats(stats *map[string]float64) {
 	var reads = []string{
 		"get",
