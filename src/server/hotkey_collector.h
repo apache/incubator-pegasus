@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
 #include "hotkey_collector_state.h"
+#include <dsn/dist/replication/replica_base.h>
 
 namespace pegasus {
 namespace server {
@@ -63,10 +63,11 @@ class internal_collector_base;
 //    |                    |  |                     Hotkey                         |
 //    +--------------------+  +----------------------------------------------------+
 
-class hotkey_collector
+class hotkey_collector : public dsn::replication::replica_base
 {
 public:
-    hotkey_collector();
+    hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
+                     dsn::replication::replica_base *r_base);
     // TODO: (Tangyanzhao) capture_*_key should be consistent with hotspot detection
     // weight: calculate the weight according to the specific situation
     void capture_raw_key(const dsn::blob &raw_key, int64_t weight);
@@ -76,8 +77,11 @@ public:
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
 
 private:
-    std::unique_ptr<internal_collector_base> _internal_collector;
+    void on_start_detect(dsn::replication::detect_hotkey_response &resp);
+    void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
     std::atomic<hotkey_collector_state> _state;
+    const dsn::replication::hotkey_type::type _hotkey_type;
+    std::shared_ptr<internal_collector_base> _internal_collector;
 };
 
 class internal_collector_base
