@@ -46,9 +46,9 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
         return;
     default:
         std::string hint = fmt::format("{}: can't find this detect action", req.action);
-        resp.err = dsn::ERR_INVALID_VERSION;
+        resp.err = dsn::ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
-        dwarn_replica(hint);
+        derror_replica(hint);
     }
 }
 
@@ -74,18 +74,18 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
     switch (now_state) {
     case hotkey_collector_state::COARSE_DETECTING:
     case hotkey_collector_state::FINE_DETECTING:
-        resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
+        resp.err = dsn::ERR_INVALID_STATE;
         hint = fmt::format("still detecting {} hotkey, state is {}",
                            dsn::enum_to_string(_hotkey_type),
                            enum_to_string(now_state));
-        ddebug_replica(hint);
+        dwarn_replica(hint);
         return;
     case hotkey_collector_state::FINISHED:
-        resp.err = dsn::ERR_SERVICE_ALREADY_EXIST;
+        resp.err = dsn::ERR_INVALID_STATE;
         hint = fmt::format(
             "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
             dsn::enum_to_string(_hotkey_type));
-        ddebug_replica(hint);
+        dwarn_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
         // TODO: (Tangyanzhao) start coarse detecting
@@ -96,9 +96,9 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         return;
     default:
         hint = "invalid collector state";
-        resp.err = dsn::ERR_INVALID_VERSION;
+        resp.err = dsn::ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
-        dwarn_replica(hint);
+        derror_replica(hint);
         dassert(false, "invalid collector state");
     }
 }
@@ -110,7 +110,7 @@ void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &
     resp.err = dsn::ERR_OK;
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
-    derror_replica(hint);
+    ddebug_replica(hint);
 }
 
 } // namespace server
