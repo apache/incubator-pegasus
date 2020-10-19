@@ -14,6 +14,7 @@ class log_file_test : public replica_test_base
 public:
     void SetUp() override
     {
+        utils::filesystem::remove_path(_log_dir);
         utils::filesystem::create_directory(_log_dir);
         _logf = log_file::create_write(_log_dir.c_str(), 1, _start_offset);
     }

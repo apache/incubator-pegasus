@@ -473,7 +473,9 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
             (int)mu->client_requests.size());
     dassert(mu->data.updates.size() > 0, "");
 
-    ADD_POINT(mu->tracer);
+    if (_replica->status() == partition_status::PS_PRIMARY) {
+        ADD_POINT(mu->tracer);
+    }
 
     bool has_ingestion_request = false;
     int request_count = static_cast<int>(mu->client_requests.size());

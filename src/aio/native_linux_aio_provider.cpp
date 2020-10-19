@@ -26,36 +26,13 @@
 
 #include "native_linux_aio_provider.h"
 
-#include <fcntl.h>
-#include <cstdlib>
+#include <dsn/tool-api/async_calls.h>
 
 namespace dsn {
 
-native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk) : aio_provider(disk)
-{
-    memset(&_ctx, 0, sizeof(_ctx));
-    auto ret = io_setup(128, &_ctx); // 128 concurrent events
-    dassert(ret == 0, "io_setup error, ret = %d", ret);
+native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk) : aio_provider(disk) {}
 
-    _is_running = true;
-    _worker = std::thread([this]() {
-        task::set_tls_dsn_context(node(), nullptr);
-        get_event();
-    });
-}
-
-native_linux_aio_provider::~native_linux_aio_provider()
-{
-    if (!_is_running) {
-        return;
-    }
-    _is_running = false;
-
-    auto ret = io_destroy(_ctx);
-    dassert(ret == 0, "io_destroy error, ret = %d", ret);
-
-    _worker.join();
-}
+native_linux_aio_provider::~native_linux_aio_provider() {}
 
 dsn_handle_t native_linux_aio_provider::open(const char *file_name, int flag, int pmode)
 {
@@ -86,144 +63,75 @@ error_code native_linux_aio_provider::flush(dsn_handle_t fh)
     }
 }
 
-aio_context *native_linux_aio_provider::prepare_aio_context(aio_task *tsk)
+error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
+                                            /*out*/ uint32_t *processed_bytes)
 {
-    return new linux_disk_aio_context(tsk);
+    ssize_t ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
+                         aio_ctx.buffer,
+                         aio_ctx.buffer_size,
+                         aio_ctx.file_offset);
+    if (ret < 0) {
+        return ERR_FILE_OPERATION_FAILED;
+    }
+    *processed_bytes = static_cast<uint32_t>(ret);
+    return ERR_OK;
 }
 
-void native_linux_aio_provider::submit_aio_task(aio_task *aio_tsk) { aio_internal(aio_tsk, true); }
-
-void native_linux_aio_provider::get_event()
+error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
+                                           /*out*/ uint32_t *processed_bytes)
 {
-    struct io_event events[1];
-    int ret;
-
-    task::set_tls_dsn_context(node(), nullptr);
-
-    const char *name = ::dsn::tools::get_service_node_name(node());
-    char buffer[128];
-    sprintf(buffer, "%s.aio", name);
-    task_worker::set_name(buffer);
-
-    while (true) {
-        if (dsn_unlikely(!_is_running.load(std::memory_order_relaxed))) {
-            break;
-        }
-        ret = io_getevents(_ctx, 1, 1, events, NULL);
-        if (ret > 0) // should be 1
-        {
-            dassert(ret == 1, "io_getevents returns %d", ret);
-            struct iocb *io = events[0].obj;
-            complete_aio(io, static_cast<int>(events[0].res), static_cast<int>(events[0].res2));
-        } else {
-            // on error it returns a negated error number (the negative of one of the values listed
-            // in ERRORS
-            dwarn("io_getevents returns %d, you probably want to try on another machine:-(", ret);
-        }
+    ssize_t ret = pread(static_cast<int>((ssize_t)aio_ctx.file),
+                        aio_ctx.buffer,
+                        aio_ctx.buffer_size,
+                        aio_ctx.file_offset);
+    if (ret < 0) {
+        return ERR_FILE_OPERATION_FAILED;
     }
+    if (ret == 0) {
+        return ERR_HANDLE_EOF;
+    }
+    *processed_bytes = static_cast<uint32_t>(ret);
+    return ERR_OK;
 }
 
-void native_linux_aio_provider::complete_aio(struct iocb *io, int bytes, int err)
+void native_linux_aio_provider::submit_aio_task(aio_task *aio_tsk)
 {
-    linux_disk_aio_context *aio = CONTAINING_RECORD(io, linux_disk_aio_context, cb);
-    error_code ec;
-    if (err != 0) {
-        derror("aio error, err = %s", strerror(err));
-        ec = ERR_FILE_OPERATION_FAILED;
-    } else {
-        ec = bytes > 0 ? ERR_OK : ERR_HANDLE_EOF;
-    }
-
-    if (!aio->evt) {
-        aio_task *aio_ptr(aio->tsk);
-        aio->this_->complete_io(aio_ptr, ec, bytes);
-    } else {
-        aio->err = ec;
-        aio->bytes = bytes;
-        aio->evt->notify();
-    }
+    tasking::enqueue(aio_tsk->code(),
+                     aio_tsk->tracker(),
+                     [=]() { aio_internal(aio_tsk, true); },
+                     aio_tsk->hash());
 }
 
 error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk,
                                                    bool async,
                                                    /*out*/ uint32_t *pbytes /*= nullptr*/)
 {
-    struct iocb *cbs[1];
-    linux_disk_aio_context *aio;
-    int ret;
-
-    aio = (linux_disk_aio_context *)aio_tsk->get_aio_context();
-
-    memset(&aio->cb, 0, sizeof(aio->cb));
-
-    aio->this_ = this;
-
-    switch (aio->type) {
+    aio_context *aio_ctx = aio_tsk->get_aio_context();
+    error_code err = ERR_UNKNOWN;
+    uint32_t processed_bytes = 0;
+    switch (aio_ctx->type) {
     case AIO_Read:
-        io_prep_pread(&aio->cb,
-                      static_cast<int>((ssize_t)aio->file),
-                      aio->buffer,
-                      aio->buffer_size,
-                      aio->file_offset);
+        err = read(*aio_ctx, &processed_bytes);
         break;
     case AIO_Write:
-        if (aio->buffer) {
-            io_prep_pwrite(&aio->cb,
-                           static_cast<int>((ssize_t)aio->file),
-                           aio->buffer,
-                           aio->buffer_size,
-                           aio->file_offset);
-        } else {
-            int iovcnt = aio->write_buffer_vec->size();
-            struct iovec *iov = (struct iovec *)alloca(sizeof(struct iovec) * iovcnt);
-            for (int i = 0; i < iovcnt; i++) {
-                const dsn_file_buffer_t &buf = aio->write_buffer_vec->at(i);
-                iov[i].iov_base = buf.buffer;
-                iov[i].iov_len = buf.size;
-            }
-            io_prep_pwritev(
-                &aio->cb, static_cast<int>((ssize_t)aio->file), iov, iovcnt, aio->file_offset);
-        }
+        err = write(*aio_ctx, &processed_bytes);
         break;
     default:
-        derror("unknown aio type %u", static_cast<int>(aio->type));
+        return err;
     }
 
-    if (!async) {
-        aio->evt = new utils::notify_event();
-        aio->err = ERR_OK;
-        aio->bytes = 0;
+    if (pbytes) {
+        *pbytes = processed_bytes;
     }
 
-    cbs[0] = &aio->cb;
-    ret = io_submit(_ctx, 1, cbs);
-
-    if (ret != 1) {
-        if (ret < 0)
-            derror("io_submit error, ret = %d", ret);
-        else
-            derror("could not sumbit IOs, ret = %d", ret);
-
-        if (async) {
-            complete_io(aio_tsk, ERR_FILE_OPERATION_FAILED, 0);
-        } else {
-            delete aio->evt;
-            aio->evt = nullptr;
-        }
-        return ERR_FILE_OPERATION_FAILED;
+    if (async) {
+        complete_io(aio_tsk, err, processed_bytes);
     } else {
-        if (async) {
-            return ERR_IO_PENDING;
-        } else {
-            aio->evt->wait();
-            delete aio->evt;
-            aio->evt = nullptr;
-            if (pbytes != nullptr) {
-                *pbytes = aio->bytes;
-            }
-            return aio->err;
-        }
+        utils::notify_event notify;
+        notify.notify();
     }
+
+    return err;
 }
 
 } // namespace dsn

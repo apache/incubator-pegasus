@@ -212,7 +212,7 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
             _copy_requests_low.push(std::move(copy_requests));
     }
 
-    continue_copy();
+    tasking::enqueue(LPC_NFS_COPY_FILE, nullptr, [this]() { continue_copy(); }, 0);
 }
 
 void nfs_client_impl::continue_copy()
@@ -268,6 +268,7 @@ void nfs_client_impl::continue_copy()
             zauto_lock l(req->lock);
             const user_request_ptr &ureq = req->file_ctx->user_req;
             if (req->is_valid) {
+                // todo(jiashuo1) use non-block api `consumeWithBorrowNonBlocking` or `consume`
                 _copy_token_bucket->consumeWithBorrowAndWait(req->size);
 
                 copy_request copy_req;
