@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <dsn/utility/string_view.h>
 #include <dsn/dist/replication/replication_types.h>
 #include "hotkey_collector_state.h"
 #include <dsn/dist/replication/replica_base.h>
@@ -70,10 +69,11 @@ struct detect_hotkey_result
 //    |                    |  |                     Hotkey                         |
 //    +--------------------+  +----------------------------------------------------+
 
-class hotkey_collector
+class hotkey_collector : public dsn::replication::replica_base
 {
 public:
-    hotkey_collector();
+    hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
+                     dsn::replication::replica_base *r_base);
     // TODO: (Tangyanzhao) capture_*_key should be consistent with hotspot detection
     // weight: calculate the weight according to the specific situation
     void capture_raw_key(const dsn::blob &raw_key, int64_t weight);
@@ -84,10 +84,13 @@ public:
     static int get_bucket_id(dsn::string_view data);
 
 private:
-    // replace shared_ptr
-    std::shared_ptr<internal_collector_base> _internal_collector;
-    std::atomic<hotkey_collector_state> _state;
+    void on_start_detect(dsn::replication::detect_hotkey_response &resp);
+    void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
+
     detect_hotkey_result _result;
+    std::atomic<hotkey_collector_state> _state;
+    const dsn::replication::hotkey_type::type _hotkey_type;
+    std::shared_ptr<internal_collector_base> _internal_collector;
 };
 
 class internal_collector_base : public dsn::replication::replica_base
@@ -102,12 +105,10 @@ public:
 class hotkey_empty_data_collector : public internal_collector_base
 {
 public:
-    explicit hotkey_empty_data_collector(replica_base *base);
+    explicit hotkey_empty_data_collector(replica_base *base) : internal_collector_base(base){};
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override {}
     void analyse_data(detect_hotkey_result &result) override {}
 };
-
-typedef std::function<int(dsn::string_view)> hash_method;
 
 class hotkey_coarse_data_collector : public internal_collector_base
 {
@@ -117,8 +118,9 @@ public:
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
-    detect_hotkey_result variance_calc(const std::vector<uint64_t> &data_samples, int threshold);
-    hash_method get_bucket_id;
+    detect_hotkey_result internal_analysis_method(const std::vector<uint64_t> &data_samples,
+                                                  int threshold);
+
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
