@@ -29,7 +29,7 @@ namespace server {
 DSN_DEFINE_int32("pegasus.server",
                  hotkey_collector_max_work_time,
                  150,
-                 "the max time allowed to capture hotkey, will stop if hotkey's not found");
+                 "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
@@ -133,7 +133,7 @@ void hotkey_collector::terminate_colletor()
 
 void hotkey_collector::terminate_by_timeout()
 {
-    if (dsn_now_s() == 0)
+    if (_collector_start_time == 0)
         return;
     if (dsn_now_s() - _collector_start_time >= FLAGS_hotkey_collector_max_work_time) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
