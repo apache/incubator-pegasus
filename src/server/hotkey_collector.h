@@ -119,7 +119,7 @@ public:
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
-    detect_hotkey_result internal_analysis_method(const std::vector<uint64_t> &data_samples,
+    detect_hotkey_result internal_analysis_method(const std::vector<uint64_t> &captured_keys,
                                                   int threshold);
 
     std::vector<std::atomic<uint64_t>> _hash_buckets;

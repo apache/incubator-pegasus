@@ -168,35 +168,35 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 }
 
 detect_hotkey_result
-hotkey_coarse_data_collector::internal_analysis_method(const std::vector<uint64_t> &data_samples,
+hotkey_coarse_data_collector::internal_analysis_method(const std::vector<uint64_t> &captured_keys,
                                                        int threshold)
 {
-    detect_hotkey_result result;
-    int data_size = data_samples.size();
-    double total = 0;
+
+    int data_size = captured_keys.size();
+    dassert(captured_keys.size() > 2, "data_capture_hash_bucket_num is too small");
+
+    double table_captured_key_sum = 0;
     int hot_index = 0;
     int hot_value = 0;
     for (int i = 0; i < data_size; i++) {
-        total += data_samples[i];
-        if (data_samples[i] > hot_value) {
+        table_captured_key_sum += captured_keys[i];
+        if (captured_keys[i] > hot_value) {
             hot_index = i;
-            hot_value = data_samples[i];
+            hot_value = captured_keys[i];
         }
     }
-    // in case of sample size too small
-    if (data_size < 3 || total < data_size) {
-        derror("Data samples too small");
-        return result;
-    }
-    double avg = (total - data_samples[hot_index]) / (data_size - 1);
-    double sd = 0;
-    for (int j = 0; j < data_size; j++) {
-        if (j != hot_index) {
-            sd += pow((data_samples[j] - avg), 2);
+    // TODO: (Tangyanzhao) increase a judgment of table_captured_key_sum
+    double captured_keys_avg_count =
+        (table_captured_key_sum - captured_keys[hot_index]) / (data_size - 1);
+    double standard_deviation = 0;
+    for (int i = 0; i < data_size; i++) {
+        if (i != hot_index) {
+            standard_deviation += pow((captured_keys[i] - captured_keys_avg_count), 2);
         }
     }
-    sd = sqrt(sd / (data_size - 2));
-    double hot_point = (hot_value - avg) / sd;
+    standard_deviation = sqrt(standard_deviation / (data_size - 2));
+    double hot_point = (hot_value - captured_keys_avg_count) / standard_deviation;
+    detect_hotkey_result result;
     hot_point > threshold ? result.coarse_bucket_index = hot_index
                           : result.coarse_bucket_index = -1;
     return result;
