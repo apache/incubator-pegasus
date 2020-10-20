@@ -26,10 +26,11 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int32("pegasus.server",
-                 hotkey_collector_max_work_time,
-                 150,
-                 "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
+DSN_DEFINE_int32(
+    "pegasus.server",
+    hotkey_collector_max_work_time,
+    150,
+    "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
