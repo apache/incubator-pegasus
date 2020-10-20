@@ -77,7 +77,20 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
     _internal_collector->capture_data(hash_key, weight);
 }
 
-void hotkey_collector::analyse_data() { _internal_collector->analyse_data(_result); }
+void hotkey_collector::analyse_data()
+{
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+        _internal_collector->analyse_data(_result);
+        if (_result.coarse_bucket_index != -1) {
+            // TODO: (Tangyanzhao) reset _internal_collector to hotkey_fine_data_collector
+            _state.store(hotkey_collector_state::FINE_DETECTING);
+        }
+        return;
+    default:
+        return;
+    }
+}
 
 /*static*/ int hotkey_collector::get_bucket_id(dsn::string_view data)
 {
