@@ -110,6 +110,7 @@ public:
     void analyse_data(detect_hotkey_result &result) override {}
 };
 
+// TODO: (Tangyanzhao) add a unit test of hotkey_coarse_data_collector
 class hotkey_coarse_data_collector : public internal_collector_base
 {
 public:
