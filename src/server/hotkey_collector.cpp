@@ -136,7 +136,7 @@ void hotkey_collector::terminate_by_timeout()
 {
     if (_collector_start_time == 0)
         return;
-    if (dsn_now_s() - _collector_start_time >= FLAGS_hotkey_collector_max_work_time) {
+    if (dsn_now_s() >= _collector_start_time + FLAGS_hotkey_collector_max_work_time) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
         terminate_colletor();
         return;
