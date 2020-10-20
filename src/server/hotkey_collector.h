@@ -28,8 +28,7 @@ class internal_collector_base;
 
 struct detect_hotkey_result
 {
-    int coarse_bucket_index;
-    detect_hotkey_result() : coarse_bucket_index(-1) {}
+    int coarse_bucket_index = -1;
 };
 
 //    hotkey_collector is responsible to find the hot keys after the partition
@@ -105,7 +104,7 @@ public:
 class hotkey_empty_data_collector : public internal_collector_base
 {
 public:
-    explicit hotkey_empty_data_collector(replica_base *base) : internal_collector_base(base){};
+    explicit hotkey_empty_data_collector(replica_base *base) : internal_collector_base(base) {}
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override {}
     void analyse_data(detect_hotkey_result &result) override {}
 };

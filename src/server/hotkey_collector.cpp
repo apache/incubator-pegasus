@@ -171,10 +171,10 @@ detect_hotkey_result
 hotkey_coarse_data_collector::internal_analysis_method(const std::vector<uint64_t> &captured_keys,
                                                        int threshold)
 {
-
     int data_size = captured_keys.size();
-    dassert(captured_keys.size() > 2, "data_capture_hash_bucket_num is too small");
-
+    dcheck_gt(captured_keys.size(), 2);
+    // empirical rule to calculate hot point of each partition
+    // same algorithm as hotspot_partition_calculator::stat_histories_analyse
     double table_captured_key_sum = 0;
     int hot_index = 0;
     int hot_value = 0;
@@ -197,8 +197,9 @@ hotkey_coarse_data_collector::internal_analysis_method(const std::vector<uint64_
     standard_deviation = sqrt(standard_deviation / (data_size - 2));
     double hot_point = (hot_value - captured_keys_avg_count) / standard_deviation;
     detect_hotkey_result result;
-    hot_point > threshold ? result.coarse_bucket_index = hot_index
-                          : result.coarse_bucket_index = -1;
+    if (hot_point > threshold) {
+        result.coarse_bucket_index = hot_index;
+    }
     return result;
 }
 
