@@ -21,16 +21,23 @@
 #include <dsn/utility/smart_pointers.h>
 #include "base/pegasus_key_schema.h"
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/flags.h>
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_int32("pegasus.server",
+                 hotkey_collector_max_work_time,
+                 150,
+                 "the max time allowed to capture hotkey, will stop if hotkey's not found");
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
       _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
-      _internal_collector(std::make_shared<hotkey_empty_data_collector>())
+      _internal_collector(std::make_shared<hotkey_empty_data_collector>()),
+      _collector_start_time(0)
 {
 }
 
@@ -65,7 +72,11 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
     _internal_collector->capture_data(hash_key, weight);
 }
 
-void hotkey_collector::analyse_data() { _internal_collector->analyse_data(); }
+void hotkey_collector::analyse_data()
+{
+    terminate_by_timeout();
+    _internal_collector->analyse_data();
+}
 
 void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
 {
@@ -88,6 +99,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         dwarn_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
+        _collector_start_time = dsn_now_s();
         // TODO: (Tangyanzhao) start coarse detecting
         _state.store(hotkey_collector_state::COARSE_DETECTING);
         resp.err = dsn::ERR_OK;
@@ -105,13 +117,29 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
 
 void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
 {
-    _state.store(hotkey_collector_state::STOPPED);
-    _internal_collector.reset();
+    terminate_colletor();
     resp.err = dsn::ERR_OK;
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
     ddebug_replica(hint);
 }
+
+void hotkey_collector::terminate_colletor()
+{
+    _state.store(hotkey_collector_state::STOPPED);
+    _internal_collector.reset();
+}
+
+void hotkey_collector::terminate_by_timeout()
+{
+    if (dsn_now_s() == 0)
+        return;
+    if (dsn_now_s() - _collector_start_time >= FLAGS_hotkey_collector_max_work_time) {
+        ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
+        terminate_colletor();
+        return;
+    }
+};
 
 } // namespace server
 } // namespace pegasus
