@@ -128,6 +128,7 @@ void hotkey_collector::terminate_colletor()
 {
     _state.store(hotkey_collector_state::STOPPED);
     _internal_collector.reset();
+    _collector_start_time = 0;
 }
 
 void hotkey_collector::terminate_by_timeout()
