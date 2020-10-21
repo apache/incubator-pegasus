@@ -118,10 +118,28 @@ public:
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
-    detect_hotkey_result internal_analysis_method(const std::vector<uint64_t> &captured_keys,
-                                                  int threshold);
-
     std::vector<std::atomic<uint64_t>> _hash_buckets;
+};
+
+// 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
+class outlier_detection
+{
+public:
+    outlier_detection() = delete;
+    outlier_detection(const std::vector<uint64_t> &captured_keys, int threshold);
+    bool find_hotindex(int &hot_index);
+
+private:
+    void calculate_data_count(const std::vector<uint64_t> &captured_keys);
+    void calculate_standard_deviation(const std::vector<uint64_t> &captured_keys);
+
+    int _hot_index;
+    int _data_count;
+    int _data_size;
+    double _standard_deviation;
+    int _threshold;
+    int _hot_value;
+    double _avg_count;
 };
 
 } // namespace server
