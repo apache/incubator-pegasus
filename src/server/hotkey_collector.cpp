@@ -38,7 +38,7 @@ hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_ty
       _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
       _internal_collector(std::make_shared<hotkey_empty_data_collector>()),
-      _collector_start_time(0)
+      _collector_start_time_second(0)
 {
 }
 
@@ -107,7 +107,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         dwarn_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
-        _collector_start_time = dsn_now_s();
+        _collector_start_time_second = dsn_now_s();
         // TODO: (Tangyanzhao) start coarse detecting
         _state.store(hotkey_collector_state::COARSE_DETECTING);
         resp.err = dsn::ERR_OK;
@@ -136,12 +136,12 @@ void hotkey_collector::terminate()
 {
     _state.store(hotkey_collector_state::STOPPED);
     _internal_collector.reset();
-    _collector_start_time = 0;
+    _collector_start_time_second = 0;
 }
 
 bool hotkey_collector::terminate_if_timeout()
 {
-    if (dsn_now_s() >= _collector_start_time + FLAGS_max_seconds_to_detect_hotkey) {
+    if (dsn_now_s() >= _collector_start_time_second + FLAGS_max_seconds_to_detect_hotkey) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
         terminate();
         return true;
