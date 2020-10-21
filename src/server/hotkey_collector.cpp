@@ -90,6 +90,12 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
     }
 }
 
+static int get_bucket_id(dsn::string_view data)
+{
+    size_t hash_value = boost::hash_range(data.begin(), data.end());
+    return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
+}
+
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
@@ -143,12 +149,6 @@ void hotkey_collector::analyse_data()
     default:
         return;
     }
-}
-
-/*static*/ int hotkey_collector::get_bucket_id(dsn::string_view data)
-{
-    size_t hash_value = boost::hash_range(data.begin(), data.end());
-    return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
 }
 
 void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
@@ -207,7 +207,7 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
 
 void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    _hash_buckets[hotkey_collector::get_bucket_id(hash_key)].fetch_add(weight);
+    _hash_buckets[get_bucket_id(hash_key)].fetch_add(weight);
 }
 
 void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)

@@ -80,7 +80,6 @@ public:
     void analyse_data();
     void handle_rpc(const dsn::replication::detect_hotkey_request &req,
                     /*out*/ dsn::replication::detect_hotkey_response &resp);
-    static int get_bucket_id(dsn::string_view data);
 
 private:
     void on_start_detect(dsn::replication::detect_hotkey_response &resp);
