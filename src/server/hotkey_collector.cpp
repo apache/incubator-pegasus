@@ -77,7 +77,7 @@ void hotkey_collector::analyse_data()
 {
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
-        if (terminate_if_timeout()) {
+        if (!terminate_if_timeout()) {
             _internal_collector->analyse_data();
         }
         return;
@@ -144,9 +144,9 @@ bool hotkey_collector::terminate_if_timeout()
     if (dsn_now_s() >= _collector_start_time + FLAGS_max_seconds_to_detect_hotkey) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
         terminate();
-        return false;
+        return true;
     }
-    return true;
+    return false;
 }
 
 } // namespace server
