@@ -28,7 +28,7 @@ namespace server {
 
 DSN_DEFINE_int32(
     "pegasus.server",
-    hotkey_collector_max_work_time,
+    max_seconds_to_detect_hotkey,
     150,
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
@@ -75,8 +75,14 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
 
 void hotkey_collector::analyse_data()
 {
-    terminate_by_timeout();
-    _internal_collector->analyse_data();
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+        terminate_if_timeout();
+        _internal_collector->analyse_data();
+        return;
+    default:
+        return;
+    }
 }
 
 void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
@@ -94,9 +100,9 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         return;
     case hotkey_collector_state::FINISHED:
         resp.err = dsn::ERR_INVALID_STATE;
-        hint = fmt::format(
-            "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
-            dsn::enum_to_string(_hotkey_type));
+        hint = fmt::format("{} hotkey result has been found, you can send a stop rpc to "
+                           "restart hotkey detection",
+                           dsn::enum_to_string(_hotkey_type));
         dwarn_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
@@ -118,28 +124,28 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
 
 void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
 {
-    terminate_colletor();
+    terminate();
     resp.err = dsn::ERR_OK;
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
     ddebug_replica(hint);
 }
 
-void hotkey_collector::terminate_colletor()
+void hotkey_collector::terminate()
 {
     _state.store(hotkey_collector_state::STOPPED);
     _internal_collector.reset();
     _collector_start_time = 0;
 }
 
-void hotkey_collector::terminate_by_timeout()
+void hotkey_collector::terminate_if_timeout()
 {
     if (_collector_start_time == 0) {
         return;
     }
-    if (dsn_now_s() >= _collector_start_time + FLAGS_hotkey_collector_max_work_time) {
+    if (dsn_now_s() >= _collector_start_time + FLAGS_max_seconds_to_detect_hotkey) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
-        terminate_colletor();
+        terminate();
         return;
     }
 };
