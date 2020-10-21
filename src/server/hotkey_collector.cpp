@@ -46,8 +46,9 @@ DSN_DEFINE_validator(data_capture_hash_bucket_num, [](int32_t bucket_num) -> boo
     }
     // data_capture_hash_bucket_num should be a prime number
     for (int i = 2; i <= bucket_num / i; i++) {
-        if (bucket_num % i == 0)
+        if (bucket_num % i == 0) {
             return false;
+        }
     }
     return true;
 });
