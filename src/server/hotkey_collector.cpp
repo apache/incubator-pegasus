@@ -77,8 +77,9 @@ void hotkey_collector::analyse_data()
 {
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
-        terminate_if_timeout();
-        _internal_collector->analyse_data();
+        if (terminate_if_timeout()) {
+            _internal_collector->analyse_data();
+        }
         return;
     default:
         return;
@@ -100,9 +101,9 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         return;
     case hotkey_collector_state::FINISHED:
         resp.err = dsn::ERR_INVALID_STATE;
-        hint = fmt::format("{} hotkey result has been found, you can send a stop rpc to "
-                           "restart hotkey detection",
-                           dsn::enum_to_string(_hotkey_type));
+        hint = fmt::format(
+            "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
+            dsn::enum_to_string(_hotkey_type));
         dwarn_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
@@ -138,17 +139,15 @@ void hotkey_collector::terminate()
     _collector_start_time = 0;
 }
 
-void hotkey_collector::terminate_if_timeout()
+bool hotkey_collector::terminate_if_timeout()
 {
-    if (_collector_start_time == 0) {
-        return;
-    }
     if (dsn_now_s() >= _collector_start_time + FLAGS_max_seconds_to_detect_hotkey) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
         terminate();
-        return;
+        return false;
     }
-};
+    return true;
+}
 
 } // namespace server
 } // namespace pegasus

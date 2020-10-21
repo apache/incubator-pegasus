@@ -80,7 +80,7 @@ private:
     void on_start_detect(dsn::replication::detect_hotkey_response &resp);
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
     void terminate();
-    void terminate_if_timeout();
+    bool terminate_if_timeout();
 
     std::atomic<hotkey_collector_state> _state;
     const dsn::replication::hotkey_type::type _hotkey_type;
