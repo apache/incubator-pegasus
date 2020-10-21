@@ -52,6 +52,44 @@ DSN_DEFINE_validator(data_capture_hash_bucket_num, [](int32_t bucket_num) -> boo
     return true;
 });
 
+// 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
+static bool
+find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index)
+{
+    dcheck_gt(captured_keys.size(), 2);
+    int data_size = captured_keys.size();
+    // empirical rule to calculate hot point of each partition
+    // same algorithm as hotspot_partition_calculator::stat_histories_analyse
+    double table_captured_key_sum = 0;
+    int hot_value = 0;
+    for (int i = 0; i < data_size; i++) {
+        table_captured_key_sum += captured_keys[i];
+        if (captured_keys[i] > hot_value) {
+            hot_index = i;
+            hot_value = captured_keys[i];
+        }
+    }
+    // TODO: (Tangyanzhao) increase a judgment of table_captured_key_sum
+    double captured_keys_avg_count =
+        (table_captured_key_sum - captured_keys[hot_index]) / (data_size - 1);
+    double standard_deviation = 0;
+    for (int i = 0; i < data_size; i++) {
+        if (i != hot_index) {
+            standard_deviation += pow((captured_keys[i] - captured_keys_avg_count), 2);
+        }
+    }
+    standard_deviation = sqrt(standard_deviation / (data_size - 2));
+    double hot_point = (hot_value - captured_keys_avg_count) / standard_deviation;
+    detect_hotkey_result result;
+    if (hot_point >= threshold) {
+        result.coarse_bucket_index = hot_index;
+        return true;
+    } else {
+        hot_index = -1;
+        return false;
+    }
+}
+
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
@@ -179,49 +217,10 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
     }
-    outlier_detection detection(buckets, FLAGS_coarse_data_variance_threshold);
-    int hotindex = -1;
-    if (detection.find_hotindex(hotindex)) {
-        result.coarse_bucket_index = hotindex;
+    int hot_index = -1;
+    if (find_outlier_index(buckets, FLAGS_coarse_data_variance_threshold, hot_index)) {
+        result.coarse_bucket_index = hot_index;
     }
-}
-
-outlier_detection::outlier_detection(const std::vector<uint64_t> &captured_keys, int threshold)
-    : _data_size(captured_keys.size()), _threshold(threshold)
-
-{
-    calculate_data_count(captured_keys);
-    calculate_standard_deviation(captured_keys);
-}
-
-void outlier_detection::calculate_data_count(const std::vector<uint64_t> &captured_keys)
-{
-    for (int i = 0; i < _data_size; i++) {
-        _data_count += captured_keys[i];
-        if (captured_keys[i] > _hot_value) {
-            _hot_index = i;
-            _hot_value = captured_keys[i];
-        }
-    }
-}
-
-void outlier_detection::calculate_standard_deviation(const std::vector<uint64_t> &captured_keys)
-{
-    dcheck_gt(captured_keys.size(), 2);
-    _avg_count = (_data_count - captured_keys[_hot_index]) / (_data_size - 1);
-    for (int i = 0; i < _data_size; i++) {
-        if (i != _hot_index) {
-            _standard_deviation += pow((captured_keys[i] - _avg_count), 2);
-        }
-    }
-    _standard_deviation = sqrt(_standard_deviation / (_data_size - 2));
-}
-
-bool outlier_detection::find_hotindex(int &hot_index)
-{
-    double hot_point = (_hot_value - _avg_count) / _standard_deviation;
-    hot_index = _hot_index;
-    return hot_point >= _threshold;
 }
 
 } // namespace server
