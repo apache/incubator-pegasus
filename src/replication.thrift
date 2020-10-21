@@ -890,6 +890,7 @@ struct register_child_response
     // - ERR_INVALID_VERSION: request is out-dated
     // - ERR_CHILD_REGISTERED: child has been registered
     // - ERR_IO_PENDING: meta is executing another remote sync task
+    // - ERR_INVALID_STATE: parent partition is not splitting
     1:dsn.error_code                        err;
     2:dsn.layer2.app_info                   app;
     3:dsn.layer2.partition_configuration    parent_config;

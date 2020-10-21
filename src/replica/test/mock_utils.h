@@ -270,6 +270,8 @@ public:
     {
         _bulk_load_downloading_count.store(count);
     }
+
+    void set_rpc_address(const rpc_address &address) { _primary_address = address; }
 };
 
 class mock_log_file : public log_file

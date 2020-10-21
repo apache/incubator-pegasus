@@ -51,23 +51,6 @@ public:
         _app_info.partition_count = OLD_PARTITION_COUNT;
     }
 
-    // TODO(heyuchen): refactor it
-    void mock_register_child_request()
-    {
-        partition_configuration &p_config = _register_req.parent_config;
-        p_config.pid = PARENT_GPID;
-        p_config.ballot = INIT_BALLOT;
-        p_config.last_committed_decree = DECREE;
-
-        partition_configuration &c_config = _register_req.child_config;
-        c_config.pid = CHILD_GPID;
-        c_config.ballot = INIT_BALLOT + 1;
-        c_config.last_committed_decree = 0;
-
-        _register_req.app = _app_info;
-        _register_req.primary_address = dsn::rpc_address("127.0.0.1", 10086);
-    }
-
     void generate_child()
     {
         _child_replica = stub->generate_replica(
@@ -264,23 +247,39 @@ public:
 
     void test_register_child_on_meta()
     {
+        parent_set_split_status(split_status::SPLITTING);
         _parent_split_mgr->register_child_on_meta(INIT_BALLOT);
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
-    void test_on_register_child_rely(partition_status::type status, dsn::error_code resp_err)
+    void test_on_register_child_reply(partition_status::type status, dsn::error_code resp_err)
     {
-        mock_register_child_request();
-        _parent_replica->_config.status = status;
+        stub->set_state_connected();
+        stub->set_rpc_address(PRIMARY);
+        mock_parent_split_context(status);
+        _parent_replica->_primary_states.sync_send_write_request = true;
+        _parent_split_mgr->_partition_version = -1;
+        _parent_replica->_inactive_is_transient = true;
+
+        register_child_request req;
+        req.app = _app_info;
+        req.parent_config.pid = PARENT_GPID;
+        req.parent_config.ballot = INIT_BALLOT;
+        req.parent_config.last_committed_decree = DECREE;
+        req.parent_config.primary = PRIMARY;
+        req.child_config.pid = CHILD_GPID;
+        req.child_config.ballot = INIT_BALLOT + 1;
+        req.child_config.last_committed_decree = 0;
+        req.primary_address = PRIMARY;
 
         register_child_response resp;
         resp.err = resp_err;
-        resp.app = _register_req.app;
+        resp.app = req.app;
         resp.app.partition_count *= 2;
-        resp.parent_config = _register_req.parent_config;
-        resp.child_config = _register_req.child_config;
+        resp.parent_config = req.parent_config;
+        resp.child_config = req.child_config;
 
-        _parent_split_mgr->on_register_child_on_meta_reply(ERR_OK, _register_req, resp);
+        _parent_split_mgr->on_register_child_on_meta_reply(ERR_OK, req, resp);
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
@@ -340,8 +339,7 @@ public:
     std::unique_ptr<replica_split_manager> _parent_split_mgr;
     std::unique_ptr<replica_split_manager> _child_split_mgr;
 
-    dsn::app_info _app_info;
-    register_child_request _register_req;
+    app_info _app_info;
     std::vector<std::string> _private_log_files;
     std::vector<mutation_ptr> _mutation_list;
     prepare_list *_mock_plist;
@@ -527,38 +525,38 @@ TEST_F(replica_split_test, register_child_test)
     ASSERT_EQ(_parent_split_mgr->get_partition_version(), -1);
 }
 
-// TODO(heyuchen): refactor register child reply
-TEST_F(replica_split_test, register_child_reply_with_wrong_status)
+// register_child_reply tests
+TEST_F(replica_split_test, register_child_reply_test)
 {
+    fail::cfg("replica_init_group_check", "return()");
+    fail::cfg("replica_broadcast_group_check", "return()");
     generate_child();
-    mock_child_split_context(true, true);
 
-    test_on_register_child_rely(partition_status::PS_PRIMARY, ERR_OK);
-    primary_context parent_primary_states = get_replica_primary_context(_parent_replica);
-    ASSERT_EQ(parent_primary_states.register_child_task, nullptr);
-}
-
-TEST_F(replica_split_test, register_child_reply_with_child_registered)
-{
-    generate_child();
-    mock_child_split_context(true, true);
-
-    test_on_register_child_rely(partition_status::PS_INACTIVE, ERR_CHILD_REGISTERED);
-
-    primary_context parent_primary_states = get_replica_primary_context(_parent_replica);
-    ASSERT_EQ(parent_primary_states.register_child_task, nullptr);
-    ASSERT_TRUE(is_parent_not_in_split());
-}
-
-TEST_F(replica_split_test, register_child_reply_succeed)
-{
-    generate_child();
-    mock_child_split_context(true, true);
-
-    fail::cfg("replica_stub_split_replica_exec", "return()");
-    test_on_register_child_rely(partition_status::PS_INACTIVE, ERR_OK);
-
-    ASSERT_TRUE(is_parent_not_in_split());
+    // Test cases:
+    // - wrong partition status
+    // - response error = INVALID_STATE
+    // - response error = CHILD_REGISTERED
+    // - TODO(heyuchen): add response error = OK
+    //   ({partition_status::PS_INACTIVE, ERR_OK, NEW_PARTITION_COUNT - 1})
+    //   after implement parent update group partition count
+    struct register_child_reply_test
+    {
+        partition_status::type parent_partition_status;
+        error_code resp_err;
+        int32_t expected_parent_partition_version;
+    } tests[] = {{partition_status::PS_PRIMARY, ERR_OK, -1},
+                 {partition_status::PS_INACTIVE, ERR_INVALID_STATE, -1},
+                 {partition_status::PS_INACTIVE, ERR_CHILD_REGISTERED, -1}};
+    for (auto test : tests) {
+        mock_child_split_context(true, true);
+        test_on_register_child_reply(test.parent_partition_status, test.resp_err);
+        ASSERT_EQ(_parent_replica->status(), partition_status::PS_PRIMARY);
+        if (test.parent_partition_status == partition_status::PS_INACTIVE) {
+            // TODO(heyuchen): check primary parent finish split
+            ASSERT_EQ(_parent_split_mgr->get_partition_version(),
+                      test.expected_parent_partition_version);
+        }
+    }
 }
 
 } // namespace replication

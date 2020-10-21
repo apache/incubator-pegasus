@@ -42,12 +42,15 @@
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 namespace replication {
 
 void replica::init_group_check()
 {
+    FAIL_POINT_INJECT_F("replica_init_group_check", [](dsn::string_view) {});
+
     _checker.only_one_thread_access();
 
     ddebug("%s: init group check", name());
@@ -66,6 +69,8 @@ void replica::init_group_check()
 
 void replica::broadcast_group_check()
 {
+    FAIL_POINT_INJECT_F("replica_broadcast_group_check", [](dsn::string_view) {});
+
     dassert(nullptr != _primary_states.group_check_task, "");
 
     ddebug("%s: start to broadcast group check", name());

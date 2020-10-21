@@ -628,7 +628,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
     FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
         auto old_status = status();
         _config = config;
-        ddebug_replica("update status from {} to {}", enum_to_string(old_status), status());
+        ddebug_replica(
+            "update status from {} to {}", enum_to_string(old_status), enum_to_string(status()));
         return true;
     });
 
