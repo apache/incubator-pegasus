@@ -218,9 +218,9 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
     }
-    int hot_index = -1;
-    if (find_outlier_index(buckets, FLAGS_coarse_data_variance_threshold, hot_index)) {
-        result.coarse_bucket_index = hot_index;
+    if (!find_outlier_index(
+            buckets, FLAGS_coarse_data_variance_threshold, result.coarse_bucket_index)) {
+        result.coarse_bucket_index = -1;
     }
 }
 
