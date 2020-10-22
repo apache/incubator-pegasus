@@ -30,8 +30,8 @@ public:
     explicit mock_capacity_unit_calculator(dsn::replication::replica_base *r)
         : capacity_unit_calculator(
               r,
-              std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::READ, this),
-              std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, this))
+              std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::READ, r),
+              std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, r))
     {
     }
 
