@@ -1,1 +1,0 @@
-# Building Pegasus in Docker
