@@ -107,7 +107,7 @@ void rpc_server_response(dsn::message_ex *request)
 void wait_response()
 {
     while (wait_flag == 0)
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 void rpc_client_session_send(rpc_session_ptr client_session, bool reject = false)
@@ -272,9 +272,12 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     error_code start_result;
     start_result = asio_network->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_OK);
-    asio_network->change_test_cfg_conn_threshold_per_ip(10);
 
-    for (int count = 0; count < 20; count++) {
+    auto CONN_THRESHOLD = 3;
+    asio_network->change_test_cfg_conn_threshold_per_ip(CONN_THRESHOLD);
+
+    // not exceed threshold
+    for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
         ddebug("client # %d", count);
         rpc_session_ptr client_session =
             asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
@@ -283,18 +286,18 @@ TEST(tools_common, asio_network_provider_connection_threshold)
         rpc_client_session_send(client_session);
 
         client_session->close();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
+    // exceed threshold
     bool reject = false;
-    for (int count = 0; count < 20; count++) {
-
+    for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
         ddebug("client # %d", count);
         rpc_session_ptr client_session =
             asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
         client_session->connect();
 
-        if (count >= 10)
+        if (count >= CONN_THRESHOLD)
             reject = true;
         rpc_client_session_send(client_session, reject);
     }
