@@ -522,6 +522,6 @@ dsn::task_ptr local_file_object::download(const download_request &req,
 
     return tsk;
 }
-}
-}
-}
+} // namespace block_service
+} // namespace dist
+} // namespace dsn

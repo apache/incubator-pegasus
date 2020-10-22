@@ -33,6 +33,11 @@ public:
     // \return  ERR_FS_INTERNAL: remote file system error
     // \return  ERR_CORRUPTION: file not exist or damaged
     // if download file succeed, download_err = ERR_OK and set download_file_size
+    //
+    // TODO(wutao1): create block_filesystem_wrapper instead.
+    // NOTE: This function is not responsible for the correctness of the downloaded file.
+    // The file may be half-downloaded or corrupted due to disk failure.
+    // The users can compare checksums, and retry download if validation failed.
     error_code download_file(const std::string &remote_dir,
                              const std::string &local_dir,
                              const std::string &file_name,

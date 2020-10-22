@@ -4,6 +4,7 @@
 
 #include "block_service_mock.h"
 #include "block_service/block_service_manager.h"
+#include "block_service/local/local_service.h"
 
 #include <fstream>
 
@@ -66,7 +67,13 @@ public:
 // download_file unit tests
 TEST_F(block_service_manager_test, do_download_remote_file_not_exist)
 {
-    ASSERT_EQ(test_download_file(), ERR_CORRUPTION);
+    utils::filesystem::remove_path(LOCAL_DIR);
+    auto fs = make_unique<local_service>();
+    fs->initialize({LOCAL_DIR});
+    uint64_t download_size = 0;
+    error_code err = _block_service_manager.download_file(
+        PROVIDER, LOCAL_DIR, FILE_NAME, fs.get(), download_size);
+    ASSERT_EQ(err, ERR_CORRUPTION); // file does not exist
 }
 
 TEST_F(block_service_manager_test, do_download_redownload_file)
