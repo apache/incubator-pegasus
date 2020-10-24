@@ -24,7 +24,6 @@
 #include "base/pegasus_key_schema.h"
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
-#include <readerwriterqueue/readerwriterqueue.h>
 
 namespace pegasus {
 namespace server {
