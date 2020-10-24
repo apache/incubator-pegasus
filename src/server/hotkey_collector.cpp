@@ -24,6 +24,7 @@
 #include "base/pegasus_key_schema.h"
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
+#include <readerwriterqueue/readerwriterqueue.h>
 
 namespace pegasus {
 namespace server {
@@ -53,6 +54,12 @@ DSN_DEFINE_validator(data_capture_hash_bucket_num, [](int32_t bucket_num) -> boo
     }
     return true;
 });
+
+DSN_DEFINE_int32(
+    "pegasus.server",
+    max_seconds_to_detect_hotkey,
+    150,
+    "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
 // 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
 static bool
@@ -92,16 +99,12 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
     }
 }
 
+// TODO: (Tangyanzhao) replace it to xxhash
 static int get_bucket_id(dsn::string_view data)
 {
     size_t hash_value = boost::hash_range(data.begin(), data.end());
     return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
 }
-DSN_DEFINE_int32(
-    "pegasus.server",
-    max_seconds_to_detect_hotkey,
-    150,
-    "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
