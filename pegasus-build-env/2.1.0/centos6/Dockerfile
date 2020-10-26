@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM centos:7.5.1804
+FROM centos:6
 
 LABEL maintainer=wutao
 
@@ -24,7 +24,7 @@ scl-utils \
 epel-release; \
 yum -y install devtoolset-7-gcc \
 devtoolset-7-gcc-c++ \
-python3 \
+rh-python36-python-pip \
 automake \
 autoconf \
 make \
@@ -45,12 +45,14 @@ lz4-devel \
 bison \
 flex \
 patch; \
-yum -y remove gcc g++; \
+export LD_LIBRARY_PATH=/opt/rh/rh-python36/root/usr/lib64; \
+export PATH=/opt/rh/rh-python36/root/usr/bin:${PATH}; \
+pip install --no-cache-dir cmake; \
+yum -y remove cpp; \
 yum clean all; \
 rm -rf /var/cache/yum;
 
-RUN pip3 install --no-cache-dir cmake
-
-ENV PATH="/opt/rh/devtoolset-7/root/bin/:${PATH}"
+ENV PATH="/opt/rh/devtoolset-7/root/usr/bin/:${PATH}"
+ENV PATH="/opt/rh/rh-python36/root/usr/bin:${PATH}"
 
 WORKDIR /root/pegasus
