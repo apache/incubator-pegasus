@@ -14,7 +14,7 @@ It consists of the following components:
 ## Uploading an image to DockerHub 
 
 If you are the contributor of this project, you may need to push the built images
-to DockerHub. Firstly, you should be one of the members of the orgnization "apachepegasus".
+to DockerHub. Firstly, you should be one of the members of the orgnization [apachepegasus](https://hub.docker.com/orgs/apachepegasus).
 
 ```sh
 docker login --username=yourhubusername --email=youremail@company.com
