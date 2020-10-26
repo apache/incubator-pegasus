@@ -7,9 +7,9 @@ to deploy a standalone cluster of dockers on your local machine.
 
 It consists of the following components:
 
-- [pegasus-docker-compose](/pegasus-docker-compose/README.md)
+- pegasus-docker-compose
 
-- [pegasus-build-env](/pegasus-build-env/README.md)
+- pegasus-build-env
 
 ## Uploading an image to DockerHub 
 
