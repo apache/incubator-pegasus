@@ -36,6 +36,7 @@ DSN_DEFINE_int32("pegasus.server",
 DSN_DEFINE_validator(coarse_data_variance_threshold,
                      [](int32_t threshold) -> bool { return (threshold >= 0); });
 
+// TODO: (Tangyanzhao) add limit to avoiding changing when detecting
 DSN_DEFINE_int32("pegasus.server",
                  data_capture_hash_bucket_num,
                  37,
