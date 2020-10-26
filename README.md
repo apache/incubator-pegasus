@@ -9,4 +9,4 @@ It consists of the following components:
 
 - pegasus-docker-compose
 
-- [pegasus-build-env](pegasus-build-env/README.md): 
+- [pegasus-build-env](pegasus-build-env/README.md):

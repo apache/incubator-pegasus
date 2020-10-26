@@ -14,13 +14,13 @@ https://hub.docker.com/r/apachepegasus/build-env
 
 After the container bootstrapped, it will have all the necessary dependencies installed. We can compile Pegasus by running the container that is mounted upon the local source code directory.
 
-When the compilation is completed, the binaries will be directly generated under the source directory. They won't get disappeared as the container exits.
-
 ```sh
 docker run -v /your/local/apache-pegasus-source:/root/pegasus \
            apachepegasus/build-env:centos6 \
            /bin/bash -c "./run.sh build"
 ```
+
+When the compilation is completed, the binaries will be directly generated under the source directory. They won't get disappeared as the container exits.
 
 ## Packaging Pegasus Server binaries (Optional)
 
