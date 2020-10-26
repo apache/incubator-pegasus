@@ -30,7 +30,7 @@ docker run -v /your/local/apache-pegasus-source:/root/pegasus \
            /bin/bash -c "./scripts/pack_server.sh"
 ```
 
-## Packaging Pegasus toolset (optional)
+## Packaging Pegasus toolset (Optional)
 
 ```sh
 docker run -v /your/local/apache-pegasus-source:/root/pegasus \
