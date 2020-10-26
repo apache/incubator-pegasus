@@ -88,9 +88,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
     }
     standard_deviation = sqrt(standard_deviation / (data_size - 2));
     double hot_point = (hot_value - captured_keys_avg_count) / standard_deviation;
-    detect_hotkey_result result;
     if (hot_point >= threshold) {
-        result.coarse_bucket_index = hot_index;
         return true;
     } else {
         hot_index = -1;
