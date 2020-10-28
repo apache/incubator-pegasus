@@ -36,7 +36,6 @@ DSN_DEFINE_int32("pegasus.server",
 DSN_DEFINE_validator(coarse_data_variance_threshold,
                      [](int32_t threshold) -> bool { return (threshold >= 0); });
 
-// TODO: (Tangyanzhao) add a limit to avoid changing when detecting
 DSN_DEFINE_int32("pegasus.server",
                  data_capture_hash_bucket_num,
                  37,
@@ -109,7 +108,7 @@ hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_ty
     : replica_base(r_base),
       _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
-      _internal_collector(std::make_shared<hotkey_empty_data_collector>(this)),
+      _internal_empty_collector(std::make_shared<hotkey_empty_data_collector>(this)),
       _collector_start_time_second(0)
 {
 }
@@ -142,17 +141,19 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
     // TODO: (Tangyanzhao) add a unit test to ensure data integrity
-    _internal_collector->capture_data(hash_key, weight);
+    if (_state.load() == hotkey_collector_state::COARSE_DETECTING &&
+        _internal_coarse_collector != nullptr) {
+        _internal_coarse_collector->capture_data(hash_key, weight > 0 ? weight : 1);
+    }
 }
 
 void hotkey_collector::analyse_data()
 {
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
-        if (!terminate_if_timeout()) {
-            _internal_collector->analyse_data(_result);
+        if (!terminate_if_timeout() && _internal_coarse_collector != nullptr) {
+            _internal_coarse_collector->analyse_data(_result);
             if (_result.coarse_bucket_index != -1) {
-                // TODO: (Tangyanzhao) reset _internal_collector to hotkey_fine_data_collector
                 _state.store(hotkey_collector_state::FINE_DETECTING);
             }
         }
@@ -160,6 +161,14 @@ void hotkey_collector::analyse_data()
     default:
         return;
     }
+}
+
+inline void hotkey_collector::init_internal_collector()
+{
+    int now_hash_bucket_num = FLAGS_data_capture_hash_bucket_num;
+    _coarse_empty_collector =
+        std::make_shared<hotkey_coarse_data_collector>(this, now_hash_bucket_num);
+    // TODO: (Tangyanzhao) add a fine collector initialization
 }
 
 void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
@@ -184,7 +193,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         return;
     case hotkey_collector_state::STOPPED:
         _collector_start_time_second = dsn_now_s();
-        _internal_collector.reset(new hotkey_coarse_data_collector(this));
+        init_internal_collector();
         _state.store(hotkey_collector_state::COARSE_DETECTING);
         resp.err = dsn::ERR_OK;
         hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));

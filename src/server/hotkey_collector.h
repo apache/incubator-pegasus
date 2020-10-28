@@ -86,11 +86,14 @@ private:
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
     void terminate();
     bool terminate_if_timeout();
+    void init_internal_collector();
 
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
     const dsn::replication::hotkey_type::type _hotkey_type;
-    std::shared_ptr<internal_collector_base> _internal_collector;
+    std::shared_ptr<internal_collector_base> _internal_empty_collector;
+    std::shared_ptr<internal_collector_base> _internal_coarse_collector;
+    std::shared_ptr<internal_collector_base> _internal_fine_collector;
     uint64_t _collector_start_time_second;
 };
 
@@ -115,7 +118,8 @@ public:
 class hotkey_coarse_data_collector : public internal_collector_base
 {
 public:
-    explicit hotkey_coarse_data_collector(replica_base *base);
+    hotkey_coarse_data_collector() = delete;
+    explicit hotkey_coarse_data_collector(replica_base *base, int data_capture_hash_bucket_num);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
 
