@@ -97,10 +97,9 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 }
 
 // TODO: (Tangyanzhao) replace it to xxhash
-static int get_bucket_id(dsn::string_view data)
+static int get_bucket_id(dsn::string_view data, int bucket_num)
 {
-    size_t hash_value = boost::hash_range(data.begin(), data.end());
-    return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
+    return static_cast<int>(boost::hash_range(data.begin(), data.end()) % bucket_num);
 }
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
@@ -235,7 +234,9 @@ bool hotkey_collector::terminate_if_timeout()
 
 hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base,
                                                            int data_capture_hash_bucket_num)
-    : internal_collector_base(base), _hash_buckets(data_capture_hash_bucket_num)
+    : internal_collector_base(base),
+      _hash_bucket_num(data_capture_hash_bucket_num),
+      _hash_buckets(data_capture_hash_bucket_num)
 {
     for (auto &bucket : _hash_buckets) {
         bucket.store(0);
@@ -244,12 +245,12 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base,
 
 void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    _hash_buckets[get_bucket_id(hash_key)].fetch_add(weight);
+    _hash_buckets[get_bucket_id(hash_key, _hash_bucket_num)].fetch_add(weight);
 }
 
 void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 {
-    std::vector<uint64_t> buckets(FLAGS_data_capture_hash_bucket_num);
+    std::vector<uint64_t> buckets(_hash_bucket_num);
     for (int i = 0; i < buckets.size(); i++) {
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);

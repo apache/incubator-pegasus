@@ -124,6 +124,7 @@ public:
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
+    int _hash_bucket_num;
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
