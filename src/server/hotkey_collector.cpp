@@ -273,16 +273,19 @@ hotkey_fine_data_collector::hotkey_fine_data_collector(
 {
     // Distinguish between single-threaded and multi-threaded environments
     if (_hotkey_type == dsn::replication::hotkey_type::READ) {
+
         auto threads = dsn::get_threadpool_threads_info(THREAD_POOL_LOCAL_APP);
         int queue_num = threads.size();
         for (int i = 0; i < queue_num; i++) {
             _thread_queue_map.insert(std::make_pair(threads[i]->native_tid(), i));
         }
+
         _string_capture_queue_vec.reserve(queue_num);
         for (int i = 0; i < queue_num; i++) {
             // Create a vector of the ReaderWriterQueue whose size = _max_queue_size
             _string_capture_queue_vec.emplace_back(_max_queue_size);
         }
+
     } else { // WRITE
         _string_capture_queue_vec.emplace_back(_max_queue_size);
     }
@@ -317,7 +320,8 @@ int hotkey_fine_data_collector::get_queue_index()
     if (_hotkey_type == dsn::replication::hotkey_type::WRITE) {
         return 0;
     }
-    int thread_native_tid = ::dsn::utils::get_current_tid();
+
+    int thread_native_tid = dsn::utils::get_current_tid();
     auto result = _thread_queue_map.find(thread_native_tid);
     dassert(result != _thread_queue_map.end(), "Can't find the queue corresponding to the thread");
     return result->second;
@@ -334,9 +338,11 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
             hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
         }
     }
+
     if (hash_key_accessed_cnt.empty()) {
         return;
     }
+
     std::vector<uint64_t> counts;
     counts.reserve(FLAGS_data_capture_hash_bucket_num);
     dsn::string_view count_max_key;
@@ -348,6 +354,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
             count_max_key = iter.first; // the key with the max accessed count.
         }
     }
+
     // if the accessed counts differ hugely (depends on the variance threshold),
     // the max key is the hotkey.
     int hot_index;
