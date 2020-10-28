@@ -280,7 +280,7 @@ hotkey_fine_data_collector::hotkey_fine_data_collector(
         }
         _string_capture_queue_vec.reserve(queue_num);
         for (int i = 0; i < queue_num; i++) {
-            // Create a vector of the ReaderWriterQueue whose size = target_bucket_index
+            // Create a vector of the ReaderWriterQueue whose size = _max_queue_size
             _string_capture_queue_vec.emplace_back(_max_queue_size);
         }
     } else { // WRITE
