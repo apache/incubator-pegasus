@@ -632,8 +632,7 @@ void replica_split_manager::parent_check_sync_point_commit(decree sync_point) //
                    sync_point,
                    _replica->_app->last_committed_decree());
     if (_replica->_app->last_committed_decree() >= sync_point) {
-        // TODO(heyuchen): TBD
-        // update child replica group partition_count
+        update_child_group_partition_count(_replica->_app_info.partition_count * 2);
     } else {
         dwarn_replica("sync_point has not been committed, please wait and retry");
         tasking::enqueue(
@@ -646,8 +645,241 @@ void replica_split_manager::parent_check_sync_point_commit(decree sync_point) //
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::update_child_group_partition_count(
+    int new_partition_count) // on primary parent
+{
+    if (status() != partition_status::PS_PRIMARY || _split_status != split_status::SPLITTING) {
+        derror_replica(
+            "wrong partition status or wrong split status, partition_status={}, split_status={}",
+            enum_to_string(status()),
+            enum_to_string(_split_status));
+        _stub->split_replica_error_handler(
+            _child_gpid,
+            std::bind(&replica_split_manager::child_handle_split_error,
+                      std::placeholders::_1,
+                      "update_child_group_partition_count failed, "
+                      "wrong partition status or split status"));
+        _replica->_primary_states.sync_send_write_request = false;
+        parent_cleanup_split_context();
+        return;
+    }
+
+    if (!_replica->_primary_states.learners.empty() ||
+        _replica->_primary_states.membership.secondaries.size() + 1 <
+            _replica->_primary_states.membership.max_replica_count) {
+        derror_replica("there are {} learners or not have enough secondaries(count is {})",
+                       _replica->_primary_states.learners.size(),
+                       _replica->_primary_states.membership.secondaries.size());
+        _stub->split_replica_error_handler(
+            _child_gpid,
+            std::bind(
+                &replica_split_manager::child_handle_split_error,
+                std::placeholders::_1,
+                "update_child_group_partition_count failed, have learner or lack of secondary"));
+        _replica->_primary_states.sync_send_write_request = false;
+        parent_cleanup_split_context();
+        return;
+    }
+
+    auto not_replied_addresses = std::make_shared<std::unordered_set<rpc_address>>();
+    // _primary_states.statuses is a map structure: rpc address -> partition_status
+    for (const auto &kv : _replica->_primary_states.statuses) {
+        not_replied_addresses->insert(kv.first);
+    }
+    for (const auto &iter : _replica->_primary_states.statuses) {
+        parent_send_update_partition_count_request(
+            iter.first, new_partition_count, not_replied_addresses);
+    }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::parent_send_update_partition_count_request(
+    const rpc_address &address,
+    int32_t new_partition_count,
+    std::shared_ptr<std::unordered_set<rpc_address>> &not_replied_addresses) // on primary parent
+{
+    FAIL_POINT_INJECT_F("replica_parent_update_partition_count_request", [](dsn::string_view) {});
+
+    dcheck_eq_replica(status(), partition_status::PS_PRIMARY);
+
+    auto request = make_unique<update_child_group_partition_count_request>();
+    request->new_partition_count = new_partition_count;
+    request->target_address = address;
+    request->child_pid = _child_gpid;
+    request->ballot = get_ballot();
+
+    ddebug_replica(
+        "send update child group partition count request to node({}), new partition_count = {}",
+        address.to_string(),
+        new_partition_count);
+    update_child_group_partition_count_rpc rpc(std::move(request),
+                                               RPC_SPLIT_UPDATE_CHILD_PARTITION_COUNT,
+                                               0_ms,
+                                               0,
+                                               get_gpid().thread_hash());
+    rpc.call(address, tracker(), [this, rpc, not_replied_addresses](error_code ec) mutable {
+        on_update_child_group_partition_count_reply(
+            ec, rpc.request(), rpc.response(), not_replied_addresses);
+    });
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::on_update_child_group_partition_count(
+    const update_child_group_partition_count_request &request,
+    update_child_group_partition_count_response &response) // on child partition
+{
+    if (request.ballot != get_ballot() || !_replica->_split_states.is_caught_up) {
+        derror_replica(
+            "receive outdated update child group_partition_count_request, request ballot={}, "
+            "local ballot={}, is_caught_up={}",
+            request.ballot,
+            get_ballot(),
+            _replica->_split_states.is_caught_up);
+        response.err = ERR_VERSION_OUTDATED;
+        return;
+    }
+
+    if (_replica->_app_info.partition_count == request.new_partition_count &&
+        _partition_version.load() == request.new_partition_count - 1) {
+        dwarn_replica("receive repeated update child group_partition_count_request, "
+                      "partition_count = {}, ignore it",
+                      request.new_partition_count);
+        response.err = ERR_OK;
+        return;
+    }
+
+    dcheck_eq_replica(_replica->_app_info.partition_count * 2, request.new_partition_count);
+    update_local_partition_count(request.new_partition_count);
+    response.err = ERR_OK;
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::update_local_partition_count(
+    int32_t new_partition_count) // on all partitions
+{
+    // update _app_info and partition_version
+    auto info = _replica->_app_info;
+    // if app has not been split before, init_partition_count = -1
+    // we should set init_partition_count to old_partition_count
+    if (info.init_partition_count < 0) {
+        info.init_partition_count = info.partition_count;
+    }
+    auto old_partition_count = info.partition_count;
+    info.partition_count = new_partition_count;
+
+    replica_app_info new_info((app_info *)&info);
+    std::string info_path = utils::filesystem::path_combine(_replica->_dir, ".app-info");
+    auto err = new_info.store(info_path.c_str());
+    if (err != ERR_OK) {
+        info.partition_count = old_partition_count;
+        dassert_replica(false, "failed to save app_info to {}, error = {}", info_path, err);
+        return;
+    }
+
+    _replica->_app_info = info;
+    ddebug_replica("update partition_count from {} to {}",
+                   old_partition_count,
+                   _replica->_app_info.partition_count);
+
+    _replica->_app->set_partition_version(_replica->_app_info.partition_count - 1);
+    _partition_version.store(_replica->_app_info.partition_count - 1);
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::on_update_child_group_partition_count_reply(
+    error_code ec,
+    const update_child_group_partition_count_request &request,
+    const update_child_group_partition_count_response &response,
+    std::shared_ptr<std::unordered_set<rpc_address>> &not_replied_addresses) // on primary parent
+{
+    _replica->_checker.only_one_thread_access();
+
+    if (status() != partition_status::PS_PRIMARY || _split_status != split_status::SPLITTING) {
+        derror_replica(
+            "wrong partition status or wrong split status, partition_status={}, split_status={}",
+            enum_to_string(status()),
+            enum_to_string(_split_status));
+        _stub->split_replica_error_handler(
+            _child_gpid,
+            std::bind(&replica_split_manager::child_handle_split_error,
+                      std::placeholders::_1,
+                      "on_update_child_group_partition_count_reply "
+                      "failed, wrong partition status or split "
+                      "status"));
+        _replica->_primary_states.sync_send_write_request = false;
+        parent_cleanup_split_context();
+        return;
+    }
+
+    if (request.ballot != get_ballot()) {
+        derror_replica(
+            "ballot changed, request ballot = {}, local ballot = {}", request.ballot, get_ballot());
+        _stub->split_replica_error_handler(
+            _child_gpid,
+            std::bind(&replica_split_manager::child_handle_split_error,
+                      std::placeholders::_1,
+                      "on_update_child_group_partition_count_reply failed, ballot changed"));
+        _replica->_primary_states.sync_send_write_request = false;
+        parent_cleanup_split_context();
+        return;
+    }
+
+    error_code error = (ec == ERR_OK) ? response.err : ec;
+    if (error == ERR_TIMEOUT) {
+        dwarn_replica("failed to update child node({}) partition_count, error = {}, wait and retry",
+                      request.target_address.to_string(),
+                      error);
+        tasking::enqueue(
+            LPC_PARTITION_SPLIT,
+            tracker(),
+            std::bind(&replica_split_manager::parent_send_update_partition_count_request,
+                      this,
+                      request.target_address,
+                      request.new_partition_count,
+                      not_replied_addresses),
+            get_gpid().thread_hash(),
+            std::chrono::seconds(1));
+        return;
+    }
+
+    if (error != ERR_OK) {
+        derror_replica("failed to update child node({}) partition_count({}), error = {}",
+                       request.target_address.to_string(),
+                       request.new_partition_count,
+                       error);
+        _stub->split_replica_error_handler(
+            _child_gpid,
+            std::bind(&replica_split_manager::child_handle_split_error,
+                      std::placeholders::_1,
+                      "on_update_child_group_partition_count_reply error"));
+        _replica->_primary_states.sync_send_write_request = false;
+        parent_cleanup_split_context();
+        return;
+    }
+
+    ddebug_replica("update node({}) child({}) partition_count({}) succeed",
+                   request.target_address.to_string(),
+                   request.child_pid,
+                   request.new_partition_count);
+
+    // update group partition_count succeed
+    not_replied_addresses->erase(request.target_address);
+    if (not_replied_addresses->empty()) {
+        ddebug_replica("update child({}) group partition_count, new_partition_count = {}",
+                       request.child_pid,
+                       request.new_partition_count);
+        register_child_on_meta(get_ballot());
+    } else {
+        ddebug_replica("there are still {} replica not update partition count in child group",
+                       not_replied_addresses->size());
+    }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica_split_manager::register_child_on_meta(ballot b) // on primary parent
 {
+    FAIL_POINT_INJECT_F("replica_register_child_on_meta", [](dsn::string_view) {});
+
     if (status() != partition_status::PS_PRIMARY || _split_status != split_status::SPLITTING) {
         derror_replica(
             "wrong partition status or wrong split status, partition_status={}, split_status={}",

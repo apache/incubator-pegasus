@@ -55,6 +55,9 @@ typedef rpc_holder<replica_configuration, learn_response> copy_checkpoint_rpc;
 typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
 typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
 typedef rpc_holder<notify_catch_up_request, notify_cacth_up_response> notify_catch_up_rpc;
+typedef rpc_holder<update_child_group_partition_count_request,
+                   update_child_group_partition_count_response>
+    update_child_group_partition_count_rpc;
 typedef rpc_holder<group_bulk_load_request, group_bulk_load_response> group_bulk_load_rpc;
 typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
 
@@ -126,12 +129,6 @@ public:
     void on_group_check(group_check_rpc rpc);
     void on_copy_checkpoint(copy_checkpoint_rpc rpc);
     void on_group_bulk_load(group_bulk_load_rpc rpc);
-
-    //
-    //    functions while executing partition split
-    //
-    // on primary, child notify itself has been caught up parent
-    void on_notify_primary_split_catch_up(notify_catch_up_rpc rpc);
 
     //
     //    local messages
@@ -206,6 +203,12 @@ public:
 
     // This function is used for partition split error handler
     void split_replica_error_handler(gpid pid, local_execution handler);
+
+    // on primary parent partition, child notify itself has been caught up parent
+    void on_notify_primary_split_catch_up(notify_catch_up_rpc rpc);
+
+    // on child partition, update new partition count
+    void on_update_child_group_partition_count(update_child_group_partition_count_rpc rpc);
 
     // TODO: (Tangyanzhao) add some comments
     void on_detect_hotkey(detect_hotkey_rpc rpc);

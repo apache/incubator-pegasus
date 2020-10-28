@@ -2709,6 +2709,19 @@ void replica_stub::on_notify_primary_split_catch_up(notify_catch_up_rpc rpc)
     }
 }
 
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_stub::on_update_child_group_partition_count(update_child_group_partition_count_rpc rpc)
+{
+    const auto &request = rpc.request();
+    auto &response = rpc.response();
+    replica_ptr replica = get_replica(request.child_pid);
+    if (replica != nullptr) {
+        replica->get_split_manager()->on_update_child_group_partition_count(request, response);
+    } else {
+        response.err = ERR_OBJECT_NOT_FOUND;
+    }
+}
+
 void replica_stub::update_disk_holding_replicas()
 {
     for (const auto &dir_node : _fs_manager._dir_nodes) {

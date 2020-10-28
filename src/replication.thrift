@@ -875,6 +875,23 @@ struct notify_cacth_up_response
     1:dsn.error_code    err;
 }
 
+// primary parent -> child replicas to update partition count
+struct update_child_group_partition_count_request
+{
+    1:dsn.rpc_address   target_address;
+    2:i32               new_partition_count;
+    3:dsn.gpid          child_pid;
+    4:i64               ballot;
+}
+
+struct update_child_group_partition_count_response
+{
+    // Possible errors:
+    // - ERR_OBJECT_NOT_FOUND: replica can not be found
+    // - ERR_VERSION_OUTDATED: request is outdated
+    1:dsn.error_code    err;
+}
+
 // primary parent -> meta server, register child on meta_server
 struct register_child_request
 {

@@ -423,7 +423,7 @@ private:
     replica_stub *_stub;
     std::string _dir;
     replication_options *_options;
-    const app_info _app_info;
+    app_info _app_info;
     std::map<std::string, std::string> _extra_envs;
 
     // uniq timestamp generator for this replica.
