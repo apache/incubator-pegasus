@@ -166,7 +166,7 @@ void hotkey_collector::analyse_data()
 inline void hotkey_collector::init_internal_collector()
 {
     int now_hash_bucket_num = FLAGS_data_capture_hash_bucket_num;
-    _coarse_empty_collector =
+    _internal_coarse_collector =
         std::make_shared<hotkey_coarse_data_collector>(this, now_hash_bucket_num);
     // TODO: (Tangyanzhao) add a fine collector initialization
 }
@@ -220,7 +220,6 @@ void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &
 void hotkey_collector::terminate()
 {
     _state.store(hotkey_collector_state::STOPPED);
-    _internal_collector.reset();
     _collector_start_time_second = 0;
 }
 
@@ -234,8 +233,9 @@ bool hotkey_collector::terminate_if_timeout()
     return false;
 }
 
-hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
-    : internal_collector_base(base), _hash_buckets(FLAGS_data_capture_hash_bucket_num)
+hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base,
+                                                           int data_capture_hash_bucket_num)
+    : internal_collector_base(base), _hash_buckets(data_capture_hash_bucket_num)
 {
     for (auto &bucket : _hash_buckets) {
         bucket.store(0);
