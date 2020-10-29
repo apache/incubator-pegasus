@@ -331,7 +331,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
     for (auto &rw_queue : _string_capture_queue_vec) {
         std::pair<dsn::blob, int> hash_key_pair;
-        // prevent endless loop
+        // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
         int collect_sum = 0;
         while (rw_queue.try_dequeue(hash_key_pair) && ++collect_sum <= _max_queue_size) {
             hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
@@ -343,19 +343,23 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     }
 
     std::vector<uint64_t> counts;
-    counts.reserve(FLAGS_data_capture_hash_bucket_num);
+    counts.reserve(hash_key_accessed_cnt.size());
     dsn::string_view count_max_key;
     uint64_t count_max = 0;
     for (const auto &iter : hash_key_accessed_cnt) {
         counts.push_back(iter.second);
         if (iter.second > count_max) {
             count_max = iter.second;
-            count_max_key = iter.first; // the key with the max accessed count.
+            // the key with the max accessed count.
+            count_max_key = iter.first;
         }
     }
 
-    // if the accessed counts differ hugely (depends on the variance threshold),
-    // the max key is the hotkey.
+    // counts stores the number of occurrences of each string captured in a period of time
+    // the size of counts influences our hotkey determination strategy
+    // counts.size() == 1: the only key must be the hotkey
+    // counts.size() == 2: the hotkey is the larger one
+    // counts.size() >= 3: use find_outlier_index to determinate whether exist a hotkey
     int hot_index;
     if (counts.size() < 3 ||
         find_outlier_index(counts, FLAGS_fine_data_variance_threshold, hot_index)) {

@@ -148,6 +148,7 @@ private:
     const int _target_bucket_index;
     // thread's native id -> data queue id.
     std::unordered_map<int, int> _thread_queue_map;
+    // Each element in the vector corresponds to a thread, each element is a lock-free queue
     string_capture_queue_vec _string_capture_queue_vec;
 };
 
