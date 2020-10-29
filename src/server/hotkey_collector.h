@@ -91,7 +91,6 @@ private:
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
     const dsn::replication::hotkey_type::type _hotkey_type;
-    std::shared_ptr<internal_collector_base> _internal_empty_collector;
     std::shared_ptr<internal_collector_base> _internal_coarse_collector;
     std::shared_ptr<internal_collector_base> _internal_fine_collector;
     uint64_t _collector_start_time_second;

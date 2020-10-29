@@ -107,7 +107,6 @@ hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_ty
     : replica_base(r_base),
       _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
-      _internal_empty_collector(std::make_shared<hotkey_empty_data_collector>(this)),
       _collector_start_time_second(0)
 {
 }
