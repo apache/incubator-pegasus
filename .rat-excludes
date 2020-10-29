@@ -1,0 +1,6 @@
+src/shell/argh.h
+src/shell/linenoise/*
+src/shell/sds/*
+.clang-format
+.*\.ini
+src/cmake-build-debug/*
