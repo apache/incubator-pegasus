@@ -161,7 +161,7 @@ void hotkey_collector::analyse_data()
     }
 }
 
-inline void hotkey_collector::init_internal_collector()
+inline void hotkey_collector::reset_internal_collector()
 {
     int now_hash_bucket_num = FLAGS_data_capture_hash_bucket_num;
     _internal_coarse_collector =
@@ -191,7 +191,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         return;
     case hotkey_collector_state::STOPPED:
         _collector_start_time_second = dsn_now_s();
-        init_internal_collector();
+        reset_internal_collector();
         _state.store(hotkey_collector_state::COARSE_DETECTING);
         resp.err = dsn::ERR_OK;
         hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));

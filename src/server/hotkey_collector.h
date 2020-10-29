@@ -86,7 +86,7 @@ private:
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
     void terminate();
     bool terminate_if_timeout();
-    void init_internal_collector();
+    void reset_internal_collector();
 
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
