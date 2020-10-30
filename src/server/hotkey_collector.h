@@ -87,13 +87,20 @@ private:
     void terminate();
     bool terminate_if_timeout();
     void reset_internal_collector();
+    void change_state_to_stopped();
+    void change_state_to_coarse_detecting();
+    void change_state_to_fine_detecting();
 
+    const dsn::replication::hotkey_type::type _hotkey_type;
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
-    const dsn::replication::hotkey_type::type _hotkey_type;
-    std::shared_ptr<internal_collector_base> _internal_coarse_collector;
-    std::shared_ptr<internal_collector_base> _internal_fine_collector;
+    std::shared_ptr<internal_collector_base> _now_using_collector;
     uint64_t _collector_start_time_second;
+
+    // Be held permanently to prevent destruction
+    std::shared_ptr<std::atomic<internal_collector_base>> _internal_coarse_collector;
+    std::shared_ptr<internal_collector_base> _internal_fine_collector;
+    std::shared_ptr<internal_collector_base> _internal_empty_collector;
 };
 
 class internal_collector_base : public dsn::replication::replica_base
