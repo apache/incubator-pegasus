@@ -122,7 +122,7 @@ type TableConnector interface {
 	MultiSet(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte) error
 	MultiSetOpt(ctx context.Context, hashKey []byte, sortKeys [][]byte, values [][]byte, ttl time.Duration) error
 
-	// MultiDel deletes the multiple entries under `hashKey` all in one operation.
+	// MultiDel deletes the multiple entries under `hashKey` all atomically in one operation.
 	// `hashKey` / `sortKeys` : CAN'T be nil or empty.
 	// `sortKeys[i]` : CAN'T be nil but CAN be empty.
 	MultiDel(ctx context.Context, hashKey []byte, sortKeys [][]byte) error

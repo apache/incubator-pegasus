@@ -8,6 +8,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/fortytw2/leaktest"
@@ -39,16 +40,21 @@ func TestNodeSession_Call(t *testing.T) {
 }
 
 func TestMetaSession_MustQueryLeader(t *testing.T) {
+	testMetaSessionMustQueryLeader(t, []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"})
+	testMetaSessionMustQueryLeader(t, []string{"0.0.0.0:12345", "0.0.0.0:12346", "0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"})
+}
+
+func testMetaSessionMustQueryLeader(t *testing.T, metaServers []string) {
 	defer leaktest.Check(t)()
 
-	mm := NewMetaManager([]string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"}, NewNodeSession)
+	mm := NewMetaManager(metaServers, NewNodeSession)
 	defer mm.Close()
 
 	resp, err := mm.QueryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
 	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
 
-	// the viewed leader must be the actual leader
+	// the cached leader must be the actual leader
 	ms := mm.metas[mm.currentLeader]
 	ms.queryConfig(context.Background(), "temp")
 	assert.Nil(t, err)
@@ -73,4 +79,33 @@ func TestNodeSession_ConcurrentCall(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+// This test mocks the case that the first meta is unavailable. The MetaManager must be able to try
+// communicating with the other metas.
+func TestMetaManager_FirstMetaDead(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	// the first meta is invalid
+	mm := NewMetaManager([]string{"0.0.0.0:12345", "0.0.0.0:34603", "0.0.0.0:34602", "0.0.0.0:34601"}, NewNodeSession)
+	defer mm.Close()
+
+	queryStart := time.Now()
+	resp, err := mm.QueryConfig(context.Background(), "temp")
+	assert.Nil(t, err)
+	assert.Equal(t, resp.Err.Errno, base.ERR_OK.String())
+	// The time duration must larger than 1s. Because it needs at least 1s to fallback to the backup metas.
+	assert.Greater(t, int64(time.Since(queryStart)), int64(time.Second))
+
+	// ensure the subsequent queries issue only to the leader
+	for i := 0; i < 3; i++ {
+		call := newMetaCall(mm.currentLeader, mm.metas, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+			return ms.queryConfig(rpcCtx, "temp")
+		})
+		// This a trick for testing. If metaCall issue to other meta, not only to the leader, this nil channel will cause panic.
+		call.backupCh = nil
+		metaResp, err := call.Run(context.Background())
+		assert.Nil(t, err)
+		assert.Equal(t, metaResp.GetErr().Errno, base.ERR_OK.String())
+	}
 }

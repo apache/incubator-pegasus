@@ -160,10 +160,10 @@ func (rc *RpcConn) Write(msgBytes []byte) (err error) {
 
 // Read is not intended to be cancellable using context by outside user.
 // The only approach to cancel the operation is to close the connection.
-// The RpcConn will close its connection whenever the returned error is not nil.
 // If the current socket is not well established for reading, the operation will
 // fail and return error immediately.
-// This function is thread-safe.
+// This function is not-thread-safe, because the underlying TCP IO buffer
+// is not-thread-safe. Package users should call Read in a single goroutine.
 func (rc *RpcConn) Read(size int) (bytes []byte, err error) {
 	bytes, err = func() ([]byte, error) {
 		if rc.GetState() != ConnStateReady {

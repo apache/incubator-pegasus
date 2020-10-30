@@ -134,3 +134,26 @@ func Test_IsNetworkTimeoutErr(t *testing.T) {
 	err := NewRpcConn("www.baidu.com:12321").TryConnect()
 	assert.True(t, IsNetworkTimeoutErr(err))
 }
+
+// Ensure reading a huge size of data (size > 4096) will not
+// cause overflow.
+func TestRpcConn_ReadHugeSizeData(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	dataSizes := []int{1024 * 16, 1024 * 256, 1024 * 512}
+	for _, sz := range dataSizes {
+		conn := NewRpcConn("0.0.0.0:8800")
+		defer conn.Close()
+		assert.Nil(t, conn.TryConnect())
+
+		data := make([]byte, sz)
+		for i := range data {
+			data[i] = 'x'
+		}
+		assert.Nil(t, conn.Write(data))
+
+		actual, err := conn.Read(sz)
+		assert.Nil(t, err)
+		assert.Equal(t, data, actual)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -140,6 +141,21 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK": func() RpcResponseResult {
 		return &rrdb.MetaQueryCfgResult{
 			Success: replication.NewQueryCfgResponse(),
+		}
+	},
+	"RPC_CM_CREATE_APP_ACK": func() RpcResponseResult {
+		return &admin.AdminClientCreateAppResult{
+			Success: admin.NewCreateAppResponse(),
+		}
+	},
+	"RPC_CM_DROP_APP_ACK": func() RpcResponseResult {
+		return &admin.AdminClientDropAppResult{
+			Success: admin.NewDropAppResponse(),
+		}
+	},
+	"RPC_CM_LIST_APPS_ACK": func() RpcResponseResult {
+		return &admin.AdminClientListAppsResult{
+			Success: admin.NewListAppsResponse(),
 		}
 	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {

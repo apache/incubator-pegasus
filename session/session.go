@@ -32,7 +32,7 @@ const (
 
 // NodeSession represents the network session to a node
 // (either a meta server or a replica server).
-// It encapsulates the internal rpc process, including
+// It encapsulates the internal rpc processing, including
 // network communication and message (de)serialization.
 type NodeSession interface {
 	String() string
@@ -48,7 +48,7 @@ type NodeSession interface {
 
 // NodeSessionCreator creates an instance of NodeSession,
 // receiving argument `string` as host address, `NodeType`
-// as type of the node.
+// as the type of the node.
 type NodeSessionCreator func(string, NodeType) NodeSession
 
 // An implementation of NodeSession.
@@ -222,7 +222,7 @@ func (n *nodeSession) loopForRequest() error { // no error returned actually
 }
 
 // single-routine worker used for reading response.
-// We register a map of sequence id -> recvItem when each request comes,
+// We register a map of sequence id -> recvItem for each coming request,
 // so that when a response is received, we are able to notify its caller.
 // Any un-retryable error occurred will end up this goroutine.
 func (n *nodeSession) loopForResponse() error { // no error returned actually
@@ -346,10 +346,8 @@ func (n *nodeSession) writeRequest(r *PegasusRpcCall) error {
 }
 
 // readResponse never returns nil `PegasusRpcCall` unless the tcp round trip failed.
-// The pegasus node may responds with not-ERR_OK error code (together with
-// sequence id and rpc name) which doesn't mean that it failed due to
-// transport failure. This error should be handled by the upper-level rpc caller.
-// This session will not be closed for it.
+// The pegasus server may in some cases respond with a not-ERR_OK error code (together with
+// sequence id and rpc name) while without a transport-layer failure.
 func (n *nodeSession) readResponse() (*PegasusRpcCall, error) {
 	return ReadRpcResponse(n.conn, n.codec)
 }
