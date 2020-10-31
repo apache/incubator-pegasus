@@ -1,6 +1,8 @@
-src/shell/argh.h
-src/shell/linenoise/*
-src/shell/sds/*
+
+.*thrift
+.*ini
 .clang-format
-.*\.ini
-src/cmake-build-debug/*
+sds/*
+linenoise/*
+argh.h
+git_commit.h
