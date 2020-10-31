@@ -1,5 +1,4 @@
 
-.*thrift
 .*ini
 .clang-format
 sds/*
