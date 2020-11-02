@@ -28,7 +28,8 @@ class internal_collector_base;
 
 struct detect_hotkey_result
 {
-    int coarse_bucket_index = -1;
+    std::atomic<int> coarse_bucket_index;
+    detect_hotkey_result() { coarse_bucket_index.store(-1); }
 };
 
 //    hotkey_collector is responsible to find the hot keys after the partition
@@ -84,23 +85,18 @@ public:
 private:
     void on_start_detect(dsn::replication::detect_hotkey_response &resp);
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
-    void terminate();
     bool terminate_if_timeout();
-    void reset_internal_collector();
-    void change_state_to_stopped();
     void change_state_to_coarse_detecting();
     void change_state_to_fine_detecting();
+    void change_state_to_stopped();
 
     const dsn::replication::hotkey_type::type _hotkey_type;
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
-    std::shared_ptr<internal_collector_base> _now_using_collector;
-    uint64_t _collector_start_time_second;
+    std::atomic<uint64_t> _collector_start_time_second;
 
-    // Be held permanently to prevent destruction
-    std::shared_ptr<std::atomic<internal_collector_base>> _internal_coarse_collector;
     std::shared_ptr<internal_collector_base> _internal_fine_collector;
-    std::shared_ptr<internal_collector_base> _internal_empty_collector;
+    std::shared_ptr<internal_collector_base> _internal_coarse_collector;
 };
 
 class internal_collector_base : public dsn::replication::replica_base
@@ -130,7 +126,7 @@ public:
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
-    int _hash_bucket_num;
+    const int _hash_bucket_num;
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 

@@ -24,7 +24,6 @@
 #include "base/pegasus_key_schema.h"
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
-#include <bits/shared_ptr_atomic.h>
 
 namespace pegasus {
 namespace server {
@@ -105,36 +104,29 @@ static int get_bucket_id(dsn::string_view data, int bucket_num)
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
-    : replica_base(r_base),
-      _hotkey_type(hotkey_type),
-      _internal_empty_collector(std::make_shared<hotkey_empty_data_collector>(r_base))
+    : replica_base(r_base), _hotkey_type(hotkey_type)
 {
-    change_state_to_stopped();
+    int now_hash_bucket_num = FLAGS_data_capture_hash_bucket_num;
+    _internal_coarse_collector =
+        std::make_shared<hotkey_coarse_data_collector>(this, now_hash_bucket_num);
+    // TODO: (Tangyanzhao) init _internal_fine_collector
 }
 
 inline void hotkey_collector::change_state_to_stopped()
 {
-    _result.coarse_bucket_index = -1;
+    _result.coarse_bucket_index.store(-1);
     _state.store(hotkey_collector_state::STOPPED);
-    _now_using_collector =
-        atomic_load_explicit(&_internal_empty_collector, std::memory_order_seq_cst);
-    _collector_start_time_second = 0;
-    reset_internal_collector();
-    _now_using_collector.reset();
 }
 
 inline void hotkey_collector::change_state_to_coarse_detecting()
 {
     _state.store(hotkey_collector_state::COARSE_DETECTING);
-    _now_using_collector =
-        atomic_load_explicit(&_internal_coarse_collector, std::memory_order_seq_cst);
-    _collector_start_time_second = dsn_now_s();
+    _collector_start_time_second.store(dsn_now_s());
 }
 
 inline void hotkey_collector::change_state_to_fine_detecting()
 {
     _state.store(hotkey_collector_state::FINE_DETECTING);
-    // _now_using_collector -> _internal_fine_collector
 }
 
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
@@ -165,7 +157,13 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
     // TODO: (Tangyanzhao) add a unit test to ensure data integrity
-    _now_using_collector->capture_data(hash_key, weight > 0 ? weight : 1);
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+        _internal_coarse_collector->capture_data(hash_key, weight > 0 ? weight : 1);
+        return;
+    default:
+        return;
+    }
 }
 
 void hotkey_collector::analyse_data()
@@ -173,8 +171,8 @@ void hotkey_collector::analyse_data()
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
         if (!terminate_if_timeout()) {
-            _now_using_collector->analyse_data(_result);
-            if (_result.coarse_bucket_index != -1) {
+            _internal_coarse_collector->analyse_data(_result);
+            if (_result.coarse_bucket_index.load() != -1) {
                 change_state_to_fine_detecting();
             }
         }
@@ -182,14 +180,6 @@ void hotkey_collector::analyse_data()
     default:
         return;
     }
-}
-
-inline void hotkey_collector::reset_internal_collector()
-{
-    int now_hash_bucket_num = FLAGS_data_capture_hash_bucket_num;
-    atomic_exchange(&_internal_coarse_collector,
-                    std::make_shared<hotkey_coarse_data_collector>(this, now_hash_bucket_num));
-    // TODO: (Tangyanzhao) add a fine collector initialization
 }
 
 void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response &resp)
@@ -238,7 +228,7 @@ void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &
 
 bool hotkey_collector::terminate_if_timeout()
 {
-    if (dsn_now_s() >= _collector_start_time_second + FLAGS_max_seconds_to_detect_hotkey) {
+    if (dsn_now_s() >= _collector_start_time_second.load() + FLAGS_max_seconds_to_detect_hotkey) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
         change_state_to_stopped();
         return true;
@@ -269,9 +259,11 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
     }
-    if (!find_outlier_index(
-            buckets, FLAGS_coarse_data_variance_threshold, result.coarse_bucket_index)) {
-        result.coarse_bucket_index = -1;
+    int hot_bucket_index = -1;
+    if (!find_outlier_index(buckets, FLAGS_coarse_data_variance_threshold, hot_bucket_index)) {
+        result.coarse_bucket_index.store(hot_bucket_index);
+    } else {
+        result.coarse_bucket_index.store(-1);
     }
 }
 
