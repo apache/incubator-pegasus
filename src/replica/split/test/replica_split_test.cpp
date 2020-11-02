@@ -341,6 +341,28 @@ public:
         _child_replica->tracker()->wait_outstanding_tasks();
     }
 
+    group_check_response test_trigger_secondary_parent_split(split_status::type meta_split_status,
+                                                             split_status::type local_split_status)
+    {
+        _parent_replica->set_partition_status(partition_status::PS_SECONDARY);
+        parent_set_split_status(local_split_status);
+
+        group_check_request req;
+        req.app = _parent_replica->_app_info;
+        req.config.ballot = INIT_BALLOT;
+        req.config.status = partition_status::PS_SECONDARY;
+        req.node = SECONDARY;
+        if (meta_split_status == split_status::NOT_SPLIT) {
+            req.app.partition_count *= 2;
+        }
+
+        group_check_response resp;
+        _parent_split_mgr->trigger_secondary_parent_split(req, resp);
+        _parent_replica->tracker()->wait_outstanding_tasks();
+
+        return resp;
+    }
+
     /// helper functions
     void cleanup_prepare_list(mock_replica_ptr rep) { rep->_prepare_list->reset(0); }
     void cleanup_child_split_context()
@@ -691,9 +713,7 @@ TEST_F(replica_split_test, register_child_reply_test)
     // - wrong partition status
     // - response error = INVALID_STATE
     // - response error = CHILD_REGISTERED
-    // - TODO(heyuchen): add response error = OK
-    //   ({partition_status::PS_INACTIVE, ERR_OK, NEW_PARTITION_COUNT - 1})
-    //   after implement parent update group partition count
+    // - response error = OK
     struct register_child_reply_test
     {
         partition_status::type parent_partition_status;
@@ -701,7 +721,8 @@ TEST_F(replica_split_test, register_child_reply_test)
         int32_t expected_parent_partition_version;
     } tests[] = {{partition_status::PS_PRIMARY, ERR_OK, -1},
                  {partition_status::PS_INACTIVE, ERR_INVALID_STATE, -1},
-                 {partition_status::PS_INACTIVE, ERR_CHILD_REGISTERED, -1}};
+                 {partition_status::PS_INACTIVE, ERR_CHILD_REGISTERED, -1},
+                 {partition_status::PS_INACTIVE, ERR_OK, NEW_PARTITION_COUNT - 1}};
     for (auto test : tests) {
         mock_child_split_context(true, true);
         test_on_register_child_reply(test.parent_partition_status, test.resp_err);
@@ -711,6 +732,34 @@ TEST_F(replica_split_test, register_child_reply_test)
             ASSERT_EQ(_parent_split_mgr->get_partition_version(),
                       test.expected_parent_partition_version);
         }
+    }
+}
+
+// trigger_secondary_parent_split unit test
+TEST_F(replica_split_test, secondary_handle_split_test)
+{
+    generate_child();
+
+    // Test cases:
+    // - secondary parent update partition_count
+    // TODO(heyuchen): add more cases
+    struct trigger_secondary_parent_split_test
+    {
+        split_status::type meta_split_status;
+        split_status::type local_split_status;
+        int32_t expected_partition_version;
+    } tests[]{{split_status::NOT_SPLIT, split_status::SPLITTING, NEW_PARTITION_COUNT - 1}};
+
+    for (auto test : tests) {
+        if (test.local_split_status == split_status::SPLITTING) {
+            mock_child_split_context(true, true);
+            mock_parent_split_context(partition_status::PS_SECONDARY);
+        }
+        auto resp =
+            test_trigger_secondary_parent_split(test.meta_split_status, test.local_split_status);
+        ASSERT_EQ(resp.err, ERR_OK);
+        ASSERT_TRUE(is_parent_not_in_split());
+        ASSERT_EQ(_parent_split_mgr->get_partition_version(), test.expected_partition_version);
     }
 }
 

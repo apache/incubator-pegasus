@@ -39,6 +39,7 @@
 #include "replica_stub.h"
 
 #include "duplication/replica_duplicator_manager.h"
+#include "split/replica_split_manager.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -175,6 +176,8 @@ void replica::on_group_check(const group_check_request &request,
         if (request.last_committed_decree > last_committed_decree()) {
             _prepare_list->commit(request.last_committed_decree, COMMIT_TO_DECREE_HARD);
         }
+        // the group check may trigger start/finish/cancel/pause a split on the secondary.
+        _split_mgr->trigger_secondary_parent_split(request, response);
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         init_learn(request.config.learner_signature);

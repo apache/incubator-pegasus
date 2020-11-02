@@ -125,6 +125,11 @@ private:
     // child handle error while async learn parent states
     void child_handle_async_learn_error();
 
+    // called by `on_group_check` in `replica_check.cpp`
+    // secondary parent check whether should start or stop split
+    void trigger_secondary_parent_split(const group_check_request &request,
+                                        /*out*/ group_check_response &response);
+
     //
     // helper functions
     //
