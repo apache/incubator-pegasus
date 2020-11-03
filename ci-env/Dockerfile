@@ -20,17 +20,15 @@ FROM apachepegasus/build-env:centos7
 WORKDIR /root
 
 # install jre for running zookeeper during testing.
-RUN yum -y install ccache zip java-1.8.0-openjdk; \
+RUN yum -y install ccache zip java-1.8.0-openjdk nmap-ncat; \
     yum clean all; \
     rm -rf /var/cache/yum;
 
 RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
     cd rdsn/thirdparty; \
     mkdir -p build; \
-    cd build; \
-    cmake .. -DCMAKE_BUILD_TYPE=Release; \
-    make -j6; \
-    cd ..; \
-    zip -r ~/pegasus-thirdparty-output.zip output/ build/Source/rocksdb/cmake build/Source/http-parser; \
+    cmake -DCMAKE_BUILD_TYPE=Release -B build/ .; \
+    cmake --build build/ -j $(($(nproc)/2+1)); \
+    zip -r ~/pegasus-thirdparty-output.zip output/ build/Source/rocksdb/cmake build/Source/http-parser build/Download/zookeeper; \
     cd ~; \
     rm -rf rdsn;
