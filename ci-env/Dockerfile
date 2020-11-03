@@ -19,7 +19,8 @@ FROM apachepegasus/build-env:centos7
 
 WORKDIR /root
 
-RUN yum -y install ccache zip; \
+# install jre for running zookeeper during testing.
+RUN yum -y install ccache zip java-1.8.0-openjdk; \
     yum clean all; \
     rm -rf /var/cache/yum;
 
