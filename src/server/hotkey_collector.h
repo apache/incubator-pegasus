@@ -18,7 +18,7 @@
 #pragma once
 
 #include <dsn/dist/replication/replication_types.h>
-#include <readerwriterqueue/readerwriterqueue.h>
+#include <concurrentqueue/concurrentqueue.h>
 #include <dsn/dist/replication/replica_base.h>
 #include "hotkey_collector_state.h"
 
@@ -126,30 +126,21 @@ private:
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
-typedef std::vector<moodycamel::ReaderWriterQueue<std::pair<dsn::blob, uint64_t>>>
-    string_capture_queue_vec;
-
 class hotkey_fine_data_collector : public internal_collector_base
 {
 public:
     hotkey_fine_data_collector() = delete;
     explicit hotkey_fine_data_collector(replica_base *base,
-                                        dsn::replication::hotkey_type::type hotkey_type,
                                         int target_bucket_index,
                                         int max_queue_size);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
-    inline int get_queue_index();
-
-    const dsn::replication::hotkey_type::type _hotkey_type;
-    int _max_queue_size;
-    const int _target_bucket_index;
-    // thread's native id -> data queue id.
-    std::unordered_map<int, int> _thread_queue_map;
-    // Each element in the vector corresponds to a thread, each element is a lock-free queue
-    string_capture_queue_vec _string_capture_queue_vec;
+    uint32_t _max_queue_size;
+    const uint32_t _target_bucket_index;
+    // ConcurrentQueue is a lock-free queue to capture keys
+    moodycamel::ConcurrentQueue<std::pair<dsn::blob, uint64_t>> _capture_key_queue;
 };
 
 } // namespace server

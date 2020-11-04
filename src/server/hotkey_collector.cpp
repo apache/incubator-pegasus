@@ -117,7 +117,6 @@ static int get_bucket_id(dsn::string_view data)
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
-      _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
       _internal_collector(std::make_shared<hotkey_empty_data_collector>(this)),
       _collector_start_time_second(0)
@@ -261,33 +260,14 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
     }
 }
 
-hotkey_fine_data_collector::hotkey_fine_data_collector(
-    replica_base *base,
-    dsn::replication::hotkey_type::type hotkey_type,
-    int target_bucket_index,
-    int max_queue_size)
+hotkey_fine_data_collector::hotkey_fine_data_collector(replica_base *base,
+                                                       int target_bucket_index,
+                                                       int max_queue_size)
     : internal_collector_base(base),
-      _hotkey_type(hotkey_type),
       _max_queue_size(max_queue_size),
-      _target_bucket_index(target_bucket_index)
+      _target_bucket_index(target_bucket_index),
+      _capture_key_queue(max_queue_size)
 {
-    // Distinguish between single-threaded and multi-threaded environments
-    if (_hotkey_type == dsn::replication::hotkey_type::READ) {
-
-        auto threads = dsn::get_threadpool_threads_info(THREAD_POOL_LOCAL_APP);
-        int queue_num = threads.size();
-
-        _string_capture_queue_vec.reserve(queue_num);
-        for (int i = 0; i < queue_num; i++) {
-            _thread_queue_map.insert(std::make_pair(threads[i]->native_tid(), i));
-
-            // Create a vector of the ReaderWriterQueue whose size = _max_queue_size
-            _string_capture_queue_vec.emplace_back(_max_queue_size);
-        }
-
-    } else { // WRITE
-        _string_capture_queue_vec.emplace_back(_max_queue_size);
-    }
 }
 
 void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
@@ -295,7 +275,7 @@ void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_
     if (get_bucket_id(hash_key) != _target_bucket_index) {
         return;
     }
-    _string_capture_queue_vec[get_queue_index()].try_emplace(std::make_pair(hash_key, weight));
+    _capture_key_queue.try_enqueue(std::make_pair(hash_key, weight));
 }
 
 struct blob_hash
@@ -314,28 +294,14 @@ struct blob_equal
     }
 };
 
-int hotkey_fine_data_collector::get_queue_index()
-{
-    if (_hotkey_type == dsn::replication::hotkey_type::WRITE) {
-        return 0;
-    }
-
-    int thread_native_tid = dsn::utils::get_current_tid();
-    auto result = _thread_queue_map.find(thread_native_tid);
-    dassert(result != _thread_queue_map.end(), "Can't find the queue corresponding to the thread");
-    return result->second;
-}
-
 void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 {
     std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
-    for (auto &rw_queue : _string_capture_queue_vec) {
-        std::pair<dsn::blob, int> hash_key_pair;
-        // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
-        int collect_sum = 0;
-        while (rw_queue.try_dequeue(hash_key_pair) && ++collect_sum <= _max_queue_size) {
-            hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
-        }
+    std::pair<dsn::blob, int> hash_key_pair;
+    // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
+    int collect_sum = 0;
+    while (_capture_key_queue.try_dequeue(hash_key_pair) && ++collect_sum <= _max_queue_size) {
+        hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
     }
 
     if (hash_key_accessed_cnt.empty()) {
