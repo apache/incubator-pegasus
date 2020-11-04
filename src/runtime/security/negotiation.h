@@ -32,7 +32,7 @@ typedef rpc_holder<negotiation_request, negotiation_response> negotiation_rpc;
 class negotiation
 {
 public:
-    negotiation(rpc_session *session)
+    negotiation(rpc_session_ptr session)
         : _session(session), _status(negotiation_status::type::INVALID)
     {
         _sasl = create_sasl_wrapper(_session->is_client());
@@ -49,9 +49,7 @@ public:
     bool check_status(negotiation_status::type status, negotiation_status::type expected_status);
 
 protected:
-    // The ownership of the negotiation instance is held by rpc_session.
-    // So negotiation keeps only a raw pointer.
-    rpc_session *_session;
+    rpc_session_ptr _session;
     std::string _name;
     negotiation_status::type _status;
     std::string _selected_mechanism;

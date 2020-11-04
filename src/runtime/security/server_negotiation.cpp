@@ -29,7 +29,7 @@ namespace security {
 DSN_DECLARE_string(service_fqdn);
 DSN_DECLARE_string(service_name);
 
-server_negotiation::server_negotiation(rpc_session *session) : negotiation(session)
+server_negotiation::server_negotiation(rpc_session_ptr session) : negotiation(session)
 {
     _name = fmt::format("SERVER_NEGOTIATION(CLIENT={})", _session->remote_address().to_string());
 }

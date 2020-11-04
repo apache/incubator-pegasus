@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "runtime/security/negotiation_service.h"
+#include "runtime/security/negotiation_manager.h"
 #include "runtime/security/negotiation_utils.h"
 #include "runtime/rpc/network.sim.h"
 
@@ -29,7 +29,7 @@ namespace security {
 DSN_DECLARE_bool(enable_auth);
 DSN_DECLARE_bool(mandatory_auth);
 
-class negotiation_service_test : public testing::Test
+class negotiation_manager_test : public testing::Test
 {
 public:
     negotiation_rpc create_fake_rpc()
@@ -52,21 +52,21 @@ public:
 
     void on_negotiation_request(negotiation_rpc rpc)
     {
-        negotiation_service::instance().on_negotiation_request(rpc);
+        negotiation_manager::instance().on_negotiation_request(rpc);
     }
 
     bool on_rpc_recv_msg(message_ex *msg)
     {
-        return negotiation_service::instance().on_rpc_recv_msg(msg);
+        return negotiation_manager::instance().on_rpc_recv_msg(msg);
     }
 
     bool on_rpc_send_msg(message_ex *msg)
     {
-        return negotiation_service::instance().on_rpc_send_msg(msg);
+        return negotiation_manager::instance().on_rpc_send_msg(msg);
     }
 };
 
-TEST_F(negotiation_service_test, disable_auth)
+TEST_F(negotiation_manager_test, disable_auth)
 {
     RPC_MOCKING(negotiation_rpc)
     {
@@ -78,7 +78,7 @@ TEST_F(negotiation_service_test, disable_auth)
     }
 }
 
-TEST_F(negotiation_service_test, on_rpc_recv_msg)
+TEST_F(negotiation_manager_test, on_rpc_recv_msg)
 {
     struct
     {
@@ -107,7 +107,7 @@ TEST_F(negotiation_service_test, on_rpc_recv_msg)
     }
 }
 
-TEST_F(negotiation_service_test, on_rpc_send_msg)
+TEST_F(negotiation_manager_test, on_rpc_send_msg)
 {
     struct
     {

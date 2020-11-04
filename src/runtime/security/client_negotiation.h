@@ -25,12 +25,12 @@ namespace security {
 class client_negotiation : public negotiation
 {
 public:
-    client_negotiation(rpc_session *session);
+    client_negotiation(rpc_session_ptr session);
 
     void start();
+    void handle_response(error_code err, const negotiation_response &&response);
 
 private:
-    void handle_response(error_code err, const negotiation_response &&response);
     void on_recv_mechanisms(const negotiation_response &resp);
     void on_mechanism_selected(const negotiation_response &resp);
     void on_challenge(const negotiation_response &resp);

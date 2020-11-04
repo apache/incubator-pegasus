@@ -28,7 +28,7 @@ extern const std::set<std::string> supported_mechanisms;
 class server_negotiation : public negotiation
 {
 public:
-    server_negotiation(rpc_session *session);
+    server_negotiation(rpc_session_ptr session);
 
     void start();
     void handle_request(negotiation_rpc rpc);

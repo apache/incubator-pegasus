@@ -17,6 +17,7 @@
 
 #include "client_negotiation.h"
 #include "negotiation_utils.h"
+#include "negotiation_manager.h"
 
 #include <boost/algorithm/string/join.hpp>
 #include <dsn/dist/fmt_logging.h>
@@ -29,7 +30,7 @@ namespace security {
 DSN_DECLARE_bool(mandatory_auth);
 extern const std::set<std::string> supported_mechanisms;
 
-client_negotiation::client_negotiation(rpc_session *session) : negotiation(session)
+client_negotiation::client_negotiation(rpc_session_ptr session) : negotiation(session)
 {
     _name = fmt::format("CLIENT_NEGOTIATION(SERVER={})", _session->remote_address().to_string());
 }
@@ -179,8 +180,8 @@ void client_negotiation::send(negotiation_status::type status, const blob &msg)
     req->msg = msg;
 
     negotiation_rpc rpc(std::move(req), RPC_NEGOTIATION);
-    rpc.call(_session->remote_address(), nullptr, [this, rpc](error_code err) mutable {
-        handle_response(err, std::move(rpc.response()));
+    rpc.call(_session->remote_address(), nullptr, [rpc](error_code err) mutable {
+        negotiation_manager::on_negotiation_response(err, rpc);
     });
 }
 

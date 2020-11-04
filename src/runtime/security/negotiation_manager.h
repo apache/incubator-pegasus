@@ -23,24 +23,27 @@
 
 namespace dsn {
 namespace security {
-typedef std::unordered_map<rpc_session *, std::unique_ptr<negotiation>> negotiation_map;
+typedef std::unordered_map<rpc_session *, std::shared_ptr<negotiation>> negotiation_map;
 
-class negotiation_service : public serverlet<negotiation_service>,
-                            public utils::singleton<negotiation_service>
+class negotiation_manager : public serverlet<negotiation_manager>,
+                            public utils::singleton<negotiation_manager>
 {
 public:
     static void on_rpc_connected(rpc_session *session);
     static void on_rpc_disconnected(rpc_session *session);
     static bool on_rpc_recv_msg(message_ex *msg);
     static bool on_rpc_send_msg(message_ex *msg);
+    static void on_negotiation_response(error_code err, negotiation_rpc rpc);
 
     void open_service();
 
 private:
-    negotiation_service();
+    negotiation_manager();
     void on_negotiation_request(negotiation_rpc rpc);
-    friend class utils::singleton<negotiation_service>;
-    friend class negotiation_service_test;
+    static std::shared_ptr<negotiation> get_negotiation(negotiation_rpc rpc);
+
+    friend class utils::singleton<negotiation_manager>;
+    friend class negotiation_manager_test;
 
     static utils::rw_lock_nr _lock; // [
     static negotiation_map _negotiations;

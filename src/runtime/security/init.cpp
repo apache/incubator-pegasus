@@ -17,7 +17,7 @@
 
 #include "kinit_context.h"
 #include "sasl_init.h"
-#include "negotiation_service.h"
+#include "negotiation_manager.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
