@@ -30,27 +30,21 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int32("pegasus.server",
-                 coarse_data_variance_threshold,
-                 3,
-                 "the threshold of variance calculate to find the outliers in coarse analyse");
+DSN_DEFINE_uint32("pegasus.server",
+                  coarse_data_variance_threshold,
+                  3,
+                  "the threshold of variance calculate to find the outliers in coarse analyse");
 
-DSN_DEFINE_validator(coarse_data_variance_threshold,
-                     [](int32_t threshold) -> bool { return (threshold >= 0); });
-
-DSN_DEFINE_int32("pegasus.server",
-                 fine_data_variance_threshold,
-                 3,
-                 "the threshold of variance calculate to find the outliers in fine analyse");
-
-DSN_DEFINE_validator(fine_data_variance_threshold,
-                     [](int32_t threshold) -> bool { return (threshold >= 0); });
+DSN_DEFINE_uint32("pegasus.server",
+                  fine_data_variance_threshold,
+                  3,
+                  "the threshold of variance calculate to find the outliers in fine analyse");
 
 // TODO: (Tangyanzhao) add a limit to avoid changing when detecting
-DSN_DEFINE_int32("pegasus.server",
-                 data_capture_hash_bucket_num,
-                 37,
-                 "the number of data capture hash buckets");
+DSN_DEFINE_uint32("pegasus.server",
+                  data_capture_hash_bucket_num,
+                  37,
+                  "the number of data capture hash buckets");
 
 DSN_DEFINE_validator(data_capture_hash_bucket_num, [](int32_t bucket_num) -> bool {
     if (bucket_num < 3) {
@@ -286,6 +280,7 @@ struct blob_hash
         return boost::hash_range(cp.begin(), cp.end());
     }
 };
+
 struct blob_equal
 {
     std::size_t operator()(const dsn::blob &lhs, const dsn::blob &rhs) const
@@ -299,7 +294,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
     std::pair<dsn::blob, int> hash_key_pair;
     // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
-    int collect_sum = 0;
+    uint32_t collect_sum = 0;
     while (_capture_key_queue.try_dequeue(hash_key_pair) && ++collect_sum <= _max_queue_size) {
         hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
     }
