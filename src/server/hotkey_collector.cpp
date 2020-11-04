@@ -292,23 +292,23 @@ struct blob_equal
 void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 {
     std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
-    std::pair<dsn::blob, uint64_t> hash_key_pair;
+    std::pair<dsn::blob, uint64_t> key_weight_pair;
     // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
-    uint32_t collect_sum = 0;
-    while (_capture_key_queue.try_dequeue(hash_key_pair) && ++collect_sum <= _max_queue_size) {
-        hash_key_accessed_cnt[hash_key_pair.first] += hash_key_pair.second;
+    uint32_t dequeue_cnt = 0;
+    while (_capture_key_queue.try_dequeue(key_weight_pair) && ++dequeue_cnt <= _max_queue_size) {
+        hash_key_accessed_cnt[key_weight_pair.first] += key_weight_pair.second;
     }
 
     if (hash_key_accessed_cnt.empty()) {
         return;
     }
 
-    std::vector<uint64_t> counts;
-    counts.reserve(hash_key_accessed_cnt.size());
+    std::vector<uint64_t> hash_key_counts;
+    hash_key_counts.reserve(hash_key_accessed_cnt.size());
     dsn::string_view count_max_key;
     uint64_t count_max = 0;
     for (const auto &iter : hash_key_accessed_cnt) {
-        counts.push_back(iter.second);
+        hash_key_counts.push_back(iter.second);
         if (iter.second > count_max) {
             count_max = iter.second;
             // the key with the max accessed count.
@@ -316,14 +316,14 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
         }
     }
 
-    // counts stores the number of occurrences of each string captured in a period of time
-    // the size of counts influences our hotkey determination strategy
-    // counts.size() == 1: the only key must be the hotkey
-    // counts.size() == 2: the hotkey is the larger one
-    // counts.size() >= 3: use find_outlier_index to determinate whether exist a hotkey
+    // hash_key_counts stores the number of occurrences of each string captured in a period of time
+    // the size of hash_key_counts influences our hotkey determination strategy
+    // hash_key_counts.size() == 1: the only key must be the hotkey
+    // hash_key_counts.size() == 2: the hotkey is the larger one
+    // hash_key_counts.size() >= 3: use find_outlier_index to determinate whether exist a hotkey
     int hot_index;
-    if (counts.size() < 3 ||
-        find_outlier_index(counts, FLAGS_fine_data_variance_threshold, hot_index)) {
+    if (hash_key_counts.size() < 3 ||
+        find_outlier_index(hash_key_counts, FLAGS_fine_data_variance_threshold, hot_index)) {
         result.hot_hash_key = std::string(count_max_key);
     }
 }
