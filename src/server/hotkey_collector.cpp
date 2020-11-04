@@ -292,7 +292,7 @@ struct blob_equal
 void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 {
     std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
-    std::pair<dsn::blob, int> hash_key_pair;
+    std::pair<dsn::blob, uint64_t> hash_key_pair;
     // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
     uint32_t collect_sum = 0;
     while (_capture_key_queue.try_dequeue(hash_key_pair) && ++collect_sum <= _max_queue_size) {
