@@ -320,14 +320,15 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     }
 
     // hash_key_counts stores the number of occurrences of each string captured in a period of time
-    // the size of hash_key_counts influences our hotkey determination strategy
-    // hash_key_counts.size() == 1: the only key must be the hotkey
-    // hash_key_counts.size() == 2: the hotkey is the larger one
-    // hash_key_counts.size() >= 3: use find_outlier_index to determinate whether exist a hotkey
+    // The size of weights influences our hotkey determination strategy
+    // weights.size() <= 2: the hotkey must exist (the most weighted key), because
+    //                      the two-level filtering significantly reduces the
+    //                      possibility that the hottest key is not the actual hotkey.
+    // weights.size() >= 3: use find_outlier_index to determine whether a hotkey exists
     int hot_index;
-    if (hash_key_counts.size() < 3 ||
-        find_outlier_index(hash_key_counts, FLAGS_hot_key_variance_threshold, hot_index)) {
-        result.hot_hash_key = std::string(count_max_key);
+    if (weights.size() < 3 ||
+        find_outlier_index(weights, FLAGS_hot_key_variance_threshold, hot_index)) {
+        result.hot_hash_key = std::string(weight_max_key);
     }
 }
 
