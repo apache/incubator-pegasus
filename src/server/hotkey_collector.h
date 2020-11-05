@@ -117,27 +117,27 @@ public:
 class hotkey_coarse_data_collector : public internal_collector_base
 {
 public:
-    hotkey_coarse_data_collector() = delete;
     explicit hotkey_coarse_data_collector(replica_base *base);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
+    hotkey_coarse_data_collector() = delete;
+
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
 class hotkey_fine_data_collector : public internal_collector_base
 {
 public:
-    hotkey_fine_data_collector() = delete;
-    hotkey_fine_data_collector(replica_base *base,
-                                        int target_bucket_index,
-                                        int max_queue_size);
+    hotkey_fine_data_collector(replica_base *base, int target_bucket_index, int max_queue_size);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
-    uint32_t _max_queue_size;
+    hotkey_fine_data_collector() = delete;
+
+    const uint32_t _max_queue_size;
     const uint32_t _target_bucket_index;
     // ConcurrentQueue is a lock-free queue to capture keys
     moodycamel::ConcurrentQueue<std::pair<dsn::blob, uint64_t>> _capture_key_queue;

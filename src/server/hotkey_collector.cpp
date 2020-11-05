@@ -30,27 +30,29 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_uint32("pegasus.server",
-                  coarse_data_variance_threshold,
-                  3,
-                  "the threshold of variance calculate to find the outliers in coarse analyse");
+DSN_DEFINE_uint32(
+    "pegasus.server",
+    hot_bucket_variance_threshold,
+    3,
+    "the variance threshold to detect hot bucket during coarse analysis of hotkey detection");
 
-DSN_DEFINE_uint32("pegasus.server",
-                  fine_data_variance_threshold,
-                  3,
-                  "the threshold of variance calculate to find the outliers in fine analyse");
+DSN_DEFINE_uint32(
+    "pegasus.server",
+    hot_key_variance_threshold,
+    3,
+    "the variance threshold to detect hot key during fine analysis of hotkey detection");
 
 // TODO: (Tangyanzhao) add a limit to avoid changing when detecting
 DSN_DEFINE_uint32("pegasus.server",
-                  data_capture_hash_bucket_num,
+                  hotkey_buckets_num,
                   37,
                   "the number of data capture hash buckets");
 
-DSN_DEFINE_validator(data_capture_hash_bucket_num, [](int32_t bucket_num) -> bool {
+DSN_DEFINE_validator(hotkey_buckets_num, [](int32_t bucket_num) -> bool {
     if (bucket_num < 3) {
         return false;
     }
-    // data_capture_hash_bucket_num should be a prime number
+    // hotkey_buckets_num should be a prime number
     for (int i = 2; i <= bucket_num / i; i++) {
         if (bucket_num % i == 0) {
             return false;
@@ -105,7 +107,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 static int get_bucket_id(dsn::string_view data)
 {
     size_t hash_value = boost::hash_range(data.begin(), data.end());
-    return static_cast<int>(hash_value % FLAGS_data_capture_hash_bucket_num);
+    return static_cast<int>(hash_value % FLAGS_hotkey_buckets_num);
 }
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
@@ -229,7 +231,7 @@ bool hotkey_collector::terminate_if_timeout()
 }
 
 hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
-    : internal_collector_base(base), _hash_buckets(FLAGS_data_capture_hash_bucket_num)
+    : internal_collector_base(base), _hash_buckets(FLAGS_hotkey_buckets_num)
 {
     for (auto &bucket : _hash_buckets) {
         bucket.store(0);
@@ -243,13 +245,13 @@ void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint6
 
 void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 {
-    std::vector<uint64_t> buckets(FLAGS_data_capture_hash_bucket_num);
+    std::vector<uint64_t> buckets(FLAGS_hotkey_buckets_num);
     for (int i = 0; i < buckets.size(); i++) {
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
     }
     if (!find_outlier_index(
-            buckets, FLAGS_coarse_data_variance_threshold, result.coarse_bucket_index)) {
+            buckets, FLAGS_hot_bucket_variance_threshold, result.coarse_bucket_index)) {
         result.coarse_bucket_index = -1;
     }
 }
@@ -292,23 +294,24 @@ struct blob_equal
 
 void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 {
-    std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_key_accessed_cnt;
+    // hashkey -> weight
+    std::unordered_map<dsn::blob, uint64_t, blob_hash, blob_equal> hash_keys_weight;
     std::pair<dsn::blob, uint64_t> key_weight_pair;
     // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
     uint32_t dequeue_cnt = 0;
     while (_capture_key_queue.try_dequeue(key_weight_pair) && ++dequeue_cnt <= _max_queue_size) {
-        hash_key_accessed_cnt[key_weight_pair.first] += key_weight_pair.second;
+        hash_keys_weight[key_weight_pair.first] += key_weight_pair.second;
     }
 
-    if (hash_key_accessed_cnt.empty()) {
+    if (hash_keys_weight.empty()) {
         return;
     }
 
     std::vector<uint64_t> hash_key_counts;
-    hash_key_counts.reserve(hash_key_accessed_cnt.size());
+    hash_key_counts.reserve(hash_keys_weight.size());
     dsn::string_view count_max_key;
     uint64_t count_max = 0;
-    for (const auto &iter : hash_key_accessed_cnt) {
+    for (const auto &iter : hash_keys_weight) {
         hash_key_counts.push_back(iter.second);
         if (iter.second > count_max) {
             count_max = iter.second;
@@ -324,7 +327,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     // hash_key_counts.size() >= 3: use find_outlier_index to determinate whether exist a hotkey
     int hot_index;
     if (hash_key_counts.size() < 3 ||
-        find_outlier_index(hash_key_counts, FLAGS_fine_data_variance_threshold, hot_index)) {
+        find_outlier_index(hash_key_counts, FLAGS_hot_key_variance_threshold, hot_index)) {
         result.hot_hash_key = std::string(count_max_key);
     }
 }
