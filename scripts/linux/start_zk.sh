@@ -4,6 +4,8 @@
 #    INSTALL_DIR    <dir>
 #    PORT           <port>
 
+PROJECT_DIR=$(realpath $(dirname $(dirname $(dirname "${BASH_SOURCE[0]}"))))
+
 if [ -z "$INSTALL_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
@@ -25,26 +27,24 @@ fi
 
 cd $INSTALL_DIR
 
-if [ ! -f zookeeper-3.4.6.tar.gz ]; then
-    echo "Downloading zookeeper..."
-    download_url="https://github.com/XiaoMi/pegasus-common/releases/download/deps/zookeeper-3.4.6.tar.gz"
-    wget -T 5 -t 1 $download_url
-    if [ $? -ne 0 ]; then
-        echo "ERROR: download zookeeper failed"
-        exit 1
-    fi
+ZOOKEEPER_PKG=${PROJECT_DIR}/thirdparty/build/Download/zookeeper/zookeeper-3.4.10.tar.gz
+if [ ! -f ${ZOOKEEPER_PKG} ]; then
+    echo "no such file \"${ZOOKEEPER_PKG}\""
+    echo "please install third-parties first"
+    exit 1
 fi
 
 if [ ! -d zookeeper-3.4.6 ]; then
     echo "Decompressing zookeeper..."
-    tar xf zookeeper-3.4.6.tar.gz
+    cp ${ZOOKEEPER_PKG} .
+    tar xf zookeeper-3.4.10.tar.gz
     if [ $? -ne 0 ]; then
         echo "ERROR: decompress zookeeper failed"
         exit 1
     fi
 fi
 
-ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.6
+ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.10
 ZOOKEEPER_PORT=$PORT
 
 cp $ZOOKEEPER_HOME/conf/zoo_sample.cfg $ZOOKEEPER_HOME/conf/zoo.cfg

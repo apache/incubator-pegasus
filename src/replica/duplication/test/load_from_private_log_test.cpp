@@ -208,69 +208,6 @@ public:
         return mlog;
     }
 
-    void test_restart_duplication2()
-    {
-        load_from_private_log load(_replica.get(), duplicator.get());
-
-        // create a log file indexed 3, starting from 38200
-        for (int f = 0; f < 3; f++) {
-            mutation_log_ptr mlog = create_private_log();
-            for (int i = 0; i < 100; i++) {
-                std::string msg = "hello!";
-                mutation_ptr mu = create_test_mutation(38000 + 100 * f + i, msg);
-                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
-            }
-            mlog->tracker()->wait_outstanding_tasks();
-        }
-        auto files1 = open_log_file_map(_log_dir);
-        ASSERT_EQ(files1.size(), 3);
-        boost::filesystem::remove(files1[1]->path());
-        boost::filesystem::remove(files1[2]->path());
-        boost::filesystem::rename(
-            files1[3]->path(),
-            fmt::format("./log.{}.{}", files1[3]->index(), files1[3]->start_offset()));
-
-        // first log is 39100
-        {
-            for (int f = 0; f < 2; f++) {
-                mutation_log_ptr mlog = create_private_log();
-                for (int i = 0; i < 100; i++) {
-                    std::string msg = "hello!";
-                    mutation_ptr mu = create_test_mutation(39000 + 100 * f + i, msg);
-                    mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
-                }
-                mlog->tracker()->wait_outstanding_tasks();
-            }
-            boost::filesystem::remove(files1[1]->path());
-        }
-
-        {
-            // This test simulates the following case:
-            // the replica has written logs [39100 -> 39199], but after some sort of failure,
-            // it became learner and copied plogs starting from 38200.
-            boost::filesystem::rename(
-                fmt::format("./log.{}.{}", files1[3]->index(), files1[3]->start_offset()),
-                files1[3]->path());
-        }
-
-        // log.2.xxx starts from 39100
-        // log.3.xxx starts from 38200
-        // all log files are reserved for duplication
-        mutation_log_ptr mlog = create_private_log();
-        auto files = mlog->get_log_file_map();
-        ASSERT_EQ(files.size(), 2);
-
-        decree max_gced_decree = mlog->max_gced_decree_no_lock(_replica->get_gpid());
-        ASSERT_EQ(max_gced_decree, 38199);
-
-        // new duplication, ensure we can start at log.3.xxx
-        load._private_log = mlog;
-        load.set_start_decree(max_gced_decree + 1);
-        load.find_log_file_to_start();
-        ASSERT_TRUE(load._current);
-        ASSERT_EQ(load._current->index(), 3);
-    }
-
     std::unique_ptr<replica_duplicator> duplicator;
 };
 
@@ -336,8 +273,6 @@ TEST_F(load_from_private_log_test, handle_real_private_log)
 }
 
 TEST_F(load_from_private_log_test, restart_duplication) { test_restart_duplication(); }
-
-TEST_F(load_from_private_log_test, restart_duplication2) { test_restart_duplication2(); }
 
 TEST_F(load_from_private_log_test, ignore_useless)
 {

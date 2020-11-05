@@ -1,0 +1,66 @@
+# Developer Notes:
+#
+# This config is for github actions. Before merging your changes of this file,
+# it's recommended to create a PR against the ci-test branch to test if it works
+# as expected.
+
+name: pull_request
+
+on:
+  # run on each pull request
+  pull_request:
+    types: [ synchronize, reopened, labeled ]
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+      - ci-test # testing branch for github action
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    container:
+      image: apachepegasus/clang-format-3.9
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: clang-format
+        run: ./scripts/linux/run-clang-format.py --clang-format-executable=clang-format-3.9 -r src include
+
+  test:
+    name: Test
+    needs: lint
+    runs-on: self-hosted
+    container:
+      image: apachepegasus/ci-env
+      env:
+        CCACHE_DIR: /tmp/ccache/pegasus
+        CCACHE_MAXSIZE: 10G
+      volumes:
+        # Place ccache compilation intermediate results in host memory, that's shared among containers.
+        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
+      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
+      options: --mount type=tmpfs,destination=/tmp/pegasus,tmpfs-size=10737418240 --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Unpack prebuilt third-parties
+        if: contains(github.event.pull_request.labels.*.name, 'thirdparty-modified') == false
+        run: unzip /root/pegasus-thirdparty-output.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: contains(github.event.pull_request.labels.*.name, 'thirdparty-modified')
+        working-directory: thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
+      - name: Compilation
+        run: ./run.sh build -c --skip_thirdparty
+      - name: Unit Testing
+        run: ./run.sh test --skip_thirdparty

@@ -208,46 +208,6 @@ function run_build()
 }
 
 #####################
-## install
-#####################
-function usage_install()
-{
-    echo "Options for subcommand 'install':"
-    echo "   -h|--help         print the help info"
-    echo "   -d|--install_dir <dir>"
-    echo "                     specify the install directory,"
-    echo "                     if not set, then default is './install'"
-}
-function run_install()
-{
-    INSTALL_DIR=$DSN_ROOT
-    if [ ! -d $INSTALL_DIR ]; then
-        INSTALL_DIR=`pwd`/install
-    fi
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_install
-                exit 0
-                ;;
-            -d|--install_dir)
-                INSTALL_DIR="$2"
-                shift
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_install
-                exit 1
-                ;;
-        esac
-        shift
-    done
-    INSTALL_DIR="$INSTALL_DIR" $scripts_dir/install.sh
-}
-
-#####################
 ## start_zk
 #####################
 function usage_start_zk()
@@ -386,9 +346,6 @@ case $cmd in
         shift
         ONLY_BUILD=YES
         run_build $* ;;
-    install)
-        shift
-        run_install $* ;;
     test)
         shift
         ONLY_BUILD=NO
