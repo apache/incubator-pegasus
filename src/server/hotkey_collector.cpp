@@ -310,7 +310,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     std::vector<uint64_t> weights;
     weights.reserve(hash_keys_weight.size());
     dsn::string_view weight_max_key; // the hashkey with the max weight
-    uint64_t weight_max = 0; // the max weight by far
+    uint64_t weight_max = 0;         // the max weight by far
     for (const auto &iter : hash_keys_weight) {
         weights.push_back(iter.second);
         if (iter.second > weight_max) {
