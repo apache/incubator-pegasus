@@ -23,8 +23,6 @@
 #include <boost/functional/hash.hpp>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/dist/replication/replication.codes.h>
 #include "base/pegasus_key_schema.h"
 
 namespace pegasus {
@@ -113,6 +111,7 @@ static int get_bucket_id(dsn::string_view data)
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
     : replica_base(r_base),
+      _state(hotkey_collector_state::STOPPED),
       _hotkey_type(hotkey_type),
       _internal_collector(std::make_shared<hotkey_empty_data_collector>(this)),
       _collector_start_time_second(0)
@@ -299,7 +298,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     std::pair<dsn::blob, uint64_t> key_weight_pair;
     // prevent endless loop, limit the number of elements analyzed not to exceed the queue size
     uint32_t dequeue_cnt = 0;
-    while (_capture_key_queue.try_dequeue(key_weight_pair) && ++dequeue_cnt <= _max_queue_size) {
+    while (++dequeue_cnt <= _max_queue_size && _capture_key_queue.try_dequeue(key_weight_pair)) {
         hash_keys_weight[key_weight_pair.first] += key_weight_pair.second;
     }
 
