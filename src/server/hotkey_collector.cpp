@@ -269,6 +269,7 @@ void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_
     if (get_bucket_id(hash_key) != _target_bucket_index) {
         return;
     }
+    // abandon the key if enqueue failed (possibly because not enough room to enqueue)
     _capture_key_queue.try_enqueue(std::make_pair(hash_key, weight));
 }
 
