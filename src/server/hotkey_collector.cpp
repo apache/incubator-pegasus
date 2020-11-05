@@ -306,16 +306,16 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
         return;
     }
 
-    std::vector<uint64_t> hash_key_counts;
-    hash_key_counts.reserve(hash_keys_weight.size());
-    dsn::string_view count_max_key;
-    uint64_t count_max = 0;
+    // the weight of all the collected hash keys
+    std::vector<uint64_t> weights;
+    weights.reserve(hash_keys_weight.size());
+    dsn::string_view weight_max_key; // the hashkey with the max weight
+    uint64_t weight_max = 0; // the max weight by far
     for (const auto &iter : hash_keys_weight) {
-        hash_key_counts.push_back(iter.second);
-        if (iter.second > count_max) {
-            count_max = iter.second;
-            // the key with the max accessed count.
-            count_max_key = iter.first;
+        weights.push_back(iter.second);
+        if (iter.second > weight_max) {
+            weight_max = iter.second;
+            weight_max_key = iter.first;
         }
     }
 
