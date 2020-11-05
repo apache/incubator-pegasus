@@ -130,7 +130,7 @@ class hotkey_fine_data_collector : public internal_collector_base
 {
 public:
     hotkey_fine_data_collector() = delete;
-    explicit hotkey_fine_data_collector(replica_base *base,
+    hotkey_fine_data_collector(replica_base *base,
                                         int target_bucket_index,
                                         int max_queue_size);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
