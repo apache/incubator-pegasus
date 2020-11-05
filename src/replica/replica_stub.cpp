@@ -983,26 +983,17 @@ void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
         disk_info info;
         // app_name empty means query all app replica_count
         if (req.app_name.empty()) {
-            for (const auto &holding_primary_replicas : dir_node->holding_primary_replicas) {
-                info.holding_primary_replica_counts[holding_primary_replicas.first] =
-                    static_cast<int>(holding_primary_replicas.second.size());
-            }
-
-            for (const auto &holding_secondary_replicas : dir_node->holding_secondary_replicas) {
-                info.holding_secondary_replica_counts[holding_secondary_replicas.first] =
-                    static_cast<int>(holding_secondary_replicas.second.size());
-            }
+            info.holding_primary_replicas = dir_node->holding_primary_replicas;
+            info.holding_secondary_replicas = dir_node->holding_secondary_replicas;
         } else {
             const auto &primary_iter = dir_node->holding_primary_replicas.find(app_id);
             if (primary_iter != dir_node->holding_primary_replicas.end()) {
-                info.holding_primary_replica_counts[app_id] =
-                    static_cast<int>(primary_iter->second.size());
+                info.holding_primary_replicas[app_id] = primary_iter->second;
             }
 
             const auto &secondary_iter = dir_node->holding_secondary_replicas.find(app_id);
             if (secondary_iter != dir_node->holding_secondary_replicas.end()) {
-                info.holding_secondary_replica_counts[app_id] =
-                    static_cast<int>(secondary_iter->second.size());
+                info.holding_secondary_replicas[app_id] = secondary_iter->second;
             }
         }
         info.tag = dir_node->tag;

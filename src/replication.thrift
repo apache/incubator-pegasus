@@ -452,14 +452,13 @@ struct query_replica_info_response
 
 struct disk_info
 {
-    // TODO(jiashuo1): figure out what the "tag" means and decide if it's necessary
     1:string tag;
     2:string full_dir;
     3:i64 disk_capacity_mb;
     4:i64 disk_available_mb;
-    // map<i32,i32> means map<app_id, replica_counts>
-    5:map<i32,i32> holding_primary_replica_counts;
-    6:map<i32,i32> holding_secondary_replica_counts;
+    // app_id=>set<gpid>
+    5:map<i32,set<dsn.gpid>> holding_primary_replicas;
+    6:map<i32,set<dsn.gpid>> holding_secondary_replicas;
 }
 
 // This request is sent from client to replica_server.

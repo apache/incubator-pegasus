@@ -3303,16 +3303,16 @@ typedef struct _disk_info__isset
           full_dir(false),
           disk_capacity_mb(false),
           disk_available_mb(false),
-          holding_primary_replica_counts(false),
-          holding_secondary_replica_counts(false)
+          holding_primary_replicas(false),
+          holding_secondary_replicas(false)
     {
     }
     bool tag : 1;
     bool full_dir : 1;
     bool disk_capacity_mb : 1;
     bool disk_available_mb : 1;
-    bool holding_primary_replica_counts : 1;
-    bool holding_secondary_replica_counts : 1;
+    bool holding_primary_replicas : 1;
+    bool holding_secondary_replicas : 1;
 } _disk_info__isset;
 
 class disk_info
@@ -3329,8 +3329,8 @@ public:
     std::string full_dir;
     int64_t disk_capacity_mb;
     int64_t disk_available_mb;
-    std::map<int32_t, int32_t> holding_primary_replica_counts;
-    std::map<int32_t, int32_t> holding_secondary_replica_counts;
+    std::map<int32_t, std::set<::dsn::gpid>> holding_primary_replicas;
+    std::map<int32_t, std::set<::dsn::gpid>> holding_secondary_replicas;
 
     _disk_info__isset __isset;
 
@@ -3342,9 +3342,9 @@ public:
 
     void __set_disk_available_mb(const int64_t val);
 
-    void __set_holding_primary_replica_counts(const std::map<int32_t, int32_t> &val);
+    void __set_holding_primary_replicas(const std::map<int32_t, std::set<::dsn::gpid>> &val);
 
-    void __set_holding_secondary_replica_counts(const std::map<int32_t, int32_t> &val);
+    void __set_holding_secondary_replicas(const std::map<int32_t, std::set<::dsn::gpid>> &val);
 
     bool operator==(const disk_info &rhs) const
     {
@@ -3356,9 +3356,9 @@ public:
             return false;
         if (!(disk_available_mb == rhs.disk_available_mb))
             return false;
-        if (!(holding_primary_replica_counts == rhs.holding_primary_replica_counts))
+        if (!(holding_primary_replicas == rhs.holding_primary_replicas))
             return false;
-        if (!(holding_secondary_replica_counts == rhs.holding_secondary_replica_counts))
+        if (!(holding_secondary_replicas == rhs.holding_secondary_replicas))
             return false;
         return true;
     }
