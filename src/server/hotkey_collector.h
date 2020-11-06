@@ -18,8 +18,9 @@
 #pragma once
 
 #include <dsn/dist/replication/replication_types.h>
-#include "hotkey_collector_state.h"
+#include <concurrentqueue/concurrentqueue.h>
 #include <dsn/dist/replication/replica_base.h>
+#include "hotkey_collector_state.h"
 
 namespace pegasus {
 namespace server {
@@ -29,6 +30,7 @@ class internal_collector_base;
 struct detect_hotkey_result
 {
     int coarse_bucket_index = -1;
+    std::string hot_hash_key;
 };
 
 //    hotkey_collector is responsible to find the hot keys after the partition
@@ -120,7 +122,25 @@ public:
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
+    hotkey_coarse_data_collector() = delete;
+
     std::vector<std::atomic<uint64_t>> _hash_buckets;
+};
+
+class hotkey_fine_data_collector : public internal_collector_base
+{
+public:
+    hotkey_fine_data_collector(replica_base *base, int target_bucket_index, int max_queue_size);
+    void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
+    void analyse_data(detect_hotkey_result &result) override;
+
+private:
+    hotkey_fine_data_collector() = delete;
+
+    const uint32_t _max_queue_size;
+    const uint32_t _target_bucket_index;
+    // ConcurrentQueue is a lock-free queue to capture keys
+    moodycamel::ConcurrentQueue<std::pair<dsn::blob, uint64_t>> _capture_key_queue;
 };
 
 } // namespace server
