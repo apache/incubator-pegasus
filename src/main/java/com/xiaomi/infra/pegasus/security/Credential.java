@@ -16,23 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.xiaomi.infra.pegasus.rpc.async;
+package com.xiaomi.infra.pegasus.security;
 
-import static com.xiaomi.infra.pegasus.apps.negotiation_status.SASL_LIST_MECHANISMS;
-import static org.mockito.ArgumentMatchers.any;
+import org.apache.commons.configuration2.Configuration;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+/** credential info for authentiation */
+public interface Credential {
+  String KERBEROS_PROTOCOL_NAME = "kerberos";
 
-public class NegotiationTest {
-  @Test
-  public void testStart() {
-    Negotiation negotiation = new Negotiation(null, null, "", "");
-    Negotiation mockNegotiation = Mockito.spy(negotiation);
+  static Credential create(String authProtocol, Configuration config)
+      throws IllegalArgumentException {
+    Credential credential;
+    if (authProtocol.equals(KERBEROS_PROTOCOL_NAME)) {
+      credential = new KerberosCredential(config);
+    } else if (authProtocol.isEmpty()) {
+      credential = null;
+    } else {
+      throw new IllegalArgumentException("unsupported protocol: " + authProtocol);
+    }
 
-    Mockito.doNothing().when(mockNegotiation).send(any(), any());
-    mockNegotiation.start();
-    Assert.assertEquals(mockNegotiation.get_status(), SASL_LIST_MECHANISMS);
+    return credential;
   }
+
+  /** get the authentiation protocol supported */
+  AuthProtocol getProtocol();
+
+  String toString();
 }

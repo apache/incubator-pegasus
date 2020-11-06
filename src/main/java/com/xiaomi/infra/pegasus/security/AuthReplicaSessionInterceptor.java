@@ -16,27 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.xiaomi.infra.pegasus.rpc.interceptor;
+package com.xiaomi.infra.pegasus.security;
 
 import com.xiaomi.infra.pegasus.client.ClientOptions;
 import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession;
-import com.xiaomi.infra.pegasus.security.AuthReplicaSessionInterceptor;
-import java.util.ArrayList;
-import java.util.List;
+import com.xiaomi.infra.pegasus.rpc.interceptor.ReplicaSessionInterceptor;
 
-public class ReplicaSessionInterceptorManager {
-  private List<ReplicaSessionInterceptor> interceptors = new ArrayList<>();
+public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor {
+  private AuthProtocol protocol;
 
-  public ReplicaSessionInterceptorManager(ClientOptions options) {
-    if (!options.getAuthProtocol().isEmpty()) {
-      ReplicaSessionInterceptor authInterceptor = new AuthReplicaSessionInterceptor(options);
-      interceptors.add(authInterceptor);
-    }
+  public AuthReplicaSessionInterceptor(ClientOptions options) throws IllegalArgumentException {
+    this.protocol = options.getCredential().getProtocol();
   }
 
   public void onConnected(ReplicaSession session) {
-    for (ReplicaSessionInterceptor interceptor : interceptors) {
-      interceptor.onConnected(session);
-    }
+    protocol.authenticate(session);
   }
 }

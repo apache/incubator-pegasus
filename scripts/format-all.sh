@@ -33,6 +33,7 @@ SRC_FILES=(src/main/java/com/xiaomi/infra/pegasus/client/*.java
            src/main/java/com/xiaomi/infra/pegasus/client/request/*.java
            src/main/java/com/xiaomi/infra/pegasus/base/*.java
            src/main/java/com/xiaomi/infra/pegasus/example/*.java
+           src/main/java/com/xiaomi/infra/pegasus/security/*.java
            src/test/java/com/xiaomi/infra/pegasus/client/*.java
            src/test/java/com/xiaomi/infra/pegasus/metrics/*.java
            src/test/java/com/xiaomi/infra/pegasus/rpc/async/*.java

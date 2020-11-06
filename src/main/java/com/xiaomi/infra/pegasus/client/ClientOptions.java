@@ -5,6 +5,7 @@ package com.xiaomi.infra.pegasus.client;
 
 import static com.xiaomi.infra.pegasus.client.PConfigUtil.loadConfiguration;
 
+import com.xiaomi.infra.pegasus.security.Credential;
 import java.time.Duration;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ConfigurationConverter;
@@ -30,7 +31,8 @@ import org.apache.commons.configuration2.ConfigurationConverter;
  *          .falconPerfCounterTags("")
  *          .falconPushInterval(Duration.ofSeconds(10))
  *          .metaQueryTimeout(Duration.ofMillis(5000))
- *          .enableAuth(false)
+ *          .authProtocol("")
+ *          .credential(null)
  *          .build();
  * }</pre>
  */
@@ -45,9 +47,7 @@ public class ClientOptions {
   public static final String PEGASUS_PERF_COUNTER_TAGS_KEY = "perf_counter_tags";
   public static final String PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY = "push_counter_interval_secs";
   public static final String PEGASUS_META_QUERY_TIMEOUT_KEY = "meta_query_timeout";
-  public static final String PEGASUS_ENABLE_AUTH_KEY = "enable_auth";
-  public static final String PEGASUS_SERVICE_NAME_KEY = "service_name";
-  public static final String PEGASUS_SERVICE_FQDN_KEY = "service_fqdn";
+  public static final String PEGASUS_AUTH_PROTOCOL_KEY = "auth_protocol";
 
   public static final String DEFAULT_META_SERVERS =
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
@@ -58,9 +58,7 @@ public class ClientOptions {
   public static final Duration DEFAULT_FALCON_PUSH_INTERVAL = Duration.ofSeconds(10);
   public static final boolean DEFAULT_ENABLE_WRITE_LIMIT = true;
   public static final Duration DEFAULT_META_QUERY_TIMEOUT = Duration.ofMillis(5000);
-  public static final boolean DEFAULT_ENABLE_AUTH = false;
-  public static final String DEFAULT_SERVICE_NAME = "";
-  public static final String DEFAULT_SERVICE_FQDN = "";
+  public static final String DEFAULT_AUTH_PROTOCOL = "";
 
   private final String metaServers;
   private final Duration operationTimeout;
@@ -70,9 +68,8 @@ public class ClientOptions {
   private final Duration falconPushInterval;
   private final boolean enableWriteLimit;
   private final Duration metaQueryTimeout;
-  private final boolean enableAuth;
-  private final String serviceName;
-  private final String serviceFQDN;
+  private final String authProtocol;
+  private final Credential credential;
 
   protected ClientOptions(Builder builder) {
     this.metaServers = builder.metaServers;
@@ -83,9 +80,8 @@ public class ClientOptions {
     this.falconPushInterval = builder.falconPushInterval;
     this.enableWriteLimit = builder.enableWriteLimit;
     this.metaQueryTimeout = builder.metaQueryTimeout;
-    this.enableAuth = builder.enableAuth;
-    this.serviceName = builder.serviceName;
-    this.serviceFQDN = builder.serviceFQDN;
+    this.authProtocol = builder.authProtocol;
+    this.credential = builder.credential;
   }
 
   protected ClientOptions(ClientOptions original) {
@@ -97,9 +93,8 @@ public class ClientOptions {
     this.falconPushInterval = original.getFalconPushInterval();
     this.enableWriteLimit = original.isWriteLimitEnabled();
     this.metaQueryTimeout = original.getMetaQueryTimeout();
-    this.enableAuth = original.isEnableAuth();
-    this.serviceName = original.getServiceName();
-    this.serviceFQDN = original.getServiceFQDN();
+    this.authProtocol = original.getAuthProtocol();
+    this.credential = original.getCredential();
   }
 
   /**
@@ -159,9 +154,8 @@ public class ClientOptions {
     Duration metaQueryTimeout =
         Duration.ofMillis(
             config.getLong(PEGASUS_META_QUERY_TIMEOUT_KEY, DEFAULT_META_QUERY_TIMEOUT.toMillis()));
-    boolean enableAuth = config.getBoolean(PEGASUS_ENABLE_AUTH_KEY, DEFAULT_ENABLE_AUTH);
-    String serviceName = config.getString(PEGASUS_SERVICE_NAME_KEY, DEFAULT_SERVICE_NAME);
-    String serviceFQDN = config.getString(PEGASUS_SERVICE_FQDN_KEY, DEFAULT_SERVICE_FQDN);
+    String authProtocol = config.getString(PEGASUS_AUTH_PROTOCOL_KEY, DEFAULT_AUTH_PROTOCOL);
+    Credential credential = Credential.create(authProtocol, config);
 
     return ClientOptions.builder()
         .metaServers(metaList)
@@ -171,9 +165,8 @@ public class ClientOptions {
         .falconPerfCounterTags(perfCounterTags)
         .falconPushInterval(pushIntervalSecs)
         .metaQueryTimeout(metaQueryTimeout)
-        .enableAuth(enableAuth)
-        .serviceName(serviceName)
-        .serviceFQDN(serviceFQDN)
+        .authProtocol(authProtocol)
+        .credential(credential)
         .build();
   }
 
@@ -192,41 +185,40 @@ public class ClientOptions {
           && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis()
           && this.enableWriteLimit == clientOptions.enableWriteLimit
           && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis()
-          && this.enableAuth == clientOptions.enableAuth
-          && this.serviceName == clientOptions.serviceName
-          && this.serviceFQDN == clientOptions.serviceFQDN;
+          && this.authProtocol == clientOptions.authProtocol
+          && this.credential == clientOptions.credential;
     }
     return false;
   }
 
   @Override
   public String toString() {
-    return "ClientOptions{"
-        + "metaServers='"
-        + metaServers
-        + '\''
-        + ", operationTimeout(ms)="
-        + operationTimeout.toMillis()
-        + ", asyncWorkers="
-        + asyncWorkers
-        + ", enablePerfCounter="
-        + enablePerfCounter
-        + ", falconPerfCounterTags='"
-        + falconPerfCounterTags
-        + '\''
-        + ", falconPushInterval(s)="
-        + falconPushInterval.getSeconds()
-        + ",enableWriteLimit="
-        + enableWriteLimit
-        + ", metaQueryTimeout(ms)="
-        + metaQueryTimeout.toMillis()
-        + ", enableAuth="
-        + enableAuth
-        + ", serviceName="
-        + serviceName
-        + ", serviceFQDN="
-        + serviceFQDN
-        + '}';
+    String res =
+        "ClientOptions{"
+            + "metaServers='"
+            + metaServers
+            + '\''
+            + ", operationTimeout(ms)="
+            + operationTimeout.toMillis()
+            + ", asyncWorkers="
+            + asyncWorkers
+            + ", enablePerfCounter="
+            + enablePerfCounter
+            + ", falconPerfCounterTags='"
+            + falconPerfCounterTags
+            + '\''
+            + ", falconPushInterval(s)="
+            + falconPushInterval.getSeconds()
+            + ",enableWriteLimit="
+            + enableWriteLimit
+            + ", metaQueryTimeout(ms)="
+            + metaQueryTimeout.toMillis()
+            + ", authProtocol="
+            + authProtocol;
+    if (credential != null) {
+      res += ", credential=" + credential.toString();
+    }
+    return res + '}';
   }
 
   /** Builder for {@link ClientOptions}. */
@@ -239,9 +231,8 @@ public class ClientOptions {
     private Duration falconPushInterval = DEFAULT_FALCON_PUSH_INTERVAL;
     private boolean enableWriteLimit = DEFAULT_ENABLE_WRITE_LIMIT;
     private Duration metaQueryTimeout = DEFAULT_META_QUERY_TIMEOUT;
-    private boolean enableAuth = DEFAULT_ENABLE_AUTH;
-    private String serviceName = DEFAULT_SERVICE_NAME;
-    private String serviceFQDN = DEFAULT_SERVICE_FQDN;
+    private String authProtocol = DEFAULT_AUTH_PROTOCOL;
+    private Credential credential = null;
 
     protected Builder() {}
 
@@ -345,37 +336,28 @@ public class ClientOptions {
     }
 
     /**
-     * Whether to enable authentication. Defaults to {@literal false}, see {@link
-     * #DEFAULT_ENABLE_AUTH}.
+     * The authentiation protocol to use. Available protocols are: 1. kerberos; 2.""
      *
-     * @param enableAuth
+     * <p>"" means the authentiation is disabled
+     *
+     * <p>Defaults to {@literal ""}, See {@link #DEFAULT_AUTH_PROTOCOL}
+     *
+     * @param authProtocol authentiation protocol.
      * @return {@code this}
      */
-    public Builder enableAuth(boolean enableAuth) {
-      this.enableAuth = enableAuth;
+    public Builder authProtocol(String authProtocol) {
+      this.authProtocol = authProtocol;
       return this;
     }
 
     /**
-     * service name. Defaults to {@literal ""}, see {@link #DEFAULT_SERVICE_NAME}.
+     * credential info. Defaults to {@literal null}
      *
-     * @param serviceName
+     * @param credential credential
      * @return {@code this}
      */
-    public Builder serviceName(String serviceName) {
-      this.serviceName = serviceName;
-      return this;
-    }
-
-    /**
-     * service full qualified domain name. Defaults to {@literal ""}, see {@link
-     * #DEFAULT_SERVICE_FQDN}.
-     *
-     * @param serviceFQDN
-     * @return {@code this}
-     */
-    public Builder serviceFQDN(String serviceFQDN) {
-      this.serviceFQDN = serviceFQDN;
+    public Builder credential(Credential credential) {
+      this.credential = credential;
       return this;
     }
 
@@ -407,9 +389,8 @@ public class ClientOptions {
         .falconPushInterval(getFalconPushInterval())
         .enableWriteLimit(isWriteLimitEnabled())
         .metaQueryTimeout(getMetaQueryTimeout())
-        .enableAuth(isEnableAuth())
-        .serviceName(getServiceName())
-        .serviceFQDN(getServiceFQDN());
+        .authProtocol(getAuthProtocol())
+        .credential(getCredential());
     return builder;
   }
 
@@ -491,29 +472,24 @@ public class ClientOptions {
   }
 
   /**
-   * Whether to enable authentication. Defaults to {@literal false}.
+   * The authentiation protocol to use. Available protocols are: 1. kerberos; 2.""
    *
-   * @return whether to enable authentication.
+   * <p>"" means the authentiation is disabled
+   *
+   * <p>Defaults to {@literal ""}, See {@link #DEFAULT_AUTH_PROTOCOL}
+   *
+   * @return authentiation protocol.
    */
-  public boolean isEnableAuth() {
-    return enableAuth;
+  public String getAuthProtocol() {
+    return authProtocol;
   }
 
   /**
-   * service name. Defaults to {@literal ""}.
+   * credential info. Defaults to {@literal null}
    *
-   * @return service name.
+   * @return credential
    */
-  public String getServiceName() {
-    return serviceName;
-  }
-
-  /**
-   * service full qualified domain name. Defaults to {@literal ""}.
-   *
-   * @return service full qualified domain name.
-   */
-  public String getServiceFQDN() {
-    return serviceFQDN;
+  public Credential getCredential() {
+    return credential;
   }
 }
