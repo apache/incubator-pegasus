@@ -19,10 +19,8 @@
 
 #include <dsn/dist/replication/replication_enums.h>
 #include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/flags.h>
-#include <boost/functional/hash.hpp>
 #include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include <boost/functional/hash.hpp>
 #include "base/pegasus_key_schema.h"
 
 namespace pegasus {
@@ -66,8 +64,7 @@ DSN_DEFINE_int32(
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
 // 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
-static bool
-find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index)
+bool find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index)
 {
     dcheck_gt(captured_keys.size(), 2);
     int data_size = captured_keys.size();
@@ -102,7 +99,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 }
 
 // TODO: (Tangyanzhao) replace it to xxhash
-static int get_bucket_id(dsn::string_view data)
+int get_bucket_id(dsn::string_view data)
 {
     size_t hash_value = boost::hash_range(data.begin(), data.end());
     return static_cast<int>(hash_value % FLAGS_hotkey_buckets_num);
@@ -255,6 +252,13 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
     }
 }
 
+void hotkey_coarse_data_collector::clear()
+{
+    for (int i = 0; i < FLAGS_hotkey_buckets_num; i++) {
+        _hash_buckets[i].store(0);
+    }
+}
+
 hotkey_fine_data_collector::hotkey_fine_data_collector(replica_base *base,
                                                        int target_bucket_index,
                                                        int max_queue_size)
@@ -330,6 +334,13 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
         find_outlier_index(weights, FLAGS_hot_key_variance_threshold, hot_index)) {
         result.hot_hash_key = std::string(weight_max_key);
     }
+}
+
+void hotkey_fine_data_collector::clear()
+{
+    std::pair<dsn::blob, uint64_t> key_weight_pair;
+    while (_capture_key_queue.try_dequeue(key_weight_pair)) {
+    };
 }
 
 } // namespace server
