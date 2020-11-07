@@ -19,8 +19,8 @@
 
 #include <dsn/dist/replication/replication_enums.h>
 #include <dsn/utility/smart_pointers.h>
-#include <dsn/dist/fmt_logging.h>
 #include <boost/functional/hash.hpp>
+#include <dsn/dist/fmt_logging.h>
 #include "base/pegasus_key_schema.h"
 
 namespace pegasus {
