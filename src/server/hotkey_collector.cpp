@@ -343,7 +343,7 @@ void hotkey_fine_data_collector::clear()
 {
     std::pair<dsn::blob, uint64_t> key_weight_pair;
     while (_capture_key_queue.try_dequeue(key_weight_pair)) {
-    };
+    }
 }
 
 } // namespace server
