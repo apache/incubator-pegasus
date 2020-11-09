@@ -123,6 +123,8 @@ inline void hotkey_collector::change_state_to_stopped()
 {
     _state.store(hotkey_collector_state::STOPPED);
     _result.if_find_result.store(false);
+    _internal_coarse_collector->clear();
+    _internal_fine_collector->clear();
 }
 
 inline void hotkey_collector::change_state_to_coarse_detecting()
