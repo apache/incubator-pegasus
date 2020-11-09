@@ -1,7 +1,0 @@
-cluster_info
-server_info
-ls -d
-nodes -d
-app_stat
-query_backup_policy -p every_day
-
