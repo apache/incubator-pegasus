@@ -133,7 +133,7 @@ inline void hotkey_collector::change_state_to_coarse_detecting()
 inline void hotkey_collector::change_state_to_fine_detecting()
 {
     _state.store(hotkey_collector_state::FINE_DETECTING);
-    _internal_fine_collector->change_target_bucket(_result.hot_hash_key);
+    _internal_fine_collector->change_target_bucket(_result.coarse_bucket_index);
 }
 
 inline void hotkey_collector::change_state_to_finished()
@@ -302,20 +302,21 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
         _hash_buckets[i].store(0);
     }
     int hot_bucket_index = -1;
-    if (!find_outlier_index(buckets, FLAGS_coarse_data_variance_threshold, hot_bucket_index)) {
-        result.coarse_bucket_index.store(hot_bucket_index);
+    if (!find_outlier_index(buckets, FLAGS_hot_bucket_variance_threshold, hot_bucket_index)) {
+        result.coarse_bucket_index = hot_bucket_index;
     } else {
-        result.coarse_bucket_index.store(-1);
+        result.coarse_bucket_index = -1;
     }
 }
 
 hotkey_fine_data_collector::hotkey_fine_data_collector(replica_base *base,
-                                                       size_t target_bucket_index,
-                                                       uint32_t max_queue_size,
-                                                       uint32_t hotkey_buckets_num)
+                                                       uint32_t hotkey_buckets_num,
+                                                       uint32_t max_queue_size)
     : internal_collector_base(base),
       _max_queue_size(max_queue_size),
-      _capture_key_queue(max_queue_size)
+      _capture_key_queue(max_queue_size),
+      _hash_bucket_num(hotkey_buckets_num)
+
 {
     _target_bucket_index.store(-1);
 }
@@ -327,7 +328,7 @@ void hotkey_fine_data_collector::change_target_bucket(int target_bucket_index)
 
 void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    if (get_bucket_id(hash_key) != _target_bucket_index.load()) {
+    if (get_bucket_id(hash_key, _hash_bucket_num) != _target_bucket_index.load()) {
         return;
     }
     // abandon the key if enqueue failed (possibly because not enough room to enqueue)

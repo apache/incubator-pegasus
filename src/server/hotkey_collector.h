@@ -26,6 +26,9 @@ namespace pegasus {
 namespace server {
 
 class internal_collector_base;
+class hotkey_empty_data_collector;
+class hotkey_coarse_data_collector;
+class hotkey_fine_data_collector;
 
 struct detect_hotkey_result
 {
@@ -91,20 +94,24 @@ public:
 private:
     void on_start_detect(dsn::replication::detect_hotkey_response &resp);
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
-    bool terminate_if_timeout();
-    std::shared_ptr<internal_collector_base> get_internal_collector_by_state();
+
+    void change_state_to_stopped();
     void change_state_to_coarse_detecting();
     void change_state_to_fine_detecting();
-    void change_state_to_stopped();
+    void change_state_to_finished();
+
+    bool terminate_if_timeout();
+    std::shared_ptr<internal_collector_base> get_internal_collector_by_state();
+    void change_state_by_result();
 
     const dsn::replication::hotkey_type::type _hotkey_type;
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
     std::atomic<uint64_t> _collector_start_time_second;
 
-    std::shared_ptr<internal_collector_base> _internal_empty_collector;
-    std::shared_ptr<internal_collector_base> _internal_coarse_collector;
-    std::shared_ptr<internal_collector_base> _internal_fine_collector;
+    std::shared_ptr<hotkey_empty_data_collector> _internal_empty_collector;
+    std::shared_ptr<hotkey_coarse_data_collector> _internal_coarse_collector;
+    std::shared_ptr<hotkey_fine_data_collector> _internal_fine_collector;
 };
 
 class internal_collector_base : public dsn::replication::replica_base
@@ -128,15 +135,14 @@ public:
 class hotkey_coarse_data_collector : public internal_collector_base
 {
 public:
-    explicit hotkey_coarse_data_collector(replica_base *base,
-                                          uint32_t data_capture_hash_bucket_num);
+    explicit hotkey_coarse_data_collector(replica_base *base, uint32_t hotkey_buckets_num);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
 
 private:
     hotkey_coarse_data_collector() = delete;
 
-    const int _hash_bucket_num;
+    const uint32_t _hash_bucket_num;
     std::vector<std::atomic<uint64_t>> _hash_buckets;
 };
 
@@ -144,7 +150,7 @@ class hotkey_fine_data_collector : public internal_collector_base
 {
 public:
     hotkey_fine_data_collector(replica_base *base,
-                               uint32_t data_capture_hash_bucket_num,
+                               uint32_t hotkey_buckets_num,
                                uint32_t max_queue_size = 1000);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
@@ -157,6 +163,7 @@ private:
     std::atomic<int32_t> _target_bucket_index;
     // ConcurrentQueue is a lock-free queue to capture keys
     moodycamel::ConcurrentQueue<std::pair<dsn::blob, uint64_t>> _capture_key_queue;
+    const uint32_t _hash_bucket_num;
 };
 
 } // namespace server
