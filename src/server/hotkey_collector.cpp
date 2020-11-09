@@ -116,6 +116,7 @@ hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_ty
     _internal_fine_collector =
         std::make_shared<hotkey_fine_data_collector>(this, now_hash_bucket_num);
     _internal_empty_collector = std::make_shared<hotkey_empty_data_collector>(this);
+    hotkey_collector::change_state_to_stopped();
 }
 
 inline void hotkey_collector::change_state_to_stopped()
@@ -202,6 +203,7 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
     // TODO: (Tangyanzhao) add a unit test to ensure data integrity
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
+    case hotkey_collector_state::FINE_DETECTING:
         _internal_coarse_collector->capture_data(hash_key, weight > 0 ? weight : 1);
         return;
     default:
@@ -301,10 +303,8 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
     }
-    int hot_bucket_index = -1;
-    if (!find_outlier_index(buckets, FLAGS_hot_bucket_variance_threshold, hot_bucket_index)) {
-        result.coarse_bucket_index = hot_bucket_index;
-    } else {
+    if (!find_outlier_index(
+            buckets, FLAGS_hot_bucket_variance_threshold, result.coarse_bucket_index)) {
         result.coarse_bucket_index = -1;
     }
 }
@@ -380,9 +380,9 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
         }
     }
 
-    // hash_key_counts stores the number of occurrences of each string captured in a period of time
-    // The size of weights influences our hotkey determination strategy
-    // weights.size() <= 2: the hotkey must exist (the most weighted key), because
+    // hash_key_counts stores the number of occurrences of each string captured in a period of
+    // time The size of weights influences our hotkey determination strategy weights.size() <=
+    // 2: the hotkey must exist (the most weighted key), because
     //                      the two-level filtering significantly reduces the
     //                      possibility that the hottest key is not the actual hotkey.
     // weights.size() >= 3: use find_outlier_index to determine whether a hotkey exists
