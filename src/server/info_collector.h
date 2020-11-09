@@ -173,7 +173,7 @@ private:
     dsn::task_tracker _tracker;
     ::dsn::rpc_address _meta_servers;
     std::string _cluster_name;
-    shell_context _shell_context;
+    std::shared_ptr<shell_context> _shell_context;
     uint32_t _app_stat_interval_seconds;
     ::dsn::task_ptr _app_stat_timer_task;
     ::dsn::utils::ex_lock_nr _app_stat_counter_lock;
