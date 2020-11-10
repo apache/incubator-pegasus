@@ -23,6 +23,7 @@ WORKDIR /root
 RUN yum -y install ccache zip java-1.8.0-openjdk nmap-ncat; \
     yum clean all; \
     rm -rf /var/cache/yum;
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
 
 RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
     cd rdsn/thirdparty; \
