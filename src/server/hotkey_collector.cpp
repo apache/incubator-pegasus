@@ -311,6 +311,13 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
     }
 }
 
+void hotkey_coarse_data_collector::clear()
+{
+    for (int i = 0; i < FLAGS_hotkey_buckets_num; i++) {
+        _hash_buckets[i].store(0);
+    }
+}
+
 hotkey_fine_data_collector::hotkey_fine_data_collector(replica_base *base,
                                                        uint32_t hotkey_buckets_num,
                                                        uint32_t max_queue_size)
@@ -392,6 +399,13 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
     if (weights.size() < 3 ||
         find_outlier_index(weights, FLAGS_hot_key_variance_threshold, hot_index)) {
         result.hot_hash_key = std::string(weight_max_key);
+    }
+}
+
+void hotkey_fine_data_collector::clear()
+{
+    std::pair<dsn::blob, uint64_t> key_weight_pair;
+    while (_capture_key_queue.try_dequeue(key_weight_pair)) {
     }
 }
 

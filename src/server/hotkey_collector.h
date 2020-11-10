@@ -120,6 +120,7 @@ public:
     explicit internal_collector_base(replica_base *base) : replica_base(base){};
     virtual void capture_data(const dsn::blob &hash_key, uint64_t weight) = 0;
     virtual void analyse_data(detect_hotkey_result &result) = 0;
+    virtual void clear() = 0;
 };
 
 // used in hotkey_collector_state::STOPPED and hotkey_collector_state::FINISHED, avoid null pointers
@@ -129,6 +130,7 @@ public:
     explicit hotkey_empty_data_collector(replica_base *base) : internal_collector_base(base) {}
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override {}
     void analyse_data(detect_hotkey_result &result) override {}
+    void clear() override {}
 };
 
 // TODO: (Tangyanzhao) add a unit test of hotkey_coarse_data_collector
@@ -138,6 +140,7 @@ public:
     explicit hotkey_coarse_data_collector(replica_base *base, uint32_t hotkey_buckets_num);
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
+    void clear() override;
 
 private:
     hotkey_coarse_data_collector() = delete;
@@ -155,6 +158,7 @@ public:
     void capture_data(const dsn::blob &hash_key, uint64_t weight) override;
     void analyse_data(detect_hotkey_result &result) override;
     void change_target_bucket(int target_bucket_index);
+    void clear() override;
 
 private:
     hotkey_fine_data_collector() = delete;
