@@ -178,24 +178,24 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
 {
     FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
 
-    dsn::replication::detect_hotkey_request req;
-    req.type = hotkey_type;
-    req.action = action;
-    dsn::replication::detect_hotkey_response resp;
-
-    ddebug_f("{} {} hotkey detection in {}.{}",
-             (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
-             (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
-             app_name,
-             partition_index);
-
     int app_id;
     int partition_count;
     std::vector<dsn::partition_configuration> partitions;
     _shell_context->ddl_client->list_app(app_name, app_id, partition_count, partitions);
     auto target_address = partitions[partition_index].primary;
 
+    dsn::replication::detect_hotkey_response resp;
+    dsn::replication::detect_hotkey_request req;
+    req.type = hotkey_type;
+    req.action = action;
     auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
+
+    ddebug_f("{} {} hotkey detection in {}.{}, server address: {}",
+             (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
+             app_name,
+             partition_index,
+             target_address.to_string());
 
     if (error != dsn::ERR_OK) {
         derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
