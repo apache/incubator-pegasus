@@ -43,7 +43,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         } else {
             /// TODO: policy may change provider
             dist::block_service::block_filesystem *block_service =
-                _stub->_block_service_manager.get_block_filesystem(
+                _stub->_block_service_manager.get_or_create_block_filesystem(
                     request.policy.backup_provider_type);
             if (block_service == nullptr) {
                 derror("%s: create cold backup block service failed, provider_type = %s, response "

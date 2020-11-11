@@ -99,7 +99,7 @@ error_code replica::download_checkpoint(const configuration_restore_request &req
                                         const std::string &local_chkpt_dir)
 {
     block_filesystem *fs =
-        _stub->_block_service_manager.get_block_filesystem(req.backup_provider_name);
+        _stub->_block_service_manager.get_or_create_block_filesystem(req.backup_provider_name);
 
     // download metadata file and parse it into cold_backup_meta
     cold_backup_metadata backup_metadata;
@@ -230,7 +230,7 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
     std::string manifest_file = cold_backup::get_current_chkpt_file(
         backup_root, policy_name, req.app_name, old_gpid, backup_id);
     block_filesystem *fs =
-        _stub->_block_service_manager.get_block_filesystem(req.backup_provider_name);
+        _stub->_block_service_manager.get_or_create_block_filesystem(req.backup_provider_name);
     dassert(fs,
             "%s: get block filesystem by provider(%s) failed",
             name(),

@@ -26,7 +26,8 @@ class block_service_manager
 {
 public:
     block_service_manager();
-    block_filesystem *get_block_filesystem(const std::string &provider);
+    ~block_service_manager();
+    block_filesystem *get_or_create_block_filesystem(const std::string &provider);
 
     // download files from remote file system
     // \return  ERR_FILE_OPERATION_FAILED: local file system error

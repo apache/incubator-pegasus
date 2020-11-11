@@ -95,7 +95,7 @@ error_code bulk_load_service::check_bulk_load_request_params(const std::string &
 
     // check file provider
     dsn::dist::block_service::block_filesystem *blk_fs =
-        _meta_svc->get_block_service_manager().get_block_filesystem(file_provider);
+        _meta_svc->get_block_service_manager().get_or_create_block_filesystem(file_provider);
     if (blk_fs == nullptr) {
         derror_f("invalid remote file provider type: {}", file_provider);
         hint_msg = "invalid file_provider";

@@ -230,7 +230,6 @@ public:
     }
     mock_virtual ~policy_context() {}
 
-    void set_policy(policy &&p);
     void set_policy(const policy &p);
     policy get_policy();
     void add_backup_history(const backup_info &info);

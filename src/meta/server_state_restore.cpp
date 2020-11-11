@@ -47,7 +47,8 @@ void server_state::sync_app_from_backup_media(
             LPC_RESTORE_BACKGROUND, std::move(callback), 0));
 
     block_filesystem *blk_fs =
-        _meta_svc->get_block_service_manager().get_block_filesystem(request.backup_provider_name);
+        _meta_svc->get_block_service_manager().get_or_create_block_filesystem(
+            request.backup_provider_name);
     if (blk_fs == nullptr) {
         derror("acquire block_filesystem(%s) failed", request.backup_provider_name.c_str());
         callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, dsn::blob());

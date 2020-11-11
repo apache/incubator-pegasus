@@ -865,22 +865,6 @@ bool policy_context::is_under_backuping()
     return false;
 }
 
-void policy_context::set_policy(policy &&p)
-{
-    zauto_lock l(_lock);
-
-    const std::string old_backup_provider_type = _policy.backup_provider_type;
-    _policy = std::move(p);
-    if (_policy.backup_provider_type != old_backup_provider_type) {
-        _block_service =
-            _backup_service->get_meta_service()->get_block_service_manager().get_block_filesystem(
-                _policy.backup_provider_type);
-    }
-    dassert(_block_service,
-            "can't initialize block filesystem by provider (%s)",
-            _policy.backup_provider_type.c_str());
-}
-
 void policy_context::set_policy(const policy &p)
 {
     zauto_lock l(_lock);
@@ -888,9 +872,9 @@ void policy_context::set_policy(const policy &p)
     const std::string old_backup_provider_type = _policy.backup_provider_type;
     _policy = p;
     if (_policy.backup_provider_type != old_backup_provider_type) {
-        _block_service =
-            _backup_service->get_meta_service()->get_block_service_manager().get_block_filesystem(
-                _policy.backup_provider_type);
+        _block_service = _backup_service->get_meta_service()
+                             ->get_block_service_manager()
+                             .get_or_create_block_filesystem(_policy.backup_provider_type);
     }
     dassert(_block_service,
             "can't initialize block filesystem by provider (%s)",
@@ -1279,14 +1263,11 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
             }
         }
 
-        {
-            dist::block_service::block_service_manager _block_service_manager;
-            if (_block_service_manager.get_block_filesystem(request.backup_provider_type) ==
-                nullptr) {
-                derror("invalid backup_provider_type(%s)", request.backup_provider_type.c_str());
-                response.err = ERR_INVALID_PARAMETERS;
-                should_create_new_policy = false;
-            }
+        if (_meta_svc->get_block_service_manager().get_or_create_block_filesystem(
+                request.backup_provider_type) == nullptr) {
+            derror("invalid backup_provider_type(%s)", request.backup_provider_type.c_str());
+            response.err = ERR_INVALID_PARAMETERS;
+            should_create_new_policy = false;
         }
 
         if (should_create_new_policy) {
