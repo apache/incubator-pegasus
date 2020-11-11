@@ -196,7 +196,6 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     auto target_address = partitions[partition_index].primary;
 
     auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
-
     if (error != dsn::ERR_OK) {
         derror_f("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
                  app_name,
