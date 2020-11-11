@@ -77,7 +77,7 @@ http_message_parser::http_message_parser()
         // msg->buffers[0] = header
         // msg->buffers[1] = body (blob())
         msg.reset(message_ex::create_receive_message_with_standalone_header(blob()));
-        msg->buffers.resize(4);
+        msg->buffers.resize(HTTP_MSG_BUFFERS_NUM);
 
         message_header *header = msg->header;
         header->hdr_length = sizeof(message_header);

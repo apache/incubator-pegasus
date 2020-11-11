@@ -38,6 +38,9 @@ namespace dsn {
 
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_HTTP)
 
+// Number of blobs that a message_ex contains.
+#define HTTP_MSG_BUFFERS_NUM 4
+
 // Incoming HTTP requests will be parsed into:
 //
 //    msg->header->rpc_name = "RPC_HTTP_SERVICE"

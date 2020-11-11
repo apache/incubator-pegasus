@@ -104,7 +104,7 @@ void http_server::serve(message_ex *msg)
 
 /*static*/ error_with<http_request> http_request::parse(message_ex *m)
 {
-    if (m->buffers.size() != 3) {
+    if (m->buffers.size() != HTTP_MSG_BUFFERS_NUM) {
         return error_s::make(ERR_INVALID_DATA,
                              std::string("buffer size is: ") + std::to_string(m->buffers.size()));
     }
