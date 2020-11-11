@@ -19,11 +19,10 @@ FROM apachepegasus/build-env:centos7
 
 WORKDIR /root
 
-# install jre for running zookeeper during testing.
-RUN yum -y install ccache zip java-1.8.0-openjdk nmap-ncat; \
+# install jdk for building pegasus(hdfs_service) and running zookeeper during testing.
+RUN yum -y install ccache zip java-1.8.0-openjdk-devel.x86_64 nmap-ncat; \
     yum clean all; \
     rm -rf /var/cache/yum;
-ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
 
 RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
     cd rdsn/thirdparty; \
