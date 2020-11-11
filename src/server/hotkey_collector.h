@@ -33,7 +33,7 @@ class internal_collector_base;
 struct detect_hotkey_result
 {
     int coarse_bucket_index = -1;
-    std::string hot_hash_key = "";
+    std::string hot_hash_key;
 };
 
 DSN_DECLARE_uint32(hotkey_buckets_num);
@@ -95,10 +95,6 @@ private:
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
     void terminate();
     bool terminate_if_timeout();
-
-    static int get_bucket_id(dsn::string_view data);
-    static bool
-    find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
 
     detect_hotkey_result _result;
     std::atomic<hotkey_collector_state> _state;
