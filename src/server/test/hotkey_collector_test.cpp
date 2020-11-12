@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "server/hotkey_collector.h"
 
 #include <dsn/utility/rand.h>
@@ -26,31 +43,34 @@ static std::string generate_hash_key_by_random(bool is_hotkey, int probability =
 TEST(hotkey_collector_test, get_bucket_id_test)
 {
     int bucket_id = -1;
-    bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)));
-    ASSERT_NE(bucket_id, -1);
+    for (int i = 0; i < 1000000; i++) {
+        bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)));
+        ASSERT_GE(bucket_id, 0);
+        ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);
+    }
 }
 
 TEST(hotkey_collector_test, find_outlier_index_test)
 {
     int threshold = 3;
     int hot_index;
-    bool if_find_hot_index;
+    bool hot_index_found;
 
-    if_find_hot_index = find_outlier_index({1, 2, 3}, threshold, hot_index);
-    ASSERT_EQ(if_find_hot_index, false);
+    hot_index_found = find_outlier_index({1, 2, 3}, threshold, hot_index);
+    ASSERT_EQ(hot_index_found, false);
     ASSERT_EQ(hot_index, -1);
 
-    if_find_hot_index = find_outlier_index({1, 2, 100000}, threshold, hot_index);
-    ASSERT_EQ(if_find_hot_index, true);
+    hot_index_found = find_outlier_index({1, 2, 100000}, threshold, hot_index);
+    ASSERT_EQ(hot_index_found, true);
     ASSERT_EQ(hot_index, 2);
 
-    if_find_hot_index = find_outlier_index({1, 10000, 2, 3, 4, 10000000, 6}, threshold, hot_index);
-    ASSERT_EQ(if_find_hot_index, true);
+    hot_index_found = find_outlier_index({1, 10000, 2, 3, 4, 10000000, 6}, threshold, hot_index);
+    ASSERT_EQ(hot_index_found, true);
     ASSERT_EQ(hot_index, 5);
 
-    if_find_hot_index = find_outlier_index(
+    hot_index_found = find_outlier_index(
         {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, threshold, hot_index);
-    ASSERT_EQ(if_find_hot_index, false);
+    ASSERT_EQ(hot_index_found, false);
     ASSERT_EQ(hot_index, -1);
 }
 
@@ -61,7 +81,7 @@ public:
 
     hotkey_coarse_data_collector coarse_collector;
 
-    bool if_empty()
+    bool empty()
     {
         int empty = true;
         for (const auto &iter : coarse_collector._hash_buckets) {
@@ -87,7 +107,7 @@ TEST_F(coarse_collector_test, coarse_collector)
     ASSERT_NE(result.coarse_bucket_index, -1);
 
     coarse_collector.clear();
-    ASSERT_TRUE(if_empty());
+    ASSERT_TRUE(empty());
 
     for (int i = 0; i < 1000; i++) {
         dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
