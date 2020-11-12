@@ -244,12 +244,6 @@ bool pause_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
 
-// == disk rebalance (see 'commands/disk_rebalance.cpp') == //
-
-bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args);
-
-bool query_disk_replica(command_executor *e, shell_context *sc, arguments args);
-
 // == bulk load (see 'commands/bulk_load.cpp') == //
 
 bool start_bulk_load(command_executor *e, shell_context *sc, arguments args);
