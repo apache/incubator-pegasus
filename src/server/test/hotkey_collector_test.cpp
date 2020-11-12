@@ -66,11 +66,10 @@ public:
         int empty = true;
         for (const auto &iter : coarse_collector._hash_buckets) {
             if (iter.load() != 0) {
-                empty = false;
-                return;
+                return false;
             }
         }
-        return empty;
+        return true;
     }
 };
 
