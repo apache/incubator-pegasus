@@ -29,7 +29,7 @@ DSN_DECLARE_int32(occurrence_threshold);
 class hotspot_partition_test : public pegasus_server_test_base
 {
 public:
-    hotspot_partition_test() : calculator("TEST", 8)
+    hotspot_partition_test() : calculator("TEST", 8, nullptr)
     {
         dsn::fail::setup();
         dsn::fail::cfg("send_detect_hotkey_request", "return()");

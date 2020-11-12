@@ -37,7 +37,9 @@ typedef std::vector<std::array<dsn::perf_counter_wrapper, 2>> hot_partition_coun
 class hotspot_partition_calculator
 {
 public:
-    hotspot_partition_calculator(const std::string &app_name, int partition_count)
+    hotspot_partition_calculator(const std::string &app_name,
+                                 int partition_count,
+                                 std::shared_ptr<shell_context> context)
         : _app_name(app_name), _hot_points(partition_count), _hotpartition_counter(partition_count)
     {
         init_perf_counter(partition_count);
@@ -46,10 +48,10 @@ public:
     void data_aggregate(const std::vector<row_data> &partitions);
     // analyse the saved data to find hotspot partition
     void data_analyse();
-    static void send_detect_hotkey_request(const std::string &app_name,
-                                           const uint64_t partition_index,
-                                           const dsn::replication::hotkey_type::type hotkey_type,
-                                           const dsn::replication::detect_action::type action);
+    void send_detect_hotkey_request(const std::string &app_name,
+                                    const uint64_t partition_index,
+                                    const dsn::replication::hotkey_type::type hotkey_type,
+                                    const dsn::replication::detect_action::type action);
 
 private:
     // empirical rule to calculate hot point of each partition
@@ -65,6 +67,7 @@ private:
     hot_partition_counters _hot_points;
     // saving historical data can improve accuracy
     stat_histories _partitions_stat_histories;
+    std::shared_ptr<shell_context> _shell_context;
 
     // _hotpartition_counter p[index_of_partitions][type_of_read(0)/write(1)_stat]
     // it's a counter to find partitions that often exceed the threshold

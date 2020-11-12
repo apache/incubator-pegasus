@@ -57,9 +57,10 @@ info_collector::info_collector()
 
     _cluster_name = dsn::replication::get_current_cluster_name();
 
-    _shell_context.current_cluster_name = _cluster_name;
-    _shell_context.meta_list = meta_servers;
-    _shell_context.ddl_client.reset(new replication_ddl_client(meta_servers));
+    _shell_context = std::make_shared<shell_context>();
+    _shell_context->current_cluster_name = _cluster_name;
+    _shell_context->meta_list = meta_servers;
+    _shell_context->ddl_client.reset(new replication_ddl_client(meta_servers));
 
     _app_stat_interval_seconds = (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
                                                                        "app_stat_interval_seconds",
@@ -143,7 +144,7 @@ void info_collector::on_app_stat()
 {
     ddebug("start to stat apps");
     std::map<std::string, std::vector<row_data>> all_rows;
-    if (!get_app_partition_stat(&_shell_context, all_rows)) {
+    if (!get_app_partition_stat(_shell_context.get(), all_rows)) {
         derror("call get_app_stat() failed");
         return;
     }
@@ -241,7 +242,7 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
 {
     ddebug("start to stat capacity unit, remaining_retry_count = %d", remaining_retry_count);
     std::vector<node_capacity_unit_stat> nodes_stat;
-    if (!get_capacity_unit_stat(&_shell_context, nodes_stat)) {
+    if (!get_capacity_unit_stat(_shell_context.get(), nodes_stat)) {
         if (remaining_retry_count > 0) {
             dwarn("get capacity unit stat failed, remaining_retry_count = %d, "
                   "wait %u seconds to retry",
@@ -288,7 +289,7 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
 {
     ddebug("start to stat storage size, remaining_retry_count = %d", remaining_retry_count);
     app_storage_size_stat st_stat;
-    if (!get_storage_size_stat(&_shell_context, st_stat)) {
+    if (!get_storage_size_stat(_shell_context.get(), st_stat)) {
         if (remaining_retry_count > 0) {
             dwarn("get storage size stat failed, remaining_retry_count = %d, "
                   "wait %u seconds to retry",
@@ -316,7 +317,8 @@ info_collector::get_hotspot_calculator(const std::string &app_name, const int pa
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    auto calculator = std::make_shared<hotspot_partition_calculator>(app_name, partition_count);
+    auto calculator =
+        std::make_shared<hotspot_partition_calculator>(app_name, partition_count, _shell_context);
     _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }
