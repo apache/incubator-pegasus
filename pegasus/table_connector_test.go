@@ -340,9 +340,9 @@ func TestPegasusTableConnector_MultiKeyOperations(t *testing.T) {
 func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 	hashKey := []byte("h1")
 
-	sortKeys := make([][]byte, 100)
-	values := make([][]byte, 100)
-	for i := 0; i < 100; i++ {
+	sortKeys := make([][]byte, 10)
+	values := make([][]byte, 10)
+	for i := 0; i < 10; i++ {
 		// make sortKeys sorted.
 		sidBuf := []byte(fmt.Sprintf("%d", i))
 		var sidWithLeadingZero bytes.Buffer
@@ -1015,8 +1015,8 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 func TestPegasusTableConnector_Incr(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	concurrency := 10
-	times := 1000
+	concurrency := 3
+	times := 20
 
 	{
 		client := NewClient(testingCfg)

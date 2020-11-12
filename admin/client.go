@@ -19,6 +19,9 @@ type Client interface {
 // TableInfo is the table information.
 type TableInfo struct {
 	Name string
+
+	// Envs is a set of attributes binding to this table.
+	Envs map[string]string
 }
 
 type Config struct {
@@ -52,7 +55,7 @@ func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
 
 	var results []*TableInfo
 	for _, app := range appInfos {
-		results = append(results, &TableInfo{Name: app.AppName})
+		results = append(results, &TableInfo{Name: app.AppName, Envs: app.Envs})
 	}
 	return results, nil
 }

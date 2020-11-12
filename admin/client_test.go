@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -38,4 +39,27 @@ func TestAdmin_Table(t *testing.T) {
 
 	err = c.DropTable(context.Background(), "admin_table_test")
 	assert.Nil(t, err)
+}
+
+func TestAdmin_ListTablesTimeout(t *testing.T) {
+	c := NewClient(Config{
+		MetaServers: []string{"0.0.0.0:123456"},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	_, err := c.ListTables(ctx)
+	assert.Equal(t, err, context.DeadlineExceeded)
+}
+
+func TestAdmin_GetAppEnvs(t *testing.T) {
+	c := NewClient(Config{
+		MetaServers: []string{"0.0.0.0:34601", "0.0.0.0:34602", "0.0.0.0:34603"},
+	})
+
+	tables, err := c.ListTables(context.Background())
+	assert.Nil(t, err)
+	for _, tb := range tables {
+		assert.Empty(t, tb.Envs)
+	}
 }
