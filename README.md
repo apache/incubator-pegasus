@@ -1,1 +1,7 @@
 # admin-cli
+
+## Installation
+
+```
+make
+```
