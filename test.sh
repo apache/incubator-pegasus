@@ -20,7 +20,7 @@ cd $PEGASUS_PKG
 cd ../
 
 GO111MODULE=on make build
-./bin/echo & # run echoserver in the background
+./bin/echo > /dev/null 2>&1 & # run echoserver in the background, drop its stderr/stdout
 
 if ! GO111MODULE=on time make ci
 then

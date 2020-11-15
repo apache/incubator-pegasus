@@ -96,9 +96,117 @@ struct list_apps_response
     2:list<app_info> infos;
 }
 
+/////////////////// duplication-related structs ////////////////////
+
+//  - INIT  -> START
+//  - START -> PAUSE
+//  - START -> REMOVED
+//  - PAUSE -> START
+//  - PAUSE -> REMOVED
+enum duplication_status
+{
+    DS_INIT = 0,
+    DS_START,
+    DS_PAUSE,
+    DS_REMOVED,
+}
+
+// How duplication reacts on permanent failure.
+enum duplication_fail_mode
+{
+    // The default mode. If some permanent failure occurred that makes duplication
+    // blocked, it will retry forever until external interference.
+    FAIL_SLOW = 0,
+
+    // Skip the writes that failed to duplicate, which means minor data loss on the remote cluster.
+    // This will certainly achieve better stability of the system.
+    FAIL_SKIP,
+
+    // Stop immediately after it ensures itself unable to duplicate.
+    // WARN: this mode kills the server process, replicas on the server will all be effected.
+    FAIL_FAST
+}
+
+// This request is sent from client to meta.
+struct duplication_add_request
+{
+    1:string  app_name;
+    2:string  remote_cluster_name;
+
+    // True means to initialize the duplication in DS_PAUSE.
+    3:bool    freezed;
+}
+
+struct duplication_add_response
+{
+    // Possible errors:
+    // - ERR_INVALID_PARAMETERS:
+    //   the address of remote cluster is not well configured in meta sever.
+    1:base.error_code  err;
+    2:i32              appid;
+    3:i32              dupid;
+    4:optional string  hint;
+}
+
+// This request is sent from client to meta.
+struct duplication_modify_request
+{
+    1:string                    app_name;
+    2:i32                       dupid;
+    3:optional duplication_status status;
+    4:optional duplication_fail_mode fail_mode;
+}
+
+struct duplication_modify_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app is not found
+    // - ERR_OBJECT_NOT_FOUND: duplication is not found
+    // - ERR_BUSY: busy for updating state
+    // - ERR_INVALID_PARAMETERS: illegal request
+    1:base.error_code  err;
+    2:i32              appid;
+}
+
+struct duplication_entry
+{
+    1:i32                  dupid;
+    2:duplication_status   status;
+    3:string               remote;
+    4:i64                  create_ts;
+
+    // partition_index => confirmed decree
+    5:optional map<i32, i64> progress;
+
+    7:optional duplication_fail_mode fail_mode;
+}
+
+// This request is sent from client to meta.
+struct duplication_query_request
+{
+    1:string                    app_name;
+}
+
+struct duplication_query_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app is not found
+    1:base.error_code            err;
+    3:i32                        appid;
+    4:list<duplication_entry>    entry_list;
+}
+
 service admin_client 
 {
     create_app_response create_app(1:create_app_request req);
+    
     drop_app_response drop_app(1:drop_app_request req);
+    
     list_apps_response list_apps(1:list_apps_request req);
+
+    duplication_add_response add_duplication(1: duplication_add_request req);
+
+    duplication_query_response query_duplication(1: duplication_query_request req);
+
+    duplication_modify_response modify_duplication(1: duplication_modify_request req);
 }
