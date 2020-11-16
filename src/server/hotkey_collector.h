@@ -21,7 +21,6 @@
 #include <concurrentqueue/concurrentqueue.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <gtest/gtest_prod.h>
-
 #include "hotkey_collector_state.h"
 
 namespace pegasus {
