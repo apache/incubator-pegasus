@@ -23,6 +23,8 @@
 namespace pegasus {
 namespace server {
 
+DSN_DECLARE_uint32(hotkey_buckets_num);
+
 static std::string generate_hash_key_by_random(bool is_hotkey, int probability = 100)
 {
     if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
