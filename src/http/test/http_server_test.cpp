@@ -21,14 +21,14 @@ TEST(http_server, parse_url)
         std::string path;
     } tests[] = {
         {"http://127.0.0.1:34601", ERR_OK, ""},
-        {"http://127.0.0.1:34601/", ERR_OK, "/"},
-        {"http://127.0.0.1:34601///", ERR_OK, "///"},
-        {"http://127.0.0.1:34601/threads", ERR_OK, "/threads"},
-        {"http://127.0.0.1:34601/threads/?detail", ERR_OK, "/threads/"},
-        {"http://127.0.0.1:34601//pprof/heap/", ERR_OK, "//pprof/heap/"},
-        {"http://127.0.0.1:34601//pprof///heap?detailed=true", ERR_OK, "//pprof///heap"},
-        {"http://127.0.0.1:34601/pprof/heap/arg/", ERR_OK, "/pprof/heap/arg/"},
-        {"http://127.0.0.1:34601/pprof///heap///arg/", ERR_OK, "/pprof///heap///arg/"},
+        {"http://127.0.0.1:34601/", ERR_OK, ""},
+        {"http://127.0.0.1:34601///", ERR_OK, ""},
+        {"http://127.0.0.1:34601/threads", ERR_OK, "threads"},
+        {"http://127.0.0.1:34601/threads/?detail", ERR_OK, "threads"},
+        {"http://127.0.0.1:34601//pprof/heap/", ERR_OK, "pprof/heap"},
+        {"http://127.0.0.1:34601//pprof///heap?detailed=true", ERR_OK, "pprof/heap"},
+        {"http://127.0.0.1:34601/pprof/heap/arg/", ERR_OK, "pprof/heap/arg"},
+        {"http://127.0.0.1:34601/pprof///heap///arg/", ERR_OK, "pprof/heap/arg"},
     };
 
     for (auto tt : tests) {

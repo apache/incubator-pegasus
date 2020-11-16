@@ -151,7 +151,26 @@ void http_server::serve(message_ex *msg)
     if (!unresolved_path.empty() && *unresolved_path.crbegin() == '\0') {
         unresolved_path.pop_back();
     }
-    ret.path = std::move(unresolved_path);
+
+    // parse path
+    std::vector<std::string> args;
+    boost::split(args, unresolved_path, boost::is_any_of("/"));
+    std::vector<std::string> real_args;
+    for (std::string &arg : args) {
+        if (!arg.empty()) {
+            real_args.emplace_back(std::move(arg));
+        }
+    }
+    if (real_args.size() == 0) {
+        ret.path = "";
+    } else {
+        std::string path = real_args[0];
+        for (int i = 1; i < real_args.size(); i++) {
+            path += '/';
+            path += real_args[i];
+        }
+        ret.path = std::move(path);
+    }
 
     // find if there are method args (<ip>:<port>/<service>/<method>?<arg>=<val>&<arg>=<val>)
     if (!unresolved_query.empty()) {
