@@ -34,10 +34,21 @@ type pegasusClient struct {
 }
 
 // NewClient creates a new instance of pegasus client.
+// It panics if the configured addresses are illegal.
 func NewClient(cfg Config) Client {
-	if len(cfg.MetaServers) == 0 {
-		pegalog.GetLogger().Fatal("pegasus-go-client: meta server list should not be empty")
+	c, err := newClientWithError(cfg)
+	if err != nil {
+		pegalog.GetLogger().Fatal(err)
 		return nil
+	}
+	return c
+}
+
+func newClientWithError(cfg Config) (Client, error) {
+	var err error
+	cfg.MetaServers, err = session.ResolveMetaAddr(cfg.MetaServers)
+	if err != nil {
+		return nil, err
 	}
 
 	c := &pegasusClient{
@@ -45,7 +56,7 @@ func NewClient(cfg Config) Client {
 		metaMgr:    session.NewMetaManager(cfg.MetaServers, session.NewNodeSession),
 		replicaMgr: session.NewReplicaManager(session.NewNodeSession),
 	}
-	return c
+	return c, nil
 }
 
 func (p *pegasusClient) Close() error {

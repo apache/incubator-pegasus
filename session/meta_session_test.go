@@ -69,10 +69,12 @@ func TestNodeSession_ConcurrentCall(t *testing.T) {
 	defer meta.Close()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
+	wg.Add(5)
+	for i := 0; i < 5; i++ {
 		go func() {
-			_, err := meta.queryConfig(context.Background(), "temp")
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			_, err := meta.queryConfig(ctx, "temp")
 			assert.Nil(t, err)
 
 			wg.Done()

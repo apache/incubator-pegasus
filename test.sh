@@ -11,8 +11,8 @@ PEGASUS_PKG_URL="https://github.com/XiaoMi/pegasus/releases/download/v2.0.0/pega
 
 # start pegasus onebox environment
 if [ ! -f $PEGASUS_PKG.tar.gz ]; then
-    wget $PEGASUS_PKG_URL
-    tar xvf $PEGASUS_PKG.tar.gz
+    wget --quiet $PEGASUS_PKG_URL
+    tar xf $PEGASUS_PKG.tar.gz
 fi
 cd $PEGASUS_PKG
 

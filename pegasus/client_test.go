@@ -128,6 +128,25 @@ func TestPegasusClient_ConcurrentMetaQueries(t *testing.T) {
 	wg.Wait()
 }
 
+func TestPegasusClient_New(t *testing.T) {
+	c, err := newClientWithError(Config{
+		MetaServers: []string{"127.0.0.1:34601", "127.0.0.1:34602", "127.0.0.1:34603"},
+	})
+	assert.Nil(t, err)
+	_ = c.Close()
+
+	c, err = newClientWithError(Config{
+		MetaServers: []string{"127abc"},
+	})
+	assert.NotNil(t, err)
+	assert.Nil(t, c)
+
+	_, err = newClientWithError(Config{
+		MetaServers: []string{},
+	})
+	assert.NotNil(t, err)
+}
+
 func compareMaps(t *testing.T, dataMap map[string]string, baseMap map[string]string) error {
 	//sort dataMap & sort baseMap & compare
 	assert.Equal(t, len(baseMap), len(dataMap))
