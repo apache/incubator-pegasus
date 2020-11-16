@@ -20,7 +20,6 @@
 #include <dsn/dist/replication/replication_types.h>
 #include <concurrentqueue/concurrentqueue.h>
 #include <dsn/dist/replication/replica_base.h>
-#include <dsn/utility/flags.h>
 #include <gtest/gtest_prod.h>
 
 #include "hotkey_collector_state.h"
