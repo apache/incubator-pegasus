@@ -33,6 +33,7 @@
 #include "backup/cold_backup_context.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "split/replica_split_manager.h"
+#include "replica_disk_migrator.h"
 
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/cpp/json_helper.h>
@@ -74,6 +75,7 @@ replica::replica(
     _config.pid = gpid;
     _bulk_loader = make_unique<replica_bulk_loader>(this);
     _split_mgr = make_unique<replica_split_manager>(this);
+    _disk_migrator = make_unique<replica_disk_migrator>(this);
 
     std::string counter_str = fmt::format("private.log.size(MB)@{}", gpid);
     _counter_private_log_size.init_app_counter(

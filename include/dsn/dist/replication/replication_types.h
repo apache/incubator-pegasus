@@ -255,6 +255,19 @@ struct detect_action
 
 extern const std::map<int, const char *> _detect_action_VALUES_TO_NAMES;
 
+struct disk_migration_status
+{
+    enum type
+    {
+        IDLE = 0,
+        MOVING = 1,
+        MOVED = 2,
+        CLOSED = 3
+    };
+};
+
+extern const std::map<int, const char *> _disk_migration_status_VALUES_TO_NAMES;
+
 class mutation_header;
 
 class mutation_update;
@@ -350,6 +363,10 @@ class disk_info;
 class query_disk_info_request;
 
 class query_disk_info_response;
+
+class replica_disk_migrate_request;
+
+class replica_disk_migrate_response;
 
 class query_app_info_request;
 
@@ -3494,6 +3511,118 @@ public:
 void swap(query_disk_info_response &a, query_disk_info_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const query_disk_info_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _replica_disk_migrate_request__isset
+{
+    _replica_disk_migrate_request__isset() : pid(false), origin_disk(false), target_disk(false) {}
+    bool pid : 1;
+    bool origin_disk : 1;
+    bool target_disk : 1;
+} _replica_disk_migrate_request__isset;
+
+class replica_disk_migrate_request
+{
+public:
+    replica_disk_migrate_request(const replica_disk_migrate_request &);
+    replica_disk_migrate_request(replica_disk_migrate_request &&);
+    replica_disk_migrate_request &operator=(const replica_disk_migrate_request &);
+    replica_disk_migrate_request &operator=(replica_disk_migrate_request &&);
+    replica_disk_migrate_request() : origin_disk(), target_disk() {}
+
+    virtual ~replica_disk_migrate_request() throw();
+    ::dsn::gpid pid;
+    std::string origin_disk;
+    std::string target_disk;
+
+    _replica_disk_migrate_request__isset __isset;
+
+    void __set_pid(const ::dsn::gpid &val);
+
+    void __set_origin_disk(const std::string &val);
+
+    void __set_target_disk(const std::string &val);
+
+    bool operator==(const replica_disk_migrate_request &rhs) const
+    {
+        if (!(pid == rhs.pid))
+            return false;
+        if (!(origin_disk == rhs.origin_disk))
+            return false;
+        if (!(target_disk == rhs.target_disk))
+            return false;
+        return true;
+    }
+    bool operator!=(const replica_disk_migrate_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const replica_disk_migrate_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(replica_disk_migrate_request &a, replica_disk_migrate_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const replica_disk_migrate_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _replica_disk_migrate_response__isset
+{
+    _replica_disk_migrate_response__isset() : err(false), hint(false) {}
+    bool err : 1;
+    bool hint : 1;
+} _replica_disk_migrate_response__isset;
+
+class replica_disk_migrate_response
+{
+public:
+    replica_disk_migrate_response(const replica_disk_migrate_response &);
+    replica_disk_migrate_response(replica_disk_migrate_response &&);
+    replica_disk_migrate_response &operator=(const replica_disk_migrate_response &);
+    replica_disk_migrate_response &operator=(replica_disk_migrate_response &&);
+    replica_disk_migrate_response() : hint() {}
+
+    virtual ~replica_disk_migrate_response() throw();
+    ::dsn::error_code err;
+    std::string hint;
+
+    _replica_disk_migrate_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_hint(const std::string &val);
+
+    bool operator==(const replica_disk_migrate_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (__isset.hint != rhs.__isset.hint)
+            return false;
+        else if (__isset.hint && !(hint == rhs.hint))
+            return false;
+        return true;
+    }
+    bool operator!=(const replica_disk_migrate_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const replica_disk_migrate_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(replica_disk_migrate_response &a, replica_disk_migrate_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const replica_disk_migrate_response &obj)
 {
     obj.printTo(out);
     return out;

@@ -128,7 +128,8 @@ private:
 
     friend class replica_stub;
     friend class mock_replica_stub;
-    friend class replica_disk_test;
+    friend class replica_disk_migrator;
+    friend class replica_disk_test_base;
 };
 } // replication
 } // dsn

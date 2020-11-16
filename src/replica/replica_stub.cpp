@@ -41,6 +41,7 @@
 #include "duplication/duplication_sync_timer.h"
 #include "backup/replica_backup_server.h"
 #include "split/replica_split_manager.h"
+#include "replica_disk_migrator.h"
 
 #include <dsn/cpp/json_helper.h>
 #include <dsn/utility/filesystem.h>
@@ -1008,6 +1009,19 @@ void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
     resp.total_available_mb = _fs_manager._total_available_mb;
 
     resp.err = ERR_OK;
+}
+
+void replica_stub::on_disk_migrate(replica_disk_migrate_rpc rpc)
+{
+    const replica_disk_migrate_request &request = rpc.request();
+    replica_disk_migrate_response &response = rpc.response();
+
+    replica_ptr rep = get_replica(request.pid);
+    if (rep != nullptr) {
+        rep->disk_migrator()->on_migrate_replica(request, response);
+    } else {
+        response.err = ERR_OBJECT_NOT_FOUND;
+    }
 }
 
 void replica_stub::on_query_app_info(query_app_info_rpc rpc)
@@ -2082,6 +2096,8 @@ void replica_stub::open_service()
         RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
+    register_rpc_handler_with_rpc_holder(
+        RPC_REPLICA_DISK_MIGRATE, "disk_migrate_replica", &replica_stub::on_disk_migrate);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_APP_INFO, "query_app_info", &replica_stub::on_query_app_info);
     register_rpc_handler_with_rpc_holder(RPC_SPLIT_NOTIFY_CATCH_UP,

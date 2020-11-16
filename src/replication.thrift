@@ -468,7 +468,7 @@ struct query_disk_info_request
     2:string          app_name;
 }
 
-// This response is recieved replica_server.
+// This response is from replica_server to client.
 struct query_disk_info_response
 {
     // app not existed will return "ERR_OBJECT_NOT_FOUND", otherwise "ERR_OK"
@@ -476,6 +476,29 @@ struct query_disk_info_response
     2:i64 total_capacity_mb;
     3:i64 total_available_mb;
     4:list<disk_info> disk_infos;
+}
+
+// This request is sent from client to replica_server.
+struct replica_disk_migrate_request
+{
+    1:dsn.gpid pid
+    // disk tag, for example `ssd1`. `origin_disk` and `target_disk` must be specified in the config of [replication] data_dirs.
+    2:string origin_disk;
+    3:string target_disk;
+}
+
+// This response is from replica_server to client.
+struct replica_disk_migrate_response
+{
+   // Possible error:
+   // -ERR_OK: start do replica disk migrate
+   // -ERR_BUSY: current replica migration is running
+   // -ERR_INVALID_STATE: current replica partition status isn't secondary
+   // -ERR_INVALID_PARAMETERS: origin disk is equal with target disk
+   // -ERR_OBJECT_NOT_FOUND: replica not found, origin or target disk isn't existed, origin disk doesn't exist current replica
+   // -ERR_PATH_ALREADY_EXIST: target disk has existed current replica
+   1:dsn.error_code err;
+   2:optional string hint;
 }
 
 struct query_app_info_request
@@ -1109,6 +1132,13 @@ enum detect_action
 {
     START,
     STOP
+}
+
+enum disk_migration_status {
+    IDLE,
+    MOVING,
+    MOVED,
+    CLOSED
 }
 
 struct detect_hotkey_request {

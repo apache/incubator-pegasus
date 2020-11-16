@@ -53,6 +53,8 @@ typedef rpc_holder<query_replica_decree_request, query_replica_decree_response>
 typedef rpc_holder<query_replica_info_request, query_replica_info_response> query_replica_info_rpc;
 typedef rpc_holder<replica_configuration, learn_response> copy_checkpoint_rpc;
 typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
+typedef rpc_holder<replica_disk_migrate_request, replica_disk_migrate_response>
+    replica_disk_migrate_rpc;
 typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
 typedef rpc_holder<notify_catch_up_request, notify_cacth_up_response> notify_catch_up_rpc;
 typedef rpc_holder<update_child_group_partition_count_request,
@@ -110,7 +112,6 @@ public:
     void on_config_proposal(const configuration_update_request &proposal);
     void on_query_decree(query_replica_decree_rpc rpc);
     void on_query_replica_info(query_replica_info_rpc rpc);
-    void on_query_disk_info(query_disk_info_rpc rpc);
     void on_query_app_info(query_app_info_rpc rpc);
     void on_bulk_load(bulk_load_rpc rpc);
 
@@ -213,6 +214,9 @@ public:
     // TODO: (Tangyanzhao) add some comments
     void on_detect_hotkey(detect_hotkey_rpc rpc);
 
+    void on_query_disk_info(query_disk_info_rpc rpc);
+    void on_disk_migrate(replica_disk_migrate_rpc rpc);
+
 private:
     enum replica_node_state
     {
@@ -295,6 +299,7 @@ private:
     friend class replica_http_service;
     friend class replica_bulk_loader;
     friend class replica_split_manager;
+    friend class replica_disk_migrator;
 
     friend class mock_replica_stub;
     friend class duplication_sync_timer;
@@ -302,7 +307,7 @@ private:
     friend class replica_duplicator_manager_test;
     friend class duplication_test_base;
     friend class replica_test;
-    friend class replica_disk_test;
+    friend class replica_disk_test_base;
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>

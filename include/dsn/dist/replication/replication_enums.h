@@ -107,4 +107,13 @@ ENUM_REG(replication::split_status::PAUSING)
 ENUM_REG(replication::split_status::PAUSED)
 ENUM_REG(replication::split_status::CANCELING)
 ENUM_END2(replication::split_status::type, split_status)
+
+ENUM_BEGIN2(replication::disk_migration_status::type,
+            disk_migration_status,
+            replication::disk_migration_status::IDLE)
+ENUM_REG(replication::disk_migration_status::IDLE)
+ENUM_REG(replication::disk_migration_status::MOVING)
+ENUM_REG(replication::disk_migration_status::MOVED)
+ENUM_REG(replication::disk_migration_status::CLOSED)
+ENUM_END2(replication::disk_migration_status::type, disk_migration_status)
 }

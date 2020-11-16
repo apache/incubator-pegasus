@@ -65,6 +65,7 @@ class replica_duplicator_manager;
 class replica_backup_manager;
 class replica_bulk_loader;
 class replica_split_manager;
+class replica_disk_migrator;
 
 class cold_backup_context;
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
@@ -205,6 +206,11 @@ public:
     // Partition Split
     //
     replica_split_manager *get_split_manager() const { return _split_mgr.get(); }
+
+    //
+    // Disk migrator
+    //
+    replica_disk_migrator *disk_migrator() const { return _disk_migrator.get(); }
 
     //
     // Statistics
@@ -399,6 +405,7 @@ private:
     friend class replica_backup_manager;
     friend class replica_bulk_loader;
     friend class replica_split_manager;
+    friend class replica_disk_migrator;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
@@ -485,6 +492,9 @@ private:
 
     // partition split
     std::unique_ptr<replica_split_manager> _split_mgr;
+
+    // disk migrator
+    std::unique_ptr<replica_disk_migrator> _disk_migrator;
 
     // perf counters
     perf_counter_wrapper _counter_private_log_size;
