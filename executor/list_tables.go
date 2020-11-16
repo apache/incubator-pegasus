@@ -35,10 +35,7 @@ func ListTables(client *Client, useJSON bool) error {
 
 	if useJSON {
 		// formats into JSON
-		outputBytes, err := json.MarshalIndent(tbList, "", "  ")
-		if err != nil {
-			return err
-		}
+		outputBytes, _ := json.MarshalIndent(tbList, "", "  ")
 		fmt.Fprintln(client, string(outputBytes))
 		return nil
 	}

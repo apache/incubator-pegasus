@@ -22,10 +22,7 @@ func ListAppEnvs(c *Client, useTable string) error {
 
 	for _, app := range resp.Infos {
 		if app.AppName == useTable {
-			outputBytes, err := json.MarshalIndent(app.Envs, "", "  ")
-			if err != nil {
-				return err
-			}
+			outputBytes, _ := json.MarshalIndent(app.Envs, "", "  ")
 			fmt.Fprintln(c, string(outputBytes))
 			return nil
 		}

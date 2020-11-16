@@ -20,10 +20,7 @@ func QueryDuplication(c *Client, tableName string) error {
 		return err
 	}
 	// formats into JSON
-	outputBytes, err := json.MarshalIndent(resp.EntryList, "", "  ")
-	if err != nil {
-		return err
-	}
+	outputBytes, _ := json.MarshalIndent(resp.EntryList, "", "  ")
 	fmt.Fprintln(c, string(outputBytes))
 	return nil
 }

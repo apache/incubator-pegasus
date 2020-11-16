@@ -24,10 +24,7 @@ func ClusterInfo(client *Client) error {
 	}
 
 	// formats into JSON
-	outputBytes, err := json.MarshalIndent(clusterInfoMap, "", "  ")
-	if err != nil {
-		return err
-	}
+	outputBytes, _ := json.MarshalIndent(clusterInfoMap, "", "  ")
 	fmt.Fprintln(client, string(outputBytes))
 	return nil
 }
