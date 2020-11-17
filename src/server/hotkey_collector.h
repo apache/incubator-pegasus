@@ -20,9 +20,7 @@
 #include <dsn/dist/replication/replication_types.h>
 #include <concurrentqueue/concurrentqueue.h>
 #include <dsn/dist/replication/replica_base.h>
-#include <dsn/utility/flags.h>
 #include <gtest/gtest_prod.h>
-
 #include "hotkey_collector_state.h"
 
 namespace pegasus {
@@ -36,8 +34,8 @@ struct detect_hotkey_result
     std::string hot_hash_key;
 };
 
-int get_bucket_id(dsn::string_view data);
-bool find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
+extern int get_bucket_id(dsn::string_view data);
+extern bool find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
 
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
