@@ -3,7 +3,7 @@ package aggregate
 import (
 	"time"
 
-	"github.com/pegasus-kv/collector/client"
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"
@@ -14,34 +14,32 @@ import (
 // After all TableStats have been collected, TableStatsAggregator sums them up into a
 // ClusterStats. Users of this pacakage can use the hooks to watch every changes of the stats.
 type TableStatsAggregator interface {
-
-	// Start reporting until the ctx cancelled. This method will block the current thread.
-	Start(tomb *tomb.Tomb)
+	Aggregate()
 }
 
 // NewTableStatsAggregator returns a TableStatsAggregator instance.
-func NewTableStatsAggregator() TableStatsAggregator {
-	metaAddr := viper.GetString("meta_server")
+func NewTableStatsAggregator(metaAddrs []string) TableStatsAggregator {
 	return &tableStatsAggregator{
-		aggregateInterval: viper.GetDuration("metrics.report_interval"),
-		metaClient:        client.NewMetaClient(metaAddr),
-		tables:            make(map[int]*TableStats),
-		nodes:             client.NewReplicaNodesManager(),
+		tables: make(map[int32]*TableStats),
+		client: newClient(metaAddrs),
 	}
 }
 
 type tableStatsAggregator struct {
-	aggregateInterval time.Duration
+	tables   map[int32]*TableStats
+	allStats *ClusterStats
 
-	metaClient client.MetaClient
-	tables     map[int]*TableStats
-	allStats   *ClusterStats
-
-	nodes *client.ReplicaNodesManager
+	client *pegasusClient
 }
 
-func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
-	ticker := time.NewTicker(ag.aggregateInterval)
+// Start looping for metrics aggregation
+func Start(tom *tomb.Tomb) {
+	aggregateInterval := viper.GetDuration("metrics.report_interval")
+	ticker := time.NewTicker(aggregateInterval)
+
+	metaAddr := viper.GetString("meta_server")
+	ag := NewTableStatsAggregator([]string{metaAddr})
+
 	for {
 		select {
 		case <-tom.Dying(): // check if context cancelled
@@ -49,23 +47,17 @@ func (ag *tableStatsAggregator) Start(tom *tomb.Tomb) {
 		case <-ticker.C:
 		}
 
-		ag.aggregate()
+		ag.Aggregate()
 	}
 }
 
-func (ag *tableStatsAggregator) aggregate() {
+func (ag *tableStatsAggregator) Aggregate() {
 	ag.updateTableMap()
 
 	// TODO(wutao1): reduce meta queries for listing nodes
-	nodes, err := ag.metaClient.ListNodes()
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	ag.nodes.UpdateNodes(nodes)
-	for _, n := range nodes {
-		rcmdClient := ag.nodes.MustFindNode(n.Addr)
-		perfCounters, err := rcmdClient.GetPerfCounters("@")
+	ag.client.updateNodes()
+	for _, n := range ag.client.nodes {
+		perfCounters, err := n.GetPerfCounters("@")
 		if err != nil {
 			log.Errorf("unable to query perf-counters: %s", err)
 			return
@@ -108,16 +100,12 @@ func (ag *tableStatsAggregator) aggregateClusterStats() {
 // This function maintains the local table map
 // to keep consistent with the pegasus cluster.
 func (ag *tableStatsAggregator) updateTableMap() {
-	tables, err := ag.metaClient.ListTables()
-	if err != nil {
-		log.Error(err)
-		return
-	}
+	tables := ag.client.listTables()
 	ag.doUpdateTableMap(tables)
 }
 
-func (ag *tableStatsAggregator) doUpdateTableMap(tables []*client.TableInfo) {
-	currentTableSet := make(map[int]*struct{})
+func (ag *tableStatsAggregator) doUpdateTableMap(tables []*admin.AppInfo) {
+	currentTableSet := make(map[int32]*struct{})
 	for _, tb := range tables {
 		currentTableSet[tb.AppID] = nil
 		if _, found := ag.tables[tb.AppID]; !found {
@@ -141,7 +129,7 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*client.TableInfo) {
 }
 
 func (ag *tableStatsAggregator) updatePartitionStat(pc *partitionPerfCounter) {
-	tb, found := ag.tables[int(pc.gpid.Appid)]
+	tb, found := ag.tables[pc.gpid.Appid]
 	if !found {
 		// Ignore the perf-counter because there's currently no such table
 		return

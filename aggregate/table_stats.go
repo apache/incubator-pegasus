@@ -3,8 +3,8 @@ package aggregate
 import (
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/collector/client"
 )
 
 // PartitionStats is a set of metrics retrieved from this partition.
@@ -43,15 +43,15 @@ type ClusterStats struct {
 	Stats map[string]float64
 }
 
-func newTableStats(info *client.TableInfo) *TableStats {
+func newTableStats(info *admin.AppInfo) *TableStats {
 	tb := &TableStats{
-		TableName:  info.TableName,
-		AppID:      info.AppID,
+		TableName:  info.AppName,
+		AppID:      int(info.AppID),
 		Partitions: make(map[int]*PartitionStats),
 		Stats:      make(map[string]float64),
 		Timestamp:  time.Now(),
 	}
-	for i := 0; i < info.PartitionCount; i++ {
+	for i := 0; i < int(info.PartitionCount); i++ {
 		tb.Partitions[i] = &PartitionStats{
 			Gpid:  base.Gpid{Appid: int32(info.AppID), PartitionIndex: int32(i)},
 			Stats: make(map[string]float64),

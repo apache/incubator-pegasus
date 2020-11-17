@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/collector/client"
 )
 
 type partitionPerfCounter struct {
@@ -15,7 +14,7 @@ type partitionPerfCounter struct {
 }
 
 // decodePartitionPerfCounter implements the v1 version of metric decoding.
-func decodePartitionPerfCounter(pc *client.PerfCounter) *partitionPerfCounter {
+func decodePartitionPerfCounter(pc *PerfCounter) *partitionPerfCounter {
 	idx := strings.LastIndex(pc.Name, "@")
 	gpidStr := pc.Name[idx+1:]
 	appIDAndPartitionID := strings.Split(gpidStr, ".")

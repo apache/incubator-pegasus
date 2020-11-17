@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/collector/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +31,7 @@ func TestDecodePartitionPerfCounter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		pc := decodePartitionPerfCounter(&client.PerfCounter{Name: tt.name})
+		pc := decodePartitionPerfCounter(&PerfCounter{Name: tt.name})
 		assert.Equal(t, (pc == nil), tt.isNil, tt.name)
 		if pc != nil {
 			assert.Equal(t, pc.name, tt.counterName)

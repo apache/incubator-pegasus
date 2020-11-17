@@ -71,7 +71,7 @@ func main() {
 		tom.Kill(errors.New("collector terminates")) // kill other goroutines
 	})
 	tom.Go(func() error {
-		aggregate.NewTableStatsAggregator().Start(tom)
+		aggregate.Start(tom)
 		return nil
 	})
 	tom.Go(func() error {

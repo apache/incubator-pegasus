@@ -40,12 +40,12 @@ func (m *tableStatsHooksManager) afterTableStatsEmitted(stats []TableStats, allS
 	}
 }
 
-func (m *tableStatsHooksManager) afterTableDropped(appID int) {
+func (m *tableStatsHooksManager) afterTableDropped(appID int32) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	for _, hook := range m.droppedHooks {
-		hook(appID)
+		hook(int(appID))
 	}
 }
 
