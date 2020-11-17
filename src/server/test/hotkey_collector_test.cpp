@@ -18,6 +18,7 @@
 #include "server/hotkey_collector.h"
 
 #include <dsn/utility/rand.h>
+#include <dsn/utility/flags.h>
 #include <dsn/tool-api/task_tracker.h>
 #include "pegasus_server_test_base.h"
 
