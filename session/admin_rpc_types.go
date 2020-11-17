@@ -158,3 +158,128 @@ func (m *MetaManager) AddDuplication(ctx context.Context, req *admin.Duplication
 	}
 	return nil, err
 }
+
+func (ms *metaSession) queryAppInfo(ctx context.Context, req *admin.QueryAppInfoRequest) (*admin.QueryAppInfoResponse, error) {
+	arg := admin.NewAdminClientQueryAppInfoArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_QUERY_APP_INFO")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQueryAppInfoResult)
+	return ret.GetSuccess(), nil
+}
+
+// QueryAppInfo is auto-generated
+func (m *MetaManager) QueryAppInfo(ctx context.Context, req *admin.QueryAppInfoRequest) (*admin.QueryAppInfoResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.queryAppInfo(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return nil, fmt.Errorf("QueryAppInfo failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.QueryAppInfoResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) updateAppEnv(ctx context.Context, req *admin.UpdateAppEnvRequest) (*admin.UpdateAppEnvResponse, error) {
+	arg := admin.NewAdminClientUpdateAppEnvArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_UPDATE_APP_ENV")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientUpdateAppEnvResult)
+	return ret.GetSuccess(), nil
+}
+
+// UpdateAppEnv is auto-generated
+func (m *MetaManager) UpdateAppEnv(ctx context.Context, req *admin.UpdateAppEnvRequest) (*admin.UpdateAppEnvResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.updateAppEnv(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return nil, fmt.Errorf("UpdateAppEnv failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.UpdateAppEnvResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) listNodes(ctx context.Context, req *admin.ListNodesRequest) (*admin.ListNodesResponse, error) {
+	arg := admin.NewAdminClientListNodesArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_LIST_NODES")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientListNodesResult)
+	return ret.GetSuccess(), nil
+}
+
+// ListNodes is auto-generated
+func (m *MetaManager) ListNodes(ctx context.Context, req *admin.ListNodesRequest) (*admin.ListNodesResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.listNodes(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return nil, fmt.Errorf("ListNodes failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ListNodesResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) queryClusterInfo(ctx context.Context, req *admin.ClusterInfoRequest) (*admin.ClusterInfoResponse, error) {
+	arg := admin.NewAdminClientQueryClusterInfoArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CLUSTER_INFO")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQueryClusterInfoResult)
+	return ret.GetSuccess(), nil
+}
+
+// QueryClusterInfo is auto-generated
+func (m *MetaManager) QueryClusterInfo(ctx context.Context, req *admin.ClusterInfoRequest) (*admin.ClusterInfoResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.queryClusterInfo(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return nil, fmt.Errorf("QueryClusterInfo failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ClusterInfoResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) metaControl(ctx context.Context, req *admin.MetaControlRequest) (*admin.MetaControlResponse, error) {
+	arg := admin.NewAdminClientMetaControlArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_META")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientMetaControlResult)
+	return ret.GetSuccess(), nil
+}
+
+// MetaControl is auto-generated
+func (m *MetaManager) MetaControl(ctx context.Context, req *admin.MetaControlRequest) (*admin.MetaControlResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.metaControl(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return nil, fmt.Errorf("MetaControl failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.MetaControlResponse), nil
+	}
+	return nil, err
+}

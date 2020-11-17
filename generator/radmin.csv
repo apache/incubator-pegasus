@@ -1,0 +1,2 @@
+RPC_QUERY_DISK_INFO,QueryDiskInfo,QueryDiskInfoRequest,QueryDiskInfoResponse
+RPC_REPLICA_DISK_MIGRATE,DiskMigrate,ReplicaDiskMigrateRequest,ReplicaDiskMigrateResponse

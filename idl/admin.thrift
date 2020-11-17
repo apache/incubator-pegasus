@@ -1,6 +1,8 @@
 include "base.thrift"
 
-namespace go admin 
+namespace go admin
+
+/////////////////// Tables Management ////////////////////
 
 struct create_app_options
 {
@@ -94,6 +96,108 @@ struct list_apps_response
 {
     1:base.error_code err
     2:list<app_info> infos;
+}
+
+struct query_app_info_request
+{
+    1:base.rpc_address meta_server;
+}
+
+struct query_app_info_response
+{
+    1:base.error_code err;
+    2:list<app_info> apps;
+}
+
+enum app_env_operation
+{
+    APP_ENV_OP_INVALID,
+    APP_ENV_OP_SET,
+    APP_ENV_OP_DEL,
+    APP_ENV_OP_CLEAR
+}
+
+struct update_app_env_request
+{
+    1:string app_name;
+    2:app_env_operation op = app_env_operation.APP_ENV_OP_INVALID;
+    3:optional list<string> keys;           // used for set and del
+    4:optional list<string> values;         // only used for set
+    5:optional string clear_prefix;         // only used for clear
+                                            // if clear_prefix is empty then we clear all envs
+                                            // else clear the env that key = "clear_prefix.xxx"
+}
+
+struct update_app_env_response
+{
+    1:base.error_code err;
+    2:string hint_message;
+}
+
+/////////////////// Nodes Management ////////////////////
+
+enum node_status
+{
+    NS_INVALID,
+    NS_ALIVE,
+    NS_UNALIVE,
+}
+
+struct node_info
+{
+    1:node_status status = node_status.NS_INVALID;
+    2:base.rpc_address address;
+}
+
+struct list_nodes_request
+{
+    1:node_status status = node_status.NS_INVALID;
+}
+
+struct list_nodes_response
+{
+    1:base.error_code   err;
+    2:list<node_info>  infos;
+}
+
+struct cluster_info_request
+{
+}
+
+struct cluster_info_response
+{
+    1:base.error_code err;
+    2:list<string> keys;
+    3:list<string> values;
+}
+
+enum meta_function_level
+{
+    // there are 4 ways to modify the meta-server's status:
+    // 0. DDL operation: create/drop/recall table
+    // 1. downgrade primary when dectect it is not alive
+    // 2. accept primary's update-request to kickoff some secondaries
+    // 3. make balancer proposal, which further trigger 2
+    // according to these ways, we give meta several active level.
+
+    fl_stopped = 100, //we don't take any action to modify the meta's status, even the DDL operations are not responsed
+    fl_blind = 200, //only DDL operations are responsed, 1 2 3 are just ignored
+    fl_freezed = 300, //0 1 are responsed, 2 3 ignored
+    fl_steady = 400, //0 1 2 are responsed, don't do any balancer
+    fl_lively = 500, //full functional
+    fl_invalid = 10000
+}
+
+// if the level is invalid, we just response the old level of meta without updating it
+struct meta_control_request
+{
+    1:meta_function_level level;
+}
+
+struct meta_control_response
+{
+    1:base.error_code err;
+    2:meta_function_level old_level;
 }
 
 /////////////////// duplication-related structs ////////////////////
@@ -196,6 +300,7 @@ struct duplication_query_response
     4:list<duplication_entry>    entry_list;
 }
 
+// A client to MetaServer's administration API.
 service admin_client 
 {
     create_app_response create_app(1:create_app_request req);
@@ -209,4 +314,14 @@ service admin_client
     duplication_query_response query_duplication(1: duplication_query_request req);
 
     duplication_modify_response modify_duplication(1: duplication_modify_request req);
+
+    query_app_info_response query_app_info(1: query_app_info_request req);
+
+    update_app_env_response update_app_env(1: update_app_env_request req);
+
+    list_nodes_response list_nodes(1: list_nodes_request req);
+
+    cluster_info_response query_cluster_info(1: cluster_info_request req);
+
+    meta_control_response meta_control(1: meta_control_request req);
 }
