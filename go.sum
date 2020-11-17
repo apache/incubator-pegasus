@@ -5,8 +5,8 @@ github.com/Netflix/go-expect v0.0.0-20180615182759-c93bf25de8e8/go.mod h1:oX5x61
 github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667/go.mod h1:oX5x61PbNXchhh0oikYAH+4Pcfw5LKv21+Jnpr6r6Pc=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20160726150825-5bd2802263f2/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/XiaoMi/pegasus-go-client v0.0.0-20201112181327-0f7b3a247a24 h1:Y2N8IvnNw/WeCo4ycMFlrzhM4WZIwNhfhDOGw/o3Y5o=
-github.com/XiaoMi/pegasus-go-client v0.0.0-20201112181327-0f7b3a247a24/go.mod h1:H83dStz3HvHBFC0n7QK+qLHAjqsIghFOFx2TCvq6vzI=
+github.com/XiaoMi/pegasus-go-client v0.0.0-20201117033005-921fbbd1140d h1:7+6RHMxybJ+N/AZZyUuGd2H4VHEkfxB8t/hJM1pX9IE=
+github.com/XiaoMi/pegasus-go-client v0.0.0-20201117033005-921fbbd1140d/go.mod h1:H83dStz3HvHBFC0n7QK+qLHAjqsIghFOFx2TCvq6vzI=
 github.com/apache/thrift v0.13.0 h1:5hryIiq9gtn+MiLVn0wP37kb/uTeRZgN08WoCsAhIhI=
 github.com/apache/thrift v0.13.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
 github.com/chzyer/logex v1.1.10 h1:Swpa1K6QvQznwJRcfTfQJmTE72DqScAa40E+fbHEXEE=

@@ -3,7 +3,6 @@ package cmd
 import (
 	"admin-cli/executor"
 	"admin-cli/shell"
-	"os"
 
 	"github.com/desertbit/grumble"
 )
@@ -18,7 +17,7 @@ func init() {
 			f.Bool("j", "json", false, "Use JSON as the format of the output results. By default tabular format is used.")
 		},
 		Run: func(c *grumble.Context) error {
-			return executor.ListTables(os.Stdout, pegasusAdminClient, c.Flags.Bool("json"))
+			return executor.ListTables(pegasusClient, c.Flags.Bool("json"))
 		},
 	})
 }

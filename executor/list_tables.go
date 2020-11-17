@@ -4,43 +4,49 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/admin"
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/olekukonko/tablewriter"
 )
 
 // ListTables command.
-func ListTables(writer io.Writer, client admin.Client, useJSON bool) error {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	tables, err := client.ListTables(ctx)
+func ListTables(client *Client, useJSON bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	resp, err := client.meta.ListApps(ctx, &admin.ListAppsRequest{
+		Status: admin.AppStatus_AS_AVAILABLE,
+	})
 	if err != nil {
 		return err
 	}
 
+	type tableStuct struct {
+		Name string            `json:"name"`
+		Envs map[string]string `json:"envs"`
+	}
+	var tbList []tableStuct
+	for _, tb := range resp.Infos {
+		tbList = append(tbList, tableStuct{
+			Name: tb.AppName,
+			Envs: tb.Envs,
+		})
+	}
+
 	if useJSON {
 		// formats into JSON
-		type tableJSON struct {
-			Name string            `json:"name"`
-			Envs map[string]string `json:"envs"`
-		}
-		var tbJSONList []tableJSON
-		for _, tb := range tables {
-			tbJSONList = append(tbJSONList, tableJSON{Name: tb.Name, Envs: tb.Envs})
-		}
-		outputBytes, err := json.MarshalIndent(tbJSONList, "", "  ")
+		outputBytes, err := json.MarshalIndent(tbList, "", "  ")
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(writer, string(outputBytes))
+		fmt.Fprintln(client, string(outputBytes))
 		return nil
 	}
 
 	// formats into tabular
-	tabular := tablewriter.NewWriter(writer)
+	tabular := tablewriter.NewWriter(client)
 	tabular.SetHeader([]string{"Name", "Envs"})
-	for _, tb := range tables {
+	for _, tb := range tbList {
 		tabular.Append([]string{tb.Name, fmt.Sprintf("%s", tb.Envs)})
 	}
 	tabular.Render()
