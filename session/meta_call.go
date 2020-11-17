@@ -15,13 +15,18 @@ type metaResponse interface {
 	GetErr() *base.ErrorCode
 }
 
+// metaCall encapsulates the leader switching of MetaServers. Each metaCall.Run represents
+// a RPC call to the MetaServers. If during the process the leader meta changed, metaCall
+// automatically switches to the new leader.
 type metaCall struct {
 	respCh   chan metaResponse
 	backupCh chan interface{}
 	callFunc metaCallFunc
 
-	metas   []*metaSession
-	lead    int
+	metas []*metaSession
+	lead  int
+	// After a Run successfully ends, the current leader will be set in this field.
+	// If there is no meta failover, `newLead` equals to `lead`.
 	newLead uint32
 }
 

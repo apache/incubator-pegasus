@@ -6,10 +6,8 @@ package session
 
 import (
 	"context"
-	"errors"
 	"sync"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -42,60 +40,6 @@ func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*repl
 	}
 
 	ret, _ := result.(*rrdb.MetaQueryCfgResult)
-	return ret.GetSuccess(), nil
-}
-
-func (ms *metaSession) createTable(ctx context.Context, tableName string, partitionCount int) (*admin.CreateAppResponse, error) {
-	arg := admin.NewAdminClientCreateAppArgs()
-	arg.Req = admin.NewCreateAppRequest()
-	arg.Req.AppName = tableName
-	arg.Req.Options = &admin.CreateAppOptions{
-		PartitionCount: int32(partitionCount),
-		ReplicaCount:   3,
-		AppType:        "pegasus",
-		Envs:           make(map[string]string),
-		IsStateful:     true,
-	}
-
-	result, err := ms.call(ctx, arg, "RPC_CM_CREATE_APP")
-	if err != nil {
-		ms.logger.Printf("failed to create table from %s: %s", ms, err)
-		return nil, err
-	}
-	ret, _ := result.(*admin.AdminClientCreateAppResult)
-	return ret.GetSuccess(), nil
-}
-
-func (ms *metaSession) dropTable(ctx context.Context, tableName string) (*admin.DropAppResponse, error) {
-	arg := admin.NewAdminClientDropAppArgs()
-	arg.Req = admin.NewDropAppRequest()
-	arg.Req.AppName = tableName
-	reserveSeconds := int64(1) // delete immediately. the caller is responsible for the soft deletion of table.
-	arg.Req.Options = &admin.DropAppOptions{
-		SuccessIfNotExist: true,
-		ReserveSeconds:    &reserveSeconds,
-	}
-
-	result, err := ms.call(ctx, arg, "RPC_CM_DROP_APP")
-	if err != nil {
-		ms.logger.Printf("failed to drop table from %s: %s", ms, err)
-		return nil, err
-	}
-	ret, _ := result.(*admin.AdminClientDropAppResult)
-	return ret.GetSuccess(), nil
-}
-
-func (ms *metaSession) listTables(ctx context.Context) (*admin.ListAppsResponse, error) {
-	arg := admin.NewAdminClientListAppsArgs()
-	arg.Req = admin.NewListAppsRequest()
-	arg.Req.Status = admin.AppStatus_AS_AVAILABLE
-
-	result, err := ms.call(ctx, arg, "RPC_CM_LIST_APPS")
-	if err != nil {
-		ms.logger.Printf("failed to list tables from %s: %s", ms, err)
-		return nil, err
-	}
-	ret, _ := result.(*admin.AdminClientListAppsResult)
 	return ret.GetSuccess(), nil
 }
 
@@ -154,52 +98,6 @@ func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*repli
 	if err == nil {
 		queryCfgResp := resp.(*replication.QueryCfgResponse)
 		return queryCfgResp, nil
-	}
-	return nil, err
-}
-
-// CreateTable creates a table with the specified partition count.
-func (m *MetaManager) CreateTable(ctx context.Context, tableName string, partitionCount int) error {
-	m.logger.Printf("creating table(%s) with partition count(%d) [metaList=%s]", tableName, partitionCount, m.metaIPAddrs)
-	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
-		return ms.createTable(rpcCtx, tableName, partitionCount)
-	})
-	if err == nil {
-		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return errors.New(resp.GetErr().String())
-		}
-		return nil
-	}
-	return err
-}
-
-// DropTable drops a table from the pegasus cluster.
-func (m *MetaManager) DropTable(ctx context.Context, tableName string) error {
-	m.logger.Printf("dropping table(%s) [metaList=%s]", tableName, m.metaIPAddrs)
-	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
-		return ms.dropTable(rpcCtx, tableName)
-	})
-	if err == nil {
-		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return errors.New(resp.GetErr().String())
-		}
-		return nil
-	}
-	return err
-}
-
-// ListTables retrieves all tables' information in the cluster.
-func (m *MetaManager) ListTables(ctx context.Context) ([]*admin.AppInfo, error) {
-	m.logger.Printf("retrieving the list of tables from [metaList=%s]", m.metaIPAddrs)
-	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
-		return ms.listTables(rpcCtx)
-	})
-	if err == nil {
-		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, errors.New(resp.GetErr().String())
-		}
-		listTablesResp := resp.(*admin.ListAppsResponse)
-		return listTablesResp.Infos, nil
 	}
 	return nil, err
 }

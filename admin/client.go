@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
@@ -40,21 +41,41 @@ type rpcBasedClient struct {
 }
 
 func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int) error {
-	return c.metaManager.CreateTable(ctx, tableName, partitionCount)
+	_, err := c.metaManager.CreateApp(ctx, &admin.CreateAppRequest{
+		AppName: tableName,
+		Options: &admin.CreateAppOptions{
+			PartitionCount: int32(partitionCount),
+			ReplicaCount:   3,
+			AppType:        "pegasus",
+			Envs:           make(map[string]string),
+			IsStateful:     true,
+		},
+	})
+	return err
 }
 
 func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error {
-	return c.metaManager.DropTable(ctx, tableName)
+	req := admin.NewDropAppRequest()
+	req.AppName = tableName
+	reserveSeconds := int64(1) // delete immediately. the caller is responsible for the soft deletion of table.
+	req.Options = &admin.DropAppOptions{
+		SuccessIfNotExist: true,
+		ReserveSeconds:    &reserveSeconds,
+	}
+	_, err := c.metaManager.DropApp(ctx, req)
+	return err
 }
 
 func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
-	appInfos, err := c.metaManager.ListTables(ctx)
+	resp, err := c.metaManager.ListApps(ctx, &admin.ListAppsRequest{
+		Status: admin.AppStatus_AS_AVAILABLE,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	var results []*TableInfo
-	for _, app := range appInfos {
+	for _, app := range resp.Infos {
 		results = append(results, &TableInfo{Name: app.AppName, Envs: app.Envs})
 	}
 	return results, nil
