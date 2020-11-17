@@ -99,7 +99,7 @@ DSN_DEFINE_int32(
 }
 
 // TODO: (Tangyanzhao) replace it to xxhash
-int get_bucket_id(dsn::string_view data)
+/*extern*/int get_bucket_id(dsn::string_view data)
 {
     size_t hash_value = boost::hash_range(data.begin(), data.end());
     return static_cast<int>(hash_value % FLAGS_hotkey_buckets_num);
