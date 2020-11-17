@@ -18,6 +18,7 @@
 #include "server/hotkey_collector.h"
 
 #include <dsn/utility/rand.h>
+#include <dsn/tool-api/task_tracker.h>
 #include "pegasus_server_test_base.h"
 
 namespace pegasus {
@@ -93,6 +94,8 @@ public:
         }
         return true;
     }
+
+    dsn::task_tracker _tracker;
 };
 
 TEST_F(coarse_collector_test, coarse_collector)
@@ -100,24 +103,28 @@ TEST_F(coarse_collector_test, coarse_collector)
     detect_hotkey_result result;
 
     for (int i = 0; i < 1000; i++) {
-        dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
-        dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] {
+        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+            dsn::blob hash_key =
+                dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
             coarse_collector.capture_data(hash_key, 1);
-        })->wait();
+        });
     }
     coarse_collector.analyse_data(result);
     ASSERT_NE(result.coarse_bucket_index, -1);
+    _tracker.wait_outstanding_tasks();
 
     coarse_collector.clear();
     ASSERT_TRUE(empty());
 
     for (int i = 0; i < 1000; i++) {
-        dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
-        dsn::tasking::enqueue(LPC_WRITE, nullptr, [&] {
+
+        dsn::tasking::enqueue(LPC_WRITE, &_tracker, [&] {
+            dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
             coarse_collector.capture_data(hash_key, 1);
-        })->wait();
+        });
     }
     coarse_collector.analyse_data(result);
+    _tracker.wait_outstanding_tasks();
     ASSERT_EQ(result.coarse_bucket_index, -1);
 }
 
@@ -139,6 +146,8 @@ public:
         };
         return queue_size;
     }
+
+    dsn::task_tracker _tracker;
 };
 
 TEST_F(fine_collector_test, fine_collector)
@@ -148,12 +157,15 @@ TEST_F(fine_collector_test, fine_collector)
     detect_hotkey_result result;
 
     for (int i = 0; i < 1000; i++) {
-        dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, nullptr, [&] {
+        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
+            dsn::blob hash_key =
+                dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
             fine_collector.capture_data(hash_key, 1);
-        })->wait();
+        });
     }
     fine_collector.analyse_data(result);
+    _tracker.wait_outstanding_tasks();
+
     ASSERT_EQ(result.hot_hash_key, "ThisisahotkeyThisisahotkey");
 
     fine_collector.clear();
@@ -161,20 +173,23 @@ TEST_F(fine_collector_test, fine_collector)
 
     result.hot_hash_key = "";
     for (int i = 0; i < 1000; i++) {
-        dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, nullptr, [&] {
+        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
+            dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(false));
             fine_collector.capture_data(hash_key, 1);
-        })->wait();
+        });
     }
     fine_collector.analyse_data(result);
+    _tracker.wait_outstanding_tasks();
     ASSERT_TRUE(result.hot_hash_key.empty());
 
     for (int i = 0; i < 5000; i++) {
-        dsn::blob hash_key = dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
-        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, nullptr, [&] {
+        dsn::tasking::enqueue(RPC_REPLICATION_WRITE_EMPTY, &_tracker, [&] {
+            dsn::blob hash_key =
+                dsn::blob::create_from_bytes(generate_hash_key_by_random(true, 80));
             fine_collector.capture_data(hash_key, 1);
-        })->wait();
+        });
     }
+    _tracker.wait_outstanding_tasks();
     ASSERT_LT(now_queue_size(), max_queue_size * 2);
 
     FLAGS_hotkey_buckets_num = hotkey_buckets_num_backup;
