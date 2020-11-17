@@ -13,6 +13,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
@@ -156,6 +157,56 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_LIST_APPS_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListAppsResult{
 			Success: admin.NewListAppsResponse(),
+		}
+	},
+	"RPC_QUERY_APP_INFO_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryAppInfoResult{
+			Success: admin.NewQueryAppInfoResponse(),
+		}
+	},
+	"RPC_CM_UPDATE_APP_ENV_ACK": func() RpcResponseResult {
+		return &admin.AdminClientUpdateAppEnvResult{
+			Success: admin.NewUpdateAppEnvResponse(),
+		}
+	},
+	"RPC_CM_QUERY_DUPLICATION_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryDuplicationResult{
+			Success: admin.NewDuplicationQueryResponse(),
+		}
+	},
+	"RPC_CM_MODIFY_DUPLICATION_ACK": func() RpcResponseResult {
+		return &admin.AdminClientModifyDuplicationResult{
+			Success: admin.NewDuplicationModifyResponse(),
+		}
+	},
+	"RPC_CM_ADD_DUPLICATION_ACK": func() RpcResponseResult {
+		return &admin.AdminClientAddDuplicationResult{
+			Success: admin.NewDuplicationAddResponse(),
+		}
+	},
+	"RPC_CM_CLUSTER_INFO_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryClusterInfoResult{
+			Success: admin.NewClusterInfoResponse(),
+		}
+	},
+	"RPC_CM_CONTROL_META_ACK": func() RpcResponseResult {
+		return &admin.AdminClientMetaControlResult{
+			Success: admin.NewMetaControlResponse(),
+		}
+	},
+	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
+		return &admin.AdminClientListNodesResult{
+			Success: admin.NewListNodesResponse(),
+		}
+	},
+	"RPC_QUERY_DISK_INFO_ACK": func() RpcResponseResult {
+		return &radmin.ReplicaClientQueryDiskInfoResult{
+			Success: radmin.NewQueryDiskInfoResponse(),
+		}
+	},
+	"RPC_REPLICA_DISK_MIGRATE_ACK": func() RpcResponseResult {
+		return &radmin.ReplicaClientDiskMigrateResult{
+			Success: radmin.NewReplicaDiskMigrateResponse(),
 		}
 	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
