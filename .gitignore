@@ -1,3 +1,4 @@
 bin/
 .admin-cli-history
 pegasus.log
+.idea

@@ -21,13 +21,13 @@ func ListTables(client *Client, useJSON bool) error {
 		return err
 	}
 
-	type tableStuct struct {
+	type tableStruct struct {
 		Name string            `json:"name"`
 		Envs map[string]string `json:"envs"`
 	}
-	var tbList []tableStuct
+	var tbList []tableStruct
 	for _, tb := range resp.Infos {
-		tbList = append(tbList, tableStuct{
+		tbList = append(tbList, tableStruct{
 			Name: tb.AppName,
 			Envs: tb.Envs,
 		})
