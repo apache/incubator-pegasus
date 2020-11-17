@@ -16,7 +16,7 @@ func init() {
 			f.Bool("j", "json", false, "Use JSON as the format of the output results. By default tabular format is used.")
 			f.String("n", "node", "", "Specify node address(ip:port)")
 			f.String("d", "disk", "", "Specify disk tag")
-			f.String("a", "app","", "Specify app name")
+			f.String("a", "app", "", "Specify app name")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.QueryDiskInfo(
@@ -36,7 +36,7 @@ func init() {
 			/*define the flags*/
 			f.Bool("j", "json", false, "Use JSON as the format of the output results. By default tabular format is used.")
 			f.String("n", "node", "", "Specify node address(ip:port)")
-			f.String("a", "app","", "Specify app name")
+			f.String("a", "app", "", "Specify app name")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.QueryDiskInfo(
@@ -49,4 +49,3 @@ func init() {
 		},
 	})
 }
-

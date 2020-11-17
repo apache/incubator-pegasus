@@ -24,7 +24,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	resp, err := client.replicaPool.GetReplica(replicaServer).QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
-		Node:    nil,
+		Node:    &base.RPCAddress{},
 		AppName: tableName,
 	})
 	if err != nil {
@@ -134,9 +134,9 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, useJSON bool) {
 	type ReplicaCountStruct struct {
 		Disk      string `json:"disk tag"`
-		Primary   int  `json:"disk primary replica count"`
-		Secondary int  `json:"disk secondary replica count"`
-		Total int `json:"total replica count"`
+		Primary   int    `json:"disk primary replica count"`
+		Secondary int    `json:"disk secondary replica count"`
+		Total     int    `json:"total replica count"`
 	}
 
 	computeReplicaCount := func(replicasWithAppId map[int32][]*base.Gpid) int {
@@ -144,21 +144,20 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, u
 		for _, replicas := range replicasWithAppId {
 			for _, _ = range replicas {
 				replicaCount++
-				}
 			}
-			return  replicaCount
 		}
-
+		return replicaCount
+	}
 
 	var replicaCountInfos []ReplicaCountStruct
 	for _, diskInfo := range resp.DiskInfos {
 		var primaryCount = computeReplicaCount(diskInfo.HoldingPrimaryReplicas)
 		var secondaryCount = computeReplicaCount(diskInfo.HoldingSecondaryReplicas)
 		replicaCountInfos = append(replicaCountInfos, ReplicaCountStruct{
-			Disk: diskInfo.Tag,
+			Disk:      diskInfo.Tag,
 			Primary:   primaryCount,
 			Secondary: secondaryCount,
-			Total: primaryCount + secondaryCount,
+			Total:     primaryCount + secondaryCount,
 		})
 	}
 
