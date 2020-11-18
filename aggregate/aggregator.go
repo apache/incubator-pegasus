@@ -129,11 +129,3 @@ func (ag *tableStatsAggregator) updatePartitionStat(pc *PartitionStats) {
 	}
 	*part = *pc
 }
-
-func (ag *tableStatsAggregator) extendStatsForAllPartitions() {
-	for _, tb := range ag.tables {
-		for _, p := range tb.Partitions {
-			extendStats(&p.Stats)
-		}
-	}
-}
