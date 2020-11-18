@@ -20,11 +20,25 @@ const (
 )
 
 // ListNodes command.
-func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, useJSON bool) error {
+func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, file string, useJSON bool, enableResolve bool) error {
+
+	if enableResolve {
+		node, err := resolve(replicaServer, Host2Addr)
+		if err != nil {
+			return err
+		}
+		replicaServer = node
+	}
+
+	err := validateNodeAddress(client, replicaServer)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	resp, err := client.replicaPool.GetReplica(replicaServer).QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
-		Node:    &base.RPCAddress{},
+		Node:    &base.RPCAddress{}, //TODO(jiashuo1) this thrift variable is useless, it need be deleted on client/server
 		AppName: tableName,
 	})
 	if err != nil {
@@ -33,27 +47,30 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		queryDiskCapacity(client, resp, diskTag, useJSON)
+		queryDiskCapacity(client, resp, diskTag, useJSON, enableResolve)
 		break
 	case ReplicaCount:
-		queryDiskReplicaCount(client, resp, useJSON)
+		queryDiskReplicaCount(client, resp, useJSON, enableResolve)
+		break
+	default:
+		break
 	}
 	return nil
 }
 
-func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool) {
+func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool, enableResolve bool) {
 
 	type NodeCapacityStruct struct {
-		Disk      string `json:"disk tag"`
-		Capacity  int64  `json:"disk total capacity"`
-		Available int64  `json:"disk available capacity"`
-		Ratio     int64  `json:"disk available capacity ratio"`
+		Disk      string
+		Capacity  int64
+		Available int64
+		Ratio     int64
 	}
 
 	type ReplicaCapacityStruct struct {
-		Replica  string `json:"replica gpid"`
-		Status   string `json:"replica status"`
-		Capacity string `json:"replica capacity"`
+		Replica  string
+		Status   string
+		Capacity string
 	}
 
 	var nodeCapacityInfos []NodeCapacityStruct
@@ -66,9 +83,9 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 				for _, replicas := range replicasWithAppId {
 					for _, replica := range replicas {
 						replicaCapacityInfos = append(replicaCapacityInfos, ReplicaCapacityStruct{
-							Replica:  replica.String(),
+							Replica:  fmt.Sprintf("%d.%d", replica.Appid, replica.PartitionIndex),
 							Status:   replicaStatus,
-							Capacity: "TODO(jiashuo1)", // TODO(jiashuo1) need send other query to get the replica capacity
+							Capacity: "TODO(jiashuo1)", // TODO(jiashuo1) need send remote command to get the replica storage
 						})
 					}
 				}
@@ -89,6 +106,7 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 			// formats into tabular
 			tabular := tablewriter.NewWriter(client)
 			tabular.SetHeader([]string{"Replica", "Status", "Capacity"})
+			tabular.SetAlignment(tablewriter.ALIGN_CENTER)
 			for _, replicaCapacityInfo := range replicaCapacityInfos {
 				tabular.Append([]string{
 					replicaCapacityInfo.Replica,
@@ -119,6 +137,7 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 
 	// formats into tabular
 	tabular := tablewriter.NewWriter(client)
+	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
 	tabular.SetHeader([]string{"Disk", "Capacity", "Available", "Ratio"})
 	for _, nodeCapacityInfo := range nodeCapacityInfos {
 		tabular.Append([]string{
@@ -131,12 +150,12 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 	return
 }
 
-func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, useJSON bool) {
+func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, useJSON bool, enableResolve bool) {
 	type ReplicaCountStruct struct {
-		Disk      string `json:"disk tag"`
-		Primary   int    `json:"disk primary replica count"`
-		Secondary int    `json:"disk secondary replica count"`
-		Total     int    `json:"total replica count"`
+		Disk      string
+		Primary   int
+		Secondary int
+		Total     int
 	}
 
 	computeReplicaCount := func(replicasWithAppId map[int32][]*base.Gpid) int {
@@ -174,12 +193,13 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, u
 	// formats into tabular
 	tabular := tablewriter.NewWriter(client)
 	tabular.SetHeader([]string{"Disk", "Primary", "Secondary", "Total"})
+	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
 	for _, replicaCountInfo := range replicaCountInfos {
 		tabular.Append([]string{
 			replicaCountInfo.Disk,
-			string(rune(replicaCountInfo.Primary)),
-			string(rune(replicaCountInfo.Secondary)),
-			string(rune(replicaCountInfo.Total))})
+			strconv.Itoa(replicaCountInfo.Primary),
+			strconv.Itoa(replicaCountInfo.Secondary),
+			strconv.Itoa(replicaCountInfo.Total)})
 	}
 	tabular.Render()
 	return

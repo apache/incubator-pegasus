@@ -12,7 +12,8 @@ import (
 
 // TODO(jiashuo1) support query detail info
 // ListNodes command.
-func ListNodes(client *Client, useJSON bool) error {
+func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) error {
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	resp, err := client.meta.ListNodes(ctx, &admin.ListNodesRequest{
@@ -28,8 +29,18 @@ func ListNodes(client *Client, useJSON bool) error {
 	}
 	var nodeInfos []nodeStruct
 	for _, node := range resp.Infos {
+		var addr = ""
+		if enableResolve {
+			addr, err = resolve(node.Address.GetAddress(), Addr2Host)
+			if err != nil {
+				return err
+			}
+		} else {
+			addr = node.Address.GetAddress()
+		}
+
 		nodeInfos = append(nodeInfos, nodeStruct{
-			Node:   node.Address.GetAddress(),
+			Node:   addr,
 			Status: node.Status.String(),
 		})
 	}
@@ -47,9 +58,10 @@ func ListNodes(client *Client, useJSON bool) error {
 	// formats into tabular
 	tabular := tablewriter.NewWriter(client)
 	tabular.SetHeader([]string{"Node", "Status"})
-	for _, nodeInfo := range resp.Infos {
-		tabular.Append([]string{nodeInfo.Address.GetAddress(), nodeInfo.Status.String()})
+	for _, nodeInfo := range nodeInfos {
+		tabular.Append([]string{nodeInfo.Node, nodeInfo.Status})
 	}
+
 	tabular.Render()
 	return nil
 }
