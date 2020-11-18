@@ -11,12 +11,11 @@ import (
 type PartitionStats struct {
 	Gpid base.Gpid
 
+	// Address of the replica node where this partition locates.
+	Addr string
+
 	// perfCounter's name -> the value.
 	Stats map[string]float64
-}
-
-func (s *PartitionStats) update(pc *partitionPerfCounter) {
-	s.Stats[pc.name] = pc.value
 }
 
 // TableStats has the aggregated metrics for this table.

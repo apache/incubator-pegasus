@@ -14,9 +14,9 @@ type partitionPerfCounter struct {
 }
 
 // decodePartitionPerfCounter implements the v1 version of metric decoding.
-func decodePartitionPerfCounter(pc *PerfCounter) *partitionPerfCounter {
-	idx := strings.LastIndex(pc.Name, "@")
-	gpidStr := pc.Name[idx+1:]
+func decodePartitionPerfCounter(name string, value float64) *partitionPerfCounter {
+	idx := strings.LastIndex(name, "@")
+	gpidStr := name[idx+1:]
 	appIDAndPartitionID := strings.Split(gpidStr, ".")
 	if len(appIDAndPartitionID) != 2 {
 		// special case: in some mis-desgined metrics, what follows after a '@' may not be a replica id
@@ -32,12 +32,12 @@ func decodePartitionPerfCounter(pc *PerfCounter) *partitionPerfCounter {
 		return nil
 	}
 	return &partitionPerfCounter{
-		name: pc.Name[:idx], // strip out the replica id
+		name: name[:idx], // strip out the replica id
 		gpid: base.Gpid{
 			Appid:          int32(appID),
 			PartitionIndex: int32(partitionIndex),
 		},
-		value: pc.Value,
+		value: value,
 	}
 }
 

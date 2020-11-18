@@ -21,7 +21,7 @@ type TableStatsAggregator interface {
 func NewTableStatsAggregator(metaAddrs []string) TableStatsAggregator {
 	return &tableStatsAggregator{
 		tables: make(map[int32]*TableStats),
-		client: newClient(metaAddrs),
+		client: NewPerfClient(metaAddrs),
 	}
 }
 
@@ -29,7 +29,7 @@ type tableStatsAggregator struct {
 	tables   map[int32]*TableStats
 	allStats *ClusterStats
 
-	client *pegasusClient
+	client *PerfClient
 }
 
 // Start looping for metrics aggregation
@@ -55,25 +55,10 @@ func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStat
 	ag.updateTableMap()
 
 	// TODO(wutao1): reduce meta queries for listing nodes
-	ag.client.updateNodes()
-	for _, n := range ag.client.nodes {
-		perfCounters, err := n.GetPerfCounters("@")
-		if err != nil {
-			log.Errorf("unable to query perf-counters: %s", err)
-			return nil, nil
-		}
-		for _, p := range perfCounters {
-			perfCounter := decodePartitionPerfCounter(p)
-			if perfCounter == nil {
-				continue
-			}
-			if !aggregatable(perfCounter) {
-				continue
-			}
-			ag.updatePartitionStat(perfCounter)
-		}
+	partitions := ag.client.GetPartitionStats()
+	for _, p := range partitions {
+		ag.updatePartitionStat(p)
 	}
-	ag.extendStatsForAllPartitions()
 
 	var batchTableStats []TableStats
 	for _, table := range ag.tables {
@@ -131,18 +116,18 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*admin.AppInfo) {
 }
 
 // Update the counter value.
-func (ag *tableStatsAggregator) updatePartitionStat(pc *partitionPerfCounter) {
-	tb, found := ag.tables[pc.gpid.Appid]
+func (ag *tableStatsAggregator) updatePartitionStat(pc *PartitionStats) {
+	tb, found := ag.tables[pc.Gpid.Appid]
 	if !found {
 		// Ignore the perf-counter because there's currently no such table
 		return
 	}
-	part, found := tb.Partitions[int(pc.gpid.PartitionIndex)]
+	part, found := tb.Partitions[int(pc.Gpid.PartitionIndex)]
 	if !found {
-		log.Errorf("no such partition %+v, perf-counter \"%s\"", pc.gpid, pc.name)
+		log.Errorf("no such partition %+v", pc.Gpid)
 		return
 	}
-	part.update(pc)
+	*part = *pc
 }
 
 func (ag *tableStatsAggregator) extendStatsForAllPartitions() {
