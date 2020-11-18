@@ -33,8 +33,6 @@ meta_service_test_app *g_app;
 // case3.
 TEST(meta, state_sync) { g_app->state_sync_test(); }
 
-TEST(meta, data_definition) { g_app->data_definition_op_test(); }
-
 TEST(meta, update_configuration) { g_app->update_configuration_test(); }
 
 TEST(meta, balancer_validator) { g_app->balancer_validator(); }

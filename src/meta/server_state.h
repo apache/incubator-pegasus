@@ -301,6 +301,7 @@ private:
     friend class meta_split_service;
     friend class bulk_load_service;
     friend class bulk_load_service_test;
+    friend class meta_app_operation_test;
 
     dsn::task_tracker _tracker;
 

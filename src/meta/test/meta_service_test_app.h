@@ -104,7 +104,6 @@ public:
     virtual dsn::error_code start(const std::vector<std::string> &args) override;
     virtual dsn::error_code stop(bool /*cleanup*/) { return dsn::ERR_OK; }
     void state_sync_test();
-    void data_definition_op_test();
     void update_configuration_test();
     void balancer_validator();
     void balance_config_file();

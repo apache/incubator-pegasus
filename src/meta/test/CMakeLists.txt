@@ -36,7 +36,7 @@ set(MY_PROJ_LIBS
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 # Extra files that will be installed
-set(MY_BINPLACES clear.sh run.sh config-ddl-test.ini config-test.ini suite1 suite2)
+set(MY_BINPLACES clear.sh run.sh config-test.ini suite1 suite2)
 
 add_definitions(-DDSN_MOCK_TEST)
 dsn_add_test()
