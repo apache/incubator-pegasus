@@ -14,7 +14,7 @@ import (
 // After all TableStats have been collected, TableStatsAggregator sums them up into a
 // ClusterStats. Users of this pacakage can use the hooks to watch every changes of the stats.
 type TableStatsAggregator interface {
-	Aggregate()
+	Aggregate() (map[int32]*TableStats, *ClusterStats)
 }
 
 // NewTableStatsAggregator returns a TableStatsAggregator instance.
@@ -51,7 +51,7 @@ func Start(tom *tomb.Tomb) {
 	}
 }
 
-func (ag *tableStatsAggregator) Aggregate() {
+func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStats) {
 	ag.updateTableMap()
 
 	// TODO(wutao1): reduce meta queries for listing nodes
@@ -60,7 +60,7 @@ func (ag *tableStatsAggregator) Aggregate() {
 		perfCounters, err := n.GetPerfCounters("@")
 		if err != nil {
 			log.Errorf("unable to query perf-counters: %s", err)
-			return
+			return nil, nil
 		}
 		for _, p := range perfCounters {
 			perfCounter := decodePartitionPerfCounter(p)
@@ -73,6 +73,7 @@ func (ag *tableStatsAggregator) Aggregate() {
 			ag.updatePartitionStat(perfCounter)
 		}
 	}
+	ag.extendStatsForAllPartitions()
 
 	var batchTableStats []TableStats
 	for _, table := range ag.tables {
@@ -81,6 +82,8 @@ func (ag *tableStatsAggregator) Aggregate() {
 	}
 	ag.aggregateClusterStats()
 	hooksManager.afterTableStatsEmitted(batchTableStats, *ag.allStats)
+
+	return ag.tables, ag.allStats
 }
 
 func (ag *tableStatsAggregator) aggregateClusterStats() {
@@ -93,7 +96,6 @@ func (ag *tableStatsAggregator) aggregateClusterStats() {
 			ag.allStats.Stats[k] += v
 		}
 	}
-	extendStats(&ag.allStats.Stats)
 }
 
 // Some tables may disappear (be dropped) or first show up.
@@ -128,6 +130,7 @@ func (ag *tableStatsAggregator) doUpdateTableMap(tables []*admin.AppInfo) {
 	}
 }
 
+// Update the counter value.
 func (ag *tableStatsAggregator) updatePartitionStat(pc *partitionPerfCounter) {
 	tb, found := ag.tables[pc.gpid.Appid]
 	if !found {
@@ -140,4 +143,12 @@ func (ag *tableStatsAggregator) updatePartitionStat(pc *partitionPerfCounter) {
 		return
 	}
 	part.update(pc)
+}
+
+func (ag *tableStatsAggregator) extendStatsForAllPartitions() {
+	for _, tb := range ag.tables {
+		for _, p := range tb.Partitions {
+			extendStats(&p.Stats)
+		}
+	}
 }

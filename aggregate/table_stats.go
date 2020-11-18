@@ -67,7 +67,6 @@ func (tb *TableStats) aggregate() {
 			tb.Stats[name] += value
 		}
 	}
-	extendStats(&tb.Stats)
 }
 
 func aggregateCustomStats(elements []string, stats *map[string]float64, resultName string) {
