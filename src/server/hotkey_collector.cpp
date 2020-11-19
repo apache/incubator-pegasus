@@ -312,7 +312,7 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 
 void hotkey_coarse_data_collector::clear()
 {
-    for (int i = 0; i < FLAGS_hotkey_buckets_num; i++) {
+    for (int i = 0; i < _hash_bucket_num; i++) {
         _hash_buckets[i].store(0);
     }
 }
