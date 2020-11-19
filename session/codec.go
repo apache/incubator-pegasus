@@ -13,6 +13,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/cmd"
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -267,6 +268,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_RRDB_RRDB_INCR_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbIncrResult{
 			Success: rrdb.NewIncrResponse(),
+		}
+	},
+	"RPC_CLI_CLI_CALL_ACK": func() RpcResponseResult {
+		return &cmd.RemoteCmdServiceCallCommandResult{
+			Success: new(string),
 		}
 	},
 }
