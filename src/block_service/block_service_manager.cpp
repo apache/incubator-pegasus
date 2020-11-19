@@ -4,6 +4,7 @@
 
 #include "block_service_manager.h"
 #include "block_service/fds/fds_service.h"
+#include "block_service/hdfs/hdfs_service.h"
 #include "block_service/local/local_service.h"
 
 #include <dsn/dist/fmt_logging.h>
@@ -20,6 +21,10 @@ block_service_registry::block_service_registry()
     ans = utils::factory_store<block_filesystem>::register_factory(
         "fds_service", block_filesystem::create<fds_service>, PROVIDER_TYPE_MAIN);
     dassert(ans, "register fds_service failed");
+
+    ans = utils::factory_store<block_filesystem>::register_factory(
+        "hdfs_service", block_filesystem::create<hdfs_service>, PROVIDER_TYPE_MAIN);
+    dassert(ans, "register hdfs_service failed");
 
     ans = utils::factory_store<block_filesystem>::register_factory(
         "local_service", block_filesystem::create<local_service>, PROVIDER_TYPE_MAIN);

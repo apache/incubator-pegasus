@@ -79,6 +79,17 @@ ExternalProject_Add(gperftools
         BUILD_IN_SOURCE 1
         )
 
+file(MAKE_DIRECTORY ${TP_OUTPUT}/include/hdfs)
+ExternalProject_Add(hadoop
+        URL ${OSS_URL_PREFIX}/hadoop-3.1.4.tar.gz
+        https://mirrors.ocf.berkeley.edu/apache/hadoop/common/hadoop-3.1.4/hadoop-3.1.4.tar.gz
+        URL_MD5 bd87b61c8a736c27112d5c8382f8f70e
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND cp -R include/. ${TP_OUTPUT}/include/hdfs && cp -R lib/native/. ${TP_OUTPUT}/lib
+        BUILD_IN_SOURCE 1
+        )
+
 # header-only
 ExternalProject_Add(rapidjson
         URL ${OSS_URL_PREFIX}/rapidjson-1.1.0.tar.gz

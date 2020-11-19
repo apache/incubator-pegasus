@@ -7,6 +7,7 @@ set(MY_PROJ_LIBS
     dsn.block_service
     dsn.block_service.local
     dsn.block_service.fds
+    dsn.block_service.hdfs
     dsn_runtime
     galaxy-fds-sdk-cpp
     PocoNet

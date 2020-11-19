@@ -19,6 +19,7 @@ set(MY_PROJ_LIBS
         dsn.block_service
         dsn.block_service.local
         dsn.block_service.fds
+        dsn.block_service.hdfs
         dsn.failure_detector
         dsn_dist_cmd
         dsn_http
@@ -31,7 +32,8 @@ set(MY_PROJ_LIBS
         PocoNetSSL
         PocoJSON
         crypto
-        gtest)
+        gtest
+        )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 

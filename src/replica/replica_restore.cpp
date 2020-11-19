@@ -231,10 +231,12 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         backup_root, policy_name, req.app_name, old_gpid, backup_id);
     block_filesystem *fs =
         _stub->_block_service_manager.get_or_create_block_filesystem(req.backup_provider_name);
-    dassert(fs,
-            "%s: get block filesystem by provider(%s) failed",
-            name(),
-            req.backup_provider_name.c_str());
+    if (fs == nullptr) {
+        derror_f("{}: get block filesystem by provider {} failed",
+                 std::string(name()),
+                 req.backup_provider_name);
+        return ERR_CORRUPTION;
+    }
 
     create_file_response create_response;
     fs->create_file(
