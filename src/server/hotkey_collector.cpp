@@ -403,6 +403,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 
 void hotkey_fine_data_collector::clear()
 {
+    _target_bucket_index.store(-1);
     std::pair<dsn::blob, uint64_t> key_weight_pair;
     while (_capture_key_queue.try_dequeue(key_weight_pair)) {
     }
