@@ -2,12 +2,20 @@ package cmd
 
 import (
 	"admin-cli/shell"
+	"context"
 	"fmt"
+	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/desertbit/grumble"
 )
 
 var useTable string
+
+var cachedTableNames []string
+
+// whether table names are previously cached
+var tablesCached bool = false
 
 func init() {
 	shell.AddCommand(&grumble.Command{
@@ -26,8 +34,32 @@ func init() {
 		},
 		AllowArgs: true,
 		Completer: func(prefix string, args []string) []string {
-			// TODO(wutao): auto-completion of tables
-			return []string{}
+			return useCompletion(prefix)
 		},
 	})
+}
+
+func useCompletion(prefix string) []string {
+	if tablesCached {
+		// returns all tables
+		return cachedTableNames
+	}
+
+	// TODO(wutao): auto-completes in background
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+	resp, err := pegasusClient.Meta.ListApps(ctx, &admin.ListAppsRequest{
+		Status: admin.AppStatus_AS_AVAILABLE,
+	})
+	if err != nil {
+		return []string{}
+	}
+
+	tableNames := []string{}
+	for _, app := range resp.Infos {
+		tableNames = append(tableNames, app.AppName)
+	}
+	tablesCached = true
+	return tableNames
 }

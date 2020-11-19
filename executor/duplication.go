@@ -13,7 +13,7 @@ import (
 func QueryDuplication(c *Client, tableName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := c.meta.QueryDuplication(ctx, &admin.DuplicationQueryRequest{
+	resp, err := c.Meta.QueryDuplication(ctx, &admin.DuplicationQueryRequest{
 		AppName: tableName,
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func QueryDuplication(c *Client, tableName string) error {
 func AddDuplication(c *Client, tableName string, remoteCluster string, freezed bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := c.meta.AddDuplication(ctx, &admin.DuplicationAddRequest{
+	resp, err := c.Meta.AddDuplication(ctx, &admin.DuplicationAddRequest{
 		AppName:           tableName,
 		RemoteClusterName: remoteCluster,
 		Freezed:           freezed,
@@ -49,7 +49,7 @@ func AddDuplication(c *Client, tableName string, remoteCluster string, freezed b
 func ModifyDuplication(c *Client, tableName string, dupid int, status admin.DuplicationStatus) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	_, err := c.meta.ModifyDuplication(ctx, &admin.DuplicationModifyRequest{
+	_, err := c.Meta.ModifyDuplication(ctx, &admin.DuplicationModifyRequest{
 		AppName: tableName,
 		Dupid:   int32(dupid),
 		Status:  &status,

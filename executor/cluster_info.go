@@ -13,7 +13,7 @@ import (
 func ClusterInfo(client *Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := client.meta.QueryClusterInfo(ctx, &admin.ClusterInfoRequest{})
+	resp, err := client.Meta.QueryClusterInfo(ctx, &admin.ClusterInfoRequest{})
 	if err != nil {
 		return err
 	}

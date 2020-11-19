@@ -14,7 +14,7 @@ import (
 func ListTables(client *Client, useJSON bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := client.meta.ListApps(ctx, &admin.ListAppsRequest{
+	resp, err := client.Meta.ListApps(ctx, &admin.ListAppsRequest{
 		Status: admin.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {

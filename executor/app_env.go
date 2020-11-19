@@ -13,7 +13,7 @@ import (
 func ListAppEnvs(c *Client, useTable string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := c.meta.ListApps(ctx, &admin.ListAppsRequest{
+	resp, err := c.Meta.ListApps(ctx, &admin.ListAppsRequest{
 		Status: admin.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {
@@ -37,7 +37,7 @@ func ListAppEnvs(c *Client, useTable string) error {
 func SetAppEnv(c *Client, useTable string, key, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := c.meta.UpdateAppEnv(ctx, &admin.UpdateAppEnvRequest{
+	resp, err := c.Meta.UpdateAppEnv(ctx, &admin.UpdateAppEnvRequest{
 		Keys:    []string{key},
 		Values:  []string{value},
 		Op:      admin.AppEnvOperation_APP_ENV_OP_SET,
