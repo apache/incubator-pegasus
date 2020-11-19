@@ -1,12 +1,12 @@
 project(pegasus_thirdparties)
 cmake_minimum_required(VERSION 3.0.2)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     # require at least gcc 4.8
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
         message(FATAL_ERROR "GCC version must be at least 4.8!")
-    endif()
-endif()
+    endif ()
+endif ()
 
 include(ExternalProject)
 
@@ -182,9 +182,9 @@ ExternalProject_Add(fds
         )
 
 ExternalProject_Add(fmt
-        URL ${OSS_URL_PREFIX}/fmt-4.0.0.tar.gz
-        https://codeload.github.com/fmtlib/fmt/tar.gz/4.0.0
-        URL_MD5 c9be9a37bc85493d1116b0af59a25eba
+        URL ${OSS_URL_PREFIX}/fmt-7.1.2.zip
+        https://github.com/fmtlib/fmt/releases/download/7.1.2/fmt-7.1.2.zip
+        URL_MD5 cd838fb47c92b3221986a2f454331178
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_BUILD_TYPE=release
         -DFMT_TEST=false
@@ -256,9 +256,9 @@ ExternalProject_Add(prometheus-cpp
 
 # header-only
 ExternalProject_Add(nlohmann_json
-        URL ${OSS_URL_PREFIX}/nlohmann_json-3.7.3.zip
-        https://github.com/nlohmann/json/releases/download/v3.7.3/include.zip
-        URL_MD5 7249387593792b565dcb30d87bca0de3
+        URL ${OSS_URL_PREFIX}/nlohmann_json-3.9.1.zip
+        https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
+        URL_MD5 d2f66c608af689e21d69a33c220e974e
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R include/nlohmann ${TP_OUTPUT}/include

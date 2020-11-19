@@ -6,9 +6,11 @@
 #include <dsn/utility/utils.h>
 #include <dsn/utility/strings.h>
 #include <dsn/utility/safe_strerror_posix.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include <dsn/cpp/json_helper.h>
 #include <dsn/tool-api/task_tracker.h>
+#include <nlohmann/json.hpp>
 #include "local_service.h"
 
 static const int max_length = 2048; // max data length read from file each time
@@ -24,8 +26,21 @@ struct file_metadata
 {
     uint64_t size;
     std::string md5;
-    DEFINE_JSON_SERIALIZATION(size, md5)
 };
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(file_metadata, size, md5)
+
+bool file_metadata_from_json(std::ifstream &fin, file_metadata &fmeta) noexcept
+{
+    std::string data;
+    fin >> data;
+    try {
+        nlohmann::json::parse(data).get_to(fmeta);
+        return true;
+    } catch (nlohmann::json::exception &exp) {
+        dwarn_f("decode meta data from json failed: {} [{}]", exp.what(), data);
+        return false;
+    }
+}
 
 std::string local_service::get_metafile(const std::string &filepath)
 {
@@ -239,14 +254,9 @@ error_code local_file_object::load_metadata()
     }
     auto cleanup = dsn::defer([&is]() { is.close(); });
 
-    std::string data;
-    is >> data;
-
     file_metadata meta;
-    bool ans = dsn::json::json_forwarder<file_metadata>::decode(
-        dsn::blob(data.c_str(), 0, data.size()), meta);
+    bool ans = file_metadata_from_json(is, meta);
     if (!ans) {
-        dwarn("decode meta data from json(%s) failed", data.c_str());
         return ERR_FS_INTERNAL;
     }
     _size = meta.size;
@@ -270,7 +280,7 @@ error_code local_file_object::store_metadata()
         return ERR_FS_INTERNAL;
     }
     auto cleanup = dsn::defer([&os]() { os.close(); });
-    dsn::json::json_forwarder<file_metadata>::encode(os, meta);
+    os << nlohmann::json(meta);
 
     return ERR_OK;
 }
