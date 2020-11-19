@@ -13,6 +13,9 @@ import (
 // TODO(jiashuo1) support query detail info
 // ListNodes command.
 func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) error {
+	if len(file) != 0 {
+		save2File(client, file)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

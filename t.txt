@@ -1,0 +1,44 @@
++---------------------+----------+
+|        NODE         |  STATUS  |
++---------------------+----------+
+| 10.232.52.164:34801 | NS_ALIVE |
+| 10.232.52.164:34802 | NS_ALIVE |
+| 10.232.52.164:34803 | NS_ALIVE |
++---------------------+----------+
++--------------------------+----------+
+|           NODE           |  STATUS  |
++--------------------------+----------+
+| mi.jiashuo.pegasus:34801 | NS_ALIVE |
+| mi.jiashuo.pegasus:34802 | NS_ALIVE |
+| mi.jiashuo.pegasus:34803 | NS_ALIVE |
++--------------------------+----------+
+[
+  {
+    "node": "mi.jiashuo.pegasus:34801",
+    "status": "NS_ALIVE"
+  },
+  {
+    "node": "mi.jiashuo.pegasus:34802",
+    "status": "NS_ALIVE"
+  },
+  {
+    "node": "mi.jiashuo.pegasus:34803",
+    "status": "NS_ALIVE"
+  }
+]
++---------+-----------+----------------+
+| REPLICA |  STATUS   |    CAPACITY    |
++---------+-----------+----------------+
+|   1.1   |  primary  | TODO(jiashuo1) |
+|   2.0   |  primary  | TODO(jiashuo1) |
+|   2.3   |  primary  | TODO(jiashuo1) |
+|   2.6   |  primary  | TODO(jiashuo1) |
+|   1.0   | secondary | TODO(jiashuo1) |
+|   1.2   | secondary | TODO(jiashuo1) |
+|   1.3   | secondary | TODO(jiashuo1) |
+|   2.1   | secondary | TODO(jiashuo1) |
+|   2.2   | secondary | TODO(jiashuo1) |
+|   2.4   | secondary | TODO(jiashuo1) |
+|   2.5   | secondary | TODO(jiashuo1) |
+|   2.7   | secondary | TODO(jiashuo1) |
++---------+-----------+----------------+

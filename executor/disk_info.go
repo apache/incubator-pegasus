@@ -19,8 +19,11 @@ const (
 	ReplicaCount DiskInfoType = 1
 )
 
-// ListNodes command.
+// QueryDiskInfo command
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, file string, useJSON bool, enableResolve bool) error {
+	if len(file) != 0 {
+		save2File(client, file)
+	}
 
 	if enableResolve {
 		node, err := resolve(replicaServer, Host2Addr)

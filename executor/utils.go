@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -69,4 +70,9 @@ func resolve(node string, resolveType ResolveType) (string, error) {
 		ip = strings.TrimSuffix(nodes[0], ".")
 	}
 	return fmt.Sprintf("%s:%s", ip, port), nil
+}
+
+func save2File(client *Client, filePath string) {
+	file, _ := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
+	client.Writer = file
 }
