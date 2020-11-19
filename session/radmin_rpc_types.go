@@ -14,11 +14,15 @@ func (rs *ReplicaSession) QueryDiskInfo(ctx context.Context, req *radmin.QueryDi
 	arg := radmin.NewReplicaClientQueryDiskInfoArgs()
 	arg.Req = req
 	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, arg, "RPC_QUERY_DISK_INFO")
-	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", rs, err)
+	if err == nil {
+		ret, _ := result.(*radmin.ReplicaClientQueryDiskInfoResult)
+		resp := ret.GetSuccess()
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp, fmt.Errorf("QueryDiskInfo to session %s failed: %s", rs, resp.GetErr().String())
+		}
+		return resp, nil
 	}
-	ret, _ := result.(*radmin.ReplicaClientQueryDiskInfoResult)
-	return ret.GetSuccess(), nil
+	return nil, err
 }
 
 // DiskMigrate is auto-generated
@@ -26,9 +30,13 @@ func (rs *ReplicaSession) DiskMigrate(ctx context.Context, req *radmin.ReplicaDi
 	arg := radmin.NewReplicaClientDiskMigrateArgs()
 	arg.Req = req
 	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, arg, "RPC_REPLICA_DISK_MIGRATE")
-	if err != nil {
-		return nil, fmt.Errorf("RPC to session %s failed: %s", rs, err)
+	if err == nil {
+		ret, _ := result.(*radmin.ReplicaClientDiskMigrateResult)
+		resp := ret.GetSuccess()
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp, fmt.Errorf("DiskMigrate to session %s failed: %s", rs, resp.GetErr().String())
+		}
+		return resp, nil
 	}
-	ret, _ := result.(*radmin.ReplicaClientDiskMigrateResult)
-	return ret.GetSuccess(), nil
+	return nil, err
 }

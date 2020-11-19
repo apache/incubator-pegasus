@@ -27,7 +27,7 @@ func (m *MetaManager) DropApp(ctx context.Context, req *admin.DropAppRequest) (*
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("DropApp failed: %s", resp.GetErr().String())
+			return resp.(*admin.DropAppResponse), fmt.Errorf("DropApp failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.DropAppResponse), nil
 	}
@@ -52,7 +52,7 @@ func (m *MetaManager) CreateApp(ctx context.Context, req *admin.CreateAppRequest
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("CreateApp failed: %s", resp.GetErr().String())
+			return resp.(*admin.CreateAppResponse), fmt.Errorf("CreateApp failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.CreateAppResponse), nil
 	}
@@ -77,7 +77,7 @@ func (m *MetaManager) ListApps(ctx context.Context, req *admin.ListAppsRequest) 
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("ListApps failed: %s", resp.GetErr().String())
+			return resp.(*admin.ListAppsResponse), fmt.Errorf("ListApps failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.ListAppsResponse), nil
 	}
@@ -102,7 +102,7 @@ func (m *MetaManager) QueryDuplication(ctx context.Context, req *admin.Duplicati
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("QueryDuplication failed: %s", resp.GetErr().String())
+			return resp.(*admin.DuplicationQueryResponse), fmt.Errorf("QueryDuplication failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.DuplicationQueryResponse), nil
 	}
@@ -127,7 +127,7 @@ func (m *MetaManager) ModifyDuplication(ctx context.Context, req *admin.Duplicat
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("ModifyDuplication failed: %s", resp.GetErr().String())
+			return resp.(*admin.DuplicationModifyResponse), fmt.Errorf("ModifyDuplication failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.DuplicationModifyResponse), nil
 	}
@@ -152,7 +152,7 @@ func (m *MetaManager) AddDuplication(ctx context.Context, req *admin.Duplication
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("AddDuplication failed: %s", resp.GetErr().String())
+			return resp.(*admin.DuplicationAddResponse), fmt.Errorf("AddDuplication failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.DuplicationAddResponse), nil
 	}
@@ -177,7 +177,7 @@ func (m *MetaManager) QueryAppInfo(ctx context.Context, req *admin.QueryAppInfoR
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("QueryAppInfo failed: %s", resp.GetErr().String())
+			return resp.(*admin.QueryAppInfoResponse), fmt.Errorf("QueryAppInfo failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.QueryAppInfoResponse), nil
 	}
@@ -202,7 +202,7 @@ func (m *MetaManager) UpdateAppEnv(ctx context.Context, req *admin.UpdateAppEnvR
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("UpdateAppEnv failed: %s", resp.GetErr().String())
+			return resp.(*admin.UpdateAppEnvResponse), fmt.Errorf("UpdateAppEnv failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.UpdateAppEnvResponse), nil
 	}
@@ -227,7 +227,7 @@ func (m *MetaManager) ListNodes(ctx context.Context, req *admin.ListNodesRequest
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("ListNodes failed: %s", resp.GetErr().String())
+			return resp.(*admin.ListNodesResponse), fmt.Errorf("ListNodes failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.ListNodesResponse), nil
 	}
@@ -252,7 +252,7 @@ func (m *MetaManager) QueryClusterInfo(ctx context.Context, req *admin.ClusterIn
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("QueryClusterInfo failed: %s", resp.GetErr().String())
+			return resp.(*admin.ClusterInfoResponse), fmt.Errorf("QueryClusterInfo failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.ClusterInfoResponse), nil
 	}
@@ -277,7 +277,7 @@ func (m *MetaManager) MetaControl(ctx context.Context, req *admin.MetaControlReq
 	})
 	if err == nil {
 		if resp.GetErr().Errno != base.ERR_OK.String() {
-			return nil, fmt.Errorf("MetaControl failed: %s", resp.GetErr().String())
+			return resp.(*admin.MetaControlResponse), fmt.Errorf("MetaControl failed: %s", resp.GetErr().String())
 		}
 		return resp.(*admin.MetaControlResponse), nil
 	}
