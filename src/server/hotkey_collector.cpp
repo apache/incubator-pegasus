@@ -19,7 +19,6 @@
 
 #include <dsn/dist/replication/replication_enums.h>
 #include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/flags.h>
 #include <boost/functional/hash.hpp>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
@@ -66,7 +65,7 @@ DSN_DEFINE_int32(
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
 
 // 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
-static bool
+/*extern*/ bool
 find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index)
 {
     dcheck_gt(captured_keys.size(), 2);
@@ -102,7 +101,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 }
 
 // TODO: (Tangyanzhao) replace it to xxhash
-static int get_bucket_id(dsn::string_view data)
+/*extern*/ int get_bucket_id(dsn::string_view data)
 {
     size_t hash_value = boost::hash_range(data.begin(), data.end());
     return static_cast<int>(hash_value % FLAGS_hotkey_buckets_num);
