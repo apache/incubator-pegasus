@@ -101,7 +101,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 
 // TODO: (Tangyanzhao) replace it to xxhash
 
-/*extern*/ int get_bucket_id(dsn::string_view data)
+/*extern*/ int get_bucket_id(dsn::string_view data, int bucket_num)
 {
     return static_cast<int>(boost::hash_range(data.begin(), data.end()) % bucket_num);
 }

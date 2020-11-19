@@ -42,7 +42,7 @@ struct detect_hotkey_result
     }
 };
 
-extern int get_bucket_id(dsn::string_view data);
+extern int get_bucket_id(dsn::string_view data, int bucket_num);
 extern bool
 find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
 
