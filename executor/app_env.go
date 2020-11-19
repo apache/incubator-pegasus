@@ -38,12 +38,14 @@ func SetAppEnv(c *Client, useTable string, key, value string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	resp, err := c.meta.UpdateAppEnv(ctx, &admin.UpdateAppEnvRequest{
-		Keys:   []string{key},
-		Values: []string{value},
+		Keys:    []string{key},
+		Values:  []string{value},
+		Op:      admin.AppEnvOperation_APP_ENV_OP_SET,
+		AppName: useTable,
 	})
 	if err != nil {
 		if resp != nil {
-			return fmt.Errorf("error hint message: %s", resp.HintMessage)
+			return fmt.Errorf("failed to set app (\"%s\") with env \"%s\" => \"%s\" [%s]: %s", useTable, key, value, resp.Err.Errno, resp.HintMessage)
 		}
 		return err
 	}

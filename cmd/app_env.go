@@ -12,6 +12,7 @@ func init() {
 	rootCmd := &grumble.Command{
 		Name: "app-env",
 		Help: "app-env related commands",
+		// TODO(wutao): print commonly-used app-envs
 	}
 	rootCmd.AddCommand(&grumble.Command{
 		Name:    "list",
