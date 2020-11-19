@@ -8,6 +8,7 @@
 //
 //   http://www.apache.org/licenses/LICENSE-2.0
 //
+
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
 // "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -40,6 +41,10 @@ struct detect_hotkey_result
         if_find_result.store(false);
     }
 };
+
+extern int get_bucket_id(dsn::string_view data);
+extern bool
+find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index);
 
 //    hotkey_collector is responsible to find the hot keys after the partition
 //    was detected to be hot. The two types of hotkey, READ & WRITE, are detected
@@ -114,6 +119,7 @@ private:
     std::shared_ptr<hotkey_fine_data_collector> _internal_fine_collector;
 };
 
+// Be sure every function in internal_collector_base should be thread safe
 class internal_collector_base : public dsn::replication::replica_base
 {
 public:
@@ -147,6 +153,8 @@ private:
 
     const uint32_t _hash_bucket_num;
     std::vector<std::atomic<uint64_t>> _hash_buckets;
+
+    friend class coarse_collector_test;
 };
 
 class hotkey_fine_data_collector : public internal_collector_base
@@ -168,6 +176,8 @@ private:
     // ConcurrentQueue is a lock-free queue to capture keys
     moodycamel::ConcurrentQueue<std::pair<dsn::blob, uint64_t>> _capture_key_queue;
     const uint32_t _hash_bucket_num;
+
+    friend class fine_collector_test;
 };
 
 } // namespace server
