@@ -7,8 +7,8 @@ import (
 	"github.com/desertbit/grumble"
 )
 
+// TODO(jiashuo1) support show node replica/qps/latency/usage info(need remote-command support)
 func init() {
-	// TODO(jiashuo1) support query detail info
 	shell.AddCommand(&grumble.Command{
 		Name:    "list-nodes",
 		Aliases: []string{"nodes"},
@@ -16,8 +16,10 @@ func init() {
 		Flags: func(f *grumble.Flags) {
 			/*define the flags*/
 			f.Bool("r", "resolve", false, "resolve input or output address")
-			f.Bool("j", "json", false, "Use JSON as the format of the output results. By default tabular format is used.")
-			f.String("o", "out", "", "save out put into file")
+			f.Bool("j", "json", false, "use JSON as the format of the output results. By default tabular format is used.")
+			f.Bool("d", "detail", false, "show detail replica count in all node")
+			f.Bool("u", "usage", false, "show the usage of every node")
+			f.String("o", "out", "", "save output into file")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.ListNodes(pegasusClient, c.Flags.Bool("json"), c.Flags.Bool("resolve"), c.Flags.String("out"))

@@ -13,12 +13,12 @@ func init() {
 		Help: "query disk capacity info ",
 		Flags: func(f *grumble.Flags) {
 			/*define the flags*/
-			f.Bool("r", "resolve", false, "resolve input or output address")
-			f.Bool("j", "json", false, "Use JSON as the format of the output results. By default tabular format is used.")
-			f.String("n", "node", "", "Specify node address(ip:port)")
-			f.String("d", "disk", "", "Specify disk tag")
-			f.String("a", "app", "", "Specify app name")
-			f.String("o", "out", "", "save out put into file")
+			f.Bool("r", "resolve", false, "resolve input or output address, default false")
+			f.Bool("j", "json", false, "use JSON as the format of the output results. By default tabular format is used.")
+			f.String("n", "node", "", "node address(ip:port), for example, 127.0.0.1:34801")
+			f.String("d", "disk", "", "disk tag, for example, ssd1")
+			f.String("a", "app", "", "app name, for example, temp")
+			f.String("o", "out", "", "save output into file")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.QueryDiskInfo(
@@ -38,11 +38,11 @@ func init() {
 		Help: "query disk replica count info",
 		Flags: func(f *grumble.Flags) {
 			/*define the flags*/
-			f.Bool("r", "resolve", false, "resolve input or output address")
-			f.Bool("j", "json", false, "Use JSON as the format of the output results. By default tabular format is used.")
-			f.String("n", "node", "", "Specify node address(ip:port)")
-			f.String("a", "app", "", "Specify app name")
-			f.String("o", "out", "", "save out put into file")
+			f.Bool("r", "resolve", false, "resolve input or output address, default false")
+			f.Bool("j", "json", false, "use JSON as the format of the output results. By default tabular format is used.")
+			f.String("n", "node", "", "node address(ip:port), for example, 127.0.0.1:34801")
+			f.String("a", "app", "", "app name, for example, temp")
+			f.String("o", "out", "", "save output into file")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.QueryDiskInfo(

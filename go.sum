@@ -9,6 +9,8 @@ github.com/XiaoMi/pegasus-go-client v0.0.0-20201117033005-921fbbd1140d h1:7+6RHM
 github.com/XiaoMi/pegasus-go-client v0.0.0-20201117033005-921fbbd1140d/go.mod h1:H83dStz3HvHBFC0n7QK+qLHAjqsIghFOFx2TCvq6vzI=
 github.com/XiaoMi/pegasus-go-client v0.0.0-20201117083510-273d6e44ff41 h1:ZneNeMExp0wZ5Oxrxljbi8NwQKmrBbCs0tdr1GkVeqk=
 github.com/XiaoMi/pegasus-go-client v0.0.0-20201117083510-273d6e44ff41/go.mod h1:H83dStz3HvHBFC0n7QK+qLHAjqsIghFOFx2TCvq6vzI=
+github.com/XiaoMi/pegasus-go-client v0.0.0-20201119112224-45f30cd560c7 h1:v3DH4plTH/5f2RTfbNrp5rg8Fw3Bdk7i9Cf+Mu/j8Zo=
+github.com/XiaoMi/pegasus-go-client v0.0.0-20201119112224-45f30cd560c7/go.mod h1:H83dStz3HvHBFC0n7QK+qLHAjqsIghFOFx2TCvq6vzI=
 github.com/apache/thrift v0.13.0 h1:5hryIiq9gtn+MiLVn0wP37kb/uTeRZgN08WoCsAhIhI=
 github.com/apache/thrift v0.13.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
 github.com/chzyer/logex v1.1.10 h1:Swpa1K6QvQznwJRcfTfQJmTE72DqScAa40E+fbHEXEE=

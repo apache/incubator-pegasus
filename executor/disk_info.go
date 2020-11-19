@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -23,6 +24,8 @@ const (
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, file string, useJSON bool, enableResolve bool) error {
 	if len(file) != 0 {
 		save2File(client, file)
+	} else {
+		client.Writer = os.Stdout
 	}
 
 	if enableResolve {
@@ -47,6 +50,11 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 	if err != nil {
 		return err
 	}
+
+	/* TODO(jiashuo1) wait fix the err code
+	if resp.Err != base.ERR_OK {
+		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
+	}*/
 
 	switch infoType {
 	case CapacitySize:

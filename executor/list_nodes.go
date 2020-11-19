@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -15,6 +16,8 @@ import (
 func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) error {
 	if len(file) != 0 {
 		save2File(client, file)
+	} else {
+		client.Writer = os.Stdout
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
@@ -25,6 +28,11 @@ func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) er
 	if err != nil {
 		return err
 	}
+
+	/* TODO(jiashuo1) wait fix the err code
+	if resp.Err != base.ERR_OK {
+		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
+	}*/
 
 	type nodeStruct struct {
 		Node   string `json:"node"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -11,7 +12,13 @@ import (
 )
 
 // ListTables command.
-func ListTables(client *Client, useJSON bool) error {
+func ListTables(client *Client, file string, useJSON bool) error {
+	if len(file) != 0 {
+		save2File(client, file)
+	} else {
+		client.Writer = os.Stdout
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	resp, err := client.meta.ListApps(ctx, &admin.ListAppsRequest{
@@ -20,6 +27,10 @@ func ListTables(client *Client, useJSON bool) error {
 	if err != nil {
 		return err
 	}
+	/* TODO(jiashuo1) wait fix the err code
+	if resp.Err != base.ERR_OK {
+		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
+	}*/
 
 	type tableStruct struct {
 		Name string            `json:"name"`

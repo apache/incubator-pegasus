@@ -3,8 +3,10 @@ package executor
 import (
 	"context"
 	"fmt"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +23,11 @@ func validateNodeAddress(client *Client, addr string) error {
 		return err
 	}
 
+	/* TODO(jiashuo1) wait fix the err code
+	if resp.Err != base.ERR_OK {
+		return fmt.Errorf("Internal server error [%s]", base.ERR_OK)
+	}*/
+
 	for _, node := range resp.Infos {
 		if node.Address.GetAddress() == addr {
 			return nil
@@ -36,7 +43,7 @@ const (
 	Addr2Host ResolveType = 1
 )
 
-// node's formater, for example, pegasus.onebox.com:34801 or 127.0.0.1:34801
+// node's format, for example, pegasus.onebox.com:34801 or 127.0.0.1:34801
 func resolve(node string, resolveType ResolveType) (string, error) {
 	splitResult := strings.Split(node, ":")
 	if len(splitResult) < 2 {
@@ -64,6 +71,7 @@ func resolve(node string, resolveType ResolveType) (string, error) {
 	if len(nodes) == 0 || len(nodes) > 1 {
 		return node, fmt.Errorf("Invalid pegasus server node [%s]", node)
 	}
+	ip = nodes[0]
 
 	// Addr2Host result has suffix `.`, for example, `pegasus.onebox.com.` we need delete the suffix
 	if resolveType == Addr2Host {
@@ -75,4 +83,24 @@ func resolve(node string, resolveType ResolveType) (string, error) {
 func save2File(client *Client, filePath string) {
 	file, _ := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_SYNC|os.O_APPEND, 0755)
 	client.Writer = file
+}
+
+func str2Gpid(gpid string) (*base.Gpid, error) {
+	splitResult := strings.Split(gpid, ".")
+	if len(splitResult) < 2 {
+		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
+	}
+
+	appId, err := strconv.Atoi(splitResult[0])
+
+	if err != nil {
+		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
+	}
+
+	partitionId, err := strconv.Atoi(splitResult[1])
+	if err != nil {
+		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
+	}
+
+	return &base.Gpid{Appid: int32(appId), PartitionIndex: int32(partitionId)}, nil
 }
