@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/cheggaaa/pb/v3"
 )
 
 // CreateTable command
@@ -31,6 +33,39 @@ func CreateTable(c *Client, tableName string, partitionCount int) error {
 		return err
 	}
 
-	fmt.Fprintf(c, "Creating table \"%s\" [AppID: %d]\n", tableName, resp.Appid)
+	fmt.Fprintf(c, "Creating table \"%s\" (AppID: %d)\n", tableName, resp.Appid)
+	return waitTableReady(c, tableName, partitionCount)
+}
+
+func waitTableReady(c *Client, tableName string, partitionCount int) error {
+	fmt.Fprintf(c, "Available partitions:\n")
+	bar := pb.Full.Start(partitionCount) // Add a new bar
+
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		resp, err := c.Meta.QueryConfig(ctx, tableName)
+		if err != nil {
+			return err
+		}
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return fmt.Errorf("QueryConfig failed: %s", resp.GetErr().String())
+		}
+
+		readyCount := 0
+		for _, part := range resp.Partitions {
+			if part.Primary.GetRawAddress() != 0 && len(part.Secondaries)+1 == 3 {
+				readyCount++
+			}
+		}
+		bar.SetCurrent(int64(readyCount))
+		if readyCount == partitionCount {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+
+	bar.Finish()
+	fmt.Fprintf(c, "Done!\n")
 	return nil
 }
