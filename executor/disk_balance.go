@@ -18,14 +18,12 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 	}
 
 	pid, err := Str2Gpid(pidStr)
-	fmt.Println(pid)
 	if err != nil {
 		return err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	// TODO(jiashuo1) update to resp, err := ... after fix err code
 	resp, err := client.ReplicaPool.GetReplica(replicaServer).DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
 		Pid:        pid, // TODO(jiashuo1) server parser pid is error, need fix
 		OriginDisk: from,
