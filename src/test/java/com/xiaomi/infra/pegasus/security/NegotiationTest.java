@@ -18,22 +18,95 @@
  */
 package com.xiaomi.infra.pegasus.security;
 
-import static com.xiaomi.infra.pegasus.apps.negotiation_status.SASL_LIST_MECHANISMS;
 import static org.mockito.ArgumentMatchers.any;
 
-import com.xiaomi.infra.pegasus.security.Negotiation;
+import com.xiaomi.infra.pegasus.apps.negotiation_response;
+import com.xiaomi.infra.pegasus.apps.negotiation_status;
+import com.xiaomi.infra.pegasus.base.blob;
+import java.nio.charset.Charset;
+import javax.security.auth.Subject;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 
 public class NegotiationTest {
+  private Negotiation negotiation = new Negotiation(null, new Subject(), "", "");
+
   @Test
   public void testStart() {
-    Negotiation negotiation = new Negotiation(null, null, "", "");
     Negotiation mockNegotiation = Mockito.spy(negotiation);
 
     Mockito.doNothing().when(mockNegotiation).send(any(), any());
     mockNegotiation.start();
-    Assert.assertEquals(mockNegotiation.get_status(), SASL_LIST_MECHANISMS);
+    Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_LIST_MECHANISMS);
+  }
+
+  @Test
+  public void tetGetMatchMechanism() {
+    String matchMechanism = negotiation.getMatchMechanism("GSSAPI,ABC");
+    Assert.assertEquals(matchMechanism, "GSSAPI");
+
+    matchMechanism = negotiation.getMatchMechanism("TEST,ABC");
+    Assert.assertEquals(matchMechanism, "");
+  }
+
+  @Test
+  public void testCheckStatus() {
+    negotiation_status expectedStatus = negotiation_status.SASL_LIST_MECHANISMS;
+
+    Assertions.assertDoesNotThrow(
+        () -> negotiation.checkStatus(negotiation_status.SASL_LIST_MECHANISMS, expectedStatus));
+
+    Assertions.assertThrows(
+        Exception.class,
+        () ->
+            negotiation.checkStatus(negotiation_status.SASL_LIST_MECHANISMS_RESP, expectedStatus));
+  }
+
+  @Test
+  public void testRecvMechanisms() {
+    Negotiation mockNegotiation = Mockito.spy(negotiation);
+    SaslWrapper mockSaslWrapper = Mockito.mock(SaslWrapper.class);
+    mockNegotiation.saslWrapper = mockSaslWrapper;
+
+    Mockito.doNothing().when(mockNegotiation).send(any(), any());
+    Assertions.assertDoesNotThrow(
+        () -> {
+          Mockito.when(mockNegotiation.saslWrapper.init(any())).thenReturn(new byte[0]);
+        });
+
+    // normal case
+    Assertions.assertDoesNotThrow(
+        () -> {
+          negotiation_response response =
+              new negotiation_response(
+                  negotiation_status.SASL_LIST_MECHANISMS_RESP,
+                  new blob("GSSAPI".getBytes(Charset.defaultCharset())));
+          mockNegotiation.onRecvMechanisms(response);
+          Assert.assertEquals(
+              mockNegotiation.getStatus(), negotiation_status.SASL_SELECT_MECHANISMS);
+        });
+
+    // deal with wrong response.msg
+    Assertions.assertThrows(
+        Exception.class,
+        () -> {
+          negotiation_response response =
+              new negotiation_response(
+                  negotiation_status.SASL_LIST_MECHANISMS,
+                  new blob("NOTSUPPORTED".getBytes(Charset.defaultCharset())));
+          mockNegotiation.onRecvMechanisms(response);
+        });
+
+    // deal with wrong response.status
+    Assertions.assertThrows(
+        Exception.class,
+        () -> {
+          negotiation_response response =
+              new negotiation_response(
+                  negotiation_status.SASL_LIST_MECHANISMS, new blob(new byte[0]));
+          mockNegotiation.onRecvMechanisms(response);
+        });
   }
 }

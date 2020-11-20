@@ -29,7 +29,14 @@ public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor 
     this.protocol = options.getCredential().getProtocol();
   }
 
+  @Override
   public void onConnected(ReplicaSession session) {
     protocol.authenticate(session);
+  }
+
+  @Override
+  public boolean onSendMessage(ReplicaSession session, final ReplicaSession.RequestEntry entry) {
+    // tryPendRequest returns false means that the negotiation is succeed now
+    return protocol.isAuthRequest(entry) || !session.tryPendRequest(entry);
   }
 }

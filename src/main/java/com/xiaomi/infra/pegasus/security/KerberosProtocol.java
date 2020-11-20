@@ -19,6 +19,7 @@
 package com.xiaomi.infra.pegasus.security;
 
 import com.sun.security.auth.callback.TextCallbackHandler;
+import com.xiaomi.infra.pegasus.operator.negotiation_operator;
 import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,6 +74,11 @@ class KerberosProtocol implements AuthProtocol {
   public void authenticate(ReplicaSession session) {
     Negotiation negotiation = new Negotiation(session, subject, serviceName, serviceFqdn);
     negotiation.start();
+  }
+
+  @Override
+  public boolean isAuthRequest(final ReplicaSession.RequestEntry entry) {
+    return entry.op instanceof negotiation_operator;
   }
 
   private static Configuration getLoginContextConfiguration(String keyTab, String principal) {

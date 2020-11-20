@@ -26,30 +26,26 @@ import com.xiaomi.infra.pegasus.base.error_code;
 import com.xiaomi.infra.pegasus.operator.negotiation_operator;
 import com.xiaomi.infra.pegasus.rpc.ReplicationException;
 import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession;
-import java.util.HashMap;
+import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.List;
 import javax.security.auth.Subject;
-import javax.security.sasl.Sasl;
 import org.slf4j.Logger;
 
 class Negotiation {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(Negotiation.class);
-  private negotiation_status status;
-  private ReplicaSession session;
-  private String serviceName; // used for SASL authentication
-  private String serviceFqdn; // name used for SASL authentication
-  private final HashMap<String, Object> props = new HashMap<String, Object>();
-  private final Subject subject;
-
   // Because negotiation message is always the first rpc sent to pegasus server,
   // which will cost much more time. so we set negotiation timeout to 10s here
   private static final int negotiationTimeoutMS = 10000;
+  private static final List<String> expectedMechanisms = Collections.singletonList("GSSAPI");
 
-  Negotiation(ReplicaSession session, Subject subject, String serviceName, String serviceFqdn) {
+  private negotiation_status status;
+  private ReplicaSession session;
+  SaslWrapper saslWrapper;
+
+  Negotiation(ReplicaSession session, Subject subject, String serviceName, String serviceFQDN) {
+    this.saslWrapper = new SaslWrapper(subject, serviceName, serviceFQDN);
     this.session = session;
-    this.subject = subject;
-    this.serviceName = serviceName;
-    this.serviceFqdn = serviceFqdn;
-    this.props.put(Sasl.QOP, "auth");
   }
 
   void start() {
@@ -60,10 +56,11 @@ class Negotiation {
   void send(negotiation_status status, blob msg) {
     negotiation_request request = new negotiation_request(status, msg);
     negotiation_operator operator = new negotiation_operator(request);
-    session.asyncSend(operator, new RecvHandler(operator), negotiationTimeoutMS, false);
+    session.asyncSend(
+        operator, new RecvHandler(operator), negotiationTimeoutMS, /* isBackupRequest */ false);
   }
 
-  private static class RecvHandler implements Runnable {
+  private class RecvHandler implements Runnable {
     negotiation_operator op;
 
     RecvHandler(negotiation_operator op) {
@@ -79,6 +76,7 @@ class Negotiation {
         handleResponse();
       } catch (Exception e) {
         logger.error("Negotiation failed", e);
+        negotiationFailed();
       }
     }
 
@@ -88,19 +86,61 @@ class Negotiation {
         throw new Exception("RecvHandler received a null response, abandon it");
       }
 
-      switch (resp.status) {
-        case SASL_LIST_MECHANISMS_RESP:
-        case SASL_SELECT_MECHANISMS_RESP:
-        case SASL_CHALLENGE:
-        case SASL_SUCC:
+      switch (status) {
+        case SASL_LIST_MECHANISMS:
+          onRecvMechanisms(resp);
+          break;
+        case SASL_SELECT_MECHANISMS:
+        case SASL_INITIATE:
+        case SASL_CHALLENGE_RESP:
+          // TBD(zlw):
           break;
         default:
-          throw new Exception("Received an unexpected response, status " + resp.status);
+          throw new Exception("unexpected negotiation status: " + resp.status);
       }
     }
   }
 
-  negotiation_status get_status() {
+  public void onRecvMechanisms(negotiation_response response) throws Exception {
+    checkStatus(response.status, negotiation_status.SASL_LIST_MECHANISMS_RESP);
+
+    String[] matchMechanisms = new String[1];
+    matchMechanisms[0] = getMatchMechanism(new String(response.msg.data, Charset.defaultCharset()));
+    if (matchMechanisms[0].equals("")) {
+      throw new Exception("No matching mechanism was found");
+    }
+
+    status = negotiation_status.SASL_SELECT_MECHANISMS;
+    blob msg = new blob(saslWrapper.init(matchMechanisms));
+    send(status, msg);
+  }
+
+  public String getMatchMechanism(String respString) {
+    String matchMechanism = "";
+    String[] serverSupportMechanisms = respString.split(",");
+    for (String serverSupportMechanism : serverSupportMechanisms) {
+      if (expectedMechanisms.contains(serverSupportMechanism)) {
+        matchMechanism = serverSupportMechanism;
+        break;
+      }
+    }
+
+    return matchMechanism;
+  }
+
+  public void checkStatus(negotiation_status status, negotiation_status expected_status)
+      throws Exception {
+    if (status != expected_status) {
+      throw new Exception("status is " + status + " while expect " + expected_status);
+    }
+  }
+
+  private void negotiationFailed() {
+    status = negotiation_status.SASL_AUTH_FAIL;
+    session.closeSession();
+  }
+
+  negotiation_status getStatus() {
     return status;
   }
 }
