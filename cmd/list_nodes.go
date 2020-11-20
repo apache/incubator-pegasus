@@ -19,10 +19,19 @@ func init() {
 			f.Bool("j", "json", false, "use JSON as the format of the output results. By default tabular format is used.")
 			f.Bool("d", "detail", false, "show detail replica count in all node")
 			f.Bool("u", "usage", false, "show the usage of every node")
+			f.Bool("q", "qps", false, "show the qps/bytes/latency of every node")
+			f.String("a", "app", "", "filter one app, for example, temp")
 			f.String("o", "out", "", "save output into file")
 		},
 		Run: func(c *grumble.Context) error {
-			return executor.ListNodes(pegasusClient, c.Flags.Bool("json"), c.Flags.Bool("resolve"), c.Flags.String("out"))
+			return executor.ListNodes(
+				pegasusClient,
+				c.Flags.String("app"),
+				c.Flags.Bool("detail"),
+				c.Flags.Bool("usage"),
+				c.Flags.Bool("qps"),
+				c.Flags.Bool("json"),
+				c.Flags.Bool("resolve"))
 		},
 	})
 }
