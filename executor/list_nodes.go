@@ -22,7 +22,7 @@ func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) er
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := client.meta.ListNodes(ctx, &admin.ListNodesRequest{
+	resp, err := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
 		Status: admin.NodeStatus_NS_INVALID,
 	})
 	if err != nil {

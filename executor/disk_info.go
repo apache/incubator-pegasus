@@ -43,7 +43,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := client.replicaPool.GetReplica(replicaServer).QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
+	resp, err := client.ReplicaPool.GetReplica(replicaServer).QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
 		Node:    &base.RPCAddress{}, //TODO(jiashuo1) this thrift variable is useless, it need be deleted on client/server
 		AppName: tableName,
 	})

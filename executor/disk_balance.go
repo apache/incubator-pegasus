@@ -26,7 +26,7 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	// TODO(jiashuo1) update to resp, err := ... after fix err code
-	resp, err := client.replicaPool.GetReplica(replicaServer).DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
+	resp, err := client.ReplicaPool.GetReplica(replicaServer).DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
 		Pid:        pid,
 		OriginDisk: from,
 		TargetDisk: to,

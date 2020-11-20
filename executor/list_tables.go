@@ -21,7 +21,7 @@ func ListTables(client *Client, file string, useJSON bool) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	resp, err := client.meta.ListApps(ctx, &admin.ListAppsRequest{
+	resp, err := client.Meta.ListApps(ctx, &admin.ListAppsRequest{
 		Status: admin.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {
@@ -42,10 +42,7 @@ func ListTables(client *Client, file string, useJSON bool) error {
 
 	if useJSON {
 		// formats into JSON
-		outputBytes, err := json.MarshalIndent(tbList, "", "  ")
-		if err != nil {
-			return err
-		}
+		outputBytes, _ := json.MarshalIndent(tbList, "", "  ")
 		fmt.Fprintln(client, string(outputBytes))
 		return nil
 	}

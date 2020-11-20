@@ -1,9 +1,17 @@
 # admin-cli
 
+The command-line tool for the administration of Pegasus.
+
 ## Installation
 
-```
+```sh
 make
+```
+
+The executable will reside in ./bin/admin-cli. Checkout the usage via `--help`.
+
+```sh
+./bin/admin-cli --help
 ```
 
 ## Developer Guide
