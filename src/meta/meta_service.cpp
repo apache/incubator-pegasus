@@ -47,6 +47,7 @@
 #include "meta/duplication/meta_duplication_service.h"
 #include "meta_split_service.h"
 #include "meta_bulk_load_service.h"
+#include "runtime/security/access_controller.h"
 
 namespace dsn {
 namespace replication {
@@ -76,6 +77,8 @@ meta_service::meta_service()
         "replica server disconnect count in the recent period");
     _unalive_nodes_count.init_app_counter(
         "eon.meta_service", "unalive_nodes", COUNTER_TYPE_NUMBER, "current count of unalive nodes");
+
+    _access_controller = security::create_meta_access_controller();
 }
 
 meta_service::~meta_service()
@@ -120,6 +123,12 @@ int meta_service::check_leader(TRpcHolder rpc, rpc_address *forward_address)
 template <typename TRpcHolder>
 bool meta_service::check_status(TRpcHolder rpc, rpc_address *forward_address)
 {
+    if (!_access_controller->allowed(rpc.dsn_request())) {
+        rpc.response().err = ERR_ACL_DENY;
+        ddebug("reject request with ERR_ACL_DENY");
+        return false;
+    }
+
     int result = check_leader(rpc, forward_address);
     if (result == 0)
         return false;
@@ -141,6 +150,13 @@ bool meta_service::check_status(TRpcHolder rpc, rpc_address *forward_address)
 template <typename TRespType>
 bool meta_service::check_status_with_msg(message_ex *req, TRespType &response_struct)
 {
+    if (!_access_controller->allowed(req)) {
+        ddebug("reject request with ERR_ACL_DENY");
+        response_struct.err = ERR_ACL_DENY;
+        reply(req, response_struct);
+        return false;
+    }
+
     int result = check_leader(req, nullptr);
     if (result == 0) {
         return false;

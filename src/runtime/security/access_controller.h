@@ -17,33 +17,38 @@
 
 #pragma once
 
-#include <dsn/utility/errors.h>
-
-typedef struct sasl_conn sasl_conn_t;
+#include <memory>
+#include <unordered_set>
 
 namespace dsn {
+class message_ex;
 namespace security {
-class sasl_wrapper
+
+class access_controller
 {
 public:
-    virtual ~sasl_wrapper();
+    access_controller();
+    virtual ~access_controller() = 0;
 
-    virtual error_s init() = 0;
-    virtual error_s start(const std::string &mechanism, const blob &input, blob &output) = 0;
-    virtual error_s step(const blob &input, blob &output) = 0;
     /**
-     * retrive username from sasl connection.
-     * If this is a sasl server, it gets the name of the corresponding sasl client.
-     * But if this is a sasl client, it gets the name of itself
+     * reset the access controller
+     *    acls - the new acls to reset
      **/
-    error_s retrive_username(/*out*/ std::string &output);
+    virtual void reset(const std::string &acls){};
+
+    /**
+     * check if the message received is allowd to do something.
+     *   msg - the message received
+     **/
+    virtual bool allowed(message_ex *msg) = 0;
 
 protected:
-    sasl_wrapper() = default;
-    error_s wrap_error(int sasl_err);
-    sasl_conn_t *_conn = nullptr;
+    bool pre_check(const std::string &user_name);
+    friend class meta_access_controller_test;
+
+    std::unordered_set<std::string> _super_users;
 };
 
-std::unique_ptr<sasl_wrapper> create_sasl_wrapper(bool is_client);
+std::unique_ptr<access_controller> create_meta_access_controller();
 } // namespace security
 } // namespace dsn

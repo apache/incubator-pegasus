@@ -495,6 +495,13 @@ bool rpc_session::is_negotiation_succeed() const
     }
 }
 
+void rpc_session::set_client_username(const std::string &user_name)
+{
+    _client_username = user_name;
+}
+
+const std::string &rpc_session::get_client_username() const { return _client_username; }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 network::network(rpc_engine *srv, network *inner_provider)
     : _engine(srv), _client_hdr_format(NET_HDR_DSN), _unknown_msg_header_format(NET_HDR_INVALID)

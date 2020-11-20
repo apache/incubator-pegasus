@@ -143,23 +143,33 @@ TEST_F(server_negotiation_test, on_initiate)
     struct
     {
         std::string sasl_start_result;
+        std::string sasl_retrive_username_result;
         negotiation_status::type req_status;
         negotiation_status::type resp_status;
         negotiation_status::type nego_status;
     } tests[] = {
         {"ERR_TIMEOUT",
+         "ERR_OK",
          negotiation_status::type::SASL_INITIATE,
          negotiation_status::type::INVALID,
          negotiation_status::type::SASL_AUTH_FAIL},
         {"ERR_OK",
+         "ERR_OK",
          negotiation_status::type::SASL_SELECT_MECHANISMS,
          negotiation_status::type::INVALID,
          negotiation_status::type::SASL_AUTH_FAIL},
+        {"ERR_OK",
+         "ERR_TIMEOUT",
+         negotiation_status::type::SASL_INITIATE,
+         negotiation_status::type::INVALID,
+         negotiation_status::type::SASL_AUTH_FAIL},
         {"ERR_SASL_INCOMPLETE",
+         "ERR_OK",
          negotiation_status::type::SASL_INITIATE,
          negotiation_status::type::SASL_CHALLENGE,
          negotiation_status::type::SASL_CHALLENGE},
         {"ERR_OK",
+         "ERR_OK",
          negotiation_status::type::SASL_INITIATE,
          negotiation_status::type::SASL_SUCC,
          negotiation_status::type::SASL_SUCC},
@@ -170,6 +180,8 @@ TEST_F(server_negotiation_test, on_initiate)
         for (const auto &test : tests) {
             fail::setup();
             fail::cfg("sasl_server_wrapper_start", "return(" + test.sasl_start_result + ")");
+            fail::cfg("sasl_wrapper_retrive_username",
+                      "return(" + test.sasl_retrive_username_result + ")");
 
             auto rpc = create_negotiation_rpc(test.req_status, "");
             on_initiate(rpc);
@@ -186,22 +198,32 @@ TEST_F(server_negotiation_test, on_challenge_resp)
     struct
     {
         std::string sasl_step_result;
+        std::string sasl_retrive_username_result;
         negotiation_status::type req_status;
         negotiation_status::type resp_status;
         negotiation_status::type nego_status;
     } tests[] = {{"ERR_TIMEOUT",
+                  "ERR_OK",
                   negotiation_status::type::SASL_CHALLENGE_RESP,
                   negotiation_status::type::INVALID,
                   negotiation_status::type::SASL_AUTH_FAIL},
                  {"ERR_OK",
+                  "ERR_OK",
                   negotiation_status::type::SASL_SELECT_MECHANISMS,
                   negotiation_status::type::INVALID,
                   negotiation_status::type::SASL_AUTH_FAIL},
+                 {"ERR_OK",
+                  "ERR_TIMEOUT",
+                  negotiation_status::type::SASL_CHALLENGE_RESP,
+                  negotiation_status::type::INVALID,
+                  negotiation_status::type::SASL_AUTH_FAIL},
                  {"ERR_SASL_INCOMPLETE",
+                  "ERR_OK",
                   negotiation_status::type::SASL_CHALLENGE_RESP,
                   negotiation_status::type::SASL_CHALLENGE,
                   negotiation_status::type::SASL_CHALLENGE},
                  {"ERR_OK",
+                  "ERR_OK",
                   negotiation_status::type::SASL_CHALLENGE_RESP,
                   negotiation_status::type::SASL_SUCC,
                   negotiation_status::type::SASL_SUCC}};
@@ -211,6 +233,8 @@ TEST_F(server_negotiation_test, on_challenge_resp)
         for (const auto &test : tests) {
             fail::setup();
             fail::cfg("sasl_server_wrapper_step", "return(" + test.sasl_step_result + ")");
+            fail::cfg("sasl_wrapper_retrive_username",
+                      "return(" + test.sasl_retrive_username_result + ")");
 
             auto rpc = create_negotiation_rpc(test.req_status, "");
             on_challenge_resp(rpc);

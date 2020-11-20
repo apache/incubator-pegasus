@@ -4,6 +4,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <unordered_set>
 #include <iostream>
 
 namespace dsn {
@@ -11,6 +12,11 @@ namespace utils {
 
 void split_args(const char *args,
                 /*out*/ std::vector<std::string> &sargs,
+                char splitter = ' ',
+                bool keep_place_holder = false);
+
+void split_args(const char *args,
+                /*out*/ std::unordered_set<std::string> &sargs,
                 char splitter = ' ',
                 bool keep_place_holder = false);
 

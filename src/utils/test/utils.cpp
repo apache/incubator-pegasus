@@ -102,6 +102,10 @@ TEST(core, split_args)
     EXPECT_EQ(*it++, "a");
     EXPECT_EQ(*it++, "b");
     EXPECT_EQ(*it++, "c");
+
+    std::unordered_set<std::string> sargs_set;
+    dsn::utils::split_args(value.c_str(), sargs_set, ',');
+    EXPECT_EQ(sargs_set.size(), 3);
 }
 
 TEST(core, split_args_keep_place_holder)

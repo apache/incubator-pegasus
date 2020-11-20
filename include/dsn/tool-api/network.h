@@ -244,6 +244,9 @@ public:
     void set_negotiation_succeed();
     bool is_negotiation_succeed() const;
 
+    void set_client_username(const std::string &user_name);
+    const std::string &get_client_username() const;
+
 public:
     ///
     /// for subclass to implement receiving message
@@ -328,6 +331,10 @@ private:
     rpc_client_matcher *_matcher;
 
     std::atomic_int _delay_server_receive_ms;
+
+    // _client_username is only valid if it is a server rpc_session.
+    // it represents the name of the corresponding client
+    std::string _client_username;
 };
 
 // --------- inline implementation --------------

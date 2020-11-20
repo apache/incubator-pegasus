@@ -54,6 +54,16 @@ void split_args(const char *args,
     }
 }
 
+void split_args(const char *args,
+                /*out*/ std::unordered_set<std::string> &sargs,
+                char splitter,
+                bool keep_place_holder)
+{
+    std::vector<std::string> sargs_vec;
+    split_args(args, sargs_vec, splitter, keep_place_holder);
+    sargs.insert(sargs_vec.begin(), sargs_vec.end());
+}
+
 void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter)
 {
     sargs.clear();

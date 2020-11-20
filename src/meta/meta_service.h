@@ -49,6 +49,9 @@
 #include "block_service/block_service_manager.h"
 
 namespace dsn {
+namespace security {
+class access_controller;
+} // namespace security
 namespace replication {
 
 class server_state;
@@ -261,6 +264,8 @@ private:
     perf_counter_wrapper _unalive_nodes_count;
 
     dsn::task_tracker _tracker;
+
+    std::unique_ptr<security::access_controller> _access_controller;
 };
 
 } // namespace replication
