@@ -10,14 +10,14 @@ import (
 
 func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string, enableResolve bool) error {
 	if enableResolve {
-		node, err := resolve(replicaServer, Host2Addr)
+		node, err := Resolve(replicaServer, Host2Addr)
 		if err != nil {
 			return err
 		}
 		replicaServer = node
 	}
 
-	pid, err := str2Gpid(pidStr)
+	pid, err := Str2Gpid(pidStr)
 	fmt.Println(pid)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 	defer cancel()
 	// TODO(jiashuo1) update to resp, err := ... after fix err code
 	resp, err := client.ReplicaPool.GetReplica(replicaServer).DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
-		Pid:        pid,
+		Pid:        pid, // TODO(jiashuo1) server parser pid is error, need fix
 		OriginDisk: from,
 		TargetDisk: to,
 	})

@@ -23,20 +23,20 @@ const (
 // QueryDiskInfo command
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, file string, useJSON bool, enableResolve bool) error {
 	if len(file) != 0 {
-		save2File(client, file)
+		Save2File(client, file)
 	} else {
 		client.Writer = os.Stdout
 	}
 
 	if enableResolve {
-		node, err := resolve(replicaServer, Host2Addr)
+		var node, err = Resolve(replicaServer, Host2Addr)
 		if err != nil {
 			return err
 		}
 		replicaServer = node
 	}
 
-	err := validateNodeAddress(client, replicaServer)
+	err := ValidateReplicaAddress(client, replicaServer)
 	if err != nil {
 		return err
 	}
@@ -53,10 +53,10 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		queryDiskCapacity(client, resp, diskTag, useJSON, enableResolve)
+		queryDiskCapacity(client, replicaServer, resp, diskTag, useJSON, enableResolve)
 		break
 	case ReplicaCount:
-		queryDiskReplicaCount(client, resp, useJSON, enableResolve)
+		queryDiskReplicaCount(client, replicaServer, resp, useJSON, enableResolve)
 		break
 	default:
 		break
@@ -64,7 +64,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 	return nil
 }
 
-func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool, enableResolve bool) {
+func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool, enableResolve bool) {
 
 	type NodeCapacityStruct struct {
 		Disk      string
@@ -76,7 +76,7 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 	type ReplicaCapacityStruct struct {
 		Replica  string
 		Status   string
-		Capacity string
+		Capacity float64
 	}
 
 	var nodeCapacityInfos []NodeCapacityStruct
@@ -88,10 +88,11 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 			appendReplicaCapacityInfo := func(replicasWithAppId map[int32][]*base.Gpid, replicaStatus string) {
 				for _, replicas := range replicasWithAppId {
 					for _, replica := range replicas {
+						var gpidStr = fmt.Sprintf("%d.%d", replica.Appid, replica.PartitionIndex)
 						replicaCapacityInfos = append(replicaCapacityInfos, ReplicaCapacityStruct{
-							Replica:  fmt.Sprintf("%d.%d", replica.Appid, replica.PartitionIndex),
+							Replica:  gpidStr,
 							Status:   replicaStatus,
-							Capacity: "TODO(jiashuo1)", // TODO(jiashuo1) need send remote command to get the replica storage
+							Capacity: GetReplicaCounter(client, replicaServer, "disk.storage.sst(MB)", gpidStr),
 						})
 					}
 				}
@@ -117,7 +118,7 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 				tabular.Append([]string{
 					replicaCapacityInfo.Replica,
 					replicaCapacityInfo.Status,
-					replicaCapacityInfo.Capacity})
+					strconv.FormatFloat(replicaCapacityInfo.Capacity, 'f', -1, 64)})
 			}
 			tabular.Render()
 			return
@@ -156,7 +157,7 @@ func queryDiskCapacity(client *Client, resp *radmin.QueryDiskInfoResponse, diskT
 	return
 }
 
-func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, useJSON bool, enableResolve bool) {
+func queryDiskReplicaCount(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, useJSON bool, enableResolve bool) {
 	type ReplicaCountStruct struct {
 		Disk      string
 		Primary   int

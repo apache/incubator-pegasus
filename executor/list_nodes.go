@@ -15,7 +15,7 @@ import (
 // ListNodes command.
 func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) error {
 	if len(file) != 0 {
-		save2File(client, file)
+		Save2File(client, file)
 	} else {
 		client.Writer = os.Stdout
 	}
@@ -37,7 +37,7 @@ func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) er
 	for _, node := range resp.Infos {
 		var addr = ""
 		if enableResolve {
-			addr, err = resolve(node.Address.GetAddress(), Addr2Host)
+			addr, err = Resolve(node.Address.GetAddress(), Addr2Host)
 			if err != nil {
 				return err
 			}

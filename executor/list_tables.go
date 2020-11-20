@@ -14,7 +14,7 @@ import (
 // ListTables command.
 func ListTables(client *Client, file string, useJSON bool) error {
 	if len(file) != 0 {
-		save2File(client, file)
+		Save2File(client, file)
 	} else {
 		client.Writer = os.Stdout
 	}
