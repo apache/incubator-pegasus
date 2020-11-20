@@ -29,11 +29,6 @@ func ListNodes(client *Client, useJSON bool, enableResolve bool, file string) er
 		return err
 	}
 
-	/* TODO(jiashuo1) wait fix the err code
-	if resp.Err != base.ERR_OK {
-		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
-	}*/
-
 	type nodeStruct struct {
 		Node   string `json:"node"`
 		Status string `json:"status"`

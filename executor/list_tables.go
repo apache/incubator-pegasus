@@ -27,10 +27,6 @@ func ListTables(client *Client, file string, useJSON bool) error {
 	if err != nil {
 		return err
 	}
-	/* TODO(jiashuo1) wait fix the err code
-	if resp.Err != base.ERR_OK {
-		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
-	}*/
 
 	type tableStruct struct {
 		Name string            `json:"name"`

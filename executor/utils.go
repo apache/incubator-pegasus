@@ -91,13 +91,13 @@ func str2Gpid(gpid string) (*base.Gpid, error) {
 		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
 	}
 
-	appId, err := strconv.Atoi(splitResult[0])
+	appId, err := strconv.ParseInt(splitResult[0], 10, 32)
 
 	if err != nil {
 		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
 	}
 
-	partitionId, err := strconv.Atoi(splitResult[1])
+	partitionId, err := strconv.ParseInt(splitResult[1], 10, 32)
 	if err != nil {
 		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
 	}

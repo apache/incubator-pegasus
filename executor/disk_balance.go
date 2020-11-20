@@ -23,7 +23,7 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*100000)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	// TODO(jiashuo1) update to resp, err := ... after fix err code
 	resp, err := client.replicaPool.GetReplica(replicaServer).DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
@@ -31,16 +31,13 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 		OriginDisk: from,
 		TargetDisk: to,
 	})
+
 	if err != nil {
+		if resp != nil && resp.Hint != nil {
+			return fmt.Errorf("Internal server error [%s:%s]", err, *resp.Hint)
+		}
 		return err
 	}
-
-	return fmt.Errorf("Internal server error [%s:%s]", resp.Err.String(), *resp.Hint)
-
-	/* TODO(jiashuo1) wait fix the err code
-	if resp.Err != base.ERR_OK {
-		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
-	}*/
 
 	return nil
 }

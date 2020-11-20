@@ -18,7 +18,7 @@ func init() {
 			f.String("o", "out", "", "save output into file")
 		},
 		Run: func(c *grumble.Context) error {
-			return executor.ListTables(pegasusClient, c.Flags.String("out"), c.Flags.Bool("json"), )
+			return executor.ListTables(pegasusClient, c.Flags.String("out"), c.Flags.Bool("json"))
 		},
 	})
 }

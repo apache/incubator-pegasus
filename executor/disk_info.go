@@ -51,11 +51,6 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 		return err
 	}
 
-	/* TODO(jiashuo1) wait fix the err code
-	if resp.Err != base.ERR_OK {
-		return fmt.Errorf("Internal server error [%s]", resp.Err.String())
-	}*/
-
 	switch infoType {
 	case CapacitySize:
 		queryDiskCapacity(client, resp, diskTag, useJSON, enableResolve)
