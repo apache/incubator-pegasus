@@ -3,6 +3,7 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
@@ -24,12 +25,12 @@ type RemoteCmdResponse struct {
 	Counters  []PerfCounterResult `json:"counters"`
 }
 
-func generateReplicaCounter(counter string, gpid string) string {
+func generateReplicaCounterName(counter string, gpid string) string {
 	return fmt.Sprintf("replica.*%s@%s", counter, gpid)
 }
 
-func GetReplicaCounter(client *Client, addr string, counter string, gpid string) float64 {
-	resp, err := SendRemoteCommand(client, session.NodeTypeReplica, addr, PerfCounters, []string{generateReplicaCounter(counter, gpid)})
+func GetReplicaCounterValue(client *Client, addr string, counter string, gpid string) float64 {
+	resp, err := SendRemoteCommand(client, session.NodeTypeReplica, addr, PerfCounters, []string{generateReplicaCounterName(counter, gpid)})
 	if err != nil {
 		return 0.0
 	}

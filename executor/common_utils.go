@@ -3,7 +3,6 @@ package executor
 import (
 	"context"
 	"fmt"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"net"
 	"os"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 )
 
 func ValidateReplicaAddress(client *Client, addr string) error {

@@ -92,7 +92,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 						replicaCapacityInfos = append(replicaCapacityInfos, ReplicaCapacityStruct{
 							Replica:  gpidStr,
 							Status:   replicaStatus,
-							Capacity: GetReplicaCounter(client, replicaServer, "disk.storage.sst(MB)", gpidStr),
+							Capacity: GetReplicaCounterValue(client, replicaServer, "disk.storage.sst(MB)", gpidStr),
 						})
 					}
 				}

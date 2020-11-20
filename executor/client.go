@@ -1,9 +1,9 @@
 package executor
 
 import (
-	"github.com/XiaoMi/pegasus-go-client/admin"
 	"io"
 
+	"github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
@@ -30,9 +30,4 @@ func NewClient(writer io.Writer, metaAddrs []string) *Client {
 
 func (client *Client) GetRemoteCommandClient(addr string, nodeType session.NodeType) *admin.RemoteCmdClient {
 	return admin.NewRemoteCmdClient(addr, nodeType)
-}
-
-func (client *Client) GetRemoteMetaCommandClient(metaServer string) *admin.RemoteCmdClient {
-	// TODO(jiashuo1)
-	return nil
 }

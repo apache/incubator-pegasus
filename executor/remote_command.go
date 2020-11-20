@@ -3,9 +3,10 @@ package executor
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
-	"time"
 )
 
 func RemoteCommand(client *Client, targetType string, addr string, cmd string, args []string, file string, enableResolve bool) error {
