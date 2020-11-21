@@ -1,13 +1,13 @@
 package executor
 
 import (
+	"admin-cli/tabular"
 	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/olekukonko/tablewriter"
 )
 
 // ListTables command.
@@ -21,15 +21,21 @@ func ListTables(client *Client, useJSON bool) error {
 		return err
 	}
 
-	type tableStuct struct {
-		Name string            `json:"name"`
-		Envs map[string]string `json:"envs"`
+	type tableStruct struct {
+		AppID          int32             `json:"appid"`
+		Name           string            `json:"name"`
+		PartitionCount int32             `json:"partition_count"`
+		CreateTime     string            `json:"create_time"`
+		Envs           map[string]string `json:"envs"`
 	}
-	var tbList []tableStuct
+	var tbList []interface{}
 	for _, tb := range resp.Infos {
-		tbList = append(tbList, tableStuct{
-			Name: tb.AppName,
-			Envs: tb.Envs,
+		tbList = append(tbList, &tableStruct{
+			AppID:          tb.AppID,
+			Name:           tb.AppName,
+			PartitionCount: *&tb.PartitionCount,
+			CreateTime:     time.Unix(tb.CreateSecond, 0).Format("2006-01-02"),
+			Envs:           tb.Envs,
 		})
 	}
 
@@ -41,11 +47,6 @@ func ListTables(client *Client, useJSON bool) error {
 	}
 
 	// formats into tabular
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetHeader([]string{"Name", "Envs"})
-	for _, tb := range tbList {
-		tabular.Append([]string{tb.Name, fmt.Sprintf("%s", tb.Envs)})
-	}
-	tabular.Render()
+	tabular.Print(client, tbList, []string{"AppID", "Name", "Partition\nCount", "Create\nTime", "Envs"})
 	return nil
 }
