@@ -13,13 +13,16 @@ type Client struct {
 	Meta *session.MetaManager
 
 	ReplicaPool *session.ReplicaManager
+
+	MetaAddresses []string
 }
 
 // NewClient creates a client for accessing Pegasus cluster for use of admin-cli.
 func NewClient(writer io.Writer, metaAddrs []string) *Client {
 	return &Client{
-		Writer:      writer,
-		Meta:        session.NewMetaManager(metaAddrs, session.NewNodeSession),
-		ReplicaPool: session.NewReplicaManager(session.NewNodeSession),
+		Writer:        writer,
+		Meta:          session.NewMetaManager(metaAddrs, session.NewNodeSession),
+		ReplicaPool:   session.NewReplicaManager(session.NewNodeSession),
+		MetaAddresses: metaAddrs,
 	}
 }

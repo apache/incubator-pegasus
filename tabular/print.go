@@ -1,16 +1,20 @@
 package tabular
 
 import (
-	"encoding/json"
+	"fmt"
 	"io"
+	"reflect"
+	"strings"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/olekukonko/tablewriter"
 )
 
 // Print out the list of elements in tabular form.
-func Print(writer io.Writer, valueList []interface{}, header []string) {
+// Each element should be a simple struct with a number of fields
+// with size equal to header.
+func Print(writer io.Writer, valueList []interface{}) {
 	tabWriter := tablewriter.NewWriter(writer)
+	header := getHeaderFromValueList(valueList)
 	tabWriter.SetHeader(header)
 	var headerColors []tablewriter.Colors
 	for range header {
@@ -19,15 +23,39 @@ func Print(writer io.Writer, valueList []interface{}, header []string) {
 	tabWriter.SetHeaderColor(headerColors...)
 
 	for _, val := range valueList {
-		outputBytes, _ := json.Marshal(val)
-		jsonObj := jsoniter.Get(outputBytes)
+		// each value displays as a row
 
 		var row []string
-		for _, key := range jsonObj.Keys() {
-			row = append(row, jsonObj.Get(key).ToString())
+		reflectedValue := reflect.ValueOf(val)
+		for i := 0; i < reflectedValue.NumField(); i++ {
+			// columns are printed in the field order.
+			col := fmt.Sprintf("%v", reflectedValue.Field(i).Interface())
+			row = append(row, col)
 		}
 		tabWriter.Append(row)
 	}
 
 	tabWriter.Render()
+}
+
+func getHeaderFromValueList(valueList []interface{}) []string {
+	var header []string
+
+	val := valueList[0]
+	reflectedType := reflect.TypeOf(val)
+	for i := 0; i < reflectedType.NumField(); i++ {
+		// field tag
+		jsonTagName := reflectedType.Field(i).Tag.Get("json")
+		header = append(header, formatColumnName(jsonTagName))
+	}
+
+	return header
+}
+
+func formatColumnName(jsonTagName string) string {
+	words := strings.Split(jsonTagName, "_")
+	for i, w := range words {
+		words[i] = strings.ToTitle(w)
+	}
+	return strings.Join(words, "\n")
 }

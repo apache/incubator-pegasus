@@ -22,7 +22,7 @@ func ListTables(client *Client, useJSON bool) error {
 	}
 
 	type tableStruct struct {
-		AppID          int32             `json:"appid"`
+		AppID          int32             `json:"app_id"`
 		Name           string            `json:"name"`
 		PartitionCount int32             `json:"partition_count"`
 		CreateTime     string            `json:"create_time"`
@@ -30,7 +30,7 @@ func ListTables(client *Client, useJSON bool) error {
 	}
 	var tbList []interface{}
 	for _, tb := range resp.Infos {
-		tbList = append(tbList, &tableStruct{
+		tbList = append(tbList, tableStruct{
 			AppID:          tb.AppID,
 			Name:           tb.AppName,
 			PartitionCount: *&tb.PartitionCount,
@@ -47,6 +47,6 @@ func ListTables(client *Client, useJSON bool) error {
 	}
 
 	// formats into tabular
-	tabular.Print(client, tbList, []string{"AppID", "Name", "Partition\nCount", "Create\nTime", "Envs"})
+	tabular.Print(client, tbList)
 	return nil
 }
