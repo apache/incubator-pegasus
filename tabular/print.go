@@ -10,8 +10,7 @@ import (
 )
 
 // Print out the list of elements in tabular form.
-// Each element should be a simple struct with a number of fields
-// with size equal to header.
+// Each element should be a simple struct (not pointer) with a number of fields.
 func Print(writer io.Writer, valueList []interface{}) {
 	tabWriter := tablewriter.NewWriter(writer)
 	header := getHeaderFromValueList(valueList)
