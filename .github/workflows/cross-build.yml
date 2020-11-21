@@ -9,17 +9,39 @@ on:
 
 # workflow tasks
 jobs:
-  generate:
-    name: Generate cross-platform builds
+  release-windows-amd64:
+    name: release windows/amd64
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v2
-      - name: Generate build files
-        uses: thatisuday/go-cross-build@v1
-        with:
-            platforms: 'linux/amd64, darwin/amd64, windows/amd64'
-            package: ''
-            name: 'admin-cli'
-            compress: 'true'
-            dest: 'bin'
+    - uses: actions/checkout@master
+    - name: compile and release
+      uses: ngs/go-release.action@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GOARCH: amd64
+        GOOS: windows
+        EXTRA_FILES: "LICENSE"
+  release-darwin-amd64:
+    name: release darwin/amd64
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: compile and release
+      uses: ngs/go-release.action@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GOARCH: amd64
+        GOOS: darwin
+        EXTRA_FILES: "LICENSE"
+  release-linux-amd64:
+    name: release linux/amd64
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: compile and release
+      uses: ngs/go-release.action@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GOARCH: amd64
+        GOOS: linux
+        EXTRA_FILES: "LICENSE"
