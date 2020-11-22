@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"admin-cli/helper"
 	"context"
 	"fmt"
 	"time"
@@ -10,14 +11,14 @@ import (
 
 func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string, enableResolve bool) error {
 	if enableResolve {
-		node, err := Resolve(replicaServer, Host2Addr)
+		node, err := helper.Resolve(replicaServer, helper.Host2Addr)
 		if err != nil {
 			return err
 		}
 		replicaServer = node
 	}
 
-	pid, err := Str2Gpid(pidStr)
+	pid, err := helper.Str2Gpid(pidStr)
 	if err != nil {
 		return err
 	}

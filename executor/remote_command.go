@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"admin-cli/helper"
 	"context"
 	"fmt"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 func RemoteCommand(client *Client, targetType string, addr string, cmd string, args []string, file string, enableResolve bool) error {
 	if enableResolve {
-		var node, err = Resolve(addr, Host2Addr)
+		var node, err = helper.Resolve(addr, helper.Host2Addr)
 		if err != nil {
 			return err
 		}
@@ -45,7 +46,11 @@ func SendRemoteCommand(client *Client, nodeType session.NodeType, addr string, c
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	resp, err := client.GetRemoteCommandClient(addr, nodeType).Call(ctx, cmd, args)
+	remoteClient, err := client.GetRemoteCommandClient(addr, nodeType)
+	if err != nil {
+		return "", err
+	}
+	resp, err := remoteClient.Call(ctx, cmd, args)
 	if err != nil {
 		return "", err
 	} else {

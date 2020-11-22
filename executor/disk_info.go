@@ -1,10 +1,10 @@
 package executor
 
 import (
+	"admin-cli/helper"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"time"
 
@@ -22,28 +22,22 @@ const (
 
 // QueryDiskInfo command
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, file string, useJSON bool, enableResolve bool) error {
-	if len(file) != 0 {
-		Save2File(client, file)
-	} else {
-		client.Writer = os.Stdout
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
 
 	if enableResolve {
-		var node, err = Resolve(replicaServer, Host2Addr)
+		var node, err = helper.Resolve(replicaServer, helper.Host2Addr)
 		if err != nil {
 			return err
 		}
 		replicaServer = node
 	}
 
-	err := ValidateReplicaAddress(client, replicaServer)
+	replicaClient, err := client.GetReplicaClient(replicaServer)
 	if err != nil {
 		return err
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := client.ReplicaPool.GetReplica(replicaServer).QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
+	resp, err := replicaClient.QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
 		Node:    &base.RPCAddress{}, //TODO(jiashuo1) this thrift variable is useless, it need be deleted on client/server
 		AppName: tableName,
 	})
@@ -53,10 +47,10 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		queryDiskCapacity(client, replicaServer, resp, diskTag, useJSON, enableResolve)
+		queryDiskCapacity(client, replicaServer, resp, diskTag, useJSON)
 		break
 	case ReplicaCount:
-		queryDiskReplicaCount(client, replicaServer, resp, useJSON, enableResolve)
+		queryDiskReplicaCount(client, resp, useJSON)
 		break
 	default:
 		break
@@ -64,7 +58,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 	return nil
 }
 
-func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool, enableResolve bool) {
+func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool) error {
 
 	type NodeCapacityStruct struct {
 		Disk      string
@@ -82,6 +76,11 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 	var nodeCapacityInfos []NodeCapacityStruct
 	var replicaCapacityInfos []ReplicaCapacityStruct
 
+	perfClient, err := client.GetPerfCounterClient(replicaServer)
+	if err != nil {
+		return err
+	}
+
 	for _, diskInfo := range resp.DiskInfos {
 		// pass disk tag means query one disk detail capacity of replica
 		if len(diskTag) != 0 && diskInfo.Tag == diskTag {
@@ -92,7 +91,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 						replicaCapacityInfos = append(replicaCapacityInfos, ReplicaCapacityStruct{
 							Replica:  gpidStr,
 							Status:   replicaStatus,
-							Capacity: GetReplicaCounterValue(client, replicaServer, "disk.storage.sst(MB)", gpidStr),
+							Capacity: float64(helper.GetReplicaCounterValue(perfClient, "disk.storage.sst(MB)", gpidStr)),
 						})
 					}
 				}
@@ -107,7 +106,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 					fmt.Println(err)
 				}
 				fmt.Fprintln(client, string(outputBytes))
-				return
+				return nil
 			}
 
 			// formats into tabular
@@ -121,7 +120,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 					strconv.FormatFloat(replicaCapacityInfo.Capacity, 'f', -1, 64)})
 			}
 			tabular.Render()
-			return
+			return nil
 		}
 
 		nodeCapacityInfos = append(nodeCapacityInfos, NodeCapacityStruct{
@@ -139,7 +138,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 			fmt.Println(err)
 		}
 		fmt.Fprintln(client, string(outputBytes))
-		return
+		return nil
 	}
 
 	// formats into tabular
@@ -154,10 +153,10 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 			strconv.FormatInt(nodeCapacityInfo.Ratio, 10)})
 	}
 	tabular.Render()
-	return
+	return nil
 }
 
-func queryDiskReplicaCount(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, useJSON bool, enableResolve bool) {
+func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, useJSON bool) {
 	type ReplicaCountStruct struct {
 		Disk      string
 		Primary   int

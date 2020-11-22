@@ -26,7 +26,6 @@ func init() {
 		Run: func(c *grumble.Context) error {
 			return executor.ListNodes(
 				pegasusClient,
-				c.Flags.String("app"),
 				c.Flags.Bool("detail"),
 				c.Flags.Bool("usage"),
 				c.Flags.Bool("qps"),

@@ -9,5 +9,5 @@ require (
 	github.com/json-iterator/go v1.1.10
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
-	github.com/pegasus-kv/collector v0.0.0-20201118000656-800f2efe047d
+	github.com/pegasus-kv/collector v0.0.0-20201118145855-9b0f1490d652
 )
