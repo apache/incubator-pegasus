@@ -209,8 +209,8 @@ func (node *NodeDetailInfo) setUsageInfo(client *Client, addr string) error {
 	node.DiskAvailableRatio = helper.GetNodeCounterValue(perfClient, "disk.available.total.ratio")
 	node.MemUsedMB = helper.GetNodeCounterValue(perfClient, "memused.res")
 	node.BlockCacheMB = helper.GetNodeCounterValue(perfClient, "rdb.block_cache.memory_usage")
-	node.MemTableMB = helper.GetNodeAggregateCounterValue(perfClient, "rdb.memtable.memory_usage")
-	node.MemIdxMB = helper.GetNodeAggregateCounterValue(perfClient, "rdb.index_and_filter_blocks.memory_usage")
+	node.MemTableMB = helper.GetNodeAggregateCounterValue(perfClient, "rdb.memtable.memory_usage") >> 20
+	node.MemIdxMB = helper.GetNodeAggregateCounterValue(perfClient, "rdb.index_and_filter_blocks.memory_usage") >> 20
 	return nil
 }
 
