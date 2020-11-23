@@ -368,6 +368,7 @@ private:
     rocksdb::ColumnFamilyHandle *_data_cf;
     rocksdb::ColumnFamilyHandle *_meta_cf;
     static std::shared_ptr<rocksdb::Cache> _s_block_cache;
+    static std::shared_ptr<rocksdb::WriteBufferManager> _s_write_buffer_manager;
     static std::shared_ptr<rocksdb::RateLimiter> _s_rate_limiter;
     static int64_t _rocksdb_limiter_last_total_through;
     volatile bool _is_open;

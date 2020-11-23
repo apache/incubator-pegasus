@@ -19,6 +19,7 @@
 
 #include "pegasus_server_impl.h"
 
+#include <unordered_map>
 #include <dsn/utility/flags.h>
 #include <rocksdb/filter_policy.h>
 
@@ -298,6 +299,130 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         });
         _db_opts.rate_limiter = _s_rate_limiter;
     }
+
+    bool enable_write_buffer_manager = dsn_config_get_value_bool(
+                "pegasus.server",
+                "rocksdb_enable_write_buffer_manager",
+                false,
+                "enable write buffer manager to limit total memory "
+                "used by memtables and block caches across multiple replicas");
+    ddebug("rocksdb_enable_write_buffer_manager = %d", enable_write_buffer_manager);
+    if (enable_write_buffer_manager) {
+        // If write buffer manager is enabled, all replicas(one DB instance for each
+        // replica) on this server will share the same write buffer manager object,
+        // thus the same block cache object. It's convenient to control the total memory
+        // of memtables and bloack caches used by this server
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            int64_t total_size_across_write_buffer = dsn_config_get_value_int64(
+                    "pegasus.server",
+                    "rocksdb_total_size_across_write_buffer",
+                    0,
+                    "total size limit used by memtables across multiple replicas");
+            ddebug("rocksdb_total_size_across_write_buffer = %" PRId64, total_size_across_write_buffer);
+            if (total_size_across_write_buffer < 0) {
+                total_size_across_write_buffer = 0;
+            }
+            _s_write_buffer_manager = std::make_shared<rocksdb::WriteBufferManager>(
+                    static_cast<size_t>(total_size_across_write_buffer), tbl_opts.block_cache);
+        });
+        _db_opts.write_buffer_manager = _s_write_buffer_manager;
+    }
+
+    int64_t max_open_files = dsn_config_get_value_int64(
+            "pegasus.server",
+            "rocksdb_max_open_files",
+            -1,
+            "number of open files that can be used by a replica(namely a DB instance)");
+    _db_opts.max_open_files = static_cast<int>(max_open_files);
+    ddebug("rocksdb_max_open_files = %d", _db_opts.max_open_files);
+
+    std::string index_type = dsn_config_get_value_string(
+            "pegasus.server",
+            "rocksdb_index_type",
+            "kBinarySearch",
+            "The index type that will be used for this table.");
+    const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
+    index_type_string_map = {
+        {"kBinarySearch", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
+        {"kHashSearch", rocksdb::BlockBasedTableOptions::IndexType::kHashSearch},
+        {"kTwoLevelIndexSearch",
+         rocksdb::BlockBasedTableOptions::IndexType::kTwoLevelIndexSearch},
+        {"kBinarySearchWithFirstKey",
+         rocksdb::BlockBasedTableOptions::IndexType::kBinarySearchWithFirstKey}
+    };
+    auto index_type_item = index_type_string_map.find(index_type);
+    dassert(index_type_item != index_type_string_map.end(),
+            "[pegasus.server]rocksdb_index_type shold be one among kBinarySearch, "
+            "kHashSearch, kTwoLevelIndexSearch or kBinarySearchWithFirstKey.");
+    tbl_opts.index_type = index_type_item->second;
+    ddebug("rocksdb_index_type = %s", index_type.c_str());
+
+    tbl_opts.partition_filters = dsn_config_get_value_bool(
+            "pegasus.server",
+            "rocksdb_partition_filters",
+            false,
+            "Note: currently this option requires kTwoLevelIndexSearch to be set as well. "
+            "Use partitioned full filters for each SST file. This option is "
+            "incompatibile with block-based filters.");
+    ddebug("rocksdb_partition_filters = %d", tbl_opts.partition_filters);
+
+    tbl_opts.metadata_block_size = dsn_config_get_value_uint64(
+            "pegasus.server",
+            "rocksdb_metadata_block_size",
+            4096,
+            "Block size for partitioned metadata. Currently applied to indexes when "
+            "kTwoLevelIndexSearch is used and to filters when partition_filters is used. "
+            "Note: Since in the current implementation the filters and index partitions "
+            "are aligned, an index/filter block is created when either index or filter "
+            "block size reaches the specified limit. "
+            "Note: this limit is currently applied to only index blocks; a filter "
+            "partition is cut right after an index block is cut");
+    ddebug("rocksdb_metadata_block_size = %" PRIu64, tbl_opts.metadata_block_size);
+
+    tbl_opts.cache_index_and_filter_blocks = dsn_config_get_value_bool(
+            "pegasus.server",
+            "rocksdb_cache_index_and_filter_blocks",
+            false,
+            "Indicating if we'd put index/filter blocks to the block cache. "
+            "If not specified, each \"table reader\" object will pre-load index/filter "
+            "block during table initialization.");
+    ddebug("rocksdb_cache_index_and_filter_blocks = %d",
+            tbl_opts.cache_index_and_filter_blocks);
+
+    tbl_opts.pin_top_level_index_and_filter = dsn_config_get_value_bool(
+            "pegasus.server",
+            "rocksdb_pin_top_level_index_and_filter",
+            true,
+            "If cache_index_and_filter_blocks is true and the below is true, then "
+            "the top-level index of partitioned filter and index blocks are stored in "
+            "the cache, but a reference is held in the \"table reader\" object so the "
+            "blocks are pinned and only evicted from cache when the table reader is "
+            "freed. This is not limited to l0 in LSM tree.");
+    ddebug("rocksdb_pin_top_level_index_and_filter = %d",
+            tbl_opts.pin_top_level_index_and_filter);
+
+    tbl_opts.cache_index_and_filter_blocks_with_high_priority = dsn_config_get_value_bool(
+            "pegasus.server",
+            "rocksdb_cache_index_and_filter_blocks_with_high_priority",
+            true,
+            "If cache_index_and_filter_blocks is enabled, cache index and filter "
+            "blocks with high priority. If set to true, depending on implementation of "
+            "block cache, index and filter blocks may be less likely to be evicted "
+            "than data blocks.");
+    ddebug("rocksdb_cache_index_and_filter_blocks_with_high_priority = %d",
+            tbl_opts.cache_index_and_filter_blocks_with_high_priority);
+
+    tbl_opts.pin_l0_filter_and_index_blocks_in_cache = dsn_config_get_value_bool(
+            "pegasus.server",
+            "rocksdb_pin_l0_filter_and_index_blocks_in_cache",
+            false,
+            "if cache_index_and_filter_blocks is true and the below is true, then "
+            "filter and index blocks are stored in the cache, but a reference is "
+            "held in the \"table reader\" object so the blocks are pinned and only "
+            "evicted from cache when the table reader is freed.");
+    ddebug("rocksdb_pin_l0_filter_and_index_blocks_in_cache = %d",
+            tbl_opts.pin_l0_filter_and_index_blocks_in_cache);
 
     // Bloom filter configurations.
     bool disable_bloom_filter = dsn_config_get_value_bool(
