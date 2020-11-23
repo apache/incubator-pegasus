@@ -39,7 +39,6 @@ type NodeDetailInfo struct {
 	MputBytes int64
 }
 
-// TODO(jiashuo1) support query detail info
 func ListNodes(client *Client, detail bool, usage bool, qps bool, useJSON bool, enableResolve bool) error {
 
 	nodes, err := queryNodeDetailInfo(client, enableResolve)
