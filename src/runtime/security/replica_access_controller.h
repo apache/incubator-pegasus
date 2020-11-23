@@ -17,40 +17,24 @@
 
 #pragma once
 
-#include <memory>
-#include <unordered_set>
+#include <dsn/utility/synchronize.h>
+#include "access_controller.h"
 
 namespace dsn {
-class message_ex;
 namespace security {
-
-class access_controller
+class replica_access_controller : public access_controller
 {
 public:
-    access_controller();
-    virtual ~access_controller() = 0;
+    replica_access_controller(const std::string &name);
+    bool allowed(message_ex *msg);
 
-    /**
-     * reset the access controller
-     *    acls - the new acls to reset
-     **/
-    virtual void reset(const std::string &acls){};
+private:
+    utils::rw_lock_nr _lock; // [
+    std::unordered_set<std::string> _users;
+    // ]
+    std::string _name;
 
-    /**
-     * check if the message received is allowd to do something.
-     *   msg - the message received
-     **/
-    virtual bool allowed(message_ex *msg) = 0;
-
-protected:
-    bool pre_check(const std::string &user_name);
-    friend class meta_access_controller_test;
-
-    std::unordered_set<std::string> _super_users;
+    friend class replica_access_controller_test;
 };
-
-std::unique_ptr<access_controller> create_meta_access_controller();
-
-std::unique_ptr<access_controller> create_replica_access_controller(const std::string &name);
 } // namespace security
 } // namespace dsn

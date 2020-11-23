@@ -57,6 +57,9 @@
 #include "utils/throttling_controller.h"
 
 namespace dsn {
+namespace security {
+class access_controller;
+} // namespace security
 namespace replication {
 
 class replication_app_base;
@@ -507,6 +510,8 @@ private:
     dsn::task_tracker _tracker;
     // the thread access checker
     dsn::thread_access_checker _checker;
+
+    std::unique_ptr<security::access_controller> _access_controller;
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 } // namespace replication

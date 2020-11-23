@@ -15,39 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "access_controller.h"
-
-#include <dsn/utility/flags.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/smart_pointers.h>
-#include "meta_access_controller.h"
 #include "replica_access_controller.h"
+
+#include <dsn/tool-api/rpc_message.h>
+#include <dsn/dist/fmt_logging.h>
+#include <dsn/tool-api/network.h>
 
 namespace dsn {
 namespace security {
-DSN_DEFINE_bool("security", enable_acl, false, "whether enable access controller or not");
-DSN_DEFINE_string("security", super_users, "", "super user for access controller");
+replica_access_controller::replica_access_controller(const std::string &name) { _name = name; }
 
-access_controller::access_controller() { utils::split_args(FLAGS_super_users, _super_users, ','); }
-
-access_controller::~access_controller() {}
-
-bool access_controller::pre_check(const std::string &user_name)
+bool replica_access_controller::allowed(message_ex *msg)
 {
-    if (!FLAGS_enable_acl || _super_users.find(user_name) != _super_users.end()) {
+    const std::string &user_name = msg->io_session->get_client_username();
+    if (pre_check(user_name)) {
         return true;
     }
-    return false;
-}
 
-std::unique_ptr<access_controller> create_meta_access_controller()
-{
-    return make_unique<meta_access_controller>();
-}
-
-std::unique_ptr<access_controller> create_replica_access_controller(const std::string &name)
-{
-    return make_unique<replica_access_controller>(name);
+    {
+        utils::auto_read_lock l(_lock);
+        if (_users.find(user_name) == _users.end()) {
+            ddebug_f("{}: user_name {} doesn't exist in acls map", _name, user_name);
+            return false;
+        }
+        return true;
+    }
 }
 } // namespace security
 } // namespace dsn
