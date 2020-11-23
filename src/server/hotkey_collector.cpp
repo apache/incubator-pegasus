@@ -205,7 +205,7 @@ void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weigh
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
     case hotkey_collector_state::FINE_DETECTING:
-        _internal_coarse_collector->capture_data(hash_key, weight > 0 ? weight : 1);
+        get_internal_collector_by_state()->capture_data(hash_key, weight > 0 ? weight : 1);
         return;
     default:
         return;
