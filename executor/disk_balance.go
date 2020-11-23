@@ -10,6 +10,9 @@ import (
 )
 
 func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string, enableResolve bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	if enableResolve {
 		node, err := helper.Resolve(replicaServer, helper.Host2Addr)
 		if err != nil {
@@ -23,10 +26,13 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := client.ReplicaPool.GetReplica(replicaServer).DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
-		Pid:        pid, // TODO(jiashuo1) server parser pid is error, need fix
+	replicaClient, err := client.GetReplicaClient(replicaServer)
+	if err != nil {
+		return err
+	}
+
+	resp, err := replicaClient.DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
+		Pid:        pid,
 		OriginDisk: from,
 		TargetDisk: to,
 	})

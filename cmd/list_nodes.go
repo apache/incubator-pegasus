@@ -3,11 +3,9 @@ package cmd
 import (
 	"admin-cli/executor"
 	"admin-cli/shell"
-
 	"github.com/desertbit/grumble"
 )
 
-// TODO(jiashuo1) support show node replica/qps/latency/usage info(need remote-command support)
 func init() {
 	shell.AddCommand(&grumble.Command{
 		Name:    "list-nodes",

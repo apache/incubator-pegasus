@@ -3,7 +3,7 @@ module admin-cli
 go 1.14
 
 require (
-	github.com/XiaoMi/pegasus-go-client v0.0.0-20201119112224-45f30cd560c7
+	github.com/XiaoMi/pegasus-go-client v0.0.0-20201123074735-60f98674a317
 	github.com/cheggaaa/pb/v3 v3.0.5
 	github.com/desertbit/grumble v1.0.8
 	github.com/json-iterator/go v1.1.10
