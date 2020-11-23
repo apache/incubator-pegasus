@@ -7,10 +7,21 @@ import (
 	"net"
 	"strings"
 
+	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/desertbit/grumble"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func main() {
+	// pegasus-go-client's logs use the same logger as admin-cli.
+	pegalog.SetLogger(logrus.StandardLogger())
+	// configure log destination
+	logrus.SetOutput(&lumberjack.Logger{
+		Filename:  "./shell.log",
+		LocalTime: true,
+	})
+
 	shell.App.OnInit(func(a *grumble.App, flags grumble.FlagMap) error {
 		metaListStr := flags.String("meta")
 		metaList := strings.Split(metaListStr, ",")

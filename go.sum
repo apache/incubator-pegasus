@@ -115,6 +115,7 @@ github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2/go.mod h1:SqUrOPUn
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZgvJUkLughtfhJv5dyTYa91l1fOUCrgjqmcifM=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
+github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
@@ -385,10 +386,8 @@ github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnh
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
-github.com/pegasus-kv/collector v0.0.0-20201118000656-800f2efe047d h1:crmSWqa9PUUt1QNipjDF1lxKbd0rgtYcKSTWRjfU8ds=
-github.com/pegasus-kv/collector v0.0.0-20201118000656-800f2efe047d/go.mod h1:yZYuVFyZ+ZkhVTXFh+piKqPA9MxPCpLaLONwi8HyZ/4=
-github.com/pegasus-kv/collector v0.0.0-20201118145855-9b0f1490d652 h1:nw9SUftYjpCeFGVUspnQTHlvKAtwGYTGwgiZTo9dzJM=
-github.com/pegasus-kv/collector v0.0.0-20201118145855-9b0f1490d652/go.mod h1:yZYuVFyZ+ZkhVTXFh+piKqPA9MxPCpLaLONwi8HyZ/4=
+github.com/pegasus-kv/collector v0.0.0-20201118145415-3b855d1b1b8f h1:5TDnzipnELWBIEmI8Ua8YD90YTWWqUuJEMU+N5yqYHY=
+github.com/pegasus-kv/collector v0.0.0-20201118145415-3b855d1b1b8f/go.mod h1:yZYuVFyZ+ZkhVTXFh+piKqPA9MxPCpLaLONwi8HyZ/4=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
