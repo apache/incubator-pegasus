@@ -26,7 +26,7 @@ func (id *Gpid) Read(iprot thrift.TProtocol) error {
 }
 
 func (id *Gpid) Write(oprot thrift.TProtocol) error {
-	v := int64(id.Appid) + int64(id.PartitionIndex<<32)
+	v := int64(id.Appid) + int64(id.PartitionIndex)<<32
 	return oprot.WriteI64(v)
 }
 
