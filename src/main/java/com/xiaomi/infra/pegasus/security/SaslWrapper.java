@@ -18,6 +18,7 @@
  */
 package com.xiaomi.infra.pegasus.security;
 
+import com.xiaomi.infra.pegasus.base.blob;
 import java.nio.charset.Charset;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -49,6 +50,21 @@ class SaslWrapper {
                   Sasl.createSaslClient(
                       mechanims, null, serviceName, serviceFQDN, properties, null);
               return saslClient.getMechanismName().getBytes(Charset.defaultCharset());
+            });
+  }
+
+  // Invoking methods on the SaslClient instance process challenges and create
+  // responses according to the SASL mechanism implemented by the SaslClient.
+  public blob getInitialResponse() throws PrivilegedActionException {
+    return Subject.doAs(
+        subject,
+        (PrivilegedExceptionAction<blob>)
+            () -> {
+              if (saslClient.hasInitialResponse()) {
+                return new blob(saslClient.evaluateChallenge(new byte[0]));
+              } else {
+                return new blob(new byte[0]);
+              }
             });
   }
 }

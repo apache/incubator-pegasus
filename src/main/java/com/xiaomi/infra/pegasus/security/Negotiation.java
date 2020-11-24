@@ -61,7 +61,7 @@ class Negotiation {
   }
 
   private class RecvHandler implements Runnable {
-    negotiation_operator op;
+    private negotiation_operator op;
 
     RecvHandler(negotiation_operator op) {
       this.op = op;
@@ -91,6 +91,8 @@ class Negotiation {
           onRecvMechanisms(resp);
           break;
         case SASL_SELECT_MECHANISMS:
+          onMechanismSelected(resp);
+          break;
         case SASL_INITIATE:
         case SASL_CHALLENGE_RESP:
           // TBD(zlw):
@@ -112,6 +114,14 @@ class Negotiation {
 
     status = negotiation_status.SASL_SELECT_MECHANISMS;
     blob msg = new blob(saslWrapper.init(matchMechanisms));
+    send(status, msg);
+  }
+
+  void onMechanismSelected(negotiation_response response) throws Exception {
+    checkStatus(response.status, negotiation_status.SASL_SELECT_MECHANISMS_RESP);
+
+    status = negotiation_status.SASL_INITIATE;
+    blob msg = saslWrapper.getInitialResponse();
     send(status, msg);
   }
 

@@ -109,4 +109,29 @@ public class NegotiationTest {
           mockNegotiation.onRecvMechanisms(response);
         });
   }
+
+  @Test
+  public void testMechanismSelected() {
+    Negotiation mockNegotiation = Mockito.spy(negotiation);
+    SaslWrapper mockSaslWrapper = Mockito.mock(SaslWrapper.class);
+    mockNegotiation.saslWrapper = mockSaslWrapper;
+
+    Mockito.doNothing().when(mockNegotiation).send(any(), any());
+    try {
+      Mockito.when(mockNegotiation.saslWrapper.getInitialResponse()).thenReturn(new blob());
+    } catch (Exception ex) {
+      Assert.fail();
+    }
+
+    // normal case
+    negotiation_response response =
+        new negotiation_response(
+            negotiation_status.SASL_SELECT_MECHANISMS_RESP, new blob(new byte[0]));
+    Assertions.assertDoesNotThrow(() -> mockNegotiation.onMechanismSelected(response));
+    Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_INITIATE);
+
+    // deal with wrong response.status
+    response.status = negotiation_status.SASL_LIST_MECHANISMS;
+    Assertions.assertThrows(Exception.class, () -> mockNegotiation.onMechanismSelected(response));
+  }
 }
