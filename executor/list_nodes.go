@@ -3,7 +3,6 @@ package executor
 import (
 	"admin-cli/helper"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -14,13 +13,12 @@ import (
 
 type NodeDetailInfo struct {
 	// nodes
-	Node   string
-	Status string
-	// nodes -d
+	Node           string
+	Status         string
 	ReplicaCount   int
 	PrimaryCount   int
 	SecondaryCount int
-	// nodes -u
+	// nodes -d
 	DiskTotalMB        int64
 	DiskAvailableMb    int64
 	DiskAvailableRatio int64
@@ -39,78 +37,55 @@ type NodeDetailInfo struct {
 	MputBytes int64
 }
 
-func ListNodes(client *Client, detail bool, usage bool, qps bool, useJSON bool, enableResolve bool) error {
+func ListNodes(client *Client, detail bool) error {
 
-	nodes, err := queryNodeDetailInfo(client, enableResolve)
+	nodes, err := queryNodeDetailInfo(client)
 	if err != nil {
 		return err
-	}
-
-	if useJSON {
-		// formats into JSON
-		outputBytes, err := json.MarshalIndent(nodes, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Fprintln(client, string(outputBytes))
-		return nil
 	}
 
 	// formats into tabular
 	tabular := tablewriter.NewWriter(client)
 	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
+	var header = []string{"Node", "Status", "Replica", "Primary", "Secondary"}
 	if detail {
-		tabular.SetHeader([]string{"Node", "Status", "ReplicaCount", "PrimaryCount", "SecondaryCount"})
-	} else if usage {
-		tabular.SetHeader([]string{
-			"Node", "Status", "DiskTotalMB", "DiskAvailableMb", "DiskAvailableRatio",
-			"MemUsedMB", "BlockCacheMB", "MemTableMB", "MemIdxMB"})
-	} else if qps {
-		tabular.SetHeader([]string{
-			"Node", "Status",
-			"GetQPS", "MgetQPS", "PutQPS", "MputQPS",
-			"GetBytes", "MgetBytes", "PutBytes", "MputBytes"})
-	} else {
-		tabular.SetHeader([]string{"Node", "Status"})
+		header = append(header, []string{"DiskTotalMB", "DiskAvaMb", "DiskAvaRatio",
+			"MemUsedMB", "BlockCacheMB", "MemTableMB", "MemIdxMB", "GetQPS", "MgetQPS", "PutQPS", "MputQPS",
+			"GetBytes", "MgetBytes", "PutBytes", "MputBytes"}...)
 	}
 
+	tabular.SetHeader(header)
+	tabular.SetAutoFormatHeaders(false)
 	for _, node := range nodes {
-		if detail {
-			tabular.Append([]string{
-				node.Node, node.Status, strconv.Itoa(node.ReplicaCount),
-				strconv.Itoa(node.PrimaryCount), strconv.Itoa(node.SecondaryCount)})
-		} else if usage {
-			// nodes -u
-			tabular.Append([]string{
-				node.Node, node.Status,
-				strconv.FormatInt(node.DiskTotalMB, 10),
-				strconv.FormatInt(node.DiskAvailableMb, 10),
-				strconv.FormatInt(node.DiskAvailableRatio, 10),
-				strconv.FormatInt(node.MemUsedMB, 10),
-				strconv.FormatInt(node.BlockCacheMB, 10),
-				strconv.FormatInt(node.MemTableMB, 10),
-				strconv.FormatInt(node.MemIdxMB, 10)})
-		} else if qps {
-			tabular.Append([]string{
-				node.Node, node.Status,
-				strconv.FormatInt(node.GetQPS, 10),
-				strconv.FormatInt(node.MgetQPS, 10),
-				strconv.FormatInt(node.PutQPS, 10),
-				strconv.FormatInt(node.MputQPS, 10),
-				strconv.FormatInt(node.GetBytes, 10),
-				strconv.FormatInt(node.MgetBytes, 10),
-				strconv.FormatInt(node.PutBytes, 10),
-				strconv.FormatInt(node.MputBytes, 10)})
-		} else {
-			tabular.Append([]string{node.Node, node.Status})
-		}
+		rowData := []string{
+			node.Node,
+			node.Status,
+			strconv.Itoa(node.ReplicaCount),
+			strconv.Itoa(node.PrimaryCount),
+			strconv.Itoa(node.SecondaryCount),
+			strconv.FormatInt(node.DiskTotalMB, 10),
+			strconv.FormatInt(node.DiskAvailableMb, 10),
+			strconv.FormatInt(node.DiskAvailableRatio, 10),
+			strconv.FormatInt(node.MemUsedMB, 10),
+			strconv.FormatInt(node.BlockCacheMB, 10),
+			strconv.FormatInt(node.MemTableMB, 10),
+			strconv.FormatInt(node.MemIdxMB, 10),
+			strconv.FormatInt(node.GetQPS, 10),
+			strconv.FormatInt(node.MgetQPS, 10),
+			strconv.FormatInt(node.PutQPS, 10),
+			strconv.FormatInt(node.MputQPS, 10),
+			strconv.FormatInt(node.GetBytes, 10),
+			strconv.FormatInt(node.MgetBytes, 10),
+			strconv.FormatInt(node.PutBytes, 10),
+			strconv.FormatInt(node.MputBytes, 10)}
+		tabular.Append(rowData[:len(header)])
 	}
 
 	tabular.Render()
 	return nil
 }
 
-func queryNodeDetailInfo(client *Client, enableResolve bool) ([]*NodeDetailInfo, error) {
+func queryNodeDetailInfo(client *Client) ([]*NodeDetailInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	listNodeResp, err := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
@@ -123,7 +98,7 @@ func queryNodeDetailInfo(client *Client, enableResolve bool) ([]*NodeDetailInfo,
 	var nodes []*NodeDetailInfo
 	for _, info := range listNodeResp.Infos {
 		var node = NodeDetailInfo{}
-		statusErr := node.setStatus(info, enableResolve)
+		statusErr := node.setStatus(info)
 		if statusErr != nil {
 			return nil, statusErr
 		}
@@ -145,16 +120,12 @@ func queryNodeDetailInfo(client *Client, enableResolve bool) ([]*NodeDetailInfo,
 	return nodes, nil
 }
 
-func (node *NodeDetailInfo) setStatus(info *admin.NodeInfo, enableResolve bool) error {
-	if enableResolve {
-		addr, err := helper.Resolve(info.Address.GetAddress(), helper.Addr2Host)
-		if err != nil {
-			return err
-		}
-		node.Node = addr
-	} else {
-		node.Node = info.Address.GetAddress()
+func (node *NodeDetailInfo) setStatus(info *admin.NodeInfo) error {
+	host, err := helper.Resolve(info.Address.GetAddress(), helper.Addr2Host)
+	if err != nil {
+		return err
 	}
+	node.Node = fmt.Sprintf("%s[%s]", host, info.Address.GetAddress())
 
 	node.Status = info.Status.String()
 	return nil

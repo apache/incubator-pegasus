@@ -3,7 +3,6 @@ package executor
 import (
 	"admin-cli/helper"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -21,16 +20,13 @@ const (
 )
 
 // QueryDiskInfo command
-func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, useJSON bool, enableResolve bool) error {
+func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	if enableResolve {
-		var node, err = helper.Resolve(replicaServer, helper.Host2Addr)
-		if err != nil {
-			return err
-		}
-		replicaServer = node
+	var addr, err = helper.Resolve(replicaServer, helper.Host2Addr)
+	if err == nil {
+		replicaServer = addr
 	}
 
 	replicaClient, err := client.GetReplicaClient(replicaServer)
@@ -47,16 +43,16 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		_ = queryDiskCapacity(client, replicaServer, resp, diskTag, useJSON)
+		_ = queryDiskCapacity(client, replicaServer, resp, diskTag)
 	case ReplicaCount:
-		queryDiskReplicaCount(client, resp, useJSON)
+		queryDiskReplicaCount(client, resp)
 	default:
 		break
 	}
 	return nil
 }
 
-func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, useJSON bool) error {
+func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string) error {
 
 	type NodeCapacityStruct struct {
 		Disk      string
@@ -97,19 +93,10 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 			appendReplicaCapacityInfo(diskInfo.HoldingPrimaryReplicas, "primary")
 			appendReplicaCapacityInfo(diskInfo.HoldingSecondaryReplicas, "secondary")
 
-			if useJSON {
-				// formats into JSON
-				outputBytes, err := json.MarshalIndent(replicaCapacityInfos, "", "  ")
-				if err != nil {
-					fmt.Println(err)
-				}
-				fmt.Fprintln(client, string(outputBytes))
-				return nil
-			}
-
 			// formats into tabular
 			tabular := tablewriter.NewWriter(client)
 			tabular.SetHeader([]string{"Replica", "Status", "Capacity"})
+			tabular.SetAutoFormatHeaders(false)
 			tabular.SetAlignment(tablewriter.ALIGN_CENTER)
 			for _, replicaCapacityInfo := range replicaCapacityInfos {
 				tabular.Append([]string{
@@ -129,16 +116,6 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 		})
 	}
 
-	if useJSON {
-		// formats into JSON
-		outputBytes, err := json.MarshalIndent(nodeCapacityInfos, "", "  ")
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Fprintln(client, string(outputBytes))
-		return nil
-	}
-
 	// formats into tabular
 	tabular := tablewriter.NewWriter(client)
 	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
@@ -154,7 +131,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 	return nil
 }
 
-func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, useJSON bool) {
+func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse) {
 	type ReplicaCountStruct struct {
 		Disk      string
 		Primary   int
@@ -182,16 +159,6 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, u
 			Secondary: secondaryCount,
 			Total:     primaryCount + secondaryCount,
 		})
-	}
-
-	if useJSON {
-		// formats into JSON
-		outputBytes, err := json.MarshalIndent(replicaCountInfos, "", "  ")
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Fprintln(client, string(outputBytes))
-		return
 	}
 
 	// formats into tabular

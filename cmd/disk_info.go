@@ -25,9 +25,7 @@ func init() {
 				executor.CapacitySize,
 				c.Flags.String("node"),
 				c.Flags.String("app"),
-				c.Flags.String("disk"),
-				c.Flags.Bool("json"),
-				c.Flags.Bool("resolve"))
+				c.Flags.String("disk"))
 		},
 	})
 
@@ -47,9 +45,7 @@ func init() {
 				executor.ReplicaCount,
 				c.Flags.String("node"),
 				c.Flags.String("app"),
-				"",
-				c.Flags.Bool("json"),
-				c.Flags.Bool("resolve"))
+				"")
 		},
 	})
 }

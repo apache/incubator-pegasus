@@ -9,16 +9,13 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 )
 
-func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string, enableResolve bool) error {
+func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	if enableResolve {
-		node, err := helper.Resolve(replicaServer, helper.Host2Addr)
-		if err != nil {
-			return err
-		}
-		replicaServer = node
+	var addr, err = helper.Resolve(replicaServer, helper.Host2Addr)
+	if err == nil {
+		replicaServer = addr
 	}
 
 	pid, err := helper.Str2Gpid(pidStr)

@@ -17,14 +17,13 @@ type commandResult struct {
 	Result   string
 }
 
-func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd string, args string, enableResolve bool) error {
+func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd string, args string) error {
 
-	if len(node) != 0 && enableResolve {
+	if len(node) != 0 {
 		var addr, err = helper.Resolve(node, helper.Host2Addr)
-		if err != nil {
-			return err
+		if err == nil {
+			node = addr
 		}
-		node = addr
 	}
 
 	arguments := strings.Split(args, " ")
@@ -35,23 +34,23 @@ func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd s
 	var results []*commandResult
 	if len(node) == 0 {
 		if nodeType == session.NodeTypeMeta {
-			resp, err := sendRemoteCommand(client, nodeType, client.MetaAddresses, cmd, arguments, enableResolve)
+			resp, err := sendRemoteCommand(client, nodeType, client.MetaAddresses, cmd, arguments)
 			if err != nil {
 				return err
 			}
 			results = resp
 		} else if nodeType == session.NodeTypeReplica {
-			resp, err := sendRemoteCommand(client, nodeType, client.ReplicaAddresses, cmd, arguments, enableResolve)
+			resp, err := sendRemoteCommand(client, nodeType, client.ReplicaAddresses, cmd, arguments)
 			if err != nil {
 				return err
 			}
 			results = resp
 		} else {
-			respMetas, errMeta := sendRemoteCommand(client, session.NodeTypeMeta, client.MetaAddresses, cmd, arguments, enableResolve)
+			respMetas, errMeta := sendRemoteCommand(client, session.NodeTypeMeta, client.MetaAddresses, cmd, arguments)
 			if errMeta != nil {
 				return errMeta
 			}
-			respReplicas, errReplica := sendRemoteCommand(client, session.NodeTypeReplica, client.ReplicaAddresses, cmd, arguments, enableResolve)
+			respReplicas, errReplica := sendRemoteCommand(client, session.NodeTypeReplica, client.ReplicaAddresses, cmd, arguments)
 			if errReplica != nil {
 				return errReplica
 			}
@@ -65,28 +64,25 @@ func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd s
 	return nil
 }
 
-func sendRemoteCommand(client *Client, nodeType session.NodeType, nodes []string, cmd string, args []string, enableResolve bool) ([]*commandResult, error) {
+func sendRemoteCommand(client *Client, nodeType session.NodeType, nodes []string, cmd string, args []string) ([]*commandResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	var results []*commandResult
 	for _, addr := range nodes {
-		remoteClient, err := client.GetRemoteCommandClient(addr, nodeType)
-		if err != nil {
-			return nil, err
+		remoteClient, errGet := client.GetRemoteCommandClient(addr, nodeType)
+		if errGet != nil {
+			return nil, errGet
 		}
-		resp, err := remoteClient.Call(ctx, cmd, args)
-		if err != nil {
-			fmt.Printf("Node[%s] send remote command error[%s]\n", addr, err)
-			continue
-		}
+		resp, errCall := remoteClient.Call(ctx, cmd, args)
 
-		if enableResolve {
-			var host, err = helper.Resolve(addr, helper.Addr2Host)
-			if err != nil {
-				return nil, err
-			}
-			addr = host
+		var host, errResolve = helper.Resolve(addr, helper.Addr2Host)
+		if errResolve == nil {
+			addr = fmt.Sprintf("%s[%s]", addr, host)
+		}
+		if errCall != nil {
+			fmt.Printf("Node[%s] send remote command error[%s]\n", addr, errCall)
+			continue
 		}
 
 		results = append(results, &commandResult{

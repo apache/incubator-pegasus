@@ -18,13 +18,7 @@ func init() {
 		Help:  "send remote command to meta server",
 		Flags: initFlag,
 		Run: func(c *grumble.Context) error {
-			return executor.RemoteCommand(
-				pegasusClient,
-				"meta",
-				c.Flags.String("node"),
-				c.Flags.String("command"),
-				c.Flags.String("arguments"),
-				c.Flags.Bool("resolve"))
+			return executor.RemoteCommand(pegasusClient, "meta", c.Flags.String("node"), c.Flags.String("command"), c.Flags.String("arguments"))
 		},
 	})
 
@@ -33,13 +27,7 @@ func init() {
 		Help:  "send remote command to replica server",
 		Flags: initFlag,
 		Run: func(c *grumble.Context) error {
-			return executor.RemoteCommand(
-				pegasusClient,
-				"replica",
-				c.Flags.String("node"),
-				c.Flags.String("command"),
-				c.Flags.String("arguments"),
-				c.Flags.Bool("resolve"))
+			return executor.RemoteCommand(pegasusClient, "replica", c.Flags.String("node"), c.Flags.String("command"), c.Flags.String("arguments"))
 		},
 	})
 
@@ -48,13 +36,7 @@ func init() {
 		Help:  "send remote command to meta and replica server",
 		Flags: initFlag,
 		Run: func(c *grumble.Context) error {
-			return executor.RemoteCommand(
-				pegasusClient,
-				"all",
-				c.Flags.String("node"),
-				c.Flags.String("command"),
-				c.Flags.String("arguments"),
-				c.Flags.Bool("resolve"))
+			return executor.RemoteCommand(pegasusClient, "all", c.Flags.String("node"), c.Flags.String("command"), c.Flags.String("arguments"))
 		},
 	})
 	shell.AddCommand(rootCmd)
@@ -62,7 +44,6 @@ func init() {
 
 func initFlag(f *grumble.Flags) {
 	/*define the flags*/
-	f.Bool("r", "resolve", false, "resolve input or output address")
 	f.String("n", "node", "", "specify server node address, such as 127.0.0.1:34801, empty mean all node")
 	f.String("c", "command", "help", "remote command name, you can -c help to see support command")
 	f.String("a", "arguments", "", "if empty means query the command argument value, otherwise mean set update value")
