@@ -47,11 +47,9 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		queryDiskCapacity(client, replicaServer, resp, diskTag, useJSON)
-		break
+		_ = queryDiskCapacity(client, replicaServer, resp, diskTag, useJSON)
 	case ReplicaCount:
 		queryDiskReplicaCount(client, resp, useJSON)
-		break
 	default:
 		break
 	}
@@ -167,7 +165,7 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, u
 	computeReplicaCount := func(replicasWithAppId map[int32][]*base.Gpid) int {
 		var replicaCount = 0
 		for _, replicas := range replicasWithAppId {
-			for _, _ = range replicas {
+			for range replicas {
 				replicaCount++
 			}
 		}
@@ -208,5 +206,4 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, u
 			strconv.Itoa(replicaCountInfo.Total)})
 	}
 	tabular.Render()
-	return
 }

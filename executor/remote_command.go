@@ -55,13 +55,8 @@ func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd s
 			if errReplica != nil {
 				return errReplica
 			}
-
-			for _, respMeta := range respMetas {
-				results = append(results, respMeta)
-			}
-			for _, respReplica := range respReplicas {
-				results = append(results, respReplica)
-			}
+			results = append(results, respMetas...)
+			results = append(results, respReplicas...)
 		}
 	}
 	for _, result := range results {

@@ -33,7 +33,7 @@ func ListTables(client *Client, useJSON bool) error {
 		tbList = append(tbList, tableStruct{
 			AppID:          tb.AppID,
 			Name:           tb.AppName,
-			PartitionCount: *&tb.PartitionCount,
+			PartitionCount: tb.PartitionCount,
 			CreateTime:     time.Unix(tb.CreateSecond, 0).Format("2006-01-02"),
 			Envs:           tb.Envs,
 		})

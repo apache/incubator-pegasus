@@ -19,7 +19,7 @@ func GetReplicaCounterValue(perfClient *aggregate.PerfSession, counter string, g
 }
 
 func GetNodeCounterValue(perfClient *aggregate.PerfSession, counter string) int64 {
-	counters, err := perfClient.GetPerfCounters(fmt.Sprintf("%s", counter))
+	counters, err := perfClient.GetPerfCounters(counter)
 	if err != nil {
 		return -1
 	}
@@ -31,7 +31,7 @@ func GetNodeCounterValue(perfClient *aggregate.PerfSession, counter string) int6
 }
 
 func GetNodeAggregateCounterValue(perfClient *aggregate.PerfSession, counter string) int64 {
-	counters, err := perfClient.GetPerfCounters(fmt.Sprintf("%s", counter))
+	counters, err := perfClient.GetPerfCounters(counter)
 	if err != nil {
 		return -1
 	}
