@@ -19,7 +19,6 @@ func init() {
 			f.Bool("u", "usage", false, "show the usage of every node")
 			f.Bool("q", "qps", false, "show the qps/bytes/latency of every node")
 			f.String("a", "app", "", "filter one app, for example, temp")
-			f.String("o", "out", "", "save output into file")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.ListNodes(

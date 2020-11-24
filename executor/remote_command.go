@@ -4,57 +4,103 @@ import (
 	"admin-cli/helper"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
-	"github.com/olekukonko/tablewriter"
 )
 
-func RemoteCommand(client *Client, targetType string, addr string, cmd string, args []string, file string, enableResolve bool) error {
-	if enableResolve {
-		var node, err = helper.Resolve(addr, helper.Host2Addr)
+type commandResult struct {
+	NodeType session.NodeType
+	Address  string
+	Command  string
+	Result   string
+}
+
+func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd string, args string, enableResolve bool) error {
+
+	if len(node) != 0 && enableResolve {
+		var addr, err = helper.Resolve(node, helper.Host2Addr)
 		if err != nil {
 			return err
 		}
-		addr = node
+		node = addr
 	}
 
-	var nodeType session.NodeType
-	// TODO(jiashuo1) shell command support `option` args
-	if targetType == "meta" {
-		nodeType = session.NodeTypeReplica
-	} else if targetType == "replica" {
-		nodeType = session.NodeTypeReplica
-	} else {
-		return fmt.Errorf("Please input `meta` or `replica`")
+	arguments := strings.Split(args, " ")
+	if arguments[0] == "" {
+		arguments = nil
 	}
 
-	resp, err := SendRemoteCommand(client, nodeType, addr, cmd, args)
-	if err != nil {
-		return err
-	}
+	var results []*commandResult
+	if len(node) == 0 {
+		if nodeType == session.NodeTypeMeta {
+			resp, err := sendRemoteCommand(client, nodeType, client.MetaAddresses, cmd, arguments, enableResolve)
+			if err != nil {
+				return err
+			}
+			results = resp
+		} else if nodeType == session.NodeTypeReplica {
+			resp, err := sendRemoteCommand(client, nodeType, client.ReplicaAddresses, cmd, arguments, enableResolve)
+			if err != nil {
+				return err
+			}
+			results = resp
+		} else {
+			respMetas, errMeta := sendRemoteCommand(client, session.NodeTypeMeta, client.MetaAddresses, cmd, arguments, enableResolve)
+			if errMeta != nil {
+				return errMeta
+			}
+			respReplicas, errReplica := sendRemoteCommand(client, session.NodeTypeReplica, client.ReplicaAddresses, cmd, arguments, enableResolve)
+			if errReplica != nil {
+				return errReplica
+			}
 
-	// formats into tabular
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetHeader([]string{"node", "result"})
-	tabular.Append([]string{addr, resp})
-	tabular.Render()
+			for _, respMeta := range respMetas {
+				results = append(results, respMeta)
+			}
+			for _, respReplica := range respReplicas {
+				results = append(results, respReplica)
+			}
+		}
+	}
+	for _, result := range results {
+		fmt.Printf("%s[%s][%s] : %s\n", result.Address, result.NodeType, result.Command, result.Result)
+	}
 	return nil
 }
 
-func SendRemoteCommand(client *Client, nodeType session.NodeType, addr string, cmd string, args []string) (string, error) {
+func sendRemoteCommand(client *Client, nodeType session.NodeType, nodes []string, cmd string, args []string, enableResolve bool) ([]*commandResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	remoteClient, err := client.GetRemoteCommandClient(addr, nodeType)
-	if err != nil {
-		return "", err
-	}
-	resp, err := remoteClient.Call(ctx, cmd, args)
-	if err != nil {
-		return "", err
-	} else {
-		return resp, nil
+	var results []*commandResult
+	for _, addr := range nodes {
+		remoteClient, err := client.GetRemoteCommandClient(addr, nodeType)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := remoteClient.Call(ctx, cmd, args)
+		if err != nil {
+			fmt.Printf("Node[%s] send remote command error[%s]\n", addr, err)
+			continue
+		}
+
+		if enableResolve {
+			var host, err = helper.Resolve(addr, helper.Addr2Host)
+			if err != nil {
+				return nil, err
+			}
+			addr = host
+		}
+
+		results = append(results, &commandResult{
+			NodeType: nodeType,
+			Address:  addr,
+			Command:  cmd,
+			Result:   resp,
+		})
 	}
 
+	return results, nil
 }

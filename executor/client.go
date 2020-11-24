@@ -21,15 +21,36 @@ type Client struct {
 	ReplicaPool *session.ReplicaManager
 
 	MetaAddresses []string
+
+	ReplicaAddresses []string
 }
 
 // NewClient creates a client for accessing Pegasus cluster for use of admin-cli.
 func NewClient(writer io.Writer, metaAddrs []string) *Client {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	meta := session.NewMetaManager(metaAddrs, session.NewNodeSession)
+	replicaPool := session.NewReplicaManager(session.NewNodeSession)
+
+	resp, err := meta.ListNodes(ctx, &admin.ListNodesRequest{
+		Status: admin.NodeStatus_NS_INVALID,
+	})
+	if err != nil {
+		return nil
+	}
+
+	var nodes []string
+	for _, node := range resp.Infos {
+		nodes = append(nodes, node.Address.GetAddress())
+	}
+
 	return &Client{
-		Writer:        writer,
-		Meta:          session.NewMetaManager(metaAddrs, session.NewNodeSession),
-		ReplicaPool:   session.NewReplicaManager(session.NewNodeSession),
-		MetaAddresses: metaAddrs,
+		Writer:           writer,
+		Meta:             meta,
+		ReplicaPool:      replicaPool,
+		MetaAddresses:    metaAddrs,
+		ReplicaAddresses: nodes,
 	}
 }
 
@@ -66,19 +87,8 @@ func (client *Client) GetPerfCounterClient(addr string) (*aggregate.PerfSession,
 }
 
 func (client *Client) validateReplicaAddress(addr string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	var (
-		resp, err = client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
-			Status: admin.NodeStatus_NS_INVALID,
-		})
-	)
-	if err != nil {
-		return err
-	}
-
-	for _, node := range resp.Infos {
-		if node.Address.GetAddress() == addr {
+	for _, node := range client.ReplicaAddresses {
+		if node == addr {
 			return nil
 		}
 	}
