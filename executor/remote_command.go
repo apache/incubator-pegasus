@@ -78,7 +78,7 @@ func sendRemoteCommand(client *Client, nodeType session.NodeType, nodes []string
 
 		var host, errResolve = helper.Resolve(addr, helper.Addr2Host)
 		if errResolve == nil {
-			addr = fmt.Sprintf("%s[%s]", addr, host)
+			addr = fmt.Sprintf("%s[%s]", host, addr)
 		}
 		if errCall != nil {
 			fmt.Printf("Node[%s] send remote command error[%s]\n", addr, errCall)
