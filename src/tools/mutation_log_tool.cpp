@@ -25,7 +25,7 @@
  */
 
 #include <dsn/dist/replication/mutation_log_tool.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include "replica/mutation_log.h"
 
 namespace dsn {

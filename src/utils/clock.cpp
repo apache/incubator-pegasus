@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 
 #include <dsn/utility/clock.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include <dsn/utility/dlib.h>
 #include <dsn/utility/smart_pointers.h>
 

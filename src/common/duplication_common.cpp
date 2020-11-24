@@ -28,7 +28,7 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/singleton.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include <nlohmann/json.hpp>
 
 namespace dsn {

@@ -23,7 +23,7 @@
 #include <krb5/krb5.h>
 
 #include <dsn/utility/defer.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
 #include <dsn/utility/filesystem.h>

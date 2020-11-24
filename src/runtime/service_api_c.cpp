@@ -39,7 +39,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/process_utils.h>
 #include <dsn/utility/flags.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include <dsn/utility/errors.h>
 #include <dsn/dist/fmt_logging.h>
 

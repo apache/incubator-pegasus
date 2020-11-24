@@ -11,7 +11,7 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/utility/config_api.h>
 #include <dsn/utility/output_utils.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"

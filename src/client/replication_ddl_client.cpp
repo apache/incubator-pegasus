@@ -41,7 +41,7 @@
 #include <dsn/utility/error_code.h>
 #include <dsn/utility/output_utils.h>
 #include <fmt/format.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 
 #include "common/replication_common.h"
 

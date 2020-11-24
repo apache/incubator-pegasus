@@ -26,7 +26,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 
 #include "meta/server_load_balancer.h"
 #include "meta/meta_server_failure_detector.h"

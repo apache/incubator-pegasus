@@ -181,7 +181,7 @@ message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
         static_cast<char *>(dsn::tls_trans_malloc(sizeof(message_header))),
         [](char *c) { dsn::tls_trans_free(c); });
     msg->header = reinterpret_cast<message_header *>(header_holder.get());
-    memset(msg->header, 0, sizeof(message_header));
+    msg->header = {}; // initialize to empty struct
     msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
 
     if (old_msg.buffers.size() == 1) {

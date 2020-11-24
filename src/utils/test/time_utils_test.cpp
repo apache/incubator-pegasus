@@ -24,13 +24,14 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include <gtest/gtest.h>
+#include <dsn/c/api_layer1.h>
 
 namespace dsn {
 namespace utils {
 
-TEST(core, hh_mm_to_seconds)
+TEST(time_utils, hh_mm_to_seconds)
 {
     ASSERT_EQ(hh_mm_to_seconds("00:00"), 0);
     ASSERT_EQ(hh_mm_to_seconds("23:59"), 86340);
@@ -51,7 +52,7 @@ TEST(core, hh_mm_to_seconds)
     ASSERT_EQ(hh_mm_to_seconds("01b"), -1);
 }
 
-TEST(core, get_unix_sec_today_midnight)
+TEST(time_utils, get_unix_sec_today_midnight)
 {
     ASSERT_LT(0, get_unix_sec_today_midnight());
     ASSERT_LE(get_unix_sec_today_midnight(), time(nullptr));
@@ -59,7 +60,7 @@ TEST(core, get_unix_sec_today_midnight)
     ASSERT_LT(time(nullptr) - get_unix_sec_today_midnight(), 86400);
 }
 
-TEST(core, hh_mm_today_to_unix_sec)
+TEST(time_utils, hh_mm_today_to_unix_sec)
 {
     ASSERT_EQ(get_unix_sec_today_midnight() + hh_mm_to_seconds("0:0"),
               hh_mm_today_to_unix_sec("0:0"));
@@ -78,12 +79,27 @@ TEST(core, hh_mm_today_to_unix_sec)
     ASSERT_EQ(hh_mm_today_to_unix_sec("01b"), -1);
 }
 
-TEST(core, get_current_physical_time_ns)
+TEST(time_utils, get_current_physical_time_ns)
 {
     int64_t ts_ns = get_current_physical_time_ns();
     ASSERT_LT(0, ts_ns);
     ASSERT_GE(get_current_physical_time_ns() - ts_ns, 0);
     ASSERT_LT(get_current_physical_time_ns() - ts_ns, 1e7); // < 10 ms
+}
+
+TEST(time_utils, time_ms_to_string)
+{
+    char buf[64];
+    time_ms_to_string(1605091506136, buf);
+    // time differ between time zones,
+    // the real time 2020-11-11 18:45:06.136 (UTC+8)
+    // so it must be 2020-11-1x xx:45:06.136
+    ASSERT_EQ(std::string(buf).substr(0, 9), "2020-11-1");
+    ASSERT_EQ(std::string(buf).substr(13, 10), ":45:06.136");
+
+    memset(buf, 0, sizeof(buf));
+    time_ms_to_string(dsn_now_ms(), buf);
+    ASSERT_EQ(strlen(buf), strlen("XXXX-XX-XX XX:XX:XX.XXX"));
 }
 
 } // namespace utils

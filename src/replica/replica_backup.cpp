@@ -1,7 +1,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <dsn/utility/filesystem.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/utility/flags.h>

@@ -16,7 +16,7 @@
 // under the License.
 
 #include <dsn/utility/output_utils.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 
 #include "builtin_http_calls.h"
 #include "http_call_registry.h"
