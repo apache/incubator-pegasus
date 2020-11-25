@@ -19,13 +19,13 @@ type NodeDetailInfo struct {
 	PrimaryCount   int
 	SecondaryCount int
 	// nodes -d
-	DiskTotalMB        int64
-	DiskAvailableMb    int64
-	DiskAvailableRatio int64
-	MemUsedMB          int64
-	BlockCacheMB       int64
-	MemTableMB         int64
-	MemIdxMB           int64
+	DiskTotalMB  int64
+	DiskUsedMb   int64
+	DiskRatio    int64
+	MemUsedMB    int64
+	BlockCacheMB int64
+	MemTableMB   int64
+	MemIdxMB     int64
 	// nodes -q
 	GetQPS    int64
 	MgetQPS   int64
@@ -44,28 +44,17 @@ func ListNodes(client *Client, detail bool) error {
 		return err
 	}
 
-	// formats into tabular
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-	var header = []string{"Node", "Status", "Replica", "Primary", "Secondary"}
-	if detail {
-		header = append(header, []string{"DiskTotalMB", "DiskAvaMb", "DiskAvaRatio",
-			"MemUsedMB", "BlockCacheMB", "MemTableMB", "MemIdxMB", "GetQPS", "MgetQPS", "PutQPS", "MputQPS",
-			"GetBytes", "MgetBytes", "PutBytes", "MputBytes"}...)
-	}
-
-	tabular.SetHeader(header)
-	tabular.SetAutoFormatHeaders(false)
+	var rowDatas [][]string
 	for _, node := range nodes {
-		rowData := []string{
+		rowDatas = append(rowDatas, []string{
 			node.Node,
 			node.Status,
 			strconv.Itoa(node.ReplicaCount),
 			strconv.Itoa(node.PrimaryCount),
 			strconv.Itoa(node.SecondaryCount),
 			strconv.FormatInt(node.DiskTotalMB, 10),
-			strconv.FormatInt(node.DiskAvailableMb, 10),
-			strconv.FormatInt(node.DiskAvailableRatio, 10),
+			strconv.FormatInt(node.DiskUsedMb, 10),
+			strconv.FormatInt(node.DiskRatio, 10),
 			strconv.FormatInt(node.MemUsedMB, 10),
 			strconv.FormatInt(node.BlockCacheMB, 10),
 			strconv.FormatInt(node.MemTableMB, 10),
@@ -77,11 +66,35 @@ func ListNodes(client *Client, detail bool) error {
 			strconv.FormatInt(node.GetBytes, 10),
 			strconv.FormatInt(node.MgetBytes, 10),
 			strconv.FormatInt(node.PutBytes, 10),
-			strconv.FormatInt(node.MputBytes, 10)}
-		tabular.Append(rowData[:len(header)])
+			strconv.FormatInt(node.MputBytes, 10)})
 	}
 
-	tabular.Render()
+	var baseHeader = []string{"Node", "Status"}
+	var replicaCountHeader = []string{"Replica", "Primary", "Secondary"}
+	var usageHeader = []string{"DiskTotalMB", "DiskUsedMb", "DiskRatio", "MemUsedMB", "BlockCacheMB", "MemTableMB", "MemIdxMB"}
+	var requestHeader = []string{"GetQPS", "MgetQPS", "PutQPS", "MputQPS", "GetBytes", "MgetBytes", "PutBytes", "MputBytes"}
+	var headers = [][]string{replicaCountHeader, usageHeader, requestHeader}
+
+	var headerIndex = 2
+	for _, header := range headers {
+		tabular := tablewriter.NewWriter(client)
+		tabular.SetAlignment(tablewriter.ALIGN_CENTER)
+		tabular.SetHeader(append(baseHeader, header...))
+		tabular.SetAutoFormatHeaders(false)
+
+		for _, rowData := range rowDatas {
+			tabular.Append(append([]string{rowData[0], rowData[1]}, rowData[headerIndex:headerIndex+len(header)]...))
+		}
+		headerIndex += len(header)
+
+		if !detail {
+			tabular.Render()
+			return nil
+		}
+
+		tabular.Render()
+	}
+
 	return nil
 }
 
@@ -125,7 +138,7 @@ func (node *NodeDetailInfo) setStatus(info *admin.NodeInfo) error {
 	if err != nil {
 		return err
 	}
-	node.Node = fmt.Sprintf("%s\n%s", host, info.Address.GetAddress())
+	node.Node = fmt.Sprintf("%s[%s]", host, info.Address.GetAddress())
 
 	node.Status = info.Status.String()
 	return nil
@@ -175,8 +188,8 @@ func (node *NodeDetailInfo) setUsageInfo(client *Client, addr string) error {
 		return err
 	}
 	node.DiskTotalMB = helper.GetNodeCounterValue(perfClient, "disk.capacity.total")
-	node.DiskAvailableMb = helper.GetNodeCounterValue(perfClient, "disk.available.total(MB)")
-	node.DiskAvailableRatio = helper.GetNodeCounterValue(perfClient, "disk.available.total.ratio")
+	node.DiskUsedMb = node.DiskTotalMB - helper.GetNodeCounterValue(perfClient, "disk.available.total(MB)")
+	node.DiskRatio = 100 - helper.GetNodeCounterValue(perfClient, "disk.available.total.ratio")
 	node.MemUsedMB = helper.GetNodeCounterValue(perfClient, "memused.res")
 	node.BlockCacheMB = helper.GetNodeCounterValue(perfClient, "rdb.block_cache.memory_usage")
 	node.MemTableMB = helper.GetNodeAggregateCounterValue(perfClient, "rdb.memtable.memory_usage") >> 20
