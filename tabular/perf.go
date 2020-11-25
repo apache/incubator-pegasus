@@ -55,7 +55,7 @@ type statFormatter func(float64) string
 // according to the predefined template.
 func PrintTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableStats) {
 	var sections map[string]interface{}
-	yaml.Unmarshal([]byte(tableStatsTemplate), &sections)
+	_ = yaml.Unmarshal([]byte(tableStatsTemplate), &sections)
 
 	for sect, columns := range sections {
 		// print section
@@ -65,7 +65,7 @@ func PrintTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableS
 		table.SetHeader([]string{sect})
 		table.Render()
 
-		header := append([]string{"AppID", "Name", "Partitions"})
+		header := []string{"AppID", "Name", "Partitions"}
 		var formatters []statFormatter
 		for columnName, attrs := range columns.(map[interface{}]interface{}) {
 			header = append(header, columnName.(string))
