@@ -1018,7 +1018,7 @@ void replica_stub::on_disk_migrate(replica_disk_migrate_rpc rpc)
 
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
-        rep->disk_migrator()->on_migrate_replica(request, response);
+        rep->disk_migrator()->on_migrate_replica(rpc); // THREAD_POOL_DEFAULT
     } else {
         response.err = ERR_OBJECT_NOT_FOUND;
     }
@@ -1624,21 +1624,16 @@ void replica_stub::on_gc()
     //
     // How to trigger memtable flush?
     //   we add a parameter `is_emergency' in dsn_app_async_checkpoint() function, when set true,
-    //   the undering
-    //   storage system should flush memtable as soon as possiable.
+    //   the undering storage system should flush memtable as soon as possiable.
     //
     // When to trigger memtable flush?
     //   1. Using `[replication].checkpoint_max_interval_hours' option, we can set max interval time
-    //   of two
-    //      adjacent checkpoints; If the time interval is arrived, then emergency checkpoint will be
-    //      triggered.
+    //   of two adjacent checkpoints; If the time interval is arrived, then emergency checkpoint
+    //   will be triggered.
     //   2. Using `[replication].log_shared_file_count_limit' option, we can set max file count of
-    //   shared log;
-    //      If the limit is exceeded, then emergency checkpoint will be triggered; Instead of
-    //      triggering all
-    //      replicas to do checkpoint, we will only trigger a few of necessary replicas which block
-    //      garbage
-    //      collection of the oldest log file.
+    //   shared log; If the limit is exceeded, then emergency checkpoint will be triggered; Instead
+    //   of triggering all replicas to do checkpoint, we will only trigger a few of necessary
+    //   replicas which block garbage collection of the oldest log file.
     //
     if (_log != nullptr) {
         replica_log_info_map gc_condition;

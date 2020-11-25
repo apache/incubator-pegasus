@@ -58,7 +58,11 @@ public:
     error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
                                       /*output*/ int64_t *last_decree) override
     {
-        *last_decree = _decree;
+        if (last_decree != nullptr) {
+            *last_decree = _decree;
+        }
+
+        utils::filesystem::create_file(fmt::format("{}/checkpoint.file", checkpoint_dir));
         return ERR_OK;
     }
     int on_request(message_ex *request) override { return 0; }

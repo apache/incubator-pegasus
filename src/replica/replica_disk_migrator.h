@@ -29,28 +29,38 @@ public:
     explicit replica_disk_migrator(replica *r);
     ~replica_disk_migrator();
 
-    void on_migrate_replica(const replica_disk_migrate_request &req,
-                            /*out*/ replica_disk_migrate_response &resp);
+    void on_migrate_replica(replica_disk_migrate_rpc rpc);
 
     disk_migration_status::type status() const { return _status; }
 
     void set_status(const disk_migration_status::type &status) { _status = status; }
 
 private:
-    bool check_migration_args(const replica_disk_migrate_request &req,
-                              /*out*/ replica_disk_migrate_response &resp);
+    bool check_migration_args(replica_disk_migrate_rpc rpc);
 
-    // TODO(jiashuo1)
     void migrate_replica(const replica_disk_migrate_request &req);
 
-    // TODO(jiashuo1)
+    bool init_target_dir(const replica_disk_migrate_request &req);
+    bool migrate_replica_checkpoint(const replica_disk_migrate_request &req);
+    bool migrate_replica_app_info(const replica_disk_migrate_request &req);
+
+    void close_current_replica();
     void update_replica_dir();
 
+    void reset_status() { _status = disk_migration_status::IDLE; }
+
 private:
+    const static std::string kReplicaDirTempSuffix;
+    const static std::string kDataDirFolder;
+    const static std::string kAppInfo;
+
     replica *_replica;
 
+    std::string _target_replica_dir; // /root/ssd_tag/gpid.pegasus/
+    std::string _target_data_dir;    // /root/ssd_tag/gpid.pegasus/data/rdb
     disk_migration_status::type _status{disk_migration_status::IDLE};
 
+    friend class replica;
     friend class replica_disk_migrate_test;
 };
 

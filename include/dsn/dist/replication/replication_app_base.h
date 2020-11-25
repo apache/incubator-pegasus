@@ -267,6 +267,7 @@ private:
     friend class replica;
     friend class replica_stub;
     friend class mock_replica;
+    friend class replica_disk_migrator;
 
     ::dsn::error_code open_internal(replica *r);
     ::dsn::error_code

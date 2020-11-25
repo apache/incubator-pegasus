@@ -409,6 +409,8 @@ private:
     friend class replica_bulk_loader;
     friend class replica_split_manager;
     friend class replica_disk_migrator;
+    friend class replica_disk_test;
+    friend class replica_disk_migrate_test;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;
