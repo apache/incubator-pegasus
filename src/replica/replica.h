@@ -132,7 +132,9 @@ public:
     //    messages and tools from/for meta server
     //
     void on_config_proposal(configuration_update_request &proposal);
-    void on_config_sync(const app_info &info, const partition_configuration &config);
+    void on_config_sync(const app_info &info,
+                        const partition_configuration &config,
+                        split_status::type meta_split_status);
     void on_cold_backup(const backup_request &request, /*out*/ backup_response &response);
 
     //

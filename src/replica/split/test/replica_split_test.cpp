@@ -341,6 +341,16 @@ public:
         _child_replica->tracker()->wait_outstanding_tasks();
     }
 
+    void test_trigger_primary_parent_split(split_status::type meta_split_status,
+                                           split_status::type local_split_status,
+                                           int32_t old_partition_version)
+    {
+        parent_set_split_status(local_split_status);
+        _parent_split_mgr->_partition_version.store(old_partition_version);
+        _parent_split_mgr->trigger_primary_parent_split(NEW_PARTITION_COUNT, meta_split_status);
+        _parent_replica->tracker()->wait_outstanding_tasks();
+    }
+
     group_check_response test_trigger_secondary_parent_split(split_status::type meta_split_status,
                                                              split_status::type local_split_status)
     {
@@ -732,6 +742,39 @@ TEST_F(replica_split_test, register_child_reply_test)
             ASSERT_EQ(_parent_split_mgr->get_partition_version(),
                       test.expected_parent_partition_version);
         }
+    }
+}
+
+// trigger_primary_parent_split unit test
+TEST_F(replica_split_test, trigger_primary_parent_split_test)
+{
+    fail::cfg("replica_broadcast_group_check", "return()");
+    generate_child();
+
+    // Test cases:
+    // - meta splitting with lack of secondary
+    // - meta splitting with local not_split(See parent_start_split_tests)
+    // - meta splitting with local splitting(See parent_start_split_tests)
+    // - TODO(heyuchen): add other split status
+    struct primary_parent_test
+    {
+        bool lack_of_secondary;
+        split_status::type meta_split_status;
+        int32_t old_partition_version;
+        split_status::type old_split_status;
+        split_status::type expected_split_status;
+    } tests[]{{true,
+               split_status::SPLITTING,
+               OLD_PARTITION_COUNT - 1,
+               split_status::NOT_SPLIT,
+               split_status::NOT_SPLIT}};
+
+    for (const auto &test : tests) {
+        mock_parent_primary_configuration(test.lack_of_secondary);
+        test_trigger_primary_parent_split(
+            test.meta_split_status, test.old_split_status, test.old_partition_version);
+        ASSERT_EQ(parent_get_split_status(), test.expected_split_status);
+        // TODO(heyuchen): add other check
     }
 }
 

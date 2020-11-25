@@ -1324,10 +1324,10 @@ void replica_stub::on_node_query_reply(error_code err,
             return;
         }
 
-        ddebug("process query node partitions response for resp.err = ERR_OK, "
-               "partitions_count(%d), gc_replicas_count(%d)",
-               (int)resp.partitions.size(),
-               (int)resp.gc_replicas.size());
+        ddebug_f("process query node partitions response for resp.err = ERR_OK, "
+                 "partitions_count({}), gc_replicas_count({})",
+                 resp.partitions.size(),
+                 resp.gc_replicas.size());
 
         replicas rs;
         {
@@ -1397,7 +1397,10 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
 {
     replica_ptr replica = get_replica(req.config.pid);
     if (replica != nullptr) {
-        replica->on_config_sync(req.info, req.config);
+        replica->on_config_sync(req.info,
+                                req.config,
+                                req.__isset.meta_split_status ? req.meta_split_status
+                                                              : split_status::NOT_SPLIT);
     } else {
         if (req.config.primary == _primary_address) {
             ddebug("%s@%s: replica not exists on replica server, which is primary, remove it "

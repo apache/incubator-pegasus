@@ -1104,6 +1104,48 @@ void replica_split_manager::child_handle_async_learn_error() // on child partiti
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::trigger_primary_parent_split(
+    const int32_t meta_partition_count,
+    const split_status::type meta_split_status) // on primary parent partition
+{
+    dcheck_eq_replica(status(), partition_status::PS_PRIMARY);
+    dcheck_eq_replica(_replica->_app_info.partition_count * 2, meta_partition_count);
+    ddebug_replica("app({}) partition count changed, local({}) VS meta({}), split_status local({}) "
+                   "VS meta({})",
+                   _replica->_app_info.app_name,
+                   _replica->_app_info.partition_count,
+                   meta_partition_count,
+                   enum_to_string(_split_status),
+                   enum_to_string(meta_split_status));
+
+    if (meta_split_status == split_status::SPLITTING) {
+        if (!_replica->_primary_states.learners.empty() ||
+            _replica->_primary_states.membership.secondaries.size() + 1 <
+                _replica->_primary_states.membership.max_replica_count) {
+            dwarn_replica(
+                "there are {} learners or not have enough secondaries(count is {}), wait for "
+                "next round",
+                _replica->_primary_states.learners.size(),
+                _replica->_primary_states.membership.secondaries.size());
+            return;
+        }
+
+        group_check_request add_child_request;
+        add_child_request.app = _replica->_app_info;
+        _replica->_primary_states.get_replica_config(status(), add_child_request.config);
+        auto child_gpid =
+            gpid(get_gpid().get_app_id(),
+                 get_gpid().get_partition_index() + _replica->_app_info.partition_count);
+        add_child_request.__set_child_gpid(child_gpid);
+        parent_start_split(add_child_request);
+        // TODO(heyuchen): broadcast group check request to secondaries to start split
+        return;
+    }
+
+    // TODO(heyuchen): add other split_status check
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
 void replica_split_manager::trigger_secondary_parent_split(
     const group_check_request &request,
     /*out*/ group_check_response &response) // on secondary parent partition

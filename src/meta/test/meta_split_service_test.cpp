@@ -97,6 +97,21 @@ public:
         return rpc.response().err;
     }
 
+    int32_t on_config_sync(configuration_query_by_node_request req)
+    {
+        auto request = make_unique<configuration_query_by_node_request>(req);
+        configuration_query_by_node_rpc rpc(std::move(request), RPC_CM_CONFIG_SYNC);
+        _ss->on_config_sync(rpc);
+        wait_all();
+        int32_t splitting_count = 0;
+        for (auto p : rpc.response().partitions) {
+            if (p.__isset.meta_split_status) {
+                ++splitting_count;
+            }
+        }
+        return splitting_count;
+    }
+
     void mock_app_partition_split_context()
     {
         app->partition_count = NEW_PARTITION_COUNT;
@@ -200,6 +215,53 @@ TEST_F(meta_split_service_test, register_child_test)
         ASSERT_EQ(register_child(PARENT_INDEX, test.parent_ballot, test.wait_zk),
                   test.expected_err);
     }
+}
+
+// config sync unit tests
+TEST_F(meta_split_service_test, on_config_sync_test)
+{
+    create_app("not_splitting_app");
+    auto not_splitting_app = find_app("not_splitting_app");
+    gpid pid1 = gpid(app->app_id, PARENT_INDEX);
+    gpid pid2 = gpid(not_splitting_app->app_id, 0);
+    // mock meta server node state
+    node_state node;
+    node.put_partition(pid1, true);
+    node.put_partition(pid2, true);
+    mock_node_state(NODE, node);
+    // mock request
+    replica_info info1, info2;
+    info1.pid = pid1;
+    info2.pid = pid2;
+    configuration_query_by_node_request req;
+    req.node = NODE;
+    req.__isset.stored_replicas = true;
+    req.stored_replicas.emplace_back(info1);
+    req.stored_replicas.emplace_back(info2);
+
+    // Test case:
+    // - partition is splitting
+    // - partition is not splitting
+    // - TODO(heyuchen): partition split is paused({false, true, 1})
+    struct config_sync_test
+    {
+        bool mock_child_registered;
+        bool mock_parent_paused;
+        int32_t expected_count;
+    } tests[] = {{false, false, 1}, {true, false, 0}};
+
+    for (const auto &test : tests) {
+        mock_app_partition_split_context();
+        if (test.mock_child_registered) {
+            mock_child_registered();
+        }
+        if (test.mock_parent_paused) {
+            // TODO(heyuchen): TBD
+        }
+        ASSERT_EQ(on_config_sync(req), test.expected_count);
+    }
+
+    drop_app("not_splitting_app");
 }
 
 } // namespace replication
