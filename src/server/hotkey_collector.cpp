@@ -39,7 +39,6 @@ DSN_DEFINE_uint32(
     3,
     "the variance threshold to detect hot key during fine analysis of hotkey detection");
 
-// TODO: (Tangyanzhao) add a limit to avoid changing when detecting
 DSN_DEFINE_uint32("pegasus.server",
                   hotkey_buckets_num,
                   37,
@@ -58,7 +57,7 @@ DSN_DEFINE_validator(hotkey_buckets_num, [](int32_t bucket_num) -> bool {
     return true;
 });
 
-DSN_DEFINE_int32(
+DSN_DEFINE_uint32(
     "pegasus.server",
     max_seconds_to_detect_hotkey,
     150,
@@ -101,20 +100,78 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
 }
 
 // TODO: (Tangyanzhao) replace it to xxhash
-/*extern*/ int get_bucket_id(dsn::string_view data)
+
+/*extern*/ int get_bucket_id(dsn::string_view data, int bucket_num)
 {
-    size_t hash_value = boost::hash_range(data.begin(), data.end());
-    return static_cast<int>(hash_value % FLAGS_hotkey_buckets_num);
+    return static_cast<int>(boost::hash_range(data.begin(), data.end()) % bucket_num);
 }
 
 hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_type,
                                    dsn::replication::replica_base *r_base)
-    : replica_base(r_base),
-      _state(hotkey_collector_state::STOPPED),
-      _hotkey_type(hotkey_type),
-      _internal_collector(std::make_shared<hotkey_empty_data_collector>(this)),
-      _collector_start_time_second(0)
+    : replica_base(r_base), _hotkey_type(hotkey_type)
 {
+    int now_hash_bucket_num = FLAGS_hotkey_buckets_num;
+    _internal_coarse_collector =
+        std::make_shared<hotkey_coarse_data_collector>(this, now_hash_bucket_num);
+    _internal_fine_collector =
+        std::make_shared<hotkey_fine_data_collector>(this, now_hash_bucket_num);
+    _internal_empty_collector = std::make_shared<hotkey_empty_data_collector>(this);
+}
+
+inline void hotkey_collector::change_state_to_stopped()
+{
+    _state.store(hotkey_collector_state::STOPPED);
+    _result.if_find_result.store(false);
+    _internal_coarse_collector->clear();
+    _internal_fine_collector->clear();
+}
+
+inline void hotkey_collector::change_state_to_coarse_detecting()
+{
+    _state.store(hotkey_collector_state::COARSE_DETECTING);
+    _collector_start_time_second.store(dsn_now_s());
+}
+
+inline void hotkey_collector::change_state_to_fine_detecting()
+{
+    _state.store(hotkey_collector_state::FINE_DETECTING);
+    _internal_fine_collector->change_target_bucket(_result.coarse_bucket_index);
+}
+
+inline void hotkey_collector::change_state_to_finished()
+{
+    _state.store(hotkey_collector_state::FINISHED);
+    _result.if_find_result.store(true);
+}
+
+inline std::shared_ptr<internal_collector_base> hotkey_collector::get_internal_collector_by_state()
+{
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+        return _internal_coarse_collector;
+    case hotkey_collector_state::FINE_DETECTING:
+        return _internal_fine_collector;
+    default:
+        return _internal_empty_collector;
+    }
+}
+
+inline void hotkey_collector::change_state_by_result()
+{
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+        if (_result.coarse_bucket_index != -1) {
+            change_state_to_fine_detecting();
+        }
+        break;
+    case hotkey_collector_state::FINE_DETECTING:
+        if (!_result.hot_hash_key.empty()) {
+            change_state_to_finished();
+        }
+        break;
+    default:
+        break;
+    }
 }
 
 void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request &req,
@@ -145,19 +202,24 @@ void hotkey_collector::capture_raw_key(const dsn::blob &raw_key, int64_t weight)
 void hotkey_collector::capture_hash_key(const dsn::blob &hash_key, int64_t weight)
 {
     // TODO: (Tangyanzhao) add a unit test to ensure data integrity
-    _internal_collector->capture_data(hash_key, weight);
+    switch (_state.load()) {
+    case hotkey_collector_state::COARSE_DETECTING:
+    case hotkey_collector_state::FINE_DETECTING:
+        get_internal_collector_by_state()->capture_data(hash_key, weight > 0 ? weight : 1);
+        return;
+    default:
+        return;
+    }
 }
 
 void hotkey_collector::analyse_data()
 {
     switch (_state.load()) {
     case hotkey_collector_state::COARSE_DETECTING:
+    case hotkey_collector_state::FINE_DETECTING:
         if (!terminate_if_timeout()) {
-            _internal_collector->analyse_data(_result);
-            if (_result.coarse_bucket_index != -1) {
-                // TODO: (Tangyanzhao) reset _internal_collector to hotkey_fine_data_collector
-                _state.store(hotkey_collector_state::FINE_DETECTING);
-            }
+            get_internal_collector_by_state()->analyse_data(_result);
+            change_state_by_result();
         }
         return;
     default:
@@ -186,9 +248,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         dwarn_replica(hint);
         return;
     case hotkey_collector_state::STOPPED:
-        _collector_start_time_second = dsn_now_s();
-        _internal_collector.reset(new hotkey_coarse_data_collector(this));
-        _state.store(hotkey_collector_state::COARSE_DETECTING);
+        change_state_to_coarse_detecting();
         resp.err = dsn::ERR_OK;
         hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
         ddebug_replica(hint);
@@ -204,32 +264,28 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
 
 void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
 {
-    terminate();
+    change_state_to_stopped();
     resp.err = dsn::ERR_OK;
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
     ddebug_replica(hint);
 }
 
-void hotkey_collector::terminate()
-{
-    _state.store(hotkey_collector_state::STOPPED);
-    _internal_collector.reset();
-    _collector_start_time_second = 0;
-}
-
 bool hotkey_collector::terminate_if_timeout()
 {
-    if (dsn_now_s() >= _collector_start_time_second + FLAGS_max_seconds_to_detect_hotkey) {
+    if (dsn_now_s() >= _collector_start_time_second.load() + FLAGS_max_seconds_to_detect_hotkey) {
         ddebug_replica("hotkey collector work time is exhausted but no hotkey has been found");
-        terminate();
+        change_state_to_stopped();
         return true;
     }
     return false;
 }
 
-hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
-    : internal_collector_base(base), _hash_buckets(FLAGS_hotkey_buckets_num)
+hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base,
+                                                           uint32_t hotkey_buckets_num)
+    : internal_collector_base(base),
+      _hash_bucket_num(hotkey_buckets_num),
+      _hash_buckets(hotkey_buckets_num)
 {
     for (auto &bucket : _hash_buckets) {
         bucket.store(0);
@@ -238,12 +294,12 @@ hotkey_coarse_data_collector::hotkey_coarse_data_collector(replica_base *base)
 
 void hotkey_coarse_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    _hash_buckets[get_bucket_id(hash_key)].fetch_add(weight);
+    _hash_buckets[get_bucket_id(hash_key, _hash_bucket_num)].fetch_add(weight);
 }
 
 void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 {
-    std::vector<uint64_t> buckets(FLAGS_hotkey_buckets_num);
+    std::vector<uint64_t> buckets(_hash_bucket_num);
     for (int i = 0; i < buckets.size(); i++) {
         buckets[i] = _hash_buckets[i].load();
         _hash_buckets[i].store(0);
@@ -256,24 +312,31 @@ void hotkey_coarse_data_collector::analyse_data(detect_hotkey_result &result)
 
 void hotkey_coarse_data_collector::clear()
 {
-    for (int i = 0; i < FLAGS_hotkey_buckets_num; i++) {
+    for (int i = 0; i < _hash_bucket_num; i++) {
         _hash_buckets[i].store(0);
     }
 }
 
 hotkey_fine_data_collector::hotkey_fine_data_collector(replica_base *base,
-                                                       int target_bucket_index,
-                                                       int max_queue_size)
+                                                       uint32_t hotkey_buckets_num,
+                                                       uint32_t max_queue_size)
     : internal_collector_base(base),
       _max_queue_size(max_queue_size),
-      _target_bucket_index(target_bucket_index),
-      _capture_key_queue(max_queue_size)
+      _capture_key_queue(max_queue_size),
+      _hash_bucket_num(hotkey_buckets_num)
+
 {
+    _target_bucket_index.store(-1);
+}
+
+void hotkey_fine_data_collector::change_target_bucket(int target_bucket_index)
+{
+    _target_bucket_index.store(target_bucket_index);
 }
 
 void hotkey_fine_data_collector::capture_data(const dsn::blob &hash_key, uint64_t weight)
 {
-    if (get_bucket_id(hash_key) != _target_bucket_index) {
+    if (get_bucket_id(hash_key, _hash_bucket_num) != _target_bucket_index.load()) {
         return;
     }
     // abandon the key if enqueue failed (possibly because not enough room to enqueue)
@@ -325,9 +388,9 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
         }
     }
 
-    // hash_key_counts stores the number of occurrences of each string captured in a period of time
-    // The size of weights influences our hotkey determination strategy
-    // weights.size() <= 2: the hotkey must exist (the most weighted key), because
+    // hash_key_counts stores the number of occurrences of each string captured in a period of
+    // time The size of weights influences our hotkey determination strategy weights.size() <=
+    // 2: the hotkey must exist (the most weighted key), because
     //                      the two-level filtering significantly reduces the
     //                      possibility that the hottest key is not the actual hotkey.
     // weights.size() >= 3: use find_outlier_index to determine whether a hotkey exists
@@ -340,6 +403,7 @@ void hotkey_fine_data_collector::analyse_data(detect_hotkey_result &result)
 
 void hotkey_fine_data_collector::clear()
 {
+    _target_bucket_index.store(-1);
     std::pair<dsn::blob, uint64_t> key_weight_pair;
     while (_capture_key_queue.try_dequeue(key_weight_pair)) {
     }

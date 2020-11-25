@@ -48,7 +48,8 @@ TEST(hotkey_collector_test, get_bucket_id_test)
 {
     int bucket_id = -1;
     for (int i = 0; i < 1000000; i++) {
-        bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)));
+        bucket_id = get_bucket_id(dsn::blob::create_from_bytes(generate_hash_key_by_random(false)),
+                                  FLAGS_hotkey_buckets_num);
         ASSERT_GE(bucket_id, 0);
         ASSERT_LT(bucket_id, FLAGS_hotkey_buckets_num);
     }
@@ -81,7 +82,7 @@ TEST(hotkey_collector_test, find_outlier_index_test)
 class coarse_collector_test : public pegasus_server_test_base
 {
 public:
-    coarse_collector_test() : coarse_collector(_server.get()){};
+    coarse_collector_test() : coarse_collector(_server.get(), FLAGS_hotkey_buckets_num){};
 
     hotkey_coarse_data_collector coarse_collector;
 
@@ -134,9 +135,11 @@ class fine_collector_test : public pegasus_server_test_base
 public:
     int max_queue_size = 1000;
     int target_bucket_index = 0;
-    fine_collector_test() : fine_collector(_server.get(), 0, max_queue_size){};
-
     hotkey_fine_data_collector fine_collector;
+    fine_collector_test() : fine_collector(_server.get(), 1, max_queue_size)
+    {
+        fine_collector.change_target_bucket(0);
+    };
 
     int now_queue_size()
     {
@@ -153,8 +156,6 @@ public:
 
 TEST_F(fine_collector_test, fine_collector)
 {
-    auto hotkey_buckets_num_backup = FLAGS_hotkey_buckets_num;
-    FLAGS_hotkey_buckets_num = 1;
     detect_hotkey_result result;
 
     for (int i = 0; i < 1000; i++) {
@@ -192,8 +193,6 @@ TEST_F(fine_collector_test, fine_collector)
     }
     _tracker.wait_outstanding_tasks();
     ASSERT_LT(now_queue_size(), max_queue_size * 2);
-
-    FLAGS_hotkey_buckets_num = hotkey_buckets_num_backup;
 }
 
 } // namespace server
