@@ -311,7 +311,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         // If write buffer manager is enabled, all replicas(one DB instance for each
         // replica) on this server will share the same write buffer manager object,
         // thus the same block cache object. It's convenient to control the total memory
-        // of memtables and bloack caches used by this server
+        // of memtables and block caches used by this server
         static std::once_flag flag;
         std::call_once(flag, [&]() {
             int64_t total_size_across_write_buffer = dsn_config_get_value_int64(
@@ -340,21 +340,21 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     std::string index_type = dsn_config_get_value_string(
             "pegasus.server",
             "rocksdb_index_type",
-            "kBinarySearch",
+            "binary_search",
             "The index type that will be used for this table.");
     const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     index_type_string_map = {
-        {"kBinarySearch", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
-        {"kHashSearch", rocksdb::BlockBasedTableOptions::IndexType::kHashSearch},
-        {"kTwoLevelIndexSearch",
+        {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
+        {"hash_search", rocksdb::BlockBasedTableOptions::IndexType::kHashSearch},
+        {"two_level_index_search",
          rocksdb::BlockBasedTableOptions::IndexType::kTwoLevelIndexSearch},
-        {"kBinarySearchWithFirstKey",
+        {"binary_search_with_first_key",
          rocksdb::BlockBasedTableOptions::IndexType::kBinarySearchWithFirstKey}
     };
     auto index_type_item = index_type_string_map.find(index_type);
     dassert(index_type_item != index_type_string_map.end(),
-            "[pegasus.server]rocksdb_index_type shold be one among kBinarySearch, "
-            "kHashSearch, kTwoLevelIndexSearch or kBinarySearchWithFirstKey.");
+            "[pegasus.server]rocksdb_index_type shold be one among binary_search, "
+            "hash_search, two_level_index_search or binary_search_with_first_key.");
     tbl_opts.index_type = index_type_item->second;
     ddebug("rocksdb_index_type = %s", index_type.c_str());
 
@@ -362,7 +362,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "pegasus.server",
             "rocksdb_partition_filters",
             false,
-            "Note: currently this option requires kTwoLevelIndexSearch to be set as well. "
+            "Note: currently this option requires two_level_index_search to be set as well. "
             "Use partitioned full filters for each SST file. This option is "
             "incompatibile with block-based filters.");
     ddebug("rocksdb_partition_filters = %d", tbl_opts.partition_filters);
@@ -372,7 +372,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "rocksdb_metadata_block_size",
             4096,
             "Block size for partitioned metadata. Currently applied to indexes when "
-            "kTwoLevelIndexSearch is used and to filters when partition_filters is used. "
+            "two_level_index_search is used and to filters when partition_filters is used. "
             "Note: Since in the current implementation the filters and index partitions "
             "are aligned, an index/filter block is created when either index or filter "
             "block size reaches the specified limit. "
