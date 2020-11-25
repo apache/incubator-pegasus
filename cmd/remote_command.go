@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"admin-cli/executor"
-	"admin-cli/shell"
-
 	"github.com/desertbit/grumble"
 )
 
@@ -30,16 +28,6 @@ func init() {
 			return executor.RemoteCommand(pegasusClient, "replica", c.Flags.String("node"), c.Flags.String("command"), c.Flags.String("arguments"))
 		},
 	})
-
-	rootCmd.AddCommand(&grumble.Command{
-		Name:  "all",
-		Help:  "send remote command to meta and replica server",
-		Flags: initFlag,
-		Run: func(c *grumble.Context) error {
-			return executor.RemoteCommand(pegasusClient, "all", c.Flags.String("node"), c.Flags.String("command"), c.Flags.String("arguments"))
-		},
-	})
-	shell.AddCommand(rootCmd)
 }
 
 func initFlag(f *grumble.Flags) {

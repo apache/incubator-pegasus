@@ -32,6 +32,7 @@ func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd s
 	}
 
 	var results []*commandResult
+
 	if len(node) == 0 {
 		if nodeType == session.NodeTypeMeta {
 			resp, err := sendRemoteCommand(client, nodeType, client.MetaAddresses, cmd, arguments)
@@ -45,21 +46,17 @@ func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd s
 				return err
 			}
 			results = resp
-		} else {
-			respMetas, errMeta := sendRemoteCommand(client, session.NodeTypeMeta, client.MetaAddresses, cmd, arguments)
-			if errMeta != nil {
-				return errMeta
-			}
-			respReplicas, errReplica := sendRemoteCommand(client, session.NodeTypeReplica, client.ReplicaAddresses, cmd, arguments)
-			if errReplica != nil {
-				return errReplica
-			}
-			results = append(results, respMetas...)
-			results = append(results, respReplicas...)
 		}
+	} else {
+		resp, err := sendRemoteCommand(client, nodeType, []string{node}, cmd, arguments)
+		if err != nil {
+			return err
+		}
+		results = resp
 	}
+
 	for _, result := range results {
-		fmt.Printf("%s[%s][%s] : %s\n", result.Address, result.NodeType, result.Command, result.Result)
+		fmt.Printf("[%s]%s[%s] : %s\n", result.NodeType, result.Address, result.Command, result.Result)
 	}
 	return nil
 }

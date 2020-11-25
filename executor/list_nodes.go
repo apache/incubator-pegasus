@@ -125,7 +125,7 @@ func (node *NodeDetailInfo) setStatus(info *admin.NodeInfo) error {
 	if err != nil {
 		return err
 	}
-	node.Node = fmt.Sprintf("%s[%s]", host, info.Address.GetAddress())
+	node.Node = fmt.Sprintf("%s\n%s", host, info.Address.GetAddress())
 
 	node.Status = info.Status.String()
 	return nil
