@@ -13,7 +13,7 @@ func init() {
 		Help:      "show the app partition configuration in node",
 		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
-			var appName = ""
+			var appName string
 			if len(c.Args) == 1 {
 				appName = c.Args[0]
 			} else {
