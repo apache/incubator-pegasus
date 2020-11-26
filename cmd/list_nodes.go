@@ -12,7 +12,7 @@ func init() {
 		Aliases: []string{"nodes"},
 		Help:    "list all nodes in the cluster",
 		Flags: func(f *grumble.Flags) {
-			f.Bool("d", "detail", false, "show detail replica count in all node")
+			f.Bool("d", "detail", false, "show detail node info in all node")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.ListNodes(

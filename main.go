@@ -13,6 +13,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+
 func main() {
 	// pegasus-go-client's logs use the same logger as admin-cli.
 	pegalog.SetLogger(logrus.StandardLogger())
