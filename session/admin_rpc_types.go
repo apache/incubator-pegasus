@@ -59,6 +59,31 @@ func (m *MetaManager) CreateApp(ctx context.Context, req *admin.CreateAppRequest
 	return nil, err
 }
 
+func (ms *metaSession) recallApp(ctx context.Context, req *admin.RecallAppRequest) (*admin.RecallAppResponse, error) {
+	arg := admin.NewAdminClientRecallAppArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_RECALL_APP")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientRecallAppResult)
+	return ret.GetSuccess(), nil
+}
+
+// RecallApp is auto-generated
+func (m *MetaManager) RecallApp(ctx context.Context, req *admin.RecallAppRequest) (*admin.RecallAppResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.recallApp(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.RecallAppResponse), fmt.Errorf("RecallApp failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.RecallAppResponse), nil
+	}
+	return nil, err
+}
+
 func (ms *metaSession) listApps(ctx context.Context, req *admin.ListAppsRequest) (*admin.ListAppsResponse, error) {
 	arg := admin.NewAdminClientListAppsArgs()
 	arg.Req = req

@@ -43,6 +43,18 @@ struct drop_app_response
     1:base.error_code err;
 }
 
+struct recall_app_request
+{
+    1:i32 app_id;
+    2:string new_app_name;
+}
+
+struct recall_app_response
+{
+    1:base.error_code err;
+    2:app_info info;
+}
+
 enum app_status
 {
     AS_INVALID,
@@ -306,6 +318,8 @@ service admin_client
     create_app_response create_app(1:create_app_request req);
     
     drop_app_response drop_app(1:drop_app_request req);
+
+    recall_app_response recall_app(1:recall_app_request req);
     
     list_apps_response list_apps(1:list_apps_request req);
 

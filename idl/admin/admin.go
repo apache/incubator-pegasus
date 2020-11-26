@@ -1489,6 +1489,306 @@ func (p *DropAppResponse) String() string {
 }
 
 // Attributes:
+//  - AppID
+//  - NewAppName_
+type RecallAppRequest struct {
+	AppID       int32  `thrift:"app_id,1" db:"app_id" json:"app_id"`
+	NewAppName_ string `thrift:"new_app_name,2" db:"new_app_name" json:"new_app_name"`
+}
+
+func NewRecallAppRequest() *RecallAppRequest {
+	return &RecallAppRequest{}
+}
+
+func (p *RecallAppRequest) GetAppID() int32 {
+	return p.AppID
+}
+
+func (p *RecallAppRequest) GetNewAppName_() string {
+	return p.NewAppName_
+}
+func (p *RecallAppRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppID = v
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.NewAppName_ = v
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("recall_app_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_id: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_id: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("new_app_name", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:new_app_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.NewAppName_)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.new_app_name (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:new_app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RecallAppRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - Info
+type RecallAppResponse struct {
+	Err  *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
+	Info *AppInfo        `thrift:"info,2" db:"info" json:"info"`
+}
+
+func NewRecallAppResponse() *RecallAppResponse {
+	return &RecallAppResponse{}
+}
+
+var RecallAppResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *RecallAppResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return RecallAppResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+var RecallAppResponse_Info_DEFAULT *AppInfo
+
+func (p *RecallAppResponse) GetInfo() *AppInfo {
+	if !p.IsSetInfo() {
+		return RecallAppResponse_Info_DEFAULT
+	}
+	return p.Info
+}
+func (p *RecallAppResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *RecallAppResponse) IsSetInfo() bool {
+	return p.Info != nil
+}
+
+func (p *RecallAppResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) ReadField2(iprot thrift.TProtocol) error {
+	p.Info = &AppInfo{
+		Status: 0,
+
+		InitPartitionCount: -1,
+	}
+	if err := p.Info.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Info), err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("recall_app_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("info", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:info: ", p), err)
+	}
+	if err := p.Info.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Info), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:info: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RecallAppResponse(%+v)", *p)
+}
+
+// Attributes:
 //  - Status
 //  - AppType
 //  - AppName
@@ -5654,6 +5954,9 @@ type AdminClient interface {
 	DropApp(ctx context.Context, req *DropAppRequest) (r *DropAppResponse, err error)
 	// Parameters:
 	//  - Req
+	RecallApp(ctx context.Context, req *RecallAppRequest) (r *RecallAppResponse, err error)
+	// Parameters:
+	//  - Req
 	ListApps(ctx context.Context, req *ListAppsRequest) (r *ListAppsResponse, err error)
 	// Parameters:
 	//  - Req
@@ -5733,11 +6036,11 @@ func (p *AdminClientClient) DropApp(ctx context.Context, req *DropAppRequest) (r
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) ListApps(ctx context.Context, req *ListAppsRequest) (r *ListAppsResponse, err error) {
-	var _args18 AdminClientListAppsArgs
+func (p *AdminClientClient) RecallApp(ctx context.Context, req *RecallAppRequest) (r *RecallAppResponse, err error) {
+	var _args18 AdminClientRecallAppArgs
 	_args18.Req = req
-	var _result19 AdminClientListAppsResult
-	if err = p.Client_().Call(ctx, "list_apps", &_args18, &_result19); err != nil {
+	var _result19 AdminClientRecallAppResult
+	if err = p.Client_().Call(ctx, "recall_app", &_args18, &_result19); err != nil {
 		return
 	}
 	return _result19.GetSuccess(), nil
@@ -5745,11 +6048,11 @@ func (p *AdminClientClient) ListApps(ctx context.Context, req *ListAppsRequest) 
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) AddDuplication(ctx context.Context, req *DuplicationAddRequest) (r *DuplicationAddResponse, err error) {
-	var _args20 AdminClientAddDuplicationArgs
+func (p *AdminClientClient) ListApps(ctx context.Context, req *ListAppsRequest) (r *ListAppsResponse, err error) {
+	var _args20 AdminClientListAppsArgs
 	_args20.Req = req
-	var _result21 AdminClientAddDuplicationResult
-	if err = p.Client_().Call(ctx, "add_duplication", &_args20, &_result21); err != nil {
+	var _result21 AdminClientListAppsResult
+	if err = p.Client_().Call(ctx, "list_apps", &_args20, &_result21); err != nil {
 		return
 	}
 	return _result21.GetSuccess(), nil
@@ -5757,11 +6060,11 @@ func (p *AdminClientClient) AddDuplication(ctx context.Context, req *Duplication
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *DuplicationQueryRequest) (r *DuplicationQueryResponse, err error) {
-	var _args22 AdminClientQueryDuplicationArgs
+func (p *AdminClientClient) AddDuplication(ctx context.Context, req *DuplicationAddRequest) (r *DuplicationAddResponse, err error) {
+	var _args22 AdminClientAddDuplicationArgs
 	_args22.Req = req
-	var _result23 AdminClientQueryDuplicationResult
-	if err = p.Client_().Call(ctx, "query_duplication", &_args22, &_result23); err != nil {
+	var _result23 AdminClientAddDuplicationResult
+	if err = p.Client_().Call(ctx, "add_duplication", &_args22, &_result23); err != nil {
 		return
 	}
 	return _result23.GetSuccess(), nil
@@ -5769,11 +6072,11 @@ func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *Duplicati
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *DuplicationModifyRequest) (r *DuplicationModifyResponse, err error) {
-	var _args24 AdminClientModifyDuplicationArgs
+func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *DuplicationQueryRequest) (r *DuplicationQueryResponse, err error) {
+	var _args24 AdminClientQueryDuplicationArgs
 	_args24.Req = req
-	var _result25 AdminClientModifyDuplicationResult
-	if err = p.Client_().Call(ctx, "modify_duplication", &_args24, &_result25); err != nil {
+	var _result25 AdminClientQueryDuplicationResult
+	if err = p.Client_().Call(ctx, "query_duplication", &_args24, &_result25); err != nil {
 		return
 	}
 	return _result25.GetSuccess(), nil
@@ -5781,11 +6084,11 @@ func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *Duplicat
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error) {
-	var _args26 AdminClientQueryAppInfoArgs
+func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *DuplicationModifyRequest) (r *DuplicationModifyResponse, err error) {
+	var _args26 AdminClientModifyDuplicationArgs
 	_args26.Req = req
-	var _result27 AdminClientQueryAppInfoResult
-	if err = p.Client_().Call(ctx, "query_app_info", &_args26, &_result27); err != nil {
+	var _result27 AdminClientModifyDuplicationResult
+	if err = p.Client_().Call(ctx, "modify_duplication", &_args26, &_result27); err != nil {
 		return
 	}
 	return _result27.GetSuccess(), nil
@@ -5793,11 +6096,11 @@ func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoR
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *UpdateAppEnvRequest) (r *UpdateAppEnvResponse, err error) {
-	var _args28 AdminClientUpdateAppEnvArgs
+func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error) {
+	var _args28 AdminClientQueryAppInfoArgs
 	_args28.Req = req
-	var _result29 AdminClientUpdateAppEnvResult
-	if err = p.Client_().Call(ctx, "update_app_env", &_args28, &_result29); err != nil {
+	var _result29 AdminClientQueryAppInfoResult
+	if err = p.Client_().Call(ctx, "query_app_info", &_args28, &_result29); err != nil {
 		return
 	}
 	return _result29.GetSuccess(), nil
@@ -5805,11 +6108,11 @@ func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *UpdateAppEnvR
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) ListNodes(ctx context.Context, req *ListNodesRequest) (r *ListNodesResponse, err error) {
-	var _args30 AdminClientListNodesArgs
+func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *UpdateAppEnvRequest) (r *UpdateAppEnvResponse, err error) {
+	var _args30 AdminClientUpdateAppEnvArgs
 	_args30.Req = req
-	var _result31 AdminClientListNodesResult
-	if err = p.Client_().Call(ctx, "list_nodes", &_args30, &_result31); err != nil {
+	var _result31 AdminClientUpdateAppEnvResult
+	if err = p.Client_().Call(ctx, "update_app_env", &_args30, &_result31); err != nil {
 		return
 	}
 	return _result31.GetSuccess(), nil
@@ -5817,11 +6120,11 @@ func (p *AdminClientClient) ListNodes(ctx context.Context, req *ListNodesRequest
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ClusterInfoRequest) (r *ClusterInfoResponse, err error) {
-	var _args32 AdminClientQueryClusterInfoArgs
+func (p *AdminClientClient) ListNodes(ctx context.Context, req *ListNodesRequest) (r *ListNodesResponse, err error) {
+	var _args32 AdminClientListNodesArgs
 	_args32.Req = req
-	var _result33 AdminClientQueryClusterInfoResult
-	if err = p.Client_().Call(ctx, "query_cluster_info", &_args32, &_result33); err != nil {
+	var _result33 AdminClientListNodesResult
+	if err = p.Client_().Call(ctx, "list_nodes", &_args32, &_result33); err != nil {
 		return
 	}
 	return _result33.GetSuccess(), nil
@@ -5829,14 +6132,26 @@ func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ClusterIn
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) MetaControl(ctx context.Context, req *MetaControlRequest) (r *MetaControlResponse, err error) {
-	var _args34 AdminClientMetaControlArgs
+func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ClusterInfoRequest) (r *ClusterInfoResponse, err error) {
+	var _args34 AdminClientQueryClusterInfoArgs
 	_args34.Req = req
-	var _result35 AdminClientMetaControlResult
-	if err = p.Client_().Call(ctx, "meta_control", &_args34, &_result35); err != nil {
+	var _result35 AdminClientQueryClusterInfoResult
+	if err = p.Client_().Call(ctx, "query_cluster_info", &_args34, &_result35); err != nil {
 		return
 	}
 	return _result35.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) MetaControl(ctx context.Context, req *MetaControlRequest) (r *MetaControlResponse, err error) {
+	var _args36 AdminClientMetaControlArgs
+	_args36.Req = req
+	var _result37 AdminClientMetaControlResult
+	if err = p.Client_().Call(ctx, "meta_control", &_args36, &_result37); err != nil {
+		return
+	}
+	return _result37.GetSuccess(), nil
 }
 
 type AdminClientProcessor struct {
@@ -5859,19 +6174,20 @@ func (p *AdminClientProcessor) ProcessorMap() map[string]thrift.TProcessorFuncti
 
 func NewAdminClientProcessor(handler AdminClient) *AdminClientProcessor {
 
-	self36 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self36.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
-	self36.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
-	self36.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
-	self36.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
-	self36.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
-	self36.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
-	self36.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
-	self36.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
-	self36.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
-	self36.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
-	self36.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
-	return self36
+	self38 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self38.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
+	self38.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
+	self38.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
+	self38.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
+	self38.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
+	self38.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
+	self38.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
+	self38.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
+	self38.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
+	self38.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
+	self38.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
+	self38.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
+	return self38
 }
 
 func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -5884,12 +6200,12 @@ func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x37 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x39 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x37.Write(oprot)
+	x39.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x37
+	return false, x39
 
 }
 
@@ -5972,6 +6288,54 @@ func (p *adminClientProcessorDropApp) Process(ctx context.Context, seqId int32, 
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("drop_app", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type adminClientProcessorRecallApp struct {
+	handler AdminClient
+}
+
+func (p *adminClientProcessorRecallApp) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := AdminClientRecallAppArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("recall_app", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := AdminClientRecallAppResult{}
+	var retval *RecallAppResponse
+	var err2 error
+	if retval, err2 = p.handler.RecallApp(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing recall_app: "+err2.Error())
+		oprot.WriteMessageBegin("recall_app", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("recall_app", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -6853,6 +7217,222 @@ func (p *AdminClientDropAppResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("AdminClientDropAppResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Req
+type AdminClientRecallAppArgs struct {
+	Req *RecallAppRequest `thrift:"req,1" db:"req" json:"req"`
+}
+
+func NewAdminClientRecallAppArgs() *AdminClientRecallAppArgs {
+	return &AdminClientRecallAppArgs{}
+}
+
+var AdminClientRecallAppArgs_Req_DEFAULT *RecallAppRequest
+
+func (p *AdminClientRecallAppArgs) GetReq() *RecallAppRequest {
+	if !p.IsSetReq() {
+		return AdminClientRecallAppArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *AdminClientRecallAppArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *AdminClientRecallAppArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientRecallAppArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req = &RecallAppRequest{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
+	}
+	return nil
+}
+
+func (p *AdminClientRecallAppArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("recall_app_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientRecallAppArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
+	}
+	return err
+}
+
+func (p *AdminClientRecallAppArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientRecallAppArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type AdminClientRecallAppResult struct {
+	Success *RecallAppResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewAdminClientRecallAppResult() *AdminClientRecallAppResult {
+	return &AdminClientRecallAppResult{}
+}
+
+var AdminClientRecallAppResult_Success_DEFAULT *RecallAppResponse
+
+func (p *AdminClientRecallAppResult) GetSuccess() *RecallAppResponse {
+	if !p.IsSetSuccess() {
+		return AdminClientRecallAppResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *AdminClientRecallAppResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *AdminClientRecallAppResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientRecallAppResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &RecallAppResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *AdminClientRecallAppResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("recall_app_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientRecallAppResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *AdminClientRecallAppResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientRecallAppResult(%+v)", *p)
 }
 
 // Attributes:
