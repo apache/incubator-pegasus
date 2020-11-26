@@ -9,8 +9,9 @@ import (
 
 func init() {
 	shell.AddCommand(&grumble.Command{
-		Name:    "recall",
-		Help:    "recall the dropped table",
+		Name:      "recall",
+		Help:      "recall the dropped table",
+		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
 			var originTableId = ""
 			var newTableName = ""

@@ -9,8 +9,9 @@ import (
 
 func init() {
 	shell.AddCommand(&grumble.Command{
-		Name:    "app",
-		Help:    "show the app partition distribution in node",
+		Name:      "app",
+		Help:      "show the app partition distribution in node",
+		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
 			var appName = ""
 			if len(c.Args) == 1 {
@@ -19,7 +20,7 @@ func init() {
 				return fmt.Errorf("Please input the app name")
 			}
 
-			return executor.RecallTable(pegasusClient, originTableId, newTableName)
+			return executor.TablePartition(pegasusClient, appName)
 		},
 	})
 }

@@ -34,10 +34,10 @@ func CreateTable(c *Client, tableName string, partitionCount int) error {
 	}
 
 	fmt.Fprintf(c, "Creating table \"%s\" (AppID: %d)\n", tableName, resp.Appid)
-	return waitTableReady(c, tableName, partitionCount)
+	return WaitTableReady(c, tableName, partitionCount)
 }
 
-func waitTableReady(c *Client, tableName string, partitionCount int) error {
+func WaitTableReady(c *Client, tableName string, partitionCount int) error {
 	fmt.Fprintf(c, "Available partitions:\n")
 	bar := pb.Full.Start(partitionCount) // Add a new bar
 
