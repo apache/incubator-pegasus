@@ -10,7 +10,7 @@ import (
 func init() {
 	shell.AddCommand(&grumble.Command{
 		Name:      "app",
-		Help:      "show the app partition distribution in node",
+		Help:      "show the app partition configuration in node",
 		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
 			var appName = ""
