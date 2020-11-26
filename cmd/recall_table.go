@@ -13,8 +13,8 @@ func init() {
 		Help:      "recall the dropped table",
 		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
-			var originTableId = ""
-			var newTableName = ""
+			var originTableId string
+			var newTableName string
 			if len(c.Args) == 1 {
 				originTableId = c.Args[0]
 			} else if len(c.Args) == 2 {

@@ -21,7 +21,6 @@ func init() {
 		Description: "Pegasus administration command line tool",
 		Flags: func(f *grumble.Flags) {
 			f.String("m", "meta", "127.0.0.1:34601,127.0.0.1:34602", "a list of MetaServer IP:Port addresses")
-			f.Bool("v", "version", false, "show the cli version")
 		},
 		HistoryFile: ".admin-cli-history",
 	})
