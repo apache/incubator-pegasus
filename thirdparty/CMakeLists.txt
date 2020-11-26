@@ -192,6 +192,7 @@ ExternalProject_Add(fds
         BUILD_IN_SOURCE 1
         )
 
+# fmtlib >=6.x requires c++14 support, do not update this library for now
 ExternalProject_Add(fmt
         URL ${OSS_URL_PREFIX}/fmt-5.3.0.zip
         https://github.com/fmtlib/fmt/releases/download/5.3.0/fmt-5.3.0.zip
