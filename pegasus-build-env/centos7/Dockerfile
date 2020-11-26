@@ -45,7 +45,6 @@ lz4-devel \
 bison \
 flex \
 patch; \
-yum -y remove gcc g++; \
 yum clean all; \
 rm -rf /var/cache/yum;
 

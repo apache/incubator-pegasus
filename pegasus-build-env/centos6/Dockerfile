@@ -48,7 +48,6 @@ patch; \
 export LD_LIBRARY_PATH=/opt/rh/rh-python36/root/usr/lib64; \
 export PATH=/opt/rh/rh-python36/root/usr/bin:${PATH}; \
 pip install --no-cache-dir cmake; \
-yum -y remove cpp; \
 yum clean all; \
 rm -rf /var/cache/yum;
 
