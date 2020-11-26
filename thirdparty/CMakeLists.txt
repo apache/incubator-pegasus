@@ -81,9 +81,9 @@ ExternalProject_Add(gperftools
 
 file(MAKE_DIRECTORY ${TP_OUTPUT}/include/hdfs)
 ExternalProject_Add(hadoop
-        URL ${OSS_URL_PREFIX}/hadoop-3.1.4.tar.gz
-        https://mirrors.ocf.berkeley.edu/apache/hadoop/common/hadoop-3.1.4/hadoop-3.1.4.tar.gz
-        URL_MD5 bd87b61c8a736c27112d5c8382f8f70e
+        URL ${OSS_URL_PREFIX}/hadoop-2.8.4.tar.gz
+        https://archive.apache.org/dist/hadoop/common/hadoop-2.8.4/hadoop-2.8.4.tar.gz
+        URL_MD5 b30b409bb69185003b3babd1504ba224
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
         INSTALL_COMMAND cp -R include/. ${TP_OUTPUT}/include/hdfs && cp -R lib/native/. ${TP_OUTPUT}/lib
