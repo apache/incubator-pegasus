@@ -37,5 +37,5 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.14
-      - name: Compile
+      - name: Compile 
         run: make
