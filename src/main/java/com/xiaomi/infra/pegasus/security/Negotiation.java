@@ -40,7 +40,7 @@ class Negotiation {
   private static final List<String> expectedMechanisms = Collections.singletonList("GSSAPI");
 
   private negotiation_status status;
-  private ReplicaSession session;
+  ReplicaSession session;
   SaslWrapper saslWrapper;
 
   Negotiation(ReplicaSession session, Subject subject, String serviceName, String serviceFQDN) {
@@ -95,7 +95,7 @@ class Negotiation {
           break;
         case SASL_INITIATE:
         case SASL_CHALLENGE_RESP:
-          // TBD(zlw):
+          onChallenge(resp);
           break;
         default:
           throw new Exception("unexpected negotiation status: " + resp.status);
@@ -125,6 +125,21 @@ class Negotiation {
     send(status, msg);
   }
 
+  void onChallenge(negotiation_response response) throws Exception {
+    switch (response.status) {
+      case SASL_CHALLENGE:
+        blob msg = saslWrapper.evaluateChallenge(response.msg.data);
+        status = negotiation_status.SASL_CHALLENGE_RESP;
+        send(status, msg);
+        break;
+      case SASL_SUCC:
+        negotiationSucceed();
+        break;
+      default:
+        throw new Exception("receive wrong negotiation msg type" + response.status.toString());
+    }
+  }
+
   public String getMatchMechanism(String respString) {
     String matchMechanism = "";
     String[] serverSupportMechanisms = respString.split(",");
@@ -148,6 +163,11 @@ class Negotiation {
   private void negotiationFailed() {
     status = negotiation_status.SASL_AUTH_FAIL;
     session.closeSession();
+  }
+
+  private void negotiationSucceed() {
+    status = negotiation_status.SASL_SUCC;
+    session.onAuthSucceed();
   }
 
   negotiation_status getStatus() {

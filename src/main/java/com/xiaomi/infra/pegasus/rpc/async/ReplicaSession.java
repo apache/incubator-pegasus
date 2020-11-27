@@ -385,6 +385,24 @@ public class ReplicaSession {
         TimeUnit.MILLISECONDS);
   }
 
+  public void onAuthSucceed() {
+    Queue<RequestEntry> swappedPendingSend = new LinkedList<>();
+    synchronized (authPendingSend) {
+      authSucceed = true;
+      swappedPendingSend.addAll(authPendingSend);
+      authPendingSend.clear();
+    }
+
+    while (!swappedPendingSend.isEmpty()) {
+      RequestEntry e = swappedPendingSend.poll();
+      if (pendingResponse.get(e.sequenceId) != null) {
+        write(e, fields);
+      } else {
+        logger.info("{}: {} is removed from pending, perhaps timeout", name(), e.sequenceId);
+      }
+    }
+  }
+
   // return value:
   //   true  - pend succeed
   //   false - pend failed

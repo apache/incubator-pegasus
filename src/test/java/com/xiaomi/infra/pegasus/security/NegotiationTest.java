@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import com.xiaomi.infra.pegasus.apps.negotiation_response;
 import com.xiaomi.infra.pegasus.apps.negotiation_status;
 import com.xiaomi.infra.pegasus.base.blob;
+import com.xiaomi.infra.pegasus.rpc.async.ReplicaSession;
 import java.nio.charset.Charset;
 import javax.security.auth.Subject;
 import org.junit.Assert;
@@ -133,5 +134,46 @@ public class NegotiationTest {
     // deal with wrong response.status
     response.status = negotiation_status.SASL_LIST_MECHANISMS;
     Assertions.assertThrows(Exception.class, () -> mockNegotiation.onMechanismSelected(response));
+  }
+
+  @Test
+  public void testChallenge() {
+    Negotiation mockNegotiation = Mockito.spy(negotiation);
+    SaslWrapper mockSaslWrapper = Mockito.mock(SaslWrapper.class);
+    ReplicaSession mockSession = Mockito.mock(ReplicaSession.class);
+    mockNegotiation.saslWrapper = mockSaslWrapper;
+    mockNegotiation.session = mockSession;
+
+    // mock operation
+    Mockito.doNothing().when(mockNegotiation).send(any(), any());
+    Mockito.doNothing().when(mockNegotiation.session).onAuthSucceed();
+    try {
+      Mockito.when(mockNegotiation.saslWrapper.evaluateChallenge(any())).thenReturn(new blob());
+    } catch (Exception ex) {
+      Assert.fail();
+    }
+
+    // normal case
+    Assertions.assertDoesNotThrow(
+        () -> {
+          negotiation_response response =
+              new negotiation_response(negotiation_status.SASL_CHALLENGE, new blob(new byte[0]));
+          mockNegotiation.onChallenge(response);
+          Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_CHALLENGE_RESP);
+
+          response = new negotiation_response(negotiation_status.SASL_SUCC, new blob(new byte[0]));
+          mockNegotiation.onChallenge(response);
+          Assert.assertEquals(mockNegotiation.getStatus(), negotiation_status.SASL_SUCC);
+        });
+
+    // deal with wrong response.status
+    Assertions.assertThrows(
+        Exception.class,
+        () -> {
+          negotiation_response response =
+              new negotiation_response(
+                  negotiation_status.SASL_LIST_MECHANISMS, new blob(new byte[0]));
+          mockNegotiation.onChallenge(response);
+        });
   }
 }
