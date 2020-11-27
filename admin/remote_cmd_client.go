@@ -39,10 +39,25 @@ func NewRemoteCmdClient(addr string, nodeType session.NodeType) *RemoteCmdClient
 
 // Call a remote command.
 func (c *RemoteCmdClient) Call(ctx context.Context, command string, arguments []string) (cmdResult string, err error) {
-	thriftArgs := &cmd.RemoteCmdServiceCallCommandArgs{
-		Cmd: &cmd.Command{Cmd: command, Arguments: arguments},
+	rcmd := &RemoteCommand{
+		Command:   command,
+		Arguments: arguments,
 	}
-	res, err := c.session.CallWithGpid(ctx, &base.Gpid{}, thriftArgs, "RPC_CLI_CLI_CALL")
+	return rcmd.Call(ctx, c.session)
+}
+
+// RemoteCommand can be called concurrently by multiple sessions.
+type RemoteCommand struct {
+	Command   string
+	Arguments []string
+}
+
+// Call a remote command to an existing session.
+func (c *RemoteCommand) Call(ctx context.Context, session session.NodeSession) (cmdResult string, err error) {
+	thriftArgs := &cmd.RemoteCmdServiceCallCommandArgs{
+		Cmd: &cmd.Command{Cmd: c.Command, Arguments: c.Arguments},
+	}
+	res, err := session.CallWithGpid(ctx, &base.Gpid{}, thriftArgs, "RPC_CLI_CLI_CALL")
 	if err != nil {
 		return "", err
 	}
