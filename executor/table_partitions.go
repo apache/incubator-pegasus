@@ -9,14 +9,7 @@ import (
 	"time"
 )
 
-type PartitionConfigration struct {
-	Pidx               int32
-	Ballot             int64
-	PrimaryAddress     string
-	SecondariesAddress string
-}
-
-func TablePartition(client *Client, tableName string) error {
+func ShowTablePartitions(client *Client, tableName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -25,11 +18,15 @@ func TablePartition(client *Client, tableName string) error {
 		return err
 	}
 
-	var partitionConfigurations []*PartitionConfigration
+	type partitionConfigurationStruct struct {
+		Pidx               int32
+		PrimaryAddress     string
+		SecondariesAddress string
+	}
+	var partitionConfigurations []*partitionConfigurationStruct
 	for _, partition := range resp.Partitions {
-		partitionConfiguration := PartitionConfigration{}
+		partitionConfiguration := partitionConfigurationStruct{}
 		partitionConfiguration.Pidx = partition.Pid.PartitionIndex
-		partitionConfiguration.Ballot = partition.Ballot
 
 		host, err := helper.Resolve(partition.Primary.GetAddress(), helper.Addr2Host)
 		if err != nil {
@@ -53,13 +50,12 @@ func TablePartition(client *Client, tableName string) error {
 
 	tabular := tablewriter.NewWriter(client)
 	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-	tabular.SetHeader([]string{"Pidx", "Ballot", "Primary", "Secondaries"})
+	tabular.SetHeader([]string{"Pidx", "Primary", "Secondaries"})
 	tabular.SetAutoFormatHeaders(false)
 	for _, info := range partitionConfigurations {
-		tabular.Append([]string{strconv.Itoa(int(info.Pidx)),
-			strconv.Itoa(int(info.Ballot)), info.PrimaryAddress, info.SecondariesAddress})
+		tabular.Append([]string{strconv.Itoa(int(info.Pidx)), info.PrimaryAddress, info.SecondariesAddress})
 	}
-	fmt.Printf("[TablePartition(ReplicaCount=%d)]\n", resp.Partitions[0].MaxReplicaCount)
+	fmt.Printf("[ShowTablePartitions(ReplicaCount=%d)]\n", resp.Partitions[0].MaxReplicaCount)
 	tabular.Render()
 	return nil
 }

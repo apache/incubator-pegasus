@@ -54,21 +54,21 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string) error {
 
-	type NodeCapacityStruct struct {
+	type nodeCapacityStruct struct {
 		Disk      string
 		Capacity  int64
 		Available int64
 		Ratio     int64
 	}
 
-	type ReplicaCapacityStruct struct {
+	type replicaCapacityStruct struct {
 		Replica  string
 		Status   string
 		Capacity float64
 	}
 
-	var nodeCapacityInfos []NodeCapacityStruct
-	var replicaCapacityInfos []ReplicaCapacityStruct
+	var nodeCapacityInfos []nodeCapacityStruct
+	var replicaCapacityInfos []replicaCapacityStruct
 
 	perfClient, err := client.GetPerfCounterClient(replicaServer)
 	if err != nil {
@@ -82,7 +82,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 				for _, replicas := range replicasWithAppId {
 					for _, replica := range replicas {
 						var gpidStr = fmt.Sprintf("%d.%d", replica.Appid, replica.PartitionIndex)
-						replicaCapacityInfos = append(replicaCapacityInfos, ReplicaCapacityStruct{
+						replicaCapacityInfos = append(replicaCapacityInfos, replicaCapacityStruct{
 							Replica:  gpidStr,
 							Status:   replicaStatus,
 							Capacity: float64(helper.GetReplicaCounterValue(perfClient, "disk.storage.sst(MB)", gpidStr)),
@@ -108,7 +108,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 			return nil
 		}
 
-		nodeCapacityInfos = append(nodeCapacityInfos, NodeCapacityStruct{
+		nodeCapacityInfos = append(nodeCapacityInfos, nodeCapacityStruct{
 			Disk:      diskInfo.Tag,
 			Capacity:  diskInfo.DiskCapacityMb,
 			Available: diskInfo.DiskAvailableMb,

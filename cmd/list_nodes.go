@@ -11,12 +11,12 @@ func init() {
 		Name: "nodes",
 		Help: "query all nodes perf stat in the cluster",
 		Flags: func(f *grumble.Flags) {
-			f.String("a", "app", "", "show one app replica info in cluster")
+			f.String("t", "table", "", "show one app replica info in cluster")
 		},
 		Run: func(c *grumble.Context) error {
 			return executor.ListNodes(
 				pegasusClient,
-				c.Flags.String("app"),
+				c.Flags.String("table"),
 			)
 		},
 	})

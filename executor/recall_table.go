@@ -23,7 +23,7 @@ func RecallTable(client *Client, originTableId string, newTableName string) erro
 	}
 
 	fmt.Printf("Recalling table \"%s\", ", resp.Info.AppName)
-	errWait := WaitTableReady(client, resp.Info.AppName, int(resp.Info.PartitionCount))
+	errWait := waitTableReady(client, resp.Info.AppName, int(resp.Info.PartitionCount))
 
 	if errWait != nil {
 		return errWait

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type NodeStat struct {
+type nodeStatStruct struct {
 	Node      string
 	Status    string
 	GetQPS    int64
@@ -31,7 +31,7 @@ type NodeStat struct {
 	MemIdxMB     int64
 }
 
-func NodesStat(client *Client, detail bool) error {
+func ShowNodesStat(client *Client, detail bool) error {
 	nodeStats, err := queryNodeStat(client)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func NodesStat(client *Client, detail bool) error {
 	return nil
 }
 
-func queryNodeStat(client *Client) ([]*NodeStat, error) {
+func queryNodeStat(client *Client) ([]*nodeStatStruct, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	listNodeResp, err := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
@@ -95,9 +95,9 @@ func queryNodeStat(client *Client) ([]*NodeStat, error) {
 		return nil, err
 	}
 
-	var nodes []*NodeStat
+	var nodes []*nodeStatStruct
 	for _, info := range listNodeResp.Infos {
-		var node = NodeStat{}
+		var node = nodeStatStruct{}
 		statusErr := node.setStatus(info)
 		if statusErr != nil {
 			return nil, statusErr
@@ -116,7 +116,7 @@ func queryNodeStat(client *Client) ([]*NodeStat, error) {
 	return nodes, nil
 }
 
-func (node *NodeStat) setStatus(info *admin.NodeInfo) error {
+func (node *nodeStatStruct) setStatus(info *admin.NodeInfo) error {
 	host, err := helper.Resolve(info.Address.GetAddress(), helper.Addr2Host)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (node *NodeStat) setStatus(info *admin.NodeInfo) error {
 	return nil
 }
 
-func (node *NodeStat) setUsageInfo(client *Client, addr string) error {
+func (node *nodeStatStruct) setUsageInfo(client *Client, addr string) error {
 	perfClient, err := client.GetPerfCounterClient(addr)
 	if err != nil {
 		return err
@@ -142,7 +142,7 @@ func (node *NodeStat) setUsageInfo(client *Client, addr string) error {
 	return nil
 }
 
-func (node *NodeStat) setQPSInfo(client *Client, addr string) error {
+func (node *nodeStatStruct) setQPSInfo(client *Client, addr string) error {
 	perfClient, err := client.GetPerfCounterClient(addr)
 	if err != nil {
 		return err

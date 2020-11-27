@@ -14,7 +14,7 @@ func init() {
 			f.Bool("d", "detail", false, "show node detail perf stats in cluster")
 		},
 		Run: func(c *grumble.Context) error {
-			return executor.NodesStat(
+			return executor.ShowNodesStat(
 				pegasusClient,
 				c.Flags.Bool("detail"),
 			)
