@@ -3,3 +3,5 @@ bin/
 pegasus.log
 .idea
 shell.log
+golangci-lint-1.29.0-linux-amd64
+*.tar.gz

@@ -30,30 +30,30 @@ var predefinedAppEnvKeys = []string{
 
 func init() {
 	rootCmd := &grumble.Command{
-		Name: "app-env",
-		Help: "app-env related commands",
+		Name: "table-env",
+		Help: "table environments related commands",
 		// TODO(wutao): print commonly-used app-envs
 	}
 	rootCmd.AddCommand(&grumble.Command{
 		Name:    "list",
 		Aliases: []string{"ls"},
-		Help:    "list the app-envs binding to the table",
+		Help:    "list the table environment binding to the table",
 		Run: func(c *grumble.Context) error {
 			return executor.ListAppEnvs(pegasusClient, useTable)
 		},
 	})
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "set",
-		Help: "set an env with key and value",
+		Help: "set an environment with key and value",
 		Run: func(c *grumble.Context) error {
 			if len(c.Args) != 2 {
-				return fmt.Errorf("invalid number (%d) of arguments for `app-env set`", len(c.Args))
+				return fmt.Errorf("invalid number (%d) of arguments for `table-env set`", len(c.Args))
 			}
 			return executor.SetAppEnv(pegasusClient, useTable, c.Args[0], c.Args[1])
 		},
 		AllowArgs: true,
 		Completer: func(prefix string, args []string) []string {
-			/* fill with predefined app-envs */
+			/* fill with predefined table-envs */
 			if len(args) == 0 {
 				return filterStringWithPrefix(predefinedAppEnvKeys, prefix)
 			}
@@ -63,10 +63,10 @@ func init() {
 	rootCmd.AddCommand(&grumble.Command{
 		Name:    "delete",
 		Aliases: []string{"del"},
-		Help:    "delete app-envs with specified key or key prefix",
+		Help:    "delete table environments with specified key or key prefix",
 		Run: func(c *grumble.Context) error {
 			if len(c.Args) != 1 {
-				return fmt.Errorf("invalid number (%d) of arguments for `app-env delete`", len(c.Args))
+				return fmt.Errorf("invalid number (%d) of arguments for `table-env delete`", len(c.Args))
 			}
 			return executor.DelAppEnv(pegasusClient, useTable, c.Args[0], c.Flags.Bool("prefix"))
 		},
@@ -77,7 +77,7 @@ func init() {
 	})
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "clear",
-		Help: "clear all app-envs",
+		Help: "clear all table environments",
 		Run: func(c *grumble.Context) error {
 			return executor.ClearAppEnv(pegasusClient, useTable)
 		},
