@@ -31,10 +31,10 @@ public:
     virtual ~access_controller() = 0;
 
     /**
-     * reset the access controller
-     *    acls - the new acls to reset
+     * update the access controller
+     *    acls - the new acls to update
      **/
-    virtual void reset(const std::string &acls){};
+    virtual void update(const std::string &acls){};
 
     /**
      * check if the message received is allowd to do something.

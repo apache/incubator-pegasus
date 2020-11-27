@@ -39,6 +39,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "bulk_load/replica_bulk_loader.h"
+#include "runtime/security/access_controller.h"
 #include "split/replica_split_manager.h"
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -569,6 +570,19 @@ void replica::update_app_envs_internal(const std::map<std::string, std::string> 
     }
 
     update_throttle_envs(envs);
+
+    update_ac_allowed_users(envs);
+}
+
+void replica::update_ac_allowed_users(const std::map<std::string, std::string> &envs)
+{
+    std::string allowed_users;
+    auto iter = envs.find(replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS);
+    if (iter != envs.end()) {
+        allowed_users = iter->second;
+    }
+
+    _access_controller->update(allowed_users);
 }
 
 void replica::query_app_envs(/*out*/ std::map<std::string, std::string> &envs)

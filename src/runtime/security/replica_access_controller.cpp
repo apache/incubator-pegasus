@@ -41,5 +41,25 @@ bool replica_access_controller::allowed(message_ex *msg)
         return true;
     }
 }
+
+void replica_access_controller::update(const std::string &users)
+{
+    {
+        // check to see whether we should update it or not.
+        utils::auto_read_lock l(_lock);
+        if (_env_users == users) {
+            return;
+        }
+    }
+
+    std::unordered_set<std::string> users_set;
+    utils::split_args(users.c_str(), users_set, ',');
+    {
+        utils::auto_write_lock l(_lock);
+        // This swap operation is in constant time
+        _users.swap(users_set);
+        _env_users = users;
+    }
+}
 } // namespace security
 } // namespace dsn
