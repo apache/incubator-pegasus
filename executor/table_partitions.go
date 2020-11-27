@@ -4,9 +4,10 @@ import (
 	"admin-cli/helper"
 	"context"
 	"fmt"
-	"github.com/olekukonko/tablewriter"
 	"strconv"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
 )
 
 func ShowTablePartitions(client *Client, tableName string) error {

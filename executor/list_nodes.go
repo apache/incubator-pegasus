@@ -35,7 +35,7 @@ func ListNodes(client *Client, table string) error {
 	}
 	tables = append(tables, table)
 
-	type nodeInfo struct {
+	type nodeInfoStruct struct {
 		Address           string
 		Status            string
 		ReplicaTotalCount int
@@ -43,37 +43,37 @@ func ListNodes(client *Client, table string) error {
 		SecondaryCount    int
 	}
 
-	var nodeInfos []*nodeInfo
+	var nodeInfos []*nodeInfoStruct
 	for _, info := range listNodeResp.Infos {
-		node := nodeInfo{}
+		nodeInfo := nodeInfoStruct{}
 		addr := info.Address.GetAddress()
 		host, err := helper.Resolve(addr, helper.Addr2Host)
 		if err != nil {
 			return err
 		}
-		node.Address = fmt.Sprintf("%s[%s]", host, addr)
-		node.Status = info.Status.String()
+		nodeInfo.Address = fmt.Sprintf("%s[%s]", host, addr)
+		nodeInfo.Status = info.Status.String()
 
-		for _, app := range tables {
-			partitionInfoResp, err := client.Meta.QueryConfig(ctx, app)
+		for _, table := range tables {
+			partitionInfoResp, err := client.Meta.QueryConfig(ctx, table)
 			if err != nil {
 				return err
 			}
 
 			for _, partition := range partitionInfoResp.Partitions {
 				if partition.Primary.GetAddress() == addr {
-					node.PrimaryCount++
+					nodeInfo.PrimaryCount++
 				}
 
 				for _, secondary := range partition.Secondaries {
 					if secondary.GetAddress() == addr {
-						node.SecondaryCount++
+						nodeInfo.SecondaryCount++
 					}
 				}
 			}
 		}
-		node.ReplicaTotalCount = node.PrimaryCount + node.SecondaryCount
-		nodeInfos = append(nodeInfos, &node)
+		nodeInfo.ReplicaTotalCount = nodeInfo.PrimaryCount + nodeInfo.SecondaryCount
+		nodeInfos = append(nodeInfos, &nodeInfo)
 	}
 
 	tabular := tablewriter.NewWriter(client)

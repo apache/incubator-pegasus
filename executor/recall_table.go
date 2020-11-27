@@ -12,12 +12,12 @@ func RecallTable(client *Client, originTableId string, newTableName string) erro
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	appId, errParse := strconv.ParseInt(originTableId, 10, 32)
+	tableId, errParse := strconv.ParseInt(originTableId, 10, 32)
 	if errParse != nil {
 		return errParse
 	}
 
-	resp, errRecall := client.Meta.RecallApp(ctx, &admin.RecallAppRequest{AppID: int32(appId), NewAppName_: newTableName})
+	resp, errRecall := client.Meta.RecallApp(ctx, &admin.RecallAppRequest{AppID: int32(tableId), NewAppName_: newTableName})
 	if errRecall != nil {
 		return errRecall
 	}

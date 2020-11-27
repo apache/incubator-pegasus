@@ -32,7 +32,7 @@ type nodeStatStruct struct {
 }
 
 func ShowNodesStat(client *Client, detail bool) error {
-	nodeStats, err := queryNodeStat(client)
+	nodeStats, err := queryNodesStat(client)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func ShowNodesStat(client *Client, detail bool) error {
 	return nil
 }
 
-func queryNodeStat(client *Client) ([]*nodeStatStruct, error) {
+func queryNodesStat(client *Client) ([]*nodeStatStruct, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	listNodeResp, err := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
