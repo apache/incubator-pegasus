@@ -9,7 +9,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-// Print out the list of elements in tabular form.
+// New creates a tablewrtier.Table that's filled with the content.
 // Each element should be a simple struct (not pointer) with a number of fields.
 // Each field corresponds to a column in the table, the field must have json tag.
 // The tag name is the column name in the table header.
@@ -25,8 +25,9 @@ import (
 //  tabular.Print(tables)
 // ```
 //
-func Print(writer io.Writer, valueList []interface{}) {
+func New(writer io.Writer, valueList []interface{}) *tablewriter.Table {
 	tabWriter := tablewriter.NewWriter(writer)
+	tabWriter.SetAlignment(tablewriter.ALIGN_CENTER)
 	header := getHeaderFromValueList(valueList)
 	tabWriter.SetHeader(header)
 	var headerColors []tablewriter.Colors
@@ -48,7 +49,12 @@ func Print(writer io.Writer, valueList []interface{}) {
 		tabWriter.Append(row)
 	}
 
-	tabWriter.Render()
+	return tabWriter
+}
+
+// Print out the list of elements in tabular form.
+func Print(writer io.Writer, valueList []interface{}) {
+	New(writer, valueList).Render()
 }
 
 func getHeaderFromValueList(valueList []interface{}) []string {
