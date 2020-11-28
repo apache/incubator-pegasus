@@ -60,6 +60,7 @@ func useCompletion(prefix string) []string {
 	for _, app := range resp.Infos {
 		tableNames = append(tableNames, app.AppName)
 	}
+	cachedTableNames = tableNames
 	tablesCached = true
 	return tableNames
 }

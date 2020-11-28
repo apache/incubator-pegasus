@@ -9,6 +9,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
+	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -29,11 +30,13 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 		replicaServer = addr
 	}
 
-	replicaClient, err := client.GetReplicaClient(replicaServer)
+	n, err := client.Nodes.GetNode(replicaServer, session.NodeTypeReplica)
 	if err != nil {
 		return err
 	}
-	resp, err := replicaClient.QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
+	replica := n.Replica()
+
+	resp, err := replica.QueryDiskInfo(ctx, &radmin.QueryDiskInfoRequest{
 		Node:    &base.RPCAddress{}, //TODO(jiashuo1) this thrift variable is useless, it need be deleted on client/server
 		AppName: tableName,
 	})

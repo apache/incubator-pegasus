@@ -1,94 +1,91 @@
 package executor
 
 import (
-	"admin-cli/helper"
+	"admin-cli/executor/util"
 	"context"
 	"fmt"
-	"strings"
+	"sync"
 	"time"
 
+	adminCli "github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/olekukonko/tablewriter"
 )
 
-type commandResult struct {
-	NodeType session.NodeType
-	Address  string
-	Command  string
-	Result   string
-}
-
-func RemoteCommand(client *Client, nodeType session.NodeType, node string, cmd string, args string) error {
-
-	if len(node) != 0 {
-		var addr, err = helper.Resolve(node, helper.Host2Addr)
-		if err == nil {
-			node = addr
-		}
+// RemoteCommand command.
+func RemoteCommand(client *Client, nodeType session.NodeType, nodeAddr string, cmd string, args []string) error {
+	rc := &adminCli.RemoteCommand{
+		Command:   cmd,
+		Arguments: args,
 	}
 
-	arguments := strings.Split(args, " ")
-	if arguments[0] == "" {
-		arguments = nil
-	}
-
-	var results []*commandResult
-
-	if len(node) == 0 {
-		if nodeType == session.NodeTypeMeta {
-			resp, err := sendRemoteCommand(client, nodeType, client.MetaAddresses, cmd, arguments)
-			if err != nil {
-				return err
-			}
-			results = resp
-		} else if nodeType == session.NodeTypeReplica {
-			resp, err := sendRemoteCommand(client, nodeType, client.ReplicaAddresses, cmd, arguments)
-			if err != nil {
-				return err
-			}
-			results = resp
-		}
+	var nodes []*util.PegasusNode
+	if len(nodeAddr) == 0 {
+		// send remote-commands to all nodeType nodes
+		nodes = client.Nodes.GetAllNodes(nodeType)
 	} else {
-		resp, err := sendRemoteCommand(client, nodeType, []string{node}, cmd, arguments)
+		n, err := client.Nodes.GetNode(nodeAddr, nodeType)
 		if err != nil {
 			return err
 		}
-		results = resp
+		nodes = append(nodes, n)
 	}
 
-	for _, result := range results {
-		fmt.Printf("[%s]%s[%s] : %s\n", result.NodeType, result.Address, result.Command, result.Result)
-	}
+	results := batchCallCmd(nodes, rc)
+	printCmdResults(client, rc, results)
 	return nil
 }
 
-func sendRemoteCommand(client *Client, nodeType session.NodeType, nodes []string, cmd string, args []string) ([]*commandResult, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+type cmdResult struct {
+	resp string
+	err  error
+}
 
-	var results []*commandResult
-	for _, addr := range nodes {
-		remoteClient, errGet := client.GetRemoteCommandClient(addr, nodeType)
-		if errGet != nil {
-			return nil, errGet
-		}
-		resp, errCall := remoteClient.Call(ctx, cmd, args)
+func (c *cmdResult) String() string {
+	if c.err != nil {
+		return fmt.Sprintf("failure: %s", c.err)
+	}
+	return c.resp
+}
 
-		var host, errResolve = helper.Resolve(addr, helper.Addr2Host)
-		if errResolve == nil {
-			addr = fmt.Sprintf("%s[%s]", host, addr)
-		}
-		if errCall != nil {
-			fmt.Printf("Node[%s] send remote command error[%s]\n", addr, errCall)
-			continue
-		}
-
-		results = append(results, &commandResult{
-			NodeType: nodeType,
-			Address:  addr,
-			Command:  cmd,
-			Result:   resp,
-		})
+func batchCallCmd(nodes []*util.PegasusNode, cmd *adminCli.RemoteCommand) map[*util.PegasusNode]*cmdResult {
+	results := make(map[*util.PegasusNode]*cmdResult)
+	for _, n := range nodes {
+		results[n] = nil
 	}
 
-	return results, nil
+	var wg sync.WaitGroup
+	wg.Add(len(nodes))
+	for _, n := range nodes {
+		go func(node *util.PegasusNode) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			defer cancel()
+			result, err := cmd.Call(ctx, node.NodeSession)
+			if err != nil {
+				results[node] = &cmdResult{err: err}
+			} else {
+				results[node] = &cmdResult{resp: result}
+			}
+			wg.Done()
+		}(n)
+	}
+	wg.Wait()
+
+	return results
+}
+
+func printCmdResults(client *Client, cmd *adminCli.RemoteCommand, results map[*util.PegasusNode]*cmdResult) {
+	fmt.Fprintf(client, "CMD: %s %s\n\n", cmd.Command, cmd.Arguments)
+
+	for n, res := range results {
+		// print title for the node
+		tb := tablewriter.NewWriter(client)
+		tb.SetHeader([]string{fmt.Sprint(n)})
+		tb.SetBorder(false)
+		tb.SetAutoFormatHeaders(false)
+		tb.Render()
+
+		fmt.Fprintf(client, "%s\n", res)
+		fmt.Fprintln(client)
+	}
 }

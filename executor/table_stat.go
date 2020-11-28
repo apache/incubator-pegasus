@@ -8,7 +8,7 @@ import (
 
 // TableStat command.
 func TableStat(c *Client) error {
-	ag := aggregate.NewTableStatsAggregator(c.MetaAddresses)
+	ag := aggregate.NewTableStatsAggregator(c.Nodes.MetaAddresses)
 	tableStats, _ := ag.Aggregate()
 	// TODO(wutao): limit table count, if table count exceeds a number, the result
 	// can be written to a file or somewhere instead.

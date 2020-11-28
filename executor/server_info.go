@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
 )
@@ -8,17 +9,13 @@ import (
 // ServerInfo command
 func ServerInfo(client *Client) error {
 
-	var results []*commandResult
-	respMetas, errMeta := sendRemoteCommand(client, session.NodeTypeMeta, client.MetaAddresses, "server-info", []string{""})
-	if errMeta != nil {
-		return errMeta
-	}
-	respReplicas, errReplica := sendRemoteCommand(client, session.NodeTypeReplica, client.ReplicaAddresses, "server-info", []string{""})
-	if errReplica != nil {
-		return errReplica
-	}
-	results = append(results, respMetas...)
-	results = append(results, respReplicas...)
+	nodes := client.Nodes.GetAllNodes(session.NodeTypeMeta)
+	nodes = append(nodes, client.Nodes.GetAllNodes(session.NodeTypeReplica)...)
+
+	results := batchCallCmd(nodes, &admin.RemoteCommand{
+		Command:   "version",
+		Arguments: []string{},
+	})
 
 	tabular := tablewriter.NewWriter(client)
 	tabular.SetAutoFormatHeaders(false)
@@ -26,8 +23,8 @@ func ServerInfo(client *Client) error {
 	tabular.SetColWidth(150)
 	tabular.SetHeader([]string{"Server", "Node", "Version"})
 
-	for _, result := range results {
-		tabular.Append([]string{string(result.NodeType), result.Address, result.Result})
+	for n, result := range results {
+		tabular.Append([]string{string(n.Type), n.CombinedAddr(), result.String()})
 	}
 	tabular.Render()
 

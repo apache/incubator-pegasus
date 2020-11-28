@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
+	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
 func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string) error {
@@ -23,12 +24,13 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 		return err
 	}
 
-	replicaClient, err := client.GetReplicaClient(replicaServer)
+	node, err := client.Nodes.GetNode(replicaServer, session.NodeTypeReplica)
 	if err != nil {
 		return err
 	}
+	replica := node.Replica()
 
-	resp, err := replicaClient.DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
+	resp, err := replica.DiskMigrate(ctx, &radmin.ReplicaDiskMigrateRequest{
 		Pid:        pid,
 		OriginDisk: from,
 		TargetDisk: to,
