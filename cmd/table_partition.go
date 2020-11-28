@@ -4,6 +4,7 @@ import (
 	"admin-cli/executor"
 	"admin-cli/shell"
 	"fmt"
+
 	"github.com/desertbit/grumble"
 )
 
@@ -13,14 +14,14 @@ func init() {
 		Help:      "show the table partition configuration in node",
 		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
-			var appName string
+			var tbName string
 			if len(c.Args) == 1 {
-				appName = c.Args[0]
+				tbName = c.Args[0]
 			} else {
 				return fmt.Errorf("Please input the table name")
 			}
 
-			return executor.ShowTablePartitions(pegasusClient, appName)
+			return executor.ShowTablePartitions(pegasusClient, tbName)
 		},
 	})
 }

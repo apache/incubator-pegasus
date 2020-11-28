@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
@@ -10,7 +11,8 @@ import (
 // PegasusNode is a representation of MetaServer and ReplicaServer, with address and node type.
 // Compared to session.NodeSession, it extends with more detailed information.
 type PegasusNode struct {
-	session.NodeSession
+	// the session is nil by default, it will be initialized when needed.
+	session session.NodeSession
 
 	IP net.IP
 
@@ -40,8 +42,19 @@ func (n *PegasusNode) Replica() *session.ReplicaSession {
 	if n.Type != session.NodeTypeReplica {
 		panic(fmt.Sprintf("%s is not replica", n))
 	}
-	r, _ := n.NodeSession.(*session.ReplicaSession)
+	if n.session != nil {
+		n.session = session.NewNodeSession(n.TCPAddr(), session.NodeTypeReplica)
+	}
+	r, _ := n.session.(*session.ReplicaSession)
 	return r
+}
+
+// Session returns a tcp session to the node.
+func (n *PegasusNode) Session() session.NodeSession {
+	if n.session != nil {
+		n.session = session.NewNodeSession(n.TCPAddr(), session.NodeTypeReplica)
+	}
+	return n.session
 }
 
 // newNodeFromTCPAddr creates a node from tcp address.
@@ -53,10 +66,9 @@ func newNodeFromTCPAddr(addr string, ntype session.NodeType) *PegasusNode {
 	}
 
 	n := &PegasusNode{
-		IP:          tcpAddr.IP,
-		Port:        tcpAddr.Port,
-		Type:        ntype,
-		NodeSession: session.NewNodeSession(addr, ntype),
+		IP:   tcpAddr.IP,
+		Port: tcpAddr.Port,
+		Type: ntype,
 	}
 	n.resolveIP()
 	return n
@@ -76,10 +88,7 @@ type PegasusNodeManager struct {
 	// filled on initialization, won't be updated after that.
 	MetaAddresses []string
 
-	// For now, the nodes are fixed once the manager is created.
-	// User couldn't remove or add nodes from the manager.
-	// If we want the nodes synchronized in the long run, remember to lock
-	// the access of the following members.
+	mu               sync.RWMutex
 	replicaAddresses []string
 	nodes            map[string]*PegasusNode
 }
@@ -100,8 +109,25 @@ func NewPegasusNodeManager(metaAddrs []string, replicaAddrs []string) *PegasusNo
 	return m
 }
 
+// MustGetReplica returns a replica node even if it doens't exist before.
+// User should assure the validity of the given info.
+func (m *PegasusNodeManager) MustGetReplica(addr string) *PegasusNode {
+	n, err := m.GetNode(addr, session.NodeTypeReplica)
+	if err != nil {
+		n = newNodeFromTCPAddr(addr, session.NodeTypeReplica)
+		m.mu.Lock()
+		m.nodes[addr] = n
+		m.replicaAddresses = append(m.replicaAddresses, addr)
+		m.mu.Unlock()
+	}
+	return n
+}
+
 // GetNode returns the specified node if it exists.
 func (m *PegasusNodeManager) GetNode(addr string, ntype session.NodeType) (*PegasusNode, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	var err error
 	switch ntype {
 	case session.NodeTypeMeta:
@@ -119,6 +145,9 @@ func (m *PegasusNodeManager) GetNode(addr string, ntype session.NodeType) (*Pega
 
 // GetAllNodes returns all nodes that matches the type.
 func (m *PegasusNodeManager) GetAllNodes(ntype session.NodeType) []*PegasusNode {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	var result []*PegasusNode
 	for _, n := range m.nodes {
 		if n.Type == ntype {

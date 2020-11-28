@@ -3,7 +3,9 @@ package executor
 import (
 	"admin-cli/executor/util"
 	"context"
+	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -38,7 +40,8 @@ func NewClient(writer io.Writer, metaAddrs []string) *Client {
 		Status: admin.NodeStatus_NS_INVALID,
 	})
 	if err != nil {
-		return nil
+		fmt.Fprintf(writer, "fatal: failed to list nodes [%s]\n", err)
+		os.Exit(1)
 	}
 
 	var replicaAddrs []string

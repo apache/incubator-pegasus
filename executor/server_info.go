@@ -13,7 +13,7 @@ func ServerInfo(client *Client) error {
 	nodes = append(nodes, client.Nodes.GetAllNodes(session.NodeTypeReplica)...)
 
 	results := batchCallCmd(nodes, &admin.RemoteCommand{
-		Command:   "version",
+		Command:   "server-info",
 		Arguments: []string{},
 	})
 

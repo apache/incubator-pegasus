@@ -1,15 +1,13 @@
 package executor
 
 import (
-	"admin-cli/helper"
+	"admin-cli/tabular"
 	"context"
-	"fmt"
-	"strconv"
+	"strings"
 	"time"
-
-	"github.com/olekukonko/tablewriter"
 )
 
+// ShowTablePartitions is table-partitions command
 func ShowTablePartitions(client *Client, tableName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -19,44 +17,30 @@ func ShowTablePartitions(client *Client, tableName string) error {
 		return err
 	}
 
-	type partitionConfigurationStruct struct {
-		Pidx               int32
-		PrimaryAddress     string
-		SecondariesAddress string
+	type partitionStruct struct {
+		Pidx            int32  `json:"pidx"`
+		PrimaryAddr     string `json:"primary"`
+		SecondariesAddr string `json:"secondaries"`
 	}
-	var partitionConfigurations []*partitionConfigurationStruct
+
+	var partitions []interface{}
 	for _, partition := range resp.Partitions {
-		partitionConfiguration := partitionConfigurationStruct{}
-		partitionConfiguration.Pidx = partition.Pid.PartitionIndex
+		p := partitionStruct{}
+		p.Pidx = partition.Pid.PartitionIndex
 
-		host, err := helper.Resolve(partition.Primary.GetAddress(), helper.Addr2Host)
-		if err != nil {
-			return err
+		primary := client.Nodes.MustGetReplica(partition.Primary.GetAddress())
+		p.PrimaryAddr = primary.CombinedAddr()
+
+		var secondaries []string
+		for _, sec := range partition.Secondaries {
+			secNode := client.Nodes.MustGetReplica(sec.GetAddress())
+			secondaries = append(secondaries, secNode.CombinedAddr())
 		}
-		primary := fmt.Sprintf("%s[%s]", host, partition.Primary.GetAddress())
-		partitionConfiguration.PrimaryAddress = primary
+		p.SecondariesAddr = strings.Join(secondaries, ",")
 
-		var secondaries = ""
-		for _, secondary := range partition.Secondaries {
-			host, err := helper.Resolve(secondary.GetAddress(), helper.Addr2Host)
-			if err != nil {
-				return err
-			}
-			secondaries = fmt.Sprintf("%s[%s(%s)]", secondaries, host, secondary.GetAddress())
-		}
-		partitionConfiguration.SecondariesAddress = secondaries
-
-		partitionConfigurations = append(partitionConfigurations, &partitionConfiguration)
+		partitions = append(partitions, p)
 	}
 
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-	tabular.SetHeader([]string{"Pidx", "Primary", "Secondaries"})
-	tabular.SetAutoFormatHeaders(false)
-	for _, info := range partitionConfigurations {
-		tabular.Append([]string{strconv.Itoa(int(info.Pidx)), info.PrimaryAddress, info.SecondariesAddress})
-	}
-	fmt.Printf("[ShowTablePartitions(ReplicaCount=%d)]\n", resp.Partitions[0].MaxReplicaCount)
-	tabular.Render()
+	tabular.Print(client, partitions)
 	return nil
 }

@@ -60,7 +60,7 @@ func batchCallCmd(nodes []*util.PegasusNode, cmd *adminCli.RemoteCommand) map[*u
 		go func(node *util.PegasusNode) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
-			result, err := cmd.Call(ctx, node.NodeSession)
+			result, err := cmd.Call(ctx, node.Session())
 			if err != nil {
 				results[node] = &cmdResult{err: err}
 			} else {
