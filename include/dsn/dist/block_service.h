@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dsn/tool-api/task_code.h>
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/dist/replication.h>
 #include <functional>
@@ -8,6 +9,8 @@ namespace dsn {
 
 namespace dist {
 namespace block_service {
+
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_BLOCK_SERVICE)
 
 class block_file;
 typedef dsn::ref_ptr<block_file> block_file_ptr;
