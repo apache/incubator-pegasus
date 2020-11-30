@@ -785,6 +785,8 @@ TEST_F(replica_split_test, secondary_handle_split_test)
 
     // Test cases:
     // - secondary parent update partition_count
+    // - meta splitting with local not_split(See parent_start_split_tests)
+    // - meta splitting with local splitting(See parent_start_split_tests)
     // TODO(heyuchen): add more cases
     struct trigger_secondary_parent_split_test
     {

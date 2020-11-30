@@ -161,10 +161,13 @@ struct learn_notify_response
 // partition split status
 enum split_status
 {
+    // idle state
     NOT_SPLIT,
+    // A replica is splitting into two replicas, original one called parent, new one called child
     SPLITTING,
     PAUSING,
     PAUSED,
+    // After split is successfully cancelled, the state turns into NOT_SPLIT
     CANCELING
 }
 
@@ -180,8 +183,9 @@ struct group_check_request
     // their WALs after this decree.
     5:optional i64          confirmed_decree;
 
-    // Used to deliver child gpid during partition split
-    6:optional dsn.gpid     child_gpid;
+    // Used to deliver child gpid and meta_split_status during partition split
+    6:optional dsn.gpid     child_gpid; 
+    7:optional split_status meta_split_status;
 }
 
 struct group_check_response

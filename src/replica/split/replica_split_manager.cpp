@@ -1118,6 +1118,7 @@ void replica_split_manager::trigger_primary_parent_split(
                    enum_to_string(_split_status),
                    enum_to_string(meta_split_status));
 
+    _meta_split_status = meta_split_status;
     if (meta_split_status == split_status::SPLITTING) {
         if (!_replica->_primary_states.learners.empty() ||
             _replica->_primary_states.membership.secondaries.size() + 1 <
@@ -1138,7 +1139,8 @@ void replica_split_manager::trigger_primary_parent_split(
                  get_gpid().get_partition_index() + _replica->_app_info.partition_count);
         add_child_request.__set_child_gpid(child_gpid);
         parent_start_split(add_child_request);
-        // TODO(heyuchen): broadcast group check request to secondaries to start split
+        // broadcast group check request to secondaries to start split
+        _replica->broadcast_group_check();
         return;
     }
 
@@ -1154,6 +1156,16 @@ void replica_split_manager::trigger_secondary_parent_split(
         _replica->_app_info.partition_count * 2) { // secondary update partition count
         update_local_partition_count(request.app.partition_count);
         parent_cleanup_split_context();
+        return;
+    }
+
+    if (!request.__isset.meta_split_status) {
+        return;
+    }
+
+    if (request.meta_split_status == split_status::SPLITTING &&
+        request.__isset.child_gpid) { // secondary create child replica
+        parent_start_split(request);
         return;
     }
 

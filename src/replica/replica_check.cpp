@@ -102,6 +102,14 @@ void replica::broadcast_group_check()
         _primary_states.get_replica_config(it->second, request->config);
         request->last_committed_decree = last_committed_decree();
         request->__set_confirmed_decree(_duplication_mgr->min_confirmed_decree());
+        // set split context in group_check_request
+        if (request->config.status == partition_status::PS_SECONDARY &&
+            _split_mgr->get_meta_split_status() != split_status::NOT_SPLIT) {
+            request->__set_meta_split_status(_split_mgr->get_meta_split_status());
+            if (_split_mgr->is_splitting()) {
+                request->__set_child_gpid(_split_mgr->get_child_gpid());
+            }
+        }
 
         if (request->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
             auto it = _primary_states.learners.find(addr);
