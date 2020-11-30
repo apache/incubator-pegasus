@@ -42,11 +42,10 @@ func (n *PegasusNode) Replica() *session.ReplicaSession {
 	if n.Type != session.NodeTypeReplica {
 		panic(fmt.Sprintf("%s is not replica", n))
 	}
-	if n.session != nil {
+	if n.session == nil {
 		n.session = session.NewNodeSession(n.TCPAddr(), session.NodeTypeReplica)
 	}
-	r, _ := n.session.(*session.ReplicaSession)
-	return r
+	return &session.ReplicaSession{NodeSession: n.session}
 }
 
 // Session returns a tcp session to the node.
