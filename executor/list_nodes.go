@@ -30,10 +30,11 @@ func ListNodes(client *Client, table string) error {
 	}
 
 	nodes := make(map[string]*nodeInfoStruct)
-	for _, n := range listNodeResp.Infos {
-		nodes[n.Address.GetAddress()] = &nodeInfoStruct{
-			Address: n.Address.GetAddress(),
-			Status:  n.Status.String(),
+	for _, ninfo := range listNodeResp.Infos {
+		n := client.Nodes.MustGetReplica(ninfo.Address.GetAddress())
+		nodes[ninfo.Address.GetAddress()] = &nodeInfoStruct{
+			Address: n.CombinedAddr(),
+			Status:  ninfo.Status.String(),
 		}
 	}
 	nodes, err = fillNodesInfoMap(client, nodes)

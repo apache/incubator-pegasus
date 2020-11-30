@@ -51,7 +51,7 @@ func (n *PegasusNode) Replica() *session.ReplicaSession {
 
 // Session returns a tcp session to the node.
 func (n *PegasusNode) Session() session.NodeSession {
-	if n.session != nil {
+	if n.session == nil {
 		n.session = session.NewNodeSession(n.TCPAddr(), session.NodeTypeReplica)
 	}
 	return n.session
@@ -88,6 +88,8 @@ type PegasusNodeManager struct {
 	// filled on initialization, won't be updated after that.
 	MetaAddresses []string
 
+	// a cache for nodes, to prevent unnecessary hostname resolving
+	// in each PegasusNode creation.
 	mu               sync.RWMutex
 	replicaAddresses []string
 	nodes            map[string]*PegasusNode
@@ -143,7 +145,8 @@ func (m *PegasusNodeManager) GetNode(addr string, ntype session.NodeType) (*Pega
 	return m.nodes[addr], nil
 }
 
-// GetAllNodes returns all nodes that matches the type.
+// GetAllNodes returns all nodes that matches the type. The result could be inconsistent
+// with the latest cluster state. Please use MetaManager.ListNodes whenever possible.
 func (m *PegasusNodeManager) GetAllNodes(ntype session.NodeType) []*PegasusNode {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
