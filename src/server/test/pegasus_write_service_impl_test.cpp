@@ -32,6 +32,7 @@ class pegasus_write_service_impl_test : public pegasus_server_test_base
 protected:
     std::unique_ptr<pegasus_server_write> _server_write;
     pegasus_write_service::impl *_write_impl{nullptr};
+    rocksdb_wrapper *_rocksdb_wrapper{nullptr};
 
 public:
     void SetUp() override
@@ -39,6 +40,7 @@ public:
         start();
         _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
         _write_impl = _server_write->_write_svc->_impl.get();
+        _rocksdb_wrapper = _write_impl->_rocksdb_wrapper.get();
     }
 
     uint64_t read_timestamp_from(dsn::string_view raw_key)
@@ -70,7 +72,7 @@ public:
 
     int db_get(dsn::string_view raw_key, db_get_context *get_ctx)
     {
-        return _write_impl->db_get(raw_key, get_ctx);
+        return _rocksdb_wrapper->get(raw_key, get_ctx);
     }
 
     void single_set(dsn::blob raw_key, dsn::blob user_value)
