@@ -184,7 +184,7 @@ func (m *PegasusNodeManager) validateReplicaAddress(addr string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("The cluster doesn't exist the replica server node [%s]", addr)
+	return fmt.Errorf("the cluster doesn't have the replica server node [%s]", addr)
 }
 
 func (m *PegasusNodeManager) validateMetaAddress(addr string) error {
@@ -193,5 +193,5 @@ func (m *PegasusNodeManager) validateMetaAddress(addr string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("The cluster doesn't exist the meta server node [%s]", addr)
+	return fmt.Errorf("the cluster doesn't have the meta server node [%s]", addr)
 }

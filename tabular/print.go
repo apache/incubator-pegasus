@@ -28,14 +28,14 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-// New creates a tablewrtier.Table that's filled with the content.
+// New creates a tablewriter.Table that's filled with the content.
 // Each element should be a simple struct (not pointer) with a number of fields.
 // Each field corresponds to a column in the table, the field must have json tag.
 // The tag name is the column name in the table header.
 //
 // For example:
 // ```
-//	type tableStruct struct {
+//  type tableStruct struct {
 //    PartitionCount int    `json:"partition_count"`
 //    TableName      string `json:"name"`
 //  }
