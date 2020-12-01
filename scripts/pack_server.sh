@@ -24,6 +24,7 @@ function usage()
     echo "  -h"
     echo "  -p|--update-package-template <minos-package-template-file-path>"
     echo "  -g|--custom-gcc"
+    echo "  -k|--keytab-file"
     exit 0
 }
 
@@ -79,6 +80,7 @@ if [ -n "$MINOS_CONFIG_FILE" ]; then
 fi
 
 custom_gcc="false"
+keytab_file=""
 
 while [[ $# > 0 ]]; do
     option_key="$1"
@@ -93,6 +95,10 @@ while [[ $# > 0 ]]; do
         -h|--help)
             usage
             ;;
+        -k|--keytab-file)
+            keytab_file="$2"
+            shift
+            ;;
     esac
     shift
 done
@@ -105,6 +111,7 @@ copy_file ./DSN_ROOT/lib/libdsn_utils.so ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 
@@ -115,6 +122,33 @@ copy_file `get_system_lib server ssl` ${pack}/bin/`get_system_libname server ssl
 copy_file `get_system_lib server aio` ${pack}/bin/`get_system_libname server aio`
 copy_file `get_system_lib server zstd` ${pack}/bin/`get_system_libname server zstd`
 copy_file `get_system_lib server lz4` ${pack}/bin/`get_system_libname server lz4`
+
+# Pack hadoop-related files.
+# If you want to use hdfs service to backup/restore/bulkload pegasus tables,
+# you need to set env ${HADOOP_HOME}, edit ${HADOOP_HOME}/etc/hadoop/core-site.xml,
+# and specify the keytab file.
+if [ -n "$HADOOP_HOME" ] && [ -n "$keytab_file" ]; then
+    mkdir -p ${pack}/hadoop
+    copy_file $keytab_file ${pack}/hadoop
+    copy_file ${HADOOP_HOME}/etc/hadoop/core-site.xml ${pack}/hadoop
+    if [ -d $HADOOP_HOME/share/hadoop ]; then
+        for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
+            copy_file $f ${pack}/hadoop
+        done
+        for f in ${HADOOP_HOME}/share/hadoop/common/*.jar; do
+            copy_file $f ${pack}/hadoop
+        done
+        for f in ${HADOOP_HOME}/share/hadoop/hdfs/lib/*.jar; do
+            copy_file $f ${pack}/hadoop
+        done
+        for f in ${HADOOP_HOME}/share/hadoop/hdfs/*.jar; do
+            copy_file $f ${pack}/hadoop
+        done
+    fi
+else
+    echo "Couldn't find env ${HADOOP_HOME} or no valid keytab file was specified,
+          hadoop-related files were not packed."
+fi
 
 DISTRIB_ID=$(cat /etc/*-release | grep DISTRIB_ID | awk -F'=' '{print $2}')
 DISTRIB_RELEASE=$(cat /etc/*-release | grep DISTRIB_RELEASE | awk -F'=' '{print $2}')
