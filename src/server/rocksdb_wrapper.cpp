@@ -51,8 +51,8 @@ int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
         return 0;
     }
 
-    ::dsn::blob hash_key, sort_key;
-    pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+    dsn::blob hash_key, sort_key;
+    pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
     derror_rocksdb("Get",
                    s.ToString(),
                    "hash_key: {}, sort_key: {}",
