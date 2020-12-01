@@ -63,11 +63,10 @@ func (d *pegasusDetector) Start(rootCtx context.Context) error {
 		}
 
 		// periodically set/get a configured Pegasus table.
-		d.detect();
+		d.detect()
 	}
 	return nil
 }
-
 
 func (d *pegasusDetector) detect() {
 

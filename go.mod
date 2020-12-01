@@ -3,7 +3,7 @@ module github.com/pegasus-kv/collector
 go 1.13
 
 require (
-	github.com/XiaoMi/pegasus-go-client v0.0.0-20201119112224-45f30cd560c7
+	github.com/XiaoMi/pegasus-go-client v0.0.0-20201127155445-d3b9a03abf6e
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
