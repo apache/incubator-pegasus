@@ -19,11 +19,11 @@
 
 #include "available_detector.h"
 
-#include <iomanip>
 #include <algorithm>
-#include <sstream>
 #include <dsn/dist/replication/duplication_common.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
+#include <iomanip>
+#include <sstream>
 
 #include "base/pegasus_key_schema.h"
 #include "result_writer.h"

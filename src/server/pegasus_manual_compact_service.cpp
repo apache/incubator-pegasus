@@ -19,11 +19,11 @@
 
 #include "pegasus_manual_compact_service.h"
 
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/time_utils.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <dsn/tool-api/async_calls.h>
+#include <dsn/utility/string_conv.h>
+#include <dsn/utils/time_utils.h>
 
 #include "base/pegasus_const.h"
 #include "pegasus_server_impl.h"
