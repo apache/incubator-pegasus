@@ -291,7 +291,7 @@ public:
             return empty_put(decree);
         }
 
-        ::dsn::blob check_key;
+        dsn::blob check_key;
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
 
         db_get_context get_context;
@@ -303,8 +303,8 @@ public:
             return resp.error;
         }
 
-        ::dsn::blob check_value;
         bool value_exist = !get_context.expired && get_context.found;
+        dsn::blob check_value;
         if (value_exist) {
             pegasus_extract_user_data(
                 _pegasus_data_version, std::move(get_context.raw_value), check_value);
@@ -406,7 +406,7 @@ public:
             return empty_put(decree);
         }
 
-        ::dsn::blob check_key;
+        dsn::blob check_key;
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
 
         db_get_context get_context;
