@@ -20,7 +20,7 @@
 package executor
 
 import (
-	"admin-cli/executor/util"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 	"context"
 	"fmt"
 	"io"

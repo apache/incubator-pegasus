@@ -20,7 +20,7 @@
 package executor
 
 import (
-	"admin-cli/tabular"
+	"github.com/pegasus-kv/admin-cli/tabular"
 	"context"
 	"encoding/json"
 	"fmt"

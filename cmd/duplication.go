@@ -20,8 +20,8 @@
 package cmd
 
 import (
-	"admin-cli/executor"
-	"admin-cli/shell"
+	"github.com/pegasus-kv/admin-cli/executor"
+	"github.com/pegasus-kv/admin-cli/shell"
 	"fmt"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"

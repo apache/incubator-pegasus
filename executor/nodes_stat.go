@@ -20,7 +20,7 @@
 package executor
 
 import (
-	"admin-cli/helper"
+	"github.com/pegasus-kv/admin-cli/helper"
 	"context"
 	"fmt"
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"

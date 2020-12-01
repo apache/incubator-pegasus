@@ -20,7 +20,7 @@
 package cmd
 
 import (
-	"admin-cli/executor"
+	"github.com/pegasus-kv/admin-cli/executor"
 	"os"
 )
 

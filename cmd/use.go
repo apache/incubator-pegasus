@@ -20,7 +20,7 @@
 package cmd
 
 import (
-	"admin-cli/shell"
+	"github.com/pegasus-kv/admin-cli/shell"
 	"context"
 	"fmt"
 	"time"
