@@ -13,6 +13,8 @@ import (
 // PerfSession is a client to get perf-counters from a Pegasus ReplicaServer.
 type PerfSession struct {
 	session.NodeSession
+
+	Address string
 }
 
 // PerfCounter is a Pegasus perf-counter.
@@ -28,13 +30,15 @@ func (p *PerfCounter) String() string {
 // NewPerfSession returns an instance of PerfSession.
 func NewPerfSession(addr string) *PerfSession {
 	return &PerfSession{
+		Address: addr,
 		NodeSession: session.NewNodeSession(addr, session.NodeTypeReplica),
 	}
 }
 
 // WrapPerf returns an instance of PerfSession using an existed session.
-func WrapPerf(session session.NodeSession) *PerfSession {
+func WrapPerf(addr string, session session.NodeSession) *PerfSession {
 	return &PerfSession{
+		Address: addr,
 		NodeSession: session,
 	}
 }
