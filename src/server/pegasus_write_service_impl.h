@@ -299,11 +299,6 @@ public:
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != 0) {
             // read check value failed
-            derror_rocksdb("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
-                           "check_sort_key: {}",
-                           decree,
-                           utils::c_escape_string(update.hash_key),
-                           utils::c_escape_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
@@ -419,11 +414,6 @@ public:
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != 0) {
             // read check value failed
-            derror_rocksdb("Error to GetCheckValue for CheckAndMutate decree: {}, hash_key: {}, "
-                           "check_sort_key: {}",
-                           decree,
-                           utils::c_escape_string(update.hash_key),
-                           utils::c_escape_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
