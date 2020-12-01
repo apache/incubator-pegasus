@@ -57,19 +57,19 @@ func init() {
 		Name:    "list",
 		Aliases: []string{"ls"},
 		Help:    "list the table environment binding to the table",
-		Run: func(c *grumble.Context) error {
-			return executor.ListAppEnvs(pegasusClient, useTable)
-		},
+		Run: shell.RequireUseTable(func(c *shell.Context) error {
+			return executor.ListAppEnvs(pegasusClient, c.UseTable)
+		}),
 	})
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "set",
 		Help: "set an environment with key and value",
-		Run: func(c *grumble.Context) error {
+		Run: shell.RequireUseTable(func(c *shell.Context) error {
 			if len(c.Args) != 2 {
 				return fmt.Errorf("invalid number (%d) of arguments for `table-env set`", len(c.Args))
 			}
-			return executor.SetAppEnv(pegasusClient, useTable, c.Args[0], c.Args[1])
-		},
+			return executor.SetAppEnv(pegasusClient, c.UseTable, c.Args[0], c.Args[1])
+		}),
 		AllowArgs: true,
 		Completer: func(prefix string, args []string) []string {
 			/* fill with predefined table-envs */
@@ -83,12 +83,12 @@ func init() {
 		Name:    "delete",
 		Aliases: []string{"del"},
 		Help:    "delete table environments with specified key or key prefix",
-		Run: func(c *grumble.Context) error {
+		Run: shell.RequireUseTable(func(c *shell.Context) error {
 			if len(c.Args) != 1 {
 				return fmt.Errorf("invalid number (%d) of arguments for `table-env delete`", len(c.Args))
 			}
-			return executor.DelAppEnv(pegasusClient, useTable, c.Args[0], c.Flags.Bool("prefix"))
-		},
+			return executor.DelAppEnv(pegasusClient, c.UseTable, c.Args[0], c.Flags.Bool("prefix"))
+		}),
 		AllowArgs: true,
 		Flags: func(f *grumble.Flags) {
 			f.BoolL("prefix", false, "to delete with key prefix")
@@ -97,9 +97,9 @@ func init() {
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "clear",
 		Help: "clear all table environments",
-		Run: func(c *grumble.Context) error {
-			return executor.ClearAppEnv(pegasusClient, useTable)
-		},
+		Run: shell.RequireUseTable(func(c *shell.Context) error {
+			return executor.ClearAppEnv(pegasusClient, c.UseTable)
+		}),
 	})
 	shell.AddCommand(rootCmd)
 }

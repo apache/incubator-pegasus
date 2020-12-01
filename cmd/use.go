@@ -29,8 +29,6 @@ import (
 	"github.com/desertbit/grumble"
 )
 
-var useTable string
-
 var cachedTableNames []string
 
 // whether table names are previously cached
@@ -46,7 +44,7 @@ func init() {
 				c.App.Println(c.Command.Usage)
 				return fmt.Errorf("invalid number (%d) of arguments for `use`", len(c.Args))
 			}
-			useTable = c.Args[0]
+			shell.SetUseTable(c.Args[0])
 			// TODO(wutao): verify if the use table exists
 			c.App.Println("ok")
 			return nil
@@ -75,7 +73,7 @@ func useCompletion(prefix string) []string {
 		return []string{}
 	}
 
-	tableNames := []string{}
+	var tableNames []string
 	for _, app := range resp.Infos {
 		tableNames = append(tableNames, app.AppName)
 	}
