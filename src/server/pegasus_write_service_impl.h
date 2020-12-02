@@ -92,7 +92,8 @@ public:
           _data_cf(server->_data_cf),
           _meta_cf(server->_meta_cf),
           _rd_opts(server->_data_cf_rd_opts),
-          _default_ttl(0)
+          _default_ttl(0),
+          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
         // disable write ahead logging as replication handles logging instead now
         _wt_opts.disableWAL = true;
@@ -292,28 +293,43 @@ public:
             return empty_put(decree);
         }
 
-        dsn::blob check_key;
+        ::dsn::blob check_key;
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
-
-        db_get_context get_context;
-        dsn::string_view check_raw_key(check_key.data(), check_key.length());
-        int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
-        if (err != 0) {
+        rocksdb::Slice check_raw_key(check_key.data(), check_key.length());
+        std::string check_raw_value;
+        rocksdb::Status check_status = _db->Get(_rd_opts, check_raw_key, &check_raw_value);
+        if (check_status.ok()) {
+            // read check value succeed
+            if (check_if_record_expired(
+                    _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
+                // check value ttl timeout
+                _pfc_recent_expire_count->increment();
+                check_status = rocksdb::Status::NotFound();
+            }
+        } else if (!check_status.IsNotFound()) {
             // read check value failed
-            resp.error = err;
+            derror_rocksdb("GetCheckValue for CheckAndSet",
+                           check_status.ToString(),
+                           "decree: {}, hash_key: {}, check_sort_key: {}",
+                           decree,
+                           utils::c_escape_string(update.hash_key),
+                           utils::c_escape_string(update.check_sort_key));
+            resp.error = check_status.code();
             return resp.error;
         }
+        dassert_f(check_status.ok() || check_status.IsNotFound(),
+                  "status = %s",
+                  check_status.ToString().c_str());
 
-        bool value_exist = !get_context.expired && get_context.found;
-        dsn::blob check_value;
-        if (value_exist) {
+        ::dsn::blob check_value;
+        if (check_status.ok()) {
             pegasus_extract_user_data(
-                _pegasus_data_version, std::move(get_context.raw_value), check_value);
+                _pegasus_data_version, std::move(check_raw_value), check_value);
         }
 
         if (update.return_check_value) {
             resp.check_value_returned = true;
-            if (value_exist) {
+            if (check_status.ok()) {
                 resp.check_value_exist = true;
                 resp.check_value = check_value;
             }
@@ -323,7 +339,7 @@ public:
         bool passed = validate_check(decree,
                                      update.check_type,
                                      update.check_operand,
-                                     value_exist,
+                                     check_status.ok(),
                                      check_value,
                                      invalid_argument);
 
@@ -407,28 +423,43 @@ public:
             return empty_put(decree);
         }
 
-        dsn::blob check_key;
+        ::dsn::blob check_key;
         pegasus_generate_key(check_key, update.hash_key, update.check_sort_key);
-
-        db_get_context get_context;
-        dsn::string_view check_raw_key(check_key.data(), check_key.length());
-        int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
-        if (err != 0) {
+        rocksdb::Slice check_raw_key(check_key.data(), check_key.length());
+        std::string check_raw_value;
+        rocksdb::Status check_status = _db->Get(_rd_opts, check_raw_key, &check_raw_value);
+        if (check_status.ok()) {
+            // read check value succeed
+            if (check_if_record_expired(
+                    _pegasus_data_version, utils::epoch_now(), check_raw_value)) {
+                // check value ttl timeout
+                _pfc_recent_expire_count->increment();
+                check_status = rocksdb::Status::NotFound();
+            }
+        } else if (!check_status.IsNotFound()) {
             // read check value failed
-            resp.error = err;
+            derror_rocksdb("GetCheckValue for CheckAndMutate",
+                           check_status.ToString(),
+                           "decree: {}, hash_key: {}, check_sort_key: {}",
+                           decree,
+                           utils::c_escape_string(update.hash_key),
+                           utils::c_escape_string(update.check_sort_key));
+            resp.error = check_status.code();
             return resp.error;
         }
+        dassert_f(check_status.ok() || check_status.IsNotFound(),
+                  "status = %s",
+                  check_status.ToString().c_str());
 
-        bool value_exist = !get_context.expired && get_context.found;
-        dsn::blob check_value;
-        if (value_exist) {
+        ::dsn::blob check_value;
+        if (check_status.ok()) {
             pegasus_extract_user_data(
-                _pegasus_data_version, std::move(get_context.raw_value), check_value);
+                _pegasus_data_version, std::move(check_raw_value), check_value);
         }
 
         if (update.return_check_value) {
             resp.check_value_returned = true;
-            if (value_exist) {
+            if (check_status.ok()) {
                 resp.check_value_exist = true;
                 resp.check_value = check_value;
             }
@@ -438,7 +469,7 @@ public:
         bool passed = validate_check(decree,
                                      update.check_type,
                                      update.check_operand,
-                                     value_exist,
+                                     check_status.ok(),
                                      check_value,
                                      invalid_argument);
 
@@ -813,6 +844,7 @@ private:
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
+    ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
     pegasus_value_generator _value_generator;
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
