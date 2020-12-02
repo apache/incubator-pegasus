@@ -22,6 +22,8 @@ package executor
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -66,6 +68,7 @@ func ListNodes(client *Client, table string) error {
 	for _, n := range nodes {
 		nodeList = append(nodeList, *n)
 	}
+	nodesSortByAddress(nodeList)
 
 	tabular.New(client, nodeList, func(t *tablewriter.Table) {
 		footerWithTotalCount(t, nodeList)
@@ -73,17 +76,32 @@ func ListNodes(client *Client, table string) error {
 	return nil
 }
 
+func nodesSortByAddress(nodes []interface{}) []interface{} {
+	sort.Slice(nodes, func(i, j int) bool {
+		n1 := nodes[i].(nodeInfoStruct)
+		n2 := nodes[j].(nodeInfoStruct)
+		return strings.Compare(n1.Address, n2.Address) < 0
+	})
+	return nodes
+}
+
 func footerWithTotalCount(tbWriter *tablewriter.Table, nlist []interface{}) {
+	var aliveCnt, unaliveCnt int
 	var totalRepCnt, totalPriCnt, totalSecCnt int
 	for _, element := range nlist {
 		n := element.(nodeInfoStruct)
 		totalRepCnt += n.ReplicaTotalCount
 		totalPriCnt += n.PrimaryCount
 		totalSecCnt += n.SecondaryCount
+		if n.Status == admin.NodeStatus_NS_ALIVE.String() {
+			aliveCnt++
+		} else {
+			unaliveCnt++
+		}
 	}
 	tbWriter.SetFooter([]string{
-		"",
-		"Total",
+		fmt.Sprintf("Alive(%d) | Unalive(%d)", aliveCnt, unaliveCnt),
+		fmt.Sprintf("Total(%d)", len(nlist)),
 		fmt.Sprintf("%d", totalRepCnt),
 		fmt.Sprintf("%d", totalPriCnt),
 		fmt.Sprintf("%d", totalSecCnt),
