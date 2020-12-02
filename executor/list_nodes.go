@@ -20,13 +20,13 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/tabular"
 	"context"
 	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 type nodeInfoStruct struct {
@@ -67,9 +67,9 @@ func ListNodes(client *Client, table string) error {
 		nodeList = append(nodeList, *n)
 	}
 
-	tbWriter := tabular.New(client, nodeList)
-	footerWithTotalCount(tbWriter, nodeList)
-	tbWriter.Render()
+	tabular.New(client, nodeList, func(t *tablewriter.Table) {
+		footerWithTotalCount(t, nodeList)
+	}).Render()
 	return nil
 }
 

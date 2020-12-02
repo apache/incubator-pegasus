@@ -60,7 +60,7 @@ Write:
 
 // The default statFormatter if no unit is specified
 func defaultStatFormatter(v float64) string {
-	return humanize.SI(v, "")
+	return humanize.SIWithDigits(v, 2, "")
 }
 
 // Used for counter with `"unit" : "size"`.
@@ -105,6 +105,7 @@ func PrintTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableS
 		tabWriter := tablewriter.NewWriter(writer)
 		tabWriter.SetBorder(false)
 		tabWriter.SetHeader(header)
+		tabWriter.SetAlignment(tablewriter.ALIGN_LEFT)
 		for _, tb := range tables {
 			// each table displays as a row
 			var row []string

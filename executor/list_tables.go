@@ -20,13 +20,13 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/tabular"
 	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 // ListTables command.
@@ -41,20 +41,28 @@ func ListTables(client *Client, useJSON bool) error {
 	}
 
 	type tableStruct struct {
-		AppID          int32             `json:"app_id"`
-		Name           string            `json:"name"`
-		PartitionCount int32             `json:"partition_count"`
-		CreateTime     string            `json:"create_time"`
-		Envs           map[string]string `json:"envs"`
+		AppID           int32  `json:"app_id"`
+		Name            string `json:"name"`
+		PartitionCount  int32  `json:"partition_count"`
+		CreateTime      string `json:"create_time"`
+		WReqRateLimit   string `json:"wreq_rate-limit"`
+		WBytesRateLimit string `json:"wbytes_rate-limit"`
 	}
 	var tbList []interface{}
 	for _, tb := range resp.Infos {
+		createTime := "unknown"
+		if tb.CreateSecond != 0 {
+			createTime = time.Unix(tb.CreateSecond, 0).Format("2006-01-02")
+		}
+		throttlingQPS := tb.Envs["replica.write_throttling"]
+		throttlingBytes := tb.Envs["replica.write_throttling_by_size"]
 		tbList = append(tbList, tableStruct{
-			AppID:          tb.AppID,
-			Name:           tb.AppName,
-			PartitionCount: tb.PartitionCount,
-			CreateTime:     time.Unix(tb.CreateSecond, 0).Format("2006-01-02"),
-			Envs:           tb.Envs,
+			AppID:           tb.AppID,
+			Name:            tb.AppName,
+			PartitionCount:  tb.PartitionCount,
+			CreateTime:      createTime,
+			WReqRateLimit:   throttlingQPS,
+			WBytesRateLimit: throttlingBytes,
 		})
 	}
 

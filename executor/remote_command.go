@@ -20,7 +20,6 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/executor/util"
 	"context"
 	"fmt"
 	"sync"
@@ -29,6 +28,7 @@ import (
 	adminCli "github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 )
 
 // RemoteCommand command.
@@ -69,10 +69,8 @@ func (c *cmdResult) String() string {
 
 func batchCallCmd(nodes []*util.PegasusNode, cmd *adminCli.RemoteCommand) map[*util.PegasusNode]*cmdResult {
 	results := make(map[*util.PegasusNode]*cmdResult)
-	for _, n := range nodes {
-		results[n] = nil
-	}
 
+	var mu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(len(nodes))
 	for _, n := range nodes {
@@ -80,11 +78,13 @@ func batchCallCmd(nodes []*util.PegasusNode, cmd *adminCli.RemoteCommand) map[*u
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
 			result, err := cmd.Call(ctx, node.Session())
+			mu.Lock()
 			if err != nil {
 				results[node] = &cmdResult{err: err}
 			} else {
 				results[node] = &cmdResult{resp: result}
 			}
+			mu.Unlock()
 			wg.Done()
 		}(n)
 	}

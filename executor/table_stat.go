@@ -25,7 +25,7 @@ import (
 	"github.com/pegasus-kv/collector/aggregate"
 )
 
-// TableStat command.
+// TableStat is table-stat command.
 func TableStat(c *Client) error {
 	ag := aggregate.NewTableStatsAggregator(c.Nodes.MetaAddresses)
 	tableStats, _ := ag.Aggregate()

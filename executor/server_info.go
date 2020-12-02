@@ -23,6 +23,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 // ServerInfo command
@@ -36,16 +37,28 @@ func ServerInfo(client *Client) error {
 		Arguments: []string{},
 	})
 
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetAutoFormatHeaders(false)
-	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-	tabular.SetColWidth(150)
-	tabular.SetHeader([]string{"Server", "Node", "Version"})
-
-	for n, result := range results {
-		tabular.Append([]string{string(n.Type), n.CombinedAddr(), result.String()})
+	type serverInfoStruct struct {
+		Server  string `json:"server"`
+		Node    string `json:"node"`
+		Version string `json:"version"`
 	}
-	tabular.Render()
+	// always print meta-server first.
+	var rowList []interface{}
+	for _, tp := range []session.NodeType{session.NodeTypeMeta, session.NodeTypeReplica} {
+		for n, result := range results {
+			if n.Type != tp {
+				continue
+			}
+			rowList = append(rowList, serverInfoStruct{
+				Server:  string(n.Type),
+				Node:    n.CombinedAddr(),
+				Version: result.String(),
+			})
+		}
+	}
 
+	tabular.New(client, rowList, func(table *tablewriter.Table) {
+		table.SetAutoWrapText(false)
+	}).Render()
 	return nil
 }
