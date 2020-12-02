@@ -43,6 +43,7 @@ int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
         ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
         if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
             ctx->expired = true;
+            _pfc_recent_expire_count->increment();
         }
         return 0;
     } else if (s.IsNotFound()) {

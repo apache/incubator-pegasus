@@ -21,6 +21,7 @@
 
 #include <dsn/dist/replication/replica_base.h>
 #include <rocksdb/db.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 namespace pegasus {
 namespace server {
@@ -35,7 +36,8 @@ public:
     rocksdb_wrapper(pegasus_server_impl *server,
                     rocksdb::DB *db,
                     const uint32_t _pegasus_data_version,
-                    rocksdb::ReadOptions &_rd_opts);
+                    rocksdb::ReadOptions &_rd_opts,
+                    dsn::perf_counter_wrapper &_pfc_recent_expire_count);
 
     /// Calls RocksDB Get and store the result into `db_get_context`.
     /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
@@ -47,6 +49,7 @@ private:
     rocksdb::DB *_db;
     rocksdb::ReadOptions &_rd_opts;
     const uint32_t _pegasus_data_version;
+    dsn::perf_counter_wrapper &_pfc_recent_expire_count;
 };
 } // namespace server
 } // namespace pegasus
