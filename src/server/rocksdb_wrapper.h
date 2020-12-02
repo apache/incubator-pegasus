@@ -35,9 +35,9 @@ class rocksdb_wrapper : public dsn::replication::replica_base
 public:
     rocksdb_wrapper(pegasus_server_impl *server,
                     rocksdb::DB *db,
-                    const uint32_t _pegasus_data_version,
-                    rocksdb::ReadOptions &_rd_opts,
-                    dsn::perf_counter_wrapper &_pfc_recent_expire_count);
+                    const uint32_t pegasus_data_version,
+                    rocksdb::ReadOptions &rd_opts,
+                    dsn::perf_counter_wrapper &pfc_recent_expire_count);
 
     /// Calls RocksDB Get and store the result into `db_get_context`.
     /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.

@@ -92,7 +92,7 @@ public:
           _data_cf(server->_data_cf),
           _meta_cf(server->_meta_cf),
           _rd_opts(server->_data_cf_rd_opts),
-          _default_ttl(0),
+          _default_ttl(0)
     {
         // disable write ahead logging as replication handles logging instead now
         _wt_opts.disableWAL = true;
