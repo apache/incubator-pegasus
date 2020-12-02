@@ -93,7 +93,6 @@ public:
           _meta_cf(server->_meta_cf),
           _rd_opts(server->_data_cf_rd_opts),
           _default_ttl(0),
-          _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
         // disable write ahead logging as replication handles logging instead now
         _wt_opts.disableWAL = true;
@@ -212,7 +211,6 @@ public:
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
         } else if (get_ctx.expired) {
             // ttl timeout, set to 0 before increment
-            _pfc_recent_expire_count->increment();
             new_value = update.increment;
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
         } else {
@@ -815,7 +813,6 @@ private:
     rocksdb::WriteOptions _wt_opts;
     rocksdb::ReadOptions &_rd_opts;
     volatile uint32_t _default_ttl;
-    ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
     pegasus_value_generator _value_generator;
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
