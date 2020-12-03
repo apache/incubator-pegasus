@@ -28,7 +28,7 @@ import (
 func init() {
 	shell.AddCommand(&grumble.Command{
 		Name: "nodes",
-		Help: "query all nodes perf stat in the cluster",
+		Help: "displays the nodes overall status",
 		Flags: func(f *grumble.Flags) {
 			f.String("t", "table", "", "show one app replica info in cluster")
 		},

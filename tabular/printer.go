@@ -46,7 +46,6 @@ import (
 //  tabular.Print(tables)
 // ```
 //
-
 func New(writer io.Writer, valueList []interface{}, configurer func(*tablewriter.Table)) *tablewriter.Table {
 	tabWriter := NewTabWriter(writer)
 	header := getHeaderFromValueList(valueList)
@@ -127,16 +126,16 @@ func FormatStat(attrsMap map[string]interface{}, formatters []StatFormatter) []S
 
 // The default StatFormatter if no unit is specified
 func DefaultStatFormatter(v float64) string {
-	return humanize.SI(v, "")
+	return humanize.SIWithDigits(v, 2, "")
 }
 
 // Used for counter with `"unit" : "size"`.
 func ByteStatFormatter(v float64) string {
-	return humanize.IBytes(uint64(v))
+	return humanize.Bytes(uint64(v))
 }
 
 func MegabyteStatFormatter(v float64) string {
-	return humanize.IBytes(uint64(v) << 20)
+	return humanize.Bytes(uint64(v) << 20)
 }
 
 type StatFormatter func(float64) string

@@ -22,6 +22,7 @@ package executor
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/ghodss/yaml"
 	"github.com/pegasus-kv/admin-cli/tabular"
@@ -30,13 +31,13 @@ import (
 
 var tableStatsTemplate = `--- 
 Memory: 
- IndexMem:
+ Index:
   counter: rdb_index_and_filter_blocks_mem_usage
   unit: byte
- MemTbMem:
+ MemTable:
   counter: rdb_memtable_mem_usage
   unit: byte
-Peformance: 
+Performance:
  Abnormal:
   counter: recent_abnormal_count
  Expire:
@@ -53,14 +54,14 @@ Read:
  RBytes:
   counter: read_bytes
   unit: byte
- WBytes:
-  counter: write_bytes
-  unit: byte
 Storage: 
  KeyNum:
   counter: rdb_estimate_num_keys
- SSTStorege:
+ TableSize:
   counter: sst_storage_mb
+  unit: MB
+ AvgPartitionSize:
+  counter: avg_partition_mb
   unit: MB
 Write: 
  Put:
@@ -75,6 +76,7 @@ Write:
   counter: incr_qps
  WBytes:
   counter: write_bytes
+  unit: byte
 `
 
 // TableStat is table-stat command.
@@ -84,11 +86,17 @@ func TableStat(c *Client) error {
 	// TODO(wutao): limit table count, if table count exceeds a number, the result
 	// can be written to a file or somewhere instead.
 
+	for _, tb := range tableStats {
+		// Calculate average partition size. This counter could help to diagnose
+		// if there is table that has abnormally large partitions.
+		tb.Stats["avg_partition_mb"] = tb.Stats["sst_storage_mb"] / float64(len(tb.Partitions))
+	}
+
 	printTableStatsTabular(c, tableStats)
 	return nil
 }
 
-// PrintTableStatsTabular prints table stats in a number of sections,
+// printTableStatsTabular prints table stats in a number of sections,
 // according to the predefined template.
 func printTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableStats) {
 	var sections map[string]interface{}
@@ -114,7 +122,8 @@ func printTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableS
 
 		tabWriter := tabular.NewTabWriter(writer)
 		tabWriter.SetHeader(header)
-		for _, tb := range tables {
+		sortedTables := tableStatsSortedByAppID(tables)
+		for _, tb := range sortedTables {
 			// each table displays as a row
 			var row []string
 			row = append(row, fmt.Sprintf("%d", tb.AppID), tb.TableName, fmt.Sprintf("%d", len(tb.Partitions)))
@@ -125,4 +134,18 @@ func printTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableS
 		}
 		tabWriter.Render()
 	}
+}
+
+func tableStatsSortedByAppID(tables map[int32]*aggregate.TableStats) []*aggregate.TableStats {
+	appIDs := []int{}
+	for id := range tables {
+		appIDs = append(appIDs, int(id))
+	}
+	sort.Ints(appIDs)
+
+	tableList := []*aggregate.TableStats{}
+	for _, id := range appIDs {
+		tableList = append(tableList, tables[int32(id)])
+	}
+	return tableList
 }

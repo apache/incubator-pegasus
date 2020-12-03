@@ -30,7 +30,7 @@ import (
 func init() {
 	shell.AddCommand(&grumble.Command{
 		Name:      "table-partitions",
-		Help:      "show the table partition configuration in node",
+		Help:      "show how the partitions distributed in the cluster",
 		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
 			var tbName string
