@@ -29,6 +29,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "bulk_load/replica_bulk_loader.h"
+#include "split/replica_split_manager.h"
 #include "runtime/security/access_controller.h"
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -237,6 +238,10 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         }
     }
     mu->set_left_potential_secondary_ack_count(count);
+
+    if (_split_mgr->is_splitting()) {
+        _split_mgr->copy_mutation(mu);
+    }
 
     if (mu->is_logged()) {
         do_possible_commit_on_primary(mu);
@@ -478,6 +483,10 @@ void replica::on_prepare(dsn::message_ex *request)
                enum_to_string(status()));
         ack_prepare_message(ERR_INVALID_STATE, mu);
         return;
+    }
+
+    if (_split_mgr->is_splitting()) {
+        _split_mgr->copy_mutation(mu);
     }
 
     dassert(mu->log_task() == nullptr, "");
