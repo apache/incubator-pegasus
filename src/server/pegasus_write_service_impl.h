@@ -97,11 +97,7 @@ public:
     {
         // disable write ahead logging as replication handles logging instead now
         _wt_opts.disableWAL = true;
-        _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server,
-                                                             server->_db,
-                                                             _pegasus_data_version,
-                                                             server->_data_cf_rd_opts,
-                                                             server->_pfc_recent_expire_count);
+        _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server, _pegasus_data_version);
     }
 
     int empty_put(int64_t decree)

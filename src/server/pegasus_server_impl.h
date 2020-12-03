@@ -188,6 +188,7 @@ private:
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
+    friend class rocksdb_wrapper;
 
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"

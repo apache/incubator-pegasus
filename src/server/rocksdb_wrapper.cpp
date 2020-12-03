@@ -25,16 +25,12 @@
 namespace pegasus {
 namespace server {
 
-rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server,
-                                 rocksdb::DB *db,
-                                 const uint32_t pegasus_data_version,
-                                 rocksdb::ReadOptions &rd_opts,
-                                 dsn::perf_counter_wrapper &pfc_recent_expire_count)
+rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server, const uint32_t pegasus_data_version)
     : replica_base(server),
-      _db(db),
-      _rd_opts(rd_opts),
+      _db(server->_db),
+      _rd_opts(server->_data_cf_rd_opts),
       _pegasus_data_version(pegasus_data_version),
-      _pfc_recent_expire_count(pfc_recent_expire_count)
+      _pfc_recent_expire_count(server->_pfc_recent_expire_count)
 {
 }
 
