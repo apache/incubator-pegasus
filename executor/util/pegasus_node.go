@@ -22,6 +22,7 @@ package util
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
@@ -98,7 +99,7 @@ func (n *PegasusNode) resolveIP() {
 	if err != nil {
 		n.Hostname = "unknown"
 	} else {
-		n.Hostname = hostnames[0]
+		n.Hostname = strings.TrimSuffix(hostnames[0], ".")
 	}
 }
 
@@ -149,19 +150,31 @@ func (m *PegasusNodeManager) GetNode(addr string, ntype session.NodeType) (*Pega
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var err error
-	switch ntype {
-	case session.NodeTypeMeta:
-		err = m.validateMetaAddress(addr)
-	case session.NodeTypeReplica:
-		err = m.validateReplicaAddress(addr)
-	}
-	if err != nil {
+	if n, ok := m.nodes[addr]; ok { // node exists
+		if n.Type != ntype {
+			return nil, fmt.Errorf("node(%s) is not %s", n, ntype)
+		}
+		return n, nil
+	} else {
+		node, err := m.getNodeFromHost(addr, ntype)
+		if err == nil {
+			return node, nil
+		}
 		return nil, err
 	}
+}
 
-	// node that passes the validation above must exist in m.nodes
-	return m.nodes[addr], nil
+func (m *PegasusNodeManager) getNodeFromHost(host string, ntype session.NodeType) (*PegasusNode, error) {
+	for _, node := range m.nodes {
+		if fmt.Sprintf("%s:%d", node.Hostname, node.Port) == host {
+			if node.Type != ntype {
+				return nil, fmt.Errorf("node(%s) is not %s", node, ntype)
+			}
+			return node, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Invalid node %s", host)
 }
 
 // GetAllNodes returns all nodes that matches the type. The result could be inconsistent
@@ -186,22 +199,4 @@ func (m *PegasusNodeManager) GetPerfSession(addr string, ntype session.NodeType)
 	}
 
 	return aggregate.WrapPerf(addr, node.session)
-}
-
-func (m *PegasusNodeManager) validateReplicaAddress(addr string) error {
-	for _, node := range m.replicaAddresses {
-		if node == addr {
-			return nil
-		}
-	}
-	return fmt.Errorf("the cluster doesn't have the replica server node [%s]", addr)
-}
-
-func (m *PegasusNodeManager) validateMetaAddress(addr string) error {
-	for _, meta := range m.MetaAddresses {
-		if addr == meta {
-			return nil
-		}
-	}
-	return fmt.Errorf("the cluster doesn't have the meta server node [%s]", addr)
 }

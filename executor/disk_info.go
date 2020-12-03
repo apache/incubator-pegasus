@@ -22,14 +22,13 @@ package executor
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"github.com/XiaoMi/pegasus-go-client/session"
-	"github.com/olekukonko/tablewriter"
 	"github.com/pegasus-kv/admin-cli/executor/util"
+	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 type DiskInfoType int32
@@ -44,11 +43,6 @@ const (
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-
-	var addr, err = util.Resolve(replicaServer, util.Host2Addr)
-	if err == nil {
-		replicaServer = addr
-	}
 
 	n, err := client.Nodes.GetNode(replicaServer, session.NodeTypeReplica)
 	if err != nil {
@@ -66,7 +60,7 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		_ = queryDiskCapacity(client, replicaServer, resp, diskTag)
+		queryDiskCapacity(client, n.TCPAddr(), resp, diskTag)
 	case ReplicaCount:
 		queryDiskReplicaCount(client, resp)
 	default:
@@ -75,30 +69,30 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 	return nil
 }
 
-func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string) error {
+func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string) {
 
 	type nodeCapacityStruct struct {
-		Disk      string
-		Capacity  int64
-		Available int64
-		Ratio     int64
+		Disk      string `json:"disk"`
+		Capacity  int64  `json:"capacity"`
+		Available int64  `json:"available"`
+		Ratio     int64  `json:"ratio"`
 	}
 
 	type replicaCapacityStruct struct {
-		Replica  string
-		Status   string
-		Capacity float64
+		Replica  string  `json:"replica"`
+		Status   string  `json:"status"`
+		Capacity float64 `json:"capacity"`
 	}
 
-	var nodeCapacityInfos []nodeCapacityStruct
-	var replicaCapacityInfos []replicaCapacityStruct
+	var nodeCapacityInfos []interface{}
+	var replicaCapacityInfos []interface{}
 
 	perfSession := client.Nodes.GetPerfSession(replicaServer, session.NodeTypeReplica)
 
 	for _, diskInfo := range resp.DiskInfos {
 		// pass disk tag means query one disk detail capacity of replica
 		if len(diskTag) != 0 && diskInfo.Tag == diskTag {
-			appendReplicaCapacityInfo := func(replicasWithAppId map[int32][]*base.Gpid, replicaStatus string) {
+			appendCapacity := func(replicasWithAppId map[int32][]*base.Gpid, replicaStatus string) {
 				for _, replicas := range replicasWithAppId {
 					for _, replica := range replicas {
 						var gpidStr = fmt.Sprintf("%d.%d", replica.Appid, replica.PartitionIndex)
@@ -110,22 +104,12 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 					}
 				}
 			}
-			appendReplicaCapacityInfo(diskInfo.HoldingPrimaryReplicas, "primary")
-			appendReplicaCapacityInfo(diskInfo.HoldingSecondaryReplicas, "secondary")
+			appendCapacity(diskInfo.HoldingPrimaryReplicas, "primary")
+			appendCapacity(diskInfo.HoldingSecondaryReplicas, "secondary")
 
-			// formats into tabular
-			tabular := tablewriter.NewWriter(client)
-			tabular.SetHeader([]string{"Replica", "Status", "Capacity"})
-			tabular.SetAutoFormatHeaders(false)
-			tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-			for _, replicaCapacityInfo := range replicaCapacityInfos {
-				tabular.Append([]string{
-					replicaCapacityInfo.Replica,
-					replicaCapacityInfo.Status,
-					strconv.FormatFloat(replicaCapacityInfo.Capacity, 'f', -1, 64)})
-			}
-			tabular.Render()
-			return nil
+			// formats into tabularWriter
+			tabular.Print(client.Writer, replicaCapacityInfos)
+			return
 		}
 
 		nodeCapacityInfos = append(nodeCapacityInfos, nodeCapacityStruct{
@@ -136,30 +120,18 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 		})
 	}
 
-	// formats into tabular
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-	tabular.SetHeader([]string{"Disk", "Capacity", "Available", "Ratio"})
-	for _, nodeCapacityInfo := range nodeCapacityInfos {
-		tabular.Append([]string{
-			nodeCapacityInfo.Disk,
-			strconv.FormatInt(nodeCapacityInfo.Capacity, 10),
-			strconv.FormatInt(nodeCapacityInfo.Available, 10),
-			strconv.FormatInt(nodeCapacityInfo.Ratio, 10)})
-	}
-	tabular.Render()
-	return nil
+	tabular.Print(client.Writer, nodeCapacityInfos)
 }
 
 func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse) {
 	type ReplicaCountStruct struct {
-		Disk      string
-		Primary   int
-		Secondary int
-		Total     int
+		Disk      string `json:"disk"`
+		Primary   int    `json:"primary"`
+		Secondary int    `json:"secondary"`
+		Total     int    `json:"total"`
 	}
 
-	computeReplicaCount := func(replicasWithAppId map[int32][]*base.Gpid) int {
+	computeCount := func(replicasWithAppId map[int32][]*base.Gpid) int {
 		var replicaCount = 0
 		for _, replicas := range replicasWithAppId {
 			for range replicas {
@@ -169,10 +141,10 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse) {
 		return replicaCount
 	}
 
-	var replicaCountInfos []ReplicaCountStruct
+	var replicaCountInfos []interface{}
 	for _, diskInfo := range resp.DiskInfos {
-		var primaryCount = computeReplicaCount(diskInfo.HoldingPrimaryReplicas)
-		var secondaryCount = computeReplicaCount(diskInfo.HoldingSecondaryReplicas)
+		var primaryCount = computeCount(diskInfo.HoldingPrimaryReplicas)
+		var secondaryCount = computeCount(diskInfo.HoldingSecondaryReplicas)
 		replicaCountInfos = append(replicaCountInfos, ReplicaCountStruct{
 			Disk:      diskInfo.Tag,
 			Primary:   primaryCount,
@@ -181,16 +153,5 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse) {
 		})
 	}
 
-	// formats into tabular
-	tabular := tablewriter.NewWriter(client)
-	tabular.SetHeader([]string{"Disk", "Primary", "Secondary", "Total"})
-	tabular.SetAlignment(tablewriter.ALIGN_CENTER)
-	for _, replicaCountInfo := range replicaCountInfos {
-		tabular.Append([]string{
-			replicaCountInfo.Disk,
-			strconv.Itoa(replicaCountInfo.Primary),
-			strconv.Itoa(replicaCountInfo.Secondary),
-			strconv.Itoa(replicaCountInfo.Total)})
-	}
-	tabular.Render()
+	tabular.Print(client.Writer, replicaCountInfos)
 }
