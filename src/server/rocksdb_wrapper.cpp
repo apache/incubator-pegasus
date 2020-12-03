@@ -21,6 +21,8 @@
 
 #include "pegasus_write_service_impl.h"
 
+#include <rocksdb/db.h>
+
 namespace pegasus {
 namespace server {
 

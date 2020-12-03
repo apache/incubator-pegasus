@@ -20,8 +20,15 @@
 #pragma once
 
 #include <dsn/dist/replication/replica_base.h>
-#include <rocksdb/db.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+
+namespace rocksdb {
+class DB;
+class ReadOptions;
+} // namespace rocksdb
+
+namespace dsn {
+class perf_counter_wrapper;
+}
 
 namespace pegasus {
 namespace server {
