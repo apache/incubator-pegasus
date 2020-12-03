@@ -21,9 +21,10 @@ package executor
 
 import (
 	"context"
-	"github.com/pegasus-kv/admin-cli/tabular"
 	"strings"
 	"time"
+
+	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 // ShowTablePartitions is table-partitions command
@@ -61,5 +62,36 @@ func ShowTablePartitions(client *Client, tableName string) error {
 	}
 
 	tabular.Print(client, partitions)
+
+	// TODO(wutao): this piece of code is repeated with list-nodes, which also calculates replica count distribution among nodes.
+	type nodeStruct struct {
+		Address        string `json:"address"`
+		PrimaryCount   int    `json:"primary"`
+		SecondaryCount int    `json:"secondary"`
+		ReplicaCount   int    `json:"replica"`
+	}
+	nodesMap := make(map[string]*nodeStruct)
+	for _, partition := range resp.Partitions {
+		nodesMap[partition.Primary.GetAddress()] = &nodeStruct{Address: partition.Primary.GetAddress()}
+		for _, sec := range partition.Secondaries {
+			nodesMap[sec.GetAddress()] = &nodeStruct{Address: sec.GetAddress()}
+		}
+	}
+	for _, partition := range resp.Partitions {
+		nodesMap[partition.Primary.GetAddress()].PrimaryCount++
+		nodesMap[partition.Primary.GetAddress()].ReplicaCount++
+		for _, sec := range partition.Secondaries {
+			nodesMap[sec.GetAddress()].SecondaryCount++
+			nodesMap[sec.GetAddress()].ReplicaCount++
+		}
+	}
+	var nodeList []interface{}
+	for _, n := range nodesMap {
+		n.Address = client.Nodes.MustGetReplica(n.Address).CombinedAddr()
+		nodeList = append(nodeList, *n)
+	}
+	nodeList = nodesSortByAddress(nodeList)
+	tabular.Print(client, nodeList)
+
 	return nil
 }

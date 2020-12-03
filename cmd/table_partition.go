@@ -20,8 +20,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/desertbit/grumble"
 	"github.com/pegasus-kv/admin-cli/executor"
 	"github.com/pegasus-kv/admin-cli/shell"
@@ -32,15 +30,8 @@ func init() {
 		Name:      "table-partitions",
 		Help:      "show how the partitions distributed in the cluster",
 		AllowArgs: true,
-		Run: func(c *grumble.Context) error {
-			var tbName string
-			if len(c.Args) == 1 {
-				tbName = c.Args[0]
-			} else {
-				return fmt.Errorf("Please input the table name")
-			}
-
-			return executor.ShowTablePartitions(pegasusClient, tbName)
-		},
+		Run: shell.RequireUseTable(func(c *shell.Context) error {
+			return executor.ShowTablePartitions(pegasusClient, c.UseTable)
+		}),
 	})
 }

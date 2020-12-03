@@ -22,13 +22,14 @@ package executor
 import (
 	"context"
 	"fmt"
-	"github.com/pegasus-kv/admin-cli/tabular"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 type nodeInfoStruct struct {
@@ -40,7 +41,7 @@ type nodeInfoStruct struct {
 }
 
 // ListNodes is nodes command.
-func ListNodes(client *Client, table string) error {
+func ListNodes(client *Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	listNodeResp, err := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
@@ -78,9 +79,9 @@ func ListNodes(client *Client, table string) error {
 
 func nodesSortByAddress(nodes []interface{}) []interface{} {
 	sort.Slice(nodes, func(i, j int) bool {
-		n1 := nodes[i].(nodeInfoStruct)
-		n2 := nodes[j].(nodeInfoStruct)
-		return strings.Compare(n1.Address, n2.Address) < 0
+		addr1 := reflect.ValueOf(nodes[i]).FieldByName("Address").String()
+		addr2 := reflect.ValueOf(nodes[j]).FieldByName("Address").String()
+		return strings.Compare(addr1, addr2) < 0
 	})
 	return nodes
 }

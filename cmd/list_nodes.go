@@ -29,14 +29,8 @@ func init() {
 	shell.AddCommand(&grumble.Command{
 		Name: "nodes",
 		Help: "displays the nodes overall status",
-		Flags: func(f *grumble.Flags) {
-			f.String("t", "table", "", "show one app replica info in cluster")
-		},
 		Run: func(c *grumble.Context) error {
-			return executor.ListNodes(
-				pegasusClient,
-				c.Flags.String("table"),
-			)
+			return executor.ListNodes(pegasusClient)
 		},
 	})
 }
