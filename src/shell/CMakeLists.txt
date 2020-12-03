@@ -36,6 +36,7 @@ set(MY_PROJ_LIBS
     dsn_utils
     dsn.block_service.local
     dsn.block_service.fds
+    dsn.block_service.hdfs
     dsn.block_service
     dsn.failure_detector
     pegasus_client_static
@@ -47,6 +48,7 @@ set(MY_PROJ_LIBS
     pegasus_geo_lib
     RocksDB::rocksdb
     s2
+    hdfs
     )
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")

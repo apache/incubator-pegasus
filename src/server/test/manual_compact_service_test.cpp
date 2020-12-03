@@ -17,9 +17,10 @@
  * under the License.
  */
 
+#include <dsn/utils/time_utils.h>
+
 #include "pegasus_server_test_base.h"
 #include "server/pegasus_manual_compact_service.h"
-#include <dsn/utility/time_utils.h>
 
 namespace pegasus {
 namespace server {
