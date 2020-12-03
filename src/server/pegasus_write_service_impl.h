@@ -606,7 +606,7 @@ private:
             !raw_key.empty()) {           // not an empty write
 
             db_get_context get_ctx;
-            int err = _rocksdb_wrapper->get(raw_key, &get_ctx);
+            int err = db_get(raw_key, &get_ctx);
             if (dsn_unlikely(err != 0)) {
                 return err;
             }
@@ -683,6 +683,40 @@ private:
             derror_rocksdb("Write", status.ToString(), "write rocksdb error, decree: {}", decree);
         }
         return status.code();
+    }
+
+    /// Calls RocksDB Get and store the result into `db_get_context`.
+    /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
+    /// \result ctx.expired=true if record expired. Still 0 is returned.
+    /// \result ctx.found=false if record is not found. Still 0 is returned.
+    int db_get(dsn::string_view raw_key,
+               /*out*/ db_get_context *ctx)
+    {
+        FAIL_POINT_INJECT_F("db_get", [](dsn::string_view) -> int { return FAIL_DB_GET; });
+
+        rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
+        if (dsn_likely(s.ok())) {
+            // success
+            ctx->found = true;
+            ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
+            if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
+                ctx->expired = true;
+            }
+            return 0;
+        }
+        if (s.IsNotFound()) {
+            // NotFound is an acceptable error
+            ctx->found = false;
+            return 0;
+        }
+        ::dsn::blob hash_key, sort_key;
+        pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+        derror_rocksdb("Get",
+                       s.ToString(),
+                       "hash_key: {}, sort_key: {}",
+                       utils::c_escape_string(hash_key),
+                       utils::c_escape_string(sort_key));
+        return s.code();
     }
 
     void clear_up_batch_states(int64_t decree, int err)
