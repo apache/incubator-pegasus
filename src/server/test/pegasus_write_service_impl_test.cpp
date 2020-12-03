@@ -260,5 +260,25 @@ TEST_F(incr_test, fail_on_put)
     dsn::fail::teardown();
 }
 
+TEST_F(incr_test, incr_on_expire_record)
+{
+    // make the key expired
+    req.expire_ts_seconds = 1;
+    _write_impl->incr(0, req, resp);
+
+    // check whether the key is expired
+    db_get_context get_ctx;
+    db_get(req.key, &get_ctx);
+    ASSERT_TRUE(get_ctx.expired);
+
+    // incr the expired key
+    req.increment = 100;
+    req.expire_ts_seconds = 0;
+    _write_impl->incr(0, req, resp);
+    ASSERT_EQ(resp.new_value, 100);
+
+    db_get(req.key, &get_ctx);
+    ASSERT_TRUE(get_ctx.found);
+}
 } // namespace server
 } // namespace pegasus

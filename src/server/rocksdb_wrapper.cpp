@@ -39,36 +39,7 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server,
 
 int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
 {
-    // An example for str: err=ERR_UNKNOWN,found=false,expired=false,expire_ts=1234
-    FAIL_POINT_INJECT_F("db_get", [ctx](dsn::string_view str) -> int {
-        std::vector<std::string> args;
-        dsn::utils::split_args(str.data(), args, ',');
-        assert(args.size() == 4);
-
-        int res = 0;
-        for (const auto &arg : args) {
-            std::vector<std::string> sub_args;
-            dsn::utils::split_args(arg.c_str(), sub_args, '=');
-            assert(args.size() == 2);
-
-            bool convert_res = true;
-            if (sub_args[0] == "err") {
-                res = dsn::error_code::try_get(sub_args[1], dsn::ERR_UNKNOWN);
-            } else if (sub_args[0] == "found") {
-                convert_res = dsn::buf2bool(sub_args[1], ctx->found);
-            } else if (sub_args[0] == "expired") {
-                convert_res = dsn::buf2bool(sub_args[1], ctx->expired);
-            } else if (sub_args[0] == "expire_ts") {
-                uint64_t expire_ts;
-                convert_res = dsn::buf2uint64(sub_args[1], expire_ts);
-                ctx->expire_ts = expire_ts;
-            }
-            if (!convert_res) {
-                dassert_f(false, "wrong format with {}", arg);
-            }
-        }
-        return res;
-    });
+    FAIL_POINT_INJECT_F("db_get", [](dsn::string_view) -> int { return FAIL_DB_GET; });
 
     rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
     if (dsn_likely(s.ok())) {
