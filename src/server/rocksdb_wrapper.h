@@ -28,7 +28,7 @@ class ReadOptions;
 
 namespace dsn {
 class perf_counter_wrapper;
-}
+} // namespace dsn
 
 namespace pegasus {
 namespace server {
