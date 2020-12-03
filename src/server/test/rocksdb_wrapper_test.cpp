@@ -64,7 +64,7 @@ TEST_F(rocksdb_wrapper_test, get)
     ASSERT_FALSE(get_ctx1.found);
 
     // expired
-    int32_t expired_ts = 123;
+    int32_t expired_ts = utils::epoch_now();
     db_get_context get_ctx2;
     single_set(_raw_key, dsn::blob::create_from_bytes("abc"), expired_ts);
     _rocksdb_wrapper->get(_raw_key, &get_ctx2);
