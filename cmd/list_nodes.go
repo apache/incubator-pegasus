@@ -20,9 +20,9 @@
 package cmd
 
 import (
+	"github.com/desertbit/grumble"
 	"github.com/pegasus-kv/admin-cli/executor"
 	"github.com/pegasus-kv/admin-cli/shell"
-	"github.com/desertbit/grumble"
 )
 
 func init() {

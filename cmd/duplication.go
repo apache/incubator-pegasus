@@ -20,12 +20,12 @@
 package cmd
 
 import (
-	"github.com/pegasus-kv/admin-cli/executor"
-	"github.com/pegasus-kv/admin-cli/shell"
 	"fmt"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/desertbit/grumble"
+	"github.com/pegasus-kv/admin-cli/executor"
+	"github.com/pegasus-kv/admin-cli/shell"
 )
 
 func init() {

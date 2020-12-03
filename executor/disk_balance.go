@@ -20,25 +20,26 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/helper"
 	"context"
 	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 )
 
 func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	var addr, err = helper.Resolve(replicaServer, helper.Host2Addr)
+	// TODO(jiashuo1) resolve need refactor
+	var addr, err = util.Resolve(replicaServer, util.Host2Addr)
 	if err == nil {
 		replicaServer = addr
 	}
 
-	pid, err := helper.Str2Gpid(pidStr)
+	pid, err := util.Str2Gpid(pidStr)
 	if err != nil {
 		return err
 	}

@@ -22,13 +22,13 @@ package executor
 import (
 	"context"
 	"fmt"
+	"github.com/pegasus-kv/admin-cli/tabular"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 type nodeInfoStruct struct {

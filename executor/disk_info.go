@@ -20,7 +20,6 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/helper"
 	"context"
 	"fmt"
 	"strconv"
@@ -30,6 +29,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 )
 
 type DiskInfoType int32
@@ -40,11 +40,12 @@ const (
 )
 
 // QueryDiskInfo command
+// TODO(jiashuo1) need refactor
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	var addr, err = helper.Resolve(replicaServer, helper.Host2Addr)
+	var addr, err = util.Resolve(replicaServer, util.Host2Addr)
 	if err == nil {
 		replicaServer = addr
 	}
@@ -92,10 +93,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 	var nodeCapacityInfos []nodeCapacityStruct
 	var replicaCapacityInfos []replicaCapacityStruct
 
-	perfClient, err := client.GetPerfCounterClient(replicaServer)
-	if err != nil {
-		return err
-	}
+	perfSession := client.Nodes.GetPerfSession(replicaServer, session.NodeTypeReplica)
 
 	for _, diskInfo := range resp.DiskInfos {
 		// pass disk tag means query one disk detail capacity of replica
@@ -107,7 +105,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 						replicaCapacityInfos = append(replicaCapacityInfos, replicaCapacityStruct{
 							Replica:  gpidStr,
 							Status:   replicaStatus,
-							Capacity: float64(helper.GetReplicaCounterValue(perfClient, "disk.storage.sst(MB)", gpidStr)),
+							Capacity: float64(util.GetPartitionStat(perfSession, "disk.storage.sst(MB)", gpidStr)),
 						})
 					}
 				}

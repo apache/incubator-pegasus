@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package helper
+package util
 
 import (
 	"fmt"

@@ -20,7 +20,6 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/executor/util"
 	"context"
 	"fmt"
 	"io"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/collector/aggregate"
 )
 
@@ -72,9 +72,6 @@ func NewClient(writer io.Writer, metaAddrs []string) *Client {
 		Writer: writer,
 		Meta:   meta,
 		Nodes:  util.NewPegasusNodeManager(metaAddrs, replicaAddrs),
+		Perf:   aggregate.NewPerfClient(metaAddrs),
 	}
-}
-
-func (client *Client) GetPerfCounterClient(addr string) (*aggregate.PerfSession, error) {
-	return nil, nil
 }

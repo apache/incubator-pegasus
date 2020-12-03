@@ -28,4 +28,5 @@ if [ ! -f "${PROJECT_DIR}"/golangci-lint-1.29.0-linux-amd64/golangci-lint ]; the
 fi
 
 gofmt -l -w .
+go mod tidy
 golangci-lint-1.29.0-linux-amd64/golangci-lint run

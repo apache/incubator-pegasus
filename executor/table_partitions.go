@@ -20,8 +20,8 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/tabular"
 	"context"
+	"github.com/pegasus-kv/admin-cli/tabular"
 	"strings"
 	"time"
 )

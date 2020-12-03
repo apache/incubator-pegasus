@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/pegasus-kv/collector/aggregate"
 )
 
 // PegasusNode is a representation of MetaServer and ReplicaServer, with address and node type.
@@ -176,6 +177,15 @@ func (m *PegasusNodeManager) GetAllNodes(ntype session.NodeType) []*PegasusNode 
 		}
 	}
 	return result
+}
+
+func (m *PegasusNodeManager) GetPerfSession(addr string, ntype session.NodeType) *aggregate.PerfSession {
+	node, err := m.GetNode(addr, ntype)
+	if err != nil {
+		panic(fmt.Sprintf("Get PerfSession %s error %s", addr, err))
+	}
+
+	return aggregate.WrapPerf(addr, node.session)
 }
 
 func (m *PegasusNodeManager) validateReplicaAddress(addr string) error {

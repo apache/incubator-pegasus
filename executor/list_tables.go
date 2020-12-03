@@ -23,10 +23,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/pegasus-kv/admin-cli/tabular"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 // ListTables command.

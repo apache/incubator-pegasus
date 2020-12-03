@@ -20,14 +20,14 @@
 package main
 
 import (
-	"github.com/pegasus-kv/admin-cli/cmd"
-	"github.com/pegasus-kv/admin-cli/shell"
 	"fmt"
 	"net"
 	"strings"
 
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
 	"github.com/desertbit/grumble"
+	"github.com/pegasus-kv/admin-cli/cmd"
+	"github.com/pegasus-kv/admin-cli/shell"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
