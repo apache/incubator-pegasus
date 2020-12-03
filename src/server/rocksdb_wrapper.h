@@ -40,7 +40,7 @@ static constexpr int FAIL_DB_GET = -104;
 class rocksdb_wrapper : public dsn::replication::replica_base
 {
 public:
-    rocksdb_wrapper(pegasus_server_impl *server, const uint32_t pegasus_data_version);
+    rocksdb_wrapper(pegasus_server_impl *server);
 
     /// Calls RocksDB Get and store the result into `db_get_context`.
     /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
