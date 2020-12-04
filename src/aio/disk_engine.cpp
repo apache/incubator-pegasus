@@ -207,14 +207,7 @@ void disk_engine::process_write(aio_task *aio, uint32_t sz)
 
     // no batching
     if (dio->buffer_size == sz) {
-        if (dio->buffer == nullptr) {
-            if (dio->support_write_vec) {
-                dio->write_buffer_vec = &aio->_unmerged_write_buffers;
-            } else {
-                aio->collapse();
-            }
-        }
-        dassert(dio->buffer || dio->write_buffer_vec, "");
+        aio->collapse();
         _provider->submit_aio_task(aio);
     }
 
@@ -251,7 +244,7 @@ void disk_engine::process_write(aio_task *aio, uint32_t sz)
     }
 }
 
-void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes, int delay_milliseconds)
+void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes)
 {
     if (err != ERR_OK) {
         dinfo("disk operation failure with code %s, err = %s, aio_task_id = %016" PRIx64,

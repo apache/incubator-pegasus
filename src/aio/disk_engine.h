@@ -82,7 +82,7 @@ private:
     ~disk_engine() = default;
 
     void process_write(aio_task *wk, uint32_t sz);
-    void complete_io(aio_task *aio, error_code err, uint32_t bytes, int delay_milliseconds = 0);
+    void complete_io(aio_task *aio, error_code err, uint32_t bytes);
 
     std::unique_ptr<aio_provider> _provider;
     service_node *_node;

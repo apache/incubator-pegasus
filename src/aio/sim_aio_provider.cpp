@@ -39,7 +39,7 @@ void sim_aio_provider::submit_aio_task(aio_task *aio)
     uint32_t bytes;
 
     err = aio_internal(aio, false, &bytes);
-    complete_io(aio, err, bytes, 0);
+    complete_io(aio, err, bytes);
 }
 
 } // namespace aio
