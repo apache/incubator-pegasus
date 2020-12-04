@@ -94,12 +94,11 @@ func (t *Template) Render(writer io.Writer, rows []interface{}) {
 		// print section
 		fmt.Fprintf(writer, "[%s]\n", sect.name)
 
-		tabWriter := NewTabWriter(writer)
 		header := t.commonColNames
 		for _, col := range sect.columns {
 			header = append(header, col.Name)
 		}
-		tabWriter.SetHeader(header)
+		tabWriter := NewTabWriter(writer, header)
 		for _, row := range rows {
 			rowColumns := t.commonColFunc(row)
 			for _, col := range sect.columns {
@@ -134,6 +133,9 @@ type ColumnAttributes struct {
 // The default if no unit is specified.
 func defaultFormatter(v interface{}) string {
 	if fv, ok := v.(float64); ok {
+		if fv < 1 {
+			return fmt.Sprintf("%.2f", fv)
+		}
 		return humanize.SIWithDigits(fv, 2, "")
 	}
 	return fmt.Sprintf("%v", v)

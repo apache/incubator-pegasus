@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pegasus-kv/admin-cli/tabular"
 )
@@ -44,13 +45,45 @@ type nodeInfoStruct struct {
 func ListNodes(client *Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	listNodeResp, err := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
-		Status: admin.NodeStatus_NS_INVALID,
-	})
+
+	nodes, err := getNodesMap(client, ctx)
 	if err != nil {
 		return err
 	}
 
+	listTableResp, errTable := client.Meta.ListApps(ctx, &admin.ListAppsRequest{
+		Status: admin.AppStatus_AS_AVAILABLE,
+	})
+	if errTable != nil {
+		return errTable
+	}
+	var tableNames []string
+	for _, info := range listTableResp.Infos {
+		tableNames = append(tableNames, info.AppName)
+	}
+
+	for _, tb := range tableNames {
+		queryCfgResp, err := client.Meta.QueryConfig(ctx, tb)
+		if err != nil {
+			return err
+		}
+		nodes, err = fillNodesInfo(nodes, queryCfgResp.Partitions)
+		if err != nil {
+			return err
+		}
+	}
+
+	printNodesInfo(client, nodes)
+	return nil
+}
+
+func getNodesMap(client *Client, ctx context.Context) (map[string]*nodeInfoStruct, error) {
+	listNodeResp, errNode := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
+		Status: admin.NodeStatus_NS_INVALID,
+	})
+	if errNode != nil {
+		return nil, errNode
+	}
 	nodes := make(map[string]*nodeInfoStruct)
 	for _, ninfo := range listNodeResp.Infos {
 		n := client.Nodes.MustGetReplica(ninfo.Address.GetAddress())
@@ -59,11 +92,31 @@ func ListNodes(client *Client) error {
 			Status:  ninfo.Status.String(),
 		}
 	}
-	nodes, err = fillNodesInfoMap(client, nodes)
-	if err != nil {
-		return err
-	}
+	return nodes, nil
+}
 
+func fillNodesInfo(nodes map[string]*nodeInfoStruct, partitions []*replication.PartitionConfiguration) (map[string]*nodeInfoStruct, error) {
+	for _, part := range partitions {
+		n := nodes[part.Primary.GetAddress()]
+		if len(part.Primary.GetAddress()) != 0 {
+			if n != nil {
+				n.PrimaryCount++
+				n.ReplicaTotalCount++
+			} else {
+				return nil, fmt.Errorf("inconsistent state: nodes are updated")
+			}
+		}
+
+		for _, sec := range part.Secondaries {
+			n := nodes[sec.GetAddress()]
+			n.SecondaryCount++
+			n.ReplicaTotalCount++
+		}
+	}
+	return nodes, nil
+}
+
+func printNodesInfo(client *Client, nodes map[string]*nodeInfoStruct) {
 	// render in tabular form
 	var nodeList []interface{}
 	for _, n := range nodes {
@@ -74,7 +127,6 @@ func ListNodes(client *Client) error {
 	tabular.New(client, nodeList, func(t *tablewriter.Table) {
 		footerWithTotalCount(t, nodeList)
 	}).Render()
-	return nil
 }
 
 func nodesSortByAddress(nodes []interface{}) []interface{} {
@@ -107,43 +159,4 @@ func footerWithTotalCount(tbWriter *tablewriter.Table, nlist []interface{}) {
 		fmt.Sprintf("%d", totalPriCnt),
 		fmt.Sprintf("%d", totalSecCnt),
 	})
-}
-
-func fillNodesInfoMap(client *Client, nodes map[string]*nodeInfoStruct) (map[string]*nodeInfoStruct, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	listAppsResp, err := client.Meta.ListApps(ctx, &admin.ListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var tableNames []string
-	for _, info := range listAppsResp.Infos {
-		tableNames = append(tableNames, info.AppName)
-	}
-
-	for _, tb := range tableNames {
-		// reuse the previous context, failed if the total time expires
-		queryCfgResp, err := client.Meta.QueryConfig(ctx, tb)
-		if err != nil {
-			return nil, err
-		}
-		for _, part := range queryCfgResp.Partitions {
-			n := nodes[part.Primary.GetAddress()]
-			if n == nil {
-				return nil, fmt.Errorf("inconsistent state: nodes are updated")
-			}
-			n.PrimaryCount++
-			n.ReplicaTotalCount++
-
-			for _, sec := range part.Secondaries {
-				n := nodes[sec.GetAddress()]
-				n.SecondaryCount++
-				n.ReplicaTotalCount++
-			}
-		}
-	}
-
-	return nodes, nil
 }

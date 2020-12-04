@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 )
@@ -45,4 +46,11 @@ func Str2Gpid(gpid string) (*base.Gpid, error) {
 	}
 
 	return &base.Gpid{Appid: int32(appId), PartitionIndex: int32(partitionId)}, nil
+}
+
+func FormatDate(date int64) string {
+	if date != 0 {
+		return time.Unix(date, 0).Format("2006-01-02")
+	}
+	return "unknown"
 }

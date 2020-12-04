@@ -63,13 +63,13 @@ Request:
   counter: replica*app.pegasus*multi_put_bytes
 `
 
-func ShowNodesStat(client *Client, detail bool) error {
+func ShowNodesStat(client *Client) error {
 	nodesStats := util.GetNodeStat(client.Perf)
-	printNodesStatsTabular(client, nodesStats, detail)
+	printNodesStatsTabular(client, nodesStats)
 	return nil
 }
 
-func printNodesStatsTabular(client *Client, nodes map[string]*aggregate.NodeStat, detail bool) {
+func printNodesStatsTabular(client *Client, nodes map[string]*aggregate.NodeStat) {
 	t := tabular.NewTemplate(nodeStatsTemplate)
 	t.SetCommonColumns([]string{"Node"}, func(rowData interface{}) []string {
 		node := rowData.(*aggregate.NodeStat)

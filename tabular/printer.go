@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -46,14 +45,8 @@ import (
 // ```
 //
 func New(writer io.Writer, valueList []interface{}, configurer func(*tablewriter.Table)) *tablewriter.Table {
-	tabWriter := NewTabWriter(writer)
 	header := getHeaderFromValueList(valueList)
-	tabWriter.SetHeader(header)
-	var headerColors []tablewriter.Colors
-	for range header {
-		headerColors = append(headerColors, tablewriter.Colors{tablewriter.Bold})
-	}
-	tabWriter.SetHeaderColor(headerColors...)
+	tabWriter := NewTabWriter(writer, header)
 
 	// could replace the default settings
 	if configurer != nil {
@@ -76,10 +69,16 @@ func New(writer io.Writer, valueList []interface{}, configurer func(*tablewriter
 	return tabWriter
 }
 
-func NewTabWriter(writer io.Writer) *tablewriter.Table {
+func NewTabWriter(writer io.Writer, header []string) *tablewriter.Table {
 	tabWriter := tablewriter.NewWriter(writer)
 	tabWriter.SetAlignment(tablewriter.ALIGN_LEFT)
 	tabWriter.SetAutoFormatHeaders(false)
+	tabWriter.SetHeader(header)
+	var headerColors []tablewriter.Colors
+	for range header {
+		headerColors = append(headerColors, tablewriter.Colors{tablewriter.Bold})
+	}
+	tabWriter.SetHeaderColor(headerColors...)
 	return tabWriter
 }
 
@@ -89,23 +88,18 @@ func Print(writer io.Writer, valueList []interface{}) {
 }
 
 func getHeaderFromValueList(valueList []interface{}) []string {
-	var header []string
+	if len(valueList) == 0 {
+		return []string{"result"}
+	}
 
+	var header []string
 	val := valueList[0]
 	reflectedType := reflect.TypeOf(val)
 	for i := 0; i < reflectedType.NumField(); i++ {
 		// field tag
 		jsonTagName := reflectedType.Field(i).Tag.Get("json")
-		header = append(header, formatColumnName(jsonTagName))
+		header = append(header, jsonTagName)
 	}
 
 	return header
-}
-
-func formatColumnName(jsonTagName string) string {
-	words := strings.Split(jsonTagName, "_")
-	for i, w := range words {
-		words[i] = strings.ToTitle(w)
-	}
-	return strings.Join(words, "\n")
 }

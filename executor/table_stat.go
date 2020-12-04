@@ -29,7 +29,7 @@ import (
 )
 
 var tableStatsTemplate = `--- 
-Read: 
+Request: 
  Get:
   counter: get_qps
  Mget:
@@ -39,7 +39,6 @@ Read:
  RBytes:
   counter: read_bytes
   unit: byte
-Write: 
  Put:
   counter: put_qps
  Mput:
@@ -53,7 +52,13 @@ Write:
  WBytes:
   counter: write_bytes
   unit: byte
-Storage:
+ Abnormal:
+  counter: recent_abnormal_count
+ Expire:
+  counter: recent_expire_count
+ Filter:
+  counter: recent_filter_count
+Usage:
  KeyNum:
   counter: rdb_estimate_num_keys
  TableSize:
@@ -62,20 +67,12 @@ Storage:
  AvgPartitionSize:
   counter: avg_partition_mb
   unit: MB
-Memory:
  Index:
   counter: rdb_index_and_filter_blocks_mem_usage
   unit: byte
  MemTable:
   counter: rdb_memtable_mem_usage
   unit: byte
-Performance:
- Abnormal:
-  counter: recent_abnormal_count
- Expire:
-  counter: recent_expire_count
- Filter:
-  counter: recent_filter_count
 `
 
 // TableStat is table-stat command.
