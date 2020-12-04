@@ -28,22 +28,6 @@ or specify one test:
 mvn clean package -Dtest=TestPing
 ```
 
-## PegasusCli
-
-PegasusCli is a tool to set/get/del data from pegasus.
-
-This tool is also deployed to Nexus, from which you can download it.
-
-Or you can build it from source as following:
-
-```
-mvn clean package -DskipTests
-cd target/
-tar xfz pegasus-client-${VERSION}-thrift-0.11.0-inlined-bin.tar.gz
-cd pegasus-client-${VERSION}-thrift-0.11.0-inlined
-./PegasusCli
-```
-
 ## Configuration
 
 Configure client by "pegasus.properties", for example:
@@ -92,7 +76,3 @@ Currently, metrics are integrated with open-falcon(http://open-falcon.com/),
 which push counters to local http agent http://127.0.0.1:1988/push/v1. 
 
 If you'd like to integrate pegasus client with other monitor system, please let us know ASAP.
-
-## Document
-
-For Pegasus Java API document, please refer to: https://github.com/XiaoMi/pegasus/wiki/Java%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%87%E6%A1%A3

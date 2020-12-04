@@ -370,7 +370,6 @@
             <exclude>idl/*</exclude>
             <exclude>configuration/*</exclude>
             <exclude>dev-support/*</exclude>
-            <exclude>scripts/PegasusCli</exclude>
           </excludes>
 
           <mapping>
