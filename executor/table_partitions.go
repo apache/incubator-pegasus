@@ -38,7 +38,7 @@ func ShowTablePartitions(client *Client, tableName string) error {
 		return err
 	}
 
-	nodes, err := getNodesMap(client, ctx)
+	nodes, err := getNodesMap(ctx, client)
 	if err != nil {
 		return err
 	}

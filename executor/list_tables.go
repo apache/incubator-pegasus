@@ -47,38 +47,36 @@ func ListTables(client *Client, showDropped bool) error {
 		return err
 	}
 
-	type dropTableStruct struct {
-		AppID          int32  `json:"id"`
-		Name           string `json:"name"`
-		PartitionCount int32  `json:"partitionCount"`
-		DropTime       string `json:"dropTime"`
-		ExpireTime     string `json:"expireTime"`
+	type droppedTableStruct struct {
+		AppID          int32  `json:"ID"`
+		Name           string `json:"Name"`
+		PartitionCount int32  `json:"PartitionCount"`
+		DropTime       string `json:"DropTime"`
+		ExpireTime     string `json:"ExpireTime"`
 	}
 
 	type availableTableStruct struct {
-		AppID           int32  `json:"id"`
-		Name            string `json:"name"`
-		PartitionCount  int32  `json:"partitionCount"`
-		FullHealthy     int32  `json:"fullHealthy"`
-		UnHealthy       int32  `json:"unhealthy"`
-		WriteUnHealthy  int32  `json:"writeUnhealthy"`
-		ReadUnHealthy   int32  `json:"readUnhealthy"`
-		CreateTime      string `json:"createTime"`
-		WReqRateLimit   string `json:"writeReqLimit"`
-		WBytesRateLimit string `json:"writeBytesLimit"`
+		AppID           int32  `json:"ID"`
+		Name            string `json:"Name"`
+		PartitionCount  int32  `json:"Partitions"`
+		UnHealthy       int32  `json:"Unhealthy"`
+		WriteUnHealthy  int32  `json:"WriteUnhealthy"`
+		ReadUnHealthy   int32  `json:"ReadUnhealthy"`
+		CreateTime      string `json:"CreateTime"`
+		WReqRateLimit   string `json:"WReqRateLimit"`
+		WBytesRateLimit string `json:"WBytesRateLimit"`
 	}
 
 	var tbList []interface{}
 	for _, tb := range resp.Infos {
 		if status == admin.AppStatus_AS_AVAILABLE {
-			fullHealthy, unHealthy, writeUnHealthy, readUnHealthy, err := getPartitionHealthyCount(client, tb)
+			unHealthy, writeUnHealthy, readUnHealthy, err := getPartitionHealthyCount(client, tb)
 			if err != nil {
 				return err
 			}
 			tbList = append(tbList, availableTableStruct{
 				AppID:           tb.AppID,
 				Name:            tb.AppName,
-				FullHealthy:     fullHealthy,
 				UnHealthy:       unHealthy,
 				WriteUnHealthy:  writeUnHealthy,
 				ReadUnHealthy:   readUnHealthy,
@@ -88,7 +86,7 @@ func ListTables(client *Client, showDropped bool) error {
 				WBytesRateLimit: tb.Envs["replica.write_throttling_by_size"],
 			})
 		} else if status == admin.AppStatus_AS_DROPPED {
-			tbList = append(tbList, dropTableStruct{
+			tbList = append(tbList, droppedTableStruct{
 				AppID:          tb.AppID,
 				Name:           tb.AppName,
 				DropTime:       util.FormatDate(tb.DropSecond),
@@ -104,13 +102,13 @@ func ListTables(client *Client, showDropped bool) error {
 	return nil
 }
 
-// return (FullHealthy, UnHealthy, WriteUnHealthy, ReadUnHealthy, Err)
-func getPartitionHealthyCount(client *Client, table *admin.AppInfo) (int32, int32, int32, int32, error) {
+// return (UnHealthy, WriteUnHealthy, ReadUnHealthy, Err)
+func getPartitionHealthyCount(client *Client, table *admin.AppInfo) (int32, int32, int32, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	resp, err := client.Meta.QueryConfig(ctx, table.AppName)
 	if err != nil {
-		return 0, 0, 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	var fullHealthy, unHealthy, writeUnHealthy, readUnHealthy int32
@@ -129,5 +127,5 @@ func getPartitionHealthyCount(client *Client, table *admin.AppInfo) (int32, int3
 		}
 	}
 	unHealthy = table.PartitionCount - fullHealthy
-	return fullHealthy, unHealthy, writeUnHealthy, readUnHealthy, nil
+	return unHealthy, writeUnHealthy, readUnHealthy, nil
 }

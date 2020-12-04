@@ -27,7 +27,7 @@ import (
 
 func init() {
 	shell.AddCommand(&grumble.Command{
-		Name: "nodes-stat",
+		Name: "node-stat",
 		Help: "query all nodes perf stat in the cluster",
 		Run: func(c *grumble.Context) error {
 			return executor.ShowNodesStat(

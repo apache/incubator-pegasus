@@ -59,7 +59,7 @@ func init() {
 func useCompletion(prefix string) []string {
 	if tablesCached {
 		// returns all tables
-		return cachedTableNames
+		return filterStringWithPrefix(cachedTableNames, prefix)
 	}
 
 	// TODO(wutao): auto-completes in background
@@ -79,5 +79,5 @@ func useCompletion(prefix string) []string {
 	}
 	cachedTableNames = tableNames
 	tablesCached = true
-	return tableNames
+	return filterStringWithPrefix(tableNames, prefix)
 }

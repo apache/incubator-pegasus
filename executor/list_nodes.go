@@ -34,11 +34,11 @@ import (
 )
 
 type nodeInfoStruct struct {
-	Address           string `json:"node"`
-	Status            string `json:"status"`
-	ReplicaTotalCount int    `json:"replica"`
-	PrimaryCount      int    `json:"primary"`
-	SecondaryCount    int    `json:"secondary"`
+	Address           string `json:"Node"`
+	Status            string `json:"Status"`
+	ReplicaTotalCount int    `json:"Replica"`
+	PrimaryCount      int    `json:"Primary"`
+	SecondaryCount    int    `json:"Secondary"`
 }
 
 // ListNodes is nodes command.
@@ -46,7 +46,7 @@ func ListNodes(client *Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	nodes, err := getNodesMap(client, ctx)
+	nodes, err := getNodesMap(ctx, client)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func ListNodes(client *Client) error {
 	return nil
 }
 
-func getNodesMap(client *Client, ctx context.Context) (map[string]*nodeInfoStruct, error) {
+func getNodesMap(ctx context.Context, client *Client) (map[string]*nodeInfoStruct, error) {
 	listNodeResp, errNode := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
 		Status: admin.NodeStatus_NS_INVALID,
 	})

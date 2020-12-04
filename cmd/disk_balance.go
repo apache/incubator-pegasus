@@ -29,7 +29,7 @@ import (
 func init() {
 	shell.AddCommand(&grumble.Command{
 		Name: "disk-migrate",
-		Help: "migrate replica between the two disks within a specified ReplicaServer node",
+		Help: "migrate replica between the two disks within a specified ReplicaServer",
 		Flags: func(f *grumble.Flags) {
 			/*define the flags*/
 			f.String("g", "gpid", "", "gpid, for example, '2.1'")
@@ -50,7 +50,7 @@ func init() {
 	// TODO(jiashuo1) need generate migrate strategy(step) depends the disk-info result to run
 	shell.AddCommand(&grumble.Command{
 		Name: "disk-balance",
-		Help: "migrate replica automatically to let the disk capacity balance within a specified ReplicaServer node",
+		Help: "auto-migrate replica to let the disks space balance within the given ReplicaServer",
 		Flags: func(f *grumble.Flags) {
 			/*define the flags*/
 		},
