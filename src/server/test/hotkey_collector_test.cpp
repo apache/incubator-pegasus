@@ -345,7 +345,12 @@ TEST_F(hotkey_collector_test, data_completeness)
     ASSERT_EQ(resp.err, dsn::ERR_OK);
 
     auto writes = new dsn::message_ex *[1000];
-    auto cleanup = dsn::defer([=]() { delete[] writes; });
+    auto cleanup = dsn::defer([=]() {
+        for (int i = 0; i < 1000; i++) {
+            writes[i]->release_ref();
+        }
+        delete[] writes;
+    });
     for (int i = 0; i < 1000; i++) {
         writes[i] = create_put_request(generate_set_req(std::to_string(i)));
     }
