@@ -69,7 +69,13 @@ unexpectedly high request volume, and possible hotspot partition...etc, you can 
 - `partition-stat`
 - `node-stat`
 
-`create`, `drop`, `recall` are the table operations.
+`create`, `drop`, `recall` are the table operations. `meta-level` is for rebalancing.
+`table-env set` is an advanced operation that controls table behavior.
+To know more about a specific command usage, please type:
+
+```
+<CMD> -h
+```
 
 ## Developer Guide
 
