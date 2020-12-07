@@ -25,6 +25,8 @@
 namespace pegasus {
 namespace server {
 
+const int FAIL_DB_GET = -104;
+
 rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     : replica_base(server),
       _db(server->_db),

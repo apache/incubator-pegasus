@@ -39,6 +39,7 @@ namespace server {
 static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
+extern const int FAIL_DB_GET;
 
 struct db_get_context
 {

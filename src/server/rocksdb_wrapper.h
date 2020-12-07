@@ -35,8 +35,6 @@ namespace server {
 struct db_get_context;
 class pegasus_server_impl;
 
-static constexpr int FAIL_DB_GET = -104;
-
 class rocksdb_wrapper : public dsn::replication::replica_base
 {
 public:
