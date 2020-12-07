@@ -2,6 +2,7 @@ package aggregate
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -18,13 +19,21 @@ type PerfClient struct {
 }
 
 // GetPartitionStats retrieves all the partition stats from replica nodes.
-func (m *PerfClient) GetPartitionStats() []*PartitionStats {
+// NOTE: Only the primaries are counted.
+func (m *PerfClient) GetPartitionStats() ([]*PartitionStats, error) {
 	m.updateNodes()
 
-	partitions := make(map[base.Gpid]*PartitionStats)
+	partitions, err := m.preparePrimariesStats()
+	if err != nil {
+		return nil, err
+	}
 
-	nodes := m.GetNodeStats("@")
-	for _, n := range nodes {
+	nodeStats, err := m.GetNodeStats("@")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, n := range nodeStats {
 		for name, value := range n.Stats {
 			perfCounter := decodePartitionPerfCounter(name, value)
 			if perfCounter == nil {
@@ -34,14 +43,11 @@ func (m *PerfClient) GetPartitionStats() []*PartitionStats {
 				continue
 			}
 			part := partitions[perfCounter.gpid]
-			if part == nil {
-				part = &PartitionStats{
-					Gpid:  perfCounter.gpid,
-					Stats: make(map[string]float64),
-					Addr:  n.Addr,
-				}
-				partitions[perfCounter.gpid] = part
+			if part == nil || part.Addr != n.Addr {
+				// if this node is not the primary of this partition
+				continue
 			}
+
 			part.Stats[perfCounter.name] = perfCounter.value
 		}
 	}
@@ -51,7 +57,46 @@ func (m *PerfClient) GetPartitionStats() []*PartitionStats {
 		extendStats(&part.Stats)
 		ret = append(ret, part)
 	}
-	return ret
+	return ret, nil
+}
+
+// getPrimaries returns mapping of [partition -> primary address]
+func (m *PerfClient) getPrimaries() (map[base.Gpid]string, error) {
+	tables, err := m.listTables()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	result := make(map[base.Gpid]string)
+	for _, tb := range tables {
+		tableCfg, err := m.meta.QueryConfig(ctx, tb.AppName)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range tableCfg.Partitions {
+			result[*p.Pid] = p.Primary.GetAddress()
+		}
+	}
+	return result, nil
+}
+
+func (m *PerfClient) preparePrimariesStats() (map[base.Gpid]*PartitionStats, error) {
+	primaries, err := m.getPrimaries()
+	if err != nil {
+		return nil, err
+	}
+	partitions := make(map[base.Gpid]*PartitionStats)
+	for p, addr := range primaries {
+		partitions[p] = &PartitionStats{
+			Gpid:  p,
+			Stats: make(map[string]float64),
+			Addr:  addr,
+		}
+	}
+	return partitions, nil
 }
 
 // NodeStat contains the stats of a replica node.
@@ -64,7 +109,7 @@ type NodeStat struct {
 }
 
 // GetNodeStats retrieves all the stats matched with `filter` from replica nodes.
-func (m *PerfClient) GetNodeStats(filter string) []*NodeStat {
+func (m *PerfClient) GetNodeStats(filter string) ([]*NodeStat, error) {
 	m.updateNodes()
 
 	var ret []*NodeStat
@@ -75,45 +120,47 @@ func (m *PerfClient) GetNodeStats(filter string) []*NodeStat {
 		}
 		perfCounters, err := n.GetPerfCounters(filter)
 		if err != nil {
-			log.Errorf("unable to query perf-counters: %s", err)
-			return nil
+			return nil, fmt.Errorf("unable to query perf-counters: %s", err)
 		}
 		for _, p := range perfCounters {
 			stat.Stats[p.Name] = p.Value
 		}
 		ret = append(ret, stat)
 	}
-	return ret
+	return ret, nil
 }
 
-func (m *PerfClient) listNodes() []*admin.NodeInfo {
+func (m *PerfClient) listNodes() ([]*admin.NodeInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	resp, err := m.meta.ListNodes(ctx, &admin.ListNodesRequest{
 		Status: admin.NodeStatus_NS_ALIVE,
 	})
 	if err != nil {
-		log.Error(err)
-		return nil
+		return nil, err
 	}
-	return resp.Infos
+	return resp.Infos, nil
 }
 
-func (m *PerfClient) listTables() []*admin.AppInfo {
+func (m *PerfClient) listTables() ([]*admin.AppInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	resp, err := m.meta.ListApps(ctx, &admin.ListAppsRequest{
 		Status: admin.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {
-		log.Error(err)
-		return nil
+		return nil, err
 	}
-	return resp.Infos
+	return resp.Infos, nil
 }
 
+// updateNodes
 func (m *PerfClient) updateNodes() {
-	nodeInfos := m.listNodes()
+	nodeInfos, err := m.listNodes()
+	if err != nil {
+		log.Error("skip updating nodes due to list-nodes RPC failure: ", err)
+		return
+	}
 
 	newNodes := make(map[string]*PerfSession)
 	for _, n := range nodeInfos {

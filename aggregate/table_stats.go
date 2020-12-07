@@ -11,7 +11,7 @@ import (
 type PartitionStats struct {
 	Gpid base.Gpid
 
-	// Address of the replica node where this partition locates.
+	// Address of the primary where this partition locates.
 	Addr string
 
 	// perfCounter's name -> the value.
