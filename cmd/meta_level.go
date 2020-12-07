@@ -40,10 +40,22 @@ func init() {
 			return executor.GetMetaLevel(pegasusClient)
 		},
 	}
+
+	longHelp := `Reset the rebalancing level of the cluster.
+
+The possible rebalancing levels include "lively", "steady", "blind", "freezed", "stopped".
+The default level of cluster is "steady", which indicates that no automatic rebalancing will be performed.
+Setting to "lively" can enable auto-rebalancing.
+
+Documentation:
+  https://pegasus.apache.org/administration/rebalance`
+
 	rootCmd.AddCommand(
 		&grumble.Command{
-			Name: "set",
-			Help: "reset the meta function level",
+			Name:     "set",
+			Help:     "reset the meta function level",
+			LongHelp: longHelp,
+			Usage:    "meta-level set <LEVEL>",
 			Run: func(c *grumble.Context) error {
 				if len(c.Args) != 1 {
 					return fmt.Errorf("invalid number (%d) of arguments for `meta-level set`", len(c.Args))

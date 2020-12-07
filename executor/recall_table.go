@@ -22,9 +22,10 @@ package executor
 import (
 	"context"
 	"fmt"
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"strconv"
 	"time"
+
+	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 )
 
 func RecallTable(client *Client, originTableId string, newTableName string) error {
@@ -42,7 +43,7 @@ func RecallTable(client *Client, originTableId string, newTableName string) erro
 	}
 
 	fmt.Printf("Recalling table \"%s\", ", resp.Info.AppName)
-	errWait := waitTableReady(client, resp.Info.AppName, int(resp.Info.PartitionCount))
+	errWait := waitTableReady(client, resp.Info.AppName, int(resp.Info.PartitionCount), int(resp.Info.MaxReplicaCount))
 
 	if errWait != nil {
 		return errWait

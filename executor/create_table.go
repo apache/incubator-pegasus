@@ -30,9 +30,12 @@ import (
 )
 
 // CreateTable command
-func CreateTable(c *Client, tableName string, partitionCount int) error {
+func CreateTable(c *Client, tableName string, partitionCount int, replicaCount int) error {
 	if partitionCount < 1 {
 		return fmt.Errorf("partitions count should >=1")
+	}
+	if replicaCount < 1 {
+		return fmt.Errorf("replica count should >=1")
 	}
 	// TODO(wutao): reject request with invalid table name
 
@@ -45,7 +48,7 @@ func CreateTable(c *Client, tableName string, partitionCount int) error {
 			IsStateful:     true,
 			AppType:        "pegasus",
 			SuccessIfExist: true,
-			ReplicaCount:   3,
+			ReplicaCount:   int32(replicaCount),
 		},
 	})
 	if err != nil {
@@ -53,10 +56,10 @@ func CreateTable(c *Client, tableName string, partitionCount int) error {
 	}
 
 	fmt.Fprintf(c, "Creating table \"%s\" (AppID: %d)\n", tableName, resp.Appid)
-	return waitTableReady(c, tableName, partitionCount)
+	return waitTableReady(c, tableName, partitionCount, replicaCount)
 }
 
-func waitTableReady(c *Client, tableName string, partitionCount int) error {
+func waitTableReady(c *Client, tableName string, partitionCount int, replicaCount int) error {
 	fmt.Fprintf(c, "Available partitions:\n")
 	bar := pb.Full.Start(partitionCount) // Add a new bar
 
@@ -73,7 +76,7 @@ func waitTableReady(c *Client, tableName string, partitionCount int) error {
 
 		readyCount := 0
 		for _, part := range resp.Partitions {
-			if part.Primary.GetRawAddress() != 0 && len(part.Secondaries)+1 == 3 {
+			if part.Primary.GetRawAddress() != 0 && len(part.Secondaries)+1 == replicaCount {
 				readyCount++
 			}
 		}

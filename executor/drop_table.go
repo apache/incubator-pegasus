@@ -28,12 +28,12 @@ import (
 )
 
 // DropTable command
-func DropTable(c *Client, tableName string, reservePeriod time.Duration) error {
+func DropTable(c *Client, tableName string, reservePeriod int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	reserveSecond := new(int64)
-	*reserveSecond = int64(reservePeriod.Seconds())
+	*reserveSecond = reservePeriod
 	_, err := c.Meta.DropApp(ctx, &admin.DropAppRequest{
 		AppName: tableName,
 		Options: &admin.DropAppOptions{

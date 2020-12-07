@@ -29,16 +29,18 @@ import (
 
 func init() {
 	shell.AddCommand(&grumble.Command{
-		Name: "create",
-		Help: "create a table",
+		Name:  "create",
+		Help:  "create a table",
+		Usage: "create <table> [-p|--partitions <NUM>] [-r|--replica <NUM>]",
 		Run: func(c *grumble.Context) error {
 			if len(c.Args) != 1 {
 				return fmt.Errorf("must specify a table name")
 			}
-			return executor.CreateTable(pegasusClient, c.Args[0], c.Flags.Int("partitions"))
+			return executor.CreateTable(pegasusClient, c.Args[0], c.Flags.Int("partitions"), c.Flags.Int("replica"))
 		},
 		Flags: func(f *grumble.Flags) {
 			f.Int("p", "partitions", 4, "the number of partitions")
+			f.Int("r", "replica", 3, "the number of replicas")
 		},
 		AllowArgs: true,
 	})

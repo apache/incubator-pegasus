@@ -28,23 +28,37 @@ import (
 )
 
 func init() {
+	longHelp := `Recall a dropped table.
+
+Before the table being physically deleted, you can recall it alive and restore its data.
+This command requires the table ID to restore, which you can see via "ls --drop" command.
+By default, recall will create a new table with the same name as before.
+You can specify a new table name as the second argument.
+
+Sample:
+  recall 16 new_table
+
+Documentation:
+  https://pegasus.apache.org/administration/table-soft-delete`
+
 	shell.AddCommand(&grumble.Command{
 		Name:      "recall",
 		Help:      "recall the dropped table",
+		LongHelp:  longHelp,
+		Usage:     "recall <ORIGIN_TABLE_ID> [NEW_TABLE_NAME]",
 		AllowArgs: true,
 		Run: func(c *grumble.Context) error {
-			var originTableId string
+			var originTableID string
 			var newTableName string
 			if len(c.Args) == 1 {
-				originTableId = c.Args[0]
+				originTableID = c.Args[0]
 			} else if len(c.Args) == 2 {
-				originTableId = c.Args[0]
+				originTableID = c.Args[0]
 				newTableName = c.Args[1]
 			} else {
 				return fmt.Errorf("Invalid argument")
 			}
-
-			return executor.RecallTable(pegasusClient, originTableId, newTableName)
+			return executor.RecallTable(pegasusClient, originTableID, newTableName)
 		},
 	})
 }
