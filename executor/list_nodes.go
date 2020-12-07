@@ -98,7 +98,7 @@ func getNodesMap(ctx context.Context, client *Client) (map[string]*nodeInfoStruc
 func fillNodesInfo(nodes map[string]*nodeInfoStruct, partitions []*replication.PartitionConfiguration) (map[string]*nodeInfoStruct, error) {
 	for _, part := range partitions {
 		n := nodes[part.Primary.GetAddress()]
-		if len(part.Primary.GetAddress()) != 0 {
+		if part.Primary.GetRawAddress() != 0 {
 			if n != nil {
 				n.PrimaryCount++
 				n.ReplicaTotalCount++
