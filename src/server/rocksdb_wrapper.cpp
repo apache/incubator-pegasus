@@ -47,11 +47,11 @@ int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
             ctx->expired = true;
             _pfc_recent_expire_count->increment();
         }
-        return 0;
+        return rocksdb::Status::kOk;
     } else if (s.IsNotFound()) {
         // NotFound is an acceptable error
         ctx->found = false;
-        return 0;
+        return rocksdb::Status::kOk;
     }
 
     dsn::blob hash_key, sort_key;
