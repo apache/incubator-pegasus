@@ -493,7 +493,9 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 if (r == 1) {
                     count++;
                     auto &kv = resp.kvs.back();
-                    limiter->add_size(kv.key.length() + kv.value.length());
+                    uint64_t kv_size = kv.key.length() + kv.value.length();
+                    size += kv_size;
+                    limiter->add_size(kv_size);
                 } else if (r == 2) {
                     expire_count++;
                 } else { // r == 3
@@ -556,7 +558,9 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 if (r == 1) {
                     count++;
                     auto &kv = reverse_kvs.back();
-                    limiter->add_size(kv.key.length() + kv.value.length());
+                    uint64_t kv_size = kv.key.length() + kv.value.length();
+                    size += kv_size;
+                    limiter->add_size(kv_size);
                 } else if (r == 2) {
                     expire_count++;
                 } else { // r == 3
