@@ -40,7 +40,7 @@ import org.slf4j.Logger;
 
 public class ReplicaSession {
   public static class RequestEntry {
-    public int sequenceId;
+    int sequenceId;
     public com.xiaomi.infra.pegasus.operator.client_operator op;
     public Runnable callback;
     public ScheduledFuture<?> timeoutTask;
@@ -84,24 +84,11 @@ public class ReplicaSession {
     this.firstRecentTimedOutMs = new AtomicLong(0);
   }
 
-  // You can specify a message response filter with constructor or with "setMessageResponseFilter"
-  // function.
-  // the mainly usage of filter is test, in which you can control whether to abaondon a response
-  // and how to abandon it, so as to emulate some network failure cases
-  public ReplicaSession(
-      rpc_address address,
-      EventLoopGroup rpcGroup,
-      int socketTimeout,
-      MessageResponseFilter filter) {
-    this(address, rpcGroup, socketTimeout, (ReplicaSessionInterceptorManager) null);
+  void setMessageResponseFilter(MessageResponseFilter filter) {
     this.filter = filter;
   }
 
-  public void setMessageResponseFilter(MessageResponseFilter filter) {
-    this.filter = filter;
-  }
-
-  public int asyncSend(
+  public void asyncSend(
       client_operator op,
       Runnable callbackFunc,
       long timeoutInMilliseconds,
@@ -135,7 +122,6 @@ public class ReplicaSession {
       }
       tryConnect();
     }
-    return entry.sequenceId;
   }
 
   public void closeSession() {

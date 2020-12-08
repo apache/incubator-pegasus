@@ -25,7 +25,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.slf4j.Logger;
 
-/** Created by sunweijie@xiaomi.com on 16-11-9. */
 public class ThriftFrameEncoder extends MessageToByteEncoder<ReplicaSession.RequestEntry> {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ThriftFrameEncoder.class);
 
@@ -59,13 +58,5 @@ public class ThriftFrameEncoder extends MessageToByteEncoder<ReplicaSession.Requ
         initIndex,
         e.op.prepare_thrift_header(
             meta_length, out.readableBytes() - ThriftHeader.HEADER_LENGTH - meta_length));
-  }
-
-  @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-    logger.warn(
-        "got exception in outbound handler of {}, just ignore this: ",
-        ctx.channel().toString(),
-        cause);
   }
 }
