@@ -28,15 +28,26 @@ import (
 )
 
 func init() {
+	longHelp := `Create a Pegasus table.
+
+Please pay attention to the partition number. It usually depends on the table's on-disk storage size.
+To achieve an predictable performance, you should keep the average partition size within a acceptable
+range.`
+
 	shell.AddCommand(&grumble.Command{
-		Name:  "create",
-		Help:  "create a table",
-		Usage: "create <table> [-p|--partitions <NUM>] [-r|--replica <NUM>]",
+		Name:     "create",
+		Help:     "create a table",
+		Usage:    "create <table> [-p|--partitions <NUM>] [-r|--replica <NUM>]",
+		LongHelp: longHelp,
 		Run: func(c *grumble.Context) error {
 			if len(c.Args) != 1 {
 				return fmt.Errorf("must specify a table name")
 			}
-			return executor.CreateTable(pegasusClient, c.Args[0], c.Flags.Int("partitions"), c.Flags.Int("replica"))
+			partitionCount := c.Flags.Int("partitions")
+			if partitionCount%2 != 0 {
+				return fmt.Errorf("partitions number must be a multiply of 2")
+			}
+			return executor.CreateTable(pegasusClient, c.Args[0], partitionCount, c.Flags.Int("replica"))
 		},
 		Flags: func(f *grumble.Flags) {
 			f.Int("p", "partitions", 4, "the number of partitions")

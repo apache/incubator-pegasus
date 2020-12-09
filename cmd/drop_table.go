@@ -58,7 +58,7 @@ Documentation:
 		},
 		Flags: func(f *grumble.Flags) {
 			// 7 days by default.
-			f.Duration("r", "reserved", 86400*7, "the soft-deletion period, which is the time before table actually deleted")
+			f.Int64("r", "reserved", 86400*7, "the soft-deletion period, which is the time before table actually deleted")
 		},
 		AllowArgs: true,
 	})
