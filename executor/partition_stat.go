@@ -54,6 +54,8 @@ Overall:
  Size:
   counter: sst_storage_mb
   unit: MB
+ Abnormal:
+  counter: recent_abnormal_count
 `
 
 // ShowPartitionsStats is partition-stat command
