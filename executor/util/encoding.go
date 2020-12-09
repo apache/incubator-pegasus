@@ -91,17 +91,17 @@ func (*int64Encoder) String() string {
 	return "INT64"
 }
 
-type rawBytesEncoder struct {
+type goBytesEncoder struct {
 }
 
-func (*rawBytesEncoder) EncodeAll(s string) ([]byte, error) {
+func (*goBytesEncoder) EncodeAll(s string) ([]byte, error) {
 	bytesInStrList := strings.Split(s, " ")
 
 	value := make([]byte, len(bytesInStrList))
 	for i, byteStr := range bytesInStrList {
 		b, err := strconv.Atoi(byteStr)
-		if err != nil || b >= 128 || b < -128 { // byte ranges from [-128, 127]
-			return nil, fmt.Errorf("invalid byte \"%s\"", byteStr)
+		if err != nil || b > 255 || b < 0 { // byte ranges from [0, 255]
+			return nil, fmt.Errorf("invalid go byte \"%s\"", byteStr)
 		}
 		value[i] = byte(b)
 	}
@@ -109,15 +109,15 @@ func (*rawBytesEncoder) EncodeAll(s string) ([]byte, error) {
 	return value, nil
 }
 
-func (*rawBytesEncoder) DecodeAll(bytes []byte) (string, error) {
+func (*goBytesEncoder) DecodeAll(bytes []byte) (string, error) {
 	s := make([]string, len(bytes))
 	for i, c := range bytes {
-		s[i] += fmt.Sprint(int(c))
+		s[i] = fmt.Sprint(uint8(c))
 	}
 	return strings.Join(s, ","), nil
 }
 
-func (*rawBytesEncoder) String() string {
+func (*goBytesEncoder) String() string {
 	return "BYTES"
 }
 
@@ -132,7 +132,9 @@ func NewEncoder(name string) Encoder {
 	case "int64":
 		return &int64Encoder{}
 	case "bytes":
-		return &rawBytesEncoder{}
+		return &goBytesEncoder{}
+	case "javabytes":
+		return &javaBytesEncoder{}
 	case "asciihex":
 		return &asciiHexEncoder{}
 	// TODO(wutao): support hex array, such as 0x37, 0xFF, ...
