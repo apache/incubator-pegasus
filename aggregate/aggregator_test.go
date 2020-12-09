@@ -13,7 +13,8 @@ func TestUpdateLocalTableMap(t *testing.T) {
 		client: NewPerfClient([]string{"127.0.0.1:34601"}),
 		tables: make(map[int32]*TableStats),
 	}
-	ag.updateTableMap()
+	err := ag.updateTableMap()
+	assert.Nil(t, err)
 	assert.Equal(t, len(ag.tables), 2)
 	assert.Equal(t, len(ag.tables[1].Partitions), 4) // test
 	assert.Equal(t, len(ag.tables[2].Partitions), 8) // stat
@@ -63,7 +64,8 @@ func TestUpdatePartitionStats(t *testing.T) {
 
 func TestAggregate(t *testing.T) {
 	ag := NewTableStatsAggregator([]string{"127.0.0.1:34601"})
-	tableStats, allStat := ag.Aggregate()
+	tableStats, allStat, err := ag.Aggregate()
+	assert.Nil(t, err)
 	assert.Greater(t, len(allStat.Stats), 0)
 
 	assert.Equal(t, len(tableStats), 2)

@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -14,7 +15,7 @@ import (
 // After all TableStats have been collected, TableStatsAggregator sums them up into a
 // ClusterStats. Users of this pacakage can use the hooks to watch every changes of the stats.
 type TableStatsAggregator interface {
-	Aggregate() (map[int32]*TableStats, *ClusterStats)
+	Aggregate() (map[int32]*TableStats, *ClusterStats, error)
 }
 
 // NewTableStatsAggregator returns a TableStatsAggregator instance.
@@ -47,15 +48,24 @@ func Start(tom *tomb.Tomb) {
 		case <-ticker.C:
 		}
 
-		ag.Aggregate()
+		_, _, err := ag.Aggregate()
+		if err != nil {
+			log.Error(err)
+		}
 	}
 }
 
-func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStats) {
-	ag.updateTableMap()
+func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStats, error) {
+	err := ag.updateTableMap()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to aggregate: %s", err)
+	}
 
 	// TODO(wutao1): reduce meta queries for listing nodes
-	partitions := ag.client.GetPartitionStats()
+	partitions, err := ag.client.GetPartitionStats()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to aggregate: %s", err)
+	}
 	for _, p := range partitions {
 		ag.updatePartitionStat(p)
 	}
@@ -68,7 +78,7 @@ func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStat
 	ag.aggregateClusterStats()
 	hooksManager.afterTableStatsEmitted(batchTableStats, *ag.allStats)
 
-	return ag.tables, ag.allStats
+	return ag.tables, ag.allStats, nil
 }
 
 func (ag *tableStatsAggregator) aggregateClusterStats() {
@@ -86,9 +96,13 @@ func (ag *tableStatsAggregator) aggregateClusterStats() {
 // Some tables may disappear (be dropped) or first show up.
 // This function maintains the local table map
 // to keep consistent with the pegasus cluster.
-func (ag *tableStatsAggregator) updateTableMap() {
-	tables := ag.client.listTables()
+func (ag *tableStatsAggregator) updateTableMap() error {
+	tables, err := ag.client.listTables()
+	if err != nil {
+		return err
+	}
 	ag.doUpdateTableMap(tables)
+	return nil
 }
 
 func (ag *tableStatsAggregator) doUpdateTableMap(tables []*admin.AppInfo) {

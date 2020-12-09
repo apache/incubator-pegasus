@@ -35,7 +35,7 @@ func TestDecodePartitionPerfCounter(t *testing.T) {
 
 	for _, tt := range tests {
 		pc := decodePartitionPerfCounter(tt.name, 1.0)
-		assert.Equal(t, (pc == nil), tt.isNil, tt.name)
+		assert.Equal(t, pc == nil, tt.isNil, tt.name)
 		if pc != nil {
 			assert.Equal(t, pc.name, tt.counterName)
 			assert.Equal(t, pc.gpid, base.Gpid{Appid: tt.appID, PartitionIndex: tt.partitionIndex})
