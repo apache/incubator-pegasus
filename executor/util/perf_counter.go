@@ -39,23 +39,27 @@ func GetPartitionStat(perfSession *aggregate.PerfSession, counter string, gpid s
 	return int64(counters[0].Value)
 }
 
-func GetNodeStat(perfClient *aggregate.PerfClient) map[string]*aggregate.NodeStat {
+// GetNodeStats returns a mapping of [node address => node stats]
+func GetNodeStats(perfClient *aggregate.PerfClient) (map[string]*aggregate.NodeStat, error) {
 	var nodesStats = make(map[string]*aggregate.NodeStat)
 
-	nodes := perfClient.GetNodeStats("replica")
+	nodes, err := perfClient.GetNodeStats("replica")
+	if err != nil {
+		return nil, err
+	}
+	for _, node := range nodes {
+		nodesStats[node.Addr] = &aggregate.NodeStat{
+			Addr:  node.Addr,
+			Stats: make(map[string]float64),
+		}
+	}
 	for _, node := range nodes {
 		for name, value := range node.Stats {
 			name = getCounterName(name)
-			if nodesStats[node.Addr] == nil {
-				nodesStats[node.Addr] = &aggregate.NodeStat{
-					Addr:  node.Addr,
-					Stats: make(map[string]float64),
-				}
-			}
 			nodesStats[node.Addr].Stats[name] += value
 		}
 	}
-	return nodesStats
+	return nodesStats, nil
 }
 
 func getCounterName(name string) string {

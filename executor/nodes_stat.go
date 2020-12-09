@@ -64,7 +64,10 @@ Request:
 `
 
 func ShowNodesStat(client *Client) error {
-	nodesStats := util.GetNodeStat(client.Perf)
+	nodesStats, err := util.GetNodeStats(client.Perf)
+	if err != nil {
+		return err
+	}
 	printNodesStatsTabular(client, nodesStats)
 	return nil
 }

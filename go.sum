@@ -404,8 +404,8 @@ github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnh
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
-github.com/pegasus-kv/collector v0.0.0-20201201073017-468e28186f53 h1:u9W7M8wHukiohIqNhsTLgtrTatClQCIqlKZhZoBg/Kw=
-github.com/pegasus-kv/collector v0.0.0-20201201073017-468e28186f53/go.mod h1:5zkYUqrX6Ft+PAx228/A3ecdKS9+2GKgtjn0SzOOEq0=
+github.com/pegasus-kv/collector v0.0.0-20201209040317-d27335267f44 h1:7ER8l8PYuJiOBbhQJh2EXRVaXot+I6vuKy3372U/r2Q=
+github.com/pegasus-kv/collector v0.0.0-20201209040317-d27335267f44/go.mod h1:5zkYUqrX6Ft+PAx228/A3ecdKS9+2GKgtjn0SzOOEq0=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.8.1 h1:1Nf83orprkJyknT6h7zbuEGUEjcyVlCxSUGTENmNCRM=

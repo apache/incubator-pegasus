@@ -78,7 +78,10 @@ Usage:
 // TableStat is table-stat command.
 func TableStat(c *Client) error {
 	ag := aggregate.NewTableStatsAggregator(c.Nodes.MetaAddresses)
-	tableStats, _ := ag.Aggregate()
+	tableStats, _, err := ag.Aggregate()
+	if err != nil {
+		return err
+	}
 	// TODO(wutao): limit table count, if table count exceeds a number, the result
 	// can be written to a file or somewhere instead.
 
@@ -120,7 +123,7 @@ func tableStatsSortedByAppID(tables map[int32]*aggregate.TableStats) []*aggregat
 	}
 	sort.Ints(appIDs)
 
-	tableList := []*aggregate.TableStats{}
+	var tableList []*aggregate.TableStats
 	for _, id := range appIDs {
 		tableList = append(tableList, tables[int32(id)])
 	}

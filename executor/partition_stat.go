@@ -68,7 +68,10 @@ func ShowPartitionsStats(client *Client, tableName string) error {
 
 	// filter out the partitions belongs to this table.
 	var appPartitions []*aggregate.PartitionStats
-	partitions := client.Perf.GetPartitionStats()
+	partitions, err := client.Perf.GetPartitionStats()
+	if err != nil {
+		return err
+	}
 	for _, p := range partitions {
 		if p.Gpid.Appid == appID {
 			appPartitions = append(appPartitions, p)
