@@ -116,6 +116,7 @@ hotkey_collector::hotkey_collector(dsn::replication::hotkey_type::type hotkey_ty
     _internal_fine_collector =
         std::make_shared<hotkey_fine_data_collector>(this, now_hash_bucket_num);
     _internal_empty_collector = std::make_shared<hotkey_empty_data_collector>(this);
+    _state.store(hotkey_collector_state::STOPPED);
 }
 
 inline void hotkey_collector::change_state_to_stopped()

@@ -116,6 +116,8 @@ private:
     std::shared_ptr<hotkey_empty_data_collector> _internal_empty_collector;
     std::shared_ptr<hotkey_coarse_data_collector> _internal_coarse_collector;
     std::shared_ptr<hotkey_fine_data_collector> _internal_fine_collector;
+
+    friend class hotkey_collector_test;
 };
 
 // Be sure every function in internal_collector_base should be thread safe

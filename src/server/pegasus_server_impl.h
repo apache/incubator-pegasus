@@ -181,6 +181,7 @@ private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
     friend class pegasus_server_impl_test;
+    friend class hotkey_collector_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_app_envs);

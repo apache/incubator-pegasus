@@ -67,7 +67,12 @@ public:
                 for (int i = put_rpc_cnt; i < total_rpc_cnt; i++) {
                     writes[i] = pegasus::create_remove_request(key);
                 }
-                auto cleanup = dsn::defer([=]() { delete[] writes; });
+                auto cleanup = dsn::defer([=]() {
+                    for (int i = 0; i < total_rpc_cnt; i++) {
+                        writes[i]->release_ref();
+                    }
+                    delete[] writes;
+                });
 
                 int err =
                     _server_write->on_batched_write_requests(writes, total_rpc_cnt, decree, 0);
