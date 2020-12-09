@@ -188,6 +188,7 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     dsn::replication::detect_hotkey_request req;
     req.type = hotkey_type;
     req.action = action;
+    req.pid = dsn::gpid(app_id, partition_index);
     auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
 
     ddebug_f("{} {} hotkey detection in {}.{}, server address: {}",
