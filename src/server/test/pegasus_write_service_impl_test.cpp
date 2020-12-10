@@ -26,12 +26,14 @@
 
 namespace pegasus {
 namespace server {
+extern const int FAIL_DB_GET;
 
 class pegasus_write_service_impl_test : public pegasus_server_test_base
 {
 protected:
     std::unique_ptr<pegasus_server_write> _server_write;
     pegasus_write_service::impl *_write_impl{nullptr};
+    rocksdb_wrapper *_rocksdb_wrapper{nullptr};
 
 public:
     void SetUp() override
@@ -39,6 +41,7 @@ public:
         start();
         _server_write = dsn::make_unique<pegasus_server_write>(_server.get(), true);
         _write_impl = _server_write->_write_svc->_impl.get();
+        _rocksdb_wrapper = _write_impl->_rocksdb_wrapper.get();
     }
 
     uint64_t read_timestamp_from(dsn::string_view raw_key)
@@ -70,7 +73,7 @@ public:
 
     int db_get(dsn::string_view raw_key, db_get_context *get_ctx)
     {
-        return _write_impl->db_get(raw_key, get_ctx);
+        return _rocksdb_wrapper->get(raw_key, get_ctx);
     }
 
     void single_set(dsn::blob raw_key, dsn::blob user_value)
@@ -258,5 +261,25 @@ TEST_F(incr_test, fail_on_put)
     dsn::fail::teardown();
 }
 
+TEST_F(incr_test, incr_on_expire_record)
+{
+    // make the key expired
+    req.expire_ts_seconds = 1;
+    _write_impl->incr(0, req, resp);
+
+    // check whether the key is expired
+    db_get_context get_ctx;
+    db_get(req.key, &get_ctx);
+    ASSERT_TRUE(get_ctx.expired);
+
+    // incr the expired key
+    req.increment = 100;
+    req.expire_ts_seconds = 0;
+    _write_impl->incr(0, req, resp);
+    ASSERT_EQ(resp.new_value, 100);
+
+    db_get(req.key, &get_ctx);
+    ASSERT_TRUE(get_ctx.found);
+}
 } // namespace server
 } // namespace pegasus

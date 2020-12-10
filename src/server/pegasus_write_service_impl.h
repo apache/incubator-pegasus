@@ -25,6 +25,7 @@
 
 #include "base/pegasus_key_schema.h"
 #include "meta_store.h"
+#include "rocksdb_wrapper.h"
 
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/filesystem.h>
@@ -38,7 +39,7 @@ namespace server {
 static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
-static constexpr int FAIL_DB_GET = -104;
+extern const int FAIL_DB_GET;
 
 struct db_get_context
 {
@@ -97,6 +98,7 @@ public:
     {
         // disable write ahead logging as replication handles logging instead now
         _wt_opts.disableWAL = true;
+        _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server);
     }
 
     int empty_put(int64_t decree)
@@ -196,7 +198,7 @@ public:
         int64_t new_value = 0;
         uint32_t new_expire_ts = 0;
         db_get_context get_ctx;
-        int err = db_get(raw_key, &get_ctx);
+        int err = _rocksdb_wrapper->get(raw_key, &get_ctx);
         if (err != 0) {
             resp.error = err;
             return err;
@@ -207,7 +209,6 @@ public:
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
         } else if (get_ctx.expired) {
             // ttl timeout, set to 0 before increment
-            _pfc_recent_expire_count->increment();
             new_value = update.increment;
             new_expire_ts = update.expire_ts_seconds > 0 ? update.expire_ts_seconds : 0;
         } else {
@@ -861,6 +862,7 @@ private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_impl_test;
+    friend class rocksdb_wrapper_test;
     FRIEND_TEST(pegasus_write_service_impl_test, put_verify_timetag);
     FRIEND_TEST(pegasus_write_service_impl_test, verify_timetag_compatible_with_version_0);
 
@@ -876,6 +878,8 @@ private:
     volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
     pegasus_value_generator _value_generator;
+
+    std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
 
     // for setting update_response.error after committed.
     std::vector<dsn::apps::update_response *> _update_responses;
