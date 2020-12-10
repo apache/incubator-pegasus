@@ -24,6 +24,9 @@
 namespace rocksdb {
 class DB;
 class ReadOptions;
+class WriteBatch;
+class ColumnFamilyHandle;
+class WriteOptions;
 } // namespace rocksdb
 
 namespace dsn {
@@ -31,8 +34,11 @@ class perf_counter_wrapper;
 } // namespace dsn
 
 namespace pegasus {
+class pegasus_value_generator;
+
 namespace server {
 struct db_get_context;
+struct db_write_context;
 class pegasus_server_impl;
 
 class rocksdb_wrapper : public dsn::replication::replica_base
@@ -46,11 +52,32 @@ public:
     /// \result ctx.found=false if record is not found. Still 0 is returned.
     int get(dsn::string_view raw_key, /*out*/ db_get_context *ctx);
 
+    int write_batch_put(int64_t decree,
+                        dsn::string_view raw_key,
+                        dsn::string_view value,
+                        uint32_t expire_sec);
+    int write_batch_put_ctx(const db_write_context &ctx,
+                            dsn::string_view raw_key,
+                            dsn::string_view value,
+                            uint32_t expire_sec);
+    int write(int64_t decree);
+    void clear_up_write_batch();
+
+    void set_default_ttl(uint32_t ttl);
+
 private:
+    uint32_t db_expire_ts(uint32_t expire_ts);
+
     rocksdb::DB *_db;
     rocksdb::ReadOptions &_rd_opts;
+    std::unique_ptr<pegasus_value_generator> _value_generator;
+    std::unique_ptr<rocksdb::WriteBatch> _write_batch;
+    std::unique_ptr<rocksdb::WriteOptions> _wt_opts;
+    rocksdb::ColumnFamilyHandle *_meta_cf;
+
     const uint32_t _pegasus_data_version;
     dsn::perf_counter_wrapper &_pfc_recent_expire_count;
+    volatile uint32_t _default_ttl;
 };
 } // namespace server
 } // namespace pegasus

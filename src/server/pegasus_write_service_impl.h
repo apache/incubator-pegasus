@@ -348,22 +348,24 @@ public:
             } else {
                 set_key = check_key;
             }
-            resp.error = db_write_batch_put(decree,
-                                            set_key,
-                                            update.set_value,
-                                            static_cast<uint32_t>(update.set_expire_ts_seconds));
+            resp.error = _rocksdb_wrapper->write_batch_put(
+                decree,
+                set_key,
+                update.set_value,
+                static_cast<uint32_t>(update.set_expire_ts_seconds));
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
-            resp.error = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+            resp.error = _rocksdb_wrapper->write_batch_put(
+                decree, dsn::string_view(), dsn::string_view(), 0);
         }
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
+            _rocksdb_wrapper->clear_up_write_batch();
             return resp.error;
         }
 
-        resp.error = db_write(decree);
+        resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
+            _rocksdb_wrapper->clear_up_write_batch();
             return resp.error;
         }
 
@@ -373,7 +375,7 @@ public:
                 invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
 
-        clear_up_batch_states(decree, resp.error);
+        _rocksdb_wrapper->clear_up_write_batch();
         return 0;
     }
 
@@ -570,10 +572,13 @@ public:
 
     void set_default_ttl(uint32_t ttl)
     {
+        // TODO(zlw): remove these lines
         if (_default_ttl != ttl) {
             _default_ttl = ttl;
             ddebug_replica("update _default_ttl to {}.", ttl);
         }
+
+        _rocksdb_wrapper->set_default_ttl(ttl);
     }
 
 private:
