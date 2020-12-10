@@ -78,6 +78,7 @@ func readPegasusArgs(ctx *Context, args []string) ([][]byte, error) {
 	panic("more than 3 arguments are given")
 }
 
+// printPegasusRecord prints bytes from pegasus in pretty and parsable form.
 func printPegasusRecord(ctx *Context, hashKey, sortKey, value []byte) error {
 	hashKeyStr, err := ctx.HashKeyEnc.DecodeAll(hashKey)
 	if err != nil {

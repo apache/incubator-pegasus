@@ -66,10 +66,12 @@ func (s *ScanCommand) IterateAll(rootCtx *Context) error {
 			Type:    filterType,
 			Pattern: filterPattern,
 		},
+		// TODO(wutao): provide options
+		StartInclusive: true,
+		StopInclusive:  true,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-
 	scanner, err := rootCtx.UseTable.GetScanner(ctx, hashkey, startSortKey, stopSortKey, sopts)
 	if err != nil {
 		return err

@@ -10,9 +10,9 @@ import (
 
 func init() {
 	usage := `<hashKey>
+[ --from <startSortKey> ]
+[ --to <stopSortKey> ]
 [
-  --from <startSortKey>
-  --to <stopSortKey>
   --prefix <filter>
   --suffix <filter>
   --contains <filter>
@@ -30,8 +30,8 @@ func init() {
 			f.StringL("suffix", "", "<filter>")
 			f.StringL("contains", "", "<filter>")
 		},
+		AllowArgs: true,
 	}
-	scanCmd.AddCommand(&grumble.Command{})
 
 	interactive.App.AddCommand(scanCmd)
 }
