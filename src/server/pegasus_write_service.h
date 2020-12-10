@@ -180,6 +180,7 @@ private:
     friend class pegasus_write_service_test;
     friend class pegasus_write_service_impl_test;
     friend class pegasus_server_write_test;
+    friend class rocksdb_wrapper_test;
 
     pegasus_server_impl *_server;
 
