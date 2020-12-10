@@ -311,7 +311,7 @@ public:
         bool value_exist = !get_context.expired && get_context.found;
         if (value_exist) {
             pegasus_extract_user_data(
-                    _pegasus_data_version, std::move(get_context.raw_value), check_value);
+                _pegasus_data_version, std::move(get_context.raw_value), check_value);
         }
 
         if (update.return_check_value) {
