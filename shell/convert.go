@@ -1,8 +1,9 @@
 package shell
 
 import (
-	"github.com/spf13/cobra"
 	"pegic/executor/util"
+
+	"github.com/spf13/cobra"
 )
 
 func init() {

@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"fmt"
 	"io"
 	"pegic/executor/util"
 
@@ -37,6 +38,7 @@ func NewContext(writer io.Writer, metaAddrs []string) *Context {
 	return c
 }
 
+// String returns a human-readable string of context.
 func (c *Context) String() string {
 	output := "\nEncoding:\n"
 	output += "  - HashKey: " + c.HashKeyEnc.String() + "\n"
@@ -45,8 +47,8 @@ func (c *Context) String() string {
 	return output
 }
 
-// readPegasusArgs returns exactly the same number of arguments of input `args` if no failure.
-// The order of arguments are also preserved.
+// readPegasusArgs assumes the args to be [hashkey, sortkey, value].
+// It returns the bytes encoded from the args if no failure.
 func readPegasusArgs(ctx *Context, args []string) ([][]byte, error) {
 	// the first argument must be hashkey
 	hashkey, err := ctx.HashKeyEnc.EncodeAll(args[0])
@@ -74,4 +76,21 @@ func readPegasusArgs(ctx *Context, args []string) ([][]byte, error) {
 	}
 
 	panic("more than 3 arguments are given")
+}
+
+func printPegasusRecord(ctx *Context, hashKey, sortKey, value []byte) error {
+	hashKeyStr, err := ctx.HashKeyEnc.DecodeAll(hashKey)
+	if err != nil {
+		return err
+	}
+	sortkeyStr, err := ctx.SortKeyEnc.DecodeAll(sortKey)
+	if err != nil {
+		return err
+	}
+	valueStr, err := ctx.ValueEnc.DecodeAll(value)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(ctx, "%s : %s : %s\n", hashKeyStr, sortkeyStr, valueStr)
+	return nil
 }
