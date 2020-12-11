@@ -39,7 +39,10 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
 {
     _write_batch = dsn::make_unique<rocksdb::WriteBatch>();
     _value_generator = dsn::make_unique<pegasus_value_generator>();
+
     _wt_opts = dsn::make_unique<rocksdb::WriteOptions>();
+    // disable write ahead logging as replication handles logging instead now
+    _wt_opts->disableWAL = true;
 }
 
 int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)

@@ -20,6 +20,7 @@
 #pragma once
 
 #include <dsn/dist/replication/replica_base.h>
+#include <gtest/gtest_prod.h>
 
 namespace rocksdb {
 class DB;
@@ -78,6 +79,11 @@ private:
     const uint32_t _pegasus_data_version;
     dsn::perf_counter_wrapper &_pfc_recent_expire_count;
     volatile uint32_t _default_ttl;
+
+    friend class rocksdb_wrapper_test;
+    FRIEND_TEST(rocksdb_wrapper_test, put_verify_timetag);
+    FRIEND_TEST(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0);
+    FRIEND_TEST(rocksdb_wrapper_test, get);
 };
 } // namespace server
 } // namespace pegasus
