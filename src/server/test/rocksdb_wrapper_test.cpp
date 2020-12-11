@@ -123,6 +123,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
     db_get_context get_ctx1;
     _rocksdb_wrapper->get(_raw_key, &get_ctx1);
     ASSERT_TRUE(get_ctx1.found);
+    ASSERT_FALSE(get_ctx1.expired);
     ASSERT_EQ(read_timestamp_from(get_ctx1.raw_value), timestamp);
     dsn::blob user_value;
     pegasus_extract_user_data(
@@ -138,6 +139,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
     db_get_context get_ctx2;
     _rocksdb_wrapper->get(_raw_key, &get_ctx2);
     ASSERT_TRUE(get_ctx2.found);
+    ASSERT_FALSE(get_ctx2.expired);
     ASSERT_EQ(read_timestamp_from(get_ctx2.raw_value), timestamp);
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx2.raw_value), user_value);
@@ -154,6 +156,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
     db_get_context get_ctx3;
     _rocksdb_wrapper->get(_raw_key, &get_ctx3);
     ASSERT_TRUE(get_ctx3.found);
+    ASSERT_FALSE(get_ctx3.expired);
     ASSERT_EQ(read_timestamp_from(get_ctx3.raw_value), timestamp);
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx3.raw_value), user_value);
@@ -172,6 +175,7 @@ TEST_F(rocksdb_wrapper_test, put_verify_timetag)
     db_get_context get_ctx4;
     _rocksdb_wrapper->get(_raw_key, &get_ctx4);
     ASSERT_TRUE(get_ctx4.found);
+    ASSERT_FALSE(get_ctx4.expired);
     ASSERT_EQ(read_timestamp_from(get_ctx4.raw_value), timestamp);
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx4.raw_value), user_value);
@@ -186,7 +190,7 @@ TEST_F(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0)
 {
     const_cast<uint32_t &>(_rocksdb_wrapper->_pegasus_data_version) = 0; // old version
 
-    /// set data with data version 0
+    /// write data with data version 0
     std::string value = "value";
     int64_t decree = 10;
     uint64_t timestamp = 10;
@@ -196,6 +200,7 @@ TEST_F(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0)
     db_get_context get_ctx;
     _rocksdb_wrapper->get(_raw_key, &get_ctx);
     ASSERT_TRUE(get_ctx.found);
+    ASSERT_FALSE(get_ctx.expired);
     dsn::blob user_value;
     pegasus_extract_user_data(
         _rocksdb_wrapper->_pegasus_data_version, std::move(get_ctx.raw_value), user_value);
