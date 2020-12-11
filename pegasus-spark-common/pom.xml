@@ -86,8 +86,20 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <version>2.6.0-mdh3.12.24-jre8</version>
+      <!--exclusions for package conflict with spark-core_2.11-->
+      <exclusions>
+        <exclusion>
+          <artifactId>jackson-databind</artifactId>
+          <groupId>com.fasterxml.jackson.core</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>2.6.0-mdh3.12.18-jre8</version>
+      <version>2.6.0-mdh3.12.24-jre8</version>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
@@ -102,7 +114,7 @@
     <dependency>
       <groupId>org.rocksdb</groupId>
       <artifactId>rocksdbjni</artifactId>
-      <version>6.6.4-mdh6.6.4-hdfs</version>
+      <version>6.6.4-mdh6.6.5-hdfs</version>
     </dependency>
     <!--The version add `Serializable` for some class, it will be replaced by release version-->
     <dependency>

@@ -23,8 +23,11 @@ public class RocksDBOptions {
       env = new HdfsEnv(remoteFsUrl + "#" + remoteFsPort);
     } else if (remoteFsUrl.startsWith("hdfs://")) {
       env = new HdfsEnv(remoteFsUrl + ":" + remoteFsPort);
+    } else if (remoteFsUrl.equals("default")) {
+      env = new HdfsEnv(remoteFsUrl);
+      LOG.warn("You now access hdfs using default url in config(core-site.xml)");
     } else {
-      throw new PegasusSparkException("the URL must start with 'fds://' or 'hdfs://'");
+      throw new PegasusSparkException("Not support the url:" + remoteFsUrl);
     }
 
     Logger rocksDBLog =
