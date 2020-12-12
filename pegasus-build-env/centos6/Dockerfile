@@ -19,6 +19,9 @@ FROM centos:6
 
 LABEL maintainer=wutao
 
+# As centos6 became EOL, we could only use a official vault mirror to fetch softwares.
+RUN curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo;
+
 # test if the remote yum repository is valid
 RUN yum list
 
