@@ -19,6 +19,9 @@ FROM centos:7.5.1804
 
 LABEL maintainer=wutao
 
+# test if the remote yum repository is valid
+RUN yum -y update
+
 RUN yum -y install centos-release-scl \
 scl-utils \
 epel-release; \
