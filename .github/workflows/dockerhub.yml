@@ -35,11 +35,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Build and push
-        id: docker_build
         uses: docker/build-push-action@v2
         with:
-          context: ./pegasus-build-env/${{ matrix.dockertag }}
-          file: ./Dockerfile
+          context: .
+          file: ./pegasus-build-env/${{ matrix.dockertag }}/Dockerfile
           push: true
           tags: apachepegasus/build-env:${{ matrix.dockertag }}
       -
