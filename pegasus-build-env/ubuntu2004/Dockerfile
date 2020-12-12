@@ -19,9 +19,12 @@ FROM ubuntu:20.04
 
 LABEL maintainer=wutao
 
-RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/' /etc/apt/sources.list; \
-    apt-get update -y; \
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update -y; \
     apt-get -y install build-essential \
+                       clang-10 \
                        openjdk-8-jdk \
                        python3-pip \
                        libaio-dev \

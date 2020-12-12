@@ -15,8 +15,7 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
-          - ubuntu2004clang11
-          - centos6
+          #- centos6
           - centos7
     steps:
       -
