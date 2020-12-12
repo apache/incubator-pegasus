@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 LABEL maintainer=wutao
 

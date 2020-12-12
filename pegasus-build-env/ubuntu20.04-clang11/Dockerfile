@@ -15,14 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 LABEL maintainer=wutao
 
 RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/' /etc/apt/sources.list; \
     apt-get update -y; \
     apt-get -y install build-essential \
-                       openjdk-8-jdk \
+                       clang-11 \
                        python3-pip \
                        libaio-dev \
                        libsnappy-dev \
