@@ -23,18 +23,19 @@ It contains the Dockerfiles of the building environment for Pegasus compilation.
 
 DockerHub automatically watches the changes of theses files and rebuilds them to images for every commit.
 
-- apachepegasus/build-env:centos6
-- apachepegasus/build-env:centos7
-- apachepegasus/build-env:ubuntu1604
-- apachepegasus/build-env:ubuntu1804
-- apachepegasus/build-env:ubuntu2004
-- apachepegasus/build-env:ubuntu2004clang11
+- `apachepegasus/build-env:centos6`
+- `apachepegasus/build-env:centos7`
+- `apachepegasus/build-env:ubuntu1604`
+- `apachepegasus/build-env:ubuntu1804`
+- `apachepegasus/build-env:ubuntu2004`
+- `apachepegasus/build-env:ubuntu2004clang11`
 
 The DockerHub Homepage: https://hub.docker.com/r/apachepegasus/build-env
 
 You can build on your local machine via the command:
 
 ```sh
+cd pegasus-build-env/centos6
 docker build -t apachepegasus/build-env:centos6 .
 ```
 
