@@ -19,8 +19,7 @@ FROM apachepegasus/build-env:centos7
 
 WORKDIR /root
 
-# install jdk for building pegasus(hdfs_service) and running zookeeper during testing.
-RUN yum -y install ccache zip java-1.8.0-openjdk-devel.x86_64 nmap-ncat; \
+RUN yum -y install ccache zip nmap-ncat; \
     yum clean all; \
     rm -rf /var/cache/yum;
 

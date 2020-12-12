@@ -24,6 +24,7 @@ scl-utils \
 epel-release; \
 yum -y install devtoolset-7-gcc \
 devtoolset-7-gcc-c++ \
+java-1.8.0-openjdk-devel.x86_64 \
 python3 \
 automake \
 autoconf \

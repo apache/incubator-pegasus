@@ -25,6 +25,7 @@ epel-release; \
 yum -y install devtoolset-7-gcc \
 devtoolset-7-gcc-c++ \
 rh-python36-python-pip \
+java-1.8.0-openjdk-devel.x86_64 \
 automake \
 autoconf \
 make \
