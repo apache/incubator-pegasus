@@ -1,4 +1,4 @@
-name: Publish Docker images
+name: Build and publish pegasus-build-env Docker images
 
 on:
   push:
@@ -9,6 +9,7 @@ jobs:
   build_docker_images:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         dockertag:
           - ubuntu1604
