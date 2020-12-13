@@ -3,15 +3,11 @@
 This project maintains the stuff you can use from building Pegasus docker images,
 to deploying a standalone cluster of Pegasus containers on your local machine.
 
-## Guide
+- ![Build and publish pegasus-build-env Docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20publish%20pegasus-build-env%20Docker%20images/badge.svg?branch=master)
 
-It consists of the following components:
+- ![Build and upload third-party source package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20source%20package%20to%20GHCR/badge.svg)
 
-- pegasus-docker-compose
-
-- pegasus-build-env
-
-- ci-env
+- ![Build and upload third-party binary package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20binary%20package%20to%20GHCR/badge.svg?branch=master)
 
 ## pegasus-build-env
 
