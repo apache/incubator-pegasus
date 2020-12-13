@@ -3,7 +3,7 @@ name: Build and upload third-party source package to GHCR
 on:
   push:
     paths:
-      - 'thirdparties-src/*'
+      - 'thirdparties-src/**'
 
 jobs:
   build_docker_images:
