@@ -23,7 +23,6 @@ It contains the Dockerfiles of the building environment for Pegasus compilation.
 
 DockerHub automatically watches the changes of theses files and rebuilds them to images for every commit.
 
-- `apachepegasus/build-env:centos6`
 - `apachepegasus/build-env:centos7`
 - `apachepegasus/build-env:ubuntu1604`
 - `apachepegasus/build-env:ubuntu1804`
@@ -40,10 +39,6 @@ docker build -t apachepegasus/build-env:centos7 .
 
 The How-to Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
 
-## ci-env
-
-This is a Docker image for running Pegasus testing.
-
 ## thirdparties-src
 
 This image is to eliminate extra downloading of third-party sources of Pegasus.
@@ -55,3 +50,15 @@ Since it mostly benefits the building in Github Actions, we uploaded it automati
 to the Github Container Registry: `ghcr.io/pegasus-kv/thirdparties-src`,
 which is now only accessible from Github Actions runners, not public to everyone.
 See also: https://docs.github.com/en/free-pro-team@latest/packages/guides/configuring-docker-for-use-with-github-packages
+
+## thirdparties-bin
+
+This is a Docker image for Pegasus unit-testing. It prebuilts the thirdparty libraries,
+so jobs based on this image can skip building third-parties.
+
+- `ghcr.io/pegasus-kv/thirdparties-bin:centos7`
+- `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1604`
+- `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804`
+- `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu2004`
+
+Only available by Github Actions runners.
