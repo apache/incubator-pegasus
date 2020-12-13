@@ -29,8 +29,7 @@ COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
 
 RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
     cd rdsn/thirdparty; \
-    mkdir -p build; \
-    unzip /root/thirdparties-src.zip -d build/; \
+    unzip /root/thirdparties-src.zip -d .; \
     cmake -DCMAKE_BUILD_TYPE=Release -B build/ .; \
     cmake --build build/ -j $(($(nproc)/2+1)); \
     zip -r ~/thirdparties-bin.zip output/ build/Source/rocksdb/cmake build/Source/http-parser build/Download/zookeeper; \
