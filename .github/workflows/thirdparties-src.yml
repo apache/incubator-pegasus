@@ -2,8 +2,6 @@ name: Build and upload third-party source package to GHCR
 
 on:
   push:
-    branches:
-      - master
     paths:
       - 'thirdparties-src/*'
 
