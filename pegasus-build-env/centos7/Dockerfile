@@ -36,6 +36,7 @@ libtool \
 git \
 file \
 wget \
+zip \
 unzip \
 which \
 openssl-devel \
