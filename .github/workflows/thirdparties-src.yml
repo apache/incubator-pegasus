@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'thirdparties-src/**'
+      - '.github/workflows/thirdparties-src.yml
   workflow_dispatch: # for manually triggering workflow
 
 jobs:
