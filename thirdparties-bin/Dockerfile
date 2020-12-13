@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+ARG OS_VERSION=centos7
+
 FROM ghcr.io/pegasus-kv/thirdparties-src as builder
 
 ARG OS_VERSION=centos7
