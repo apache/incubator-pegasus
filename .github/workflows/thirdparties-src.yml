@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'thirdparties-src/**'
-  workflow_dispatch:
+  workflow_dispatch: # for manually triggering workflow
 
 jobs:
   build_docker_images:
@@ -22,8 +22,8 @@ jobs:
         name: Login to Github Container Registry
         uses: docker/login-action@v1 
         with:
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
       -
         name: Build and push
         uses: docker/build-push-action@v2
