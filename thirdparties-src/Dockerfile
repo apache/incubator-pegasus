@@ -19,13 +19,13 @@ FROM apachepegasus/build-env:ubuntu1804
 
 WORKDIR /root
 
-RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
-    cd rdsn/thirdparty; \
-    mkdir -p build; \
-    cmake -DCMAKE_BUILD_TYPE=Release -B build/ .; \
-    cmake --build build/ -j $(($(nproc)/2+1)); \
-    zip -r ~/thirdparties-src.zip build/Download; \
-    cd ~; \
-    rm -rf rdsn;
+RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git \
+    && cd rdsn/thirdparty \
+    && mkdir -p build \
+    && cmake -DCMAKE_BUILD_TYPE=Release -B build/ . \
+    && cmake --build build/ -j $(($(nproc)/2+1)) \
+    && zip -r ~/thirdparties-src.zip build/Download \
+    && cd ~ \
+    && rm -rf rdsn;
 
 # Unzip thirdparties-src.zip to rdsn/thirdparty/build, the download will automatically be skipped.
