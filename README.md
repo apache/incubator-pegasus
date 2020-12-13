@@ -28,15 +28,14 @@ DockerHub automatically watches the changes of theses files and rebuilds them to
 - `apachepegasus/build-env:ubuntu1604`
 - `apachepegasus/build-env:ubuntu1804`
 - `apachepegasus/build-env:ubuntu2004`
-- `apachepegasus/build-env:ubuntu2004clang11`
 
 The DockerHub Homepage: https://hub.docker.com/r/apachepegasus/build-env
 
 You can build on your local machine via the command:
 
 ```sh
-cd pegasus-build-env/centos6
-docker build -t apachepegasus/build-env:centos6 .
+cd pegasus-build-env/centos7
+docker build -t apachepegasus/build-env:centos7 .
 ```
 
 The How-to Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
@@ -44,3 +43,17 @@ The How-to Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
 ## ci-env
 
 This is a Docker image for running Pegasus testing.
+
+## thirdparties-src
+
+This image is to eliminate extra downloading of third-party sources of Pegasus.
+It packages the downloaded sources into a zip in the container, so that
+other repos can easily extract third-parties from the container (via `docker cp`),
+without downloading from the cloud object storage.
+
+Since it mostly benefits the building in Github Actions, we uploaded it automatically
+to the Github Container Registry. See also: https://docs.github.com/en/free-pro-team@latest/packages/guides/configuring-docker-for-use-with-github-packages
+
+```bash
+docker pull ghcr.io/pegasus-kv/thirdparties-src
+```
