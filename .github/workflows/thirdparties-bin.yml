@@ -6,6 +6,9 @@ on:
       - 'thirdparties-bin/**'
       - '.github/workflows/thirdparties-bin.yml'
 
+  # for manually triggering workflow
+  workflow_dispatch:
+
 jobs:
   build_docker_images:
     runs-on: ubuntu-latest
