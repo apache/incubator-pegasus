@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'thirdparties-src/**'
+  workflow_dispatch
 
 jobs:
   build_docker_images:
