@@ -4,8 +4,10 @@ on:
   push:
     paths:
       - 'thirdparties-src/**'
-      - '.github/workflows/thirdparties-src.yml
-  workflow_dispatch: # for manually triggering workflow
+      - '.github/workflows/thirdparties-src.yml'
+
+  # for manually triggering workflow
+  workflow_dispatch:
 
 jobs:
   build_docker_images:
