@@ -1,13 +1,14 @@
 name: Build and upload third-party source package to GHCR
 
 on:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    # runs at every 30 days
-    - cron:  '0 0 */30 * *'
+  push:
+    branches:
+      - master
+    paths:
+      - 'thirdparties-src/*'
 
 jobs:
-  push:
+  build_docker_images:
     runs-on: ubuntu-latest
     steps:
       -

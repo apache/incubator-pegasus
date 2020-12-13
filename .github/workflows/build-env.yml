@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'pegasus-build-env/**'
 
 jobs:
   build_docker_images:

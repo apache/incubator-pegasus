@@ -52,8 +52,6 @@ other repos can easily extract third-parties from the container (via `docker cp`
 without downloading from the cloud object storage.
 
 Since it mostly benefits the building in Github Actions, we uploaded it automatically
-to the Github Container Registry. See also: https://docs.github.com/en/free-pro-team@latest/packages/guides/configuring-docker-for-use-with-github-packages
-
-```bash
-docker pull ghcr.io/pegasus-kv/thirdparties-src
-```
+to the Github Container Registry: `ghcr.io/pegasus-kv/thirdparties-src`,
+which is now only accessible from Github Actions runners, not public to everyone.
+See also: https://docs.github.com/en/free-pro-team@latest/packages/guides/configuring-docker-for-use-with-github-packages
