@@ -25,27 +25,15 @@ jobs:
           #- centos6 is EOL
           - centos7
     container:
-      image: ghcr.io/pegasus-kv/build-env:${{ matrix.osversion }}
+      image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
     steps:
-      -
-        name: Login to Github Container Registry
-        uses: docker/login-action@v1 
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
       -
         uses: actions/checkout@v2
         with:
           repository: 'XiaoMi/rdsn'
       -
-        uses: shrink/actions-docker-extract@v1
-        with:
-          image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
-          path: /root/thirdparties-bin.zip
-      -
-        name: Extracts thirdparty binaries
-        run: unzip ${{ steps.extract.outputs.destination }} -d ./thirdparty
+        name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       -
         name: Compilation
         run: ./run.sh build -c --skip_thirdparty
