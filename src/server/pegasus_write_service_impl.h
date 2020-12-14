@@ -572,7 +572,7 @@ public:
 
     void set_default_ttl(uint32_t ttl)
     {
-        // TODO(zlw): remove these lines
+        // TODO(zlw): remove these lines after the refactor is done
         if (_default_ttl != ttl) {
             _default_ttl = ttl;
             ddebug_replica("update _default_ttl to {}.", ttl);
