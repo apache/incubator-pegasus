@@ -17,12 +17,13 @@
 
 # use dockerhub by default
 ARG REGISTRY_REPO=apachepegasus
+ARG TAGNAME=master
 
 FROM ${REGISTRY_REPO}/build-env:ubuntu1804 as builder
 
 WORKDIR /root
 
-RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git
+RUN git clone --depth=1 --branch=${TAGNAME} https://github.com/XiaoMi/rdsn.git
 
 RUN cd rdsn/thirdparty \
     && mkdir -p build \
