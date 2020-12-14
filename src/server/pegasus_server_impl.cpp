@@ -68,6 +68,7 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
 std::shared_ptr<rocksdb::RateLimiter> pegasus_server_impl::_s_rate_limiter;
 int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
+std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffer_manager;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
