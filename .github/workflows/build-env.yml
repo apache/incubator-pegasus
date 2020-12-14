@@ -6,6 +6,9 @@ on:
       - 'pegasus-build-env/**'
       - '.github/workflows/build-env.yml'
 
+  # for manually triggering workflow
+  workflow_dispatch:
+
 jobs:
   build_docker_images:
     runs-on: ubuntu-latest

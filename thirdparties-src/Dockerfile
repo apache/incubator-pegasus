@@ -29,7 +29,8 @@ RUN cd rdsn/thirdparty \
     && cmake -DCMAKE_BUILD_TYPE=Release -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1))
 
-RUN zip -r ~/thirdparties-src.zip build/Download \
+RUN cd rdsn/thirdparty \
+    && zip -r ~/thirdparties-src.zip build/Download \
     && cd ~ \
     && rm -rf rdsn;
 
