@@ -9,6 +9,8 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 
 ![Build and upload third-party binary package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20binary%20package%20to%20GHCR/badge.svg?branch=master)
 
+![Build rdsn regularly](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20rdsn%20regularly/badge.svg?branch=master)
+
 ## pegasus-build-env
 
 Building environment for Pegasus compilation.
