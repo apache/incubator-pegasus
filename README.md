@@ -19,17 +19,14 @@ Github Actions automatically rebuilds and publishes build-env for every commit.
 - `apachepegasus/build-env:ubuntu1604`
 - `apachepegasus/build-env:ubuntu1804`
 - `apachepegasus/build-env:ubuntu2004`
-
-DockerHub: https://hub.docker.com/r/apachepegasus/build-env
-
-The How-to-use Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
-
-The packages only available by Github Actions runners:
-
 - `ghcr.io/pegasus-kv/build-env:centos7`
 - `ghcr.io/pegasus-kv/build-env:ubuntu1604`
 - `ghcr.io/pegasus-kv/build-env:ubuntu1804`
 - `ghcr.io/pegasus-kv/build-env:ubuntu2004`
+
+DockerHub: https://hub.docker.com/r/apachepegasus/build-env
+
+The How-to-use Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
 
 ## thirdparties-src
 
@@ -39,9 +36,9 @@ other repos can easily extract third-parties from the container (via `docker cp`
 without downloading from the cloud object storage.
 
 Since it mostly benefits the building in Github Actions, we uploaded it automatically
-to the Github Container Registry: `ghcr.io/pegasus-kv/thirdparties-src`,
-which is now only accessible from Github Actions runners, not public to everyone.
-See also: https://docs.github.com/en/free-pro-team@latest/packages/guides/configuring-docker-for-use-with-github-packages
+to the Github Container Registry:
+
+- `ghcr.io/pegasus-kv/thirdparties-src`
 
 ## thirdparties-bin
 
@@ -52,5 +49,3 @@ so jobs based on this image can skip building third-parties.
 - `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1604`
 - `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804`
 - `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu2004`
-
-Only available by Github Actions runners.
