@@ -3,37 +3,33 @@
 This project maintains the stuff you can use from building Pegasus docker images,
 to deploying a standalone cluster of Pegasus containers on your local machine.
 
-- ![Build and publish pegasus-build-env Docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20publish%20pegasus-build-env%20Docker%20images/badge.svg?branch=master)
+![Build and publish pegasus-build-env Docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20publish%20pegasus-build-env%20Docker%20images/badge.svg?branch=master)
 
-- ![Build and upload third-party source package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20source%20package%20to%20GHCR/badge.svg)
+![Build and upload third-party source package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20source%20package%20to%20GHCR/badge.svg)
 
-- ![Build and upload third-party binary package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20binary%20package%20to%20GHCR/badge.svg?branch=master)
+![Build and upload third-party binary package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20binary%20package%20to%20GHCR/badge.svg?branch=master)
 
 ## pegasus-build-env
 
 Building environment for Pegasus compilation.
 
-It contains the Dockerfiles of the building environment for Pegasus compilation.
-
-### Building the images
-
-DockerHub automatically watches the changes of theses files and rebuilds them to images for every commit.
+Github Actions automatically rebuilds and publishes build-env for every commit.
 
 - `apachepegasus/build-env:centos7`
 - `apachepegasus/build-env:ubuntu1604`
 - `apachepegasus/build-env:ubuntu1804`
 - `apachepegasus/build-env:ubuntu2004`
 
-The DockerHub Homepage: https://hub.docker.com/r/apachepegasus/build-env
+DockerHub: https://hub.docker.com/r/apachepegasus/build-env
 
-You can build on your local machine via the command:
+The How-to-use Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
 
-```sh
-cd pegasus-build-env/centos7
-docker build -t apachepegasus/build-env:centos7 .
-```
+The packages only available by Github Actions runners:
 
-The How-to Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
+- `ghcr.io/pegasus-kv/build-env:centos7`
+- `ghcr.io/pegasus-kv/build-env:ubuntu1604`
+- `ghcr.io/pegasus-kv/build-env:ubuntu1804`
+- `ghcr.io/pegasus-kv/build-env:ubuntu2004`
 
 ## thirdparties-src
 
