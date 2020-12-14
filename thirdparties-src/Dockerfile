@@ -18,17 +18,23 @@
 # use dockerhub by default
 ARG REGISTRY_REPO=apachepegasus
 
-FROM ${REGISTRY_REPO}/build-env:ubuntu1804
+FROM ${REGISTRY_REPO}/build-env:ubuntu1804 as builder
 
 WORKDIR /root
 
-RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git \
-    && cd rdsn/thirdparty \
+RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git
+
+RUN cd rdsn/thirdparty \
     && mkdir -p build \
     && cmake -DCMAKE_BUILD_TYPE=Release -B build/ . \
-    && cmake --build build/ -j $(($(nproc)/2+1)) \
-    && zip -r ~/thirdparties-src.zip build/Download \
+    && cmake --build build/ -j $(($(nproc)/2+1))
+
+RUN zip -r ~/thirdparties-src.zip build/Download \
     && cd ~ \
     && rm -rf rdsn;
 
-# Unzip thirdparties-src.zip to rdsn/thirdparty/build, the download will automatically be skipped.
+# Unzip thirdparties-src.zip to rdsn/thirdparty, the download will automatically be skipped.
+
+FROM alpine
+
+COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
