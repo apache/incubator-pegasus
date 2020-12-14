@@ -15,7 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM apachepegasus/build-env:ubuntu1804
+# use dockerhub by default
+ARG REGISTRY_REPO=apachepegasus
+
+FROM ${REGISTRY_REPO}/build-env:ubuntu1804
 
 WORKDIR /root
 
