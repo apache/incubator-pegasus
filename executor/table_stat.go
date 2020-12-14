@@ -22,8 +22,8 @@ package executor
 import (
 	"fmt"
 	"io"
-	"sort"
 
+	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/admin-cli/tabular"
 	"github.com/pegasus-kv/collector/aggregate"
 )
@@ -100,32 +100,18 @@ func TableStat(c *Client) error {
 func printTableStatsTabular(writer io.Writer, tables map[int32]*aggregate.TableStats) {
 	t := tabular.NewTemplate(tableStatsTemplate)
 	t.SetCommonColumns([]string{"AppID", "Name", "Partitions"}, func(rowData interface{}) []string {
-		tbStat := rowData.(*aggregate.TableStats)
+		tbStat := rowData.(aggregate.TableStats)
 		return []string{fmt.Sprint(tbStat.AppID), tbStat.TableName, fmt.Sprint(len(tbStat.Partitions))}
 	})
 	t.SetColumnValueFunc(func(col *tabular.ColumnAttributes, rowData interface{}) interface{} {
-		tbStat := rowData.(*aggregate.TableStats)
+		tbStat := rowData.(aggregate.TableStats)
 		return tbStat.Stats[col.Attrs["counter"]]
 	})
 
-	sortedTables := tableStatsSortedByAppID(tables)
 	var valueList []interface{}
-	for _, tb := range sortedTables {
-		valueList = append(valueList, tb)
+	for _, tb := range tables {
+		valueList = append(valueList, *tb)
 	}
+	util.SortStructsByField(valueList, "AppID")
 	t.Render(writer, valueList)
-}
-
-func tableStatsSortedByAppID(tables map[int32]*aggregate.TableStats) []*aggregate.TableStats {
-	appIDs := []int{}
-	for id := range tables {
-		appIDs = append(appIDs, int(id))
-	}
-	sort.Ints(appIDs)
-
-	var tableList []*aggregate.TableStats
-	for _, id := range appIDs {
-		tableList = append(tableList, tables[int32(id)])
-	}
-	return tableList
 }

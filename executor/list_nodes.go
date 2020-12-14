@@ -22,14 +22,12 @@ package executor
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
@@ -57,13 +55,9 @@ func ListNodes(client *Client) error {
 	if errTable != nil {
 		return errTable
 	}
-	var tableNames []string
-	for _, info := range listTableResp.Infos {
-		tableNames = append(tableNames, info.AppName)
-	}
 
-	for _, tb := range tableNames {
-		queryCfgResp, err := client.Meta.QueryConfig(ctx, tb)
+	for _, info := range listTableResp.Infos {
+		queryCfgResp, err := client.Meta.QueryConfig(ctx, info.AppName)
 		if err != nil {
 			return err
 		}
@@ -122,20 +116,10 @@ func printNodesInfo(client *Client, nodes map[string]*nodeInfoStruct) {
 	for _, n := range nodes {
 		nodeList = append(nodeList, *n)
 	}
-	nodesSortByAddress(nodeList)
-
+	util.SortStructsByField(nodeList, "Address")
 	tabular.New(client, nodeList, func(t *tablewriter.Table) {
 		footerWithTotalCount(t, nodeList)
 	}).Render()
-}
-
-func nodesSortByAddress(nodes []interface{}) []interface{} {
-	sort.Slice(nodes, func(i, j int) bool {
-		addr1 := reflect.ValueOf(nodes[i]).FieldByName("Address").String()
-		addr2 := reflect.ValueOf(nodes[j]).FieldByName("Address").String()
-		return strings.Compare(addr1, addr2) < 0
-	})
-	return nodes
 }
 
 func footerWithTotalCount(tbWriter *tablewriter.Table, nlist []interface{}) {

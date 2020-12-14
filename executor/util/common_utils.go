@@ -21,6 +21,8 @@ package util
 
 import (
 	"fmt"
+	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +48,20 @@ func Str2Gpid(gpid string) (*base.Gpid, error) {
 	}
 
 	return &base.Gpid{Appid: int32(appId), PartitionIndex: int32(partitionId)}, nil
+}
+
+func SortStructsByField(structs []interface{}, key string) {
+	sort.Slice(structs, func(i, j int) bool {
+		v1 := reflect.ValueOf(structs[i]).FieldByName(key)
+		v2 := reflect.ValueOf(structs[j]).FieldByName(key)
+		if v1.Type().Name() == "string" {
+			return strings.Compare(v1.String(), v2.String()) < 0
+		} else if v1.Type().Name() == "int" {
+			return v1.Int() < v2.Int()
+		} else {
+			panic(fmt.Sprintf("Not support sort %s", v1.Type().Name()))
+		}
+	})
 }
 
 func FormatDate(date int64) string {

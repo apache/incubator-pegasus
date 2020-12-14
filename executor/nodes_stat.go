@@ -75,17 +75,18 @@ func ShowNodesStat(client *Client) error {
 func printNodesStatsTabular(client *Client, nodes map[string]*aggregate.NodeStat) {
 	t := tabular.NewTemplate(nodeStatsTemplate)
 	t.SetCommonColumns([]string{"Node"}, func(rowData interface{}) []string {
-		node := rowData.(*aggregate.NodeStat)
+		node := rowData.(aggregate.NodeStat)
 		return []string{client.Nodes.MustGetReplica(node.Addr).CombinedAddr()}
 	})
 	t.SetColumnValueFunc(func(col *tabular.ColumnAttributes, rowData interface{}) interface{} {
-		node := rowData.(*aggregate.NodeStat)
+		node := rowData.(aggregate.NodeStat)
 		return node.Stats[col.Attrs["counter"]]
 	})
 
 	var valueList []interface{}
 	for _, n := range nodes {
-		valueList = append(valueList, n)
+		valueList = append(valueList, *n)
 	}
+	util.SortStructsByField(valueList, "Addr")
 	t.Render(client, valueList)
 }

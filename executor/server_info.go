@@ -23,6 +23,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
@@ -43,21 +44,27 @@ func ServerInfo(client *Client) error {
 		Version string `json:"version"`
 	}
 	// always print meta-server first.
-	var rowList []interface{}
-	for _, tp := range []session.NodeType{session.NodeTypeMeta, session.NodeTypeReplica} {
-		for n, result := range results {
-			if n.Type != tp {
-				continue
-			}
-			rowList = append(rowList, serverInfoStruct{
+	var metaList []interface{}
+	var replicaList []interface{}
+	for n, result := range results {
+		if n.Type == session.NodeTypeMeta {
+			metaList = append(metaList, serverInfoStruct{
+				Server:  string(n.Type),
+				Node:    n.CombinedAddr(),
+				Version: result.String(),
+			})
+		} else if n.Type == session.NodeTypeReplica {
+			replicaList = append(replicaList, serverInfoStruct{
 				Server:  string(n.Type),
 				Node:    n.CombinedAddr(),
 				Version: result.String(),
 			})
 		}
 	}
-
-	tabular.New(client, rowList, func(table *tablewriter.Table) {
+	util.SortStructsByField(metaList, "Node")
+	util.SortStructsByField(replicaList, "Node")
+	valueList := append(metaList, replicaList...)
+	tabular.New(client, valueList, func(table *tablewriter.Table) {
 		table.SetAutoWrapText(false)
 	}).Render()
 	return nil
