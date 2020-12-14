@@ -2,10 +2,9 @@ name: Build and publish pegasus-build-env Docker images
 
 on:
   push:
-    branches:
-      - master
     paths:
       - 'pegasus-build-env/**'
+      - '.github/workflows/build-env.yml'
 
 jobs:
   build_docker_images:
