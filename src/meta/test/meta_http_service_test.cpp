@@ -10,6 +10,7 @@
 #include "meta/meta_service.h"
 #include "meta_test_base.h"
 #include "meta_service_test_app.h"
+#include "meta/meta_bulk_load_service.h"
 
 namespace dsn {
 namespace replication {
@@ -174,6 +175,87 @@ TEST_F(meta_backup_test_base, get_backup_policy)
     test_get_backup_policy(tests[2].name, tests[2].expected_json, tests[2].http_status);
     test_get_backup_policy(tests[3].name, tests[3].expected_json, tests[3].http_status);
     test_get_backup_policy(tests[4].name, tests[4].expected_json, tests[4].http_status);
+}
+
+class meta_bulk_load_http_test : public meta_test_base
+{
+public:
+    void SetUp() override
+    {
+        meta_test_base::SetUp();
+        FLAGS_enable_http_server = false;
+        _mhs = dsn::make_unique<meta_http_service>(_ms.get());
+        create_app(APP_NAME);
+    }
+
+    void TearDown() override
+    {
+        drop_app(APP_NAME);
+        _mhs = nullptr;
+        meta_test_base::TearDown();
+    }
+
+    std::string test_query_bulk_load(const std::string &app_name)
+    {
+        http_request req;
+        http_response resp;
+        req.query_args.emplace("name", app_name);
+        _mhs->query_bulk_load_handler(req, resp);
+        return resp.body;
+    }
+
+    void mock_bulk_load_context(const bulk_load_status::type &status)
+    {
+        auto app = find_app(APP_NAME);
+        app->is_bulk_loading = true;
+        const auto app_id = app->app_id;
+        bulk_svc()._bulk_load_app_id.insert(app_id);
+        bulk_svc()._apps_in_progress_count[app_id] = app->partition_count;
+        bulk_svc()._app_bulk_load_info[app_id].status = status;
+        for (int i = 0; i < app->partition_count; ++i) {
+            gpid pid = gpid(app_id, i);
+            bulk_svc()._partition_bulk_load_info[pid].status = status;
+        }
+    }
+
+    void reset_local_bulk_load_states()
+    {
+        auto app = find_app(APP_NAME);
+        bulk_svc().reset_local_bulk_load_states(app->app_id, APP_NAME);
+        app->is_bulk_loading = false;
+    }
+
+protected:
+    std::unique_ptr<meta_http_service> _mhs;
+    std::string APP_NAME = "test_bulk_load";
+};
+
+TEST_F(meta_bulk_load_http_test, query_bulk_load_request)
+{
+    const std::string NOT_BULK_LOAD = "not_bulk_load_app";
+    const std::string NOT_FOUND = "app_not_exist";
+
+    create_app(NOT_BULK_LOAD);
+    mock_bulk_load_context(bulk_load_status::BLS_DOWNLOADING);
+
+    struct query_bulk_load_test
+    {
+        std::string app_name;
+        std::string expected_json;
+    } tests[] = {{APP_NAME,
+                  "{\"error\":\"ERR_OK\",\"app_status\":\"replication::bulk_load_status::"
+                  "BLS_DOWNLOADING\"}\n"},
+                 {NOT_BULK_LOAD,
+                  "{\"error\":\"ERR_INVALID_STATE\",\"app_status\":\"replication::"
+                  "bulk_load_status::BLS_INVALID\"}\n"},
+                 {NOT_FOUND,
+                  "{\"error\":\"ERR_APP_NOT_EXIST\",\"app_status\":\"replication::bulk_"
+                  "load_status::BLS_INVALID\"}\n"}};
+    for (const auto &test : tests) {
+        ASSERT_EQ(test_query_bulk_load(test.app_name), test.expected_json);
+    }
+
+    drop_app(NOT_BULK_LOAD);
 }
 
 } // namespace replication

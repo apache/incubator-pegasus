@@ -18,6 +18,7 @@
 #include "server_load_balancer.h"
 #include "server_state.h"
 #include "meta/duplication/meta_duplication_service.h"
+#include "meta/meta_bulk_load_service.h"
 
 namespace dsn {
 namespace replication {
@@ -608,6 +609,40 @@ void meta_http_service::query_duplication_handler(const http_request &req, http_
     }
     resp.status_code = http_status_code::ok;
     resp.body = duplication_query_response_to_string(rpc_resp);
+}
+
+void meta_http_service::query_bulk_load_handler(const http_request &req, http_response &resp)
+{
+    if (!redirect_if_not_primary(req, resp)) {
+        return;
+    }
+
+    if (_service->_bulk_load_svc == nullptr) {
+        resp.body = "bulk load is not enabled";
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
+
+    auto it = req.query_args.find("name");
+    if (it == req.query_args.end()) {
+        resp.body = "name should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    auto rpc_req = dsn::make_unique<query_bulk_load_request>();
+    rpc_req->app_name = it->second;
+    query_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
+    _service->_bulk_load_svc->on_query_bulk_load_status(rpc);
+    auto rpc_resp = rpc.response();
+    // output as json format
+    dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("error", rpc_resp.err.to_string());
+    tp.add_row_name_and_data("app_status", dsn::enum_to_string(rpc_resp.app_status));
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
 }
 
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)

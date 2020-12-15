@@ -349,6 +349,7 @@ private:
 
 private:
     friend class bulk_load_service_test;
+    friend class meta_bulk_load_http_test;
 
     meta_service *_meta_svc;
     server_state *_state;

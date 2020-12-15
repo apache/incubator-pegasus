@@ -59,6 +59,12 @@ public:
                                    std::placeholders::_1,
                                    std::placeholders::_2),
                          "ip:port/meta/backup_policy");
+        register_handler("app/query_bulk_load",
+                         std::bind(&meta_http_service::query_bulk_load_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "ip:port/meta/query_bulk_load?name=temp");
     }
 
     std::string path() const override { return "meta"; }
@@ -70,6 +76,7 @@ public:
     void get_app_envs_handler(const http_request &req, http_response &resp);
     void query_backup_policy_handler(const http_request &req, http_response &resp);
     void query_duplication_handler(const http_request &req, http_response &resp);
+    void query_bulk_load_handler(const http_request &req, http_response &resp);
 
 private:
     // set redirect location if current server is not primary
