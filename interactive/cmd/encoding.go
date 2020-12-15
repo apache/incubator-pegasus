@@ -73,5 +73,7 @@ func encodingCompleter(prefix string, args []string) []string {
 		"int32",
 		"int64",
 		"bytes",
+		"javabytes",
+		"asciihex",
 	}, prefix)
 }

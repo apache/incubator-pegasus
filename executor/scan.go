@@ -15,6 +15,10 @@ type ScanCommand struct {
 	// optional
 	From, To                 *string
 	Prefix, Suffix, Contains *string
+
+	// only calculate the count of sortkeys under this hashkey.
+	// default to false.
+	CountOnly bool
 }
 
 // IterateAll iterates over the table according to the command.
@@ -69,6 +73,7 @@ func (s *ScanCommand) IterateAll(rootCtx *Context) error {
 		// TODO(wutao): provide options
 		StartInclusive: true,
 		StopInclusive:  true,
+		NoValue:        s.CountOnly,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -76,7 +81,7 @@ func (s *ScanCommand) IterateAll(rootCtx *Context) error {
 	if err != nil {
 		return err
 	}
-	return iterateAllWithScanner(rootCtx, scanner)
+	return s.iterateAllWithScanner(rootCtx, scanner)
 }
 
 // Validate if ScanCommand is valid.
@@ -98,10 +103,11 @@ func (s *ScanCommand) Validate() error {
 }
 
 // iterateAllWithScanner prints all entries owned by scanner.
-func iterateAllWithScanner(rootCtx *Context, scanner pegasus.Scanner) error {
+func (s *ScanCommand) iterateAllWithScanner(rootCtx *Context, scanner pegasus.Scanner) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
+	recordsCnt := uint64(0)
 	for {
 		completed, hashKey, sortKey, value, err := scanner.Next(ctx)
 		if err != nil {
@@ -110,10 +116,15 @@ func iterateAllWithScanner(rootCtx *Context, scanner pegasus.Scanner) error {
 		if completed {
 			break
 		}
+		recordsCnt++
+		if s.CountOnly {
+			continue
+		}
 		err = printPegasusRecord(rootCtx, hashKey, sortKey, value)
 		if err != nil {
 			return err
 		}
 	}
+	fmt.Fprintf(rootCtx, "\nTotal records count: %d\n", recordsCnt)
 	return nil
 }

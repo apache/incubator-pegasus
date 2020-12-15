@@ -22,23 +22,39 @@ func init() {
 		Name:  "scan",
 		Help:  "scan records under the hashkey",
 		Usage: "\nscan " + usage,
-		Run:   requireUseTable(runScanCommand),
-		Flags: func(f *grumble.Flags) {
-			f.StringL("from", "", "<startSortKey>")
-			f.StringL("to", "", "<stopSortKey>")
-			f.StringL("prefix", "", "<filter>")
-			f.StringL("suffix", "", "<filter>")
-			f.StringL("contains", "", "<filter>")
-		},
+		Run: requireUseTable(func(c *grumble.Context) error {
+			cmd, err := newScanCommand(c)
+			if err != nil {
+				return err
+			}
+			return cmd.IterateAll(globalContext)
+		}),
+		Flags:     scanFlags,
 		AllowArgs: true,
 	}
+
+	scanCmd.AddCommand(&grumble.Command{
+		Name:  "count",
+		Help:  "scan records under the hashkey",
+		Usage: "\nscan " + usage,
+		Run: requireUseTable(func(c *grumble.Context) error {
+			cmd, err := newScanCommand(c)
+			if err != nil {
+				return err
+			}
+			cmd.CountOnly = true
+			return cmd.IterateAll(globalContext)
+		}),
+		Flags:     scanFlags,
+		AllowArgs: true,
+	})
 
 	interactive.App.AddCommand(scanCmd)
 }
 
-func runScanCommand(c *grumble.Context) error {
+func newScanCommand(c *grumble.Context) (*executor.ScanCommand, error) {
 	if len(c.Args) < 1 {
-		return fmt.Errorf("missing <hashkey> for `scan`")
+		return nil, fmt.Errorf("missing <hashkey> for `scan`")
 	}
 
 	from := c.Flags.String("from")
@@ -64,8 +80,15 @@ func runScanCommand(c *grumble.Context) error {
 		cmd.Contains = &contains
 	}
 	if err := cmd.Validate(); err != nil {
-		return err
+		return nil, err
 	}
+	return cmd, nil
+}
 
-	return cmd.IterateAll(globalContext)
+func scanFlags(f *grumble.Flags) {
+	f.StringL("from", "", "<startSortKey>")
+	f.StringL("to", "", "<stopSortKey>")
+	f.StringL("prefix", "", "<filter>")
+	f.StringL("suffix", "", "<filter>")
+	f.StringL("contains", "", "<filter>")
 }

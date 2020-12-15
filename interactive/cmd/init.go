@@ -6,13 +6,21 @@ import (
 	"pegic/executor"
 	"strings"
 
+	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/desertbit/grumble"
 )
 
 var globalContext *executor.Context
 
-func Init(metaAddrs []string) {
+func Init(metaAddrs []string) error {
+	// validate meta addresses
+	_, err := session.ResolveMetaAddr(metaAddrs)
+	if err != nil {
+		return err
+	}
+
 	globalContext = executor.NewContext(os.Stdout, metaAddrs)
+	return nil
 }
 
 func requireUseTable(run func(*grumble.Context) error) func(c *grumble.Context) error {

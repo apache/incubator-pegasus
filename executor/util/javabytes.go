@@ -6,11 +6,12 @@ import (
 	"strings"
 )
 
+// javabytes is like '0,0,101,12,0,1,8,-1,-1,-1', delimited by ',' and each byte ranges from [-128, 127]
 type javaBytesEncoder struct {
 }
 
 func (*javaBytesEncoder) EncodeAll(s string) ([]byte, error) {
-	bytesInStrList := strings.Split(s, " ")
+	bytesInStrList := strings.Split(s, ",")
 
 	value := make([]byte, len(bytesInStrList))
 	for i, byteStr := range bytesInStrList {
