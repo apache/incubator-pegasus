@@ -106,6 +106,20 @@ TEST(core, split_args)
     std::unordered_set<std::string> sargs_set;
     dsn::utils::split_args(value.c_str(), sargs_set, ',');
     EXPECT_EQ(sargs_set.size(), 3);
+
+    // test value = ""
+    value = "";
+    sargs.clear();
+    dsn::utils::split_args(value.c_str(), sargs, ',');
+    EXPECT_EQ(sargs.size(), 0);
+
+    sargs2.clear();
+    dsn::utils::split_args(value.c_str(), sargs2, ',');
+    EXPECT_EQ(sargs2.size(), 0);
+
+    sargs_set.clear();
+    dsn::utils::split_args(value.c_str(), sargs_set, ',');
+    EXPECT_EQ(sargs_set.size(), 0);
 }
 
 TEST(core, split_args_keep_place_holder)

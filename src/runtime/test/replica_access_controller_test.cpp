@@ -52,7 +52,7 @@ TEST_F(replica_access_controller_test, allowed)
         bool result;
     } tests[] = {{{"replica_user1", "replica_user2"}, "replica_user1", true},
                  {{"replica_user1", "replica_user2"}, "not_replica_user", false},
-                 {{}, "user_name", false}};
+                 {{}, "user_name", true}};
 
     bool origin_enable_acl = FLAGS_enable_acl;
     FLAGS_enable_acl = true;

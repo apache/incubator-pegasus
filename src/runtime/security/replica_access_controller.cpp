@@ -34,7 +34,11 @@ bool replica_access_controller::allowed(message_ex *msg)
 
     {
         utils::auto_read_lock l(_lock);
-        if (_users.find(user_name) == _users.end()) {
+        // If the user didn't specify any ACL, it means this table is publicly accessible to
+        // everyone. This is a backdoor to allow old-version clients to gracefully upgrade. After
+        // they are finally ensured to be fully upgraded, they can specify some usernames to ACL and
+        // the table will be truly protected.
+        if (!_users.empty() && _users.find(user_name) == _users.end()) {
             ddebug_f("{}: user_name {} doesn't exist in acls map", _name, user_name);
             return false;
         }
