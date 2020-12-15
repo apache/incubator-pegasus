@@ -21,7 +21,7 @@ struct query_config_request
     2:list<i32> partition_indices;
 }
 
-struct query_cfg_response
+struct query_config_response
 {
     1:base.error_code err;
     2:i32 app_id;
