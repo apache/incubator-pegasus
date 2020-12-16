@@ -50,7 +50,7 @@ public:
                       write_ctx, raw_key, user_value, expire_ts_seconds),
                   0);
         ASSERT_EQ(_rocksdb_wrapper->write(0), 0);
-        rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper);
+        _rocksdb_wrapper->clear_up_write_batch();
     }
 
     // start with duplicating.
