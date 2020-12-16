@@ -26,12 +26,12 @@
 #include "base/pegasus_key_schema.h"
 #include "meta_store.h"
 #include "rocksdb_wrapper.h"
-#include "rocksdb_write_batch_cleaner.h"
 
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <gtest/gtest_prod.h>
+#include <dsn/utility/defer.h>
 
 namespace pegasus {
 namespace server {
@@ -349,14 +349,14 @@ public:
             resp.error = _rocksdb_wrapper->write_batch_put(
                 decree, dsn::string_view(), dsn::string_view(), 0);
         }
+
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         if (resp.error) {
-            rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper.get());
             return resp.error;
         }
 
         resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error) {
-            rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper.get());
             return resp.error;
         }
 
@@ -366,7 +366,6 @@ public:
                 invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
 
-        rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper.get());
         return 0;
     }
 
