@@ -139,7 +139,7 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
 
 int rocksdb_wrapper::write(int64_t decree)
 {
-    dassert(_write_batch->Count() != 0, "");
+    dassert(_write_batch->Count() != 0, "the number of updates in the batch is 0");
 
     FAIL_POINT_INJECT_F("db_write", [](dsn::string_view) -> int { return FAIL_DB_WRITE; });
 
