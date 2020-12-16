@@ -96,10 +96,6 @@ TEST(time_utils, time_ms_to_string)
     // so it must be 2020-11-1x xx:45:06.136
     ASSERT_EQ(std::string(buf).substr(0, 9), "2020-11-1");
     ASSERT_EQ(std::string(buf).substr(13, 10), ":45:06.136");
-
-    memset(buf, 0, sizeof(buf));
-    time_ms_to_string(dsn_now_ms(), buf);
-    ASSERT_EQ(strlen(buf), strlen("XXXX-XX-XX XX:XX:XX.XXX"));
 }
 
 } // namespace utils
