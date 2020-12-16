@@ -31,7 +31,8 @@ private:
     error_code do_bulk_load(const std::string &app_name,
                             bulk_load_status::type meta_status,
                             const std::string &cluster_name,
-                            const std::string &provider_name);
+                            const std::string &provider_name,
+                            const std::string &remote_root_path);
 
     // compare meta bulk load status and local bulk load status
     // \return ERR_INVALID_STATE if local status is invalid
@@ -43,18 +44,14 @@ private:
     // replica start or restart download sst files from remote provider
     // \return ERR_BUSY if node has already had enough replica executing downloading
     // \return download errors by function `download_sst_files`
-    error_code start_download(const std::string &app_name,
-                              const std::string &cluster_name,
-                              const std::string &provider_name);
+    error_code start_download(const std::string &remote_dir, const std::string &provider_name);
 
     // download metadata and sst files from remote provider
     // metadata and sst files will be downloaded in {_dir}/.bulk_load directory
     // \return ERR_FILE_OPERATION_FAILED: create local bulk load dir failed
     // \return download metadata file error, see function `do_download`
     // \return parse metadata file error, see function `parse_bulk_load_metadata`
-    error_code download_sst_files(const std::string &app_name,
-                                  const std::string &cluster_name,
-                                  const std::string &provider_name);
+    error_code download_sst_files(const std::string &remote_dir, const std::string &provider_name);
 
     // \return ERR_FILE_OPERATION_FAILED: file not exist, get size failed, open file failed
     // \return ERR_CORRUPTION: parse failed
@@ -94,18 +91,18 @@ private:
 
     ///
     /// bulk load path on remote file provider:
-    /// <bulk_load_root>/<cluster_name>/<app_name>/{bulk_load_info}
-    /// <bulk_load_root>/<cluster_name>/<app_name>/<partition_index>/<file_name>
-    /// <bulk_load_root>/<cluster_name>/<app_name>/<partition_index>/bulk_load_metadata
+    /// <remote_root_path>/<cluster_name>/<app_name>/{bulk_load_info}
+    /// <remote_root_path>/<cluster_name>/<app_name>/<partition_index>/<file_name>
+    /// <remote_root_path>/<cluster_name>/<app_name>/<partition_index>/bulk_load_metadata
     ///
     // get partition's file dir on remote file provider
     inline std::string get_remote_bulk_load_dir(const std::string &app_name,
                                                 const std::string &cluster_name,
+                                                const std::string &remote_root_path,
                                                 uint32_t pidx) const
     {
         std::ostringstream oss;
-        oss << _replica->_options->bulk_load_provider_root << "/" << cluster_name << "/" << app_name
-            << "/" << pidx;
+        oss << remote_root_path << "/" << cluster_name << "/" << app_name << "/" << pidx;
         return oss.str();
     }
 

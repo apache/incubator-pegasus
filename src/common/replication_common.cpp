@@ -514,11 +514,6 @@ void replication_options::initialize()
                                          cold_backup_checkpoint_reserve_minutes,
                                          "reserve minutes of cold backup checkpoint");
 
-    bulk_load_provider_root = dsn_config_get_value_string("replication",
-                                                          "bulk_load_provider_root",
-                                                          "bulk_load_provider_root",
-                                                          "bulk load root on remote file provider");
-
     max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
     replica_helper::load_meta_servers(meta_servers);

@@ -45,19 +45,21 @@ void replica_bulk_loader::on_bulk_load(const bulk_load_request &request,
         return;
     }
 
-    ddebug_replica(
-        "receive bulk load request, remote provider = {}, cluster_name = {}, app_name = {}, "
-        "meta_bulk_load_status = {}, local bulk_load_status = {}",
-        request.remote_provider_name,
-        request.cluster_name,
-        request.app_name,
-        enum_to_string(request.meta_bulk_load_status),
-        enum_to_string(_status));
+    ddebug_replica("receive bulk load request, remote provider = {}, remote_root_path = {}, "
+                   "cluster_name = {}, app_name = {}, "
+                   "meta_bulk_load_status = {}, local bulk_load_status = {}",
+                   request.remote_provider_name,
+                   request.remote_root_path,
+                   request.cluster_name,
+                   request.app_name,
+                   enum_to_string(request.meta_bulk_load_status),
+                   enum_to_string(_status));
 
     error_code ec = do_bulk_load(request.app_name,
                                  request.meta_bulk_load_status,
                                  request.cluster_name,
-                                 request.remote_provider_name);
+                                 request.remote_provider_name,
+                                 request.remote_root_path);
     if (ec != ERR_OK) {
         response.err = ec;
         response.primary_bulk_load_status = _status;
@@ -104,6 +106,7 @@ void replica_bulk_loader::broadcast_group_bulk_load(const bulk_load_request &met
         request->cluster_name = meta_req.cluster_name;
         request->provider_name = meta_req.remote_provider_name;
         request->meta_bulk_load_status = meta_req.meta_bulk_load_status;
+        request->remote_root_path = meta_req.remote_root_path;
 
         ddebug_replica("send group_bulk_load_request to {}", addr.to_string());
 
@@ -158,7 +161,8 @@ void replica_bulk_loader::on_group_bulk_load(const group_bulk_load_request &requ
     error_code ec = do_bulk_load(request.app_name,
                                  request.meta_bulk_load_status,
                                  request.cluster_name,
-                                 request.provider_name);
+                                 request.provider_name,
+                                 request.remote_root_path);
     if (ec != ERR_OK) {
         response.err = ec;
         response.status = _status;
@@ -216,7 +220,8 @@ void replica_bulk_loader::on_group_bulk_load_reply(error_code err,
 error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
                                              bulk_load_status::type meta_status,
                                              const std::string &cluster_name,
-                                             const std::string &provider_name)
+                                             const std::string &provider_name,
+                                             const std::string &remote_root_path)
 {
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY) {
         return ERR_INVALID_STATE;
@@ -237,7 +242,9 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
             local_status == bulk_load_status::BLS_PAUSED ||
             local_status == bulk_load_status::BLS_INGESTING ||
             local_status == bulk_load_status::BLS_SUCCEED) {
-            ec = start_download(app_name, cluster_name, provider_name);
+            const std::string remote_dir = get_remote_bulk_load_dir(
+                app_name, cluster_name, remote_root_path, get_gpid().get_partition_index());
+            ec = start_download(remote_dir, provider_name);
         }
         break;
     case bulk_load_status::BLS_INGESTING:
@@ -322,8 +329,7 @@ replica_bulk_loader::validate_status(const bulk_load_status::type meta_status,
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-error_code replica_bulk_loader::start_download(const std::string &app_name,
-                                               const std::string &cluster_name,
+error_code replica_bulk_loader::start_download(const std::string &remote_dir,
                                                const std::string &provider_name)
 {
     if (_stub->_bulk_load_downloading_count.load() >=
@@ -351,7 +357,7 @@ error_code replica_bulk_loader::start_download(const std::string &app_name,
     // start download
     _is_downloading.store(true);
     ddebug_replica("start to download sst files");
-    error_code err = download_sst_files(app_name, cluster_name, provider_name);
+    error_code err = download_sst_files(remote_dir, provider_name);
     if (err != ERR_OK) {
         try_decrease_bulk_load_download_count();
     }
@@ -359,8 +365,7 @@ error_code replica_bulk_loader::start_download(const std::string &app_name,
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
-error_code replica_bulk_loader::download_sst_files(const std::string &app_name,
-                                                   const std::string &cluster_name,
+error_code replica_bulk_loader::download_sst_files(const std::string &remote_dir,
                                                    const std::string &provider_name)
 {
     FAIL_POINT_INJECT_F("replica_bulk_loader_download_sst_files",
@@ -379,8 +384,6 @@ error_code replica_bulk_loader::download_sst_files(const std::string &app_name,
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    const std::string remote_dir =
-        get_remote_bulk_load_dir(app_name, cluster_name, get_gpid().get_partition_index());
     dist::block_service::block_filesystem *fs =
         _stub->_block_service_manager.get_or_create_block_filesystem(provider_name);
 

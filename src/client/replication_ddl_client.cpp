@@ -1552,12 +1552,14 @@ void replication_ddl_client::query_disk_info(
 error_with<start_bulk_load_response>
 replication_ddl_client::start_bulk_load(const std::string &app_name,
                                         const std::string &cluster_name,
-                                        const std::string &file_provider_type)
+                                        const std::string &file_provider_type,
+                                        const std::string &remote_root_path)
 {
     auto req = make_unique<start_bulk_load_request>();
     req->app_name = app_name;
     req->cluster_name = cluster_name;
     req->file_provider_type = file_provider_type;
+    req->remote_root_path = remote_root_path;
     return call_rpc_sync(start_bulk_load_rpc(std::move(req), RPC_CM_START_BULK_LOAD));
 }
 

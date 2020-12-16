@@ -23,8 +23,14 @@ struct app_bulk_load_info
     std::string cluster_name;
     std::string file_provider_type;
     bulk_load_status::type status;
-    DEFINE_JSON_SERIALIZATION(
-        app_id, partition_count, app_name, cluster_name, file_provider_type, status)
+    std::string remote_root_path;
+    DEFINE_JSON_SERIALIZATION(app_id,
+                              partition_count,
+                              app_name,
+                              cluster_name,
+                              file_provider_type,
+                              status,
+                              remote_root_path)
 };
 
 struct partition_bulk_load_info
@@ -110,6 +116,7 @@ private:
     error_code check_bulk_load_request_params(const std::string &app_name,
                                               const std::string &cluster_name,
                                               const std::string &file_provider,
+                                              const std::string &remote_root_path,
                                               const int32_t app_id,
                                               const int32_t partition_count,
                                               std::string &hint_msg);
@@ -264,13 +271,14 @@ private:
     /// helper functions
     ///
     // get bulk_load_info path on file provider
-    // <bulk_load_provider_root>/<cluster_name>/<app_name>/bulk_load_info
+    // <remote_root_path>/<cluster_name>/<app_name>/bulk_load_info
     inline std::string get_bulk_load_info_path(const std::string &app_name,
-                                               const std::string &cluster_name) const
+                                               const std::string &cluster_name,
+                                               const std::string &remote_root_path) const
     {
         std::ostringstream oss;
-        oss << _meta_svc->get_options().bulk_load_provider_root << "/" << cluster_name << "/"
-            << app_name << "/" << bulk_load_constant::BULK_LOAD_INFO;
+        oss << remote_root_path << "/" << cluster_name << "/" << app_name << "/"
+            << bulk_load_constant::BULK_LOAD_INFO;
         return oss.str();
     }
 

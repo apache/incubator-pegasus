@@ -15611,6 +15611,11 @@ void start_bulk_load_request::__set_file_provider_type(const std::string &val)
     this->file_provider_type = val;
 }
 
+void start_bulk_load_request::__set_remote_root_path(const std::string &val)
+{
+    this->remote_root_path = val;
+}
+
 uint32_t start_bulk_load_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -15654,6 +15659,14 @@ uint32_t start_bulk_load_request::read(::apache::thrift::protocol::TProtocol *ip
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 4:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->remote_root_path);
+                this->__isset.remote_root_path = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -15684,6 +15697,10 @@ uint32_t start_bulk_load_request::write(::apache::thrift::protocol::TProtocol *o
     xfer += oprot->writeString(this->file_provider_type);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("remote_root_path", ::apache::thrift::protocol::T_STRING, 4);
+    xfer += oprot->writeString(this->remote_root_path);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -15695,6 +15712,7 @@ void swap(start_bulk_load_request &a, start_bulk_load_request &b)
     swap(a.app_name, b.app_name);
     swap(a.cluster_name, b.cluster_name);
     swap(a.file_provider_type, b.file_provider_type);
+    swap(a.remote_root_path, b.remote_root_path);
     swap(a.__isset, b.__isset);
 }
 
@@ -15703,6 +15721,7 @@ start_bulk_load_request::start_bulk_load_request(const start_bulk_load_request &
     app_name = other680.app_name;
     cluster_name = other680.cluster_name;
     file_provider_type = other680.file_provider_type;
+    remote_root_path = other680.remote_root_path;
     __isset = other680.__isset;
 }
 start_bulk_load_request::start_bulk_load_request(start_bulk_load_request &&other681)
@@ -15710,6 +15729,7 @@ start_bulk_load_request::start_bulk_load_request(start_bulk_load_request &&other
     app_name = std::move(other681.app_name);
     cluster_name = std::move(other681.cluster_name);
     file_provider_type = std::move(other681.file_provider_type);
+    remote_root_path = std::move(other681.remote_root_path);
     __isset = std::move(other681.__isset);
 }
 start_bulk_load_request &start_bulk_load_request::operator=(const start_bulk_load_request &other682)
@@ -15717,6 +15737,7 @@ start_bulk_load_request &start_bulk_load_request::operator=(const start_bulk_loa
     app_name = other682.app_name;
     cluster_name = other682.cluster_name;
     file_provider_type = other682.file_provider_type;
+    remote_root_path = other682.remote_root_path;
     __isset = other682.__isset;
     return *this;
 }
@@ -15725,6 +15746,7 @@ start_bulk_load_request &start_bulk_load_request::operator=(start_bulk_load_requ
     app_name = std::move(other683.app_name);
     cluster_name = std::move(other683.cluster_name);
     file_provider_type = std::move(other683.file_provider_type);
+    remote_root_path = std::move(other683.remote_root_path);
     __isset = std::move(other683.__isset);
     return *this;
 }
@@ -15737,6 +15759,8 @@ void start_bulk_load_request::printTo(std::ostream &out) const
         << "cluster_name=" << to_string(cluster_name);
     out << ", "
         << "file_provider_type=" << to_string(file_provider_type);
+    out << ", "
+        << "remote_root_path=" << to_string(remote_root_path);
     out << ")";
 }
 
@@ -16100,6 +16124,11 @@ void bulk_load_request::__set_query_bulk_load_metadata(const bool val)
     this->query_bulk_load_metadata = val;
 }
 
+void bulk_load_request::__set_remote_root_path(const std::string &val)
+{
+    this->remote_root_path = val;
+}
+
 uint32_t bulk_load_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -16185,6 +16214,14 @@ uint32_t bulk_load_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 9:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->remote_root_path);
+                this->__isset.remote_root_path = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -16236,6 +16273,10 @@ uint32_t bulk_load_request::write(::apache::thrift::protocol::TProtocol *oprot) 
     xfer += oprot->writeBool(this->query_bulk_load_metadata);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("remote_root_path", ::apache::thrift::protocol::T_STRING, 9);
+    xfer += oprot->writeString(this->remote_root_path);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -16252,6 +16293,7 @@ void swap(bulk_load_request &a, bulk_load_request &b)
     swap(a.ballot, b.ballot);
     swap(a.meta_bulk_load_status, b.meta_bulk_load_status);
     swap(a.query_bulk_load_metadata, b.query_bulk_load_metadata);
+    swap(a.remote_root_path, b.remote_root_path);
     swap(a.__isset, b.__isset);
 }
 
@@ -16265,6 +16307,7 @@ bulk_load_request::bulk_load_request(const bulk_load_request &other694)
     ballot = other694.ballot;
     meta_bulk_load_status = other694.meta_bulk_load_status;
     query_bulk_load_metadata = other694.query_bulk_load_metadata;
+    remote_root_path = other694.remote_root_path;
     __isset = other694.__isset;
 }
 bulk_load_request::bulk_load_request(bulk_load_request &&other695)
@@ -16277,6 +16320,7 @@ bulk_load_request::bulk_load_request(bulk_load_request &&other695)
     ballot = std::move(other695.ballot);
     meta_bulk_load_status = std::move(other695.meta_bulk_load_status);
     query_bulk_load_metadata = std::move(other695.query_bulk_load_metadata);
+    remote_root_path = std::move(other695.remote_root_path);
     __isset = std::move(other695.__isset);
 }
 bulk_load_request &bulk_load_request::operator=(const bulk_load_request &other696)
@@ -16289,6 +16333,7 @@ bulk_load_request &bulk_load_request::operator=(const bulk_load_request &other69
     ballot = other696.ballot;
     meta_bulk_load_status = other696.meta_bulk_load_status;
     query_bulk_load_metadata = other696.query_bulk_load_metadata;
+    remote_root_path = other696.remote_root_path;
     __isset = other696.__isset;
     return *this;
 }
@@ -16302,6 +16347,7 @@ bulk_load_request &bulk_load_request::operator=(bulk_load_request &&other697)
     ballot = std::move(other697.ballot);
     meta_bulk_load_status = std::move(other697.meta_bulk_load_status);
     query_bulk_load_metadata = std::move(other697.query_bulk_load_metadata);
+    remote_root_path = std::move(other697.remote_root_path);
     __isset = std::move(other697.__isset);
     return *this;
 }
@@ -16324,6 +16370,8 @@ void bulk_load_request::printTo(std::ostream &out) const
         << "meta_bulk_load_status=" << to_string(meta_bulk_load_status);
     out << ", "
         << "query_bulk_load_metadata=" << to_string(query_bulk_load_metadata);
+    out << ", "
+        << "remote_root_path=" << to_string(remote_root_path);
     out << ")";
 }
 
@@ -16714,6 +16762,11 @@ void group_bulk_load_request::__set_meta_bulk_load_status(const bulk_load_status
     this->meta_bulk_load_status = val;
 }
 
+void group_bulk_load_request::__set_remote_root_path(const std::string &val)
+{
+    this->remote_root_path = val;
+}
+
 uint32_t group_bulk_load_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -16783,6 +16836,14 @@ uint32_t group_bulk_load_request::read(::apache::thrift::protocol::TProtocol *ip
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->remote_root_path);
+                this->__isset.remote_root_path = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -16825,6 +16886,10 @@ uint32_t group_bulk_load_request::write(::apache::thrift::protocol::TProtocol *o
     xfer += oprot->writeI32((int32_t)this->meta_bulk_load_status);
     xfer += oprot->writeFieldEnd();
 
+    xfer += oprot->writeFieldBegin("remote_root_path", ::apache::thrift::protocol::T_STRING, 7);
+    xfer += oprot->writeString(this->remote_root_path);
+    xfer += oprot->writeFieldEnd();
+
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -16839,6 +16904,7 @@ void swap(group_bulk_load_request &a, group_bulk_load_request &b)
     swap(a.provider_name, b.provider_name);
     swap(a.cluster_name, b.cluster_name);
     swap(a.meta_bulk_load_status, b.meta_bulk_load_status);
+    swap(a.remote_root_path, b.remote_root_path);
     swap(a.__isset, b.__isset);
 }
 
@@ -16850,6 +16916,7 @@ group_bulk_load_request::group_bulk_load_request(const group_bulk_load_request &
     provider_name = other712.provider_name;
     cluster_name = other712.cluster_name;
     meta_bulk_load_status = other712.meta_bulk_load_status;
+    remote_root_path = other712.remote_root_path;
     __isset = other712.__isset;
 }
 group_bulk_load_request::group_bulk_load_request(group_bulk_load_request &&other713)
@@ -16860,6 +16927,7 @@ group_bulk_load_request::group_bulk_load_request(group_bulk_load_request &&other
     provider_name = std::move(other713.provider_name);
     cluster_name = std::move(other713.cluster_name);
     meta_bulk_load_status = std::move(other713.meta_bulk_load_status);
+    remote_root_path = std::move(other713.remote_root_path);
     __isset = std::move(other713.__isset);
 }
 group_bulk_load_request &group_bulk_load_request::operator=(const group_bulk_load_request &other714)
@@ -16870,6 +16938,7 @@ group_bulk_load_request &group_bulk_load_request::operator=(const group_bulk_loa
     provider_name = other714.provider_name;
     cluster_name = other714.cluster_name;
     meta_bulk_load_status = other714.meta_bulk_load_status;
+    remote_root_path = other714.remote_root_path;
     __isset = other714.__isset;
     return *this;
 }
@@ -16881,6 +16950,7 @@ group_bulk_load_request &group_bulk_load_request::operator=(group_bulk_load_requ
     provider_name = std::move(other715.provider_name);
     cluster_name = std::move(other715.cluster_name);
     meta_bulk_load_status = std::move(other715.meta_bulk_load_status);
+    remote_root_path = std::move(other715.remote_root_path);
     __isset = std::move(other715.__isset);
     return *this;
 }
@@ -16899,6 +16969,8 @@ void group_bulk_load_request::printTo(std::ostream &out) const
         << "cluster_name=" << to_string(cluster_name);
     out << ", "
         << "meta_bulk_load_status=" << to_string(meta_bulk_load_status);
+    out << ", "
+        << "remote_root_path=" << to_string(remote_root_path);
     out << ")";
 }
 

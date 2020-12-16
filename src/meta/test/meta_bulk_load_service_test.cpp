@@ -27,6 +27,7 @@ public:
         request->app_name = app_name;
         request->cluster_name = CLUSTER;
         request->file_provider_type = PROVIDER;
+        request->remote_root_path = ROOT_PATH;
 
         start_bulk_load_rpc rpc(std::move(request), RPC_CM_START_BULK_LOAD);
         bulk_svc().on_start_bulk_load(rpc);
@@ -40,7 +41,7 @@ public:
     {
         std::string hint_msg;
         return bulk_svc().check_bulk_load_request_params(
-            APP_NAME, CLUSTER, provider, app_id, partition_count, hint_msg);
+            APP_NAME, CLUSTER, provider, ROOT_PATH, app_id, partition_count, hint_msg);
     }
 
     error_code control_bulk_load(int32_t app_id,
@@ -298,6 +299,7 @@ public:
     int32_t PARTITION_COUNT = 8;
     std::string CLUSTER = "cluster";
     std::string PROVIDER = "local_service";
+    std::string ROOT_PATH = "bulk_load_root";
     int64_t BALLOT = 4;
 };
 
@@ -789,6 +791,7 @@ public:
         ainfo.app_name = app_name;
         ainfo.cluster_name = CLUSTER;
         ainfo.file_provider_type = PROVIDER;
+        ainfo.remote_root_path = ROOT_PATH;
         ainfo.partition_count = partition_count;
         ainfo.status = status;
         _app_bulk_load_info_map[app_id] = ainfo;

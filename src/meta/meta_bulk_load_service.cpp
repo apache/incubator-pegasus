@@ -59,6 +59,7 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
     error_code e = check_bulk_load_request_params(request.app_name,
                                                   request.cluster_name,
                                                   request.file_provider_type,
+                                                  request.remote_root_path,
                                                   app->app_id,
                                                   app->partition_count,
                                                   hint_msg);
@@ -86,6 +87,7 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
 error_code bulk_load_service::check_bulk_load_request_params(const std::string &app_name,
                                                              const std::string &cluster_name,
                                                              const std::string &file_provider,
+                                                             const std::string &remote_root_path,
                                                              const int32_t app_id,
                                                              const int32_t partition_count,
                                                              std::string &hint_msg)
@@ -103,7 +105,8 @@ error_code bulk_load_service::check_bulk_load_request_params(const std::string &
     }
 
     // sync get bulk_load_info file_handler
-    const std::string remote_path = get_bulk_load_info_path(app_name, cluster_name);
+    const std::string remote_path =
+        get_bulk_load_info_path(app_name, cluster_name, remote_root_path);
     dsn::dist::block_service::create_file_request cf_req;
     cf_req.file_name = remote_path;
     cf_req.ignore_metadata = true;
@@ -202,6 +205,7 @@ void bulk_load_service::create_app_bulk_load_dir(const std::string &app_name,
     ainfo.status = bulk_load_status::BLS_DOWNLOADING;
     ainfo.cluster_name = req.cluster_name;
     ainfo.file_provider_type = req.file_provider_type;
+    ainfo.remote_root_path = req.remote_root_path;
     blob value = dsn::json::json_forwarder<app_bulk_load_info>::encode(ainfo);
 
     _meta_svc->get_meta_storage()->create_node(
@@ -291,15 +295,17 @@ void bulk_load_service::partition_bulk_load(const std::string &app_name, const g
     req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
     req->ballot = b;
     req->query_bulk_load_metadata = is_partition_metadata_not_updated_unlocked(pid);
+    req->remote_root_path = ainfo.remote_root_path;
 
     ddebug_f("send bulk load request to node({}), app({}), partition({}), partition "
-             "status = {}, remote provider = {}, cluster_name = {}",
+             "status = {}, remote provider = {}, cluster_name = {}, remote_root_path = {}",
              primary_addr.to_string(),
              app_name,
              pid,
              dsn::enum_to_string(req->meta_bulk_load_status),
              req->remote_provider_name,
-             req->cluster_name);
+             req->cluster_name,
+             req->remote_root_path);
 
     bulk_load_rpc rpc(std::move(req), RPC_BULK_LOAD, 0_ms, 0, pid.thread_hash());
     rpc.call(primary_addr, _meta_svc->tracker(), [this, rpc](error_code err) mutable {

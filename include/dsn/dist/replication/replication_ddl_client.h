@@ -180,7 +180,8 @@ public:
 
     error_with<start_bulk_load_response> start_bulk_load(const std::string &app_name,
                                                          const std::string &cluster_name,
-                                                         const std::string &file_provider_type);
+                                                         const std::string &file_provider_type,
+                                                         const std::string &remote_root_path);
 
     error_with<control_bulk_load_response>
     control_bulk_load(const std::string &app_name, const bulk_load_control_type::type control_type);

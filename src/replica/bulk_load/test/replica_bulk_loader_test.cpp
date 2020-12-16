@@ -44,7 +44,9 @@ public:
 
     error_code test_start_downloading()
     {
-        return _bulk_loader->start_download(APP_NAME, CLUSTER, PROVIDER);
+        const std::string remote_dir = _bulk_loader->get_remote_bulk_load_dir(
+            APP_NAME, CLUSTER, ROOT_PATH, PID.get_partition_index());
+        return _bulk_loader->start_download(remote_dir, PROVIDER);
     }
 
     void test_rollback_to_downloading(bulk_load_status::type cur_status)
@@ -172,6 +174,7 @@ public:
         _req.meta_bulk_load_status = status;
         _req.pid = PID;
         _req.remote_provider_name = PROVIDER;
+        _req.remote_root_path = ROOT_PATH;
         stub->set_bulk_load_downloading_count(downloading_count);
     }
 
@@ -407,6 +410,7 @@ public:
     std::string APP_NAME = "replica";
     std::string CLUSTER = "cluster";
     std::string PROVIDER = "local_service";
+    std::string ROOT_PATH = "bulk_load_root";
     gpid PID = gpid(1, 0);
     ballot BALLOT = 3;
     rpc_address PRIMARY = rpc_address("127.0.0.2", 34801);
