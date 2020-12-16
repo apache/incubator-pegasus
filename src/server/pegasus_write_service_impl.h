@@ -26,6 +26,7 @@
 #include "base/pegasus_key_schema.h"
 #include "meta_store.h"
 #include "rocksdb_wrapper.h"
+#include "rocksdb_write_batch_cleaner.h"
 
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/filesystem.h>
@@ -349,13 +350,13 @@ public:
                 decree, dsn::string_view(), dsn::string_view(), 0);
         }
         if (resp.error) {
-            _rocksdb_wrapper->clear_up_write_batch();
+            rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper.get());
             return resp.error;
         }
 
         resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error) {
-            _rocksdb_wrapper->clear_up_write_batch();
+            rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper.get());
             return resp.error;
         }
 
@@ -365,7 +366,7 @@ public:
                 invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
 
-        _rocksdb_wrapper->clear_up_write_batch();
+        rocksdb_write_batch_cleaner cleaner(_rocksdb_wrapper.get());
         return 0;
     }
 
