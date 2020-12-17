@@ -50,7 +50,15 @@ void client_negotiation::list_mechanisms()
 void client_negotiation::handle_response(error_code err, const negotiation_response &&response)
 {
     if (err != ERR_OK) {
-        fail_negotiation();
+        // ERR_HANDLER_NOT_FOUND means server is old version, which doesn't support authentication
+        if (ERR_HANDLER_NOT_FOUND == err && !FLAGS_mandatory_auth) {
+            ddebug_f("{}: treat negotiation succeed because server is old version, which doesn't "
+                     "support authentication",
+                     _name);
+            succ_negotiation();
+        } else {
+            fail_negotiation();
+        }
         return;
     }
 
