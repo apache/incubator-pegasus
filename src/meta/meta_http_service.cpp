@@ -5,7 +5,6 @@
 #include <string>
 
 #include <dsn/c/api_layer1.h>
-#include <dsn/cpp/json_helper.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 #include <dsn/dist/replication/replication_types.h>
 #include <dsn/dist/replication/duplication_common.h>
@@ -609,6 +608,61 @@ void meta_http_service::query_duplication_handler(const http_request &req, http_
     }
     resp.status_code = http_status_code::ok;
     resp.body = duplication_query_response_to_string(rpc_resp);
+}
+
+void meta_http_service::start_bulk_load_handler(const http_request &req, http_response &resp)
+{
+    if (!redirect_if_not_primary(req, resp)) {
+        return;
+    }
+
+    if (_service->_bulk_load_svc == nullptr) {
+        resp.body = "bulk load is not enabled";
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
+
+    start_bulk_load_request request;
+    bool ret = json::json_forwarder<start_bulk_load_request>::decode(req.body, request);
+    if (!ret) {
+        resp.body = "invalid request structure";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    if (request.app_name.empty()) {
+        resp.body = "app_name should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    if (request.cluster_name.empty()) {
+        resp.body = "cluster_name should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    if (request.file_provider_type.empty()) {
+        resp.body = "file_provider_type should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    if (request.remote_root_path.empty()) {
+        resp.body = "remote_root_path should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    auto rpc_req = dsn::make_unique<start_bulk_load_request>(request);
+    start_bulk_load_rpc rpc(std::move(rpc_req), LPC_META_CALLBACK);
+    _service->_bulk_load_svc->on_start_bulk_load(rpc);
+
+    auto rpc_resp = rpc.response();
+    // output as json format
+    dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("error", rpc_resp.err.to_string());
+    tp.add_row_name_and_data("hint_msg", rpc_resp.hint_msg);
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
 }
 
 void meta_http_service::query_bulk_load_handler(const http_request &req, http_response &resp)

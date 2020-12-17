@@ -6,10 +6,14 @@
 
 #include <algorithm>
 
+#include <dsn/cpp/json_helper.h>
 #include <dsn/http/http_server.h>
 
 namespace dsn {
 namespace replication {
+
+NON_MEMBER_JSON_SERIALIZATION(
+    start_bulk_load_request, app_name, cluster_name, file_provider_type, remote_root_path)
 
 class meta_service;
 class meta_http_service : public http_service
@@ -59,6 +63,13 @@ public:
                                    std::placeholders::_1,
                                    std::placeholders::_2),
                          "ip:port/meta/backup_policy");
+        // request body should be start_bulk_load_request
+        register_handler("app/start_bulk_load",
+                         std::bind(&meta_http_service::start_bulk_load_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "ip:port/meta/start_bulk_load");
         register_handler("app/query_bulk_load",
                          std::bind(&meta_http_service::query_bulk_load_handler,
                                    this,
@@ -76,6 +87,7 @@ public:
     void get_app_envs_handler(const http_request &req, http_response &resp);
     void query_backup_policy_handler(const http_request &req, http_response &resp);
     void query_duplication_handler(const http_request &req, http_response &resp);
+    void start_bulk_load_handler(const http_request &req, http_response &resp);
     void query_bulk_load_handler(const http_request &req, http_response &resp);
 
 private:

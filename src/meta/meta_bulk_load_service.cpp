@@ -30,6 +30,9 @@ void bulk_load_service::initialize_bulk_load_service()
 // ThreadPool: THREAD_POOL_META_SERVER
 void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
 {
+    FAIL_POINT_INJECT_F("meta_on_start_bulk_load",
+                        [=](dsn::string_view) { rpc.response().err = ERR_OK; });
+
     const auto &request = rpc.request();
     auto &response = rpc.response();
     response.err = ERR_OK;

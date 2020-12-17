@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/http/http_server.h>
+#include <dsn/utility/fail_point.h>
 
 #include "meta/meta_http_service.h"
 #include "meta/meta_service.h"
@@ -195,6 +196,15 @@ public:
         meta_test_base::TearDown();
     }
 
+    http_response test_start_bulk_load(std::string req_body_json)
+    {
+        http_request req;
+        http_response resp;
+        req.body = blob::create_from_bytes(std::move(req_body_json));
+        _mhs->start_bulk_load_handler(req, resp);
+        return resp;
+    }
+
     std::string test_query_bulk_load(const std::string &app_name)
     {
         http_request req;
@@ -229,6 +239,38 @@ protected:
     std::unique_ptr<meta_http_service> _mhs;
     std::string APP_NAME = "test_bulk_load";
 };
+
+TEST_F(meta_bulk_load_http_test, start_bulk_load_request)
+{
+    fail::setup();
+    fail::cfg("meta_on_start_bulk_load", "return()");
+    struct start_bulk_load_test
+    {
+        std::string request_json;
+        http_status_code expected_code;
+        std::string expected_response_json;
+    } tests[] = {
+        {"{\"app\":\"test_bulk_load\",\"cluster_name\":\"onebox\", "
+         "\"file_provider_type\":\"local_service\", \"remote_root_path\":\"bulk_load_root\"}",
+         http_status_code::bad_request,
+         "invalid request structure"},
+        {"{\"app_name\":\"test_bulk_load\",\"cluster_name\":\"onebox\", "
+         "\"file_provider_type\":\"\", \"remote_root_path\":\"bulk_load_root\"}",
+         http_status_code::bad_request,
+         "file_provider_type should not be empty"},
+        {"{\"app_name\":\"test_bulk_load\",\"cluster_name\":\"onebox\", "
+         "\"file_provider_type\":\"local_service\", \"remote_root_path\":\"bulk_load_root\"}",
+         http_status_code::ok,
+         "{\"error\":\"ERR_OK\",\"hint_msg\":\"\"}\n"},
+    };
+
+    for (const auto &test : tests) {
+        http_response resp = test_start_bulk_load(test.request_json);
+        ASSERT_EQ(resp.status_code, test.expected_code);
+        ASSERT_EQ(resp.body, test.expected_response_json);
+    }
+    fail::teardown();
+}
 
 TEST_F(meta_bulk_load_http_test, query_bulk_load_request)
 {
