@@ -112,6 +112,8 @@ copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libsasl2.so.3 ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libcom_err.so.3 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 
