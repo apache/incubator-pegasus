@@ -312,6 +312,7 @@ function(dsn_setup_thirdparty_libs)
     # libhdfs
     find_package(JNI REQUIRED)
     message (STATUS "JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
+    link_libraries(${JAVA_JVM_LIBRARY})
 
     link_directories(${DSN_THIRDPARTY_ROOT}/lib)
     link_directories(${DSN_THIRDPARTY_ROOT}/lib64)
