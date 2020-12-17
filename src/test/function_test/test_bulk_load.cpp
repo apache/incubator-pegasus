@@ -103,7 +103,7 @@ public:
 
     error_code start_bulk_load()
     {
-        auto err_resp = ddl_client->start_bulk_load(APP_NAME, CLUSTER, PROVIDER);
+        auto err_resp = ddl_client->start_bulk_load(APP_NAME, CLUSTER, PROVIDER, LOCAL_ROOT);
         return err_resp.get_value().err;
     }
 
