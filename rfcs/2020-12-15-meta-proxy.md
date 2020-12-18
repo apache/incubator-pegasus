@@ -48,3 +48,5 @@ The zk layout:
 ```
 
 All tables under one MetaProxy deployment are unique. It's impossible for two tables with the same name. However, we can deploy two sets of MetaProxy in two isolated AZs, then they can both have the same table. And consequently, we can achieve double-alive with intra-AZs.
+
+MetaProxy lazily caches each [zknode watch event](https://zookeeper.apache.org/doc/r3.3.5/zookeeperProgrammers.html#ch_zkWatches) for a table. If it happens to a zknode that's queried but not cached, MetaProxy will invoke zookeeper getData API to fetch the zknode data, and listens for its changes.
