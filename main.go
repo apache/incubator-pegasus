@@ -78,9 +78,5 @@ func main() {
 		usage.NewTableUsageRecorder().Start(tom)
 		return nil
 	})
-	select {
-	case <-tom.Dying():
-		<-tom.Dead() // gracefully wait until all goroutines dead
-		return
-	}
+	<-tom.Dead() // gracefully wait until all goroutines dead
 }

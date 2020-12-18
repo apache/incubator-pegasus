@@ -26,4 +26,5 @@ require (
 	github.com/yudai/pp v2.0.1+incompatible // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
+	k8s.io/apimachinery v0.0.0-20191123233150-4c4803ed55e3
 )
