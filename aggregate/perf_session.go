@@ -30,7 +30,7 @@ func (p *PerfCounter) String() string {
 // NewPerfSession returns an instance of PerfSession.
 func NewPerfSession(addr string) *PerfSession {
 	return &PerfSession{
-		Address: addr,
+		Address:     addr,
 		NodeSession: session.NewNodeSession(addr, session.NodeTypeReplica),
 	}
 }
@@ -38,7 +38,7 @@ func NewPerfSession(addr string) *PerfSession {
 // WrapPerf returns an instance of PerfSession using an existed session.
 func WrapPerf(addr string, session session.NodeSession) *PerfSession {
 	return &PerfSession{
-		Address: addr,
+		Address:     addr,
 		NodeSession: session,
 	}
 }
