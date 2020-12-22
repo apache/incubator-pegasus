@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"pegic/shell"
 
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
@@ -17,5 +19,8 @@ func main() {
 		LocalTime: true,
 	})
 
-	shell.Root.Execute()
+	if err := shell.Root.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

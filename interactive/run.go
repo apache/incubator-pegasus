@@ -1,6 +1,9 @@
 package interactive
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/desertbit/grumble"
 )
 
@@ -18,5 +21,9 @@ func init() {
 }
 
 func Run() {
-	App.Run()
+	err := App.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

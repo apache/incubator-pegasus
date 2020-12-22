@@ -24,12 +24,14 @@ func (z *zstdCompression) Decompress(data []byte) ([]byte, error) {
 	return z.decoder.DecodeAll(data, nil)
 }
 
-func newZstdCompression() BytesCompression {
-	decoder, _ := zstd.NewReader(nil)
-	encoder, _ := zstd.NewWriter(nil)
+// TODO(wutao): compression command is not implemented yet.
+//
+// func newZstdCompression() BytesCompression {
+// 	decoder, _ := zstd.NewReader(nil)
+// 	encoder, _ := zstd.NewWriter(nil)
 
-	return &zstdCompression{
-		encoder: encoder,
-		decoder: decoder,
-	}
-}
+// 	return &zstdCompression{
+// 		encoder: encoder,
+// 		decoder: decoder,
+// 	}
+// }
