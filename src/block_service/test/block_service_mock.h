@@ -89,6 +89,10 @@ public:
                                    const download_callback &cb,
                                    dsn::task_tracker *tracker = nullptr)
     {
+        download_response resp;
+        resp.err = ERR_OK;
+        resp.downloaded_size = size;
+        cb(resp);
         return task_ptr();
     }
 
