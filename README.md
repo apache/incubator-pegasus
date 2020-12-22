@@ -1,6 +1,6 @@
 # pegic, another PEGasus Interactive Cli
 
-Pegic is an user-facing command-line tool to read/write your data on Pegasus.
+Pegic is a user-facing command-line tool to read/write your data on Pegasus.
 
 ## Quick Start
 
@@ -20,9 +20,13 @@ Before starting read/write command, you need to firstly select a table to operat
 pegic » use xiaomi_ad_data
 ```
 
-This command opens a table called "xiaomi_ad_data". Every operations followed are applied to this table.
+This command opens a table called "xiaomi_ad_data". Every operation followed is applied to this table.
 
 ## Commands
+
+* [Set/Get/Del](#setgetdel)
+* [Encoding](#encoding)
+* [Scan](#scan)
 
 This is an overview of the commands that pegic provides.
 
@@ -117,8 +121,7 @@ Encoding:
   - Value: UTF8
 ```
 
-If the encoding is not correctly matched to the data, the result could possibly
-be not existing:
+If the encoding is not correctly matched to the data, the result will be unexpected.
 
 ```
 pegic » encoding hashkey utf8
@@ -129,7 +132,66 @@ Encoding:
   - Value: UTF8
 
 pegic » get 19491001 "sortkey"
+
+Encoding:
+  - HashKey: UTF8
+  - SortKey: UTF8
+  - Value: UTF8
+
 error: record not found
 HASH_KEY=19491001
 SORT_KEY=sortkey
+```
+
+### Scan
+
+```
+pegic » scan "中国"
+中国 : 上海 : {"people_num": 35000000}
+中国 : 北京 : {"people_num": 40000000}
+中国 : 广州 : {"people_num": 28000000}
+中国 : 成都 : {"people_num": 20000000}
+
+Total records count: 4
+
+Encoding:
+  - HashKey: UTF8
+  - SortKey: UTF8
+  - Value: UTF8
+```
+
+`scan` iterates over all the records under the given hashkey. If you only want a subset of
+the records within a given range, or to filter out the records that matched some pattern,
+you can specify the flags according to your needs.
+
+Scan with range:
+
+```
+pegic » scan --from 20200714000000 --to 20200715000000 uid18456112
+uid18456112 : 20200714151429 : {"login": "Beijing"}
+uid18456112 : 20200714152021 : {"login": "Beijing"}
+uid18456112 : 20200714153342 : {"login": "Beijing"}
+
+Total records count: 3
+
+Encoding:
+  - HashKey: UTF8
+  - SortKey: INT64
+  - Value: UTF8
+```
+
+Scan with filtering pattern:
+
+```
+pegic » scan --prefix rocksdb pegasus
+pegasus : rocksdb_index_size_mb : 4300
+pegasus : rocksdb_memtable_size_mb : 2000
+pegasus : rocksdb_sst_size_mb : 358000
+
+Total records count: 3
+
+Encoding:
+  - HashKey: UTF8
+  - SortKey: UTF8
+  - Value: INT64
 ```

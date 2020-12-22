@@ -21,6 +21,7 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -32,5 +33,10 @@ func Del(rootCtx *Context, hashKeyStr, sortkeyStr string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	return rootCtx.UseTable.Del(ctx, pegasusArgs[0], pegasusArgs[1])
+	err = rootCtx.UseTable.Del(ctx, pegasusArgs[0], pegasusArgs[1])
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(rootCtx, "\nok")
+	return nil
 }

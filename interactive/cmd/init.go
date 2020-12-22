@@ -87,3 +87,12 @@ func filterStringWithPrefix(strs []string, prefix string) []string {
 	}
 	return result
 }
+
+func printEndingContext(run func(*grumble.Context) error) func(c *grumble.Context) error {
+	grumbleRun := func(c *grumble.Context) error {
+		err := run(c)
+		c.App.Println(globalContext)
+		return err
+	}
+	return grumbleRun
+}

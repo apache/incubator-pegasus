@@ -41,13 +41,13 @@ func init() {
 		Name:  "scan",
 		Help:  "scan records under the hashkey",
 		Usage: "\nscan " + usage,
-		Run: requireUseTable(func(c *grumble.Context) error {
+		Run: requireUseTable(printEndingContext(func(c *grumble.Context) error {
 			cmd, err := newScanCommand(c)
 			if err != nil {
 				return err
 			}
 			return cmd.IterateAll(globalContext)
-		}),
+		})),
 		Flags:     scanFlags,
 		AllowArgs: true,
 	}
@@ -56,14 +56,14 @@ func init() {
 		Name:  "count",
 		Help:  "scan records under the hashkey",
 		Usage: "\nscan " + usage,
-		Run: requireUseTable(func(c *grumble.Context) error {
+		Run: requireUseTable(printEndingContext(func(c *grumble.Context) error {
 			cmd, err := newScanCommand(c)
 			if err != nil {
 				return err
 			}
 			cmd.CountOnly = true
 			return cmd.IterateAll(globalContext)
-		}),
+		})),
 		Flags:     scanFlags,
 		AllowArgs: true,
 	})
