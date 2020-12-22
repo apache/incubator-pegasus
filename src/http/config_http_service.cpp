@@ -15,23 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#pragma once
-
-#include <dsn/cpp/serverlet.h>
 #include <dsn/http/http_server.h>
-#include <dsn/utility/errors.h>
+#include <dsn/utility/flags.h>
+#include <dsn/utility/output_utils.h>
 
 namespace dsn {
+void update_config(const http_request &req, http_response &resp)
+{
+    if (req.query_args.size() != 1) {
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
 
-// Register basic services for the HTTP server.
-extern void register_builtin_http_calls();
+    auto iter = req.query_args.begin();
+    auto res = update_flag(iter->first, iter->second);
 
-extern void get_perf_counter_handler(const http_request &req, http_response &resp);
-
-extern void get_help_handler(const http_request &req, http_response &resp);
-
-extern void get_recent_start_time_handler(const http_request &req, http_response &resp);
-
-extern void update_config(const http_request &req, http_response &resp);
-
+    utils::table_printer tp;
+    tp.add_row_name_and_data("update_status", res.description());
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
+}
 } // namespace dsn

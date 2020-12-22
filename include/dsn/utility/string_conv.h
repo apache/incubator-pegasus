@@ -116,6 +116,11 @@ inline bool buf2int64(string_view buf, int64_t &result)
     return internal::buf2signed(buf, result);
 }
 
+inline bool buf2uint32(string_view buf, uint32_t &result)
+{
+    return internal::buf2unsigned(buf, result);
+}
+
 inline bool buf2uint64(string_view buf, uint64_t &result)
 {
     return internal::buf2unsigned(buf, result);

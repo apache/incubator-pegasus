@@ -5,8 +5,11 @@
 #include <dsn/utility/flags.h>
 #include <dsn/utility/config_api.h>
 #include <dsn/utility/singleton.h>
+#include <dsn/utility/errors.h>
+#include <dsn/utility/string_conv.h>
 #include <dsn/c/api_utilities.h>
 #include <boost/optional/optional.hpp>
+#include <fmt/format.h>
 
 #include <map>
 
@@ -37,6 +40,19 @@ public:
         }                                                                                          \
         break
 
+#define FLAG_DATA_UPDATE_CASE(type, type_enum, suffix)                                             \
+    case type_enum:                                                                                \
+        type tmpval_##type_enum;                                                                   \
+        if (!dsn::buf2##suffix(val, tmpval_##type_enum)) {                                         \
+            return error_s::make(ERR_INVALID_PARAMETERS, fmt::format("{} in invalid", val));       \
+        }                                                                                          \
+        value<type>() = tmpval_##type_enum;                                                        \
+        break
+
+#define FLAG_DATA_UPDATE_STRING()                                                                  \
+    case FV_STRING:                                                                                \
+        return error_s::make(ERR_INVALID_PARAMETERS, "string modifications are not supported")
+
     void load()
     {
         switch (_type) {
@@ -55,8 +71,29 @@ public:
     {
     }
 
+    error_s update(const std::string &val)
+    {
+        if (!has_tag(flag_tag::FT_MUTABLE)) {
+            return error_s::make(ERR_INVALID_PARAMETERS, fmt::format("{} is not mutable", _name));
+        }
+
+        switch (_type) {
+            FLAG_DATA_UPDATE_CASE(int32_t, FV_INT32, int32);
+            FLAG_DATA_UPDATE_CASE(int64_t, FV_INT64, int64);
+            FLAG_DATA_UPDATE_CASE(uint32_t, FV_UINT32, uint32);
+            FLAG_DATA_UPDATE_CASE(uint64_t, FV_UINT64, uint64);
+            FLAG_DATA_UPDATE_CASE(bool, FV_BOOL, bool);
+            FLAG_DATA_UPDATE_CASE(double, FV_DOUBLE, double);
+            FLAG_DATA_UPDATE_STRING();
+        }
+        return error_s::make(ERR_OK);
+    }
+
     void set_validator(validator_fn &validator) { _validator = std::move(validator); }
     const validator_fn &validator() const { return _validator; }
+
+    void add_tag(const flag_tag &tag) { _tags.insert(tag); }
+    bool has_tag(const flag_tag &tag) const { return _tags.find(tag) != _tags.end(); }
 
 private:
     template <typename T>
@@ -72,12 +109,22 @@ private:
     const char *_name;
     const char *_desc;
     validator_fn _validator;
+    std::unordered_set<flag_tag> _tags;
 };
 
 class flag_registry : public utils::singleton<flag_registry>
 {
 public:
     void add_flag(const char *name, flag_data flag) { _flags.emplace(name, flag); }
+
+    error_s update_flag(const std::string &name, const std::string &val)
+    {
+        auto it = _flags.find(name);
+        if (it == _flags.end()) {
+            return error_s::make(ERR_OBJECT_NOT_FOUND, fmt::format("{} is not found", name));
+        }
+        return it->second.update(val);
+    }
 
     void add_validator(const char *name, validator_fn &validator)
     {
@@ -95,6 +142,22 @@ public:
             flag_data &flag = kv.second;
             flag.load();
         }
+    }
+
+    void add_tag(const char *name, const flag_tag &tag)
+    {
+        auto it = _flags.find(name);
+        dassert(it != _flags.end(), "flag \"%s\" does not exist", name);
+        it->second.add_tag(tag);
+    }
+
+    bool has_tag(const std::string &name, const flag_tag &tag) const
+    {
+        auto it = _flags.find(name);
+        if (it == _flags.end()) {
+            return false;
+        }
+        return it->second.has_tag(tag);
     }
 
 private:
@@ -125,6 +188,21 @@ flag_validator::flag_validator(const char *name, validator_fn validator)
     flag_registry::instance().add_validator(name, validator);
 }
 
+flag_tagger::flag_tagger(const char *name, const flag_tag &tag)
+{
+    flag_registry::instance().add_tag(name, tag);
+}
+
 /*extern*/ void flags_initialize() { flag_registry::instance().load_from_config(); }
+
+/*extern*/ error_s update_flag(const std::string &name, const std::string &val)
+{
+    return flag_registry::instance().update_flag(name, val);
+}
+
+/*extern*/ bool has_tag(const std::string &name, const flag_tag &tag)
+{
+    return flag_registry::instance().has_tag(name, tag);
+}
 
 } // namespace dsn

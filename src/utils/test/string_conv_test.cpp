@@ -189,6 +189,52 @@ TEST(string_conv, buf2uint64)
     ASSERT_FALSE(dsn::buf2uint64(dsn::string_view(str.data(), 5), result));
 }
 
+TEST(string_conv, buf2uint32)
+{
+    uint32_t result = 1;
+
+    ASSERT_TRUE(dsn::buf2uint32(std::to_string(0), result));
+    ASSERT_EQ(result, 0);
+
+    ASSERT_TRUE(dsn::buf2uint32("-0", result));
+    ASSERT_EQ(result, 0);
+
+    ASSERT_FALSE(dsn::buf2uint32("-1", result));
+
+    ASSERT_TRUE(dsn::buf2uint32("0xdeadbeef", result));
+    ASSERT_EQ(result, 0xdeadbeef);
+
+    ASSERT_TRUE(dsn::buf2uint32("0xDEADBEEF", result));
+    ASSERT_EQ(result, 0xdeadbeef);
+
+    ASSERT_TRUE(dsn::buf2uint32(std::to_string(42), result));
+    ASSERT_EQ(result, 42);
+
+    ASSERT_TRUE(dsn::buf2uint32(std::to_string(std::numeric_limits<int16_t>::max()), result));
+    ASSERT_EQ(result, std::numeric_limits<int16_t>::max());
+
+    ASSERT_TRUE(dsn::buf2uint32(std::to_string(std::numeric_limits<uint16_t>::max()), result));
+    ASSERT_EQ(result, std::numeric_limits<uint16_t>::max());
+
+    ASSERT_TRUE(dsn::buf2uint32(std::to_string(std::numeric_limits<uint32_t>::max()), result));
+    ASSERT_EQ(result, std::numeric_limits<uint32_t>::max());
+
+    ASSERT_TRUE(dsn::buf2uint32(std::to_string(std::numeric_limits<uint32_t>::min()), result));
+    ASSERT_EQ(result, std::numeric_limits<uint32_t>::min());
+
+    ASSERT_FALSE(dsn::buf2uint32(std::to_string(std::numeric_limits<uint64_t>::max()), result));
+
+    // "\045" is "%", so the string length=5, otherwise(2th argument > 5) it will be reported
+    // "global-buffer-overflow" error under AddressSanitizer check
+    std::string str("123\0456", 5);
+    ASSERT_TRUE(dsn::buf2uint32(dsn::string_view(str.data(), 2), result));
+    ASSERT_EQ(result, 12);
+    ASSERT_TRUE(dsn::buf2uint32(dsn::string_view(str.data(), 3), result));
+    ASSERT_EQ(result, 123);
+    ASSERT_FALSE(dsn::buf2uint32(dsn::string_view(str.data(), 4), result));
+    ASSERT_FALSE(dsn::buf2uint32(dsn::string_view(str.data(), 5), result));
+}
+
 TEST(string_conv, int64_partial)
 {
     int64_t result = 0;

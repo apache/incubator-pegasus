@@ -43,6 +43,26 @@
 
 #define TIME_MS_MAX 0xffffffff
 
+// The COMPILE_ASSERT macro can be used to verify that a compile time
+// expression is true. For example, you could use it to verify the
+// size of a static array:
+//
+//   COMPILE_ASSERT(ARRAYSIZE(content_type_names) == CONTENT_NUM_TYPES,
+//                  content_type_names_incorrect_size);
+//
+// or to make sure a struct is smaller than a certain size:
+//
+//   COMPILE_ASSERT(sizeof(foo) < 128, foo_too_large);
+//
+// The second argument to the macro is the name of the variable. If
+// the expression is false, most compilers will issue a warning/error
+// containing the name of the variable.
+struct CompileAssert
+{
+};
+
+#define COMPILE_ASSERT(expr, msg) static const CompileAssert msg[bool(expr) ? 1 : -1]
+
 namespace dsn {
 namespace utils {
 
@@ -88,5 +108,5 @@ bool hostname(const dsn::rpc_address &address, std::string *hostname_result);
 // valid_ip_network_order -> return TRUE && hostname_result=hostname	|
 // invalid_ip_network_order -> return FALSE
 bool hostname_from_ip(uint32_t ip, std::string *hostname_result);
-}
-}
+} // namespace utils
+} // namespace dsn

@@ -7,6 +7,13 @@
 #include <string>
 #include <cstdint>
 #include <functional>
+#include "errors.h"
+#include "utils.h"
+
+enum class flag_tag
+{
+    FT_MUTABLE = 0, /** flag data is mutable */
+};
 
 // Example:
 //    DSN_DEFINE_string("core", filename, "my_file.txt", "The file to read");
@@ -52,6 +59,10 @@
         dassert(FLAGS_VALIDATOR_FN_##name(FLAGS_##name), "validation failed: %s", #name);          \
     })
 
+#define DSN_TAG_VARIABLE(name, tag)                                                                \
+    COMPILE_ASSERT(sizeof(decltype(FLAGS_##name)), exist_##name##_##tag);                          \
+    static dsn::flag_tagger FLAGS_TAGGER_##name##_##tag(#name, flag_tag::tag)
+
 namespace dsn {
 
 // An utility class that registers a flag upon initialization.
@@ -74,7 +85,18 @@ public:
     flag_validator(const char *name, std::function<void()>);
 };
 
+class flag_tagger
+{
+public:
+    flag_tagger(const char *name, const flag_tag &tag);
+};
+
 // Loads all the flags from configuration.
 extern void flags_initialize();
 
+// update the specified flag to val
+extern error_s update_flag(const std::string &name, const std::string &val);
+
+// determine if the tag is exist for the specified flag
+extern bool has_tag(const std::string &name, const flag_tag &tag);
 } // namespace dsn
