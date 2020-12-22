@@ -98,6 +98,7 @@ public:
 private:
     void on_start_detect(dsn::replication::detect_hotkey_response &resp);
     void on_stop_detect(dsn::replication::detect_hotkey_response &resp);
+    void query_result(dsn::replication::detect_hotkey_response &resp);
 
     void change_state_to_stopped();
     void change_state_to_coarse_detecting();
