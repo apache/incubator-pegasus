@@ -24,16 +24,18 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
                                            {"cluster_name", required_argument, 0, 'c'},
                                            {"file_provider_type", required_argument, 0, 'p'},
+                                           {"root_path", required_argument, 0, 'r'},
                                            {0, 0, 0, 0}};
     std::string app_name;
     std::string cluster_name;
     std::string file_provider_type;
+    std::string remote_root_path;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "a:c:p:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "a:c:p:r:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -45,6 +47,9 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'p':
             file_provider_type = optarg;
+            break;
+        case 'r':
+            remote_root_path = optarg;
             break;
         default:
             return false;
@@ -65,7 +70,13 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    auto err_resp = sc->ddl_client->start_bulk_load(app_name, cluster_name, file_provider_type);
+    if (remote_root_path.empty()) {
+        fprintf(stderr, "remote_root_path should not be empty\n");
+        return false;
+    }
+
+    auto err_resp = sc->ddl_client->start_bulk_load(
+        app_name, cluster_name, file_provider_type, remote_root_path);
     dsn::error_s err = err_resp.get_error();
     std::string hint_msg;
     if (err.is_ok()) {
