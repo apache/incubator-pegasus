@@ -51,6 +51,7 @@ func init() {
 			if err != nil {
 				return err
 			}
+			globalContext.UseTableName = tableName
 
 			c.App.Println("ok")
 			return nil

@@ -6,6 +6,7 @@ import (
 	"pegic/executor/util"
 
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
 type Context struct {
@@ -14,8 +15,13 @@ type Context struct {
 
 	pegasus.Client
 
+	Meta *session.MetaManager
+
 	// default to nil
-	UseTable pegasus.TableConnector
+	UseTable     pegasus.TableConnector
+	UseTableName string
+	// default to 0
+	UseTablePartitionCount int
 
 	// default to nil
 	Compressor util.BytesCompression
@@ -29,6 +35,7 @@ func NewContext(writer io.Writer, metaAddrs []string) *Context {
 		Client: pegasus.NewClient(pegasus.Config{
 			MetaServers: metaAddrs,
 		}),
+		Meta: session.NewMetaManager(metaAddrs, session.NewNodeSession),
 
 		// by default, string uses utf-8 as encoding to bytes
 		HashKeyEnc: util.NewEncoder("utf8"),
