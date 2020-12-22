@@ -1,7 +1,0 @@
-time="2020-11-29T01:01:27+08:00" level=info msg="create session with [127.0.0.1:34601(meta)]" func="logrus.(*Entry).Logf" file="entry.go:314"
-time="2020-11-29T01:01:27+08:00" level=info msg="create session with [127.0.0.1:34601(meta)]" func="logrus.(*Entry).Logf" file="entry.go:314"
-time="2020-11-29T01:02:40+08:00" level=info msg="querying configuration of table(temp) [metaList=[127.0.0.1:34601]]" func="logrus.(*Entry).Logf" file="entry.go:314"
-time="2020-11-29T01:02:40+08:00" level=info msg="querying configuration of table(temp) from [127.0.0.1:34601(meta)]" func="logrus.(*Entry).Logf" file="entry.go:314"
-time="2020-11-29T01:02:40+08:00" level=info msg="dial to [127.0.0.1:34601(meta)]" func="logrus.(*Entry).Info" file="entry.go:285"
-time="2020-11-29T01:02:40+08:00" level=info msg="failed to dial [127.0.0.1:34601(meta)]: dial tcp 127.0.0.1:34601: connect: connection refused" func="logrus.(*Entry).Logf" file="entry.go:314"
-time="2020-11-29T01:02:40+08:00" level=info msg="stop dialing for [127.0.0.1:34601(meta)], connection state: ConnStateTransientFailure" func="logrus.(*Entry).Logf" file="entry.go:314"
