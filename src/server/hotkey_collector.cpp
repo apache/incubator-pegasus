@@ -168,6 +168,7 @@ inline void hotkey_collector::change_state_by_result()
     case hotkey_collector_state::FINE_DETECTING:
         if (!_result.hot_hash_key.empty()) {
             change_state_to_finished();
+            derror_replica("Find the hotkey: {}", _result.hot_hash_key);
         }
         break;
     default:
