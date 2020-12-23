@@ -15,6 +15,16 @@ enum class flag_tag
     FT_MUTABLE = 0, /** flag data is mutable */
 };
 
+// support std::hash with enum types is implemented since gcc 6.1
+// so we should define hash for flag_tag to compatible with gcc < 6.1
+namespace std {
+template <>
+struct hash<flag_tag>
+{
+    size_t operator()(const flag_tag &t) const { return size_t(t); }
+};
+} // namespace std
+
 // Example:
 //    DSN_DEFINE_string("core", filename, "my_file.txt", "The file to read");
 //    DSN_DEFINE_validator(filename, [](const char *fname){ return is_file(fname); });
