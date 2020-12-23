@@ -1,0 +1,45 @@
+name: Build rdsn with sanitizers
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sanitizers.yml'
+
+  # for manually triggering workflow
+  workflow_dispatch:
+
+  # run for every day 2am UTC+8(Beijing)
+  schedule:
+    - cron:  '0 18 */1 * *'
+
+jobs:
+  build_docker_images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer:
+          - address
+          - leak
+          - thread
+          - undefined
+    container:
+      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu2004
+    steps:
+      -
+        uses: actions/checkout@v2
+        with:
+          repository: 'XiaoMi/rdsn'
+      -
+        name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      -
+        name: Compilation
+        run: |
+          cmake -DSANITIZER=${{ matrix.sanitizer }} -DENABLE_GCOV=TRUE -B builder/ .
+          cmake --build builder/ -j $(($(nproc)/2+1))
+          cmake --install builder/ --prefix builder/output
+      -
+        name: Testing
+        run: |
+          ./run.sh test --enable_gcov --sanitizer=${{ matrix.sanitizer }} --skip_thirdparty
