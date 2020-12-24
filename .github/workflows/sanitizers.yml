@@ -42,4 +42,4 @@ jobs:
       -
         name: Testing
         run: |
-          ./run.sh test --sanitizer=${{ matrix.sanitizer }} --skip_thirdparty
+          ./run.sh test --sanitizer ${{ matrix.sanitizer }} --skip_thirdparty
