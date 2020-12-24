@@ -24,7 +24,7 @@ jobs:
           - thread
           - undefined
     container:
-      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu2004
+      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
     steps:
       -
         name: Install dependencies
