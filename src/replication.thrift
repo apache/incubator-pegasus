@@ -1144,7 +1144,8 @@ enum hotkey_type
 enum detect_action
 {
     START,
-    STOP
+    STOP,
+    QUERY
 }
 
 enum disk_migration_status {
@@ -1167,6 +1168,7 @@ struct detect_hotkey_response {
     // - ERR_SERVICE_ALREADY_EXIST: hotkey detection is running now
     1: dsn.error_code err;
     2: optional string err_hint;
+    3: optional string hotkey_result;
 }
 
 /*

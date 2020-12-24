@@ -206,10 +206,10 @@ const std::map<int, const char *> _hotkey_type_VALUES_TO_NAMES(
     ::apache::thrift::TEnumIterator(2, _khotkey_typeValues, _khotkey_typeNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
-int _kdetect_actionValues[] = {detect_action::START, detect_action::STOP};
-const char *_kdetect_actionNames[] = {"START", "STOP"};
+int _kdetect_actionValues[] = {detect_action::START, detect_action::STOP, detect_action::QUERY};
+const char *_kdetect_actionNames[] = {"START", "STOP", "QUERY"};
 const std::map<int, const char *> _detect_action_VALUES_TO_NAMES(
-    ::apache::thrift::TEnumIterator(2, _kdetect_actionValues, _kdetect_actionNames),
+    ::apache::thrift::TEnumIterator(3, _kdetect_actionValues, _kdetect_actionNames),
     ::apache::thrift::TEnumIterator(-1, NULL, NULL));
 
 int _kdisk_migration_statusValues[] = {disk_migration_status::IDLE,
@@ -18157,6 +18157,12 @@ void detect_hotkey_response::__set_err_hint(const std::string &val)
     __isset.err_hint = true;
 }
 
+void detect_hotkey_response::__set_hotkey_result(const std::string &val)
+{
+    this->hotkey_result = val;
+    __isset.hotkey_result = true;
+}
+
 uint32_t detect_hotkey_response::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -18192,6 +18198,14 @@ uint32_t detect_hotkey_response::read(::apache::thrift::protocol::TProtocol *ipr
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 3:
+            if (ftype == ::apache::thrift::protocol::T_STRING) {
+                xfer += iprot->readString(this->hotkey_result);
+                this->__isset.hotkey_result = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -18219,6 +18233,11 @@ uint32_t detect_hotkey_response::write(::apache::thrift::protocol::TProtocol *op
         xfer += oprot->writeString(this->err_hint);
         xfer += oprot->writeFieldEnd();
     }
+    if (this->__isset.hotkey_result) {
+        xfer += oprot->writeFieldBegin("hotkey_result", ::apache::thrift::protocol::T_STRING, 3);
+        xfer += oprot->writeString(this->hotkey_result);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -18229,6 +18248,7 @@ void swap(detect_hotkey_response &a, detect_hotkey_response &b)
     using ::std::swap;
     swap(a.err, b.err);
     swap(a.err_hint, b.err_hint);
+    swap(a.hotkey_result, b.hotkey_result);
     swap(a.__isset, b.__isset);
 }
 
@@ -18236,18 +18256,21 @@ detect_hotkey_response::detect_hotkey_response(const detect_hotkey_response &oth
 {
     err = other774.err;
     err_hint = other774.err_hint;
+    hotkey_result = other774.hotkey_result;
     __isset = other774.__isset;
 }
 detect_hotkey_response::detect_hotkey_response(detect_hotkey_response &&other775)
 {
     err = std::move(other775.err);
     err_hint = std::move(other775.err_hint);
+    hotkey_result = std::move(other775.hotkey_result);
     __isset = std::move(other775.__isset);
 }
 detect_hotkey_response &detect_hotkey_response::operator=(const detect_hotkey_response &other776)
 {
     err = other776.err;
     err_hint = other776.err_hint;
+    hotkey_result = other776.hotkey_result;
     __isset = other776.__isset;
     return *this;
 }
@@ -18255,6 +18278,7 @@ detect_hotkey_response &detect_hotkey_response::operator=(detect_hotkey_response
 {
     err = std::move(other777.err);
     err_hint = std::move(other777.err_hint);
+    hotkey_result = std::move(other777.hotkey_result);
     __isset = std::move(other777.__isset);
     return *this;
 }
@@ -18266,6 +18290,9 @@ void detect_hotkey_response::printTo(std::ostream &out) const
     out << ", "
         << "err_hint=";
     (__isset.err_hint ? (out << to_string(err_hint)) : (out << "<null>"));
+    out << ", "
+        << "hotkey_result=";
+    (__isset.hotkey_result ? (out << to_string(hotkey_result)) : (out << "<null>"));
     out << ")";
 }
 }

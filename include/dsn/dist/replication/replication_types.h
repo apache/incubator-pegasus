@@ -249,7 +249,8 @@ struct detect_action
     enum type
     {
         START = 0,
-        STOP = 1
+        STOP = 1,
+        QUERY = 2
     };
 };
 
@@ -7740,9 +7741,10 @@ inline std::ostream &operator<<(std::ostream &out, const detect_hotkey_request &
 
 typedef struct _detect_hotkey_response__isset
 {
-    _detect_hotkey_response__isset() : err(false), err_hint(false) {}
+    _detect_hotkey_response__isset() : err(false), err_hint(false), hotkey_result(false) {}
     bool err : 1;
     bool err_hint : 1;
+    bool hotkey_result : 1;
 } _detect_hotkey_response__isset;
 
 class detect_hotkey_response
@@ -7752,17 +7754,20 @@ public:
     detect_hotkey_response(detect_hotkey_response &&);
     detect_hotkey_response &operator=(const detect_hotkey_response &);
     detect_hotkey_response &operator=(detect_hotkey_response &&);
-    detect_hotkey_response() : err_hint() {}
+    detect_hotkey_response() : err_hint(), hotkey_result() {}
 
     virtual ~detect_hotkey_response() throw();
     ::dsn::error_code err;
     std::string err_hint;
+    std::string hotkey_result;
 
     _detect_hotkey_response__isset __isset;
 
     void __set_err(const ::dsn::error_code &val);
 
     void __set_err_hint(const std::string &val);
+
+    void __set_hotkey_result(const std::string &val);
 
     bool operator==(const detect_hotkey_response &rhs) const
     {
@@ -7771,6 +7776,10 @@ public:
         if (__isset.err_hint != rhs.__isset.err_hint)
             return false;
         else if (__isset.err_hint && !(err_hint == rhs.err_hint))
+            return false;
+        if (__isset.hotkey_result != rhs.__isset.hotkey_result)
+            return false;
+        else if (__isset.hotkey_result && !(hotkey_result == rhs.hotkey_result))
             return false;
         return true;
     }

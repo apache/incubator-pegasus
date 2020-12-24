@@ -2788,7 +2788,6 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
     }
 }
 
-// TODO: (Tangyanzhao) implement it later
 void replica_stub::on_detect_hotkey(detect_hotkey_rpc rpc)
 {
     const auto &request = rpc.request();
