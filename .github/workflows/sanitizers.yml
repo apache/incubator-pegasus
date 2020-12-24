@@ -27,6 +27,10 @@ jobs:
       image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu2004
     steps:
       -
+        name: Install dependencies
+        run: |
+          apt install -y nmap ncat
+      -
         uses: actions/checkout@v2
         with:
           repository: 'XiaoMi/rdsn'
