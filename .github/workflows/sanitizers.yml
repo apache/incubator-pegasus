@@ -36,10 +36,10 @@ jobs:
       -
         name: Compilation
         run: |
-          cmake -DSANITIZER=${{ matrix.sanitizer }} -DENABLE_GCOV=TRUE -B builder/ .
+          cmake -DSANITIZER=${{ matrix.sanitizer }} -B builder/ .
           cmake --build builder/ -j $(($(nproc)/2+1))
           cmake --install builder/ --prefix builder/output
       -
         name: Testing
         run: |
-          ./run.sh test --enable_gcov --sanitizer=${{ matrix.sanitizer }} --skip_thirdparty
+          ./run.sh test --sanitizer=${{ matrix.sanitizer }} --skip_thirdparty
