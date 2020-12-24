@@ -34,7 +34,7 @@ if [ ! -f ${ZOOKEEPER_PKG} ]; then
     exit 1
 fi
 
-if [ ! -d zookeeper-3.4.6 ]; then
+if [ ! -d zookeeper-3.4.10 ]; then
     echo "Decompressing zookeeper..."
     cp ${ZOOKEEPER_PKG} .
     tar xf zookeeper-3.4.10.tar.gz
