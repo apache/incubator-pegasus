@@ -35,8 +35,4 @@ public:
 
 extern void http_response_reply(const http_response &resp, message_ex *req);
 
-/// The rpc code for all the HTTP RPCs.
-/// Since http is used only for system monitoring, it is restricted to lowest priority.
-DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_LOW, THREAD_POOL_DEFAULT);
-
 } // namespace dsn

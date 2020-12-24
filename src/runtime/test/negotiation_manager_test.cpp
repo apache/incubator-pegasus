@@ -23,6 +23,7 @@
 #include <dsn/utility/flags.h>
 #include <dsn/dist/failure_detector/fd.code.definition.h>
 #include <http/http_server_impl.h>
+#include "nfs/nfs_code_definition.h"
 
 namespace dsn {
 namespace security {
@@ -90,9 +91,11 @@ TEST_F(negotiation_manager_test, on_rpc_recv_msg)
                  {RPC_NEGOTIATION_ACK, false, true, true},
                  {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, true},
                  {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, true},
-                 {RPC_HTTP_SERVICE, true, true, true},
-                 {RPC_HTTP_SERVICE, false, false, true},
-                 {RPC_HTTP_SERVICE, false, true, false}};
+                 {RPC_HTTP_SERVICE, false, true, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true, true},
+                 {service::RPC_NFS_COPY, true, true, true},
+                 {service::RPC_NFS_COPY, false, false, true},
+                 {service::RPC_NFS_COPY, false, true, false}};
 
     for (const auto &test : tests) {
         FLAGS_mandatory_auth = test.mandatory_auth;
@@ -119,9 +122,11 @@ TEST_F(negotiation_manager_test, on_rpc_send_msg)
                  {RPC_NEGOTIATION_ACK, false, true, true},
                  {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, true},
                  {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, true},
-                 {RPC_HTTP_SERVICE, true, true, true},
-                 {RPC_HTTP_SERVICE, false, false, true},
-                 {RPC_HTTP_SERVICE, false, true, false}};
+                 {RPC_HTTP_SERVICE, false, true, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true, true},
+                 {service::RPC_NFS_COPY, true, true, true},
+                 {service::RPC_NFS_COPY, false, false, true},
+                 {service::RPC_NFS_COPY, false, true, false}};
 
     for (const auto &test : tests) {
         FLAGS_mandatory_auth = test.mandatory_auth;

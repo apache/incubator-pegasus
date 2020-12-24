@@ -6,10 +6,15 @@
 
 #include <dsn/utility/errors.h>
 #include <dsn/utility/flags.h>
+#include <dsn/tool-api/task_code.h>
 
 namespace dsn {
 
 DSN_DECLARE_bool(enable_http_server);
+
+/// The rpc code for all the HTTP RPCs.
+/// Since http is used only for system monitoring, it is restricted to lowest priority.
+DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_LOW, THREAD_POOL_DEFAULT);
 
 enum http_method
 {
@@ -104,4 +109,8 @@ extern void start_http_server();
 // TODO(wutao): pass `svc` as a std::unique_ptr.
 extern void register_http_service(http_service *svc);
 
+inline bool is_http_message(dsn::task_code code)
+{
+    return code == RPC_HTTP_SERVICE || code == RPC_HTTP_SERVICE_ACK;
+}
 } // namespace dsn
