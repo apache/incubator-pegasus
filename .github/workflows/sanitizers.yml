@@ -29,7 +29,8 @@ jobs:
       -
         name: Install dependencies
         run: |
-          apt install -y nmap ncat
+          apt-get update -y
+          apt-get install -y nmap ncat
       -
         uses: actions/checkout@v2
         with:
