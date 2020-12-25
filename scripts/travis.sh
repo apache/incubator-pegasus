@@ -32,8 +32,7 @@ if [ "$modified" ]; then
     exit 1
 fi
 
-export LD_LIBRARY_PATH=/usr/local/lib/jvm/openjdk11/lib/server:$LD_LIBRARY_PATH
-
+source "${root}"/config_hdfs.sh
 "${root}"/run.sh build -c --skip_thirdparty --disable_gperf && ./run.sh test --on_travis
 ret=$?
 if [ $ret ]; then
