@@ -282,11 +282,11 @@ void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &re
         resp.err = dsn::ERR_BUSY;
         std::string hint = fmt::format("hotkey is detecting now, now state: {}",
                                        dsn::enum_to_string(_hotkey_type));
-        resp.err_hint = hint;
+        resp.__set_err_hint(hint);
         ddebug_replica(hint);
     } else {
         resp.err = dsn::ERR_OK;
-        resp.hotkey_result = _result.hot_hash_key;
+        resp.__set_hotkey_result(_result.hot_hash_key);
     }
 }
 
