@@ -116,20 +116,17 @@ TEST_F(negotiation_manager_test, on_rpc_send_msg)
     {
         task_code rpc_code;
         bool negotiation_succeed;
-        bool mandatory_auth;
         bool return_value;
-    } tests[] = {{RPC_NEGOTIATION, false, true, true},
-                 {RPC_NEGOTIATION_ACK, false, true, true},
-                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, true},
-                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, true},
-                 {RPC_HTTP_SERVICE, false, true, true},
-                 {RPC_HTTP_SERVICE_ACK, false, true, true},
-                 {service::RPC_NFS_COPY, true, true, true},
-                 {service::RPC_NFS_COPY, false, false, true},
-                 {service::RPC_NFS_COPY, false, true, false}};
+    } tests[] = {{RPC_NEGOTIATION, false, true},
+                 {RPC_NEGOTIATION_ACK, false, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true},
+                 {RPC_HTTP_SERVICE, false, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true},
+                 {service::RPC_NFS_COPY, true, true},
+                 {service::RPC_NFS_COPY, false, false}};
 
     for (const auto &test : tests) {
-        FLAGS_mandatory_auth = test.mandatory_auth;
         message_ptr msg = dsn::message_ex::create_request(test.rpc_code, 0, 0);
         auto sim_session = create_fake_session();
         msg->io_session = sim_session;

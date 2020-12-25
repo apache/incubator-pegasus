@@ -110,8 +110,7 @@ bool negotiation_manager::on_rpc_recv_msg(message_ex *msg)
 bool negotiation_manager::on_rpc_send_msg(message_ex *msg)
 {
     // if try_pend_message return true, it means the msg is pended to the resend message queue
-    return !FLAGS_mandatory_auth || in_white_list(msg->rpc_code()) ||
-           !msg->io_session->try_pend_message(msg);
+    return in_white_list(msg->rpc_code()) || !msg->io_session->try_pend_message(msg);
 }
 
 std::shared_ptr<negotiation> negotiation_manager::get_negotiation(negotiation_rpc rpc)

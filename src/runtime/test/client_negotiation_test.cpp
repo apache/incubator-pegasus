@@ -95,26 +95,16 @@ TEST_F(client_negotiation_test, handle_response)
     {
         error_code resp_err;
         negotiation_status::type resp_status;
-        bool mandatory_auth;
         negotiation_status::type neg_status;
-    } tests[] = {{ERR_TIMEOUT,
-                  negotiation_status::type::SASL_SELECT_MECHANISMS,
-                  false,
-                  negotiation_status::type::SASL_AUTH_FAIL},
-                 {ERR_OK,
-                  negotiation_status::type::SASL_AUTH_DISABLE,
-                  true,
-                  negotiation_status::type::SASL_AUTH_FAIL},
-                 {ERR_OK,
-                  negotiation_status::type::SASL_AUTH_DISABLE,
-                  false,
-                  negotiation_status::type::SASL_SUCC}};
+    } tests[] = {
+        {ERR_TIMEOUT,
+         negotiation_status::type::SASL_SELECT_MECHANISMS,
+         negotiation_status::type::SASL_AUTH_FAIL},
+        {ERR_OK, negotiation_status::type::SASL_AUTH_DISABLE, negotiation_status::type::SASL_SUCC}};
 
-    DSN_DECLARE_bool(mandatory_auth);
     for (const auto &test : tests) {
         negotiation_response resp;
         resp.status = test.resp_status;
-        FLAGS_mandatory_auth = test.mandatory_auth;
         handle_response(test.resp_err, resp);
 
         ASSERT_EQ(get_negotiation_status(), test.neg_status);
