@@ -30,7 +30,7 @@ jobs:
         name: Install dependencies
         run: |
           apt-get update -y
-          apt-get install -y nmap ncat
+          apt-get install -y nmap netcat
       -
         uses: actions/checkout@v2
         with:
