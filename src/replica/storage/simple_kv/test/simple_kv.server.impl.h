@@ -90,6 +90,8 @@ public:
 
     virtual void query_app_envs(/*out*/ std::map<std::string, std::string> &envs) {}
 
+    virtual uint32_t query_data_version() const override { return 0; }
+
 private:
     void recover();
     void recover(const std::string &name, int64_t version);

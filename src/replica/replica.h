@@ -398,6 +398,8 @@ private:
 
     void on_detect_hotkey(const detect_hotkey_request &req, /*out*/ detect_hotkey_response &resp);
 
+    uint32_t query_data_version() const;
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;

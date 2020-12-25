@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 #include <fmt/format.h>
+#include <dsn/utility/output_utils.h>
 #include "replica_http_service.h"
 #include "duplication/duplication_sync_timer.h"
 
@@ -53,6 +54,35 @@ void replica_http_service::query_duplication_handler(const http_request &req, ht
     }
     resp.status_code = http_status_code::ok;
     resp.body = json.dump();
+}
+
+void replica_http_service::query_app_data_version_handler(const http_request &req,
+                                                          http_response &resp)
+{
+    auto it = req.query_args.find("app_id");
+    if (it == req.query_args.end()) {
+        resp.body = "app_id should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    int32_t app_id = -1;
+    if (!buf2int32(it->second, app_id) || app_id < 0) {
+        resp.body = fmt::format("invalid app_id={}", it->second);
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    uint32_t data_version = 0;
+    error_code ec = _stub->query_app_data_version(app_id, data_version);
+
+    dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("error", ec.to_string());
+    tp.add_row_name_and_data("data_version", data_version);
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
 }
 
 } // namespace replication

@@ -474,5 +474,11 @@ void replica::on_detect_hotkey(const detect_hotkey_request &req, detect_hotkey_r
     _app->on_detect_hotkey(req, resp);
 }
 
+uint32_t replica::query_data_version() const
+{
+    dassert_replica(_app != nullptr, "");
+    return _app->query_data_version();
+}
+
 } // namespace replication
 } // namespace dsn

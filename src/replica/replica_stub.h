@@ -284,6 +284,8 @@ private:
         return 0;
     }
 
+    error_code query_app_data_version(int32_t app_id, /*out*/ uint32_t &data_version);
+
 #ifdef DSN_ENABLE_GPERF
     // Try to release tcmalloc memory back to operating system
     void gc_tcmalloc_memory();

@@ -79,6 +79,8 @@ public:
     void set_ingestion_status(ingestion_status::type status) { _ingestion_status = status; }
     ingestion_status::type get_ingestion_status() override { return _ingestion_status; }
 
+    uint32_t query_data_version() const { return 1; }
+
 private:
     std::map<std::string, std::string> _envs;
     decree _decree = 5;

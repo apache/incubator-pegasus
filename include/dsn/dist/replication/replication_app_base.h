@@ -249,6 +249,9 @@ public:
         resp.__set_err_hint("on_detect_hotkey implementation not found");
     }
 
+    // query pegasus data version
+    virtual uint32_t query_data_version() const = 0;
+
 public:
     //
     // utility functions to be used by app
