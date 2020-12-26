@@ -141,7 +141,7 @@ void server_negotiation::do_challenge(negotiation_rpc rpc, error_s err_s, const 
 
     if (err_s.is_ok()) {
         std::string user_name;
-        auto retrive_err = _sasl->retrive_username(user_name);
+        auto retrive_err = _sasl->retrieve_username(user_name);
         if (retrive_err.is_ok()) {
             succ_negotiation(rpc, user_name);
         } else {

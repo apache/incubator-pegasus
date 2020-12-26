@@ -28,9 +28,8 @@ const char *sasl_err_desc(int status, sasl_conn_t *conn)
 {
     if (conn != nullptr) {
         return sasl_errdetail(conn);
-    } else {
-        return sasl_errstring(status, nullptr, nullptr);
     }
+    return sasl_errstring(status, nullptr, nullptr);
 }
 
 sasl_wrapper::~sasl_wrapper()
@@ -40,14 +39,14 @@ sasl_wrapper::~sasl_wrapper()
     }
 }
 
-error_s sasl_wrapper::retrive_username(std::string &output)
+error_s sasl_wrapper::retrieve_username(std::string &output)
 {
-    FAIL_POINT_INJECT_F("sasl_wrapper_retrive_username", [](dsn::string_view str) {
+    FAIL_POINT_INJECT_F("sasl_wrapper_retrieve_username", [](dsn::string_view str) {
         error_code err = error_code::try_get(str.data(), ERR_UNKNOWN);
         return error_s::make(err);
     });
 
-    // retrive username from _conn.
+    // retrieve username from _conn.
     // If this is a sasl server, it gets the name of the corresponding sasl client.
     // But if this is a sasl client, it gets the name of itself
     char *username = nullptr;

@@ -21,6 +21,8 @@
 
 namespace dsn {
 namespace security {
+
+// TODO(wutao): rename to negotiation_status_to_string
 inline const char *enum_to_string(negotiation_status::type s)
 {
     switch (s) {

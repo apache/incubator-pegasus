@@ -36,14 +36,15 @@ inline bool is_negotiation_message(dsn::task_code code)
     return code == RPC_NEGOTIATION || code == RPC_NEGOTIATION_ACK;
 }
 
+// in_white_list returns if the rpc code can be allowed to bypass negotiation.
 inline bool in_white_list(task_code code)
 {
     return is_negotiation_message(code) || fd::is_failure_detector_message(code) ||
            is_http_message(code);
 }
 
-negotiation_map negotiation_manager::_negotiations;
-utils::rw_lock_nr negotiation_manager::_lock;
+/*static*/ negotiation_map negotiation_manager::_negotiations;
+/*static*/ utils::rw_lock_nr negotiation_manager::_lock;
 
 negotiation_manager::negotiation_manager() : serverlet("negotiation_manager") {}
 
@@ -66,7 +67,7 @@ void negotiation_manager::on_negotiation_request(negotiation_rpc rpc)
 
     std::shared_ptr<negotiation> nego = get_negotiation(rpc);
     if (nullptr != nego) {
-        server_negotiation *srv_negotiation = static_cast<server_negotiation *>(nego.get());
+        auto srv_negotiation = static_cast<server_negotiation *>(nego.get());
         srv_negotiation->handle_request(rpc);
     }
 }
@@ -78,7 +79,7 @@ void negotiation_manager::on_negotiation_response(error_code err, negotiation_rp
 
     std::shared_ptr<negotiation> nego = get_negotiation(rpc);
     if (nullptr != nego) {
-        client_negotiation *cli_negotiation = static_cast<client_negotiation *>(nego.get());
+        auto cli_negotiation = static_cast<client_negotiation *>(nego.get());
         cli_negotiation->handle_response(err, std::move(rpc.response()));
     }
 }

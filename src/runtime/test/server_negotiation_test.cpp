@@ -143,7 +143,7 @@ TEST_F(server_negotiation_test, on_initiate)
     struct
     {
         std::string sasl_start_result;
-        std::string sasl_retrive_username_result;
+        std::string sasl_retrieve_username_result;
         negotiation_status::type req_status;
         negotiation_status::type resp_status;
         negotiation_status::type nego_status;
@@ -180,8 +180,8 @@ TEST_F(server_negotiation_test, on_initiate)
         for (const auto &test : tests) {
             fail::setup();
             fail::cfg("sasl_server_wrapper_start", "return(" + test.sasl_start_result + ")");
-            fail::cfg("sasl_wrapper_retrive_username",
-                      "return(" + test.sasl_retrive_username_result + ")");
+            fail::cfg("sasl_wrapper_retrieve_username",
+                      "return(" + test.sasl_retrieve_username_result + ")");
 
             auto rpc = create_negotiation_rpc(test.req_status, "");
             on_initiate(rpc);
@@ -198,7 +198,7 @@ TEST_F(server_negotiation_test, on_challenge_resp)
     struct
     {
         std::string sasl_step_result;
-        std::string sasl_retrive_username_result;
+        std::string sasl_retrieve_username_result;
         negotiation_status::type req_status;
         negotiation_status::type resp_status;
         negotiation_status::type nego_status;
@@ -233,8 +233,8 @@ TEST_F(server_negotiation_test, on_challenge_resp)
         for (const auto &test : tests) {
             fail::setup();
             fail::cfg("sasl_server_wrapper_step", "return(" + test.sasl_step_result + ")");
-            fail::cfg("sasl_wrapper_retrive_username",
-                      "return(" + test.sasl_retrive_username_result + ")");
+            fail::cfg("sasl_wrapper_retrieve_username",
+                      "return(" + test.sasl_retrieve_username_result + ")");
 
             auto rpc = create_negotiation_rpc(test.req_status, "");
             on_challenge_resp(rpc);

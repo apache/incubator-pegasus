@@ -21,15 +21,18 @@
 
 namespace dsn {
 namespace security {
+
+// sasl_client_wrapper is a simple wrapper over cyrus-sasl's sasl_client_xxx API.
 class sasl_client_wrapper : public sasl_wrapper
 {
 public:
     sasl_client_wrapper() = default;
-    ~sasl_client_wrapper() = default;
+    ~sasl_client_wrapper() override = default;
 
     error_s init();
     error_s start(const std::string &mechanism, const blob &input, blob &output);
     error_s step(const blob &input, blob &output);
 };
+
 } // namespace security
 } // namespace dsn

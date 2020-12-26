@@ -32,11 +32,12 @@ typedef rpc_holder<negotiation_request, negotiation_response> negotiation_rpc;
 class negotiation
 {
 public:
-    negotiation(rpc_session_ptr session)
-        : _session(session), _status(negotiation_status::type::INVALID)
+    explicit negotiation(rpc_session_ptr session)
+        : _session(std::move(session)), _status(negotiation_status::type::INVALID)
     {
         _sasl = create_sasl_wrapper(_session->is_client());
     }
+
     virtual ~negotiation() = 0;
 
     virtual void start() = 0;

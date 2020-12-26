@@ -25,12 +25,15 @@ namespace dsn {
 namespace security {
 extern const std::set<std::string> supported_mechanisms;
 
+// server_negotiation negotiates a session on server side.
 class server_negotiation : public negotiation
 {
 public:
-    server_negotiation(rpc_session_ptr session);
+    explicit server_negotiation(rpc_session_ptr session);
 
-    void start();
+    void start() override;
+
+    // handle_request handles negotiate_request from the session.
     void handle_request(negotiation_rpc rpc);
 
 private:

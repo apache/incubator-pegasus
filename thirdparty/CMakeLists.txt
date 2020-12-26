@@ -9,6 +9,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif ()
 
 include(ExternalProject)
+include(CheckCXXCompilerFlag)
 
 set(TP_DIR ${PROJECT_SOURCE_DIR})
 set(TP_OUTPUT ${PROJECT_SOURCE_DIR}/output)
@@ -128,11 +129,15 @@ ExternalProject_Add(thrift
         DEPENDS boost
         )
 
+check_cxx_compiler_flag(-Wformat-overflow COMPILER_SUPPORTS_FORMAT_OVERFLOW)
+if (COMPILER_SUPPORTS_FORMAT_OVERFLOW)
+    set(ZOOKEEPER_CFLAGS -Wno-error=format-overflow)
+endif ()
 ExternalProject_Add(zookeeper
         URL ${OSS_URL_PREFIX}/zookeeper-3.4.10.tar.gz
         http://ftp.jaist.ac.jp/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
         URL_MD5 e4cf1b1593ca870bf1c7a75188f09678
-        CONFIGURE_COMMAND cd src/c && CFLAGS=-Wno-error=format ./configure --enable-static=yes --enable-shared=no --prefix=${TP_OUTPUT} --with-pic=yes
+        CONFIGURE_COMMAND cd src/c && CFLAGS=${ZOOKEEPER_CFLAGS} ./configure --enable-static=yes --enable-shared=no --prefix=${TP_OUTPUT} --with-pic=yes
         BUILD_COMMAND cd src/c && make
         INSTALL_COMMAND cd src/c && make install
         BUILD_IN_SOURCE 1

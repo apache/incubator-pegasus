@@ -22,12 +22,13 @@
 namespace dsn {
 namespace security {
 
+// client_negotiation negotiates a session on client side.
 class client_negotiation : public negotiation
 {
 public:
-    client_negotiation(rpc_session_ptr session);
+    explicit client_negotiation(rpc_session_ptr session);
 
-    void start();
+    void start() override;
     void handle_response(error_code err, const negotiation_response &&response);
 
 private:
