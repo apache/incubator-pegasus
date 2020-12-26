@@ -769,6 +769,39 @@ void meta_http_service::start_compaction_handler(const http_request &req, http_r
     update_app_env(info.app_name, keys, values, resp);
 }
 
+void meta_http_service::update_scenario_handler(const http_request &req, http_response &resp)
+{
+    if (!redirect_if_not_primary(req, resp)) {
+        return;
+    }
+
+    // validate paramters
+    usage_scenario_info info;
+    bool ret = json::json_forwarder<usage_scenario_info>::decode(req.body, info);
+    if (!ret) {
+        resp.body = "invalid request structure";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    if (info.app_name.empty()) {
+        resp.body = "app_name should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+    if (info.scenario.empty() || (info.scenario != "bulk_load" && info.scenario != "normal")) {
+        resp.body = "scenario should ony be 'normal' or 'bulk_load'";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    // create configuration_update_app_env_request
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+    keys.emplace_back(replica_envs::ROCKSDB_USAGE_SCENARIO);
+    values.emplace_back(info.scenario);
+    update_app_env(info.app_name, keys, values, resp);
+}
+
 bool meta_http_service::redirect_if_not_primary(const http_request &req, http_response &resp)
 {
 #ifdef DSN_MOCK_TEST

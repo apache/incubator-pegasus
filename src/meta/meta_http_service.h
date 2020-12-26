@@ -31,6 +31,13 @@ struct manual_compaction_info
                               trigger_time)
 };
 
+struct usage_scenario_info
+{
+    std::string app_name;
+    std::string scenario; // normal or bulk_load
+    DEFINE_JSON_SERIALIZATION(app_name, scenario)
+};
+
 class meta_service;
 class meta_http_service : public http_service
 {
@@ -99,6 +106,13 @@ public:
                                    std::placeholders::_1,
                                    std::placeholders::_2),
                          "ip:port/meta/start_compaction");
+        // request body should be usage_scenario_info
+        register_handler("app/usage_scenario",
+                         std::bind(&meta_http_service::update_scenario_handler,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2),
+                         "ip:port/meta/app/usage_scenario");
     }
 
     std::string path() const override { return "meta"; }
@@ -113,6 +127,7 @@ public:
     void start_bulk_load_handler(const http_request &req, http_response &resp);
     void query_bulk_load_handler(const http_request &req, http_response &resp);
     void start_compaction_handler(const http_request &req, http_response &resp);
+    void update_scenario_handler(const http_request &req, http_response &resp);
 
 private:
     // set redirect location if current server is not primary
