@@ -33,6 +33,7 @@ public:
     // \return  ERR_FILE_OPERATION_FAILED: local file system error
     // \return  ERR_FS_INTERNAL: remote file system error
     // \return  ERR_CORRUPTION: file not exist or damaged
+    // \return  ERR_PATH_ALREADY_EXIST: local file exist
     // if download file succeed, download_err = ERR_OK and set download_file_size
     //
     // TODO(wutao1): create block_filesystem_wrapper instead.

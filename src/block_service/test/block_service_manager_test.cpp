@@ -75,15 +75,14 @@ TEST_F(block_service_manager_test, do_download_remote_file_not_exist)
     ASSERT_EQ(err, ERR_CORRUPTION); // file does not exist
 }
 
-TEST_F(block_service_manager_test, do_download_redownload_file)
+TEST_F(block_service_manager_test, do_download_same_name_file)
 {
     // local file exists, but md5 not matched with remote file
-    // expected to remove old local file and redownload it
     create_local_file(FILE_NAME);
     create_remote_file(FILE_NAME, 2333, "md5_not_match");
     uint64_t download_size = 0;
-    ASSERT_EQ(test_download_file(download_size), ERR_OK);
-    ASSERT_EQ(download_size, 2333);
+    ASSERT_EQ(test_download_file(download_size), ERR_PATH_ALREADY_EXIST);
+    ASSERT_EQ(download_size, 0);
 }
 
 TEST_F(block_service_manager_test, do_download_file_exist)
@@ -91,8 +90,8 @@ TEST_F(block_service_manager_test, do_download_file_exist)
     create_local_file(FILE_NAME);
     create_remote_file(FILE_NAME, _file_meta.size, _file_meta.md5);
     uint64_t download_size = 0;
-    ASSERT_EQ(test_download_file(download_size), ERR_OK);
-    ASSERT_EQ(download_size, _file_meta.size);
+    ASSERT_EQ(test_download_file(download_size), ERR_PATH_ALREADY_EXIST);
+    ASSERT_EQ(download_size, 0);
 }
 
 TEST_F(block_service_manager_test, do_download_succeed)

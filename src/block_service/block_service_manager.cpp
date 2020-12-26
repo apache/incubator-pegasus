@@ -118,6 +118,13 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
                                                 block_filesystem *fs,
                                                 /*out*/ uint64_t &download_file_size)
 {
+    // local file exists
+    const std::string local_file_name = utils::filesystem::path_combine(local_dir, file_name);
+    if (utils::filesystem::file_exists(local_file_name)) {
+        ddebug_f("local file({}) exists", local_file_name);
+        return ERR_PATH_ALREADY_EXIST;
+    }
+
     task_tracker tracker;
 
     // Create a block_file object.
@@ -130,37 +137,6 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
         return err;
     }
     block_file_ptr bf = create_resp.file_handle;
-
-    const std::string local_file_name = utils::filesystem::path_combine(local_dir, file_name);
-    if (utils::filesystem::file_exists(local_file_name)) {
-        std::string current_md5;
-        error_code e = utils::filesystem::md5sum(local_file_name, current_md5);
-        // local file exists
-        if (e == ERR_OK && current_md5 == bf->get_md5sum()) {
-            download_file_size = bf->get_size();
-            ddebug_f("local file({}) has been downloaded, file_size = {}",
-                     local_file_name,
-                     download_file_size);
-            return ERR_OK;
-        }
-        // local file has same file name with remote file, but there are different
-        // remove local file and download it from remote file provider
-        if (e != ERR_OK) {
-            dwarn_f("calculate file({}) md5 failed, should remove and redownload it",
-                    local_file_name);
-        } else {
-            dwarn_f("local file({}) is different from remote file({}), md5: local({}) VS "
-                    "remote({}), should remove and redownload it",
-                    local_file_name,
-                    bf->file_name(),
-                    current_md5,
-                    bf->get_md5sum());
-        }
-        if (!utils::filesystem::remove_path(local_file_name)) {
-            derror_f("failed to remove file({})", local_file_name);
-            return ERR_FILE_OPERATION_FAILED;
-        }
-    }
 
     download_response resp = download_block_file_sync(local_file_name, bf.get(), &tracker);
     if (resp.err != ERR_OK) {

@@ -120,9 +120,13 @@ error_code replica::download_checkpoint(const configuration_restore_request &req
                     remote_chkpt_dir, local_chkpt_dir, f_meta.name, fs, f_size);
                 const std::string file_name =
                     utils::filesystem::path_combine(local_chkpt_dir, f_meta.name);
-                if (download_err == ERR_OK &&
-                    !utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
-                    download_err = ERR_CORRUPTION;
+                if (download_err == ERR_OK || download_err == ERR_PATH_ALREADY_EXIST) {
+                    if (!utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
+                        download_err = ERR_CORRUPTION;
+                    } else if (download_err == ERR_PATH_ALREADY_EXIST) {
+                        download_err = ERR_OK;
+                        f_size = f_meta.size;
+                    }
                 }
 
                 if (download_err != ERR_OK) {
@@ -167,7 +171,7 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
                                                     cold_backup_constant::BACKUP_METADATA,
                                                     fs,
                                                     download_file_size);
-    if (err != ERR_OK) {
+    if (err != ERR_OK && err != ERR_PATH_ALREADY_EXIST) {
         derror_replica("download backup_metadata failed, file({}), reason({})",
                        utils::filesystem::path_combine(remote_chkpt_dir,
                                                        cold_backup_constant::BACKUP_METADATA),
