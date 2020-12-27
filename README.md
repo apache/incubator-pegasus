@@ -3,6 +3,8 @@
 This project maintains the stuff you can use from building Pegasus docker images,
 to deploying a standalone cluster of Pegasus containers on your local machine.
 
+## Workflows
+
 ![Build and publish pegasus-build-env Docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20publish%20pegasus-build-env%20Docker%20images/badge.svg?branch=master)
 
 ![Build and upload third-party source package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20source%20package%20to%20GHCR/badge.svg)
@@ -10,6 +12,8 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 ![Build and upload third-party binary package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20binary%20package%20to%20GHCR/badge.svg?branch=master)
 
 ![Build rdsn regularly](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20rdsn%20regularly/badge.svg?branch=master)
+
+![Build rdsn with sanitizers](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20rdsn%20with%20sanitizers/badge.svg)
 
 ## pegasus-build-env
 
