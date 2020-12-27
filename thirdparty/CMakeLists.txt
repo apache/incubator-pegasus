@@ -297,6 +297,8 @@ ExternalProject_Add(s2geometry
         DEPENDS googletest
         )
 
+option(ROCKSDB_PORTABLE "build a portable binary" OFF)
+
 ExternalProject_Add(rocksdb
         URL ${OSS_URL_PREFIX}/pegasus-rocksdb-6.6.4-compatible.zip
         https://github.com/XiaoMi/pegasus-rocksdb/archive/v6.6.4-compatible.zip
@@ -311,6 +313,7 @@ ExternalProject_Add(rocksdb
         -DUSE_RTTI=ON
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DPORTABLE=${ROCKSDB_PORTABLE}
         )
 
 # kerberos

@@ -61,6 +61,8 @@ function usage_build()
         echo "                         e.g., \"dsn_runtime_tests,dsn_meta_state_tests\","
         echo "                         if not set, then run all tests"
     fi
+
+    echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
 }
 function run_build()
 {
@@ -82,6 +84,7 @@ function run_build()
     CHECK=NO
     SANITIZER=""
     TEST_MODULE=""
+    ROCKSDB_PORTABLE=OFF
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -153,6 +156,9 @@ function run_build()
                 TEST_MODULE="$2"
                 shift
                 ;;
+            --enable_rocksdb_portable)
+                ROCKSDB_PORTABLE=ON
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -180,7 +186,8 @@ function run_build()
         echo "Start building third-parties..."
         mkdir -p build
         pushd build
-        cmake .. -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DCMAKE_BUILD_TYPE=Release \
+        -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}
         make -j$JOB_NUM
         exit_if_fail $?
         popd
