@@ -2828,5 +2828,16 @@ error_code replica_stub::query_app_data_version(int32_t app_id, /*out*/ uint32_t
     return ERR_OK;
 }
 
+void replica_stub::query_app_compact_status(
+    int32_t app_id, std::unordered_map<gpid, manual_compaction_status> &status)
+{
+    zauto_read_lock l(_replicas_lock);
+    for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
+        if (it->first.get_app_id() == app_id) {
+            status[it->first] = it->second->get_compact_status();
+        }
+    }
+}
+
 } // namespace replication
 } // namespace dsn

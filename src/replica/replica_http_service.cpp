@@ -85,5 +85,46 @@ void replica_http_service::query_app_data_version_handler(const http_request &re
     resp.status_code = http_status_code::ok;
 }
 
+void replica_http_service::query_compaction_handler(const http_request &req, http_response &resp)
+{
+    auto it = req.query_args.find("app_id");
+    if (it == req.query_args.end()) {
+        resp.body = "app_id should not be empty";
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    int32_t app_id = -1;
+    if (!buf2int32(it->second, app_id) || app_id < 0) {
+        resp.body = fmt::format("invalid app_id={}", it->second);
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    std::unordered_map<gpid, manual_compaction_status> partition_compaction_status;
+    _stub->query_app_compact_status(app_id, partition_compaction_status);
+
+    int32_t running_count = 0;
+    int32_t queue_count = 0;
+    int32_t finish_count = 0;
+    for (const auto &kv : partition_compaction_status) {
+        if (kv.second == kRunning) {
+            running_count++;
+        } else if (kv.second == kQueue) {
+            queue_count++;
+        } else if (kv.second == kFinish) {
+            finish_count++;
+        }
+    }
+    dsn::utils::table_printer tp("status");
+    tp.add_row_name_and_data(manual_compaction_status_to_string(kRunning), running_count);
+    tp.add_row_name_and_data(manual_compaction_status_to_string(kQueue), queue_count);
+    tp.add_row_name_and_data(manual_compaction_status_to_string(kFinish), finish_count);
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
+}
+
 } // namespace replication
 } // namespace dsn

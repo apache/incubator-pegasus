@@ -443,6 +443,42 @@ std::string replica::query_compact_state() const
     return _app->query_compact_state();
 }
 
+const char *manual_compaction_status_to_string(manual_compaction_status status)
+{
+    switch (status) {
+    case kFinish:
+        return "CompactionFinish";
+    case kRunning:
+        return "CompactionRunning";
+    case kQueue:
+        return "CompactionQueue";
+    default:
+        dassert(false, "invalid status({})", status);
+        __builtin_unreachable();
+    }
+}
+
+manual_compaction_status replica::get_compact_status() const
+{
+    std::string compact_state = query_compact_state();
+    // query_compact_state will return a message like:
+    // Case1. last finish at [-]
+    // - partition is not manual compaction
+    // Case2. last finish at [timestamp], last used {time_used} ms
+    // - partition manual compaction finished
+    // Case3. last finish at [-], recent enqueue at [timestamp]
+    // - partition is in manual compaction queue
+    // Case4. last finish at [-], recent enqueue at [timestamp], recent start at [timestamp]
+    // - partition is running manual compaction
+    if (compact_state.find("recent start at") != std::string::npos) {
+        return kRunning;
+    } else if (compact_state.find("recent enqueue at") != std::string::npos) {
+        return kQueue;
+    } else {
+        return kFinish;
+    }
+}
+
 // Replicas on the server which serves for the same table will share the same perf-counter.
 // For example counter `table.level.RPC_RRDB_RRDB_MULTI_PUT.latency(ns)@test_table` is shared by
 // all the replicas for `test_table`.
