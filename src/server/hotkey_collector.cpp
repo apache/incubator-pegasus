@@ -168,6 +168,7 @@ inline void hotkey_collector::change_state_by_result()
     case hotkey_collector_state::FINE_DETECTING:
         if (!_result.hot_hash_key.empty()) {
             change_state_to_finished();
+            derror_replica("Find the hotkey: {}", _result.hot_hash_key);
         }
         break;
     default:
@@ -184,6 +185,9 @@ void hotkey_collector::handle_rpc(const dsn::replication::detect_hotkey_request 
         return;
     case dsn::replication::detect_action::STOP:
         on_stop_detect(resp);
+        return;
+    case dsn::replication::detect_action::QUERY:
+        query_result(resp);
         return;
     default:
         std::string hint = fmt::format("{}: can't find this detect action", req.action);
@@ -270,6 +274,20 @@ void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &
     std::string hint =
         fmt::format("{} hotkey stopped, cache cleared", dsn::enum_to_string(_hotkey_type));
     ddebug_replica(hint);
+}
+
+void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &resp)
+{
+    if (_state != hotkey_collector_state::FINISHED) {
+        resp.err = dsn::ERR_BUSY;
+        std::string hint = fmt::format("hotkey is detecting now, now state: {}",
+                                       dsn::enum_to_string(_hotkey_type));
+        resp.__set_err_hint(hint);
+        ddebug_replica(hint);
+    } else {
+        resp.err = dsn::ERR_OK;
+        resp.__set_hotkey_result(_result.hot_hash_key);
+    }
 }
 
 bool hotkey_collector::terminate_if_timeout()

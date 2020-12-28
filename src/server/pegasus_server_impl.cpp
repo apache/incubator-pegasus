@@ -2841,7 +2841,8 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
 {
 
     if (dsn_unlikely(req.action != dsn::replication::detect_action::START &&
-                     req.action != dsn::replication::detect_action::STOP)) {
+                     req.action != dsn::replication::detect_action::STOP &&
+                     req.action != dsn::replication::detect_action::QUERY)) {
         resp.err = dsn::ERR_INVALID_PARAMETERS;
         resp.__set_err_hint("invalid detect_action");
         return;
