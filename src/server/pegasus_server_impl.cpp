@@ -2860,5 +2860,7 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
     collector->handle_rpc(req, resp);
 }
 
+uint32_t pegasus_server_impl::query_data_version() const { return _pegasus_data_version; }
+
 } // namespace server
 } // namespace pegasus
