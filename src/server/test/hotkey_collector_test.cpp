@@ -305,6 +305,12 @@ TEST_F(hotkey_collector_test, state_transform)
     ASSERT_EQ(result->hot_hash_key, "ThisisahotkeyThisisahotkey");
 
     on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
+                                          dsn::replication::detect_action::QUERY),
+                     resp);
+    ASSERT_EQ(resp.err, dsn::ERR_OK);
+    ASSERT_EQ(resp.hotkey_result, "ThisisahotkeyThisisahotkey");
+
+    on_detect_hotkey(generate_control_rpc(dsn::replication::hotkey_type::READ,
                                           dsn::replication::detect_action::STOP),
                      resp);
     ASSERT_EQ(resp.err, dsn::ERR_OK);
