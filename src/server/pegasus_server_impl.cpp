@@ -2841,7 +2841,8 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
 {
 
     if (dsn_unlikely(req.action != dsn::replication::detect_action::START &&
-                     req.action != dsn::replication::detect_action::STOP)) {
+                     req.action != dsn::replication::detect_action::STOP &&
+                     req.action != dsn::replication::detect_action::QUERY)) {
         resp.err = dsn::ERR_INVALID_PARAMETERS;
         resp.__set_err_hint("invalid detect_action");
         return;
@@ -2858,6 +2859,8 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
                                                                      : _write_hotkey_collector;
     collector->handle_rpc(req, resp);
 }
+
+uint32_t pegasus_server_impl::query_data_version() const { return _pegasus_data_version; }
 
 } // namespace server
 } // namespace pegasus
