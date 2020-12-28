@@ -73,12 +73,23 @@ void replica_http_service::query_app_data_version_handler(const http_request &re
         return;
     }
 
-    uint32_t data_version = 0;
-    error_code ec = _stub->query_app_data_version(app_id, data_version);
+    // partition_index -> data_version
+    std::unordered_map<int32_t, uint32_t> version_map;
+    _stub->query_app_data_version(app_id, version_map);
+
+    if (version_map.size() == 0) {
+        resp.body = fmt::format("app_id={} not found", it->second);
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
 
     dsn::utils::table_printer tp;
-    tp.add_row_name_and_data("error", ec.to_string());
-    tp.add_row_name_and_data("data_version", data_version);
+    tp.add_title("pidx");
+    tp.add_column("data_version");
+    for (const auto &kv : version_map) {
+        tp.add_row(kv.first);
+        tp.append_data(kv.second);
+    }
     std::ostringstream out;
     tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
     resp.body = out.str();

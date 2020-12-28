@@ -95,10 +95,8 @@ TEST_F(replica_test, query_data_version_test)
                  {"wrong", http_status_code::bad_request, "invalid app_id=wrong"},
                  {"2",
                   http_status_code::ok,
-                  R"({"error":"ERR_OK","data_version":"1"})"},
-                 {"4",
-                  http_status_code::ok,
-                  R"({"error":"ERR_OBJECT_NOT_FOUND","data_version":"0"})"}};
+                  R"({"1":{"pidx":"1","data_version":"1"}})"},
+                 {"4", http_status_code::not_found, "app_id=4 not found"}};
     for (const auto &test : tests) {
         http_request req;
         http_response resp;
