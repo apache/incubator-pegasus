@@ -40,11 +40,13 @@ DSN_DEFINE_uint64("replication",
                   hdfs_read_batch_size_bytes,
                   64 << 20,
                   "hdfs read batch size, the default value is 64MB");
+DSN_TAG_VARIABLE(hdfs_read_batch_size_bytes, FT_MUTABLE);
 
 DSN_DEFINE_uint64("replication",
                   hdfs_write_batch_size_bytes,
                   64 << 20,
                   "hdfs write batch size, the default value is 64MB");
+DSN_TAG_VARIABLE(hdfs_write_batch_size_bytes, FT_MUTABLE);
 
 hdfs_service::hdfs_service() {}
 
