@@ -162,11 +162,6 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
                          _app_name,
                          index);
-                ddebug_f("!!!!!! {} {} {} {}",
-                         index,
-                         data_type,
-                         _hot_points[index][data_type].get()->get_value(),
-                         _hotpartition_counter[index][data_type]);
                 send_detect_hotkey_request(_app_name,
                                            index,
                                            (data_type == dsn::replication::hotkey_type::type::READ)
