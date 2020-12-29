@@ -339,6 +339,8 @@ private:
     void on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
                           dsn::replication::detect_hotkey_response &resp) override;
 
+    uint32_t query_data_version() const override;
+
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;

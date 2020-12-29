@@ -44,7 +44,7 @@ DSN_DEFINE_bool("pegasus.collector",
 
 DSN_DEFINE_int32("pegasus.collector",
                  hot_partition_threshold,
-                 3,
+                 4,
                  "threshold of hotspot partition value, if app.stat.hotspots >= "
                  "FLAGS_hotpartition_threshold, this partition is a hot partition");
 
@@ -55,6 +55,7 @@ DSN_DEFINE_int32("pegasus.collector",
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
+    std::cout << "data_aggregate" << std::endl;
     while (_partitions_stat_histories.size() >= FLAGS_max_hotspot_store_size) {
         _partitions_stat_histories.pop_front();
     }
@@ -156,6 +157,11 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
                          _app_name,
                          index);
+                ddebug_f("!!!!!! {} {} {} {}",
+                         index,
+                         data_type,
+                         _hot_points[index][data_type].get()->get_value(),
+                         _hotpartition_counter[index][data_type]);
                 send_detect_hotkey_request(_app_name,
                                            index,
                                            (data_type == dsn::replication::hotkey_type::type::READ)
@@ -178,8 +184,8 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
 {
     FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
 
-    int app_id;
-    int partition_count;
+    int app_id = -1;
+    int partition_count = -1;
     std::vector<dsn::partition_configuration> partitions;
     _shell_context->ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
