@@ -31,13 +31,13 @@ namespace server {
 DSN_DEFINE_uint32(
     "pegasus.server",
     hot_bucket_variance_threshold,
-    4,
+    7,
     "the variance threshold to detect hot bucket during coarse analysis of hotkey detection");
 
 DSN_DEFINE_uint32(
     "pegasus.server",
     hot_key_variance_threshold,
-    4,
+    5,
     "the variance threshold to detect hot key during fine analysis of hotkey detection");
 
 DSN_DEFINE_uint32("pegasus.server",

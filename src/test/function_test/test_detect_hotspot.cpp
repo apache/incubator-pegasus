@@ -268,13 +268,11 @@ public:
             auto errinfo =
                 ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
             ASSERT_EQ(errinfo, dsn::ERR_OK);
-            if (resp.hotkey_result.empty()) {
+            if (!resp.hotkey_result.empty()) {
                 find_hotkey = true;
                 break;
             }
         }
-        ASSERT_EQ(resp.err_hint,
-                  "Can't get hotkey now, now state: hotkey_collector_state::FINISHED");
         ASSERT_TRUE(find_hotkey);
         ASSERT_EQ(resp.err, dsn::ERR_OK);
 
@@ -330,26 +328,26 @@ public:
     pegasus::pegasus_client *pg_client;
 };
 
-// TEST_F(test_detect_hotspot, write_hotspot_data)
-// {
-//     std::cout << "start testing write_hotspot_data..." << std::endl;
-//     write_hotspot_data();
-//     std::cout << "hotspot passed....." << std::endl;
-// }
+TEST_F(test_detect_hotspot, write_hotspot_data)
+{
+    std::cout << "start testing write_hotspot_data..." << std::endl;
+    write_hotspot_data();
+    std::cout << "hotspot passed....." << std::endl;
+}
 
-// TEST_F(test_detect_hotspot, write_random_data)
-// {
-//     std::cout << "start testing write_random_data..." << std::endl;
-//     write_random_data();
-//     std::cout << "hotspot passed....." << std::endl;
-// }
+TEST_F(test_detect_hotspot, write_random_data)
+{
+    std::cout << "start testing write_random_data..." << std::endl;
+    write_random_data();
+    std::cout << "hotspot passed....." << std::endl;
+}
 
-// TEST_F(test_detect_hotspot, capture_until_maxtime)
-// {
-//     std::cout << "start testing capture_until_maxtime..." << std::endl;
-//     capture_until_maxtime();
-//     std::cout << "hotspot passed....." << std::endl;
-// }
+TEST_F(test_detect_hotspot, capture_until_maxtime)
+{
+    std::cout << "start testing capture_until_maxtime..." << std::endl;
+    capture_until_maxtime();
+    std::cout << "hotspot passed....." << std::endl;
+}
 
 TEST_F(test_detect_hotspot, read_hotspot_data)
 {
@@ -358,9 +356,9 @@ TEST_F(test_detect_hotspot, read_hotspot_data)
     std::cout << "hotspot passed....." << std::endl;
 }
 
-// TEST_F(test_detect_hotspot, read_random_data)
-// {
-//     std::cout << "start testing read_random_data..." << std::endl;
-//     read_random_data();
-//     std::cout << "hotspot passed....." << std::endl;
-// }
+TEST_F(test_detect_hotspot, read_random_data)
+{
+    std::cout << "start testing read_random_data..." << std::endl;
+    read_random_data();
+    std::cout << "hotspot passed....." << std::endl;
+}
