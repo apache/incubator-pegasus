@@ -332,33 +332,9 @@ TEST_F(test_detect_hotspot, write_hotspot_data)
 {
     std::cout << "start testing write_hotspot_data..." << std::endl;
     write_hotspot_data();
-    std::cout << "hotspot passed....." << std::endl;
-}
-
-TEST_F(test_detect_hotspot, write_random_data)
-{
-    std::cout << "start testing write_random_data..." << std::endl;
     write_random_data();
-    std::cout << "hotspot passed....." << std::endl;
-}
-
-TEST_F(test_detect_hotspot, capture_until_maxtime)
-{
-    std::cout << "start testing capture_until_maxtime..." << std::endl;
     capture_until_maxtime();
-    std::cout << "hotspot passed....." << std::endl;
-}
-
-TEST_F(test_detect_hotspot, read_hotspot_data)
-{
-    std::cout << "start testing read_hotspot_data..." << std::endl;
     read_hotspot_data();
-    std::cout << "hotspot passed....." << std::endl;
-}
-
-TEST_F(test_detect_hotspot, read_random_data)
-{
-    std::cout << "start testing read_random_data..." << std::endl;
     read_random_data();
     std::cout << "hotspot passed....." << std::endl;
 }

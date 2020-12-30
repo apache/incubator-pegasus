@@ -44,7 +44,7 @@ DSN_DEFINE_bool("pegasus.collector",
 
 DSN_DEFINE_int32("pegasus.collector",
                  hot_partition_threshold,
-                 4,
+                 3,
                  "threshold of hotspot partition value, if app.stat.hotspots >= "
                  "FLAGS_hotpartition_threshold, this partition is a hot partition");
 
@@ -116,12 +116,6 @@ void hotspot_partition_calculator::stat_histories_analyse(int data_type,
         // use ceil to guarantee conversion results
         hot_points[i] = ceil(std::max(hot_point, double(0)));
     }
-    // test
-    std::string result = "";
-    for (int i = 0; i < hot_point_size; i++) {
-        result += std::to_string(hot_points[i]);
-    }
-    derror_f("{} hot_points: {}", data_type, result);
 }
 
 void hotspot_partition_calculator::update_hot_point(int data_type, std::vector<int> &hot_points)
