@@ -41,6 +41,15 @@ DSN_TAG_VARIABLE(test_bool, FT_MUTABLE);
 
 DSN_DEFINE_string("flag_test", test_string_immutable, "immutable_string", "");
 
+DSN_DEFINE_int32("flag_test", test_validator, 10, "");
+DSN_TAG_VARIABLE(test_validator, FT_MUTABLE);
+DSN_DEFINE_validator(test_validator, [](int32_t test_validator) -> bool {
+    if (test_validator < 0) {
+        return false;
+    }
+    return true;
+});
+
 TEST(flag_test, update_config)
 {
     auto res = update_flag("test_int32", "3");
@@ -80,6 +89,16 @@ TEST(flag_test, update_config)
     res = update_flag("test_int32", "3ab");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
     ASSERT_EQ(FLAGS_test_int32, 3);
+
+    // validation succeed
+    res = update_flag("test_validator", "5");
+    ASSERT_TRUE(res.is_ok());
+    ASSERT_EQ(FLAGS_test_validator, 5);
+
+    // validation failed
+    res = update_flag("test_validator", "-1");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_test_validator, 5);
 }
 
 DSN_DEFINE_int32("flag_test", has_tag, 5, "");

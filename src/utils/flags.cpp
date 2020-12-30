@@ -9,7 +9,7 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/c/api_utilities.h>
 #include <boost/optional/optional.hpp>
-#include <fmt/format.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include <map>
 
@@ -27,8 +27,6 @@ enum value_type
     FV_MAX_INDEX = 6,
 };
 
-using validator_fn = std::function<void()>;
-
 class flag_data
 {
 public:
@@ -36,18 +34,22 @@ public:
     case type_enum:                                                                                \
         value<type>() = dsn_config_get_value_##suffix(_section, _name, value<type>(), _desc);      \
         if (_validator) {                                                                          \
-            _validator();                                                                          \
+            dassert_f(_validator(), "validation failed: {}", _name);                               \
         }                                                                                          \
         break
 
 #define FLAG_DATA_UPDATE_CASE(type, type_enum, suffix)                                             \
-    case type_enum:                                                                                \
-        type tmpval_##type_enum;                                                                   \
+    case type_enum: {                                                                              \
+        type old_val = value<type>(), tmpval_##type_enum;                                          \
         if (!dsn::buf2##suffix(val, tmpval_##type_enum)) {                                         \
-            return error_s::make(ERR_INVALID_PARAMETERS, fmt::format("{} in invalid", val));       \
+            return error_s::make(ERR_INVALID_PARAMETERS, fmt::format("{} is invalid", val));       \
         }                                                                                          \
         value<type>() = tmpval_##type_enum;                                                        \
-        break
+        if (_validator && !_validator()) {                                                         \
+            value<type>() = old_val;                                                               \
+            return error_s::make(ERR_INVALID_PARAMETERS, "value validation failed");               \
+        }                                                                                          \
+    } break
 
 #define FLAG_DATA_UPDATE_STRING()                                                                  \
     case FV_STRING:                                                                                \
