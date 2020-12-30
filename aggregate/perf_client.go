@@ -202,6 +202,15 @@ func (m *PerfClient) updateNodes() {
 	m.nodes = newNodes
 }
 
+// Close release the resources.
+func (m *PerfClient) Close() {
+	m.Close()
+
+	for _, n := range m.nodes {
+		n.Close()
+	}
+}
+
 // NewPerfClient returns an instance of PerfClient.
 func NewPerfClient(metaAddrs []string) *PerfClient {
 	return &PerfClient{

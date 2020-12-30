@@ -70,5 +70,5 @@ func (c *PerfSession) GetPerfCounters(filter string) ([]*PerfCounter, error) {
 
 // Close terminates the session to replica.
 func (c *PerfSession) Close() {
-	/*TODO*/
+	c.NodeSession.Close()
 }

@@ -16,6 +16,8 @@ import (
 // ClusterStats. Users of this pacakage can use the hooks to watch every changes of the stats.
 type TableStatsAggregator interface {
 	Aggregate() (map[int32]*TableStats, *ClusterStats, error)
+
+	Close()
 }
 
 // NewTableStatsAggregator returns a TableStatsAggregator instance.
@@ -79,6 +81,10 @@ func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStat
 	hooksManager.afterTableStatsEmitted(batchTableStats, *ag.allStats)
 
 	return ag.tables, ag.allStats, nil
+}
+
+func (ag *tableStatsAggregator) Close() {
+	ag.client.Close()
 }
 
 func (ag *tableStatsAggregator) aggregateClusterStats() {
