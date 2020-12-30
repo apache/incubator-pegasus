@@ -204,7 +204,7 @@ func (m *PerfClient) updateNodes() {
 
 // Close release the resources.
 func (m *PerfClient) Close() {
-	m.Close()
+	m.meta.Close()
 
 	for _, n := range m.nodes {
 		n.Close()
