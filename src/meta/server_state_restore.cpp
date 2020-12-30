@@ -55,11 +55,12 @@ void server_state::sync_app_from_backup_media(
         return;
     }
 
-    std::string app_metadata = cold_backup::get_app_metadata_file(request.cluster_name,
-                                                                  request.policy_name,
-                                                                  request.app_name,
-                                                                  request.app_id,
-                                                                  request.time_stamp);
+    std::string cluster_root = request.cluster_name;
+    if (!request.policy_name.empty()) {
+        cluster_root += ("/" + request.policy_name);
+    }
+    std::string app_metadata = cold_backup::get_app_metadata_file(
+        cluster_root, request.app_name, request.app_id, request.time_stamp);
 
     error_code err = ERR_OK;
     block_file_ptr file_handle = nullptr;

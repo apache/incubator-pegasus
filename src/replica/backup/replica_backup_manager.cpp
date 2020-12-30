@@ -69,10 +69,7 @@ void replica_backup_manager::on_clear_cold_backup(const backup_clear_request &re
                 backup_context->name);
             tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
                              &_replica->_tracker,
-                             [this, request]() {
-                                 backup_response response;
-                                 on_clear_cold_backup(request);
-                             },
+                             [this, request]() { on_clear_cold_backup(request); },
                              get_gpid().thread_hash(),
                              std::chrono::seconds(100));
             return;

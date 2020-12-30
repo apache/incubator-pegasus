@@ -45,19 +45,19 @@ namespace cold_backup {
 
 // The directory structure on block service
 //
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/meta/app_metadata
-//                                                      /meta/app_backup_status
-//                                                      /partition_1/checkpoint@ip:port/***.sst
-//                                                      /partition_1/checkpoint@ip:port/CURRENT
-//                                                      /partition_1/checkpoint@ip:port/backup_metadata
-//                                                      /partition_1/current_checkpoint
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/meta/app_metadata
-//                                                      /meta/app_backup_status
-//                                                      /partition_1/checkpoint@ip:port/***.sst
-//                                                      /partition_1/checkpoint@ip:port/CURRENT
-//                                                      /partition_1/checkpoint@ip:port/backup_metadata
-//                                                      /partition_1/current_checkpoint
-//      <root>/<policy_name>/<backup_id>/backup_info
+//      <root>/<backup_id>/<appname_appid>/meta/app_metadata
+//                                        /meta/app_backup_status
+//                                        /partition_1/checkpoint@ip:port/***.sst
+//                                        /partition_1/checkpoint@ip:port/CURRENT
+//                                        /partition_1/checkpoint@ip:port/backup_metadata
+//                                        /partition_1/current_checkpoint
+//      <root>/<backup_id>/<appname_appid>/meta/app_metadata
+//                                        /meta/app_backup_status
+//                                        /partition_1/checkpoint@ip:port/***.sst
+//                                        /partition_1/checkpoint@ip:port/CURRENT
+//                                        /partition_1/checkpoint@ip:port/backup_metadata
+//                                        /partition_1/current_checkpoint
+//      <root>/<backup_id>/backup_info
 //
 
 //
@@ -72,39 +72,22 @@ namespace cold_backup {
 //      5, backup_info : recording the information of this backup
 //
 
-// compose the path for policy on block service
-// input:
-//  -- root: the prefix of path
-// return:
-//      the path: <root>/<policy_name>
-std::string get_policy_path(const std::string &root, const std::string &policy_name);
-
 // compose the path for app on block service
 // input:
 //  -- root:  the prefix of path
 // return:
-//      the path: <root>/<policy_name>/<backup_id>
-std::string
-get_backup_path(const std::string &root, const std::string &policy_name, int64_t backup_id);
+//      the path: <root>/<backup_id>
+std::string get_backup_path(const std::string &root, int64_t backup_id);
 
-// compose the path for app on block service
-// input:
-//  -- root:  the prefix of path
-// return:
-//      the path: <root>/<policy_name>/<backup_id>/<appname_appid>
-std::string get_app_backup_path(const std::string &root,
-                                const std::string &policy_name,
-                                const std::string &app_name,
-                                int32_t app_id,
-                                int64_t backup_id);
+// return: <root>/<backup_id>/backup_info
+std::string get_backup_info_file(const std::string &root, int64_t backup_id);
 
 // compose the path for replica on block service
 // input:
 //  -- root:  the prefix of the path
 // return:
-//      the path: <root>/<policy_name>/<backup_id>/<appname_appid>/<partition_index>
+//      the path: <root>/<backup_id>/<appname_appid>/<partition_index>
 std::string get_replica_backup_path(const std::string &root,
-                                    const std::string &policy_name,
                                     const std::string &app_name,
                                     gpid pid,
                                     int64_t backup_id);
@@ -113,9 +96,8 @@ std::string get_replica_backup_path(const std::string &root,
 // input:
 //  -- root:  the prefix of the path
 // return:
-//      the path: <root>/<policy_name>/<backup_id>/<appname_appid>/meta
+//      the path: <root>/<backup_id>/<appname_appid>/meta
 std::string get_app_meta_backup_path(const std::string &root,
-                                     const std::string &policy_name,
                                      const std::string &app_name,
                                      int32_t app_id,
                                      int64_t backup_id);
@@ -125,9 +107,8 @@ std::string get_app_meta_backup_path(const std::string &root,
 //  -- prefix:      the prefix of AP
 // return:
 //      the AP of app meta data file:
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/meta/app_metadata
+//      <root>/<backup_id>/<appname_appid>/meta/app_metadata
 std::string get_app_metadata_file(const std::string &root,
-                                  const std::string &policy_name,
                                   const std::string &app_name,
                                   int32_t app_id,
                                   int64_t backup_id);
@@ -137,9 +118,8 @@ std::string get_app_metadata_file(const std::string &root,
 //  -- prefix:      the prefix of AP
 // return:
 //      the AP of flag-file, which represent whether the app have finished backup:
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/meta/app_backup_status
+//      <root>/<backup_id>/<appname_appid>/meta/app_backup_status
 std::string get_app_backup_status_file(const std::string &root,
-                                       const std::string &policy_name,
                                        const std::string &app_name,
                                        int32_t app_id,
                                        int64_t backup_id);
@@ -150,9 +130,8 @@ std::string get_app_backup_status_file(const std::string &root,
 //  -- pid:         gpid of replica
 // return:
 //      the AP of current checkpoint file:
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/<partition_index>/current_checkpoint
+//      <root>/<backup_id>/<appname_appid>/<partition_index>/current_checkpoint
 std::string get_current_chkpt_file(const std::string &root,
-                                   const std::string &policy_name,
                                    const std::string &app_name,
                                    gpid pid,
                                    int64_t backup_id);
@@ -168,9 +147,8 @@ std::string get_remote_chkpt_dirname();
 //  -- pid:          gpid of replcia
 // return:
 //      the AP of the checkpoint dir:
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/<partition_index>/checkpoint@<ip:port>
+//      <root>/<backup_id>/<appname_appid>/<partition_index>/checkpoint@<ip:port>
 std::string get_remote_chkpt_dir(const std::string &root,
-                                 const std::string &policy_name,
                                  const std::string &app_name,
                                  gpid pid,
                                  int64_t backup_id);
@@ -181,9 +159,8 @@ std::string get_remote_chkpt_dir(const std::string &root,
 //  -- pid:          gpid of replcia
 // return:
 //      the AP of the checkpoint file metadata:
-//      <root>/<policy_name>/<backup_id>/<appname_appid>/<partition_index>/checkpoint@<ip:port>/backup_metadata
+//      <root>/<backup_id>/<appname_appid>/<partition_index>/checkpoint@<ip:port>/backup_metadata
 std::string get_remote_chkpt_meta_file(const std::string &root,
-                                       const std::string &policy_name,
                                        const std::string &app_name,
                                        gpid pid,
                                        int64_t backup_id);

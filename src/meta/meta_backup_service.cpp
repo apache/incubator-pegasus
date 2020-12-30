@@ -77,7 +77,6 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
     dist::block_service::create_file_request create_file_req;
     create_file_req.ignore_metadata = true;
     create_file_req.file_name = cold_backup::get_app_metadata_file(_backup_service->backup_root(),
-                                                                   _policy.policy_name,
                                                                    _policy.app_names.at(app_id),
                                                                    app_id,
                                                                    _cur_backup.backup_id);
@@ -183,7 +182,6 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
     create_file_req.ignore_metadata = true;
     create_file_req.file_name =
         cold_backup::get_app_backup_status_file(_backup_service->backup_root(),
-                                                _policy.policy_name,
                                                 _policy.app_names.at(app_id),
                                                 app_id,
                                                 _cur_backup.backup_id);
@@ -295,10 +293,8 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
 
     dist::block_service::create_file_request create_file_req;
     create_file_req.ignore_metadata = true;
-    create_file_req.file_name = utils::filesystem::path_combine(
-        cold_backup::get_backup_path(
-            _backup_service->backup_root(), _policy.policy_name, b_info.backup_id),
-        cold_backup_constant::BACKUP_INFO);
+    create_file_req.file_name =
+        cold_backup::get_backup_info_file(_backup_service->backup_root(), b_info.backup_id);
     // here we can use synchronous way coz create_file with ignored metadata is very fast
     _block_service
         ->create_file(create_file_req,
@@ -903,8 +899,8 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
     dsn::task_ptr sync_callback =
         ::dsn::tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, info_to_gc]() {
             dist::block_service::remove_path_request req;
-            req.path = cold_backup::get_backup_path(
-                _backup_service->backup_root(), _policy.policy_name, info_to_gc.backup_id);
+            req.path =
+                cold_backup::get_backup_path(_backup_service->backup_root(), info_to_gc.backup_id);
             req.recursive = true;
             _block_service->remove_path(
                 req,

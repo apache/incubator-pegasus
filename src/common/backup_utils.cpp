@@ -29,123 +29,86 @@ const int32_t cold_backup_constant::PROGRESS_FINISHED = 1000;
 
 namespace cold_backup {
 
-std::string get_policy_path(const std::string &root, const std::string &policy_name)
+std::string get_backup_path(const std::string &root, int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << root << "/" << policy_name;
-    return ss.str();
+    return root + "/" + std::to_string(backup_id);
 }
 
-std::string
-get_backup_path(const std::string &root, const std::string &policy_name, int64_t backup_id)
+std::string get_backup_info_file(const std::string &root, int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_policy_path(root, policy_name) << "/" << backup_id;
-    return ss.str();
-}
-
-std::string get_app_backup_path(const std::string &root,
-                                const std::string &policy_name,
-                                const std::string &app_name,
-                                int32_t app_id,
-                                int64_t backup_id)
-{
-    std::stringstream ss;
-    ss << get_backup_path(root, policy_name, backup_id) << "/" << app_name << "_" << app_id;
-    return ss.str();
+    return get_backup_path(root, backup_id) + "/" + cold_backup_constant::BACKUP_INFO;
 }
 
 std::string get_replica_backup_path(const std::string &root,
-                                    const std::string &policy_name,
                                     const std::string &app_name,
                                     gpid pid,
                                     int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_policy_path(root, policy_name) << "/" << backup_id << "/" << app_name << "_"
-       << pid.get_app_id() << "/" << pid.get_partition_index();
-    return ss.str();
+    std::string str_app = app_name + "_" + std::to_string(pid.get_app_id());
+    return get_backup_path(root, backup_id) + "/" + str_app + "/" +
+           std::to_string(pid.get_partition_index());
 }
 
 std::string get_app_meta_backup_path(const std::string &root,
-                                     const std::string &policy_name,
                                      const std::string &app_name,
                                      int32_t app_id,
                                      int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_policy_path(root, policy_name) << "/" << backup_id << "/" << app_name << "_" << app_id
-       << "/meta";
-    return ss.str();
+    std::string str_app = app_name + "_" + std::to_string(app_id);
+    return get_backup_path(root, backup_id) + "/" + str_app + "/meta";
 }
 
 std::string get_app_metadata_file(const std::string &root,
-                                  const std::string &policy_name,
                                   const std::string &app_name,
                                   int32_t app_id,
                                   int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_app_meta_backup_path(root, policy_name, app_name, app_id, backup_id) << "/"
-       << cold_backup_constant::APP_METADATA;
-    return ss.str();
+    return get_app_meta_backup_path(root, app_name, app_id, backup_id) + "/" +
+           cold_backup_constant::APP_METADATA;
 }
 
 std::string get_app_backup_status_file(const std::string &root,
-                                       const std::string &policy_name,
                                        const std::string &app_name,
                                        int32_t app_id,
                                        int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_app_meta_backup_path(root, policy_name, app_name, app_id, backup_id) << "/"
-       << cold_backup_constant::APP_BACKUP_STATUS;
-    return ss.str();
+    return get_app_meta_backup_path(root, app_name, app_id, backup_id) + "/" +
+           cold_backup_constant::APP_BACKUP_STATUS;
 }
 
 std::string get_current_chkpt_file(const std::string &root,
-                                   const std::string &policy_name,
                                    const std::string &app_name,
                                    gpid pid,
                                    int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_replica_backup_path(root, policy_name, app_name, pid, backup_id) << "/"
-       << cold_backup_constant::CURRENT_CHECKPOINT;
-    return ss.str();
+    return get_replica_backup_path(root, app_name, pid, backup_id) + "/" +
+           cold_backup_constant::CURRENT_CHECKPOINT;
 }
 
 std::string get_remote_chkpt_dirname()
 {
     // here using server address as suffix of remote_chkpt_dirname
-    rpc_address local_address = dsn_primary_address();
-    std::stringstream ss;
-    ss << "chkpt_" << local_address.ipv4_str() << "_" << local_address.port();
-    return ss.str();
+    std::string local_address = dsn_primary_address().ipv4_str();
+    std::string port = std::to_string(dsn_primary_address().port());
+    return "chkpt_" + local_address + "_" + port;
 }
 
 std::string get_remote_chkpt_dir(const std::string &root,
-                                 const std::string &policy_name,
                                  const std::string &app_name,
                                  gpid pid,
                                  int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_replica_backup_path(root, policy_name, app_name, pid, backup_id) << "/"
-       << get_remote_chkpt_dirname();
-    return ss.str();
+    return get_replica_backup_path(root, app_name, pid, backup_id) + "/" +
+           get_remote_chkpt_dirname();
 }
 
 std::string get_remote_chkpt_meta_file(const std::string &root,
-                                       const std::string &policy_name,
                                        const std::string &app_name,
                                        gpid pid,
                                        int64_t backup_id)
 {
-    std::stringstream ss;
-    ss << get_remote_chkpt_dir(root, policy_name, app_name, pid, backup_id) << "/"
-       << cold_backup_constant::BACKUP_METADATA;
-    return ss.str();
+    return get_remote_chkpt_dir(root, app_name, pid, backup_id) + "/" +
+           cold_backup_constant::BACKUP_METADATA;
 }
 
 } // namespace cold_backup

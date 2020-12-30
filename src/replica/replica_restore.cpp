@@ -218,21 +218,20 @@ void replica::clear_restore_useless_files(const std::string &local_chkpt_dir,
 dsn::error_code replica::find_valid_checkpoint(const configuration_restore_request &req,
                                                std::string &remote_chkpt_dir)
 {
-    const std::string &backup_root = req.cluster_name;
-    const std::string &policy_name = req.policy_name;
-    const int64_t &backup_id = req.time_stamp;
-    ddebug("%s: retore from policy_name(%s), backup_id(%lld)",
-           name(),
-           req.policy_name.c_str(),
-           req.time_stamp);
+    ddebug_f("{}: start to find valid checkpoint of backup_id {}", name(), req.time_stamp);
 
     // we should base on old gpid to combine the path on cold backup media
     dsn::gpid old_gpid;
     old_gpid.set_app_id(req.app_id);
     old_gpid.set_partition_index(_config.pid.get_partition_index());
+    std::string backup_root = req.cluster_name;
+    if (!req.policy_name.empty()) {
+        backup_root += ("/" + req.policy_name);
+    }
+    int64_t backup_id = req.time_stamp;
 
-    std::string manifest_file = cold_backup::get_current_chkpt_file(
-        backup_root, policy_name, req.app_name, old_gpid, backup_id);
+    std::string manifest_file =
+        cold_backup::get_current_chkpt_file(backup_root, req.app_name, old_gpid, backup_id);
     block_filesystem *fs =
         _stub->_block_service_manager.get_or_create_block_filesystem(req.backup_provider_name);
     if (fs == nullptr) {
@@ -251,9 +250,9 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         ->wait();
 
     if (create_response.err != dsn::ERR_OK) {
-        derror("%s: create file of block_service failed, reason(%s)",
-               name(),
-               create_response.err.to_string());
+        derror_f("{}: create file of block_service failed, reason {}",
+                 name(),
+                 create_response.err.to_string());
         return create_response.err;
     }
 
@@ -267,18 +266,17 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         ->wait();
 
     if (r.err != dsn::ERR_OK) {
-        derror("%s: read file %s failed, reason(%s)",
-               name(),
-               create_response.file_handle->file_name().c_str(),
-               r.err.to_string());
+        derror_f("{}: read file {} failed, reason {}",
+                 name(),
+                 create_response.file_handle->file_name(),
+                 r.err.to_string());
         return r.err;
     }
 
     std::string valid_chkpt_entry(r.buffer.data(), r.buffer.length());
-    ddebug("%s: get a valid chkpt(%s)", name(), valid_chkpt_entry.c_str());
+    ddebug_f("{}: got a valid chkpt {}", name(), valid_chkpt_entry);
     remote_chkpt_dir = ::dsn::utils::filesystem::path_combine(
-        cold_backup::get_replica_backup_path(
-            backup_root, policy_name, req.app_name, old_gpid, backup_id),
+        cold_backup::get_replica_backup_path(backup_root, req.app_name, old_gpid, backup_id),
         valid_chkpt_entry);
     return dsn::ERR_OK;
 }
@@ -330,19 +328,25 @@ dsn::error_code replica::restore_checkpoint()
         skip_bad_partition = true;
     }
 
+    ddebug_f("{}: restore checkpoint(policy_name {}, backup_id {}) from {} to local dir {}",
+             name(),
+             restore_req.policy_name,
+             restore_req.time_stamp,
+             restore_req.backup_provider_name,
+             _dir);
+
     // then create a local restore dir if it doesn't exist
     if (!utils::filesystem::directory_exists(_dir) && !utils::filesystem::create_directory(_dir)) {
         derror("create dir %s failed", _dir.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
-    // we don't remove the old restore.policy_name.backup_id
     std::ostringstream os;
     os << _dir << "/restore." << restore_req.policy_name << "." << restore_req.time_stamp;
     std::string restore_dir = os.str();
     if (!utils::filesystem::directory_exists(restore_dir) &&
         !utils::filesystem::create_directory(restore_dir)) {
-        derror("create dir %s failed", restore_dir.c_str());
+        derror_f("create restore dir {} failed", restore_dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 

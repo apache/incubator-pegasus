@@ -176,7 +176,7 @@ void cold_backup_context::check_backup_on_remote()
     // check whether current checkpoint file is exist on remote, and verify whether the checkpoint
     // directory is exist
     std::string current_chkpt_file = cold_backup::get_current_chkpt_file(
-        backup_root, request.policy.policy_name, request.app_name, request.pid, request.backup_id);
+        backup_root, request.app_name, request.pid, request.backup_id);
     dist::block_service::create_file_request req;
     req.file_name = current_chkpt_file;
     req.ignore_metadata = false;
@@ -311,7 +311,7 @@ void cold_backup_context::remote_chkpt_dir_exist(const std::string &chkpt_dirnam
 {
     dist::block_service::ls_request req;
     req.dir_name = cold_backup::get_replica_backup_path(
-        backup_root, request.policy.policy_name, request.app_name, request.pid, request.backup_id);
+        backup_root, request.app_name, request.pid, request.backup_id);
 
     add_ref();
 
@@ -407,7 +407,7 @@ void cold_backup_context::upload_checkpoint_to_remote()
 
     // check whether cold_backup_metadata is exist and verify cold_backup_metadata if exist
     std::string metadata = cold_backup::get_remote_chkpt_meta_file(
-        backup_root, request.policy.policy_name, request.app_name, request.pid, request.backup_id);
+        backup_root, request.app_name, request.pid, request.backup_id);
     dist::block_service::create_file_request req;
     req.file_name = metadata;
     req.ignore_metadata = false;
@@ -631,7 +631,7 @@ void cold_backup_context::prepare_upload()
 void cold_backup_context::upload_file(const std::string &local_filename)
 {
     std::string remote_chkpt_dir = cold_backup::get_remote_chkpt_dir(
-        backup_root, request.policy.policy_name, request.app_name, request.pid, request.backup_id);
+        backup_root, request.app_name, request.pid, request.backup_id);
     dist::block_service::create_file_request req;
     req.file_name = ::dsn::utils::filesystem::path_combine(remote_chkpt_dir, local_filename);
     req.ignore_metadata = false;
@@ -784,7 +784,7 @@ void cold_backup_context::write_backup_metadata()
         return;
     }
     std::string metadata = cold_backup::get_remote_chkpt_meta_file(
-        backup_root, request.policy.policy_name, request.app_name, request.pid, request.backup_id);
+        backup_root, request.app_name, request.pid, request.backup_id);
     dist::block_service::create_file_request req;
     req.file_name = metadata;
     req.ignore_metadata = true;
@@ -867,7 +867,7 @@ void cold_backup_context::write_current_chkpt_file(const std::string &value)
     }
 
     std::string current_chkpt_file = cold_backup::get_current_chkpt_file(
-        backup_root, request.policy.policy_name, request.app_name, request.pid, request.backup_id);
+        backup_root, request.app_name, request.pid, request.backup_id);
     dist::block_service::create_file_request req;
     req.file_name = current_chkpt_file;
     req.ignore_metadata = true;
