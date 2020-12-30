@@ -44,11 +44,16 @@ public:
         return rpc;
     }
 
-    rpc_session_ptr create_fake_session()
+    rpc_session_ptr create_fake_session(bool is_client)
     {
         std::unique_ptr<tools::sim_network_provider> sim_net(
             new tools::sim_network_provider(nullptr, nullptr));
-        return sim_net->create_server_session(rpc_address("localhost", 10086), rpc_session_ptr());
+        if (is_client) {
+            return sim_net->create_client_session(rpc_address("localhost", 10086));
+        } else {
+            return sim_net->create_server_session(rpc_address("localhost", 10086),
+                                                  rpc_session_ptr());
+        }
     }
 
     void on_negotiation_request(negotiation_rpc rpc)
@@ -86,21 +91,31 @@ TEST_F(negotiation_manager_test, on_rpc_recv_msg)
         task_code rpc_code;
         bool negotiation_succeed;
         bool mandatory_auth;
+        bool is_client;
         bool return_value;
-    } tests[] = {{RPC_NEGOTIATION, false, true, true},
-                 {RPC_NEGOTIATION_ACK, false, true, true},
-                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, true},
-                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, true},
-                 {RPC_HTTP_SERVICE, false, true, true},
-                 {RPC_HTTP_SERVICE_ACK, false, true, true},
-                 {service::RPC_NFS_COPY, true, true, true},
-                 {service::RPC_NFS_COPY, false, false, true},
-                 {service::RPC_NFS_COPY, false, true, false}};
+    } tests[] = {{RPC_NEGOTIATION, false, true, false, true},
+                 {RPC_NEGOTIATION, false, true, true, true},
+                 {RPC_NEGOTIATION_ACK, false, true, false, true},
+                 {RPC_NEGOTIATION_ACK, false, true, true, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, false, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, true, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, false, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, true, true},
+                 {RPC_HTTP_SERVICE, false, true, false, true},
+                 {RPC_HTTP_SERVICE, false, true, true, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true, false, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true, true, true},
+                 {service::RPC_NFS_COPY, true, true, false, true},
+                 {service::RPC_NFS_COPY, true, true, true, true},
+                 {service::RPC_NFS_COPY, false, false, false, true},
+                 {service::RPC_NFS_COPY, false, false, true, false},
+                 {service::RPC_NFS_COPY, false, true, true, false},
+                 {service::RPC_NFS_COPY, false, true, false, false}};
 
     for (const auto &test : tests) {
         FLAGS_mandatory_auth = test.mandatory_auth;
         message_ptr msg = dsn::message_ex::create_request(test.rpc_code, 0, 0);
-        auto sim_session = create_fake_session();
+        auto sim_session = create_fake_session(test.is_client);
         msg->io_session = sim_session;
         if (test.negotiation_succeed) {
             sim_session->set_negotiation_succeed();
@@ -116,19 +131,32 @@ TEST_F(negotiation_manager_test, on_rpc_send_msg)
     {
         task_code rpc_code;
         bool negotiation_succeed;
+        bool mandatory_auth;
+        bool is_client;
         bool return_value;
-    } tests[] = {{RPC_NEGOTIATION, false, true},
-                 {RPC_NEGOTIATION_ACK, false, true},
-                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true},
-                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true},
-                 {RPC_HTTP_SERVICE, false, true},
-                 {RPC_HTTP_SERVICE_ACK, false, true},
-                 {service::RPC_NFS_COPY, true, true},
-                 {service::RPC_NFS_COPY, false, false}};
+    } tests[] = {{RPC_NEGOTIATION, false, true, false, true},
+                 {RPC_NEGOTIATION, false, true, true, true},
+                 {RPC_NEGOTIATION_ACK, false, true, false, true},
+                 {RPC_NEGOTIATION_ACK, false, true, true, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, false, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING, false, true, true, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, false, true},
+                 {fd::RPC_FD_FAILURE_DETECTOR_PING_ACK, false, true, true, true},
+                 {RPC_HTTP_SERVICE, false, true, false, true},
+                 {RPC_HTTP_SERVICE, false, true, true, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true, false, true},
+                 {RPC_HTTP_SERVICE_ACK, false, true, true, true},
+                 {service::RPC_NFS_COPY, true, true, false, true},
+                 {service::RPC_NFS_COPY, true, true, true, true},
+                 {service::RPC_NFS_COPY, false, false, false, true},
+                 {service::RPC_NFS_COPY, false, false, true, false},
+                 {service::RPC_NFS_COPY, false, true, true, false},
+                 {service::RPC_NFS_COPY, false, true, false, false}};
 
     for (const auto &test : tests) {
+        FLAGS_mandatory_auth = test.mandatory_auth;
         message_ptr msg = dsn::message_ex::create_request(test.rpc_code, 0, 0);
-        auto sim_session = create_fake_session();
+        auto sim_session = create_fake_session(test.is_client);
         msg->io_session = sim_session;
         if (test.negotiation_succeed) {
             sim_session->set_negotiation_succeed();

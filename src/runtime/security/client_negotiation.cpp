@@ -27,7 +27,6 @@
 
 namespace dsn {
 namespace security {
-DSN_DECLARE_bool(mandatory_auth);
 extern const std::set<std::string> supported_mechanisms;
 
 client_negotiation::client_negotiation(rpc_session_ptr session) : negotiation(session)
