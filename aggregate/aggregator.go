@@ -41,7 +41,8 @@ func Start(tom *tomb.Tomb) {
 	ticker := time.NewTicker(aggregateInterval)
 
 	metaAddr := viper.GetString("meta_server")
-	ag := NewTableStatsAggregator([]string{metaAddr})
+	iAg := NewTableStatsAggregator([]string{metaAddr})
+	ag := iAg.(*tableStatsAggregator)
 
 	for {
 		select {
@@ -54,6 +55,14 @@ func Start(tom *tomb.Tomb) {
 		if err != nil {
 			log.Error(err)
 		}
+
+		// produce stats for the hooks
+		var batchTableStats []TableStats
+		for _, table := range ag.tables {
+			batchTableStats = append(batchTableStats, *table)
+		}
+		ag.aggregateClusterStats()
+		hooksManager.afterTableStatsEmitted(batchTableStats, *ag.allStats)
 	}
 }
 
@@ -72,13 +81,9 @@ func (ag *tableStatsAggregator) Aggregate() (map[int32]*TableStats, *ClusterStat
 		ag.updatePartitionStat(p)
 	}
 
-	var batchTableStats []TableStats
 	for _, table := range ag.tables {
 		table.aggregate()
-		batchTableStats = append(batchTableStats, *table)
 	}
-	ag.aggregateClusterStats()
-	hooksManager.afterTableStatsEmitted(batchTableStats, *ag.allStats)
 
 	return ag.tables, ag.allStats, nil
 }
