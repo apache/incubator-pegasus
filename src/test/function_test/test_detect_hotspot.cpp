@@ -118,14 +118,15 @@ public:
         }
     }
 
-    void write_hotspot_data()
+    void get_result(detection_type dt, key_type expect_hotspot)
     {
-        generate_dataset(warmup_second, detection_type::write_data, key_type::random_dataset);
-        generate_dataset(
-            max_detection_second, detection_type::write_data, key_type::hotspot_dataset);
-
-        req.type = dsn::replication::hotkey_type::type::WRITE;
+        if (dt == detection_type::write_data) {
+            req.type = dsn::replication::hotkey_type::type::WRITE;
+        } else {
+            req.type = dsn::replication::hotkey_type::type::READ;
+        }
         req.action = dsn::replication::detect_action::QUERY;
+
         bool find_hotkey = false;
         int partition_index;
         for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
@@ -138,17 +139,24 @@ public:
                 break;
             }
         }
-        ASSERT_TRUE(find_hotkey);
-        ASSERT_EQ(resp.err, dsn::ERR_OK);
-        ASSERT_EQ(resp.hotkey_result, "ThisisahotkeyThisisahotkey");
+        if (expect_hotspot == key_type::hotspot_dataset) {
+            ASSERT_TRUE(find_hotkey);
+            ASSERT_EQ(resp.err, dsn::ERR_OK);
+            ASSERT_EQ(resp.hotkey_result, "ThisisahotkeyThisisahotkey");
+        } else {
+            ASSERT_FALSE(find_hotkey);
+        }
 
         // Wait for collector sending the next start detecting command
         sleep(15);
 
         req.action = dsn::replication::detect_action::STOP;
-        auto errinfo = ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-        ASSERT_EQ(errinfo, dsn::ERR_OK);
-        ASSERT_EQ(resp.err, dsn::ERR_OK);
+        for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
+            auto errinfo =
+                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
+            ASSERT_EQ(errinfo, dsn::ERR_OK);
+            ASSERT_EQ(resp.err, dsn::ERR_OK);
+        }
 
         req.action = dsn::replication::detect_action::QUERY;
         for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
@@ -161,23 +169,19 @@ public:
         }
     }
 
+    void write_hotspot_data()
+    {
+        generate_dataset(warmup_second, detection_type::write_data, key_type::random_dataset);
+        generate_dataset(
+            max_detection_second, detection_type::write_data, key_type::hotspot_dataset);
+        get_result(detection_type::write_data, key_type::hotspot_dataset);
+    }
+
     void write_random_data()
     {
         generate_dataset(
             max_detection_second, detection_type::write_data, key_type::random_dataset);
-
-        req.type = dsn::replication::hotkey_type::type::WRITE;
-        req.action = dsn::replication::detect_action::QUERY;
-        bool find_hotkey = false;
-        int partition_index;
-        for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id, partition_index);
-            auto errinfo =
-                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-            ASSERT_EQ(errinfo, dsn::ERR_OK);
-            ASSERT_EQ(resp.err_hint,
-                      "Can't get hotkey now, now state: hotkey_collector_state::STOPPED");
-        }
+        get_result(detection_type::write_data, key_type::random_dataset);
     }
 
     void capture_until_maxtime()
@@ -209,54 +213,16 @@ public:
 
     void read_hotspot_data()
     {
-        generate_dataset(warmup_second, detection_type::read_data, key_type::random_dataset);
+        generate_dataset(warmup_second, detection_type::read_data, key_type::hotspot_dataset);
         generate_dataset(
             max_detection_second, detection_type::read_data, key_type::hotspot_dataset);
-
-        req.type = dsn::replication::hotkey_type::type::READ;
-        req.action = dsn::replication::detect_action::QUERY;
-        bool find_hotkey = false;
-        int partition_index;
-        for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id, partition_index);
-            auto errinfo =
-                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-            ASSERT_EQ(errinfo, dsn::ERR_OK);
-            if (!resp.hotkey_result.empty()) {
-                find_hotkey = true;
-                break;
-            }
-        }
-        ASSERT_TRUE(find_hotkey);
-        ASSERT_EQ(resp.err, dsn::ERR_OK);
-
-        ASSERT_EQ(resp.hotkey_result, "ThisisahotkeyThisisahotkey");
-
-        // Wait for collector sending the next start detecting command
-        sleep(15);
-
-        req.action = dsn::replication::detect_action::STOP;
-        auto errinfo = ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-        ASSERT_EQ(errinfo, dsn::ERR_OK);
-        ASSERT_EQ(resp.err, dsn::ERR_OK);
+        get_result(detection_type::read_data, key_type::hotspot_dataset);
     }
 
     void read_random_data()
     {
         generate_dataset(max_detection_second, detection_type::read_data, key_type::random_dataset);
-
-        req.type = dsn::replication::hotkey_type::type::READ;
-        req.action = dsn::replication::detect_action::QUERY;
-        bool find_hotkey = false;
-        int partition_index;
-        for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
-            req.pid = dsn::gpid(app_id, partition_index);
-            auto errinfo =
-                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-            ASSERT_EQ(errinfo, dsn::ERR_OK);
-            ASSERT_EQ(resp.err_hint,
-                      "Can't get hotkey now, now state: hotkey_collector_state::STOPPED");
-        }
+        get_result(detection_type::read_data, key_type::random_dataset);
     }
 
     const std::string app_name = "hotspot_test";
@@ -273,11 +239,19 @@ public:
 
 TEST_F(test_detect_hotspot, write_hotspot_data)
 {
-    std::cout << "start testing write_hotspot_data..." << std::endl;
+    std::cout << "start testing write hotspot data..." << std::endl;
     write_hotspot_data();
+    std::cout << "write hotspot data passed....." << std::endl;
+    std::cout << "start testing write random data..." << std::endl;
     write_random_data();
+    std::cout << "write random data passed....." << std::endl;
+    std::cout << "start testing max detection time..." << std::endl;
     capture_until_maxtime();
+    std::cout << "max detection time passed....." << std::endl;
+    std::cout << "start testing read hotspot data..." << std::endl;
     read_hotspot_data();
+    std::cout << "read hotspot data passed....." << std::endl;
+    std::cout << "start testing read random data..." << std::endl;
     read_random_data();
-    std::cout << "hotspot passed....." << std::endl;
+    std::cout << "read random data passed....." << std::endl;
 }
