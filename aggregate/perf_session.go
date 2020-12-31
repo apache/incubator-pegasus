@@ -45,7 +45,7 @@ func WrapPerf(addr string, session session.NodeSession) *PerfSession {
 
 // GetPerfCounters retrieves all perf-counters matched with `filter` from the remote node.
 func (c *PerfSession) GetPerfCounters(filter string) ([]*PerfCounter, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	rc := &admin.RemoteCommand{
 		Command:   "perf-counters-by-substr",
