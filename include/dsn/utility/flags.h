@@ -8,12 +8,18 @@
 #include <cstdint>
 #include <functional>
 #include "errors.h"
+#include "enum_helper.h"
 #include "utils.h"
 
 enum class flag_tag
 {
     FT_MUTABLE = 0, /** flag data is mutable */
+    FV_MAX_INDEX = 0,
 };
+
+ENUM_BEGIN(flag_tag, flag_tag::FV_MAX_INDEX)
+ENUM_REG(flag_tag::FT_MUTABLE)
+ENUM_END(flag_tag)
 
 // support std::hash with enum types is implemented since gcc 6.1
 // so we should define hash for flag_tag to compatible with gcc < 6.1
@@ -109,4 +115,7 @@ extern error_s update_flag(const std::string &name, const std::string &val);
 
 // determine if the tag is exist for the specified flag
 extern bool has_tag(const std::string &name, const flag_tag &tag);
+
+// list all the flags
+extern std::string list_all_flags();
 } // namespace dsn

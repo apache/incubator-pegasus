@@ -37,4 +37,15 @@ void update_config(const http_request &req, http_response &resp)
     resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
+
+void list_all_configs(const http_request &req, http_response &resp)
+{
+    if (!req.query_args.empty()) {
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    resp.body = list_all_flags();
+    resp.status_code = http_status_code::ok;
+}
 } // namespace dsn

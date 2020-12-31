@@ -77,6 +77,11 @@ namespace dsn {
         .with_callback(
             [](const http_request &req, http_response &resp) { update_config(req, resp); })
         .with_help("Updates the value of a config");
+
+    register_http_call("configs")
+        .with_callback(
+            [](const http_request &req, http_response &resp) { list_all_configs(req, resp); })
+        .with_help("list all configs");
 }
 
 } // namespace dsn
