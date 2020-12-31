@@ -132,9 +132,6 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
 
 TEST_F(hotspot_partition_test, send_detect_hotkey_request)
 {
-    auto default_occurrence_threshold = FLAGS_occurrence_threshold;
-    FLAGS_occurrence_threshold = 100;
-
     const int READ_HOT_PARTITION = 7;
     const int WRITE_HOT_PARTITION = 0;
     std::vector<row_data> test_rows = generate_row_data();
@@ -145,11 +142,9 @@ TEST_F(hotspot_partition_test, send_detect_hotkey_request)
     expect_result[WRITE_HOT_PARTITION][1] = FLAGS_occurrence_threshold;
     aggregate_analyse_data(test_rows, expect_result, FLAGS_occurrence_threshold);
     const int back_to_normal = 30;
-    expect_result[READ_HOT_PARTITION][0] = FLAGS_occurrence_threshold - back_to_normal;
-    expect_result[WRITE_HOT_PARTITION][1] = FLAGS_occurrence_threshold - back_to_normal;
+    expect_result[READ_HOT_PARTITION][0] = 0;
+    expect_result[WRITE_HOT_PARTITION][1] = 0;
     aggregate_analyse_data(generate_row_data(), expect_result, back_to_normal);
-
-    FLAGS_occurrence_threshold = default_occurrence_threshold;
 }
 
 } // namespace server

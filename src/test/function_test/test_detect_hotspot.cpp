@@ -50,6 +50,17 @@ static std::string generate_hash_key_by_random(bool is_hotkey, int probability =
     return result;
 }
 
+enum detection_type
+{
+    read_data,
+    write_data
+};
+enum key_type
+{
+    random_dataset,
+    hotspot_dataset
+};
+
 class test_detect_hotspot : public testing::Test
 {
 public:
@@ -57,7 +68,6 @@ public:
     {
         chdir(global_env::instance()._pegasus_root.c_str());
         system("pwd");
-
         system("./run.sh clear_onebox");
         system("cp src/server/config.min.ini config-server-test-hotspot.ini");
         system("sed -i \"/^\\s*enable_detect_hotkey/c enable_detect_hotkey = "
@@ -75,6 +85,8 @@ public:
 
         auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
+
+        ddl_client->list_app(app_name, app_id, partition_count, partitions);
     }
 
     virtual void TearDown() override
@@ -85,37 +97,33 @@ public:
         chdir(global_env::instance()._working_dir.c_str());
     }
 
-    void write_hotspot_data()
+    void generate_dataset(int64_t time_duration, detection_type dt, key_type kt)
     {
         int64_t start = dsn_now_s();
         int err = PERR_OK;
         ASSERT_NE(pg_client, nullptr);
 
-        const int64_t warmup_second = 30;
-        for (int i = 0; dsn_now_s() - start < warmup_second; ++i %= 1000) {
+        for (int i = 0; dsn_now_s() - start < time_duration; ++i %= 1000) {
             std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(false, 0);
+            std::string h_key = generate_hash_key_by_random(kt, 50);
             std::string s_key = "sortkey_" + index;
             std::string value = "value_" + index;
-            err = pg_client->set(h_key, s_key, value);
-            ASSERT_EQ(err, PERR_OK);
+            if (dt == detection_type::write_data) {
+                err = pg_client->set(h_key, s_key, value);
+                ASSERT_EQ(err, PERR_OK);
+            } else {
+                err = pg_client->get(h_key, s_key, value);
+                ASSERT_TRUE((err == PERR_OK) || err == (PERR_NOT_FOUND));
+            }
         }
+    }
 
-        for (int i = 0; dsn_now_s() - start < max_detection_second; ++i %= 1000) {
-            std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(true, 50);
-            std::string s_key = "sortkey_" + index;
-            std::string value = "value_" + index;
-            err = pg_client->set(h_key, s_key, value);
-            ASSERT_EQ(err, PERR_OK);
-        }
+    void write_hotspot_data()
+    {
+        generate_dataset(warmup_second, detection_type::write_data, key_type::random_dataset);
+        generate_dataset(
+            max_detection_second, detection_type::write_data, key_type::hotspot_dataset);
 
-        int32_t app_id;
-        int32_t partition_count;
-        std::vector<dsn::partition_configuration> partitions;
-        ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        dsn::replication::detect_hotkey_response resp;
-        dsn::replication::detect_hotkey_request req;
         req.type = dsn::replication::hotkey_type::type::WRITE;
         req.action = dsn::replication::detect_action::QUERY;
         bool find_hotkey = false;
@@ -155,25 +163,9 @@ public:
 
     void write_random_data()
     {
-        int64_t start = dsn_now_s();
-        int err = PERR_OK;
-        ASSERT_NE(pg_client, nullptr);
+        generate_dataset(
+            max_detection_second, detection_type::write_data, key_type::random_dataset);
 
-        for (int i = 0; dsn_now_s() - start < max_detection_second; ++i %= 1000) {
-            std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(false, 0);
-            std::string s_key = "sortkey_" + index;
-            std::string value = "value_" + index;
-            err = pg_client->set(h_key, s_key, value);
-            ASSERT_EQ(err, PERR_OK);
-        }
-
-        int32_t app_id;
-        int32_t partition_count;
-        std::vector<dsn::partition_configuration> partitions;
-        ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        dsn::replication::detect_hotkey_response resp;
-        dsn::replication::detect_hotkey_request req;
         req.type = dsn::replication::hotkey_type::type::WRITE;
         req.action = dsn::replication::detect_action::QUERY;
         bool find_hotkey = false;
@@ -190,17 +182,10 @@ public:
 
     void capture_until_maxtime()
     {
-        int64_t start = dsn_now_s();
-        dsn::replication::detect_hotkey_response resp;
-        dsn::replication::detect_hotkey_request req;
         int target_partition = 2;
-        int32_t app_id;
-        int32_t partition_count;
-        std::vector<dsn::partition_configuration> partitions;
-
         req.type = dsn::replication::hotkey_type::type::WRITE;
         req.action = dsn::replication::detect_action::START;
-        ddl_client->list_app(app_name, app_id, partition_count, partitions);
+
         req.pid = dsn::gpid(app_id, target_partition);
         auto errinfo = ddl_client->detect_hotkey(partitions[target_partition].primary, req, resp);
         ASSERT_EQ(errinfo, dsn::ERR_OK);
@@ -213,14 +198,8 @@ public:
 
         // max_detection_second > max_seconds_to_detect_hotkey
         int max_seconds_to_detect_hotkey = 160;
-        for (int i = 0; dsn_now_s() - start < max_seconds_to_detect_hotkey; ++i %= 1000) {
-            std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(false, 0);
-            std::string s_key = "sortkey_" + index;
-            std::string value = "value_" + index;
-            auto err = pg_client->set(h_key, s_key, value);
-            ASSERT_EQ(err, PERR_OK);
-        }
+        generate_dataset(
+            max_seconds_to_detect_hotkey, detection_type::write_data, key_type::random_dataset);
 
         req.action = dsn::replication::detect_action::QUERY;
         errinfo = ddl_client->detect_hotkey(partitions[target_partition].primary, req, resp);
@@ -230,35 +209,10 @@ public:
 
     void read_hotspot_data()
     {
-        int64_t start = dsn_now_s();
-        int err = PERR_OK;
-        ASSERT_NE(pg_client, nullptr);
+        generate_dataset(warmup_second, detection_type::read_data, key_type::random_dataset);
+        generate_dataset(
+            max_detection_second, detection_type::read_data, key_type::hotspot_dataset);
 
-        const int64_t warmup_second = 30;
-        for (int i = 0; dsn_now_s() - start < warmup_second; ++i %= 1000) {
-            std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(false, 0);
-            std::string s_key = "sortkey_" + index;
-            std::string value = "value_" + index;
-            err = pg_client->get(h_key, s_key, value);
-            ASSERT_TRUE((err == PERR_OK) || err == (PERR_NOT_FOUND));
-        }
-
-        for (int i = 0; dsn_now_s() - start < max_detection_second; ++i %= 1000) {
-            std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(true, 50);
-            std::string s_key = "sortkey_" + index;
-            std::string value;
-            err = pg_client->get(h_key, s_key, value);
-            ASSERT_TRUE((err == PERR_OK) || err == (PERR_NOT_FOUND));
-        }
-
-        int32_t app_id;
-        int32_t partition_count;
-        std::vector<dsn::partition_configuration> partitions;
-        ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        dsn::replication::detect_hotkey_response resp;
-        dsn::replication::detect_hotkey_request req;
         req.type = dsn::replication::hotkey_type::type::READ;
         req.action = dsn::replication::detect_action::QUERY;
         bool find_hotkey = false;
@@ -289,25 +243,8 @@ public:
 
     void read_random_data()
     {
-        int64_t start = dsn_now_s();
-        int err = PERR_OK;
-        ASSERT_NE(pg_client, nullptr);
+        generate_dataset(max_detection_second, detection_type::read_data, key_type::random_dataset);
 
-        for (int i = 0; dsn_now_s() - start < max_detection_second; ++i %= 1000) {
-            std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(false, 0);
-            std::string s_key = "sortkey_" + index;
-            std::string value;
-            err = pg_client->get(h_key, s_key, value);
-            ASSERT_TRUE((err == PERR_OK) || err == (PERR_NOT_FOUND));
-        }
-
-        int32_t app_id;
-        int32_t partition_count;
-        std::vector<dsn::partition_configuration> partitions;
-        ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        dsn::replication::detect_hotkey_response resp;
-        dsn::replication::detect_hotkey_request req;
         req.type = dsn::replication::hotkey_type::type::READ;
         req.action = dsn::replication::detect_action::QUERY;
         bool find_hotkey = false;
@@ -324,6 +261,12 @@ public:
 
     const std::string app_name = "hotspot_test";
     const int64_t max_detection_second = 100;
+    const int64_t warmup_second = 30;
+    int32_t app_id;
+    int32_t partition_count;
+    std::vector<dsn::partition_configuration> partitions;
+    dsn::replication::detect_hotkey_response resp;
+    dsn::replication::detect_hotkey_request req;
     std::shared_ptr<replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;
 };
