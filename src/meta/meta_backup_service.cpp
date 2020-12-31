@@ -15,16 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/utils/time_utils.h>
-#include <dsn/utility/output_utils.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/http/http_server.h>
+#include <dsn/utility/filesystem.h>
+#include <dsn/utility/output_utils.h>
+#include <dsn/utils/time_utils.h>
 
+#include "block_service/block_service_manager.h"
+#include "common/backup_utils.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
 #include "server_state.h"
-#include "block_service/block_service_manager.h"
-#include "common/backup_utils.h"
 
 namespace dsn {
 namespace replication {
@@ -214,7 +215,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
             "%s: create file(%s) succeed, but can't get handle",
             _backup_sig.c_str(),
             create_file_req.file_name.c_str());
-    if (!remote_file->get_md5sum().empty() && remote_file->get_size() > 0) {
+    if (remote_file->get_size() > 0) {
         // we only focus whether app_backup_status file is exist, so ignore app_backup_status file's
         // context
         ddebug("app(%d) already write finish-flag on block service", app_id);
@@ -358,46 +359,36 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
                                                         int32_t progress,
                                                         const rpc_address &source)
 {
-    int32_t &recorded_progress = _progress.partition_progress[pid];
-    if (recorded_progress == cold_backup_constant::PROGRESS_FINISHED) {
-        dwarn("%s: recorded progress(%d) is finished for pid(%d.%d), ignore the progress "
-              "from(%s)",
-              _backup_sig.c_str(),
-              recorded_progress,
-              pid.get_app_id(),
-              pid.get_partition_index(),
-              source.to_string(),
-              progress);
+    int32_t &local_progress = _progress.partition_progress[pid];
+    if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
+        dwarn_f("{}: backup of partition {} has been finished, ignore the backup response from {} ",
+                _backup_sig,
+                pid.to_string(),
+                source.to_string());
         return true;
     }
 
-    if (progress < _progress.partition_progress[pid]) {
-        dwarn("%s: local progress(%d) is larger than progress(%d) from rs(%s) for pid(%d.%d), "
-              "perhaps primary changed",
-              _backup_sig.c_str(),
-              _progress.partition_progress[pid],
-              progress,
-              source.to_string(),
-              pid.get_app_id(),
-              pid.get_partition_index());
+    if (progress < local_progress) {
+        dwarn_f("{}: local backup progress {} is larger than progress {} from server {} for "
+                "partition {}, perhaps it's primary has changed",
+                _backup_sig,
+                local_progress,
+                progress,
+                source.to_string(),
+                pid.to_string());
     }
 
-    recorded_progress = progress;
-    dinfo("%s: gpid(%d.%d)'s progress to (%d) from(%s)",
-          _backup_sig.c_str(),
-          pid.get_app_id(),
-          pid.get_partition_index(),
-          progress,
-          source.to_string());
-    if (recorded_progress == cold_backup_constant::PROGRESS_FINISHED) {
-        ddebug("%s: finish backup for gpid(%d.%d) from %s, app_progress(%d)",
-               _backup_sig.c_str(),
-               pid.get_app_id(),
-               pid.get_partition_index(),
-               source.to_string(),
-               _progress.unfinished_partitions_per_app[pid.get_app_id()]);
+    local_progress = progress;
+    dinfo_f(
+        "{}: update partition {} backup progress to {}.", _backup_sig, pid.to_string(), progress);
+    if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
+        ddebug_f("{}: finish backup for partition {}, the app has {} unfinished backup "
+                 "partition now.",
+                 _backup_sig,
+                 pid.to_string(),
+                 _progress.unfinished_partitions_per_app[pid.get_app_id()]);
 
-        // let's update the progress-chain: partition => app => current_backup_instance
+        // update the progress-chain: partition => app => current_backup_instance
         if (--_progress.unfinished_partitions_per_app[pid.get_app_id()] == 0) {
             dsn::task_ptr task_after_write_finish_flag =
                 tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, pid]() {
@@ -407,7 +398,7 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
             write_backup_app_finish_flag_unlocked(pid.get_app_id(), task_after_write_finish_flag);
         }
     }
-    return recorded_progress == cold_backup_constant::PROGRESS_FINISHED;
+    return local_progress == cold_backup_constant::PROGRESS_FINISHED;
 }
 
 void policy_context::record_partition_checkpoint_size_unlock(const gpid &pid, int64_t size)
@@ -418,17 +409,15 @@ void policy_context::record_partition_checkpoint_size_unlock(const gpid &pid, in
 void policy_context::start_backup_partition_unlocked(gpid pid)
 {
     dsn::rpc_address partition_primary;
-    // check the partition status
     {
+        // check app and partition status
         zauto_read_lock l;
         _backup_service->get_state()->lock_read(l);
         const app_state *app = _backup_service->get_state()->get_app(pid.get_app_id()).get();
 
         if (app == nullptr || app->status == app_status::AS_DROPPED) {
-            // skip backup app this time
-            dwarn("%s: app(%lld) is not available any more, just ignore this app",
-                  _backup_sig.c_str(),
-                  pid.get_app_id());
+            dwarn_f(
+                "{}: app {} is not available, skip to backup it.", _backup_sig, pid.get_app_id());
             _progress.is_app_skipped[pid.get_app_id()] = true;
             update_partition_progress_unlocked(
                 pid, cold_backup_constant::PROGRESS_FINISHED, dsn::rpc_address());
@@ -436,47 +425,40 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         }
         partition_primary = app->partitions[pid.get_partition_index()].primary;
     }
-
-    // then start to backup partition
-    {
-        if (partition_primary.is_invalid()) {
-            dwarn("%s: gpid(%d.%d) don't have a primary right now, retry it later",
-                  _backup_sig.c_str(),
-                  pid.get_app_id(),
-                  pid.get_partition_index());
-            tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                             &_tracker,
-                             [this, pid]() {
-                                 zauto_lock l(_lock);
-                                 start_backup_partition_unlocked(pid);
-                             },
-                             0,
-                             _backup_service->backup_option().reconfiguration_retry_delay_ms);
-        } else {
-            backup_request req;
-            req.pid = pid;
-            req.policy = *(static_cast<const policy_info *>(&_policy));
-            req.backup_id = _cur_backup.backup_id;
-            req.app_name = _policy.app_names.at(pid.get_app_id());
-            dsn::message_ex *request =
-                dsn::message_ex::create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
-            dsn::marshall(request, req);
-            dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
-                request,
-                &_tracker,
-                [this, pid, partition_primary](error_code err, backup_response &&response) {
-                    on_backup_reply(err, std::move(response), pid, partition_primary);
-                });
-            _progress.backup_requests[pid] = rpc_callback;
-            ddebug("%s: send backup command to replica server, partition(%d.%d), target_addr = %s",
-                   _backup_sig.c_str(),
-                   pid.get_app_id(),
-                   pid.get_partition_index(),
-                   partition_primary.to_string());
-            _backup_service->get_meta_service()->send_request(
-                request, partition_primary, rpc_callback);
-        }
+    if (partition_primary.is_invalid()) {
+        dwarn_f("{}: partition {} doesn't have a primary now, retry to backup it later",
+                _backup_sig,
+                pid.to_string());
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         &_tracker,
+                         [this, pid]() {
+                             zauto_lock l(_lock);
+                             start_backup_partition_unlocked(pid);
+                         },
+                         0,
+                         _backup_service->backup_option().reconfiguration_retry_delay_ms);
+        return;
     }
+
+    backup_request req;
+    req.pid = pid;
+    req.policy = *(static_cast<const policy_info *>(&_policy));
+    req.backup_id = _cur_backup.backup_id;
+    req.app_name = _policy.app_names.at(pid.get_app_id());
+    dsn::message_ex *request =
+        dsn::message_ex::create_request(RPC_COLD_BACKUP, 0, pid.thread_hash());
+    dsn::marshall(request, req);
+    dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
+        request,
+        &_tracker,
+        [this, pid, partition_primary](error_code err, backup_response &&response) {
+            on_backup_reply(err, std::move(response), pid, partition_primary);
+        });
+    ddebug_f("{}: send backup command to partition {}, target_addr = {}",
+             _backup_sig,
+             pid.to_string(),
+             partition_primary.to_string());
+    _backup_service->get_meta_service()->send_request(request, partition_primary, rpc_callback);
 }
 
 void policy_context::on_backup_reply(error_code err,
@@ -484,10 +466,11 @@ void policy_context::on_backup_reply(error_code err,
                                      gpid pid,
                                      const rpc_address &primary)
 {
+    ddebug_f("{}: receive backup response for partition {} from server {}.",
+             _backup_sig,
+             pid.to_string(),
+             primary.to_string());
     if (err == dsn::ERR_OK && response.err == dsn::ERR_OK) {
-        zauto_lock l(_lock);
-
-        _progress.backup_requests[pid] = nullptr;
         dassert(response.policy_name == _policy.policy_name,
                 "policy name(%s vs %s) don't match, pid(%d.%d), replica_server(%s)",
                 _policy.policy_name.c_str(),
@@ -512,31 +495,31 @@ void policy_context::on_backup_reply(error_code err,
                 pid.get_partition_index());
 
         if (response.backup_id < _cur_backup.backup_id) {
-            dwarn("%s: got a backup response with lower backup id(%lld), "
-                  "pid(%d.%d), rs(%s), maybe staled message",
-                  _backup_sig.c_str(),
-                  response.backup_id,
-                  pid.get_app_id(),
-                  pid.get_partition_index(),
-                  primary.to_string());
+            dwarn_f("{}: got a backup response of partition {} from server {}, whose backup id "
+                    "{} is smaller than current backup id {},  maybe it is a stale message",
+                    _backup_sig,
+                    pid.to_string(),
+                    primary.to_string(),
+                    response.backup_id,
+                    _cur_backup.backup_id);
         } else {
+            zauto_lock l(_lock);
             record_partition_checkpoint_size_unlock(pid, response.checkpoint_total_size);
-            // NOTICE: if a partition is finished, we don't try to resend the command again
             if (update_partition_progress_unlocked(pid, response.progress, primary)) {
+                // partition backup finished
                 return;
             }
         }
     } else {
-        dwarn("%s: backup got error for gpid(%d.%d) from(%s), rpc(%s), logic(%s)",
-              _backup_sig.c_str(),
-              pid.get_app_id(),
-              pid.get_partition_index(),
-              primary.to_string(),
-              err.to_string(),
-              response.err.to_string());
+        dwarn_f("{}: backup got error for partition {} from {}, rpc error {}, response error {}",
+                _backup_sig.c_str(),
+                pid.to_string(),
+                primary.to_string(),
+                err.to_string(),
+                response.err.to_string());
     }
 
-    // start another turn of backup no matter we encounter error or not finished
+    // retry to backup the partition.
     tasking::enqueue(LPC_DEFAULT_CALLBACK,
                      &_tracker,
                      [this, pid]() {
@@ -1202,7 +1185,6 @@ void backup_service::start()
     start_create_policy_meta_root(after_create_policy_meta_root);
 }
 
-// TODO(zhaoliwei) refactor function add_backup_policy
 void backup_service::add_backup_policy(dsn::message_ex *msg)
 {
     configuration_add_backup_policy_request request;
@@ -1229,67 +1211,58 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
         // check app status
         zauto_read_lock l;
         _state->lock_read(l);
-
         for (auto &app_id : request.app_ids) {
             const std::shared_ptr<app_state> &app = _state->get_app(app_id);
             if (app == nullptr) {
-                derror("app(%d) doesn't exist, can't be added to policy %s",
-                       app_id,
-                       request.policy_name.c_str());
-                response.hint_message += "invalid app(" + std::to_string(app_id) + ")\n";
-            } else {
-                app_ids.insert(app_id);
-                app_names.insert(std::make_pair(app_id, app->app_name));
-            }
-        }
-    }
-
-    bool should_create_new_policy = true;
-    std::shared_ptr<policy_context> policy_context_ptr = nullptr;
-
-    if (app_ids.size() > 0) {
-        {
-            // if request is valid, we just modify _pilicy_states fastly, then release the lock
-            zauto_lock l(_lock);
-            if (!is_valid_policy_name_unlocked(request.policy_name)) {
+                derror_f("app {} doesn't exist, policy {} shouldn't be added.",
+                         app_id,
+                         request.policy_name);
                 response.err = ERR_INVALID_PARAMETERS;
-                should_create_new_policy = false;
-            } else {
-                policy_context_ptr = _factory(this);
+                response.hint_message = "invalid app " + std::to_string(app_id);
+                _meta_svc->reply_data(msg, response);
+                msg->release_ref();
+                return;
             }
+            app_ids.insert(app_id);
+            app_names.insert(std::make_pair(app_id, app->app_name));
         }
-
-        if (_meta_svc->get_block_service_manager().get_or_create_block_filesystem(
-                request.backup_provider_type) == nullptr) {
-            derror("invalid backup_provider_type(%s)", request.backup_provider_type.c_str());
-            response.err = ERR_INVALID_PARAMETERS;
-            should_create_new_policy = false;
-        }
-
-        if (should_create_new_policy) {
-            policy p;
-            ddebug("add backup polciy, policy_name = %s", request.policy_name.c_str());
-            p.policy_name = request.policy_name;
-            p.backup_provider_type = request.backup_provider_type;
-            p.backup_interval_seconds = request.backup_interval_seconds;
-            p.backup_history_count_to_keep = request.backup_history_count_to_keep;
-            p.start_time.parse_from(request.start_time);
-            p.app_ids = app_ids;
-            p.app_names = app_names;
-            policy_context_ptr->set_policy(std::move(p));
-        }
-    } else {
-        should_create_new_policy = false;
     }
 
-    if (should_create_new_policy) {
-        dassert(policy_context_ptr != nullptr, "invalid policy_context");
-        do_add_policy(msg, policy_context_ptr, response.hint_message);
-    } else {
+    {
+        // check policy name
+        zauto_lock l(_lock);
+        if (!is_valid_policy_name_unlocked(request.policy_name)) {
+            response.err = ERR_INVALID_PARAMETERS;
+            response.hint_message = "invalid policy_name: " + request.policy_name;
+            _meta_svc->reply_data(msg, response);
+            msg->release_ref();
+            return;
+        }
+    }
+
+    // check backup provider
+    if (_meta_svc->get_block_service_manager().get_or_create_block_filesystem(
+            request.backup_provider_type) == nullptr) {
         response.err = ERR_INVALID_PARAMETERS;
+        response.hint_message = "invalid backup_provider_type: " + request.backup_provider_type;
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
+        return;
     }
+
+    ddebug_f("start to add backup polciy {}.", request.policy_name);
+    std::shared_ptr<policy_context> policy_context_ptr = _factory(this);
+    dassert(policy_context_ptr != nullptr, "invalid policy_context");
+    policy p;
+    p.policy_name = request.policy_name;
+    p.backup_provider_type = request.backup_provider_type;
+    p.backup_interval_seconds = request.backup_interval_seconds;
+    p.backup_history_count_to_keep = request.backup_history_count_to_keep;
+    p.start_time.parse_from(request.start_time);
+    p.app_ids = app_ids;
+    p.app_names = app_names;
+    policy_context_ptr->set_policy(std::move(p));
+    do_add_policy(msg, policy_context_ptr, response.hint_message);
 }
 
 void backup_service::do_add_policy(dsn::message_ex *req,
