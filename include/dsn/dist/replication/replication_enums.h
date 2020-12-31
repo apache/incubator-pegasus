@@ -98,6 +98,7 @@ ENUM_END2(replication::hotkey_type::type, hotkey_type)
 ENUM_BEGIN2(replication::detect_action::type, detect_action, replication::detect_action::START)
 ENUM_REG(replication::detect_action::START)
 ENUM_REG(replication::detect_action::STOP)
+ENUM_REG(replication::detect_action::QUERY)
 ENUM_END2(replication::detect_action::type, detect_action)
 
 ENUM_BEGIN2(replication::split_status::type, split_status, replication::split_status::NOT_SPLIT)
@@ -116,4 +117,4 @@ ENUM_REG(replication::disk_migration_status::MOVING)
 ENUM_REG(replication::disk_migration_status::MOVED)
 ENUM_REG(replication::disk_migration_status::CLOSED)
 ENUM_END2(replication::disk_migration_status::type, disk_migration_status)
-}
+} // namespace dsn
