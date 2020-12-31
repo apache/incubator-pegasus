@@ -256,19 +256,17 @@ public:
             }
         }
 
-        resp.error =
-            db_write_batch_put(decree, update.key, std::to_string(new_value), new_expire_ts);
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+        resp.error = _rocksdb_wrapper->write_batch_put(
+            decree, update.key, std::to_string(new_value), new_expire_ts);
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
             return resp.error;
         }
 
-        resp.error = db_write(decree);
+        resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error == 0) {
             resp.new_value = new_value;
         }
-
-        clear_up_batch_states(decree, resp.error);
         return resp.error;
     }
 
