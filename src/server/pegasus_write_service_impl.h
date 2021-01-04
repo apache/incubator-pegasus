@@ -31,6 +31,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <gtest/gtest_prod.h>
+#include <dsn/utility/defer.h>
 
 namespace pegasus {
 namespace server {
@@ -255,19 +256,17 @@ public:
             }
         }
 
-        resp.error =
-            db_write_batch_put(decree, update.key, std::to_string(new_value), new_expire_ts);
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
+        resp.error = _rocksdb_wrapper->write_batch_put(
+            decree, update.key, std::to_string(new_value), new_expire_ts);
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
             return resp.error;
         }
 
-        resp.error = db_write(decree);
+        resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error == 0) {
             resp.new_value = new_value;
         }
-
-        clear_up_batch_states(decree, resp.error);
         return resp.error;
     }
 
@@ -338,22 +337,24 @@ public:
             } else {
                 set_key = check_key;
             }
-            resp.error = db_write_batch_put(decree,
-                                            set_key,
-                                            update.set_value,
-                                            static_cast<uint32_t>(update.set_expire_ts_seconds));
+            resp.error = _rocksdb_wrapper->write_batch_put(
+                decree,
+                set_key,
+                update.set_value,
+                static_cast<uint32_t>(update.set_expire_ts_seconds));
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
-            resp.error = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+            resp.error = _rocksdb_wrapper->write_batch_put(
+                decree, dsn::string_view(), dsn::string_view(), 0);
         }
+
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
             return resp.error;
         }
 
-        resp.error = db_write(decree);
+        resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
             return resp.error;
         }
 
@@ -363,7 +364,6 @@ public:
                 invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
 
-        clear_up_batch_states(decree, resp.error);
         return 0;
     }
 
@@ -550,10 +550,13 @@ public:
 
     void set_default_ttl(uint32_t ttl)
     {
+        // TODO(zlw): remove these lines after the refactor is done
         if (_default_ttl != ttl) {
             _default_ttl = ttl;
             ddebug_replica("update _default_ttl to {}.", ttl);
         }
+
+        _rocksdb_wrapper->set_default_ttl(ttl);
     }
 
 private:
