@@ -215,6 +215,16 @@ public:
         return it->second.has_tag(tag);
     }
 
+    error_with<std::string> get_flag_str(const std::string &name) const
+    {
+        const auto iter = _flags.find(name);
+        if (iter == _flags.end()) {
+            return error_s::make(ERR_OBJECT_NOT_FOUND, fmt::format("{} is not found", name));
+        }
+
+        return iter->second.to_json();
+    }
+
     std::string list_all_flags() const
     {
         utils::table_printer tp;
@@ -270,6 +280,11 @@ flag_tagger::flag_tagger(const char *name, const flag_tag &tag)
 /*extern*/ bool has_tag(const std::string &name, const flag_tag &tag)
 {
     return flag_registry::instance().has_tag(name, tag);
+}
+
+/*extern*/ error_with<std::string> get_flag_str(const std::string &flag_name)
+{
+    return flag_registry::instance().get_flag_str(flag_name);
 }
 
 /*extern*/ std::string list_all_flags() { return flag_registry::instance().list_all_flags(); }

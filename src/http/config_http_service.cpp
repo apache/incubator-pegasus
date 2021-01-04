@@ -48,4 +48,25 @@ void list_all_configs(const http_request &req, http_response &resp)
     resp.body = list_all_flags();
     resp.status_code = http_status_code::ok;
 }
+
+void get_config(const http_request &req, http_response &resp)
+{
+    std::string config_name;
+    for (const auto &p : req.query_args) {
+        if ("name" == p.first) {
+            config_name = p.second;
+        } else {
+            resp.status_code = http_status_code::bad_request;
+            return;
+        }
+    }
+
+    auto res = get_flag_str(config_name);
+    if (res.is_ok()) {
+        resp.body = res.get_value();
+    } else {
+        resp.body = res.get_error().description();
+    }
+    resp.status_code = http_status_code::ok;
+}
 } // namespace dsn
