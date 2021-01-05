@@ -171,8 +171,8 @@ public:
 
         auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         for (auto &sort_key : update.sort_keys) {
-            resp.error =
-                _rocksdb_wrapper->write_batch_delete(decree, composite_raw_key(update.hash_key, sort_key));
+            resp.error = _rocksdb_wrapper->write_batch_delete(
+                decree, composite_raw_key(update.hash_key, sort_key));
             if (resp.error) {
                 return resp.error;
             }
