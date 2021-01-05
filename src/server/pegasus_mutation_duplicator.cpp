@@ -29,6 +29,7 @@
 namespace dsn {
 namespace replication {
 
+
 /// static definition of mutation_duplicator::creator.
 /*static*/ std::function<std::unique_ptr<mutation_duplicator>(
     replica_base *, string_view, string_view)>
