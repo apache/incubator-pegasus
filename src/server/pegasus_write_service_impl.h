@@ -508,15 +508,7 @@ public:
         }
 
         // ingest external files
-        rocksdb::IngestExternalFileOptions ifo;
-        rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
-        if (!s.ok()) {
-            derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
-            return dsn::ERR_INGESTION_FAILED;
-        } else {
-            ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
-            return dsn::ERR_OK;
-        }
+        return _rocksdb_wrapper->ingestion_files(decree, sst_file_list);
     }
 
     /// For batch write.

@@ -21,6 +21,7 @@
 
 #include <dsn/dist/replication/replica_base.h>
 #include <gtest/gtest_prod.h>
+#include <dsn/utility/error_code.h>
 
 namespace rocksdb {
 class DB;
@@ -32,6 +33,9 @@ class WriteOptions;
 
 namespace dsn {
 class perf_counter_wrapper;
+namespace replication {
+class bulk_load_metadata;
+}
 } // namespace dsn
 
 namespace pegasus {
@@ -63,6 +67,10 @@ public:
                             uint32_t expire_sec);
     int write(int64_t decree);
     void clear_up_write_batch();
+    // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
+    // \return ERR_OK: rocksdb ingestion succeed
+    dsn::error_code ingestion_files(const int64_t decree,
+                                    const std::vector<std::string> &sst_file_list);
 
     void set_default_ttl(uint32_t ttl);
 

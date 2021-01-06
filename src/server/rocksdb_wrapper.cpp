@@ -19,6 +19,7 @@
 
 #include "rocksdb_wrapper.h"
 
+#include <dsn/dist/replication/replication_types.h>
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
 #include "base/pegasus_value_schema.h"
@@ -161,6 +162,21 @@ int rocksdb_wrapper::write(int64_t decree)
 }
 
 void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }
+
+dsn::error_code rocksdb_wrapper::ingestion_files(const int64_t decree,
+                                                 const std::vector<std::string> &sst_file_list)
+{
+    // ingest external files
+    rocksdb::IngestExternalFileOptions ifo;
+    rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
+    if (!s.ok()) {
+        derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
+        return dsn::ERR_INGESTION_FAILED;
+    } else {
+        ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
+        return dsn::ERR_OK;
+    }
+}
 
 void rocksdb_wrapper::set_default_ttl(uint32_t ttl)
 {
