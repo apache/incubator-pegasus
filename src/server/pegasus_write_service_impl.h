@@ -168,21 +168,19 @@ public:
             return empty_put(decree);
         }
 
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         for (auto &sort_key : update.sort_keys) {
-            resp.error =
-                db_write_batch_delete(decree, composite_raw_key(update.hash_key, sort_key));
+            resp.error = _rocksdb_wrapper->write_batch_delete(
+                decree, composite_raw_key(update.hash_key, sort_key));
             if (resp.error) {
-                clear_up_batch_states(decree, resp.error);
                 return resp.error;
             }
         }
 
-        resp.error = db_write(decree);
+        resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error == 0) {
             resp.count = update.sort_keys.size();
         }
-
-        clear_up_batch_states(decree, resp.error);
         return resp.error;
     }
 

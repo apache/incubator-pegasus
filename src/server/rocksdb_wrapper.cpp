@@ -160,6 +160,25 @@ int rocksdb_wrapper::write(int64_t decree)
     return status.code();
 }
 
+int rocksdb_wrapper::write_batch_delete(int64_t decree, dsn::string_view raw_key)
+{
+    FAIL_POINT_INJECT_F("db_write_batch_delete",
+                        [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
+
+    rocksdb::Status s = _write_batch->Delete(utils::to_rocksdb_slice(raw_key));
+    if (dsn_unlikely(!s.ok())) {
+        dsn::blob hash_key, sort_key;
+        pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
+        derror_rocksdb("write_batch_delete",
+                       s.ToString(),
+                       "decree: {}, hash_key: {}, sort_key: {}",
+                       decree,
+                       utils::c_escape_string(hash_key),
+                       utils::c_escape_string(sort_key));
+    }
+    return s.code();
+}
+
 void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }
 
 void rocksdb_wrapper::set_default_ttl(uint32_t ttl)
