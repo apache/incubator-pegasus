@@ -104,15 +104,13 @@ public:
 
     int empty_put(int64_t decree)
     {
-        int err = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+        int err = _rocksdb_wrapper->write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         if (err) {
-            clear_up_batch_states(decree, err);
             return err;
         }
 
-        err = db_write(decree);
-
-        clear_up_batch_states(decree, err);
+        err = _rocksdb_wrapper->write(decree);
         return err;
     }
 
