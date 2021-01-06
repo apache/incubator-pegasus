@@ -245,19 +245,19 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         hint = fmt::format("still detecting {} hotkey, state is {}",
                            dsn::enum_to_string(_hotkey_type),
                            enum_to_string(now_state));
-        return;
+        break;
     case hotkey_collector_state::FINISHED:
         resp.err = dsn::ERR_BUSY;
         hint = fmt::format("{} hotkey result has been found: {}, you can send a stop rpc to "
                            "restart hotkey detection",
                            dsn::enum_to_string(_hotkey_type),
                            pegasus::utils::c_escape_string(_result.hot_hash_key));
-        return;
+        break;
     case hotkey_collector_state::STOPPED:
         change_state_to_coarse_detecting();
         resp.err = dsn::ERR_OK;
         hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
-        return;
+        break;
     default:
         hint = "invalid collector state";
         resp.err = dsn::ERR_INVALID_STATE;
