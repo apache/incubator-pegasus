@@ -66,6 +66,7 @@ public:
                             dsn::string_view value,
                             uint32_t expire_sec);
     int write(int64_t decree);
+    int write_batch_delete(int64_t decree, dsn::string_view raw_key);
     void clear_up_write_batch();
     // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
     // \return ERR_OK: rocksdb ingestion succeed
