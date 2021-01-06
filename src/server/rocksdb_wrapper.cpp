@@ -169,7 +169,7 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, dsn::string_view raw_key
     if (dsn_unlikely(!s.ok())) {
         dsn::blob hash_key, sort_key;
         pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-        derror_rocksdb("WriteBatchDelete",
+        derror_rocksdb("write_batch_delete",
                        s.ToString(),
                        "decree: {}, hash_key: {}, sort_key: {}",
                        decree,
