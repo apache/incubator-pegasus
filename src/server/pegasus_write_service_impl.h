@@ -437,13 +437,13 @@ public:
                 ::dsn::blob key;
                 pegasus_generate_key(key, update.hash_key, m.sort_key);
                 if (m.operation == ::dsn::apps::mutate_operation::MO_PUT) {
-                    resp.error = db_write_batch_put(
+                    resp.error = _rocksdb_wrapper->write_batch_put(
                         decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
                 } else {
                     dassert_f(m.operation == ::dsn::apps::mutate_operation::MO_DELETE,
                               "m.operation = %d",
                               m.operation);
-                    resp.error = db_write_batch_delete(decree, key);
+                    resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
                 }
 
                 // in case of failure, cancel mutations
@@ -452,17 +452,17 @@ public:
             }
         } else {
             // check not passed, write empty record to update rocksdb's last flushed decree
-            resp.error = db_write_batch_put(decree, dsn::string_view(), dsn::string_view(), 0);
+            resp.error = _rocksdb_wrapper->write_batch_put(
+                decree, dsn::string_view(), dsn::string_view(), 0);
         }
 
+        auto cleanup = dsn::defer([this]() { _rocksdb_wrapper->clear_up_write_batch(); });
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
             return resp.error;
         }
 
-        resp.error = db_write(decree);
+        resp.error = _rocksdb_wrapper->write(decree);
         if (resp.error) {
-            clear_up_batch_states(decree, resp.error);
             return resp.error;
         }
 
@@ -471,8 +471,6 @@ public:
             resp.error =
                 invalid_argument ? rocksdb::Status::kInvalidArgument : rocksdb::Status::kTryAgain;
         }
-
-        clear_up_batch_states(decree, resp.error);
         return 0;
     }
 
