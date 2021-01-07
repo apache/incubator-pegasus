@@ -182,19 +182,18 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, dsn::string_view raw_key
 
 void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }
 
-dsn::error_code rocksdb_wrapper::ingestion_files(const int64_t decree,
-                                                 const std::vector<std::string> &sst_file_list)
+int rocksdb_wrapper::ingestion_files(const int64_t decree,
+                                     const std::vector<std::string> &sst_file_list)
 {
     // ingest external files
     rocksdb::IngestExternalFileOptions ifo;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
-    if (!s.ok()) {
+    if (dsn_unlikely(!s.ok())) {
         derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
-        return dsn::ERR_INGESTION_FAILED;
     } else {
         ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
-        return dsn::ERR_OK;
     }
+    return s.code();
 }
 
 void rocksdb_wrapper::set_default_ttl(uint32_t ttl)

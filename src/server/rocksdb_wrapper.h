@@ -21,7 +21,6 @@
 
 #include <dsn/dist/replication/replica_base.h>
 #include <gtest/gtest_prod.h>
-#include <dsn/utility/error_code.h>
 
 namespace rocksdb {
 class DB;
@@ -68,10 +67,7 @@ public:
     int write(int64_t decree);
     int write_batch_delete(int64_t decree, dsn::string_view raw_key);
     void clear_up_write_batch();
-    // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
-    // \return ERR_OK: rocksdb ingestion succeed
-    dsn::error_code ingestion_files(const int64_t decree,
-                                    const std::vector<std::string> &sst_file_list);
+    int ingestion_files(const int64_t decree, const std::vector<std::string> &sst_file_list);
 
     void set_default_ttl(uint32_t ttl);
 

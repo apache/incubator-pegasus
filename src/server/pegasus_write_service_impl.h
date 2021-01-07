@@ -505,7 +505,10 @@ public:
         }
 
         // ingest external files
-        return _rocksdb_wrapper->ingestion_files(decree, sst_file_list);
+        if (dsn_unlikely(_rocksdb_wrapper->ingestion_files(decree, sst_file_list) != 0)) {
+            return dsn::ERR_INGESTION_FAILED;
+        }
+        return dsn::ERR_OK;
     }
 
     /// For batch write.
