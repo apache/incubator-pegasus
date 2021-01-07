@@ -185,7 +185,11 @@ int rocksdb_wrapper::ingestion_files(int64_t decree, const std::vector<std::stri
 {
     rocksdb::IngestExternalFileOptions ifo;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
-    derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
+    if (dsn_unlikely(!s.ok())) {
+        derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
+    } else {
+        ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
+    }
     return s.code();
 }
 
