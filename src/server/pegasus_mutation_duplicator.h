@@ -69,6 +69,7 @@ private:
 
     dsn::perf_counter_wrapper _shipped_ops;
     dsn::perf_counter_wrapper _failed_shipping_ops;
+    dsn::perf_counter_wrapper _rejected_shipping_ops;
 };
 
 // Decodes the binary `request_data` into write request in thrift struct, and

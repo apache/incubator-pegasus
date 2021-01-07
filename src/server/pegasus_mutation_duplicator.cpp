@@ -110,6 +110,11 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
         fmt::format("dup_failed_shipping_ops@{}", str_gpid).c_str(),
         COUNTER_TYPE_RATE,
         "the qps of failed DUPLICATE requests sent from this app");
+    _rejected_shipping_ops.init_app_counter(
+            "app.pegasus",
+            fmt::format("dup_rejected_shipping_ops@{}", str_gpid).c_str(),
+            COUNTER_TYPE_RATE,
+            "the qps of rejected DUPLICATE requests sent from this app");
 }
 
 void pegasus_mutation_duplicator::send(uint64_t hash, callback cb)
@@ -141,6 +146,9 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
 
     if (perr != PERR_OK || err != dsn::ERR_OK) {
         _failed_shipping_ops->increment();
+        if (dsn::ERR_BUSY == err) {
+            _rejected_shipping_ops->increment();
+        }
 
         // randomly log the 1% of the failed duplicate rpc, because minor number of
         // errors are acceptable.
