@@ -1,0 +1,43 @@
+name: Build Pegasus regularly
+
+on:
+  push:
+    paths:
+      - '.github/workflows/pegasus-regular-build.yml'
+
+  # for manually triggering workflow
+  workflow_dispatch:
+
+  # run for every day 2am UTC+8(Beijing)
+  schedule:
+    - cron:  '0 18 */1 * *'
+
+jobs:
+  build_docker_images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        osversion:
+          - ubuntu1604
+          - ubuntu1804
+          - ubuntu2004
+          #- centos6 is EOL
+          - centos7
+    container:
+      image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
+    steps:
+      -
+        uses: actions/checkout@v2
+        with:
+          repository: 'apache/incubator-pegasus'
+      -
+        name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+      -
+        name: Compilation
+        run: |
+          ./run.sh build -c --skip_thirdparty
+      -
+        name: Packaging
+        run: ./run.sh pack_server

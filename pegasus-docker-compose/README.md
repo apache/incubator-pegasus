@@ -8,19 +8,27 @@ on your machine.
 ### Docker image
 
 Before setting up the dockers, you should first have a docker image of a specfic version of Pegasus.
-Check out the latest version 
+
+Run compilation and package your binaries:
 
 ```sh
-git clone git@github.com:XiaoMi/pegasus.git
-
-cd pegasus
+cd /your/local/apache-pegasus-source
 ./run.sh build -c # Compiling the code.
 ./run.sh pack_server # Packaging the binaries of Pegasus server.
-
-./docker/build_docker.sh
 ```
 
-> We will soon publish a docker image of Pegasus server 2.0.0.
+Then build the image:
+
+```
+cd /your/local/pegasus-docker/pegasus-docker-compose
+./build-docker.sh /your/local/apache-pegasus-source
+```
+
+You will have a docker images called "pegasus:latest" built on you machine now.
+
+```sh
+docker images
+```
 
 ### Set up a docker cluster
 
