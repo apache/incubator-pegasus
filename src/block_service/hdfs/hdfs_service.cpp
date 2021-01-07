@@ -28,6 +28,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/flags.h>
 #include <dsn/utility/safe_strerror_posix.h>
+#include <dsn/utility/TokenBucket.h>
 #include <dsn/utility/utils.h>
 
 namespace dsn {
@@ -42,13 +43,16 @@ DSN_DEFINE_uint64("replication",
                   "hdfs read batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_read_batch_size_bytes, FT_MUTABLE);
 
+DSN_DEFINE_uint32("replication", hdfs_read_limit_rate_megabytes, 200, "hdfs read limit(MB/s)");
+DSN_TAG_VARIABLE(hdfs_read_limit_rate_megabytes, FT_MUTABLE);
+
 DSN_DEFINE_uint64("replication",
                   hdfs_write_batch_size_bytes,
                   64 << 20,
                   "hdfs write batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_write_batch_size_bytes, FT_MUTABLE);
 
-hdfs_service::hdfs_service() {}
+hdfs_service::hdfs_service() { _read_token_bucket.reset(new folly::DynamicTokenBucket()); }
 
 hdfs_service::~hdfs_service()
 {
@@ -386,7 +390,12 @@ error_code hdfs_file_object::read_data_in_batches(uint64_t start_pos,
     uint64_t read_size = 0;
     bool read_success = true;
     while (cur_pos < start_pos + data_length) {
+        const uint64_t rate = FLAGS_hdfs_read_limit_rate_megabytes << 20;
         read_size = std::min(start_pos + data_length - cur_pos, FLAGS_hdfs_read_batch_size_bytes);
+        // burst size should not be less than consume size
+        _service->_read_token_bucket->consumeWithBorrowAndWait(
+            read_size, rate, std::max(2 * rate, read_size));
+
         tSize num_read_bytes = hdfsPread(_service->get_fs(),
                                          read_file,
                                          static_cast<tOffset>(cur_pos),

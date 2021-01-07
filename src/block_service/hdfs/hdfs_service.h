@@ -20,6 +20,13 @@
 #include <dsn/dist/block_service.h>
 #include <hdfs/hdfs.h>
 
+namespace folly {
+template <typename Clock>
+class BasicDynamicTokenBucket;
+
+using DynamicTokenBucket = BasicDynamicTokenBucket<std::chrono::steady_clock>;
+}
+
 namespace dsn {
 namespace dist {
 namespace block_service {
@@ -52,6 +59,11 @@ private:
     hdfsFS _fs;
     std::string _hdfs_name_node;
     std::string _hdfs_path;
+
+    std::unique_ptr<folly::DynamicTokenBucket> _read_token_bucket;
+    // TODO: add write limiter
+
+    friend class hdfs_file_object;
 };
 
 class hdfs_file_object : public block_file
