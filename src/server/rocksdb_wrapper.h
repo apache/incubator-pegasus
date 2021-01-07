@@ -32,9 +32,6 @@ class WriteOptions;
 
 namespace dsn {
 class perf_counter_wrapper;
-namespace replication {
-class bulk_load_metadata;
-}
 } // namespace dsn
 
 namespace pegasus {
