@@ -19,7 +19,6 @@
 
 #include "rocksdb_wrapper.h"
 
-#include <dsn/dist/replication/replication_types.h>
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
 #include "base/pegasus_value_schema.h"
