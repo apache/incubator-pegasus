@@ -185,7 +185,6 @@ void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }
 int rocksdb_wrapper::ingestion_files(const int64_t decree,
                                      const std::vector<std::string> &sst_file_list)
 {
-    // ingest external files
     rocksdb::IngestExternalFileOptions ifo;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
     derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
