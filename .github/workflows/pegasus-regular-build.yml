@@ -43,5 +43,8 @@ jobs:
         run: |
           ./run.sh build -c --skip_thirdparty
       -
-        name: Packaging
+        name: Packaging Server
         run: ./run.sh pack_server
+      -
+        name: Packaging Tools
+        run: ./run.sh pack_tools
