@@ -23,6 +23,7 @@
 #include "meta/meta_service.h"
 #include "meta/test/misc/misc.h"
 #include "meta_service_test_app.h"
+#include "meta_test_base.h"
 
 namespace dsn {
 namespace replication {
@@ -140,14 +141,6 @@ public:
     }
 };
 
-void check_backup_info_eq(const backup_info &info1, const backup_info &info2)
-{
-    ASSERT_EQ(info1.app_ids, info2.app_ids);
-    ASSERT_EQ(info1.backup_id, info2.backup_id);
-    ASSERT_EQ(info1.end_time_ms, info2.end_time_ms);
-    ASSERT_EQ(info1.start_time_ms, info2.start_time_ms);
-}
-
 class progress_liar : public meta_service
 {
 public:
@@ -200,48 +193,62 @@ private:
 
 static const std::string test_policy_name = "test_policy_name";
 
-void meta_service_test_app::policy_context_test()
+class policy_context_test : public meta_test_base
 {
+protected:
+    policy_context_test() : _service(new progress_liar()), _mp(nullptr) {}
+
+    void SetUp() override
+    {
+        meta_test_base::SetUp();
+
+        dsn::error_code ec = _service->remote_storage_initialize();
+        ASSERT_EQ(ec, dsn::ERR_OK);
+        _service->_started = true;
+        _service->_backup_handler =
+            std::make_shared<backup_service>(_service.get(), policy_root, ".", nullptr);
+        _service->_backup_handler->backup_option().app_dropped_retry_delay_ms = 500_ms;
+        _service->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
+        _service->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
+        _service->_storage
+            ->create_node(
+                policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
+            ->wait();
+        ASSERT_EQ(dsn::ERR_OK, ec);
+
+        _policy.policy_name = test_policy_name;
+        _policy.is_disable = false;
+        _policy.backup_interval_seconds = 5;
+        _policy.backup_provider_type = "local_service";
+        _policy.start_time = backup_start_time(24, 0);
+        _policy.app_ids = {1, 2, 3, 4, 6};
+        _policy.app_names[1] = "app1";
+        _policy.app_names[2] = "app2";
+        _policy.app_names[3] = "app3";
+        _policy.app_names[4] = "app4";
+        _policy.app_names[6] = "app6";
+        _mp._backup_service = _service->_backup_handler.get();
+        _mp.set_policy(policy(_policy));
+
+        _service->_storage
+            ->create_node(
+                policy_dir, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
+            ->wait();
+        ASSERT_EQ(dsn::ERR_OK, ec);
+    }
+
     const std::string policy_root = "/test";
     const std::string policy_dir = "/test/" + test_policy_name;
 
-    std::shared_ptr<meta_service> s = std::make_shared<progress_liar>();
-    dsn::error_code ec = s->remote_storage_initialize();
-    ASSERT_EQ(ec, dsn::ERR_OK);
-    server_state *state = s->_state.get();
-    s->_started = true;
-    s->_backup_handler = std::make_shared<backup_service>(s.get(), policy_root, ".", nullptr);
-    s->_backup_handler->backup_option().app_dropped_retry_delay_ms = 500_ms;
-    s->_backup_handler->backup_option().request_backup_period_ms = 20_ms;
-    s->_backup_handler->backup_option().issue_backup_interval_ms = 1000_ms;
-    s->_storage
-        ->create_node(
-            policy_root, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
-        ->wait();
-    ASSERT_EQ(dsn::ERR_OK, ec);
+    std::shared_ptr<meta_service> _service;
+    mock_policy _mp;
+    policy _policy;
+};
 
-    mock_policy mp(s->_backup_handler.get());
-    policy p;
-    p.policy_name = test_policy_name;
-    p.is_disable = false;
-    p.backup_interval_seconds = 5;
-    p.backup_provider_type = "local_service";
-    p.start_time = backup_start_time(24, 0);
-    p.app_ids = {1, 2, 3, 4, 6};
-    p.app_names[1] = "app1";
-    p.app_names[2] = "app2";
-    p.app_names[3] = "app3";
-    p.app_names[4] = "app4";
-    p.app_names[6] = "app6";
-
-    mp.set_policy(policy(p));
-    s->_storage
-        ->create_node(
-            policy_dir, dsn::TASK_CODE_EXEC_INLINED, [&ec](dsn::error_code err) { ec = err; })
-        ->wait();
-    ASSERT_EQ(dsn::ERR_OK, ec);
-
+TEST_F(policy_context_test, test_app_dropped_during_backup)
+{
     int64_t time_before_backup = static_cast<int64_t>(dsn_now_ms());
+    server_state *state = _service->get_server_state();
 
     {
         // Prepare: backup_history is empty, all apps are deleted.
@@ -249,23 +256,23 @@ void meta_service_test_app::policy_context_test()
         std::cout << "issue a backup, but no app is available" << std::endl;
 
         {
-            zauto_lock l(mp._lock);
-            mp.set_maxcall_issue_new_backup_unlocked(2);
-            mp.issue_new_backup_unlocked();
+            zauto_lock l(_mp._lock);
+            _mp.set_maxcall_issue_new_backup_unlocked(2);
+            _mp.issue_new_backup_unlocked();
         }
 
-        ASSERT_TRUE(mp.notifier_issue_new_backup_unlocked().wait_for(5000));
+        ASSERT_TRUE(_mp.notifier_issue_new_backup_unlocked().wait_for(5000));
 
         {
-            zauto_lock l(mp._lock);
-            ASSERT_EQ(0, mp.counter_continue_current_backup_unlocked());
-            ASSERT_LE(time_before_backup, mp._cur_backup.backup_id);
-            ASSERT_EQ(p.app_ids, mp._cur_backup.app_ids);
-            ASSERT_NE(0, mp._cur_backup.start_time_ms);
-            ASSERT_TRUE(mp._progress.unfinished_partitions_per_app.empty());
-            ASSERT_EQ(p.app_ids.size(), mp._progress.unfinished_apps);
+            zauto_lock l(_mp._lock);
+            ASSERT_EQ(0, _mp.counter_continue_current_backup_unlocked());
+            ASSERT_LE(time_before_backup, _mp._cur_backup.backup_id);
+            ASSERT_EQ(_policy.app_ids, _mp._cur_backup.app_ids);
+            ASSERT_NE(0, _mp._cur_backup.start_time_ms);
+            ASSERT_TRUE(_mp._progress.unfinished_partitions_per_app.empty());
+            ASSERT_EQ(_policy.app_ids.size(), _mp._progress.unfinished_apps);
             ASSERT_LE(test_policy_name + std::string("@") + std::to_string(time_before_backup),
-                      mp._backup_sig);
+                      _mp._backup_sig);
         }
     }
 
@@ -284,22 +291,22 @@ void meta_service_test_app::policy_context_test()
         state->_all_apps.emplace(info.app_id, app_state::create(info));
 
         {
-            zauto_lock l(mp._lock);
-            mp.reset_records();
-            mp.set_maxcall_continue_current_backup_unlocked(0);
-            mp.issue_new_backup_unlocked();
+            zauto_lock l(_mp._lock);
+            _mp.reset_records();
+            _mp.set_maxcall_continue_current_backup_unlocked(0);
+            _mp.issue_new_backup_unlocked();
         }
 
-        ASSERT_TRUE(mp.notifier_continue_current_backup_unlocked().wait_for(5000));
+        ASSERT_TRUE(_mp.notifier_continue_current_backup_unlocked().wait_for(5000));
 
         {
-            zauto_lock l(mp._lock);
-            ASSERT_EQ(p.app_ids.size(), mp._progress.unfinished_apps);
-            ASSERT_EQ(1, mp._progress.unfinished_partitions_per_app.size());
-            ASSERT_EQ(info.app_id, mp._progress.unfinished_partitions_per_app.begin()->first);
+            zauto_lock l(_mp._lock);
+            ASSERT_EQ(_policy.app_ids.size(), _mp._progress.unfinished_apps);
+            ASSERT_EQ(1, _mp._progress.unfinished_partitions_per_app.size());
+            ASSERT_EQ(info.app_id, _mp._progress.unfinished_partitions_per_app.begin()->first);
             ASSERT_EQ(info.partition_count,
-                      mp._progress.unfinished_partitions_per_app.begin()->second);
-            ASSERT_EQ(info.partition_count, mp._progress.partition_progress.size());
+                      _mp._progress.unfinished_partitions_per_app.begin()->second);
+            ASSERT_EQ(info.partition_count, _mp._progress.partition_progress.size());
         }
     }
 
@@ -314,48 +321,48 @@ void meta_service_test_app::policy_context_test()
         backup_info info;
         info.app_ids = {1, 2, 3};
 
-        info.start_time_ms = dsn_now_ms() - (p.backup_interval_seconds + 20) * 1000 - 500;
+        info.start_time_ms = dsn_now_ms() - (_policy.backup_interval_seconds + 20) * 1000 - 500;
         info.end_time_ms = info.start_time_ms + 10;
         info.backup_id = info.start_time_ms;
-        mp.add_backup_history(info);
+        _mp.add_backup_history(info);
 
         info.start_time_ms += 10000;
         info.end_time_ms += 10000;
         info.backup_id = info.start_time_ms;
-        mp.add_backup_history(info);
+        _mp.add_backup_history(info);
 
         // the start time for recent backup is 500ms ago
         info.start_time_ms += 10000;
         info.end_time_ms += 10000;
         info.backup_id = info.start_time_ms;
-        mp.add_backup_history(info);
+        _mp.add_backup_history(info);
 
         {
-            zauto_lock l(mp._lock);
-            mp.reset_records();
+            zauto_lock l(_mp._lock);
+            _mp.reset_records();
             // issue by test -> issue by period delay -> issue by dropped retry ->
             // issue by dropped retry
-            mp.set_maxcall_issue_new_backup_unlocked(4);
+            _mp.set_maxcall_issue_new_backup_unlocked(4);
             state->_all_apps[3]->status = dsn::app_status::AS_DROPPED;
 
-            mp.issue_new_backup_unlocked();
+            _mp.issue_new_backup_unlocked();
         }
         // we mark all apps as dropped, so reissue will be triggered
-        ASSERT_TRUE(mp.notifier_issue_new_backup_unlocked().wait_for(20000));
+        ASSERT_TRUE(_mp.notifier_issue_new_backup_unlocked().wait_for(20000));
 
         {
             int64_t start_time_ms_of_sixth_backup =
-                info.start_time_ms + p.backup_interval_seconds * 1000;
-            zauto_lock l(mp._lock);
-            ASSERT_LE(start_time_ms_of_sixth_backup, mp._cur_backup.backup_id);
-            ASSERT_EQ(p.app_ids, mp._cur_backup.app_ids);
+                info.start_time_ms + _policy.backup_interval_seconds * 1000;
+            zauto_lock l(_mp._lock);
+            ASSERT_LE(start_time_ms_of_sixth_backup, _mp._cur_backup.backup_id);
+            ASSERT_EQ(_policy.app_ids, _mp._cur_backup.app_ids);
 
             // every time intialize backup, the progress will be reset
-            ASSERT_TRUE(mp._progress.unfinished_partitions_per_app.empty());
-            ASSERT_TRUE(mp._progress.partition_progress.empty());
-            ASSERT_EQ(p.app_ids.size(), mp._progress.unfinished_apps);
+            ASSERT_TRUE(_mp._progress.unfinished_partitions_per_app.empty());
+            ASSERT_TRUE(_mp._progress.partition_progress.empty());
+            ASSERT_EQ(_policy.app_ids.size(), _mp._progress.unfinished_apps);
             ASSERT_LE(test_policy_name + "@" + std::to_string(start_time_ms_of_sixth_backup),
-                      mp._backup_sig);
+                      _mp._backup_sig);
         }
     }
 
@@ -370,28 +377,28 @@ void meta_service_test_app::policy_context_test()
         //         as app 3 won't be finished, so the backup can't finish
         std::cout << "continue backup, only some apps are available " << std::endl;
         {
-            zauto_lock l(mp._lock);
-            mp._backup_history.clear();
-            mp.reset_records();
-            mp.set_maxcall_start_backup_app_meta_unlocked(0);
+            zauto_lock l(_mp._lock);
+            _mp._backup_history.clear();
+            _mp.reset_records();
+            _mp.set_maxcall_start_backup_app_meta_unlocked(0);
 
-            mp.set_maxcall_finish_backup_app_unlocked(4);
-            mp.trigger_beyond_finish_backup_app_unlocked() = false;
-            mp.set_maxcall_write_backup_app_finish_flag_unlocked(4);
-            mp.trigger_beyond_write_backup_app_finish_flag_unlocked() = false;
+            _mp.set_maxcall_finish_backup_app_unlocked(4);
+            _mp.trigger_beyond_finish_backup_app_unlocked() = false;
+            _mp.set_maxcall_write_backup_app_finish_flag_unlocked(4);
+            _mp.trigger_beyond_write_backup_app_finish_flag_unlocked() = false;
 
             state->_all_apps[3]->status = dsn::app_status::AS_AVAILABLE;
-            mp.issue_new_backup_unlocked();
+            _mp.issue_new_backup_unlocked();
         }
 
-        ASSERT_TRUE(mp.notifier_start_backup_app_meta_unlocked().wait_for(10000));
-        ASSERT_TRUE(mp.notifier_finish_backup_app_unlocked().wait_for(10000));
-        ASSERT_TRUE(mp.notifier_write_backup_app_finish_flag_unlocked().wait_for(10000));
+        ASSERT_TRUE(_mp.notifier_start_backup_app_meta_unlocked().wait_for(10000));
+        ASSERT_TRUE(_mp.notifier_finish_backup_app_unlocked().wait_for(10000));
+        ASSERT_TRUE(_mp.notifier_write_backup_app_finish_flag_unlocked().wait_for(10000));
 
         {
-            zauto_lock l(mp._lock);
-            ASSERT_EQ(1, mp.counter_start_backup_app_meta_unlocked());
-            ASSERT_EQ(4, mp.counter_finish_backup_app_unlocked());
+            zauto_lock l(_mp._lock);
+            ASSERT_EQ(1, _mp.counter_start_backup_app_meta_unlocked());
+            ASSERT_EQ(4, _mp.counter_finish_backup_app_unlocked());
         }
     }
 
@@ -403,40 +410,40 @@ void meta_service_test_app::policy_context_test()
         app_state *app = state->_all_apps[3].get();
 
         {
-            zauto_lock l(mp._lock);
-            mp._backup_history.clear();
-            mp.reset_records();
+            zauto_lock l(_mp._lock);
+            _mp._backup_history.clear();
+            _mp.reset_records();
 
-            mp.prepare_current_backup_on_new_unlocked();
+            _mp.prepare_current_backup_on_new_unlocked();
             dsn::task_ptr tsk = tasking::create_task(TASK_CODE_EXEC_INLINED, nullptr, []() {});
-            mp.sync_backup_to_remote_storage_unlocked(mp._cur_backup, tsk, true);
+            _mp.sync_backup_to_remote_storage_unlocked(_mp._cur_backup, tsk, true);
             tsk->wait();
-            mp.set_maxcall_issue_new_backup_unlocked(1);
+            _mp.set_maxcall_issue_new_backup_unlocked(1);
 
-            ASSERT_EQ(mp._progress.unfinished_apps, p.app_ids.size());
+            ASSERT_EQ(_mp._progress.unfinished_apps, _policy.app_ids.size());
             app->status = dsn::app_status::AS_DROPPED;
 
-            mp.continue_current_backup_unlocked();
+            _mp.continue_current_backup_unlocked();
         }
 
         // new backup will be issued 5s later.
-        ASSERT_TRUE(mp.notifier_issue_new_backup_unlocked().wait_for(20000));
+        ASSERT_TRUE(_mp.notifier_issue_new_backup_unlocked().wait_for(20000));
 
         {
-            zauto_lock l(mp._lock);
-            ASSERT_EQ(0, mp._cur_backup.end_time_ms);
-            ASSERT_EQ(0, mp._progress.unfinished_apps);
-            ASSERT_EQ(app->partition_count, mp._progress.partition_progress.size());
+            zauto_lock l(_mp._lock);
+            ASSERT_EQ(0, _mp._cur_backup.end_time_ms);
+            ASSERT_EQ(0, _mp._progress.unfinished_apps);
+            ASSERT_EQ(app->partition_count, _mp._progress.partition_progress.size());
 
-            const backup_info &history = mp._backup_history.begin()->second;
+            const backup_info &history = _mp._backup_history.begin()->second;
             ASSERT_NE(0, history.start_time_ms);
             ASSERT_GE(history.end_time_ms, history.start_time_ms);
 
-            for (const auto &kv : mp._progress.partition_progress) {
+            for (const auto &kv : _mp._progress.partition_progress) {
                 ASSERT_EQ(kv.first.get_app_id(), app->app_id);
                 ASSERT_EQ(kv.second, 1000);
             }
-            for (const auto &kv : mp._progress.unfinished_partitions_per_app) {
+            for (const auto &kv : _mp._progress.unfinished_partitions_per_app) {
                 ASSERT_EQ(0, kv.second);
             }
         }
@@ -449,7 +456,7 @@ void meta_service_test_app::policy_context_test()
         std::cout << "a successful entire backup" << std::endl;
         int64_t cur_start_time_ms = static_cast<int64_t>(dsn_now_ms());
         {
-            zauto_lock l(mp._lock);
+            zauto_lock l(_mp._lock);
             std::vector<dsn::rpc_address> node_list;
             generate_node_list(node_list, 3, 3);
 
@@ -460,31 +467,31 @@ void meta_service_test_app::policy_context_test()
                 pc.secondaries = {node_list[1], node_list[2]};
             }
 
-            mp._backup_history.clear();
-            mp.reset_records();
+            _mp._backup_history.clear();
+            _mp.reset_records();
 
             // issue_in_test -> issued by finish all apps -> a delay for backup interval
-            mp.set_maxcall_issue_new_backup_unlocked(2);
-            mp.issue_new_backup_unlocked();
+            _mp.set_maxcall_issue_new_backup_unlocked(2);
+            _mp.issue_new_backup_unlocked();
         }
 
-        ASSERT_TRUE(mp.notifier_issue_new_backup_unlocked().wait_for(10000));
+        ASSERT_TRUE(_mp.notifier_issue_new_backup_unlocked().wait_for(10000));
 
         {
-            zauto_lock l(mp._lock);
+            zauto_lock l(_mp._lock);
             // as new backup is captured and abandoned, so we can check the current backup
-            ASSERT_EQ(1, mp._backup_history.size());
+            ASSERT_EQ(1, _mp._backup_history.size());
             // the first backup's id is 1
-            ASSERT_LE(cur_start_time_ms, mp._backup_history.begin()->first);
-            const backup_info &history = mp._backup_history.begin()->second;
+            ASSERT_LE(cur_start_time_ms, _mp._backup_history.begin()->first);
+            const backup_info &history = _mp._backup_history.begin()->second;
             ASSERT_NE(0, history.start_time_ms);
             ASSERT_GE(history.end_time_ms, history.start_time_ms);
 
             // check the progress
-            for (const auto &kv : mp._progress.partition_progress) {
+            for (const auto &kv : _mp._progress.partition_progress) {
                 ASSERT_EQ(kv.second, 1000);
             }
-            ASSERT_EQ(0, mp._progress.unfinished_apps);
+            ASSERT_EQ(0, _mp._progress.unfinished_apps);
         }
     }
 
@@ -492,296 +499,287 @@ void meta_service_test_app::policy_context_test()
         // test case: add backup_history
         std::cout << "test add backup history" << std::endl;
 
-        mp._backup_history.clear();
-        mp._cur_backup.backup_id = 0;
-        mp._cur_backup.end_time_ms = 0;
+        _mp._backup_history.clear();
+        _mp._cur_backup.backup_id = 0;
+        _mp._cur_backup.end_time_ms = 0;
 
         backup_info bi;
         bi.start_time_ms = 100;
         bi.end_time_ms = 110;
         bi.app_ids = {1, 2, 3};
         bi.backup_id = bi.start_time_ms;
-        mp.add_backup_history(bi);
+        _mp.add_backup_history(bi);
 
         bi.start_time_ms += 1000;
         bi.end_time_ms += 1000;
         bi.app_ids = {1, 2, 5};
         bi.backup_id = bi.start_time_ms;
-        mp.add_backup_history(bi);
+        _mp.add_backup_history(bi);
 
         bi.start_time_ms += 1000;
         bi.end_time_ms = 0;
         bi.app_ids = {1, 2, 7};
         bi.backup_id = bi.start_time_ms;
 
-        mp.add_backup_history(bi);
+        _mp.add_backup_history(bi);
 
-        ASSERT_EQ(bi.backup_id, mp._cur_backup.backup_id);
-        ASSERT_EQ(bi.app_ids, mp._cur_backup.app_ids);
-        ASSERT_EQ(0, mp._cur_backup.end_time_ms);
+        ASSERT_EQ(bi.backup_id, _mp._cur_backup.backup_id);
+        ASSERT_EQ(bi.app_ids, _mp._cur_backup.app_ids);
+        ASSERT_EQ(0, _mp._cur_backup.end_time_ms);
 
-        ASSERT_EQ(bi.app_ids.size(), mp._progress.unfinished_apps);
-        ASSERT_EQ(2, mp._backup_history.size());
+        ASSERT_EQ(bi.app_ids.size(), _mp._progress.unfinished_apps);
+        ASSERT_EQ(2, _mp._backup_history.size());
 
         std::string cur_backup_sig =
             test_policy_name + std::string("@") + std::to_string(bi.backup_id);
-        ASSERT_EQ(cur_backup_sig, mp._backup_sig);
-    }
-
-    {
-        // clear the remote state
-        s->_storage
-            ->delete_node(policy_root,
-                          true,
-                          TASK_CODE_EXEC_INLINED,
-                          [&ec](dsn::error_code err) { ec = err; },
-                          nullptr)
-            ->wait();
-        ASSERT_EQ(dsn::ERR_OK, ec);
-    }
-
-    // test should_start_backup_unlock()
-    {
-        std::cout << "test should_start_backup_unlock()" << std::endl;
-        uint64_t now = dsn_now_ms();
-        int32_t hour = 0, min = 0, sec = 0;
-        ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
-        while (min == 59) {
-            std::this_thread::sleep_for(std::chrono::minutes(1));
-            now = dsn_now_ms();
-            ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
-        }
-
-        int64_t oneday_sec = 1 * 24 * 60 * 60;
-        mp._policy.start_time.hour = hour;
-        mp._policy.start_time.minute = 0;
-        mp._policy.backup_interval_seconds = oneday_sec; // oneday
-        mp._backup_history.clear();
-
-        backup_info info;
-
-        {
-            std::cout << "first backup & no limit to start_time" << std::endl;
-            mp._policy.start_time.hour = 24;
-            ASSERT_TRUE(mp.should_start_backup_unlocked());
-        }
-
-        {
-            std::cout << "first backup & cur_time.hour == start_time.hour" << std::endl;
-            mp._policy.start_time.hour = hour;
-            ASSERT_TRUE(mp.should_start_backup_unlocked());
-        }
-
-        {
-            std::cout << "first backup & cur_time.hour != start_time.hour" << std::endl;
-            mp._policy.start_time.hour = hour + 100; // invalid time
-            ASSERT_FALSE(mp.should_start_backup_unlocked());
-            mp._policy.start_time.hour = (hour + 1) % 24; // valid, but not reach
-            ASSERT_FALSE(mp.should_start_backup_unlocked());
-            mp._policy.start_time.hour = hour - 1; // time passed(also, include -1)
-            ASSERT_FALSE(mp.should_start_backup_unlocked());
-        }
-
-        {
-            std::cout << "not first backup & recent backup delay 20min to start" << std::endl;
-            info.start_time_ms = now - (oneday_sec * 1000) + 20 * 60 * 1000;
-            info.end_time_ms = info.start_time_ms + 10;
-            mp.add_backup_history(info);
-            // if we set start_time to 24:00, then will not start backup
-            mp._policy.start_time.hour = 24;
-            ASSERT_FALSE(mp.should_start_backup_unlocked());
-            // if we set start_time to hour:00, then will start backup, even if the interval <
-            // policy.backup_interval
-            mp._policy.start_time.hour = hour;
-            ASSERT_TRUE(mp.should_start_backup_unlocked());
-        }
-
-        {
-            std::cout << "not first backup & recent backup start time is equal with start_time"
-                      << std::endl;
-            mp._policy.start_time.hour = hour;
-            mp._backup_history.clear();
-            info.start_time_ms = now - (oneday_sec * 1000) - (min * 60 * 1000);
-            info.start_time_ms = (info.start_time_ms / 1000) * 1000;
-            info.end_time_ms = info.start_time_ms + 10;
-            mp.add_backup_history(info);
-            ASSERT_TRUE(mp.should_start_backup_unlocked());
-        }
-
-        {
-            // delay the start_time
-            std::cout << "not first backup & delay the start time of policy" << std::endl;
-            mp._policy.start_time.hour = hour + 1;
-            mp._backup_history.clear();
-            // make sure the start time of recent backup is litte than policy's start_time, so we
-            // minus more 3min
-            info.start_time_ms = now - (oneday_sec * 1000) - 3 * 60 * 1000;
-            info.end_time_ms = info.start_time_ms + 10;
-            mp.add_backup_history(info);
-            if (mp._policy.start_time.hour == 24) {
-                // if hour = 23, then policy.start_time.hour = 24, we should start next backup,
-                // because now - info.start_time_ms > policy.backup_interval
-                ASSERT_TRUE(mp.should_start_backup_unlocked());
-            } else {
-                // should not start, even if now - info.start_time_ms > policy.backup_interval, but
-                // not reach the time-point that policy.start_time limit
-                ASSERT_FALSE(mp.should_start_backup_unlocked());
-            }
-        }
-
-        {
-            std::cout << "not first backup & no limit to start time & should start backup"
-                      << std::endl;
-            mp._policy.start_time.hour = 24;
-            mp._backup_history.clear();
-            info.start_time_ms = now - (oneday_sec * 1000) - 3 * 60 * 60;
-            info.end_time_ms = info.start_time_ms + 10;
-            mp.add_backup_history(info);
-            ASSERT_TRUE(mp.should_start_backup_unlocked());
-        }
-
-        {
-            std::cout << "not first backup & no limit to start time & should not start backup"
-                      << std::endl;
-            mp._backup_history.clear();
-            info.start_time_ms = now - (oneday_sec * 1000) + 3 * 60 * 60;
-            info.end_time_ms = info.start_time_ms + 10;
-            mp.add_backup_history(info);
-            ASSERT_FALSE(mp.should_start_backup_unlocked());
-        }
+        ASSERT_EQ(cur_backup_sig, _mp._backup_sig);
     }
 }
 
-void meta_service_test_app::backup_service_test()
+// test should_start_backup_unlock()
+TEST_F(policy_context_test, test_should_start_backup)
 {
-    std::shared_ptr<meta_service> meta_svc = std::make_shared<fake_receiver_meta_service>();
-    meta_options &opt = meta_svc->_meta_opts;
-    opt.cluster_root = "/meta_test";
-    opt.meta_state_service_type = "meta_state_service_simple";
-    meta_svc->remote_storage_initialize();
-    std::string backup_root = "/backup_test";
-    std::string policy_meta_root = opt.cluster_root + "/backup_policies";
-    meta_svc->_backup_handler = std::make_shared<backup_service>(
-        meta_svc.get(), policy_meta_root, backup_root, [](backup_service *bs) {
-            return std::make_shared<mock_policy>(bs);
-        });
-    backup_service *backup_svc = meta_svc->_backup_handler.get();
-
-    // test start_create_policy_meta_root()
-    {
-        bool flag = false;
-        dsn::task_ptr task_test =
-            tasking::create_task(LPC_DEFAULT_CALLBACK, nullptr, [&flag]() { flag = true; });
-        backup_svc->start_create_policy_meta_root(task_test);
-        while (!flag) {
-            std::cout << "wait create policy_meta_root succeed" << std::endl;
-            sleep(1);
-        }
-        ASSERT_TRUE(flag);
+    uint64_t now = dsn_now_ms();
+    int32_t hour = 0, min = 0, sec = 0;
+    ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
+    while (min == 59) {
+        std::this_thread::sleep_for(std::chrono::minutes(1));
+        now = dsn_now_ms();
+        ::dsn::utils::time_ms_to_date_time(now, hour, min, sec);
     }
 
-    // test add_backup_policy()
+    int64_t oneday_sec = 1 * 24 * 60 * 60;
+    _mp._policy.start_time.hour = hour;
+    _mp._policy.start_time.minute = 0;
+    _mp._policy.backup_interval_seconds = oneday_sec; // oneday
+    _mp._backup_history.clear();
+
+    backup_info info;
+
     {
-        configuration_add_backup_policy_request req;
-        req.backup_provider_type = std::string("local_service");
-        req.policy_name = test_policy_name;
-        req.app_ids = {1, 2, 3};
-        req.backup_interval_seconds = 24 * 60 * 60;
+        std::cout << "first backup & no limit to start_time" << std::endl;
+        _mp._policy.start_time.hour = 24;
+        ASSERT_TRUE(_mp.should_start_backup_unlocked());
+    }
 
-        // case1: backup policy doesn't contain any valid app_id
-        // result: backup policy will not be added, and return ERR_INVALID_PARAMETERS
-        {
-            configuration_add_backup_policy_response resp;
-            auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
-                                   LPC_DEFAULT_CALLBACK,
-                                   backup_svc,
-                                   &backup_service::add_backup_policy,
-                                   req);
-            fake_wait_rpc(r, resp);
-            ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
-            // hint message contains the first invalid app id
-            std::string hint_message = "invalid app 1";
-            ASSERT_EQ(hint_message, resp.hint_message);
-        }
+    {
+        std::cout << "first backup & cur_time.hour == start_time.hour" << std::endl;
+        _mp._policy.start_time.hour = hour;
+        ASSERT_TRUE(_mp.should_start_backup_unlocked());
+    }
 
-        // case2: backup policy interval time < checkpoint reserve time
-        // result: backup policy will not be added, and return ERR_INVALID_PARAMETERS
-        {
-            int64_t old_backup_interval_seconds = req.backup_interval_seconds;
-            req.backup_interval_seconds = 10;
-            configuration_add_backup_policy_response resp;
-            server_state *state = meta_svc->get_server_state();
-            state->_all_apps.insert(std::make_pair(1, std::make_shared<app_state>(app_info())));
-            auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
-                                   LPC_DEFAULT_CALLBACK,
-                                   backup_svc,
-                                   &backup_service::add_backup_policy,
-                                   req);
-            fake_wait_rpc(r, resp);
+    {
+        std::cout << "first backup & cur_time.hour != start_time.hour" << std::endl;
+        _mp._policy.start_time.hour = hour + 100; // invalid time
+        ASSERT_FALSE(_mp.should_start_backup_unlocked());
+        _mp._policy.start_time.hour = (hour + 1) % 24; // valid, but not reach
+        ASSERT_FALSE(_mp.should_start_backup_unlocked());
+        _mp._policy.start_time.hour = hour - 1; // time passed(also, include -1)
+        ASSERT_FALSE(_mp.should_start_backup_unlocked());
+    }
 
-            std::string hint_message = fmt::format(
-                "backup interval must be greater than cold_backup_checkpoint_reserve_minutes={}",
-                meta_svc->get_options().cold_backup_checkpoint_reserve_minutes);
-            ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
-            ASSERT_EQ(hint_message, resp.hint_message);
-            req.backup_interval_seconds = old_backup_interval_seconds;
-        }
+    {
+        std::cout << "not first backup & recent backup delay 20min to start" << std::endl;
+        info.start_time_ms = now - (oneday_sec * 1000) + 20 * 60 * 1000;
+        info.end_time_ms = info.start_time_ms + 10;
+        _mp.add_backup_history(info);
+        // if we set start_time to 24:00, then will not start backup
+        _mp._policy.start_time.hour = 24;
+        ASSERT_FALSE(_mp.should_start_backup_unlocked());
+        // if we set start_time to hour:00, then will start backup, even if the interval <
+        // policy.backup_interval
+        _mp._policy.start_time.hour = hour;
+        ASSERT_TRUE(_mp.should_start_backup_unlocked());
+    }
 
-        // case3: backup policy contains valid and invalid app_id
-        // result: backup policy will not be added, and return ERR_INVALID_PARAMETERS
-        {
-            configuration_add_backup_policy_response resp;
-            server_state *state = meta_svc->get_server_state();
-            state->_all_apps.insert(std::make_pair(1, std::make_shared<app_state>(app_info())));
-            auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
-                                   LPC_DEFAULT_CALLBACK,
-                                   backup_svc,
-                                   &backup_service::add_backup_policy,
-                                   req);
-            fake_wait_rpc(r, resp);
-            ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
-            // hint message contains the first invalid app id
-            std::string hint_message = "invalid app 2";
-            ASSERT_EQ(hint_message, resp.hint_message);
-        }
+    {
+        std::cout << "not first backup & recent backup start time is equal with start_time"
+                  << std::endl;
+        _mp._policy.start_time.hour = hour;
+        _mp._backup_history.clear();
+        info.start_time_ms = now - (oneday_sec * 1000) - (min * 60 * 1000);
+        info.start_time_ms = (info.start_time_ms / 1000) * 1000;
+        info.end_time_ms = info.start_time_ms + 10;
+        _mp.add_backup_history(info);
+        ASSERT_TRUE(_mp.should_start_backup_unlocked());
+    }
 
-        // case4: backup policy only contains valid app_id
-        // result: add_backup_policy succeed
-        {
-            configuration_add_backup_policy_response resp;
-            server_state *state = meta_svc->get_server_state();
-            state->_all_apps.insert(std::make_pair(2, std::make_shared<app_state>(app_info())));
-            state->_all_apps.insert(std::make_pair(3, std::make_shared<app_state>(app_info())));
-            auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
-                                   LPC_DEFAULT_CALLBACK,
-                                   backup_svc,
-                                   &backup_service::add_backup_policy,
-                                   req);
-            fake_wait_rpc(r, resp);
-            ASSERT_EQ(ERR_OK, resp.err);
-            mock_policy *ptr =
-                static_cast<mock_policy *>(backup_svc->_policy_states.at(test_policy_name).get());
-            ASSERT_EQ(1, ptr->counter_start());
+    {
+        // delay the start_time
+        std::cout << "not first backup & delay the start time of policy" << std::endl;
+        _mp._policy.start_time.hour = hour + 1;
+        _mp._backup_history.clear();
+        // make sure the start time of recent backup is litte than policy's start_time, so we
+        // minus more 3min
+        info.start_time_ms = now - (oneday_sec * 1000) - 3 * 60 * 1000;
+        info.end_time_ms = info.start_time_ms + 10;
+        _mp.add_backup_history(info);
+        if (_mp._policy.start_time.hour == 24) {
+            // if hour = 23, then policy.start_time.hour = 24, we should start next backup,
+            // because now - info.start_time_ms > policy.backup_interval
+            ASSERT_TRUE(_mp.should_start_backup_unlocked());
+        } else {
+            // should not start, even if now - info.start_time_ms > policy.backup_interval, but
+            // not reach the time-point that policy.start_time limit
+            ASSERT_FALSE(_mp.should_start_backup_unlocked());
         }
     }
 
-    // testing sync_policies_from_remote_storage()
-    // only have one backup policy on remote storage
     {
-        std::cout << "tesing sync_policies_from_remote_storage()..." << std::endl;
-        backup_svc->_policy_states.clear();
-        ASSERT_TRUE(backup_svc->_policy_states.empty());
-        error_code err = backup_svc->sync_policies_from_remote_storage();
-        ASSERT_EQ(ERR_OK, err);
-        ASSERT_EQ(1, backup_svc->_policy_states.size());
-        ASSERT_TRUE(backup_svc->_policy_states.find(test_policy_name) !=
-                    backup_svc->_policy_states.end());
-        const policy &p = backup_svc->_policy_states.at(test_policy_name)->get_policy();
-        ASSERT_EQ(3, p.app_ids.size());
-        ASSERT_EQ("local_service", p.backup_provider_type);
-        ASSERT_EQ(24 * 60 * 60, p.backup_interval_seconds);
-        ASSERT_EQ(test_policy_name, p.policy_name);
+        std::cout << "not first backup & no limit to start time & should start backup" << std::endl;
+        _mp._policy.start_time.hour = 24;
+        _mp._backup_history.clear();
+        info.start_time_ms = now - (oneday_sec * 1000) - 3 * 60 * 60;
+        info.end_time_ms = info.start_time_ms + 10;
+        _mp.add_backup_history(info);
+        ASSERT_TRUE(_mp.should_start_backup_unlocked());
+    }
+
+    {
+        std::cout << "not first backup & no limit to start time & should not start backup"
+                  << std::endl;
+        _mp._backup_history.clear();
+        info.start_time_ms = now - (oneday_sec * 1000) + 3 * 60 * 60;
+        info.end_time_ms = info.start_time_ms + 10;
+        _mp.add_backup_history(info);
+        ASSERT_FALSE(_mp.should_start_backup_unlocked());
     }
 }
+
+class meta_backup_service_test : public meta_test_base
+{
+protected:
+    meta_backup_service_test() : _meta_svc(new fake_receiver_meta_service()), _backup_svc(nullptr)
+    {
+    }
+
+    void SetUp() override
+    {
+        meta_test_base::SetUp();
+
+        meta_options &opt = _meta_svc->_meta_opts;
+        opt.cluster_root = "/meta_test";
+        opt.meta_state_service_type = "meta_state_service_simple";
+        _meta_svc->remote_storage_initialize();
+        std::string backup_root = "/backup_test";
+        std::string policy_meta_root = opt.cluster_root + "/backup_policies";
+        _meta_svc->_backup_handler = std::make_shared<backup_service>(
+            _meta_svc.get(), policy_meta_root, backup_root, [](backup_service *bs) {
+                return std::make_shared<mock_policy>(bs);
+            });
+        _backup_svc = _meta_svc->_backup_handler.get();
+    }
+
+    std::shared_ptr<meta_service> _meta_svc;
+    backup_service *_backup_svc;
+};
+
+TEST_F(meta_backup_service_test, test_add_backup_policy)
+{
+    // create policy meta root.
+    bool flag = false;
+    dsn::task_ptr task_test =
+        tasking::create_task(LPC_DEFAULT_CALLBACK, nullptr, [&flag]() { flag = true; });
+    _backup_svc->start_create_policy_meta_root(task_test);
+    while (!flag) {
+        std::cout << "wait create policy_meta_root succeed" << std::endl;
+        sleep(1);
+    }
+    ASSERT_TRUE(flag);
+
+    configuration_add_backup_policy_request req;
+    req.backup_provider_type = std::string("local_service");
+    req.policy_name = test_policy_name;
+    req.app_ids = {1, 2, 3};
+    req.backup_interval_seconds = 24 * 60 * 60;
+
+    // case1: backup policy doesn't contain any valid app_id
+    // result: backup policy will not be added, and return ERR_INVALID_PARAMETERS
+    {
+        configuration_add_backup_policy_response resp;
+        auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
+                               LPC_DEFAULT_CALLBACK,
+                               _backup_svc,
+                               &backup_service::add_backup_policy,
+                               req);
+        fake_wait_rpc(r, resp);
+        ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
+        // hint message contains the first invalid app id
+        std::string hint_message = "invalid app 1";
+        ASSERT_EQ(hint_message, resp.hint_message);
+    }
+
+    // case2: backup policy interval time < checkpoint reserve time
+    // result: backup policy will not be added, and return ERR_INVALID_PARAMETERS
+    {
+        int64_t old_backup_interval_seconds = req.backup_interval_seconds;
+        req.backup_interval_seconds = 10;
+        configuration_add_backup_policy_response resp;
+        server_state *state = _meta_svc->get_server_state();
+        state->_all_apps.insert(std::make_pair(1, std::make_shared<app_state>(app_info())));
+        auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
+                               LPC_DEFAULT_CALLBACK,
+                               _backup_svc,
+                               &backup_service::add_backup_policy,
+                               req);
+        fake_wait_rpc(r, resp);
+
+        std::string hint_message = fmt::format(
+            "backup interval must be greater than cold_backup_checkpoint_reserve_minutes={}",
+            _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes);
+        ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
+        ASSERT_EQ(hint_message, resp.hint_message);
+        req.backup_interval_seconds = old_backup_interval_seconds;
+    }
+
+    // case3: backup policy contains valid and invalid app_id
+    // result: backup policy will not be added, and return ERR_INVALID_PARAMETERS
+    {
+        configuration_add_backup_policy_response resp;
+        server_state *state = _meta_svc->get_server_state();
+        state->_all_apps.insert(std::make_pair(1, std::make_shared<app_state>(app_info())));
+        auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
+                               LPC_DEFAULT_CALLBACK,
+                               _backup_svc,
+                               &backup_service::add_backup_policy,
+                               req);
+        fake_wait_rpc(r, resp);
+        ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
+        // hint message contains the first invalid app id
+        std::string hint_message = "invalid app 2";
+        ASSERT_EQ(hint_message, resp.hint_message);
+    }
+
+    // case4: backup policy only contains valid app_id
+    // result: add_backup_policy succeed
+    {
+        configuration_add_backup_policy_response resp;
+        server_state *state = _meta_svc->get_server_state();
+        state->_all_apps.insert(std::make_pair(2, std::make_shared<app_state>(app_info())));
+        state->_all_apps.insert(std::make_pair(3, std::make_shared<app_state>(app_info())));
+        auto r = fake_rpc_call(RPC_CM_ADD_BACKUP_POLICY,
+                               LPC_DEFAULT_CALLBACK,
+                               _backup_svc,
+                               &backup_service::add_backup_policy,
+                               req);
+        fake_wait_rpc(r, resp);
+        ASSERT_EQ(ERR_OK, resp.err);
+    }
+
+    // test sync_policies_from_remote_storage
+    _backup_svc->_policy_states.clear();
+    ASSERT_TRUE(_backup_svc->_policy_states.empty());
+    error_code err = _backup_svc->sync_policies_from_remote_storage();
+    ASSERT_EQ(ERR_OK, err);
+    ASSERT_EQ(1, _backup_svc->_policy_states.size());
+    ASSERT_TRUE(_backup_svc->_policy_states.find(test_policy_name) !=
+                _backup_svc->_policy_states.end());
+    const policy &p = _backup_svc->_policy_states.at(test_policy_name)->get_policy();
+    ASSERT_EQ(3, p.app_ids.size());
+    ASSERT_EQ("local_service", p.backup_provider_type);
+    ASSERT_EQ(24 * 60 * 60, p.backup_interval_seconds);
+    ASSERT_EQ(test_policy_name, p.policy_name);
+}
+
 } // namespace replication
 } // namespace dsn

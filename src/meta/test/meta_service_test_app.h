@@ -113,9 +113,6 @@ public:
 
     void json_compacity();
 
-    void policy_context_test();
-    void backup_service_test();
-
     // test server_state set_app_envs/del_app_envs/clear_app_envs
     void app_envs_basic_test();
 

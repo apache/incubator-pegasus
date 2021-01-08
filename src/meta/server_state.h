@@ -35,17 +35,16 @@
 
 #pragma once
 
-#include <unordered_map>
 #include <boost/lexical_cast.hpp>
-
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/dist/block_service.h>
-#include <dsn/tool-api/task_tracker.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
+#include <dsn/tool-api/task_tracker.h>
+#include <gtest/gtest_prod.h>
+#include <unordered_map>
 
 #include "common/replication_common.h"
 #include "meta_data.h"
-
 #include "meta_service.h"
 
 namespace dsn {
@@ -292,16 +291,19 @@ private:
     void transition_staging_state(std::shared_ptr<app_state> &app);
 
 private:
-    friend class test::test_checker;
-    friend class meta_service_test_app;
-    friend class meta_test_base;
-    friend class meta_duplication_service_test;
-    friend class meta_load_balance_test;
-    friend class meta_duplication_service;
-    friend class meta_split_service;
     friend class bulk_load_service;
     friend class bulk_load_service_test;
     friend class meta_app_operation_test;
+    friend class meta_duplication_service;
+    friend class meta_duplication_service_test;
+    friend class meta_load_balance_test;
+    friend class meta_split_service;
+    friend class meta_service_test_app;
+    friend class meta_test_base;
+    friend class test::test_checker;
+
+    FRIEND_TEST(meta_backup_service_test, test_add_backup_policy);
+    FRIEND_TEST(policy_context_test, test_app_dropped_during_backup);
 
     dsn::task_tracker _tracker;
 
