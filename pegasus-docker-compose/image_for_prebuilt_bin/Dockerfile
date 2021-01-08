@@ -15,14 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM apachepegasus/build-env:ubuntu1804
+FROM apachepegasus/build-env:ubuntu2004
 
 ARG SERVER_PKG_NAME
 
 COPY ./$SERVER_PKG_NAME.tar.gz /
-RUN tar xvf /$SERVER_PKG_NAME.tar.gz; \
-    mv $SERVER_PKG_NAME pegasus; \
-    rm /$SERVER_PKG_NAME.tar.gz
+RUN cd / \
+    && tar xvf /$SERVER_PKG_NAME.tar.gz \
+    && mv $SERVER_PKG_NAME pegasus \
+    && rm /$SERVER_PKG_NAME.tar.gz
 
 COPY ./entrypoint.sh /
 RUN chmod +x /entrypoint.sh
