@@ -35,6 +35,12 @@
 namespace pegasus {
 namespace server {
 
+/// internal error codes used for fail injection
+constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
+constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
+constexpr int FAIL_DB_WRITE = -103;
+constexpr int FAIL_DB_GET = -104;
+
 struct db_get_context
 {
     // value read from DB.

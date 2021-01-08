@@ -27,12 +27,6 @@
 namespace pegasus {
 namespace server {
 
-/// internal error codes used for fail injection
-const int FAIL_DB_WRITE_BATCH_PUT = -101;
-const int FAIL_DB_WRITE_BATCH_DELETE = -102;
-const int FAIL_DB_WRITE = -103;
-const int FAIL_DB_GET = -104;
-
 rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     : replica_base(server),
       _db(server->_db),

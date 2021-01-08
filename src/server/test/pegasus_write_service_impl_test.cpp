@@ -25,8 +25,6 @@
 
 namespace pegasus {
 namespace server {
-extern const int FAIL_DB_GET;
-extern const int FAIL_DB_WRITE_BATCH_PUT;
 
 class pegasus_write_service_impl_test : public pegasus_server_test_base
 {
