@@ -14,7 +14,7 @@ fi
 ROOT=$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")
 
 # PEGASUS_ROOT is the absolute path of apache-pegasus-source
-PEGASUS_ROOT="$(readlink -f $1)" 
+PEGASUS_ROOT="$(readlink -f "$1")"
 if [[ ! -f "${PEGASUS_ROOT}"/PACKAGE ]]; then
 	echo "ERROR: no such file ${PEGASUS_ROOT}/PACKAGE"
 	exit 1

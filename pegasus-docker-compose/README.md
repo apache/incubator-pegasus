@@ -44,6 +44,18 @@ using a different `CLUSTER_NAME` and `META_IP_PREFIX`. For example `onebox2` and
 Use `docker ps` command to show all the running dockers. And if some docker failed unexpectedly,
 use `docker logs {DOCKER_ID}` to dump the error logs of it.
 
+### Configuration
+
+`pegasus-docker/pegasus-docker-compose/config.min.ini` is the master-branch-Pegasus config. It may be not available
+for Pegasus in a previously released version.
+
+```sh
+cd /your/local/pegasus-docker
+git checkout 2.1.0
+```
+
+If you want to set up a previously released Pegasus cluster, please use the scripts from the specific branch.
+
 ### Cleanup a docker cluster
 
 ```sh
@@ -99,4 +111,4 @@ pumba pause --duration=1h onebox-docker_replica1_1
 pumba netem --duration=1h --tc-image 'gaiadocker/iproute2' loss --percent 100 onebox-docker_replica1_1
 ```
 
-Ensure your Pegasus service failovers normally and no more failed request through Pegasus-Shell and error logs from your client tool.
+Ensure your Pegasus service failovers normally, with no unexpectedly failed requests and error logs from your client.
