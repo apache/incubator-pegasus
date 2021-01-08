@@ -21,10 +21,10 @@ Then build the image:
 
 ```
 cd /your/local/pegasus-docker/pegasus-docker-compose
-./build-docker.sh /your/local/apache-pegasus-source
+./build_docker.sh /your/local/apache-pegasus-source
 ```
 
-You will have a docker images called "pegasus:latest" built on you machine now.
+You will have a docker image called "pegasus:latest" right now built on you machine. Check it out:
 
 ```sh
 docker images
