@@ -27,11 +27,10 @@ jobs:
     container:
       image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
     steps:
-      -
-        uses: actions/checkout@v2
-        with:
-          repository: 'apache/incubator-pegasus'
-          submodules: 'recursive'
+      - name: Clone Apache Pegasus Source
+        run: |
+          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+          cd incubator-pegasus
       -
         name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
