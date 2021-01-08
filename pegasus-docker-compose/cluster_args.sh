@@ -4,6 +4,7 @@
 
 # The ip prefix for each meta.
 # Meta-x's ip address is 172.21.0.1{x}:34601.
+# For exmaple, Meta1's address is 172.21.0.11:34601.
 export META_IP_PREFIX=172.21.0
 
 # The exported port of pegasus meta-server.
@@ -13,7 +14,7 @@ export META_PORT=34601
 # Different clusters are isolated by their cluster name and the META_IP_PREFIX.
 export CLUSTER_NAME=onebox
 
-export IMAGE_NAME='registry.cn-beijing.aliyuncs.com\/pegasus-kv\/pegasus:1.11.5'
+export IMAGE_NAME='pegasus:latest'
 
 # allow_non_idempotent_write = true
 # for jepsen test this option must be enabled.
@@ -28,4 +29,6 @@ export REPLICA_COUNT=1                           # Number of replica instances.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 export ROOT
-export DOCKER_DIR=${ROOT}/${CLUSTER_NAME}-docker # Where docker onebox resides.
+# Where docker onebox resides. If the cluster name is 'onebox', all nodes will mount their data
+# upon the directory ./onebox-docker.
+export DOCKER_DIR=${ROOT}/${CLUSTER_NAME}-docker

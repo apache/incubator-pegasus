@@ -41,6 +41,17 @@ To start a cluster:
 To start multiple clusters, you should reconfigure the `cluster_args.sh` by
 using a different `CLUSTER_NAME` and `META_IP_PREFIX`. For example `onebox2` and `172.22.0`.
 
+Use `docker ps` command to show all the running dockers. And if some docker failed unexpectedly,
+use `docker logs {DOCKER_ID}` to dump the error logs of it.
+
+### Cleanup a docker cluster
+
+```sh
+./clear_onebox.sh
+```
+
+This script will kill the cluster processes, remove the virtual network and finally remove the data directory.
+
 ## Using pumba to inject faults to Pegasus
 
 [pumba](https://github.com/alexei-led/pumba) is a chaos testing and network emulation tool for Docker. We can use it
