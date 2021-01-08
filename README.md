@@ -15,6 +15,8 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 
 ![Build rdsn with sanitizers](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20rdsn%20with%20sanitizers/badge.svg)
 
+![Build Pegasus regularly](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20Pegasus%20regularly/badge.svg)
+
 ## pegasus-build-env
 
 Building environment for Pegasus compilation.
