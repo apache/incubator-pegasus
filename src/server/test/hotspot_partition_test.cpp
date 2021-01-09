@@ -25,6 +25,7 @@ namespace pegasus {
 namespace server {
 
 DSN_DECLARE_int32(occurrence_threshold);
+DSN_DECLARE_bool(enable_detect_hotkey);
 
 class hotspot_partition_test : public pegasus_server_test_base
 {
@@ -33,8 +34,13 @@ public:
     {
         dsn::fail::setup();
         dsn::fail::cfg("send_detect_hotkey_request", "return()");
+        FLAGS_enable_detect_hotkey = true;
     };
-    ~hotspot_partition_test() { dsn::fail::teardown(); }
+    ~hotspot_partition_test()
+    {
+        FLAGS_enable_detect_hotkey = false;
+        dsn::fail::teardown();
+    }
 
     hotspot_partition_calculator calculator;
 
@@ -136,8 +142,8 @@ TEST_F(hotspot_partition_test, send_detect_hotkey_request)
     expect_result[WRITE_HOT_PARTITION][1] = FLAGS_occurrence_threshold;
     aggregate_analyse_data(test_rows, expect_result, FLAGS_occurrence_threshold);
     const int back_to_normal = 30;
-    expect_result[READ_HOT_PARTITION][0] = FLAGS_occurrence_threshold - back_to_normal;
-    expect_result[WRITE_HOT_PARTITION][1] = FLAGS_occurrence_threshold - back_to_normal;
+    expect_result[READ_HOT_PARTITION][0] = 0;
+    expect_result[WRITE_HOT_PARTITION][1] = 0;
     aggregate_analyse_data(generate_row_data(), expect_result, back_to_normal);
 }
 

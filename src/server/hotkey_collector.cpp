@@ -23,6 +23,7 @@
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
 #include "base/pegasus_key_schema.h"
+#include "base/pegasus_utils.h"
 
 namespace pegasus {
 namespace server {
@@ -30,13 +31,13 @@ namespace server {
 DSN_DEFINE_uint32(
     "pegasus.server",
     hot_bucket_variance_threshold,
-    3,
+    7,
     "the variance threshold to detect hot bucket during coarse analysis of hotkey detection");
 
 DSN_DEFINE_uint32(
     "pegasus.server",
     hot_key_variance_threshold,
-    3,
+    5,
     "the variance threshold to detect hot key during fine analysis of hotkey detection");
 
 DSN_DEFINE_uint32("pegasus.server",
@@ -168,7 +169,8 @@ inline void hotkey_collector::change_state_by_result()
     case hotkey_collector_state::FINE_DETECTING:
         if (!_result.hot_hash_key.empty()) {
             change_state_to_finished();
-            derror_replica("Find the hotkey: {}", _result.hot_hash_key);
+            derror_replica("Find the hotkey: {}",
+                           pegasus::utils::c_escape_string(_result.hot_hash_key));
         }
         break;
     default:
@@ -239,25 +241,23 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
     switch (now_state) {
     case hotkey_collector_state::COARSE_DETECTING:
     case hotkey_collector_state::FINE_DETECTING:
-        resp.err = dsn::ERR_INVALID_STATE;
+        resp.err = dsn::ERR_BUSY;
         hint = fmt::format("still detecting {} hotkey, state is {}",
                            dsn::enum_to_string(_hotkey_type),
                            enum_to_string(now_state));
-        dwarn_replica(hint);
-        return;
+        break;
     case hotkey_collector_state::FINISHED:
-        resp.err = dsn::ERR_INVALID_STATE;
-        hint = fmt::format(
-            "{} hotkey result has been found, you can send a stop rpc to restart hotkey detection",
-            dsn::enum_to_string(_hotkey_type));
-        dwarn_replica(hint);
-        return;
+        resp.err = dsn::ERR_BUSY;
+        hint = fmt::format("{} hotkey result has been found: {}, you can send a stop rpc to "
+                           "restart hotkey detection",
+                           dsn::enum_to_string(_hotkey_type),
+                           pegasus::utils::c_escape_string(_result.hot_hash_key));
+        break;
     case hotkey_collector_state::STOPPED:
         change_state_to_coarse_detecting();
         resp.err = dsn::ERR_OK;
         hint = fmt::format("starting to detect {} hotkey", dsn::enum_to_string(_hotkey_type));
-        ddebug_replica(hint);
-        return;
+        break;
     default:
         hint = "invalid collector state";
         resp.err = dsn::ERR_INVALID_STATE;
@@ -265,6 +265,8 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         derror_replica(hint);
         dassert(false, "invalid collector state");
     }
+    resp.__set_err_hint(hint);
+    dwarn_replica(hint);
 }
 
 void hotkey_collector::on_stop_detect(dsn::replication::detect_hotkey_response &resp)
@@ -280,13 +282,13 @@ void hotkey_collector::query_result(dsn::replication::detect_hotkey_response &re
 {
     if (_state != hotkey_collector_state::FINISHED) {
         resp.err = dsn::ERR_BUSY;
-        std::string hint = fmt::format("hotkey is detecting now, now state: {}",
-                                       dsn::enum_to_string(_hotkey_type));
+        std::string hint =
+            fmt::format("Can't get hotkey now, now state: {}", enum_to_string(_state.load()));
         resp.__set_err_hint(hint);
         ddebug_replica(hint);
     } else {
         resp.err = dsn::ERR_OK;
-        resp.__set_hotkey_result(_result.hot_hash_key);
+        resp.__set_hotkey_result(pegasus::utils::c_escape_string(_result.hot_hash_key));
     }
 }
 
