@@ -40,6 +40,8 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
         req.action = dsn::replication::detect_action::START;
     } else if (!strcasecmp(hotkey_action.c_str(), "stop")) {
         req.action = dsn::replication::detect_action::STOP;
+    } else if (!strcasecmp(hotkey_type.c_str(), "query")) {
+        req.action = dsn::replication::detect_action::QUERY;
     } else {
         err_info =
             fmt::format("\"{}\" is an invalid hotkey detect action (should be 'start' or 'stop')\n",
