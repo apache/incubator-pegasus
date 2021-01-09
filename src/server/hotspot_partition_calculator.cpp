@@ -50,7 +50,7 @@ DSN_DEFINE_int32("pegasus.collector",
 
 DSN_DEFINE_int32("pegasus.collector",
                  occurrence_threshold,
-                 100,
+                 3,
                  "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
@@ -170,7 +170,7 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     }
 }
 
-/*static*/ void hotspot_partition_calculator::send_detect_hotkey_request(
+void hotspot_partition_calculator::send_detect_hotkey_request(
     const std::string &app_name,
     const uint64_t partition_index,
     const dsn::replication::hotkey_type::type hotkey_type,
@@ -178,8 +178,8 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
 {
     FAIL_POINT_INJECT_F("send_detect_hotkey_request", [](dsn::string_view) {});
 
-    int app_id;
-    int partition_count;
+    int app_id = -1;
+    int partition_count = -1;
     std::vector<dsn::partition_configuration> partitions;
     _shell_context->ddl_client->list_app(app_name, app_id, partition_count, partitions);
 

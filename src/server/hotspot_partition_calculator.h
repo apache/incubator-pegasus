@@ -40,7 +40,10 @@ public:
     hotspot_partition_calculator(const std::string &app_name,
                                  int partition_count,
                                  std::shared_ptr<shell_context> context)
-        : _app_name(app_name), _hot_points(partition_count), _hotpartition_counter(partition_count)
+        : _app_name(app_name),
+          _hot_points(partition_count),
+          _shell_context(context),
+          _hotpartition_counter(partition_count)
     {
         init_perf_counter(partition_count);
     }
