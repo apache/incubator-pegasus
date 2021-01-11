@@ -33,12 +33,14 @@ DSN_DEFINE_uint32(
     hot_bucket_variance_threshold,
     7,
     "the variance threshold to detect hot bucket during coarse analysis of hotkey detection");
+DSN_TAG_VARIABLE(hot_bucket_variance_threshold, FT_MUTABLE);
 
 DSN_DEFINE_uint32(
     "pegasus.server",
     hot_key_variance_threshold,
     5,
     "the variance threshold to detect hot key during fine analysis of hotkey detection");
+DSN_TAG_VARIABLE(hot_key_variance_threshold, FT_MUTABLE);
 
 DSN_DEFINE_uint32("pegasus.server",
                   hotkey_buckets_num,
@@ -63,6 +65,7 @@ DSN_DEFINE_uint32(
     max_seconds_to_detect_hotkey,
     150,
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");
+DSN_TAG_VARIABLE(max_seconds_to_detect_hotkey, FT_MUTABLE);
 
 // 68–95–99.7 rule, same algorithm as hotspot_partition_calculator::stat_histories_analyse
 /*extern*/ bool
