@@ -50,14 +50,15 @@ DSN_DEFINE_int32("pegasus.collector",
                  "FLAGS_hotpartition_threshold, this partition is a hot partition");
 DSN_TAG_VARIABLE(hot_partition_threshold, FT_MUTABLE);
 DSN_DEFINE_validator(hot_partition_threshold,
-                     [](int32_t threshold) -> bool { return threshold >= 0 });
+                     [](int32_t threshold) -> bool { return threshold >= 0; });
 
 DSN_DEFINE_int32("pegasus.collector",
                  occurrence_threshold,
                  3,
                  "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
 DSN_TAG_VARIABLE(occurrence_threshold, FT_MUTABLE);
-DSN_DEFINE_validator(occurrence_threshold, [](int32_t threshold) -> bool { return threshold >= 0 });
+DSN_DEFINE_validator(occurrence_threshold,
+                     [](int32_t threshold) -> bool { return threshold >= 0; });
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
