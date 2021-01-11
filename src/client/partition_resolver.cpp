@@ -53,7 +53,7 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
         dsn::error_code err, dsn::message_ex * req, dsn::message_ex * resp)
     {
         if (req->header->gpid.value() != 0 && err != ERR_OK && err != ERR_HANDLER_NOT_FOUND &&
-            err != ERR_APP_NOT_EXIST && err != ERR_OPERATION_DISABLED) {
+            err != ERR_APP_NOT_EXIST && err != ERR_OPERATION_DISABLED && err != ERR_BUSY) {
             on_access_failure(req->header->gpid.get_partition_index(), err);
             // still got time, retry
             uint64_t nms = dsn_now_ms();
