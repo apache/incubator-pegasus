@@ -45,18 +45,7 @@ using namespace tools;
 DSN_REGISTER_COMPONENT_PROVIDER(screen_logger, "dsn::tools::screen_logger");
 DSN_REGISTER_COMPONENT_PROVIDER(simple_logger, "dsn::tools::simple_logger");
 
-std::function<std::string()> log_prefixed_message_func = []() {
-    static thread_local std::string prefixed_message;
-
-    static thread_local std::once_flag flag;
-    std::call_once(flag, [&]() {
-        prefixed_message.resize(23);
-        int tid = dsn::utils::get_current_tid();
-        sprintf(const_cast<char *>(prefixed_message.c_str()), "unknown.io-thrd.%05d: ", tid);
-    });
-
-    return prefixed_message;
-};
+std::function<std::string()> log_prefixed_message_func = []() -> std::string { return ": "; };
 
 void set_log_prefixed_message_func(std::function<std::string()> func)
 {

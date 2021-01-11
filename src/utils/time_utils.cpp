@@ -34,5 +34,16 @@ namespace utils {
     fmt::format_to(str, "{:%Y-%m-%d %H:%M:%S}.{}", *ret, static_cast<uint32_t>(ts_ms % 1000));
 }
 
+/*extern*/ void time_ms_to_string(uint64_t ts_ms, std::string &str)
+{
+    str.clear();
+    struct tm tmp;
+    auto ret = get_localtime(ts_ms, &tmp);
+    fmt::format_to(std::back_inserter(str),
+                   "{:%Y-%m-%d %H:%M:%S}.{}",
+                   *ret,
+                   static_cast<uint32_t>(ts_ms % 1000));
+}
+
 } // namespace utils
 } // namespace dsn

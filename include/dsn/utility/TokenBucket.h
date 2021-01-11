@@ -234,7 +234,11 @@ public:
         assert(burstSize > 0);
 
         if (burstSize < toConsume) {
-            return boost::none;
+            // boost::none
+            // if we use boost::none here, some compilers will generate warning
+            // that's actually a false positive of "-Wmaybe-uninitialized".
+            // https://www.boost.org/doc/libs/1_65_1/libs/optional/doc/html/boost_optional/tutorial/gotchas/false_positive_with__wmaybe_uninitialized.html
+            return boost::make_optional(false, double());
         }
 
         while (toConsume > 0) {

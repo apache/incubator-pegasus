@@ -26,6 +26,7 @@
 
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/smart_pointers.h>
 
 #include <gtest/gtest.h>
 
@@ -145,9 +146,9 @@ TEST(core, operation_failed)
     auto fp = file::open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
-    ::dsn::error_code *err = new ::dsn::error_code;
-    size_t *count = new size_t;
-    auto io_callback = [err, count](::dsn::error_code e, size_t n) {
+    auto err = dsn::make_unique<dsn::error_code>();
+    auto count = dsn::make_unique<size_t>();
+    auto io_callback = [&err, &count](::dsn::error_code e, size_t n) {
         *err = e;
         *count = n;
     };

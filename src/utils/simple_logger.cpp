@@ -29,6 +29,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/flags.h>
 #include <dsn/utils/time_utils.h>
+#include <fmt/format.h>
 
 namespace dsn {
 namespace tools {
@@ -58,17 +59,17 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
     static char s_level_char[] = "IDWEF";
 
     uint64_t ts = dsn_now_ns();
-    char str[24];
-    dsn::utils::time_ms_to_string(ts / 1000000, str);
+    std::string time_str;
+    dsn::utils::time_ms_to_string(ts / 1000000, time_str);
 
     int tid = dsn::utils::get_current_tid();
-    fprintf(fp,
-            "%c%s (%" PRIu64 " %04x) %s",
-            s_level_char[log_level],
-            str,
-            ts,
-            tid,
-            log_prefixed_message_func().c_str());
+    fmt::print(fp,
+               "{}{} ({} {}) {}",
+               s_level_char[log_level],
+               time_str,
+               ts,
+               tid,
+               log_prefixed_message_func());
 }
 
 screen_logger::screen_logger(bool short_header) : logging_provider("./")

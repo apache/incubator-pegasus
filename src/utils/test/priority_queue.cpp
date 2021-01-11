@@ -114,6 +114,7 @@ TEST(core, blocking_priority_queue)
     ASSERT_EQ(0, ct);
     ASSERT_EQ(0, d->priority);
     ASSERT_EQ(10, d->queue_index);
+    delete d;
 
     bool flag = false;
 
