@@ -54,7 +54,9 @@ func AddDuplication(c *Client, tableName string, remoteCluster string, freezed b
 		Freezed:           freezed,
 	})
 	if err != nil {
-		// TODO(wutao): print error hints if it has.
+		if resp != nil && resp.IsSetHint() {
+			return fmt.Errorf("%s\nHint: %s", err, resp.GetHint())
+		}
 		return err
 	}
 	fmt.Fprintf(c, "successfully add duplication [dupid: %d]\n", resp.Dupid)
