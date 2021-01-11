@@ -27,7 +27,6 @@
 #include "meta_store.h"
 #include "rocksdb_wrapper.h"
 
-#include <dsn/utility/fail_point.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <gtest/gtest_prod.h>
@@ -40,7 +39,7 @@ namespace server {
 static constexpr int FAIL_DB_WRITE_BATCH_PUT = -101;
 static constexpr int FAIL_DB_WRITE_BATCH_DELETE = -102;
 static constexpr int FAIL_DB_WRITE = -103;
-extern const int FAIL_DB_GET;
+static constexpr int FAIL_DB_GET = -104;
 
 struct db_get_context
 {
@@ -90,15 +89,8 @@ public:
         : replica_base(server),
           _primary_address(server->_primary_address),
           _pegasus_data_version(server->_pegasus_data_version),
-          _db(server->_db),
-          _data_cf(server->_data_cf),
-          _meta_cf(server->_meta_cf),
-          _rd_opts(server->_data_cf_rd_opts),
-          _default_ttl(0),
           _pfc_recent_expire_count(server->_pfc_recent_expire_count)
     {
-        // disable write ahead logging as replication handles logging instead now
-        _wt_opts.disableWAL = true;
         _rocksdb_wrapper = dsn::make_unique<rocksdb_wrapper>(server);
     }
 
@@ -515,7 +507,7 @@ public:
                   const dsn::apps::update_request &update,
                   dsn::apps::update_response &resp)
     {
-        resp.error = db_write_batch_put_ctx(
+        resp.error = _rocksdb_wrapper->write_batch_put_ctx(
             ctx, update.key, update.value, static_cast<uint32_t>(update.expire_ts_seconds));
         _update_responses.emplace_back(&resp);
         return resp.error;
@@ -523,171 +515,23 @@ public:
 
     int batch_remove(int64_t decree, const dsn::blob &key, dsn::apps::update_response &resp)
     {
-        resp.error = db_write_batch_delete(decree, key);
+        resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
         _update_responses.emplace_back(&resp);
         return resp.error;
     }
 
     int batch_commit(int64_t decree)
     {
-        int err = db_write(decree);
+        int err = _rocksdb_wrapper->write(decree);
         clear_up_batch_states(decree, err);
         return err;
     }
 
     void batch_abort(int64_t decree, int err) { clear_up_batch_states(decree, err); }
 
-    void set_default_ttl(uint32_t ttl)
-    {
-        // TODO(zlw): remove these lines after the refactor is done
-        if (_default_ttl != ttl) {
-            _default_ttl = ttl;
-            ddebug_replica("update _default_ttl to {}.", ttl);
-        }
-
-        _rocksdb_wrapper->set_default_ttl(ttl);
-    }
+    void set_default_ttl(uint32_t ttl) { _rocksdb_wrapper->set_default_ttl(ttl); }
 
 private:
-    int db_write_batch_put(int64_t decree,
-                           dsn::string_view raw_key,
-                           dsn::string_view value,
-                           uint32_t expire_sec)
-    {
-        return db_write_batch_put_ctx(db_write_context::empty(decree), raw_key, value, expire_sec);
-    }
-
-    int db_write_batch_put_ctx(const db_write_context &ctx,
-                               dsn::string_view raw_key,
-                               dsn::string_view value,
-                               uint32_t expire_sec)
-    {
-        FAIL_POINT_INJECT_F("db_write_batch_put",
-                            [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_PUT; });
-
-        uint64_t new_timetag = ctx.remote_timetag;
-        if (!ctx.is_duplicated_write()) { // local write
-            new_timetag = generate_timetag(ctx.timestamp, get_cluster_id_if_exists(), false);
-        }
-
-        if (ctx.verify_timetag &&         // needs read-before-write
-            _pegasus_data_version >= 1 && // data version 0 doesn't support timetag.
-            !raw_key.empty()) {           // not an empty write
-
-            db_get_context get_ctx;
-            int err = db_get(raw_key, &get_ctx);
-            if (dsn_unlikely(err != 0)) {
-                return err;
-            }
-            // if record exists and is not expired.
-            if (get_ctx.found && !get_ctx.expired) {
-                uint64_t local_timetag =
-                    pegasus_extract_timetag(_pegasus_data_version, get_ctx.raw_value);
-
-                if (local_timetag >= new_timetag) {
-                    // ignore this stale update with lower timetag,
-                    // and write an empty record instead
-                    raw_key = value = dsn::string_view();
-                }
-            }
-        }
-
-        rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
-        rocksdb::SliceParts skey_parts(&skey, 1);
-        rocksdb::SliceParts svalue = _value_generator.generate_value(
-            _pegasus_data_version, value, db_expire_ts(expire_sec), new_timetag);
-        rocksdb::Status s = _batch.Put(skey_parts, svalue);
-        if (dsn_unlikely(!s.ok())) {
-            ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-            derror_rocksdb("WriteBatchPut",
-                           s.ToString(),
-                           "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
-                           ctx.decree,
-                           utils::c_escape_string(hash_key),
-                           utils::c_escape_string(sort_key),
-                           expire_sec);
-        }
-        return s.code();
-    }
-
-    int db_write_batch_delete(int64_t decree, dsn::string_view raw_key)
-    {
-        FAIL_POINT_INJECT_F("db_write_batch_delete",
-                            [](dsn::string_view) -> int { return FAIL_DB_WRITE_BATCH_DELETE; });
-
-        rocksdb::Status s = _batch.Delete(utils::to_rocksdb_slice(raw_key));
-        if (dsn_unlikely(!s.ok())) {
-            ::dsn::blob hash_key, sort_key;
-            pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-            derror_rocksdb("WriteBatchDelete",
-                           s.ToString(),
-                           "decree: {}, hash_key: {}, sort_key: {}",
-                           decree,
-                           utils::c_escape_string(hash_key),
-                           utils::c_escape_string(sort_key));
-        }
-        return s.code();
-    }
-
-    // Apply the write batch into rocksdb.
-    int db_write(int64_t decree)
-    {
-        dassert(_batch.Count() != 0, "");
-
-        FAIL_POINT_INJECT_F("db_write", [](dsn::string_view) -> int { return FAIL_DB_WRITE; });
-
-        rocksdb::Status status =
-            _batch.Put(_meta_cf, meta_store::LAST_FLUSHED_DECREE, std::to_string(decree));
-        if (dsn_unlikely(!status.ok())) {
-            derror_rocksdb("Write",
-                           status.ToString(),
-                           "put decree of meta cf into batch error, decree: {}",
-                           decree);
-            return status.code();
-        }
-
-        status = _db->Write(_wt_opts, &_batch);
-        if (dsn_unlikely(!status.ok())) {
-            derror_rocksdb("Write", status.ToString(), "write rocksdb error, decree: {}", decree);
-        }
-        return status.code();
-    }
-
-    /// Calls RocksDB Get and store the result into `db_get_context`.
-    /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.
-    /// \result ctx.expired=true if record expired. Still 0 is returned.
-    /// \result ctx.found=false if record is not found. Still 0 is returned.
-    int db_get(dsn::string_view raw_key,
-               /*out*/ db_get_context *ctx)
-    {
-        FAIL_POINT_INJECT_F("db_get", [](dsn::string_view) -> int { return FAIL_DB_GET; });
-
-        rocksdb::Status s = _db->Get(_rd_opts, utils::to_rocksdb_slice(raw_key), &(ctx->raw_value));
-        if (dsn_likely(s.ok())) {
-            // success
-            ctx->found = true;
-            ctx->expire_ts = pegasus_extract_expire_ts(_pegasus_data_version, ctx->raw_value);
-            if (check_if_ts_expired(utils::epoch_now(), ctx->expire_ts)) {
-                ctx->expired = true;
-            }
-            return 0;
-        }
-        if (s.IsNotFound()) {
-            // NotFound is an acceptable error
-            ctx->found = false;
-            return 0;
-        }
-        ::dsn::blob hash_key, sort_key;
-        pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-        derror_rocksdb("Get",
-                       s.ToString(),
-                       "hash_key: {}, sort_key: {}",
-                       utils::c_escape_string(hash_key),
-                       utils::c_escape_string(sort_key));
-        return s.code();
-    }
-
     void clear_up_batch_states(int64_t decree, int err)
     {
         if (!_update_responses.empty()) {
@@ -703,7 +547,7 @@ private:
             _update_responses.clear();
         }
 
-        _batch.Clear();
+        _rocksdb_wrapper->clear_up_write_batch();
     }
 
     static dsn::blob composite_raw_key(dsn::string_view hash_key, dsn::string_view sort_key)
@@ -820,16 +664,6 @@ private:
         return false;
     }
 
-    uint32_t db_expire_ts(uint32_t expire_ts)
-    {
-        // use '_default_ttl' when ttl is not set for this write operation.
-        if (_default_ttl != 0 && expire_ts == 0) {
-            return utils::epoch_now() + _default_ttl;
-        }
-
-        return expire_ts;
-    }
-
 private:
     friend class pegasus_write_service_test;
     friend class pegasus_server_write_test;
@@ -841,15 +675,7 @@ private:
     const std::string _primary_address;
     const uint32_t _pegasus_data_version;
 
-    rocksdb::WriteBatch _batch;
-    rocksdb::DB *_db;
-    rocksdb::ColumnFamilyHandle *_data_cf;
-    rocksdb::ColumnFamilyHandle *_meta_cf;
-    rocksdb::WriteOptions _wt_opts;
-    rocksdb::ReadOptions &_rd_opts;
-    volatile uint32_t _default_ttl;
     ::dsn::perf_counter_wrapper &_pfc_recent_expire_count;
-    pegasus_value_generator _value_generator;
 
     std::unique_ptr<rocksdb_wrapper> _rocksdb_wrapper;
 
