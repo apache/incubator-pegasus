@@ -75,5 +75,6 @@ func ModifyDuplication(c *Client, tableName string, dupid int, status admin.Dupl
 	if err != nil {
 		return err
 	}
+	fmt.Fprintf(c, "%s table \"%s\" done [dupid: %d]\n", status, tableName, dupid)
 	return nil
 }

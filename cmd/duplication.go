@@ -83,5 +83,18 @@ func init() {
 			f.Int("d", "dupid", -1, "the dupid")
 		},
 	})
+	rootCmd.AddCommand(&grumble.Command{
+		Name: "start",
+		Help: "start a duplication",
+		Run: shell.RequireUseTable(func(c *shell.Context) error {
+			if c.Flags.Int("dupid") == -1 {
+				return fmt.Errorf("dupid cannot be empty")
+			}
+			return executor.ModifyDuplication(pegasusClient, c.UseTable, c.Flags.Int("dupid"), admin.DuplicationStatus_DS_START)
+		}),
+		Flags: func(f *grumble.Flags) {
+			f.Int("d", "dupid", -1, "the dupid")
+		},
+	})
 	shell.AddCommand(rootCmd)
 }
