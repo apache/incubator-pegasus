@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <dsn/utility/fail_point.h>
 #include "base/pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "server/pegasus_server_write.h"
@@ -195,7 +196,7 @@ public:
         ASSERT_EQ(response.partition_index, _gpid.get_partition_index());
         ASSERT_EQ(response.decree, decree);
         ASSERT_EQ(response.server, _write_svc->_impl->_primary_address);
-        ASSERT_EQ(_write_svc->_impl->_batch.Count(), 0);
+        ASSERT_EQ(_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(), 0);
         ASSERT_EQ(_write_svc->_impl->_update_responses.size(), 0);
     }
 };
