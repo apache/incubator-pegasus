@@ -52,7 +52,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
 
     auto iter = _single_put_methods.find(requests[0]->rpc_code());
     if (iter != _single_put_methods.end()) {
-        dassert_f(count == 1, "count = {}", count);
+        dcheck_eq(count, 1);
         return iter->second(this, requests[0]);
     } else {
         return on_batched_writes(requests, count);
