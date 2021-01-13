@@ -66,8 +66,6 @@ private:
 
     db_write_context _write_ctx;
     int64_t _decree;
-
-    const bool _verbose_log;
 };
 
 } // namespace server

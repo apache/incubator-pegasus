@@ -31,9 +31,7 @@ namespace pegasus {
 namespace server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
-    : replica_base(server),
-      _write_svc(new pegasus_write_service(server, verbose_log)),
-      _verbose_log(verbose_log)
+    : replica_base(server), _write_svc(new pegasus_write_service(server, verbose_log))
 {
 }
 
