@@ -199,7 +199,7 @@ private:
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
 
-    bool _verbose_log;
+    const bool _verbose_log;
 
     ::dsn::perf_counter_wrapper _pfc_put_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
