@@ -31,7 +31,9 @@ namespace pegasus {
 namespace server {
 
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
-    : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log)
+    : replica_base(server),
+      _write_svc(new pegasus_write_service(server, verbose_log)),
+      _verbose_log(verbose_log)
 {
 }
 
@@ -109,7 +111,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
             dsn::task_code rpc_code(requests[i]->rpc_code());
             if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
                 auto rpc = put_rpc::auto_reply(requests[i]);
-                local_err = on_single_put_in_batch(rpc);
+                local_err = _write_svc->on_single_put_in_batch(_write_ctx, rpc);
                 _put_rpc_batch.emplace_back(std::move(rpc));
             } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
                 auto rpc = remove_rpc::auto_reply(requests[i]);

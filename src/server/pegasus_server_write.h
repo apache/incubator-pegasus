@@ -28,6 +28,8 @@ namespace pegasus {
 namespace server {
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
+/// TODO(zlw): remove class pegasus_server_write, move all of its' member functions to
+/// pegassu_write_service
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
@@ -51,13 +53,6 @@ public:
 private:
     /// Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn::message_ex **requests, int count);
-
-    int on_single_put_in_batch(put_rpc &rpc)
-    {
-        int err = _write_svc->batch_put(_write_ctx, rpc.request(), rpc.response());
-        request_key_check(_decree, rpc.dsn_request(), rpc.request().key);
-        return err;
-    }
 
     int on_single_remove_in_batch(remove_rpc &rpc)
     {

@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
 #include "pegasus_write_service_impl.h"
 #include "capacity_unit_calculator.h"
@@ -31,12 +30,13 @@ namespace server {
 
 DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 
-pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
+pegasus_write_service::pegasus_write_service(pegasus_server_impl *server, bool verbose_log)
     : replica_base(server),
       _server(server),
       _impl(new impl(server)),
       _batch_start_time(0),
-      _cu_calculator(server->_cu_calculator.get())
+      _cu_calculator(server->_cu_calculator.get()),
+      _verbose_log(verbose_log)
 {
     std::string str_gpid = fmt::format("{}", server->get_gpid());
 
@@ -293,6 +293,39 @@ void pegasus_write_service::batch_abort(int64_t decree, int err)
 }
 
 void pegasus_write_service::set_default_ttl(uint32_t ttl) { _impl->set_default_ttl(ttl); }
+
+int pegasus_write_service::on_single_put_in_batch(const db_write_context &write_ctx, put_rpc &rpc)
+{
+    int err = batch_put(write_ctx, rpc.request(), rpc.response());
+    request_key_check(write_ctx.decree, rpc.dsn_request(), rpc.request().key);
+    return err;
+}
+
+void pegasus_write_service::request_key_check(int64_t decree,
+                                              dsn::message_ex *msg,
+                                              const dsn::blob &key)
+{
+    // TODO(wutao1): server should not assert when client's hash is incorrect.
+    if (msg->header->client.partition_hash != 0) {
+        uint64_t partition_hash = pegasus_key_hash(key);
+        dassert(msg->header->client.partition_hash == partition_hash,
+                "inconsistent partition hash");
+        int thread_hash = get_gpid().thread_hash();
+        dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
+    }
+
+    if (_verbose_log) {
+        dsn::blob hash_key, sort_key;
+        pegasus_restore_key(key, hash_key, sort_key);
+
+        ddebug_rocksdb("Write",
+                       "decree: {}, code: {}, hash_key: {}, sort_key: {}",
+                       decree,
+                       msg->local_rpc_code.to_string(),
+                       utils::c_escape_string(hash_key),
+                       utils::c_escape_string(sort_key));
+    }
+}
 
 void pegasus_write_service::clear_up_batch_states()
 {

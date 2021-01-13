@@ -24,6 +24,7 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/replication/replication_types.h>
 
+#include "base/pegasus_rpc_types.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
@@ -104,7 +105,7 @@ class capacity_unit_calculator;
 class pegasus_write_service : dsn::replication::replica_base
 {
 public:
-    explicit pegasus_write_service(pegasus_server_impl *server);
+    explicit pegasus_write_service(pegasus_server_impl *server, bool verbose_log);
 
     ~pegasus_write_service();
 
@@ -173,8 +174,14 @@ public:
 
     void set_default_ttl(uint32_t ttl);
 
+    // todo(zlw): make it private when refactor is done
+    int on_single_put_in_batch(const db_write_context &write_ctx, put_rpc &rpc);
+
 private:
     void clear_up_batch_states();
+    // Ensure that the write request is directed to the right partition.
+    // In verbose mode it will log for every request.
+    void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
 private:
     friend class pegasus_write_service_test;
@@ -191,6 +198,8 @@ private:
 
     capacity_unit_calculator *_cu_calculator;
     int64_t _dup_lagging_write_threshold_ms;
+
+    bool _verbose_log;
 
     ::dsn::perf_counter_wrapper _pfc_put_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_put_qps;
