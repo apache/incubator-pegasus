@@ -50,44 +50,13 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         return _write_svc->empty_put(_decree);
     }
 
-    dsn::task_code rpc_code(requests[0]->rpc_code());
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = multi_put_rpc::auto_reply(requests[0]);
-        return _write_svc->multi_put(_write_ctx, rpc.request(), rpc.response());
+    auto iter = _single_put_methods.find(requests[0]->rpc_code());
+    if (iter != _single_put_methods.end()) {
+        dassert_f(count == 1, "count = {}", count);
+        return iter->second(this, requests[0]);
+    } else {
+        return on_batched_writes(requests, count);
     }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = multi_remove_rpc::auto_reply(requests[0]);
-        return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = incr_rpc::auto_reply(requests[0]);
-        return _write_svc->incr(_decree, rpc.request(), rpc.response());
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = duplicate_rpc::auto_reply(requests[0]);
-        return _write_svc->duplicate(_decree, rpc.request(), rpc.response());
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = check_and_set_rpc::auto_reply(requests[0]);
-        return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = check_and_mutate_rpc::auto_reply(requests[0]);
-        return _write_svc->check_and_mutate(_decree, rpc.request(), rpc.response());
-    }
-    if (rpc_code == dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
-        dassert(count == 1, "count = %d", count);
-        auto rpc = ingestion_rpc::auto_reply(requests[0]);
-        return _write_svc->ingestion_files(_decree, rpc.request(), rpc.response());
-    }
-
-    return on_batched_writes(requests, count);
 }
 
 void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_default_ttl(ttl); }
@@ -116,13 +85,10 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 local_err = on_single_remove_in_batch(rpc);
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
-                if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT ||
-                    rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE ||
-                    rpc_code == dsn::apps::RPC_RRDB_RRDB_INCR ||
-                    rpc_code == dsn::apps::RPC_RRDB_RRDB_DUPLICATE) {
-                    dfatal("rpc code not allow batch: %s", rpc_code.to_string());
+                if (_single_put_methods.find(rpc_code) != _single_put_methods.end()) {
+                    dfatal_f("rpc code not allow batch: {}", rpc_code.to_string());
                 } else {
-                    dfatal("rpc code not handled: %s", rpc_code.to_string());
+                    dfatal_f("rpc code not handled: {}", rpc_code.to_string());
                 }
             }
 
@@ -170,5 +136,77 @@ void pegasus_server_write::request_key_check(int64_t decree,
     }
 }
 
+pegasus_server_write::single_put_rpc_map pegasus_server_write::_single_put_methods = {
+    {dsn::apps::RPC_RRDB_RRDB_MULTI_PUT,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->multi_put(request);
+     }},
+    {dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->multi_remove(request);
+     }},
+    {dsn::apps::RPC_RRDB_RRDB_INCR,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->incr(request);
+     }},
+    {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->duplicate(request);
+     }},
+    {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->check_and_set(request);
+     }},
+    {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->check_and_mutate(request);
+     }},
+    {dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
+     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
+         return server_write->ingestion_files(request);
+     }},
+};
+
+int pegasus_server_write::multi_put(dsn::message_ex *request)
+{
+    auto rpc = multi_put_rpc::auto_reply(request);
+    return _write_svc->multi_put(_write_ctx, rpc.request(), rpc.response());
+}
+
+int pegasus_server_write::multi_remove(dsn::message_ex *request)
+{
+    auto rpc = multi_remove_rpc::auto_reply(request);
+    return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
+}
+
+int pegasus_server_write::incr(dsn::message_ex *request)
+{
+    auto rpc = incr_rpc::auto_reply(request);
+    return _write_svc->incr(_decree, rpc.request(), rpc.response());
+}
+
+int pegasus_server_write::duplicate(dsn::message_ex *request)
+{
+    auto rpc = duplicate_rpc::auto_reply(request);
+    return _write_svc->duplicate(_decree, rpc.request(), rpc.response());
+}
+
+int pegasus_server_write::check_and_set(dsn::message_ex *request)
+{
+    auto rpc = check_and_set_rpc::auto_reply(request);
+    return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
+}
+
+int pegasus_server_write::check_and_mutate(dsn::message_ex *request)
+{
+    auto rpc = check_and_mutate_rpc::auto_reply(request);
+    return _write_svc->check_and_mutate(_decree, rpc.request(), rpc.response());
+}
+
+int pegasus_server_write::ingestion_files(dsn::message_ex *request)
+{
+    auto rpc = ingestion_rpc::auto_reply(request);
+    return _write_svc->ingestion_files(_decree, rpc.request(), rpc.response());
+}
 } // namespace server
 } // namespace pegasus

@@ -71,6 +71,14 @@ private:
     void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
 private:
+    int multi_put(dsn::message_ex *request);
+    int multi_remove(dsn::message_ex *request);
+    int incr(dsn::message_ex *request);
+    int duplicate(dsn::message_ex *request);
+    int check_and_set(dsn::message_ex *request);
+    int check_and_mutate(dsn::message_ex *request);
+    int ingestion_files(dsn::message_ex *request);
+
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
     friend class pegasus_write_service_impl_test;
@@ -84,6 +92,10 @@ private:
     int64_t _decree;
 
     const bool _verbose_log;
+
+    typedef std::map<dsn::task_code, std::function<int(pegasus_server_write *, dsn::message_ex *)>>
+        single_put_rpc_map;
+    static single_put_rpc_map _single_put_methods;
 };
 
 } // namespace server
