@@ -115,7 +115,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 _put_rpc_batch.emplace_back(std::move(rpc));
             } else if (rpc_code == dsn::apps::RPC_RRDB_RRDB_REMOVE) {
                 auto rpc = remove_rpc::auto_reply(requests[i]);
-                local_err = on_single_remove_in_batch(rpc);
+                local_err = _write_svc->on_single_remove_in_batch(_write_ctx, rpc);
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
                 if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT ||
@@ -145,32 +145,5 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
     _remove_rpc_batch.clear();
     return err;
 }
-
-void pegasus_server_write::request_key_check(int64_t decree,
-                                             dsn::message_ex *msg,
-                                             const dsn::blob &key)
-{
-    // TODO(wutao1): server should not assert when client's hash is incorrect.
-    if (msg->header->client.partition_hash != 0) {
-        uint64_t partition_hash = pegasus_key_hash(key);
-        dassert(msg->header->client.partition_hash == partition_hash,
-                "inconsistent partition hash");
-        int thread_hash = get_gpid().thread_hash();
-        dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
-    }
-
-    if (_verbose_log) {
-        ::dsn::blob hash_key, sort_key;
-        pegasus_restore_key(key, hash_key, sort_key);
-
-        ddebug_rocksdb("Write",
-                       "decree: {}, code: {}, hash_key: {}, sort_key: {}",
-                       decree,
-                       msg->local_rpc_code.to_string(),
-                       utils::c_escape_string(hash_key),
-                       utils::c_escape_string(sort_key));
-    }
-}
-
 } // namespace server
 } // namespace pegasus

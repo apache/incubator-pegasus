@@ -301,6 +301,14 @@ int pegasus_write_service::on_single_put_in_batch(const db_write_context &write_
     return err;
 }
 
+int pegasus_write_service::on_single_remove_in_batch(const db_write_context &write_ctx,
+                                                     remove_rpc &rpc)
+{
+    int err = batch_remove(write_ctx.decree, rpc.request(), rpc.response());
+    request_key_check(write_ctx.decree, rpc.dsn_request(), rpc.request());
+    return err;
+}
+
 void pegasus_write_service::request_key_check(int64_t decree,
                                               dsn::message_ex *msg,
                                               const dsn::blob &key)

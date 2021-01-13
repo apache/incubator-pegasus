@@ -54,17 +54,6 @@ private:
     /// Delay replying for the batched requests until all of them complete.
     int on_batched_writes(dsn::message_ex **requests, int count);
 
-    int on_single_remove_in_batch(remove_rpc &rpc)
-    {
-        int err = _write_svc->batch_remove(_decree, rpc.request(), rpc.response());
-        request_key_check(_decree, rpc.dsn_request(), rpc.request());
-        return err;
-    }
-
-    // Ensure that the write request is directed to the right partition.
-    // In verbose mode it will log for every request.
-    void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
-
 private:
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;

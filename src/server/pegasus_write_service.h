@@ -169,6 +169,7 @@ public:
 
     // todo(zlw): make it private when refactor is done
     int on_single_put_in_batch(const db_write_context &write_ctx, put_rpc &rpc);
+    int on_single_remove_in_batch(const db_write_context &write_ctx, remove_rpc &rpc);
 
 private:
     void clear_up_batch_states();
