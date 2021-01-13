@@ -71,6 +71,8 @@ private:
     void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
 private:
+    /// TODO(zlw): using member functions of pegasus_write_service to refactor these functions
+    /// below, in order to remove class pegasus_write_service in the later
     int multi_put(dsn::message_ex *request);
     int multi_remove(dsn::message_ex *request);
     int incr(dsn::message_ex *request);
