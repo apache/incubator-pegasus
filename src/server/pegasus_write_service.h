@@ -152,13 +152,6 @@ public:
     // Prepare batch write.
     void batch_prepare(int64_t decree);
 
-    // Add PUT record in batch write.
-    // \returns 0 if success, non-0 if failure.
-    // NOTE that `resp` should not be moved or freed while the batch is not committed.
-    int batch_put(const db_write_context &ctx,
-                  const dsn::apps::update_request &update,
-                  dsn::apps::update_response &resp);
-
     // Add REMOVE record in batch write.
     // \returns 0 if success, non-0 if failure.
     // NOTE that `resp` should not be moved or freed while the batch is not committed.
@@ -182,6 +175,13 @@ private:
     // Ensure that the write request is directed to the right partition.
     // In verbose mode it will log for every request.
     void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
+
+    // Add PUT record in batch write.
+    // \returns 0 if success, non-0 if failure.
+    // NOTE that `resp` should not be moved or freed while the batch is not committed.
+    int batch_put(const db_write_context &ctx,
+                  const dsn::apps::update_request &update,
+                  dsn::apps::update_response &resp);
 
 private:
     friend class pegasus_write_service_test;
