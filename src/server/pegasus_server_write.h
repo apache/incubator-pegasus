@@ -29,7 +29,7 @@ namespace server {
 
 /// This class implements the interface of `pegasus_sever_impl::on_batched_write_requests`.
 /// TODO(zlw): remove class pegasus_server_write, move all of its' member functions to
-/// pegassu_write_service
+/// pegasus_write_service
 class pegasus_server_write : public dsn::replication::replica_base
 {
 public:
