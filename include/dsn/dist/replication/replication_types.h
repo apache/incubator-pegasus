@@ -189,6 +189,18 @@ struct duplication_fail_mode
 
 extern const std::map<int, const char *> _duplication_fail_mode_VALUES_TO_NAMES;
 
+struct split_control_type
+{
+    enum type
+    {
+        PAUSE = 0,
+        RESTART = 1,
+        CANCEL = 2
+    };
+};
+
+extern const std::map<int, const char *> _split_control_type_VALUES_TO_NAMES;
+
 struct bulk_load_status
 {
     enum type
@@ -448,6 +460,10 @@ class ddd_diagnose_response;
 class start_partition_split_request;
 
 class start_partition_split_response;
+
+class control_split_request;
+
+class control_split_response;
 
 class notify_catch_up_request;
 
@@ -6274,6 +6290,135 @@ public:
 void swap(start_partition_split_response &a, start_partition_split_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const start_partition_split_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _control_split_request__isset
+{
+    _control_split_request__isset()
+        : app_name(false), control_type(false), parent_pidx(false), old_partition_count(false)
+    {
+    }
+    bool app_name : 1;
+    bool control_type : 1;
+    bool parent_pidx : 1;
+    bool old_partition_count : 1;
+} _control_split_request__isset;
+
+class control_split_request
+{
+public:
+    control_split_request(const control_split_request &);
+    control_split_request(control_split_request &&);
+    control_split_request &operator=(const control_split_request &);
+    control_split_request &operator=(control_split_request &&);
+    control_split_request()
+        : app_name(),
+          control_type((split_control_type::type)0),
+          parent_pidx(0),
+          old_partition_count(0)
+    {
+    }
+
+    virtual ~control_split_request() throw();
+    std::string app_name;
+    split_control_type::type control_type;
+    int32_t parent_pidx;
+    int32_t old_partition_count;
+
+    _control_split_request__isset __isset;
+
+    void __set_app_name(const std::string &val);
+
+    void __set_control_type(const split_control_type::type val);
+
+    void __set_parent_pidx(const int32_t val);
+
+    void __set_old_partition_count(const int32_t val);
+
+    bool operator==(const control_split_request &rhs) const
+    {
+        if (!(app_name == rhs.app_name))
+            return false;
+        if (!(control_type == rhs.control_type))
+            return false;
+        if (!(parent_pidx == rhs.parent_pidx))
+            return false;
+        if (__isset.old_partition_count != rhs.__isset.old_partition_count)
+            return false;
+        else if (__isset.old_partition_count && !(old_partition_count == rhs.old_partition_count))
+            return false;
+        return true;
+    }
+    bool operator!=(const control_split_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const control_split_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(control_split_request &a, control_split_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const control_split_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _control_split_response__isset
+{
+    _control_split_response__isset() : err(false), hint_msg(false) {}
+    bool err : 1;
+    bool hint_msg : 1;
+} _control_split_response__isset;
+
+class control_split_response
+{
+public:
+    control_split_response(const control_split_response &);
+    control_split_response(control_split_response &&);
+    control_split_response &operator=(const control_split_response &);
+    control_split_response &operator=(control_split_response &&);
+    control_split_response() : hint_msg() {}
+
+    virtual ~control_split_response() throw();
+    ::dsn::error_code err;
+    std::string hint_msg;
+
+    _control_split_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_hint_msg(const std::string &val);
+
+    bool operator==(const control_split_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (__isset.hint_msg != rhs.__isset.hint_msg)
+            return false;
+        else if (__isset.hint_msg && !(hint_msg == rhs.hint_msg))
+            return false;
+        return true;
+    }
+    bool operator!=(const control_split_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const control_split_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(control_split_response &a, control_split_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const control_split_response &obj)
 {
     obj.printTo(out);
     return out;

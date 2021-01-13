@@ -471,6 +471,9 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(RPC_CM_START_PARTITION_SPLIT,
                                          "start_partition_split",
                                          &meta_service::on_start_partition_split);
+    register_rpc_handler_with_rpc_holder(RPC_CM_CONTROL_PARTITION_SPLIT,
+                                         "control_partition_split(pause/restart/cancel)",
+                                         &meta_service::on_control_partition_split);
     register_rpc_handler_with_rpc_holder(RPC_CM_REGISTER_CHILD_REPLICA,
                                          "register_child_on_meta",
                                          &meta_service::on_register_child_on_meta);
@@ -1006,6 +1009,23 @@ void meta_service::on_start_partition_split(start_split_rpc rpc)
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      tracker(),
                      [this, rpc]() { _split_svc->start_partition_split(std::move(rpc)); },
+                     server_state::sStateHash);
+}
+
+void meta_service::on_control_partition_split(control_split_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+
+    if (_split_svc == nullptr) {
+        derror_f("meta doesn't support partition split");
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     [this, rpc]() { _split_svc->control_partition_split(std::move(rpc)); },
                      server_state::sStateHash);
 }
 

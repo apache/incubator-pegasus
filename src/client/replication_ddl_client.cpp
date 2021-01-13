@@ -1604,5 +1604,40 @@ replication_ddl_client::start_partition_split(const std::string &app_name, int n
     return call_rpc_sync(start_split_rpc(std::move(req), RPC_CM_START_PARTITION_SPLIT));
 }
 
+error_with<control_split_response>
+replication_ddl_client::pause_partition_split(const std::string &app_name,
+                                              const int32_t parent_pidx)
+{
+    return control_partition_split(app_name, split_control_type::PAUSE, parent_pidx, 0);
+}
+
+error_with<control_split_response>
+replication_ddl_client::restart_partition_split(const std::string &app_name,
+                                                const int32_t parent_pidx)
+{
+    return control_partition_split(app_name, split_control_type::RESTART, parent_pidx, 0);
+}
+
+error_with<control_split_response>
+replication_ddl_client::cancel_partition_split(const std::string &app_name,
+                                               const int32_t old_partition_count)
+{
+    return control_partition_split(app_name, split_control_type::CANCEL, -1, old_partition_count);
+}
+
+error_with<control_split_response>
+replication_ddl_client::control_partition_split(const std::string &app_name,
+                                                split_control_type::type control_type,
+                                                const int32_t parent_pidx,
+                                                const int32_t old_partition_count)
+{
+    auto req = make_unique<control_split_request>();
+    req->__set_app_name(app_name);
+    req->__set_control_type(control_type);
+    req->__set_parent_pidx(parent_pidx);
+    req->__set_old_partition_count(old_partition_count);
+    return call_rpc_sync(control_split_rpc(std::move(req), RPC_CM_CONTROL_PARTITION_SPLIT));
+}
+
 } // namespace replication
 } // namespace dsn

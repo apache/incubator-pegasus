@@ -890,6 +890,39 @@ struct start_partition_split_response
     2:string            hint_msg;
 }
 
+enum split_control_type
+{
+    PAUSE,
+    RESTART,
+    CANCEL
+}
+
+// client to meta server to control partition split
+// support three control type: pause, restart, cancel
+struct control_split_request
+{
+    1:string                app_name;
+    2:split_control_type    control_type
+    // for pause, parent_pidx >= 0, pause specific partition, parent_pidx = -1, pause all splitting partition
+    // for restart, parent_pidx >= 0, restart specific partition, parent_pidx = -1, restart all paused partition
+    // for cancel, parent_pidx will always be -1
+    3:i32                   parent_pidx;
+    // only used for cancel
+    4:optional i32          old_partition_count;
+}
+
+struct control_split_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: wrong partition split_status
+    // - ERR_INVALID_PARAMETERS: invalid parent_pidx or old_partition_count
+    // - ERR_CHILD_REGISTERED: child partition has been registered, pause partition split or cancel split failed
+    1:dsn.error_code    err;
+    2:optional string   hint_msg;
+}
+
 // child to primary parent, notifying that itself has caught up with parent
 struct notify_catch_up_request
 {

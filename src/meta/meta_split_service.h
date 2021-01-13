@@ -38,6 +38,15 @@ private:
     // client -> meta to start split
     void start_partition_split(start_split_rpc rpc);
 
+    // client -> meta to pause/restart/cancel split
+    void control_partition_split(control_split_rpc rpc);
+
+    // pause/restart specific one partition
+    void do_control_single(std::shared_ptr<app_state> app, control_split_rpc rpc);
+
+    // pause all splitting partitions or restart all paused partitions or cancel all partitions
+    void do_control_all(std::shared_ptr<app_state> app, control_split_rpc rpc);
+
     // primary parent -> meta_server to register child
     void register_child_on_meta(register_child_rpc rpc);
 
@@ -47,6 +56,19 @@ private:
     dsn::task_ptr add_child_on_remote_storage(register_child_rpc rpc, bool create_new);
     void
     on_add_child_on_remote_storage_reply(error_code ec, register_child_rpc rpc, bool create_new);
+
+    static const std::string control_type_str(split_control_type::type type)
+    {
+        std::string str = "";
+        if (type == split_control_type::PAUSE) {
+            str = "pause";
+        } else if (type == split_control_type::RESTART) {
+            str = "restart";
+        } else if (type == split_control_type::CANCEL) {
+            str = "cancel";
+        }
+        return str;
+    }
 
 private:
     friend class meta_service;

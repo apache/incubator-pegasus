@@ -41,6 +41,7 @@ typedef rpc_holder<control_bulk_load_request, control_bulk_load_response> contro
 typedef rpc_holder<query_bulk_load_request, query_bulk_load_response> query_bulk_load_rpc;
 
 typedef rpc_holder<start_partition_split_request, start_partition_split_response> start_split_rpc;
+typedef rpc_holder<control_split_request, control_split_response> control_split_rpc;
 
 class replication_options
 {
