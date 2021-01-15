@@ -33,6 +33,7 @@ namespace server {
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
     : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log)
 {
+    init_non_batch_write_handler();
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
@@ -50,10 +51,10 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         return _write_svc->empty_put(_decree);
     }
 
-    auto iter = _single_put_methods.find(requests[0]->rpc_code());
-    if (iter != _single_put_methods.end()) {
+    auto iter = _non_batch_write_handlers.find(requests[0]->rpc_code());
+    if (iter != _non_batch_write_handlers.end()) {
         dcheck_eq(count, 1);
-        return iter->second(this, requests[0]);
+        return iter->second(requests[0]);
     } else {
         return on_batched_writes(requests, count);
     }
@@ -85,7 +86,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 local_err = on_single_remove_in_batch(rpc);
                 _remove_rpc_batch.emplace_back(std::move(rpc));
             } else {
-                if (_single_put_methods.find(rpc_code) != _single_put_methods.end()) {
+                if (_non_batch_write_handlers.find(rpc_code) != _non_batch_write_handlers.end()) {
                     dfatal_f("rpc code not allow batch: {}", rpc_code.to_string());
                 } else {
                     dfatal_f("rpc code not handled: {}", rpc_code.to_string());
@@ -136,36 +137,25 @@ void pegasus_server_write::request_key_check(int64_t decree,
     }
 }
 
-pegasus_server_write::single_put_rpc_map pegasus_server_write::_single_put_methods = {
-    {dsn::apps::RPC_RRDB_RRDB_MULTI_PUT,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->multi_put(request);
-     }},
-    {dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->multi_remove(request);
-     }},
-    {dsn::apps::RPC_RRDB_RRDB_INCR,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->incr(request);
-     }},
-    {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->duplicate(request);
-     }},
-    {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->check_and_set(request);
-     }},
-    {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->check_and_mutate(request);
-     }},
-    {dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
-     [](pegasus_server_write *server_write, dsn::message_ex *request) -> int {
-         return server_write->ingestion_files(request);
-     }},
-};
+void pegasus_server_write::init_non_batch_write_handler()
+{
+    _non_batch_write_handlers = {
+        {dsn::apps::RPC_RRDB_RRDB_MULTI_PUT,
+         [this](dsn::message_ex *request) -> int { return multi_put(request); }},
+        {dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE,
+         [this](dsn::message_ex *request) -> int { return multi_remove(request); }},
+        {dsn::apps::RPC_RRDB_RRDB_INCR,
+         [this](dsn::message_ex *request) -> int { return incr(request); }},
+        {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+         [this](dsn::message_ex *request) -> int { return duplicate(request); }},
+        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
+         [this](dsn::message_ex *request) -> int { return check_and_set(request); }},
+        {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
+         [this](dsn::message_ex *request) -> int { return check_and_mutate(request); }},
+        {dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
+         [this](dsn::message_ex *request) -> int { return ingestion_files(request); }},
+    };
+}
 
 int pegasus_server_write::multi_put(dsn::message_ex *request)
 {
