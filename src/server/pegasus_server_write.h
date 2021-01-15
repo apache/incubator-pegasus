@@ -71,13 +71,6 @@ private:
     void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
 private:
-    int multi_put(dsn::message_ex *request);
-    int multi_remove(dsn::message_ex *request);
-    int incr(dsn::message_ex *request);
-    int duplicate(dsn::message_ex *request);
-    int check_and_set(dsn::message_ex *request);
-    int check_and_mutate(dsn::message_ex *request);
-    int ingestion_files(dsn::message_ex *request);
     void init_non_batch_write_handlers();
 
     friend class pegasus_server_write_test;

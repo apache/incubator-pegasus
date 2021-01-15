@@ -140,62 +140,41 @@ void pegasus_server_write::init_non_batch_write_handlers()
 {
     _non_batch_write_handlers = {
         {dsn::apps::RPC_RRDB_RRDB_MULTI_PUT,
-         [this](dsn::message_ex *request) -> int { return multi_put(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = multi_put_rpc::auto_reply(request);
+             return _write_svc->multi_put(_write_ctx, rpc.request(), rpc.response());
+         }},
         {dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE,
-         [this](dsn::message_ex *request) -> int { return multi_remove(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = multi_remove_rpc::auto_reply(request);
+             return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
+         }},
         {dsn::apps::RPC_RRDB_RRDB_INCR,
-         [this](dsn::message_ex *request) -> int { return incr(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = incr_rpc::auto_reply(request);
+             return _write_svc->incr(_decree, rpc.request(), rpc.response());
+         }},
         {dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-         [this](dsn::message_ex *request) -> int { return duplicate(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = duplicate_rpc::auto_reply(request);
+             return _write_svc->duplicate(_decree, rpc.request(), rpc.response());
+         }},
         {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET,
-         [this](dsn::message_ex *request) -> int { return check_and_set(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = check_and_set_rpc::auto_reply(request);
+             return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
+         }},
         {dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE,
-         [this](dsn::message_ex *request) -> int { return check_and_mutate(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = check_and_mutate_rpc::auto_reply(request);
+             return _write_svc->check_and_mutate(_decree, rpc.request(), rpc.response());
+         }},
         {dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
-         [this](dsn::message_ex *request) -> int { return ingestion_files(request); }},
+         [this](dsn::message_ex *request) -> int {
+             auto rpc = ingestion_rpc::auto_reply(request);
+             return _write_svc->ingestion_files(_decree, rpc.request(), rpc.response());
+         }},
     };
-}
-
-int pegasus_server_write::multi_put(dsn::message_ex *request)
-{
-    auto rpc = multi_put_rpc::auto_reply(request);
-    return _write_svc->multi_put(_write_ctx, rpc.request(), rpc.response());
-}
-
-int pegasus_server_write::multi_remove(dsn::message_ex *request)
-{
-    auto rpc = multi_remove_rpc::auto_reply(request);
-    return _write_svc->multi_remove(_decree, rpc.request(), rpc.response());
-}
-
-int pegasus_server_write::incr(dsn::message_ex *request)
-{
-    auto rpc = incr_rpc::auto_reply(request);
-    return _write_svc->incr(_decree, rpc.request(), rpc.response());
-}
-
-int pegasus_server_write::duplicate(dsn::message_ex *request)
-{
-    auto rpc = duplicate_rpc::auto_reply(request);
-    return _write_svc->duplicate(_decree, rpc.request(), rpc.response());
-}
-
-int pegasus_server_write::check_and_set(dsn::message_ex *request)
-{
-    auto rpc = check_and_set_rpc::auto_reply(request);
-    return _write_svc->check_and_set(_decree, rpc.request(), rpc.response());
-}
-
-int pegasus_server_write::check_and_mutate(dsn::message_ex *request)
-{
-    auto rpc = check_and_mutate_rpc::auto_reply(request);
-    return _write_svc->check_and_mutate(_decree, rpc.request(), rpc.response());
-}
-
-int pegasus_server_write::ingestion_files(dsn::message_ex *request)
-{
-    auto rpc = ingestion_rpc::auto_reply(request);
-    return _write_svc->ingestion_files(_decree, rpc.request(), rpc.response());
 }
 } // namespace server
 } // namespace pegasus
