@@ -55,9 +55,8 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     if (iter != _non_batch_write_handlers.end()) {
         dcheck_eq(count, 1);
         return iter->second(requests[0]);
-    } else {
-        return on_batched_writes(requests, count);
     }
+    return on_batched_writes(requests, count);
 }
 
 void pegasus_server_write::set_default_ttl(uint32_t ttl) { _write_svc->set_default_ttl(ttl); }
