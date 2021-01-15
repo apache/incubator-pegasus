@@ -33,7 +33,7 @@ namespace server {
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
     : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log)
 {
-    init_non_batch_write_handler();
+    init_non_batch_write_handlers();
 }
 
 int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
@@ -136,7 +136,7 @@ void pegasus_server_write::request_key_check(int64_t decree,
     }
 }
 
-void pegasus_server_write::init_non_batch_write_handler()
+void pegasus_server_write::init_non_batch_write_handlers()
 {
     _non_batch_write_handlers = {
         {dsn::apps::RPC_RRDB_RRDB_MULTI_PUT,

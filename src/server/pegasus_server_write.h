@@ -78,7 +78,7 @@ private:
     int check_and_set(dsn::message_ex *request);
     int check_and_mutate(dsn::message_ex *request);
     int ingestion_files(dsn::message_ex *request);
-    void init_non_batch_write_handler();
+    void init_non_batch_write_handlers();
 
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
