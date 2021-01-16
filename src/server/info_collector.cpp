@@ -149,16 +149,16 @@ void info_collector::on_app_stat()
         return;
     }
 
-    table_stats all_stats("_all_");
+    row_data all_stats("_all_");
     for (const auto &app_rows : all_rows) {
         // get statistics data for app
-        table_stats app_stats(app_rows.first);
+        row_data app_stats(app_rows.first);
         for (auto partition_row : app_rows.second) {
             app_stats.aggregate(partition_row);
         }
         get_app_counters(app_stats.app_name)->set(app_stats);
         // get row data statistics for all of the apps
-        all_stats.merge(app_stats);
+        all_stats.aggregate(app_stats);
 
         // hotspot_partition_calculator is used for detecting hotspots
         auto hotspot_partition_calculator =
@@ -213,6 +213,8 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(recent_abnormal_count);
     INIT_COUNTER(recent_write_throttling_delay_count);
     INIT_COUNTER(recent_write_throttling_reject_count);
+    INIT_COUNTER(recent_read_throttling_delay_count);
+    INIT_COUNTER(recent_read_throttling_reject_count);
     INIT_COUNTER(storage_mb);
     INIT_COUNTER(storage_count);
     INIT_COUNTER(rdb_block_cache_hit_rate);
