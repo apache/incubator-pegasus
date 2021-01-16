@@ -156,7 +156,7 @@ void info_collector::on_app_stat()
         for (auto partition_row : app_rows.second) {
             app_stats.aggregate(partition_row);
         }
-        get_app_counters(app_stats.app_name)->set(app_stats);
+        get_app_counters(app_stats.row_name)->set(app_stats);
         // get row data statistics for all of the apps
         all_stats.aggregate(app_stats);
 
@@ -166,7 +166,7 @@ void info_collector::on_app_stat()
         hotspot_partition_calculator->data_aggregate(app_rows.second);
         hotspot_partition_calculator->data_analyse();
     }
-    get_app_counters(all_stats.app_name)->set(all_stats);
+    get_app_counters(all_stats.row_name)->set(all_stats);
 
     ddebug_f("stat apps succeed, app_count = {}, total_read_qps = {}, total_write_qps = {}",
              all_rows.size(),
