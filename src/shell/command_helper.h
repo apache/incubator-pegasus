@@ -555,7 +555,8 @@ inline bool parse_app_perf_counter_name(const std::string &name,
 
 struct row_data
 {
-    row_data(const std::string &row_name) : row_name(row_name) {}
+    row_data() = default;
+    explicit row_data(const std::string &row_name) : row_name(row_name) {}
 
     double get_total_qps() const
     {
