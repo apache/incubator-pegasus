@@ -276,29 +276,28 @@ inline void scan_data_next(scan_data_context *context)
                     case SCAN_COPY:
                         context->split_request_count++;
                         if (context->no_overwrite) {
-                            auto callback =
-                                [context](int err,
-                                          pegasus::pegasus_client::check_and_set_results &&results,
-                                          pegasus::pegasus_client::internal_info &&info) {
-                                    if (err != pegasus::PERR_OK) {
-                                        if (!context->split_completed.exchange(true)) {
-                                            fprintf(
-                                                stderr,
+                            auto callback = [context](
+                                int err,
+                                pegasus::pegasus_client::check_and_set_results &&results,
+                                pegasus::pegasus_client::internal_info &&info) {
+                                if (err != pegasus::PERR_OK) {
+                                    if (!context->split_completed.exchange(true)) {
+                                        fprintf(stderr,
                                                 "ERROR: split[%d] async check and set failed: %s\n",
                                                 context->split_id,
                                                 context->client->get_error_string(err));
-                                            context->error_occurred->store(true);
-                                        }
-                                    } else {
-                                        if (results.set_succeed) {
-                                            context->split_rows++;
-                                        }
-                                        scan_data_next(context);
+                                        context->error_occurred->store(true);
                                     }
-                                    // should put "split_request_count--" at end of the scope,
-                                    // to prevent that split_request_count becomes 0 in the middle.
-                                    context->split_request_count--;
-                                };
+                                } else {
+                                    if (results.set_succeed) {
+                                        context->split_rows++;
+                                    }
+                                    scan_data_next(context);
+                                }
+                                // should put "split_request_count--" at end of the scope,
+                                // to prevent that split_request_count becomes 0 in the middle.
+                                context->split_request_count--;
+                            };
                             pegasus::pegasus_client::check_and_set_options options;
                             context->client->async_check_and_set(
                                 hash_key,
@@ -576,11 +575,15 @@ struct row_data
                check_and_mutate_qps;
     }
 
-    double get_total_read_bytes() const { return get_bytes + multi_get_bytes + scan_bytes; }
+    double get_total_read_bytes() const
+    {
+        return get_bytes + multi_get_bytes + scan_bytes;
+    }
 
     double get_total_write_bytes() const
     {
-        return put_bytes + multi_put_bytes + check_and_set_bytes + check_and_mutate_bytes;
+        return put_bytes + multi_put_bytes + check_and_set_bytes +
+               check_and_mutate_bytes;
     }
 
     void aggregate(const row_data &row)
@@ -628,6 +631,7 @@ struct row_data
         check_and_set_bytes += row.check_and_set_bytes;
         check_and_mutate_bytes += row.check_and_mutate_bytes;
     }
+
 
     std::string row_name;
     int32_t app_id = 0;
