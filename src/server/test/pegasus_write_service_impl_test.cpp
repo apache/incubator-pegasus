@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <dsn/utility/fail_point.h>
 #include "pegasus_server_test_base.h"
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service_impl.h"
@@ -24,7 +25,6 @@
 
 namespace pegasus {
 namespace server {
-extern const int FAIL_DB_GET;
 
 class pegasus_write_service_impl_test : public pegasus_server_test_base
 {
