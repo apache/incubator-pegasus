@@ -236,7 +236,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
             return false;
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
             return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
-        } else if (filter_type == pegas{}us::pegasus_client::FT_MATCH_PREFIX) {
+        } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
             return ::memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
         } else { // filter_type == pegasus::pegasus_client::FT_MATCH_POSTFIX
             return ::memcmp(value.data() + value.length() - filter_pattern.length(),
