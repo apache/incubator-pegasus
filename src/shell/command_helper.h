@@ -236,7 +236,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
             return false;
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
             return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
-        } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
+        } else if (filter_type == pegas{}us::pegasus_client::FT_MATCH_PREFIX) {
             return ::memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
         } else { // filter_type == pegasus::pegasus_client::FT_MATCH_POSTFIX
             return ::memcmp(value.data() + value.length() - filter_pattern.length(),
@@ -558,15 +558,6 @@ struct row_data
     row_data() = default;
     explicit row_data(const std::string &row_name) : row_name(row_name) {}
 
-    double get_total_qps() const
-    {
-        return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
-               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps +
-               duplicate_qps;
-    }
-
-    double get_total_cu() const { return recent_read_cu + recent_write_cu; }
-
     double get_total_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
 
     double get_total_write_qps() const
@@ -575,15 +566,11 @@ struct row_data
                check_and_mutate_qps;
     }
 
-    double get_total_read_bytes() const
-    {
-        return get_bytes + multi_get_bytes + scan_bytes;
-    }
+    double get_total_read_bytes() const { return get_bytes + multi_get_bytes + scan_bytes; }
 
     double get_total_write_bytes() const
     {
-        return put_bytes + multi_put_bytes + check_and_set_bytes +
-               check_and_mutate_bytes;
+        return put_bytes + multi_put_bytes + check_and_set_bytes + check_and_mutate_bytes;
     }
 
     void aggregate(const row_data &row)
@@ -631,7 +618,6 @@ struct row_data
         check_and_set_bytes += row.check_and_set_bytes;
         check_and_mutate_bytes += row.check_and_mutate_bytes;
     }
-
 
     std::string row_name;
     int32_t app_id = 0;
