@@ -234,6 +234,7 @@ void replica::on_group_check_reply(error_code err,
             req->config.status == partition_status::PS_POTENTIAL_SECONDARY) {
             handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
         }
+        _split_mgr->primary_parent_handle_stop_split(req, resp);
     }
 }
 

@@ -154,6 +154,15 @@ private:
     // when child copy mutation synchronously, parent replica handle child ack
     void on_copy_mutation_reply(dsn::error_code ec, ballot b, decree d);
 
+    // parent partition pause or cancel split
+    void parent_stop_split(split_status::type meta_split_status);
+
+    // called by `on_group_check_reply` in `replica_check.cpp`
+    // if group all replica pause/cancel split, send notify request to meta server
+    void primary_parent_handle_stop_split(const std::shared_ptr<group_check_request> &req,
+                                          const std::shared_ptr<group_check_response> &resp);
+    void parent_send_notify_stop_request(split_status::type meta_split_status);
+
     //
     // helper functions
     //

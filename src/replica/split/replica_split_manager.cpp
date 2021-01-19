@@ -68,8 +68,9 @@ void replica_split_manager::parent_start_split(
         return;
     }
 
-    // TODO(heyuchen): if partition is primary, reset split related varieties
-
+    if (status() == partition_status::PS_PRIMARY) {
+        _replica->_primary_states.cleanup_split_states();
+    }
     _partition_version.store(_replica->_app_info.partition_count - 1);
 
     _split_status = split_status::SPLITTING;
@@ -1144,6 +1145,17 @@ void replica_split_manager::trigger_primary_parent_split(
         return;
     }
 
+    if (meta_split_status == split_status::PAUSING ||
+        meta_split_status == split_status::CANCELING) {
+        parent_stop_split(meta_split_status);
+        return;
+    }
+
+    if (meta_split_status == split_status::PAUSED) {
+        dwarn_replica("split has been paused, ignore it");
+        return;
+    }
+
     // TODO(heyuchen): add other split_status check
 }
 
@@ -1169,7 +1181,11 @@ void replica_split_manager::trigger_secondary_parent_split(
         return;
     }
 
-    // TODO(heyuchen): add other split_status check, response will be used in future
+    if (request.meta_split_status == split_status::PAUSING ||
+        request.meta_split_status == split_status::CANCELING) { // secondary pause or cancel split
+        parent_stop_split(request.meta_split_status);
+        response.__set_is_split_stopped(true);
+    }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -1255,6 +1271,82 @@ void replica_split_manager::on_copy_mutation_reply(error_code ec,
 {
     // TODO(heyuchen): when child copy mutation synchronously, parent replica handle child ack
     // TBD
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::parent_stop_split(
+    split_status::type meta_split_status) // on parent partition
+{
+    dassert_replica(status() == partition_status::PS_PRIMARY ||
+                        status() == partition_status::PS_SECONDARY,
+                    "wrong partition_status({})",
+                    enum_to_string(status()));
+    dassert_replica(_split_status == split_status::SPLITTING ||
+                        _split_status == split_status::NOT_SPLIT,
+                    "wrong split_status({})",
+                    enum_to_string(_split_status));
+
+    auto old_status = _split_status;
+    if (_split_status == split_status::SPLITTING) {
+        _stub->split_replica_error_handler(
+            _child_gpid,
+            std::bind(&replica_split_manager::child_handle_split_error,
+                      std::placeholders::_1,
+                      "stop partition split"));
+        parent_cleanup_split_context();
+    }
+    _partition_version.store(_replica->_app_info.partition_count - 1);
+
+    if (status() == partition_status::PS_PRIMARY) {
+        _replica->_primary_states.sync_send_write_request = false;
+        _replica->broadcast_group_check();
+    }
+    ddebug_replica(
+        "{} split succeed, status = {}, old split_status = {}, child partition_index = {}",
+        meta_split_status == split_status::PAUSING ? "pause" : "cancel",
+        enum_to_string(status()),
+        enum_to_string(old_status),
+        get_gpid().get_partition_index() + _replica->_app_info.partition_count);
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::primary_parent_handle_stop_split(
+    const std::shared_ptr<group_check_request> &req,
+    const std::shared_ptr<group_check_response> &resp) // on primary parent partition
+{
+    if (!req->__isset.meta_split_status || (req->meta_split_status != split_status::PAUSING &&
+                                            req->meta_split_status != split_status::CANCELING)) {
+        // partition is not executing split or not stopping split
+        return;
+    }
+
+    if (!resp->__isset.is_split_stopped || !resp->is_split_stopped) {
+        // secondary has not stopped split
+        return;
+    }
+
+    _replica->_primary_states.split_stopped_secondary.insert(req->node);
+    auto count = 0;
+    for (auto &iter : _replica->_primary_states.statuses) {
+        if (iter.second == partition_status::PS_SECONDARY &&
+            _replica->_primary_states.split_stopped_secondary.find(iter.first) !=
+                _replica->_primary_states.split_stopped_secondary.end()) {
+            ++count;
+        }
+    }
+    // all secondaries have already stop split succeed
+    if (count == _replica->_primary_states.membership.max_replica_count - 1) {
+        _replica->_primary_states.cleanup_split_states();
+        parent_send_notify_stop_request(req->meta_split_status);
+    }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::parent_send_notify_stop_request(
+    split_status::type meta_split_status) // on primary parent
+{
+    FAIL_POINT_INJECT_F("replica_parent_send_notify_stop_request", [](dsn::string_view) {});
+    // TODO(hyc): TBD
 }
 
 } // namespace replication

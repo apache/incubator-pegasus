@@ -197,6 +197,9 @@ struct group_check_response
     5:learner_status      learner_status_ = learner_status.LearningInvalid;
     6:i64                 learner_signature;
     7:dsn.rpc_address     node;
+    // Used for pause or cancel partition split
+    // if secondary pause or cancel split succeed, is_split_stopped = true
+    8:optional bool       is_split_stopped;
 }
 
 /////////////////// meta server messages ////////////////////

@@ -2750,6 +2750,12 @@ void group_check_response::__set_learner_signature(const int64_t val)
 
 void group_check_response::__set_node(const ::dsn::rpc_address &val) { this->node = val; }
 
+void group_check_response::__set_is_split_stopped(const bool val)
+{
+    this->is_split_stopped = val;
+    __isset.is_split_stopped = true;
+}
+
 uint32_t group_check_response::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -2827,6 +2833,14 @@ uint32_t group_check_response::read(::apache::thrift::protocol::TProtocol *iprot
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 8:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->is_split_stopped);
+                this->__isset.is_split_stopped = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -2875,6 +2889,11 @@ uint32_t group_check_response::write(::apache::thrift::protocol::TProtocol *opro
     xfer += this->node.write(oprot);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.is_split_stopped) {
+        xfer += oprot->writeFieldBegin("is_split_stopped", ::apache::thrift::protocol::T_BOOL, 8);
+        xfer += oprot->writeBool(this->is_split_stopped);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -2890,6 +2909,7 @@ void swap(group_check_response &a, group_check_response &b)
     swap(a.learner_status_, b.learner_status_);
     swap(a.learner_signature, b.learner_signature);
     swap(a.node, b.node);
+    swap(a.is_split_stopped, b.is_split_stopped);
     swap(a.__isset, b.__isset);
 }
 
@@ -2902,6 +2922,7 @@ group_check_response::group_check_response(const group_check_response &other73)
     learner_status_ = other73.learner_status_;
     learner_signature = other73.learner_signature;
     node = other73.node;
+    is_split_stopped = other73.is_split_stopped;
     __isset = other73.__isset;
 }
 group_check_response::group_check_response(group_check_response &&other74)
@@ -2914,6 +2935,7 @@ group_check_response::group_check_response(group_check_response &&other74)
     learner_status_ = std::move(other74.learner_status_);
     learner_signature = std::move(other74.learner_signature);
     node = std::move(other74.node);
+    is_split_stopped = std::move(other74.is_split_stopped);
     __isset = std::move(other74.__isset);
 }
 group_check_response &group_check_response::operator=(const group_check_response &other75)
@@ -2925,6 +2947,7 @@ group_check_response &group_check_response::operator=(const group_check_response
     learner_status_ = other75.learner_status_;
     learner_signature = other75.learner_signature;
     node = other75.node;
+    is_split_stopped = other75.is_split_stopped;
     __isset = other75.__isset;
     return *this;
 }
@@ -2938,6 +2961,7 @@ group_check_response &group_check_response::operator=(group_check_response &&oth
     learner_status_ = std::move(other76.learner_status_);
     learner_signature = std::move(other76.learner_signature);
     node = std::move(other76.node);
+    is_split_stopped = std::move(other76.is_split_stopped);
     __isset = std::move(other76.__isset);
     return *this;
 }
@@ -2959,6 +2983,9 @@ void group_check_response::printTo(std::ostream &out) const
         << "learner_signature=" << to_string(learner_signature);
     out << ", "
         << "node=" << to_string(node);
+    out << ", "
+        << "is_split_stopped=";
+    (__isset.is_split_stopped ? (out << to_string(is_split_stopped)) : (out << "<null>"));
     out << ")";
 }
 

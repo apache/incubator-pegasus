@@ -102,6 +102,8 @@ public:
 
     void cleanup_bulk_load_states();
 
+    void cleanup_split_states();
+
 public:
     // membership mgr, including learners
     partition_configuration membership;
@@ -151,6 +153,10 @@ public:
     // Used for partition split
     // primary parent register child on meta_server task
     dsn::task_ptr register_child_task;
+
+    // Used partition split
+    // secondary replica address who has paused or canceled split
+    std::unordered_set<rpc_address> split_stopped_secondary;
 
     // Used for bulk load
     // group bulk_load response tasks of RPC_GROUP_BULK_LOAD for each secondary replica
