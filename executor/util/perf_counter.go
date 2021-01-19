@@ -20,23 +20,24 @@
 package util
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pegasus-kv/collector/aggregate"
 )
 
-func GetPartitionStat(perfSession *aggregate.PerfSession, counter string, gpid string) int64 {
-	counters, err := perfSession.GetPerfCounters(fmt.Sprintf("%s@%s", counter, gpid))
+func GetPartitionStat(perfSession *aggregate.PerfSession, counter string) map[string]float64 {
+	// gpid->value
+	partitionStats := make(map[string]float64)
+	stats, err := perfSession.GetPerfCounters(counter)
 	if err != nil {
 		panic(err)
 	}
 
-	if len(counters) != 1 {
-		panic(fmt.Sprintf("The perf filter results count(%d) > 1", len(counters)))
+	for _, stat := range stats {
+		ret := strings.Split(stat.Name, "@")
+		partitionStats[ret[1]] = stat.Value
 	}
-
-	return int64(counters[0].Value)
+	return partitionStats
 }
 
 // GetNodeStats returns a mapping of [node address => node stats]

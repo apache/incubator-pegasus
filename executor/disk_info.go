@@ -88,10 +88,10 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 	var replicaCapacityInfos []interface{}
 
 	perfSession := client.Nodes.GetPerfSession(replicaServer, session.NodeTypeReplica)
-
 	for _, diskInfo := range resp.DiskInfos {
 		// pass disk tag means query one disk detail capacity of replica
 		if len(diskTag) != 0 && diskInfo.Tag == diskTag {
+			partitionStats := util.GetPartitionStat(perfSession, "disk.storage.sst(MB)")
 			appendCapacity := func(replicasWithAppId map[int32][]*base.Gpid, replicaStatus string) {
 				for _, replicas := range replicasWithAppId {
 					for _, replica := range replicas {
@@ -99,7 +99,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 						replicaCapacityInfos = append(replicaCapacityInfos, replicaCapacityStruct{
 							Replica:  gpidStr,
 							Status:   replicaStatus,
-							Capacity: float64(util.GetPartitionStat(perfSession, "disk.storage.sst(MB)", gpidStr)),
+							Capacity: partitionStats[gpidStr],
 						})
 					}
 				}
