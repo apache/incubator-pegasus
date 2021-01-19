@@ -37,7 +37,7 @@ func UseTable(client *Client, table string) error {
 	}
 
 	if resp.GetErr().Errno == base.ERR_OBJECT_NOT_FOUND.String() {
-		return fmt.Errorf("Table(%s) doesn't exist!", table)
+		return fmt.Errorf("Table(%s) doesn't exist", table)
 	}
 
 	if resp.GetErr().Errno != base.ERR_OK.String() {

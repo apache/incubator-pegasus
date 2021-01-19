@@ -28,16 +28,16 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 )
 
-func RecallTable(client *Client, originTableId string, newTableName string) error {
+func RecallTable(client *Client, originTableID string, newTableName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	tableId, errParse := strconv.ParseInt(originTableId, 10, 32)
+	tableID, errParse := strconv.ParseInt(originTableID, 10, 32)
 	if errParse != nil {
 		return errParse
 	}
 
-	resp, errRecall := client.Meta.RecallApp(ctx, &admin.RecallAppRequest{AppID: int32(tableId), NewAppName_: newTableName})
+	resp, errRecall := client.Meta.RecallApp(ctx, &admin.RecallAppRequest{AppID: int32(tableID), NewAppName_: newTableName})
 	if errRecall != nil {
 		return errRecall
 	}

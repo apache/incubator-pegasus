@@ -155,13 +155,13 @@ func (m *PegasusNodeManager) GetNode(addr string, ntype session.NodeType) (*Pega
 			return nil, fmt.Errorf("node(%s) is not %s", n, ntype)
 		}
 		return n, nil
-	} else {
-		node, err := m.getNodeFromHost(addr, ntype)
-		if err == nil {
-			return node, nil
-		}
-		return nil, err
 	}
+	node, err := m.getNodeFromHost(addr, ntype)
+	if err == nil {
+		return node, nil
+	}
+	return nil, err
+
 }
 
 func (m *PegasusNodeManager) getNodeFromHost(host string, ntype session.NodeType) (*PegasusNode, error) {

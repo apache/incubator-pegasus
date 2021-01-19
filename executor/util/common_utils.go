@@ -36,18 +36,18 @@ func Str2Gpid(gpid string) (*base.Gpid, error) {
 		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
 	}
 
-	appId, err := strconv.ParseInt(splitResult[0], 10, 32)
+	appID, err := strconv.ParseInt(splitResult[0], 10, 32)
 
 	if err != nil {
 		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
 	}
 
-	partitionId, err := strconv.ParseInt(splitResult[1], 10, 32)
+	partitionID, err := strconv.ParseInt(splitResult[1], 10, 32)
 	if err != nil {
 		return &base.Gpid{}, fmt.Errorf("Invalid gpid format [%s]", gpid)
 	}
 
-	return &base.Gpid{Appid: int32(appId), PartitionIndex: int32(partitionId)}, nil
+	return &base.Gpid{Appid: int32(appID), PartitionIndex: int32(partitionID)}, nil
 }
 
 func SortStructsByField(structs []interface{}, key string) {

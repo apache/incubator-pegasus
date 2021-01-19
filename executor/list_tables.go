@@ -114,7 +114,7 @@ func getPartitionHealthyCount(client *Client, table *admin.AppInfo) (int32, int3
 	var fullHealthy, unHealthy, writeUnHealthy, readUnHealthy int32
 	for _, partition := range resp.Partitions {
 		var replicaCnt int32
-		if partition.Primary == nil {
+		if partition.Primary.GetRawAddress() == 0 {
 			writeUnHealthy++
 			readUnHealthy++
 		} else {
