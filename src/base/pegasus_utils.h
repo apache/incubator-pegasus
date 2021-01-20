@@ -62,7 +62,7 @@ public:
             result.emplace_front(_queue.top());
             _queue.pop();
         }
-        return std::move(result);
+        return result;
     }
 
 protected:
