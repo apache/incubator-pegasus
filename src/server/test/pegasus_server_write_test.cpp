@@ -60,19 +60,17 @@ public:
                 int put_rpc_cnt = dsn::rand::next_u32(1, 10);
                 int remove_rpc_cnt = dsn::rand::next_u32(1, 10);
                 int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
-                auto writes = new dsn::message_ex *[total_rpc_cnt];
+                /**
+                 * writes[0] ~ writes[total_rpc_cnt-1] will be destructed by rpc_holders
+                 * which created in on_batched_write_requests, so we don't need to release them here
+                 **/
+                dsn::message_ex *writes[total_rpc_cnt];
                 for (int i = 0; i < put_rpc_cnt; i++) {
                     writes[i] = pegasus::create_put_request(req);
                 }
                 for (int i = put_rpc_cnt; i < total_rpc_cnt; i++) {
                     writes[i] = pegasus::create_remove_request(key);
                 }
-                auto cleanup = dsn::defer([=]() {
-                    for (int i = 0; i < total_rpc_cnt; i++) {
-                        writes[i]->release_ref();
-                    }
-                    delete[] writes;
-                });
 
                 int err =
                     _server_write->on_batched_write_requests(writes, total_rpc_cnt, decree, 0);
