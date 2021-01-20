@@ -61,8 +61,9 @@ public:
                 int remove_rpc_cnt = dsn::rand::next_u32(1, 10);
                 int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
                 /**
-                 * writes[0] ~ writes[total_rpc_cnt-1] will be destructed by rpc_holders
-                 * which created in on_batched_write_requests, so we don't need to release them here
+                 * writes[0] ~ writes[total_rpc_cnt-1] will be destructed by their corresponding
+                 * rpc_holders, which created in on_batched_write_requests. So we don't need to
+                 * release them here
                  **/
                 dsn::message_ex *writes[total_rpc_cnt];
                 for (int i = 0; i < put_rpc_cnt; i++) {
