@@ -350,19 +350,14 @@ TEST_F(hotkey_collector_test, data_completeness)
                      resp);
     ASSERT_EQ(resp.err, dsn::ERR_OK);
 
-    auto writes = new dsn::message_ex *[1000];
-    auto cleanup = dsn::defer([=]() {
-        for (int i = 0; i < 1000; i++) {
-            writes[i]->release_ref();
-        }
-        delete[] writes;
-    });
-    for (int i = 0; i < 1000; i++) {
+    const uint16_t WRITE_REQUEST_COUNT = 1000;
+    dsn::message_ex *writes[WRITE_REQUEST_COUNT];
+    for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
         writes[i] = create_put_request(generate_set_req(std::to_string(i)));
     }
-    _server->on_batched_write_requests(int64_t(0), uint64_t(0), writes, 1000);
+    _server->on_batched_write_requests(int64_t(0), uint64_t(0), writes, WRITE_REQUEST_COUNT);
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < WRITE_REQUEST_COUNT; i++) {
         auto rpc = generate_get_rpc(std::to_string(i));
         _server->on_get(rpc);
         auto value = rpc.response().value.to_string();
