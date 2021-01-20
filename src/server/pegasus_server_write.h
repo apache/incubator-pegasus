@@ -71,6 +71,8 @@ private:
     void request_key_check(int64_t decree, dsn::message_ex *m, const dsn::blob &key);
 
 private:
+    void init_non_batch_write_handlers();
+
     friend class pegasus_server_write_test;
     friend class pegasus_write_service_test;
     friend class pegasus_write_service_impl_test;
@@ -84,6 +86,9 @@ private:
     int64_t _decree;
 
     const bool _verbose_log;
+
+    typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
+    non_batch_writes_map _non_batch_write_handlers;
 };
 
 } // namespace server
