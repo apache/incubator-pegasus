@@ -80,8 +80,8 @@ tool_app::tool_app(const char *name) : tool_base(name) {}
 
 void tool_app::start_all_apps()
 {
-    auto apps = service_engine::instance().get_all_nodes();
-    for (auto &kv : apps) {
+    const auto &apps = service_engine::instance().get_all_nodes();
+    for (const auto &kv : apps) {
         task *t = new service_control_task(kv.second.get(), true);
         t->set_delay(1000 * kv.second.get()->spec().delay_seconds);
         t->enqueue();
@@ -90,8 +90,8 @@ void tool_app::start_all_apps()
 
 void tool_app::stop_all_apps(bool cleanup)
 {
-    auto apps = service_engine::instance().get_all_nodes();
-    for (auto &kv : apps) {
+    const auto &apps = service_engine::instance().get_all_nodes();
+    for (const auto &kv : apps) {
         task *t = new service_control_task(kv.second.get(), false, cleanup);
         t->enqueue();
     }

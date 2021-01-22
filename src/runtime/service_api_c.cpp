@@ -208,8 +208,8 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
         }
     }
 
-    auto nodes = ::dsn::service_engine::instance().get_all_nodes();
-    for (auto &n : nodes) {
+    const auto &nodes = dsn::service_engine::instance().get_all_nodes();
+    for (const auto &n : nodes) {
         if (n.second->spec().role_name == std::string(app_role) &&
             n.second->spec().index == index) {
             ::dsn::task::set_tls_dsn_context(n.second.get(), nullptr);
@@ -508,7 +508,7 @@ bool run(const char *config_file,
         }
     }
 
-    if (::dsn::service_engine::instance().get_all_nodes().size() == 0) {
+    if (dsn::service_engine::instance().get_all_nodes().size() == 0) {
         printf("no app are created, usually because \n"
                "app_name is not specified correctly, should be 'xxx' in [apps.xxx]\n"
                "or app_index (1-based) is greater than specified count in config file\n");
