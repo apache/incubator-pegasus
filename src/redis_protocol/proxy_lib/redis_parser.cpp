@@ -299,8 +299,7 @@ bool redis_parser::parse_stream()
             // string content + CR + LF
             if (_total_length >= _current_str.length + 2) {
                 if (_current_str.length > 0) {
-                    std::shared_ptr<char> str_data(
-                        dsn::utils::make_shared_array<char>(_current_str.length));
+                    auto str_data(dsn::utils::make_shared_array<char>(_current_str.length));
                     eat_all(str_data.get(), _current_str.length);
                     _current_str.data.assign(std::move(str_data), 0, _current_str.length);
                 }
