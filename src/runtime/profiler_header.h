@@ -59,28 +59,24 @@ enum perf_counter_ptr_type
 class counter_info
 {
 public:
-    counter_info(const std::vector<const char *> &command_keys,
-                 perf_counter_ptr_type _index,
-                 dsn_perf_counter_type_t _type,
-                 const char *_title,
-                 const char *_unit)
-        : type(_type), title(_title), unit_name(_unit)
+    counter_info(const std::vector<std::string> &command_keys,
+                 perf_counter_ptr_type ptr_type,
+                 dsn_perf_counter_type_t counter_type,
+                 const std::string &title,
+                 const std::string &unit)
+        : keys(command_keys),
+          counter_ptr_type(ptr_type),
+          type(counter_type),
+          title(title),
+          unit_name(unit)
     {
-        for (auto key : command_keys) {
-            if (key != nullptr) {
-                keys.push_back(key);
-                auto it = pointer_type.find(std::string(key));
-                dassert(it == pointer_type.end(), "command '%s' already regisered", key);
-                pointer_type[std::string(key)] = _index;
-            }
-        }
     }
 
-    static std::map<std::string, perf_counter_ptr_type> pointer_type;
-    std::vector<const char *> keys;
+    std::vector<std::string> keys;
+    perf_counter_ptr_type counter_ptr_type;
     dsn_perf_counter_type_t type;
-    const char *title;
-    const char *unit_name;
+    std::string title;
+    std::string unit_name;
 };
 
 class profiler_output_data_type

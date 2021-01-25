@@ -65,8 +65,6 @@ std::unique_ptr<task_spec_profiler[]> s_spec_profilers;
 
 int s_task_code_max = 0;
 
-std::map<std::string, perf_counter_ptr_type> counter_info::pointer_type;
-
 counter_info *counter_info_ptr[] = {
     new counter_info({"queue.time", "qt"},
                      TASK_QUEUEING_TIME_NS,

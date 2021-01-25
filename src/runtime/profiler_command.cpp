@@ -77,11 +77,13 @@ static dsn_perf_counter_percentile_type_t find_percentail_type(const std::string
 
 static perf_counter_ptr_type find_counter_type(const std::string &name)
 {
-    auto it = counter_info::pointer_type.find(std::string(name));
-    if (it == counter_info::pointer_type.end()) {
-        return PERF_COUNTER_INVALID;
+    for (int i = 0; i < PERF_COUNTER_COUNT; i++) {
+        const auto &keys = counter_info_ptr[i]->keys;
+        if (std::find(keys.begin(), keys.end(), name) != keys.end()) {
+            return counter_info_ptr[i]->counter_ptr_type;
+        }
     }
-    return it->second;
+    return PERF_COUNTER_INVALID;
 }
 
 std::string profiler_output_handler(const std::vector<std::string> &args)
@@ -377,8 +379,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                     if (s_spec_profilers[task_id].ptr[counter_type].get() == NULL)
                         continue;
 
-                    char name[20] = {0};
-                    strcpy(name, counter_info_ptr[counter_type]->title);
+                    const std::string &name = counter_info_ptr[counter_type]->title;
 
                     char name_suffix[10] = {0};
                     switch (task_spec::get(task_id)->type) {
@@ -393,7 +394,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                         break;
                     }
 
-                    resp.name = std::string(name) + std::string(name_suffix);
+                    resp.name = name + std::string(name_suffix);
 
                     // get samples
                     perf_counter::samples_t samples;
@@ -491,25 +492,25 @@ std::string query_data_handler(const std::vector<std::string> &args)
 
                     timeGet = ((timeGet < 0) ? 0 : timeGet);
 
-                    if (strcmp(counter_info_ptr[counter_type]->title, "RPC.SERVER(ns)") == 0 &&
+                    if (counter_info_ptr[counter_type]->title == "RPC.SERVER(ns)" &&
                         task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                         timeList[0] = timeGet;
-                    else if (strcmp(counter_info_ptr[counter_type]->title, "QUEUE(ns)") == 0 &&
+                    else if (counter_info_ptr[counter_type]->title == "QUEUE(ns)" &&
                              task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                         timeList[1] = timeGet;
-                    else if (strcmp(counter_info_ptr[counter_type]->title, "EXEC(ns)") == 0 &&
+                    else if (counter_info_ptr[counter_type]->title == "EXEC(ns)" &&
                              task_spec::get(task_id)->type == TASK_TYPE_RPC_REQUEST)
                         timeList[2] = timeGet;
-                    else if (strcmp(counter_info_ptr[counter_type]->title, "RPC.CLIENT(ns)") == 0 &&
+                    else if (counter_info_ptr[counter_type]->title == "RPC.CLIENT(ns)" &&
                              task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                         timeList[3] = timeGet;
-                    else if (strcmp(counter_info_ptr[counter_type]->title, "QUEUE(ns)") == 0 &&
+                    else if (counter_info_ptr[counter_type]->title == "QUEUE(ns)" &&
                              task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                         timeList[4] = timeGet;
-                    else if (strcmp(counter_info_ptr[counter_type]->title, "EXEC(ns)") == 0 &&
+                    else if (counter_info_ptr[counter_type]->title == "EXEC(ns)" &&
                              task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE)
                         timeList[5] = timeGet;
-                    else if (strcmp(counter_info_ptr[counter_type]->title, "AIO.LATENCY(ns)") == 0)
+                    else if (counter_info_ptr[counter_type]->title == "AIO.LATENCY(ns)")
                         timeList[6] = timeGet;
                 }
             }
@@ -554,8 +555,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                     if (s_spec_profilers[task_id].ptr[counter_type].get() == NULL)
                         continue;
 
-                    char name[20] = {0};
-                    strcpy(name, counter_info_ptr[counter_type]->title);
+                    const std::string &name = counter_info_ptr[counter_type]->title;
 
                     char name_suffix[10] = {0};
                     switch (task_spec::get(task_id)->type) {
@@ -573,7 +573,7 @@ std::string query_data_handler(const std::vector<std::string> &args)
                     uint64_t sample =
                         s_spec_profilers[task_id].ptr[counter_type]->get_latest_sample();
 
-                    data.push_back(nv_pair{std::string(name) + std::string(name_suffix), sample});
+                    data.push_back(nv_pair{name + std::string(name_suffix), sample});
                 }
             }
             if (task_spec::get(task_id)->type == TASK_TYPE_RPC_RESPONSE ||
