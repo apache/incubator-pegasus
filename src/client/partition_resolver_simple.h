@@ -66,7 +66,7 @@ private:
     bool _app_is_stateful;
 
     typedef std::function<void(resolve_result &&)> callback_t;
-    struct request_context : ref_counter, transient_object
+    struct request_context : ref_counter
     {
         int partition_index;
         uint64_t partition_hash;

@@ -40,7 +40,6 @@
 #include <tuple>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/extensible_object.h>
-#include <dsn/utility/callocator.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/apply.h>
 #include <dsn/utility/binary_writer.h>
@@ -178,7 +177,7 @@ extern __thread struct __tls_dsn__ tls_dsn;
 /// functions for different purposes on these hook points, you may want to refer to
 /// "tracer", "profiler" and "fault_injector" for details.
 ///
-class task : public ref_counter, public extensible_object<task, 4>, public transient_object
+class task : public ref_counter, public extensible_object<task, 4>
 {
 public:
     task(task_code code, int hash = 0, service_node *node = nullptr);

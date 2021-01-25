@@ -47,6 +47,7 @@
 #include <gperftools/malloc_extension.h>
 #endif
 
+#include <dsn/utility/transient_memory.h>
 #include "service_engine.h"
 #include "runtime/rpc/rpc_engine.h"
 #include "runtime/task/task_engine.h"
