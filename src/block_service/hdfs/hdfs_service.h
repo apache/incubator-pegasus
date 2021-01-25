@@ -52,6 +52,7 @@ public:
                               dsn::task_code code,
                               const remove_path_callback &cb,
                               dsn::task_tracker *tracker) override;
+    void close();
 
     static std::string get_hdfs_entry_name(const std::string &hdfs_path);
 

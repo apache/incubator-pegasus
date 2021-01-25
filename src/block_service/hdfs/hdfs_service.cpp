@@ -56,14 +56,13 @@ hdfs_service::hdfs_service() { _read_token_bucket.reset(new folly::DynamicTokenB
 
 hdfs_service::~hdfs_service()
 {
-    ddebug("Try to disconnect hdfs.");
-    int result = hdfsDisconnect(_fs);
-    if (result == -1) {
-        derror_f("Fail to disconnect from the hdfs file system, error: {}.",
-                 utils::safe_strerror(errno));
-    }
-    // Even if there is an error, the resources associated with the hdfsFS will be freed.
-    _fs = nullptr;
+    // We should not call hdfsDisconnect() here if jvm has exited.
+    // And there is no simple, safe way to call hdfsDisconnect()
+    // when process terminates (the proper solution is likely to create a
+    // signal handler to detect when the process is killed, but we would still
+    // leak when pegasus crashes).
+    //
+    // close();
 }
 
 error_code hdfs_service::initialize(const std::vector<std::string> &args)
@@ -93,6 +92,21 @@ error_code hdfs_service::create_fs()
     }
     ddebug_f("Succeed to connect hdfs name node {}.", _hdfs_name_node);
     return ERR_OK;
+}
+
+void hdfs_service::close()
+{
+    // This method should be carefully called.
+    // Calls to hdfsDisconnect() by individual threads would terminate
+    // all other connections handed out via hdfsConnect() to the same URI.
+    ddebug("Try to disconnect hdfs.");
+    int result = hdfsDisconnect(_fs);
+    if (result == -1) {
+        derror_f("Fail to disconnect from the hdfs file system, error: {}.",
+                 utils::safe_strerror(errno));
+    }
+    // Even if there is an error, the resources associated with the hdfsFS will be freed.
+    _fs = nullptr;
 }
 
 std::string hdfs_service::get_hdfs_entry_name(const std::string &hdfs_path)
