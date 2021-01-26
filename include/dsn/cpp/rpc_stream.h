@@ -48,12 +48,13 @@ public:
     void set_read_msg(message_ex *msg)
     {
         _msg = msg;
+        if (nullptr != _msg) {
+            ::dsn::blob bb;
+            bool r = ((::dsn::message_ex *)_msg)->read_next(bb);
+            dassert(r, "read msg must have one segment of buffer ready");
 
-        ::dsn::blob bb;
-        bool r = ((::dsn::message_ex *)_msg)->read_next(bb);
-        dassert(r, "read msg must have one segment of buffer ready");
-
-        init(std::move(bb));
+            init(std::move(bb));
+        }
     }
 
     ~rpc_read_stream()
