@@ -299,7 +299,7 @@ bool redis_parser::parse_stream()
             // string content + CR + LF
             if (_total_length >= _current_str.length + 2) {
                 if (_current_str.length > 0) {
-                    std::string str_data('\0', _current_str.length);
+                    std::string str_data(_current_str.length, '\0');
                     eat_all(const_cast<char *>(str_data.data()), _current_str.length);
                     _current_str.data = dsn::blob::create_from_bytes(std::move(str_data));
                 }
