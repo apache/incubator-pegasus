@@ -152,6 +152,11 @@ void throttling_controller::reset(bool &changed, std::string &old_env_value)
 throttling_controller::throttling_type throttling_controller::control(
     const int64_t client_timeout_ms, int32_t request_units, int64_t &delay_ms)
 {
+    // return PASS if throttling controller is not enabled
+    if (!_enabled) {
+        return PASS;
+    }
+
     int64_t now_s = dsn_now_s();
     if (now_s != _last_request_time) {
         _cur_units = 0;

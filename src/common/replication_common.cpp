@@ -626,6 +626,8 @@ const std::string replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS(
 const std::string replica_envs::BUSINESS_INFO("business.info");
 const std::string replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS(
     "replica_access_controller.allowed_users");
+const std::string replica_envs::READ_QPS_THROTTLING("replica.read_throttling");
+const std::string replica_envs::READ_SIZE_THROTTLING("replica.read_throttling_by_size");
 
 const std::string bulk_load_constant::BULK_LOAD_INFO("bulk_load_info");
 const int32_t bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL = 10;

@@ -90,6 +90,14 @@ replica::replica(
     _counter_recent_write_throttling_reject_count.init_app_counter(
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 
+    counter_str = fmt::format("recent.read.throttling.delay.count@{}", gpid);
+    _counter_recent_read_throttling_delay_count.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
+
+    counter_str = fmt::format("recent.read.throttling.reject.count@{}", gpid);
+    _counter_recent_read_throttling_reject_count.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
+
     counter_str = fmt::format("dup.disabled_non_idempotent_write_count@{}", _app_info.app_name);
     _counter_dup_disabled_non_idempotent_write_count.init_app_counter(
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
@@ -162,7 +170,7 @@ replica::~replica(void)
     dinfo("%s: replica destroyed", name());
 }
 
-void replica::on_client_read(dsn::message_ex *request)
+void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 {
     if (!_access_controller->allowed(request)) {
         response_client_read(request, ERR_ACL_DENY);
@@ -171,6 +179,10 @@ void replica::on_client_read(dsn::message_ex *request)
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {
         response_client_read(request, ERR_INVALID_STATE);
+        return;
+    }
+
+    if (!ignore_throttling && throttle_read_request(request)) {
         return;
     }
 
