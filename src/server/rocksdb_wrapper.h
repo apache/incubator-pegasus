@@ -83,6 +83,8 @@ private:
     volatile uint32_t _default_ttl;
 
     friend class rocksdb_wrapper_test;
+    friend class pegasus_write_service_test;
+    friend class pegasus_server_write_test;
     FRIEND_TEST(rocksdb_wrapper_test, put_verify_timetag);
     FRIEND_TEST(rocksdb_wrapper_test, verify_timetag_compatible_with_version_0);
     FRIEND_TEST(rocksdb_wrapper_test, get);

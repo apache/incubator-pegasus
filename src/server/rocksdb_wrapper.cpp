@@ -19,14 +19,13 @@
 
 #include "rocksdb_wrapper.h"
 
+#include <dsn/utility/fail_point.h>
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
 #include "base/pegasus_value_schema.h"
 
 namespace pegasus {
 namespace server {
-
-const int FAIL_DB_GET = -104;
 
 rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
     : replica_base(server),
