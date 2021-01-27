@@ -80,13 +80,4 @@ void tls_trans_mem_init(size_t default_per_block_bytes);
 // "tls_trans_mem_next" should be used together with "tls_trans_mem_commit"
 void tls_trans_mem_next(void **ptr, size_t *sz, size_t min_size);
 void tls_trans_mem_commit(size_t use_size);
-
-// allocate a blob, the size is "sz"
-blob tls_trans_mem_alloc_blob(size_t sz);
-
-// allocate memory
-void *tls_trans_malloc(size_t sz);
-
-// free memory, ptr shouldn't be null
-void tls_trans_free(void *ptr);
-}
+} // namespace dsn

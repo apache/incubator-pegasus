@@ -98,46 +98,4 @@ void tls_trans_mem_commit(size_t use_size)
     tls_trans_memory.remain_bytes -= use_size;
     tls_trans_memory.committed = true;
 }
-
-blob tls_trans_mem_alloc_blob(size_t sz)
-{
-    void *ptr;
-    size_t sz2;
-    tls_trans_mem_next(&ptr, &sz2, sz);
-
-    ::dsn::blob buffer((*::dsn::tls_trans_memory.block),
-                       (int)((char *)(ptr) - ::dsn::tls_trans_memory.block->get()),
-                       (int)sz);
-
-    tls_trans_mem_commit(sz);
-    return buffer;
-}
-
-void *tls_trans_malloc(size_t sz)
-{
-    sz += sizeof(std::shared_ptr<char>) + sizeof(uint32_t);
-    void *ptr;
-    size_t sz2;
-    tls_trans_mem_next(&ptr, &sz2, sz);
-
-    // add ref
-    new (ptr) std::shared_ptr<char>(*::dsn::tls_trans_memory.block);
-
-    // add magic
-    *(uint32_t *)((char *)(ptr) + sizeof(std::shared_ptr<char>)) = 0xdeadbeef;
-
-    tls_trans_mem_commit(sz);
-
-    return (void *)((char *)(ptr) + sizeof(std::shared_ptr<char>) + sizeof(uint32_t));
-}
-
-void tls_trans_free(void *ptr)
-{
-    ptr = (void *)((char *)ptr - sizeof(uint32_t));
-    // invalid transient memory block
-    assert(*(uint32_t *)(ptr) == 0xdeadbeef);
-
-    ptr = (void *)((char *)ptr - sizeof(std::shared_ptr<char>));
-    ((std::shared_ptr<char> *)(ptr))->~shared_ptr<char>();
-}
-}
+} // namespace dsn

@@ -195,3 +195,30 @@ TEST(rpc_message, restore_read)
         msg->restore_read();
     }
 }
+
+TEST(rpc_message, create_receive_message_with_standalone_header)
+{
+    auto data = blob::create_from_bytes("10086");
+
+    message_ptr msg = message_ex::create_receive_message_with_standalone_header(data);
+    ASSERT_EQ(msg->buffers.size(), 2);
+    ASSERT_EQ(0, strcmp(msg->buffers[1].data(), data.data()));
+    ASSERT_EQ(msg->header->body_length, data.length());
+}
+
+TEST(rpc_message, copy_message_no_reply)
+{
+    auto data = blob::create_from_bytes("10086");
+    message_ptr old_msg = message_ex::create_receive_message_with_standalone_header(data);
+    old_msg->local_rpc_code = RPC_CODE_FOR_TEST;
+
+    auto msg = message_ex::copy_message_no_reply(*old_msg);
+    ASSERT_EQ(msg->buffers.size(), old_msg->buffers.size());
+    ASSERT_EQ(0, strcmp(msg->buffers[1].data(), old_msg->buffers[1].data()));
+    ASSERT_EQ(msg->header->body_length, old_msg->header->body_length);
+    ASSERT_EQ(msg->local_rpc_code, old_msg->local_rpc_code);
+
+    // add_ref was called in message_ex::copy_message_no_reply for msg
+    // so we only need to call release_ref here.
+    msg->release_ref();
+}

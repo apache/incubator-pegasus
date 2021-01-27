@@ -148,13 +148,11 @@ message_ex *message_ex::create_received_request(dsn::task_code code,
 message_ex *message_ex::create_receive_message_with_standalone_header(const blob &data)
 {
     message_ex *msg = new message_ex();
-    std::shared_ptr<char> header_holder(
-        static_cast<char *>(dsn::tls_trans_malloc(sizeof(message_header))),
-        [](char *c) { dsn::tls_trans_free(c); });
-    msg->header = reinterpret_cast<message_header *>(header_holder.get());
-    memset(static_cast<void *>(msg->header), 0, sizeof(message_header));
+    size_t header_size = sizeof(message_header);
+    std::string str(header_size, '\0');
+    msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));
 
-    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+    msg->buffers.emplace_back(blob::create_from_bytes(std::move(str)));
     msg->buffers.push_back(data);
 
     msg->header->body_length = data.length();
@@ -168,13 +166,11 @@ message_ex *message_ex::create_receive_message_with_standalone_header(const blob
 message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
 {
     message_ex *msg = new message_ex();
-    std::shared_ptr<char> header_holder(
-        static_cast<char *>(dsn::tls_trans_malloc(sizeof(message_header))),
-        [](char *c) { dsn::tls_trans_free(c); });
-    msg->header = reinterpret_cast<message_header *>(header_holder.get());
-    memset(static_cast<void *>(msg->header), 0, sizeof(message_header));
-    msg->buffers.emplace_back(blob(std::move(header_holder), sizeof(message_header)));
+    size_t header_size = sizeof(message_header);
+    std::string str(header_size, '\0');
+    msg->header = reinterpret_cast<message_header *>(const_cast<char *>(str.data()));
 
+    msg->buffers.emplace_back(blob::create_from_bytes(std::move(str)));
     if (old_msg.buffers.size() == 1) {
         // if old_msg only has header, consider its header as data
         msg->buffers.emplace_back(old_msg.buffers[0]);
