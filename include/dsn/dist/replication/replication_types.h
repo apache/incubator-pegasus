@@ -477,6 +477,10 @@ class register_child_request;
 
 class register_child_response;
 
+class notify_stop_split_request;
+
+class notify_stop_split_response;
+
 class bulk_load_metadata;
 
 class start_bulk_load_request;
@@ -6804,6 +6808,122 @@ public:
 void swap(register_child_response &a, register_child_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const register_child_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _notify_stop_split_request__isset
+{
+    _notify_stop_split_request__isset()
+        : app_name(false), parent_gpid(false), meta_split_status(false), partition_count(false)
+    {
+    }
+    bool app_name : 1;
+    bool parent_gpid : 1;
+    bool meta_split_status : 1;
+    bool partition_count : 1;
+} _notify_stop_split_request__isset;
+
+class notify_stop_split_request
+{
+public:
+    notify_stop_split_request(const notify_stop_split_request &);
+    notify_stop_split_request(notify_stop_split_request &&);
+    notify_stop_split_request &operator=(const notify_stop_split_request &);
+    notify_stop_split_request &operator=(notify_stop_split_request &&);
+    notify_stop_split_request()
+        : app_name(), meta_split_status((split_status::type)0), partition_count(0)
+    {
+    }
+
+    virtual ~notify_stop_split_request() throw();
+    std::string app_name;
+    ::dsn::gpid parent_gpid;
+    split_status::type meta_split_status;
+    int32_t partition_count;
+
+    _notify_stop_split_request__isset __isset;
+
+    void __set_app_name(const std::string &val);
+
+    void __set_parent_gpid(const ::dsn::gpid &val);
+
+    void __set_meta_split_status(const split_status::type val);
+
+    void __set_partition_count(const int32_t val);
+
+    bool operator==(const notify_stop_split_request &rhs) const
+    {
+        if (!(app_name == rhs.app_name))
+            return false;
+        if (!(parent_gpid == rhs.parent_gpid))
+            return false;
+        if (!(meta_split_status == rhs.meta_split_status))
+            return false;
+        if (!(partition_count == rhs.partition_count))
+            return false;
+        return true;
+    }
+    bool operator!=(const notify_stop_split_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const notify_stop_split_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(notify_stop_split_request &a, notify_stop_split_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const notify_stop_split_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _notify_stop_split_response__isset
+{
+    _notify_stop_split_response__isset() : err(false) {}
+    bool err : 1;
+} _notify_stop_split_response__isset;
+
+class notify_stop_split_response
+{
+public:
+    notify_stop_split_response(const notify_stop_split_response &);
+    notify_stop_split_response(notify_stop_split_response &&);
+    notify_stop_split_response &operator=(const notify_stop_split_response &);
+    notify_stop_split_response &operator=(notify_stop_split_response &&);
+    notify_stop_split_response() {}
+
+    virtual ~notify_stop_split_response() throw();
+    ::dsn::error_code err;
+
+    _notify_stop_split_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    bool operator==(const notify_stop_split_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        return true;
+    }
+    bool operator!=(const notify_stop_split_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const notify_stop_split_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(notify_stop_split_response &a, notify_stop_split_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const notify_stop_split_response &obj)
 {
     obj.printTo(out);
     return out;

@@ -1346,7 +1346,26 @@ void replica_split_manager::parent_send_notify_stop_request(
     split_status::type meta_split_status) // on primary parent
 {
     FAIL_POINT_INJECT_F("replica_parent_send_notify_stop_request", [](dsn::string_view) {});
-    // TODO(hyc): TBD
+    rpc_address meta_address(_stub->_failure_detector->get_servers());
+    std::unique_ptr<notify_stop_split_request> req = make_unique<notify_stop_split_request>();
+    req->app_name = _replica->_app_info.app_name;
+    req->parent_gpid = get_gpid();
+    req->meta_split_status = meta_split_status;
+    req->partition_count = _replica->_app_info.partition_count;
+
+    ddebug_replica("group {} split succeed, send notify_stop_request to meta server({})",
+                   meta_split_status == split_status::PAUSING ? "pause" : "cancel",
+                   meta_address.to_string());
+    notify_stop_split_rpc rpc(
+        std::move(req), RPC_CM_NOTIFY_STOP_SPLIT, 0_ms, 0, get_gpid().thread_hash());
+    rpc.call(meta_address, tracker(), [this, rpc](error_code ec) mutable {
+        error_code err = ec == ERR_OK ? rpc.response().err : ec;
+        const std::string type =
+            rpc.request().meta_split_status == split_status::PAUSING ? "pause" : "cancel";
+        if (err != ERR_OK) {
+            dwarn_replica("notify {} split failed, error = {}, wait for next round", type, err);
+        }
+    });
 }
 
 } // namespace replication

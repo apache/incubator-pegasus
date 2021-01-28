@@ -57,6 +57,10 @@ private:
     void
     on_add_child_on_remote_storage_reply(error_code ec, register_child_rpc rpc, bool create_new);
 
+    // primary replica -> meta to notify group pause or cancel split succeed
+    void notify_stop_split(notify_stop_split_rpc rpc);
+    void do_cancel_partition_split(std::shared_ptr<app_state> app, notify_stop_split_rpc rpc);
+
     static const std::string control_type_str(split_control_type::type type)
     {
         std::string str = "";

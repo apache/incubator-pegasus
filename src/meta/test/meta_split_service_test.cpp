@@ -115,6 +115,21 @@ public:
         return rpc.response().err;
     }
 
+    error_code notify_stop_split(split_status::type req_split_status)
+    {
+        auto req = make_unique<notify_stop_split_request>();
+        req->__set_app_name(NAME);
+        req->__set_parent_gpid(dsn::gpid(app->app_id, PARENT_INDEX));
+        req->__set_meta_split_status(req_split_status);
+        req->__set_partition_count(PARTITION_COUNT);
+
+        notify_stop_split_rpc rpc(std::move(req), RPC_CM_NOTIFY_STOP_SPLIT);
+        split_svc().notify_stop_split(rpc);
+        wait_all();
+
+        return rpc.response().err;
+    }
+
     int32_t on_config_sync(configuration_query_by_node_request req)
     {
         auto request = make_unique<configuration_query_by_node_request>(req);
@@ -156,6 +171,25 @@ public:
         app->helpers->contexts.resize(app->partition_count);
         app->helpers->split_states.splitting_count = 0;
         app->helpers->split_states.status.clear();
+    }
+
+    void mock_only_one_partition_split(split_status::type split_status)
+    {
+        app->partition_count = NEW_PARTITION_COUNT;
+        app->partitions.resize(app->partition_count);
+        app->helpers->contexts.resize(app->partition_count);
+        for (int i = 0; i < app->partition_count; ++i) {
+            app->helpers->contexts[i].config_owner = &app->partitions[i];
+            app->partitions[i].pid = dsn::gpid(app->app_id, i);
+            if (i >= app->partition_count / 2) {
+                app->partitions[i].ballot = invalid_ballot;
+            } else {
+                app->partitions[i].ballot = PARENT_BALLOT;
+                app->helpers->contexts[i].stage = config_status::not_pending;
+            }
+        }
+        app->helpers->split_states.splitting_count = 1;
+        app->helpers->split_states.status[PARENT_INDEX] = split_status;
     }
 
     void mock_child_registered()
@@ -483,6 +517,100 @@ TEST_F(meta_split_service_test, cancel_split_test)
             ASSERT_EQ(app->helpers->split_states.splitting_count, PARTITION_COUNT);
             check_split_status(split_status::CANCELING, -1);
         }
+        clear_app_partition_split_context();
+    }
+}
+
+// notify stop split unit tests
+TEST_F(meta_split_service_test, notify_stop_split_test)
+{
+    // Test case:
+    // - request split pausing, meta not_split
+    // - request split pausing, meta paused
+    // - request split pausing, meta splitting
+    // - request split pausing, meta pausing
+    // - request split pausing, meta canceling
+    // - request split canceling, meta not_split
+    // - request split canceling, meta paused
+    // - request split canceling, meta splitting
+    // - request split canceling, meta pausing
+    // - request split canceling, meta canceling
+    // - request split canceling, meta canceling, last cancel request
+    struct notify_stop_split_test
+    {
+        split_status::type req_split_status;
+        split_status::type meta_split_status;
+        bool last_canceled;
+        error_code expected_err;
+        split_status::type expected_status;
+    } tests[] = {
+        {split_status::PAUSING,
+         split_status::NOT_SPLIT,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::NOT_SPLIT},
+        {split_status::PAUSING,
+         split_status::PAUSED,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::PAUSED},
+        {split_status::PAUSING,
+         split_status::SPLITTING,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::SPLITTING},
+        {split_status::PAUSING, split_status::PAUSING, false, ERR_OK, split_status::PAUSING},
+        {split_status::PAUSING,
+         split_status::CANCELING,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::CANCELING},
+        {split_status::CANCELING,
+         split_status::NOT_SPLIT,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::NOT_SPLIT},
+        {split_status::CANCELING,
+         split_status::PAUSED,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::PAUSED},
+        {split_status::CANCELING,
+         split_status::SPLITTING,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::SPLITTING},
+        {split_status::CANCELING,
+         split_status::PAUSING,
+         false,
+         ERR_INVALID_VERSION,
+         split_status::PAUSING},
+        {split_status::CANCELING, split_status::CANCELING, false, ERR_OK, split_status::NOT_SPLIT},
+        {split_status::CANCELING, split_status::CANCELING, true, ERR_OK, split_status::NOT_SPLIT}};
+
+    for (auto test : tests) {
+        if (test.last_canceled) {
+            mock_only_one_partition_split(split_status::CANCELING);
+        } else {
+            mock_app_partition_split_context();
+            if (test.meta_split_status == split_status::NOT_SPLIT) {
+                mock_child_registered();
+            } else {
+                mock_split_states(test.meta_split_status, PARENT_INDEX);
+            }
+        }
+
+        ASSERT_EQ(notify_stop_split(test.req_split_status), test.expected_err);
+        if (test.last_canceled) {
+            auto app = find_app(NAME);
+            ASSERT_EQ(app->partition_count, PARTITION_COUNT);
+            ASSERT_EQ(app->helpers->split_states.splitting_count, 0);
+        } else if (test.expected_status != split_status::NOT_SPLIT) {
+            auto app = find_app(NAME);
+            ASSERT_EQ(app->partition_count, NEW_PARTITION_COUNT);
+            check_split_status(test.expected_status, PARENT_INDEX);
+        }
+
         clear_app_partition_split_context();
     }
 }
