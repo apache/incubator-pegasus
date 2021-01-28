@@ -24,454 +24,98 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     join point definition for various prototypes
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include <dsn/utility/extensible_object.h>
+#include <list>
+#include <functional>
+#include <string>
+#include <tuple>
+#include <dsn/utility/apply.h>
 
 namespace dsn {
 
+// A join_point instance is a set of lambdas with the identical function signature.
+// It's typically used for creating hooks at the specific execution points,
+// for example:
+//   - on rpc session establishes
+//   - on process begins to exits
+//   - ...
+// Using join_point, we can inject the behavior in these cases in non-intrusive way.
+//
+// NOTE: "Join point" is a concept in Aspect-Oriented-Programming. Each "advice" is
+// an extension on the join-point. It's similar with the "Interceptor Pattern".
+//   - https://en.wikipedia.org/wiki/Advice_(programming)
+
+template <typename R, typename... Args>
 class join_point_base
 {
 public:
-    join_point_base(const char *name);
+    explicit join_point_base(const char *name) : _name(name) {}
 
-    bool put_front(void *fn, const char *name, bool is_native = false);
-    bool put_back(void *fn, const char *name, bool is_native = false);
-    bool put_before(const char *base, void *fn, const char *name, bool is_native = false);
-    bool put_after(const char *base, void *fn, const char *name, bool is_native = false);
-    bool remove(const char *name);
-    bool put_replace(const char *base, void *fn, const char *name);
+    using ReturnedAdviceT = R(Args...);
+    using AdviceT = void(Args...);
+
+    // TODO(wutao): call it add_returned_advice()
+    void put_native(std::function<ReturnedAdviceT> fn) { _ret_advice_entries.push_front(fn); }
+
+    // TODO(wutao): call it add_advice()
+    void put_back(std::function<AdviceT> fn, const char * /*unused*/)
+    {
+        _advice_entries.push_back(std::move(fn));
+    }
+
+    void put_front(std::function<AdviceT> fn, const char * /*unused*/)
+    {
+        _advice_entries.push_front(std::move(fn));
+    }
 
     const char *name() const { return _name.c_str(); }
 
 protected:
-    struct advice_entry
-    {
-        std::string name;
-        void *func;
-        bool is_native;
-        advice_entry *next;
-        advice_entry *prev;
-    };
-
-    advice_entry _hdr;
-    std::string _name;
+    std::list<std::function<ReturnedAdviceT>> _ret_advice_entries;
+    std::list<std::function<AdviceT>> _advice_entries;
+    const std::string _name;
 
 private:
-    advice_entry *new_entry(void *fn, const char *name, bool is_native);
-    advice_entry *get_by_name(const char *name);
+    friend class join_point_test;
 };
 
-struct join_point_unused_type
-{
-};
-
-template <typename TReturn = void,
-          typename T1 = join_point_unused_type,
-          typename T2 = join_point_unused_type,
-          typename T3 = join_point_unused_type>
-class join_point;
-
-template <typename TReturn, typename T1, typename T2, typename T3>
-class join_point : public join_point_base
+template <typename R, typename... Args>
+class join_point final : public join_point_base<R, Args...>
 {
 public:
-    typedef TReturn (*point_prototype)(T1, T2, T3);
-    typedef void (*advice_prototype)(T1, T2, T3);
+    using BaseType = join_point_base<R, Args...>;
+    static_assert(!std::is_void<R>::value, "type R must not be a void");
 
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
+    explicit join_point(const char *name) : BaseType(name) {}
 
-    TReturn execute(T1 p1, T2 p2, T3 p3, TReturn default_return_value)
+    // Execute the hooks sequentially.
+    R execute(Args... args, R default_return_value)
     {
-        TReturn returnValue = default_return_value;
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                returnValue = (*(point_prototype *)&p->func)(p1, p2, p3);
-            } else {
-                (*(advice_prototype *)&p->func)(p1, p2, p3);
-            }
-            p = p->next;
+        R ret = default_return_value;
+        for (auto &func : BaseType::_ret_advice_entries) {
+            ret = dsn::apply(func, std::make_tuple(std::forward<Args>(args)...));
         }
-        return returnValue;
-    }
-};
-
-template <typename T1, typename T2, typename T3>
-class join_point<void, T1, T2, T3> : public join_point_base
-{
-public:
-    typedef void (*point_prototype)(T1, T2, T3);
-    typedef void (*advice_prototype)(T1, T2, T3);
-
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
-
-    void execute(T1 p1, T2 p2, T3 p3)
-    {
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                (*(point_prototype *)&p->func)(p1, p2, p3);
-            } else {
-                (*(advice_prototype *)&p->func)(p1, p2, p3);
-            }
-            p = p->next;
+        for (auto &func : BaseType::_advice_entries) {
+            dsn::apply(func, std::make_tuple(std::forward<Args>(args)...));
         }
+        return ret;
     }
 };
 
-template <typename TReturn, typename T1, typename T2>
-class join_point<TReturn, T1, T2, join_point_unused_type> : public join_point_base
+template <typename... Args>
+class join_point<void, Args...> final : public join_point_base<void, Args...>
 {
 public:
-    typedef TReturn (*point_prototype)(T1, T2);
-    typedef void (*advice_prototype)(T1, T2);
+    using BaseType = join_point_base<void, Args...>;
 
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
+    explicit join_point(const char *name) : BaseType(name) {}
 
-    TReturn execute(T1 p1, T2 p2, TReturn default_return_value)
+    // Execute the hooks sequentially.
+    void execute(Args... args)
     {
-        TReturn returnValue = default_return_value;
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                returnValue = (*(point_prototype *)&p->func)(p1, p2);
-            } else {
-                (*(advice_prototype *)&p->func)(p1, p2);
-            }
-            p = p->next;
-        }
-        return returnValue;
-    }
-};
-
-template <typename T1, typename T2>
-class join_point<void, T1, T2, join_point_unused_type> : public join_point_base
-{
-public:
-    typedef void (*point_prototype)(T1, T2);
-    typedef void (*advice_prototype)(T1, T2);
-
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
-
-    void execute(T1 p1, T2 p2)
-    {
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                (*(point_prototype *)&p->func)(p1, p2);
-            } else {
-                (*(advice_prototype *)&p->func)(p1, p2);
-            }
-            p = p->next;
-        }
-    }
-};
-
-template <typename TReturn, typename T1>
-class join_point<TReturn, T1, join_point_unused_type, join_point_unused_type>
-    : public join_point_base
-{
-public:
-    typedef TReturn (*point_prototype)(T1);
-    typedef void (*advice_prototype)(T1);
-
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
-
-    TReturn execute(T1 p1, TReturn default_return_value)
-    {
-        TReturn returnValue = default_return_value;
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                returnValue = (*(point_prototype *)&p->func)(p1);
-            } else {
-                (*(advice_prototype *)&p->func)(p1);
-            }
-            p = p->next;
-        }
-        return returnValue;
-    }
-};
-
-template <typename T1>
-class join_point<void, T1, join_point_unused_type, join_point_unused_type> : public join_point_base
-{
-public:
-    typedef void (*point_prototype)(T1);
-    typedef void (*advice_prototype)(T1);
-
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
-
-    void execute(T1 p1)
-    {
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                (*(point_prototype *)&p->func)(p1);
-            } else {
-                (*(advice_prototype *)&p->func)(p1);
-            }
-            p = p->next;
-        }
-    }
-};
-
-template <typename TReturn>
-class join_point<TReturn, join_point_unused_type, join_point_unused_type, join_point_unused_type>
-    : public join_point_base
-{
-public:
-    typedef TReturn (*point_prototype)();
-    typedef void (*advice_prototype)();
-
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
-
-    TReturn execute(TReturn default_return_value)
-    {
-        TReturn returnValue = default_return_value;
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                returnValue = (*(point_prototype *)&p->func)();
-            } else {
-                (*(advice_prototype *)&p->func)();
-            }
-            p = p->next;
-        }
-        return returnValue;
-    }
-};
-
-template <>
-class join_point<void, join_point_unused_type, join_point_unused_type, join_point_unused_type>
-    : public join_point_base
-{
-public:
-    typedef void (*point_prototype)();
-    typedef void (*advice_prototype)();
-
-public:
-    join_point(const char *name) : join_point_base(name) {}
-    bool put_native(point_prototype point)
-    {
-        return join_point_base::put_front((void *)point, "native", true);
-    }
-    bool put_front(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_front((void *)fn, name);
-    }
-    bool put_back(advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_back((void *)fn, name);
-    }
-    bool put_before(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_before(base, (void *)fn, name);
-    }
-    bool put_after(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_after(base, (void *)fn, name);
-    }
-    bool put_replace(const char *base, advice_prototype fn, const char *name)
-    {
-        return join_point_base::put_replace(base, (void *)fn, name);
-    }
-
-    void execute()
-    {
-        advice_entry *p = _hdr.next;
-        while (p != &_hdr) {
-            if (p->is_native) {
-                (*(point_prototype *)&p->func)();
-            } else {
-                (*(advice_prototype *)&p->func)();
-            }
-            p = p->next;
+        for (auto &func : BaseType::_advice_entries) {
+            dsn::apply(func, std::make_tuple(std::forward<Args>(args)...));
         }
     }
 };
