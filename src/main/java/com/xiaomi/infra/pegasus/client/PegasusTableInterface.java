@@ -858,11 +858,20 @@ public interface PegasusTableInterface {
       throws PException;
 
   /**
-   * sync version of MultiGetSortKeys, please refer to the async version {@link
-   * #asyncMultiGetSortKeys(byte[], int, int, int)} and {@link #asyncMultiGetSortKeys(byte[], int)}
+   * sync fetch sortKeys under the same hash key, which is wrapper of {@linkplain
+   * #getScanner(byte[], byte[], byte[], ScanOptions)}
+   *
+   * @param hashKey hashKey, should not be null or empty
+   * @param maxFetchCount max count of sortKeys to be fetched. max_fetch_count <= 0 means no limit.
+   *     default value is 100.
+   * @param maxFetchSize deprecated argument, can be ignored
+   * @param timeout timeout
+   * @return MultiGetSortKeysResult
+   * @throws PException if exceed timeout will throw exception
    */
   public MultiGetSortKeysResult multiGetSortKeys(
-      byte[] hashKey, int maxFetchCount, int maxFetchSize, int timeout /*ms*/) throws PException;
+      byte[] hashKey, int maxFetchCount, int maxFetchSize /*Deprecated*/, int timeout /*ms*/)
+      throws PException;
 
   public MultiGetSortKeysResult multiGetSortKeys(byte[] hashKey, int timeout /*ms*/)
       throws PException;

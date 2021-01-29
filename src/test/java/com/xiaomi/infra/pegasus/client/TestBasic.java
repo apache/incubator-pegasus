@@ -4,6 +4,8 @@
 package com.xiaomi.infra.pegasus.client;
 
 /** @author qinzuoyan */
+import com.xiaomi.infra.pegasus.client.PegasusTable.ScanRangeResult;
+import com.xiaomi.infra.pegasus.client.PegasusTableInterface.MultiGetSortKeysResult;
 import io.netty.util.concurrent.Future;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -2627,6 +2629,133 @@ public class TestBasic {
     } catch (PException e) {
       Assert.assertTrue(
           e.getMessage().contains("Exceed the multi value length threshold = 1048576"));
+    }
+  }
+
+  @Test // test for making sure return "maxFetchCount" if has "maxFetchCount" valid record
+  public void testScanRangeWithValueExpired() throws PException, InterruptedException {
+    String tableName = "temp";
+    String hashKey = "hashKey";
+    // generate records: sortKeys=[expired_0....expired_999,persistent_0...persistent_9]
+    generateRecordsWithExpired(tableName, hashKey, 1000, 10);
+
+    PegasusTable table =
+        (PegasusTable) PegasusClientFactory.getSingletonClient().openTable(tableName);
+    // case A: scan all record
+    // case A1: scan all record: if persistent record count >= maxFetchCount, it must return
+    // maxFetchCount records
+    ScanRangeResult caseA1 =
+        table.scanRange(hashKey.getBytes(), null, null, new ScanOptions(), 5, 0);
+    assertScanResult(0, 4, false, caseA1);
+    // case A2: scan all record: if persistent record count < maxFetchCount, it only return
+    // persistent count records
+    ScanRangeResult caseA2 =
+        table.scanRange(hashKey.getBytes(), null, null, new ScanOptions(), 100, 0);
+    assertScanResult(0, 9, true, caseA2);
+
+    // case B: scan limit record by "startSortKey" and "":
+    // case B1: scan limit record by "expired_0" and "", if persistent record count >=
+    // maxFetchCount, it must return maxFetchCount records
+    ScanRangeResult caseB1 =
+        table.scanRange(
+            hashKey.getBytes(), "expired_0".getBytes(), "".getBytes(), new ScanOptions(), 5, 0);
+    assertScanResult(0, 4, false, caseB1);
+    // case B2: scan limit record by "expired_0" and "", if persistent record count < maxFetchCount,
+    // it only return valid records
+    ScanRangeResult caseB2 =
+        table.scanRange(
+            hashKey.getBytes(), "expired_0".getBytes(), "".getBytes(), new ScanOptions(), 50, 0);
+    assertScanResult(0, 9, true, caseB2);
+    // case B3: scan limit record by "persistent_5" and "", if following persistent record count <
+    // maxFetchCount, it only return valid records
+    ScanRangeResult caseB3 =
+        table.scanRange(
+            hashKey.getBytes(), "persistent_5".getBytes(), "".getBytes(), new ScanOptions(), 50, 0);
+    assertScanResult(5, 9, true, caseB3);
+    // case B4: scan limit record by "persistent_5" and "", if following persistent record count >
+    // maxFetchCount, it only return valid records
+    ScanRangeResult caseB4 =
+        table.scanRange(
+            hashKey.getBytes(), "persistent_5".getBytes(), "".getBytes(), new ScanOptions(), 3, 0);
+    assertScanResult(5, 7, false, caseB4);
+
+    // case C: scan limit record by "" and "stopSortKey":
+    // case C1: scan limit record by "" and "expired_7", if will return 0 record
+    ScanRangeResult caseC1 =
+        table.scanRange(
+            hashKey.getBytes(), "".getBytes(), "expired_7".getBytes(), new ScanOptions(), 3, 0);
+    Assert.assertTrue(caseC1.allFetched);
+    Assert.assertEquals(0, caseC1.results.size()); // among "" and "expired_7" has 0 valid record
+    // case C2: scan limit record by "" and "persistent_7", if valid record count < maxFetchCount,
+    // it only return valid record
+    ScanRangeResult caseC2 =
+        table.scanRange(
+            hashKey.getBytes(), "".getBytes(), "persistent_7".getBytes(), new ScanOptions(), 10, 0);
+    assertScanResult(0, 6, true, caseC2);
+    // case C3: scan limit record by "" and "persistent_7", if valid record count > maxFetchCount,
+    // it only return valid record
+    ScanRangeResult caseC3 =
+        table.scanRange(
+            hashKey.getBytes(), "".getBytes(), "persistent_7".getBytes(), new ScanOptions(), 2, 0);
+    assertScanResult(0, 1, false, caseC3);
+
+    // case D: use multiGetSortKeys, which actually equal with case A but no value
+    // case D1: maxFetchCount > 0, return maxFetchCount valid record
+    MultiGetSortKeysResult caseD1 = table.multiGetSortKeys(hashKey.getBytes(), 5, -1, 0);
+    Assert.assertFalse(caseD1.allFetched);
+    Assert.assertEquals(5, caseD1.keys.size());
+    for (int i = 0; i <= 4; i++) {
+      Assertions.assertEquals("persistent_" + i, new String(caseD1.keys.get(i)));
+    }
+    // case D1: maxFetchCount < 0, return all valid record
+    MultiGetSortKeysResult caseD2 = table.multiGetSortKeys(hashKey.getBytes(), 10, -1, 0);
+    Assert.assertTrue(caseD2.allFetched);
+    Assert.assertEquals(10, caseD2.keys.size());
+    for (int i = 0; i <= 9; i++) {
+      Assertions.assertEquals("persistent_" + i, new String(caseD2.keys.get(i)));
+    }
+  }
+
+  private void generateRecordsWithExpired(
+      String tableName, String hashKey, int expiredCount, int persistentCount)
+      throws PException, InterruptedException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    // assign prefix to make sure the expire record is stored front of persistent
+    String expiredSortKeyPrefix = "expired_";
+    String persistentSortKeyPrefix = "persistent_";
+    while (expiredCount-- > 0) {
+      client.set(
+          tableName,
+          hashKey.getBytes(),
+          (expiredSortKeyPrefix + expiredCount).getBytes(),
+          (expiredSortKeyPrefix + expiredCount + "_value").getBytes(),
+          1);
+    }
+    // sleep to make sure the record is expired
+    Thread.sleep(1000);
+    while (persistentCount-- > 0) {
+      client.set(
+          tableName,
+          hashKey.getBytes(),
+          (persistentSortKeyPrefix + persistentCount).getBytes(),
+          (persistentSortKeyPrefix + persistentCount + "_value").getBytes());
+    }
+    PegasusClientFactory.closeSingletonClient();
+  }
+
+  private void assertScanResult(
+      int startIndex, int stopIndex, boolean expectAllFetched, ScanRangeResult actuallyRes) {
+    Assertions.assertEquals(expectAllFetched, actuallyRes.allFetched);
+    Assertions.assertEquals(stopIndex - startIndex + 1, actuallyRes.results.size());
+    for (int i = startIndex; i <= stopIndex; i++) {
+      Assertions.assertEquals(
+          "hashKey", new String(actuallyRes.results.get(i - startIndex).getLeft().getKey()));
+      Assertions.assertEquals(
+          "persistent_" + i,
+          new String(actuallyRes.results.get(i - startIndex).getLeft().getValue()));
+      Assertions.assertEquals(
+          "persistent_" + i + "_value",
+          new String(actuallyRes.results.get(i - startIndex).getRight()));
     }
   }
 }

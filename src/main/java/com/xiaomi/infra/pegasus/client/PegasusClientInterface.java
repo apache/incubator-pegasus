@@ -268,16 +268,19 @@ public interface PegasusClientInterface {
    *
    * @param tableName table name
    * @param hashKey used to decide which partition to put this k-v, should not be null or empty.
-   * @param maxFetchCount max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
+   * @param maxFetchCount max count of sortKeys to be fetched. max_fetch_count <= 0 means no limit.
    *     default value is 100.
-   * @param maxFetchSize max size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
-   *     default value is 1000000.
+   * @param maxFetchSize deprecated argument, can be ignored
    * @param sortKeys output sort keys.
    * @return true if all data is fetched; false if only partial data is fetched.
    * @throws PException throws exception if any error occurs.
    */
   public boolean multiGetSortKeys(
-      String tableName, byte[] hashKey, int maxFetchCount, int maxFetchSize, List<byte[]> sortKeys)
+      String tableName,
+      byte[] hashKey,
+      int maxFetchCount,
+      int maxFetchSize /*Deprecated*/,
+      List<byte[]> sortKeys)
       throws PException;
 
   public boolean multiGetSortKeys(String tableName, byte[] hashKey, List<byte[]> sortKeys)
