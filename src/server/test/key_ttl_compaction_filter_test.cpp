@@ -31,7 +31,7 @@ TEST(key_ttl_compaction_filter_test, need_clean_key)
     {
         std::string hash_key;
         int32_t expire_sec_from_now;
-        bool clear_ttl = false;
+        bool clear_ttl;
         bool need_clean;
     } tests[] = {{"raw_tts_audio:", 100, false, false},
                  {"raw_tts_audio:xxx", 100, false, false},
