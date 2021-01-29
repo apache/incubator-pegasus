@@ -24,8 +24,6 @@
 #include <rocksdb/compaction_filter.h>
 #include <rocksdb/merge_operator.h>
 #include <base/pegasus_key_schema.h>
-#include <dsn/utility/flags.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
 
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
@@ -47,6 +45,10 @@ inline bool need_clean_key(const rocksdb::Slice &key, uint32_t expire_ts, uint32
     for (const auto &key_prefix : cleaned_hash_key_prefix) {
         if (hash_key.length() >= key_prefix.length() &&
             0 == hash_key.compare(0, key_prefix.length(), key_prefix)) {
+            static int count = 0;
+            if (count++ / 1000 == 0) {
+                ddebug_f("{} keys are cleaned");
+            }
             return true;
         }
     }
