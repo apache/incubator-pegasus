@@ -32,7 +32,7 @@ namespace pegasus {
 namespace server {
 inline bool need_clean_key(const rocksdb::Slice &key, uint32_t expire_ts, uint32_t now_ts)
 {
-    std::vector<std::string> cleaned_hash_key_prefix = {"raw_tts_audio:", "stored_tts_url_info:"};
+    static const std::vector<std::string> cleaned_hash_key_prefix = {"raw_tts_audio:", "stored_tts_url_info:"};
 
     uint32_t oneday_sec = 24 * 60 * 60;
     // includes expire_tx == 0
