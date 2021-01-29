@@ -62,10 +62,6 @@ public:
     KeyWithTTLCompactionFilter(uint32_t pegasus_data_version, uint32_t default_ttl, bool enabled)
         : _pegasus_data_version(pegasus_data_version), _default_ttl(default_ttl), _enabled(enabled)
     {
-        _pfc_cleaned_key_count.init_app_counter("app.pegasus",
-                                                "cleaned_key_count",
-                                                COUNTER_TYPE_NUMBER,
-                                                "statistic the cleaned count of key");
     }
 
     bool Filter(int /*level*/,
@@ -95,7 +91,6 @@ public:
         }
 
         if (need_clean_key(key, expire_ts, now_ts)) {
-            _pfc_cleaned_key_count->increment();
             return true;
         }
         return false;
@@ -108,8 +103,6 @@ private:
     uint32_t _default_ttl;
     bool _enabled; // only process filtering when _enabled == true
     mutable pegasus_value_generator _gen;
-
-    dsn::perf_counter_wrapper _pfc_cleaned_key_count;
 };
 
 class KeyWithTTLCompactionFilterFactory : public rocksdb::CompactionFilterFactory
