@@ -90,10 +90,7 @@ public:
             return true;
         }
 
-        if (need_clean_key(key, expire_ts, now_ts)) {
-            return true;
-        }
-        return false;
+        return need_clean_key(key, expire_ts, now_ts);
     }
 
     const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
