@@ -46,7 +46,7 @@ inline bool need_clean_key(const rocksdb::Slice &key, uint32_t expire_ts, uint32
         if (hash_key.length() >= key_prefix.length() &&
             0 == hash_key.compare(0, key_prefix.length(), key_prefix)) {
             static int count = 0;
-            if (count++ / 1000 == 0) {
+            if (count++ % 1000 == 0) {
                 ddebug_f("{} keys are cleaned");
             }
             return true;
