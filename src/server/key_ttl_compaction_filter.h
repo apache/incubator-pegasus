@@ -37,7 +37,7 @@ inline bool need_clean_key(const rocksdb::Slice &key, uint32_t expire_ts, uint32
     std::vector<std::string> cleaned_hash_key_prefix = {"raw_tts_audio:", "stored_tts_url_info:"};
 
     uint32_t oneday_sec = 24 * 60 * 60;
-    if (expire_ts < now_ts + 3 * oneday_sec) {
+    if (expire_ts <= 0 || expire_ts < now_ts + 3 * oneday_sec) {
         return false;
     }
 
