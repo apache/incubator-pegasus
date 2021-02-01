@@ -41,17 +41,20 @@ DSN_DEFINE_bool("pegasus.collector",
                 enable_detect_hotkey,
                 false,
                 "auto detect hot key in the hot paritition");
+DSN_TAG_VARIABLE(enable_detect_hotkey, FT_MUTABLE);
 
-DSN_DEFINE_int32("pegasus.collector",
-                 hot_partition_threshold,
-                 3,
-                 "threshold of hotspot partition value, if app.stat.hotspots >= "
-                 "FLAGS_hotpartition_threshold, this partition is a hot partition");
+DSN_DEFINE_uint32("pegasus.collector",
+                  hot_partition_threshold,
+                  3,
+                  "threshold of hotspot partition value, if app.stat.hotspots >= "
+                  "FLAGS_hotpartition_threshold, this partition is a hot partition");
+DSN_TAG_VARIABLE(hot_partition_threshold, FT_MUTABLE);
 
-DSN_DEFINE_int32("pegasus.collector",
-                 occurrence_threshold,
-                 3,
-                 "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
+DSN_DEFINE_uint32("pegasus.collector",
+                  occurrence_threshold,
+                  3,
+                  "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
+DSN_TAG_VARIABLE(occurrence_threshold, FT_MUTABLE);
 
 void hotspot_partition_calculator::data_aggregate(const std::vector<row_data> &partition_stats)
 {
@@ -149,9 +152,11 @@ void hotspot_partition_calculator::data_analyse()
 
 void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
 {
+    auto now_hot_partition_threshold = FLAGS_hot_partition_threshold;
+    auto now_occurrence_threshold = FLAGS_occurrence_threshold;
     for (int index = 0; index < _hot_points.size(); index++) {
-        if (_hot_points[index][data_type].get()->get_value() >= FLAGS_hot_partition_threshold) {
-            if (++_hotpartition_counter[index][data_type] >= FLAGS_occurrence_threshold) {
+        if (_hot_points[index][data_type].get()->get_value() >= now_hot_partition_threshold) {
+            if (++_hotpartition_counter[index][data_type] >= now_occurrence_threshold) {
                 derror_f("Find a {} hot partition {}.{}",
                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
                          _app_name,
