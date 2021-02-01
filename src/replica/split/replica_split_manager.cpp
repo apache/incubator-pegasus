@@ -175,7 +175,7 @@ void replica_split_manager::parent_prepare_states(const std::string &dir) // on 
     learn_state parent_states;
     int64_t checkpoint_decree;
     // generate checkpoint
-    error_code ec = _replica->_app->copy_checkpoint_to_dir(dir.c_str(), &checkpoint_decree);
+    error_code ec = _replica->_app->copy_checkpoint_to_dir(dir.c_str(), &checkpoint_decree, true);
     if (ec == ERR_OK) {
         ddebug_replica("prepare checkpoint succeed: checkpoint dir = {}, checkpoint decree = {}",
                        dir,
@@ -207,8 +207,8 @@ void replica_split_manager::parent_prepare_states(const std::string &dir) // on 
     plist->truncate(last_committed_decree());
 
     dcheck_eq(last_committed_decree(), checkpoint_decree);
-    dcheck_gt(mutation_list.size(), 0);
-    dcheck_gt(files.size(), 0);
+    dcheck_ge(mutation_list.size(), 0);
+    dcheck_ge(files.size(), 0);
     ddebug_replica("prepare state succeed: {} mutations, {} private log files, total file size = "
                    "{}, last_committed_decree = {}",
                    mutation_list.size(),

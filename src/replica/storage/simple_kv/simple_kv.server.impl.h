@@ -70,7 +70,8 @@ public:
     virtual ::dsn::error_code async_checkpoint(bool flush_memtable) override;
 
     virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                                     int64_t *last_decree) override
+                                                     int64_t *last_decree,
+                                                     bool flush_memtable = false) override
     {
         return ERR_NOT_IMPLEMENTED;
     }

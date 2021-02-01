@@ -197,7 +197,8 @@ public:
     // must be thread safe
     //
     virtual ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                                     /*output*/ int64_t *last_decree) = 0;
+                                                     /*output*/ int64_t *last_decree,
+                                                     bool flush_memtable = false) = 0;
 
     //
     // Query methods.

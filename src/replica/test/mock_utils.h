@@ -56,7 +56,8 @@ public:
         return ERR_OK;
     }
     error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                      /*output*/ int64_t *last_decree) override
+                                      /*output*/ int64_t *last_decree,
+                                      bool flush_memtable = false) override
     {
         if (last_decree != nullptr) {
             *last_decree = _decree;
