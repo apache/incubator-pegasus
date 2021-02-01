@@ -1802,19 +1802,21 @@ private:
 
 // Must be thread safe.
 ::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                                              /*output*/ int64_t *last_decree)
+                                                              /*output*/ int64_t *last_decree,
+                                                              bool flush_memtable)
 {
     CheckpointingTokenHelper token_helper(_is_checkpointing);
     if (!token_helper.token_got()) {
         return ::dsn::ERR_WRONG_TIMING;
     }
 
-    return copy_checkpoint_to_dir_unsafe(checkpoint_dir, last_decree);
+    return copy_checkpoint_to_dir_unsafe(checkpoint_dir, last_decree, flush_memtable);
 }
 
 // not thread safe, should be protected by caller
 ::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
-                                                                     int64_t *checkpoint_decree)
+                                                                     int64_t *checkpoint_decree,
+                                                                     bool flush_memtable)
 {
     rocksdb::Checkpoint *chkpt_raw = nullptr;
     auto status = rocksdb::Checkpoint::Create(_db, &chkpt_raw);
@@ -1834,7 +1836,8 @@ private:
     }
 
     // CreateCheckpoint() will not flush memtable when log_size_for_flush = max
-    status = chkpt->CreateCheckpoint(checkpoint_dir, std::numeric_limits<uint64_t>::max());
+    status = chkpt->CreateCheckpoint(checkpoint_dir,
+                                     flush_memtable ? 0 : std::numeric_limits<uint64_t>::max());
     if (!status.ok()) {
         derror_replica("CreateCheckpoint failed, error = {}", status.ToString());
         if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
