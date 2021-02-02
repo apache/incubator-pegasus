@@ -465,6 +465,10 @@ class control_split_request;
 
 class control_split_response;
 
+class query_split_request;
+
+class query_split_response;
+
 class notify_catch_up_request;
 
 class notify_cacth_up_response;
@@ -6433,6 +6437,121 @@ public:
 void swap(control_split_response &a, control_split_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const control_split_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _query_split_request__isset
+{
+    _query_split_request__isset() : app_name(false) {}
+    bool app_name : 1;
+} _query_split_request__isset;
+
+class query_split_request
+{
+public:
+    query_split_request(const query_split_request &);
+    query_split_request(query_split_request &&);
+    query_split_request &operator=(const query_split_request &);
+    query_split_request &operator=(query_split_request &&);
+    query_split_request() : app_name() {}
+
+    virtual ~query_split_request() throw();
+    std::string app_name;
+
+    _query_split_request__isset __isset;
+
+    void __set_app_name(const std::string &val);
+
+    bool operator==(const query_split_request &rhs) const
+    {
+        if (!(app_name == rhs.app_name))
+            return false;
+        return true;
+    }
+    bool operator!=(const query_split_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const query_split_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(query_split_request &a, query_split_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const query_split_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _query_split_response__isset
+{
+    _query_split_response__isset()
+        : err(false), new_partition_count(false), status(false), hint_msg(false)
+    {
+    }
+    bool err : 1;
+    bool new_partition_count : 1;
+    bool status : 1;
+    bool hint_msg : 1;
+} _query_split_response__isset;
+
+class query_split_response
+{
+public:
+    query_split_response(const query_split_response &);
+    query_split_response(query_split_response &&);
+    query_split_response &operator=(const query_split_response &);
+    query_split_response &operator=(query_split_response &&);
+    query_split_response() : new_partition_count(0), hint_msg() {}
+
+    virtual ~query_split_response() throw();
+    ::dsn::error_code err;
+    int32_t new_partition_count;
+    std::map<int32_t, split_status::type> status;
+    std::string hint_msg;
+
+    _query_split_response__isset __isset;
+
+    void __set_err(const ::dsn::error_code &val);
+
+    void __set_new_partition_count(const int32_t val);
+
+    void __set_status(const std::map<int32_t, split_status::type> &val);
+
+    void __set_hint_msg(const std::string &val);
+
+    bool operator==(const query_split_response &rhs) const
+    {
+        if (!(err == rhs.err))
+            return false;
+        if (!(new_partition_count == rhs.new_partition_count))
+            return false;
+        if (!(status == rhs.status))
+            return false;
+        if (__isset.hint_msg != rhs.__isset.hint_msg)
+            return false;
+        else if (__isset.hint_msg && !(hint_msg == rhs.hint_msg))
+            return false;
+        return true;
+    }
+    bool operator!=(const query_split_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const query_split_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(query_split_response &a, query_split_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const query_split_response &obj)
 {
     obj.printTo(out);
     return out;

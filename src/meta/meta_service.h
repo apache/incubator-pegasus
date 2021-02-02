@@ -184,6 +184,7 @@ private:
     // split
     void on_start_partition_split(start_split_rpc rpc);
     void on_control_partition_split(control_split_rpc rpc);
+    void on_query_partition_split(query_split_rpc rpc);
     void on_register_child_on_meta(register_child_rpc rpc);
     void on_notify_stop_split(notify_stop_split_rpc rpc);
 

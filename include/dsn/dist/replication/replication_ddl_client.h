@@ -207,6 +207,8 @@ public:
                             const int32_t parent_pidx,
                             const int32_t old_partition_count);
 
+    error_with<query_split_response> query_partition_split(const std::string &app_name);
+
 private:
     bool static valid_app_char(int c);
 

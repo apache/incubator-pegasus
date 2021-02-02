@@ -1639,5 +1639,13 @@ replication_ddl_client::control_partition_split(const std::string &app_name,
     return call_rpc_sync(control_split_rpc(std::move(req), RPC_CM_CONTROL_PARTITION_SPLIT));
 }
 
+error_with<query_split_response>
+replication_ddl_client::query_partition_split(const std::string &app_name)
+{
+    auto req = make_unique<query_split_request>();
+    req->__set_app_name(app_name);
+    return call_rpc_sync(query_split_rpc(std::move(req), RPC_CM_QUERY_PARTITION_SPLIT));
+}
+
 } // namespace replication
 } // namespace dsn

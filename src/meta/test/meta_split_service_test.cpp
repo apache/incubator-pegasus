@@ -63,6 +63,17 @@ public:
         return rpc.response().err;
     }
 
+    query_split_response query_partition_split(const std::string &app_name)
+    {
+        auto request = dsn::make_unique<query_split_request>();
+        request->app_name = app_name;
+
+        query_split_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_SPLIT);
+        split_svc().query_partition_split(rpc);
+        wait_all();
+        return rpc.response();
+    }
+
     error_code control_partition_split(const std::string &app_name,
                                        split_control_type::type type,
                                        const int32_t pidx,
@@ -262,6 +273,40 @@ TEST_F(meta_split_service_test, start_split_test)
         ASSERT_EQ(start_partition_split(test.app_name, test.new_partition_count),
                   test.expected_err);
         ASSERT_EQ(app->partition_count, test.expected_partition_count);
+    }
+}
+
+// query split unit tests
+TEST_F(meta_split_service_test, query_split_test)
+{
+    // Test case:
+    // - app not existed
+    // - app not splitting
+    // - query split succeed
+    struct query_test
+    {
+        std::string app_name;
+        bool mock_splitting;
+        error_code expected_err;
+    } tests[] = {
+        {"table_not_exist", false, ERR_APP_NOT_EXIST},
+        {NAME, false, ERR_INVALID_STATE},
+        {NAME, true, ERR_OK},
+    };
+
+    for (auto test : tests) {
+        if (test.mock_splitting) {
+            mock_app_partition_split_context();
+        }
+        auto resp = query_partition_split(test.app_name);
+        ASSERT_EQ(resp.err, test.expected_err);
+        if (resp.err == ERR_OK) {
+            ASSERT_EQ(resp.new_partition_count, NEW_PARTITION_COUNT);
+            ASSERT_EQ(resp.status.size(), PARTITION_COUNT);
+        }
+        if (test.mock_splitting) {
+            clear_app_partition_split_context();
+        }
     }
 }
 
