@@ -124,13 +124,15 @@ public:
     // must be thread safe
     // this method will not trigger flush(), just copy even if the app is empty.
     ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                             /*output*/ int64_t *last_decree) override;
+                                             /*output*/ int64_t *last_decree,
+                                             bool flush_memtable = false) override;
 
     //
     // help function, just copy checkpoint to specified dir and ignore _is_checkpointing.
     // if checkpoint_dir already exist, this function will delete it first.
     ::dsn::error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
-                                                    /**output*/ int64_t *checkpoint_decree);
+                                                    /**output*/ int64_t *checkpoint_decree,
+                                                    bool flush_memtable = false);
 
     // get the last checkpoint
     // if succeed:
