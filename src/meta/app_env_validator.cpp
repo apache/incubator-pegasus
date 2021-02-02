@@ -123,6 +123,16 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
+bool check_split_validation(const std::string &env_value, std::string &hint_message)
+{
+    bool result = false;
+    if (!dsn::buf2bool(env_value, result)) {
+        hint_message = fmt::format("invalid string {}, should be \"true\" or \"false\"", env_value);
+        return false;
+    }
+    return true;
+}
+
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
@@ -172,7 +182,9 @@ void app_env_validator::register_all_validators()
         {replica_envs::READ_QPS_THROTTLING,
          std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::READ_SIZE_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)}};
+         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
+         std::bind(&check_split_validation, std::placeholders::_1, std::placeholders::_2)}};
 }
 
 } // namespace replication

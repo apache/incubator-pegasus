@@ -628,6 +628,8 @@ const std::string replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS(
     "replica_access_controller.allowed_users");
 const std::string replica_envs::READ_QPS_THROTTLING("replica.read_throttling");
 const std::string replica_envs::READ_SIZE_THROTTLING("replica.read_throttling_by_size");
+const std::string
+    replica_envs::SPLIT_VALIDATE_PARTITION_HASH("replica.split.validate_partition_hash");
 
 const std::string bulk_load_constant::BULK_LOAD_INFO("bulk_load_info");
 const int32_t bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL = 10;

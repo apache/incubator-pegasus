@@ -26,6 +26,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/service_api_c.h>
+#include <dsn/dist/replication/replica_envs.h>
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
@@ -273,6 +274,9 @@ TEST_F(meta_split_service_test, start_split_test)
         ASSERT_EQ(start_partition_split(test.app_name, test.new_partition_count),
                   test.expected_err);
         ASSERT_EQ(app->partition_count, test.expected_partition_count);
+        if (test.expected_err == ERR_OK) {
+            ASSERT_EQ(app->envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH], "true");
+        }
     }
 }
 

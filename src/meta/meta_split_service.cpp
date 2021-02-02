@@ -25,6 +25,7 @@
  */
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include <dsn/utility/fail_point.h>
 
 #include "meta_split_service.h"
@@ -55,7 +56,6 @@ void meta_split_service::start_partition_split(start_split_rpc rpc)
             response.err = app == nullptr ? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
             response.hint_msg = fmt::format(
                 "app {}", response.err == ERR_APP_NOT_EXIST ? "not existed" : "dropped");
-
             return;
         }
 
@@ -101,6 +101,7 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
         app->partition_count *= 2;
         app->helpers->contexts.resize(app->partition_count);
         app->partitions.resize(app->partition_count);
+        app->envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH] = "true";
 
         for (int i = 0; i < app->partition_count; ++i) {
             app->helpers->contexts[i].config_owner = &app->partitions[i];
@@ -121,8 +122,8 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
     }
     auto copy = *app;
     copy.partition_count *= 2;
+    copy.envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH] = "true";
     blob value = dsn::json::json_forwarder<app_info>::encode(copy);
-
     _meta_svc->get_meta_storage()->set_data(
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
