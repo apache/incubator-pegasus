@@ -44,7 +44,7 @@ DSN_REGISTER_COMPONENT_PROVIDER(sim_aio_provider, "dsn::tools::sim_aio_provider"
 //----------------- disk_file ------------------------
 aio_task *disk_write_queue::unlink_next_workload(void *plength)
 {
-    uint64_t next_offset;
+    uint64_t next_offset = 0;
     uint32_t &sz = *(uint32_t *)plength;
     sz = 0;
 
