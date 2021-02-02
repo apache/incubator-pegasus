@@ -464,7 +464,7 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
 {
     const auto &request = rpc.request();
     auto &response = rpc.response();
-    zauto_write_lock(app_lock());
+    zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(request.app_name);
     dassert_f(app != nullptr, "app({}) is not existed", request.app_name);
     dassert_f(app->is_stateful, "app({}) is stateless currently", request.app_name);
