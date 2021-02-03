@@ -46,14 +46,14 @@ namespace dsn {
 
 perf_counters::perf_counters()
 {
-    command_manager::instance().register_command(
+    _perf_counters_cmd = command_manager::instance().register_command(
         {"perf-counters"},
         "perf-counters - query perf counters, filtered by OR of POSIX basic regular expressions",
         "perf-counters [regexp]...",
         [](const std::vector<std::string> &args) {
             return perf_counters::instance().list_snapshot_by_regexp(args);
         });
-    command_manager::instance().register_command(
+    _perf_counters_by_substr_cmd = command_manager::instance().register_command(
         {"perf-counters-by-substr"},
         "perf-counters-by-substr - query perf counters, filtered by OR of substrs",
         "perf-counters-by-substr [substr]...",
@@ -63,7 +63,7 @@ perf_counters::perf_counters()
                     return cs.name.find(arg) != std::string::npos;
                 });
         });
-    command_manager::instance().register_command(
+    _perf_counters_by_prefix_cmd = command_manager::instance().register_command(
         {"perf-counters-by-prefix"},
         "perf-counters-by-prefix - query perf counters, filtered by OR of prefix strings",
         "perf-counters-by-prefix [prefix]...",
@@ -74,7 +74,7 @@ perf_counters::perf_counters()
                            ::memcmp(cs.name.c_str(), arg.c_str(), arg.size()) == 0;
                 });
         });
-    command_manager::instance().register_command(
+    _perf_counters_by_postfix_cmd = command_manager::instance().register_command(
         {"perf-counters-by-postfix"},
         "perf-counters-by-postfix - query perf counters, filtered by OR of postfix strings",
         "perf-counters-by-postfix [postfix]...",
@@ -89,7 +89,13 @@ perf_counters::perf_counters()
         });
 }
 
-perf_counters::~perf_counters() = default;
+perf_counters::~perf_counters()
+{
+    UNREGISTER_VALID_HANDLER(_perf_counters_cmd);
+    UNREGISTER_VALID_HANDLER(_perf_counters_by_substr_cmd);
+    UNREGISTER_VALID_HANDLER(_perf_counters_by_prefix_cmd);
+    UNREGISTER_VALID_HANDLER(_perf_counters_by_postfix_cmd);
+}
 
 perf_counter_ptr perf_counters::get_app_counter(const char *section,
                                                 const char *name,

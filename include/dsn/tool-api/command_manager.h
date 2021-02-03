@@ -64,7 +64,6 @@ private:
 
     ::dsn::utils::rw_lock_nr _lock;
     std::map<std::string, command_instance *> _handlers;
-    std::vector<command_instance *> _commands;
 };
 
 } // namespace dsn

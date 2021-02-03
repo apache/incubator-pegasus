@@ -276,6 +276,8 @@ private:
     perf_counter_wrapper _recent_write_data_size;
     perf_counter_wrapper _recent_write_fail_count;
 
+    dsn_handle_t _nfs_max_copy_rate_megabytes_cmd;
+
     dsn::task_tracker _tracker;
 };
 } // namespace service

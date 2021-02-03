@@ -2416,20 +2416,19 @@ void replica_stub::close()
         return;
     }
 
-    dsn::command_manager::instance().deregister_command(_kill_partition_command);
-    dsn::command_manager::instance().deregister_command(_deny_client_command);
-    dsn::command_manager::instance().deregister_command(_verbose_client_log_command);
-    dsn::command_manager::instance().deregister_command(_verbose_commit_log_command);
-    dsn::command_manager::instance().deregister_command(_trigger_chkpt_command);
-    dsn::command_manager::instance().deregister_command(_query_compact_command);
-    dsn::command_manager::instance().deregister_command(_query_app_envs_command);
-    dsn::command_manager::instance().deregister_command(_useless_dir_reserve_seconds_command);
+    UNREGISTER_VALID_HANDLER(_kill_partition_command);
+    UNREGISTER_VALID_HANDLER(_deny_client_command);
+    UNREGISTER_VALID_HANDLER(_verbose_client_log_command);
+    UNREGISTER_VALID_HANDLER(_verbose_commit_log_command);
+    UNREGISTER_VALID_HANDLER(_trigger_chkpt_command);
+    UNREGISTER_VALID_HANDLER(_query_compact_command);
+    UNREGISTER_VALID_HANDLER(_query_app_envs_command);
+    UNREGISTER_VALID_HANDLER(_useless_dir_reserve_seconds_command);
 #ifdef DSN_ENABLE_GPERF
-    dsn::command_manager::instance().deregister_command(_release_tcmalloc_memory_command);
-    dsn::command_manager::instance().deregister_command(_max_reserved_memory_percentage_command);
+    UNREGISTER_VALID_HANDLER(_release_tcmalloc_memory_command);
+    UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
 #endif
-    dsn::command_manager::instance().deregister_command(
-        _max_concurrent_bulk_load_downloading_count_command);
+    UNREGISTER_VALID_HANDLER(_max_concurrent_bulk_load_downloading_count_command);
 
     _kill_partition_command = nullptr;
     _deny_client_command = nullptr;

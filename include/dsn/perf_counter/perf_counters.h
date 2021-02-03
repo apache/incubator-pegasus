@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <dsn/c/api_common.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/utility/synchronize.h>
 #include <dsn/perf_counter/perf_counter.h>
@@ -161,6 +162,11 @@ private:
 
     // timestamp in seconds when take snapshot of current counters
     int64_t _timestamp;
+
+    dsn_handle_t _perf_counters_cmd;
+    dsn_handle_t _perf_counters_by_substr_cmd;
+    dsn_handle_t _perf_counters_by_prefix_cmd;
+    dsn_handle_t _perf_counters_by_postfix_cmd;
 };
 
 } // namespace dsn

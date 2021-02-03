@@ -173,18 +173,24 @@ service_engine::service_engine()
 {
     _env = nullptr;
 
-    ::dsn::command_manager::instance().register_command({"engine"},
-                                                        "engine - get engine internal information",
-                                                        "engine [app-id]",
-                                                        &service_engine::get_runtime_info);
-    ::dsn::command_manager::instance().register_command(
+    _get_runtime_info_cmd = dsn::command_manager::instance().register_command(
+        {"engine"},
+        "engine - get engine internal information",
+        "engine [app-id]",
+        &service_engine::get_runtime_info);
+
+    _get_queue_info_cmd = dsn::command_manager::instance().register_command(
         {"system.queue"},
         "system.queue - get queue internal information",
         "system.queue",
         &service_engine::get_queue_info);
 }
 
-service_engine::~service_engine() = default;
+service_engine::~service_engine()
+{
+    UNREGISTER_VALID_HANDLER(_get_runtime_info_cmd);
+    UNREGISTER_VALID_HANDLER(_get_queue_info_cmd);
+}
 
 void service_engine::init_before_toollets(const service_spec &spec)
 {

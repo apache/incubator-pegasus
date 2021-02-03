@@ -72,20 +72,9 @@ server_state::server_state()
 server_state::~server_state()
 {
     _tracker.cancel_outstanding_tasks();
-    if (_cli_dump_handle != nullptr) {
-        dsn::command_manager::instance().deregister_command(_cli_dump_handle);
-        _cli_dump_handle = nullptr;
-    }
-    if (_ctrl_add_secondary_enable_flow_control != nullptr) {
-        dsn::command_manager::instance().deregister_command(
-            _ctrl_add_secondary_enable_flow_control);
-        _ctrl_add_secondary_enable_flow_control = nullptr;
-    }
-    if (_ctrl_add_secondary_max_count_for_one_node != nullptr) {
-        dsn::command_manager::instance().deregister_command(
-            _ctrl_add_secondary_max_count_for_one_node);
-        _ctrl_add_secondary_max_count_for_one_node = nullptr;
-    }
+    UNREGISTER_VALID_HANDLER(_cli_dump_handle);
+    UNREGISTER_VALID_HANDLER(_ctrl_add_secondary_enable_flow_control);
+    UNREGISTER_VALID_HANDLER(_ctrl_add_secondary_max_count_for_one_node);
 }
 
 void server_state::register_cli_commands()

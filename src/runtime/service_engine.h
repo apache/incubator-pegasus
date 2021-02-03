@@ -128,6 +128,9 @@ private:
     service_spec _spec;
     env_provider *_env;
 
+    dsn_handle_t _get_runtime_info_cmd;
+    dsn_handle_t _get_queue_info_cmd;
+
     // <port, servicenode>
     typedef std::map<int, service_node *>
         node_engines_by_port; // multiple ports may share the same node
