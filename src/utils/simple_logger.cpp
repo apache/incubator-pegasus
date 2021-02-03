@@ -69,7 +69,7 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
                time_str,
                ts,
                tid,
-               log_prefixed_message_func());
+               log_prefixed_message_func().c_str());
 }
 
 screen_logger::screen_logger(bool short_header) : logging_provider("./")
