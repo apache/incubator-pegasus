@@ -11,7 +11,6 @@ public class OnlineLoaderConfig implements Serializable {
 
   private String clusterName;
   private String tableName;
-  private int TTLThreshold;
   private int batchCount;
 
   public OnlineLoaderConfig(ClientOptions clientOptions, String clusterName, String tableName) {
@@ -19,7 +18,6 @@ public class OnlineLoaderConfig implements Serializable {
     this.rateLimiterConfig = new RateLimiterConfig();
     this.clusterName = clusterName;
     this.tableName = tableName;
-    this.TTLThreshold = 0;
     this.batchCount = 10;
   }
 
@@ -67,17 +65,6 @@ public class OnlineLoaderConfig implements Serializable {
   }
 
   /**
-   * set TTLThreshold, the ttl of record exceeds the threshold will be ignored
-   *
-   * @param TTLThreshold
-   * @return
-   */
-  public OnlineLoaderConfig setTTLThreshold(int TTLThreshold) {
-    this.TTLThreshold = TTLThreshold;
-    return this;
-  }
-
-  /**
    * set batch count, {@link OnlineLoader} use {@link
    * com.xiaomi.infra.pegasus.client.PegasusClientInterface#batchSet(String, List)} to load data,
    * batchCount is used for `List` size
@@ -96,10 +83,6 @@ public class OnlineLoaderConfig implements Serializable {
 
   public RateLimiterConfig getRateLimiterConfig() {
     return rateLimiterConfig;
-  }
-
-  public int getTTLThreshold() {
-    return TTLThreshold;
   }
 
   public String getClusterName() {

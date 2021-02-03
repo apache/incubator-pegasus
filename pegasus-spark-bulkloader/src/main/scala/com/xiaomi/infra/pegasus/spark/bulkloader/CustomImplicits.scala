@@ -1,6 +1,6 @@
 package com.xiaomi.infra.pegasus.spark.bulkloader
 
-import com.xiaomi.infra.pegasus.client.SetItem
+import com.xiaomi.infra.pegasus.client.{HashKeyData, SetItem}
 import com.xiaomi.infra.pegasus.spark.utils.Comparator
 import org.apache.spark.rdd.RDD
 
@@ -38,6 +38,16 @@ object CustomImplicits {
     * @param rdd
     * @return PegasusSetItemRDD
     */
-  implicit def convertFromSetItem(rdd: RDD[SetItem]): PegasusSetItemRDD =
-    new PegasusSetItemRDD(rdd)
+  implicit def convertFromSingleItem(rdd: RDD[SetItem]): PegasusSingleItemRDD =
+    new PegasusSingleItemRDD(rdd)
+
+  /**
+    * The implicit method of converting RDD[Array[SetItem]] to PegasusSetItemRDD
+    * @param rdd
+    * @return PegasusSetItemRDD
+    */
+  implicit def convertFromMultiItem(
+      rdd: RDD[HashKeyData]
+  ): PegasusMultiItemRDD =
+    new PegasusMultiItemRDD(rdd)
 }

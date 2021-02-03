@@ -2,7 +2,7 @@ package com.xiaomi.infra.pegasus.spark.bulkloader.examples
 
 import java.time.Duration
 
-import com.xiaomi.infra.pegasus.client.{ClientOptions, SetItem}
+import com.xiaomi.infra.pegasus.client.{ClientOptions, HashKeyData, SetItem}
 import com.xiaomi.infra.pegasus.spark.bulkloader.CustomImplicits._
 import com.xiaomi.infra.pegasus.spark.bulkloader.OnlineLoaderConfig
 import com.xiaomi.infra.pegasus.spark.utils.FlowController.RateLimiterConfig
@@ -20,6 +20,20 @@ object CSVOnlineLoader {
     // This example only shows how to convert CSV file into Pegasus, actually any data source that
     // can be converted RDD can be load into pegasus
     sc.textFile("data.csv")
+      /** if resource data format is : one hashkey=>multi value, such as Hbase format, you need create multiSetItems within one hashKey* */
+      /** .map(i => {
+        *        val lines = i.split(",")
+        *        val multiSetItems = new HashKeyData(lines(0).getBytes())
+        *        val values:Array[String] = lines(1).split("|")
+        *        for(pair <- values) {
+        *          val sortKey = pair.split("@")(0).getBytes()
+        *          val value = pair.split("@")(1).getBytes()
+        *          val ttl = 0
+        *          multiSetItems.addData(sortKey, value)
+        *        }
+        *        multiSetItems
+        *      })*
+        */
       .map(i => {
         val lines = i.split(",")
         new SetItem(
@@ -28,7 +42,7 @@ object CSVOnlineLoader {
           lines(2).getBytes()
         )
       })
-      .loadIntoPeagsus(
+      .loadIntoPegasus(
         new OnlineLoaderConfig(
           ClientOptions
             .builder()
