@@ -31,13 +31,12 @@ jobs:
           fetch-depth: 1
           submodules: recursive
       - name: clang-format
-        run: |
-          ./rdsn/scripts/linux/run-clang-format.py
-          --clang-format-executable=clang-format-3.9
-          --exclude src/shell/linenoise/
-          --exclude src/shell/sds/
-          --exclude rdsn/
-          -r
+        run: ./rdsn/scripts/linux/run-clang-format.py \
+          --clang-format-executable=clang-format-3.9 \
+          --exclude src/shell/linenoise/ \
+          --exclude src/shell/sds/ \
+          --exclude rdsn/ \
+          -r \
           src
 
   test:
