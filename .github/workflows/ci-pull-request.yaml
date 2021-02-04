@@ -33,15 +33,8 @@ jobs:
         working-directory: /root
         run: |
           git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
-          cd incubator-pegasus
       - name: clang-format
-        run: ./rdsn/scripts/linux/run-clang-format.py \
-          --clang-format-executable=clang-format-3.9 \
-          --exclude src/shell/linenoise/ \
-          --exclude src/shell/sds/ \
-          --exclude rdsn/ \
-          -r \
-          src
+        run: ./rdsn/scripts/linux/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn -r ./src
 
   test:
     name: Test
@@ -57,7 +50,6 @@ jobs:
         working-directory: /root
         run: |
           git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
-          cd incubator-pegasus
       - name: Unpack prebuilt third-parties
         run: unzip /root/pegasus-thirdparty-output.zip -d ./rdsn/thirdparty
       - name: Compilation
