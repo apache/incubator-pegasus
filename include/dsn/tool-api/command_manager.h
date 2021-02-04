@@ -30,6 +30,7 @@
 #include <dsn/utility/singleton.h>
 #include <dsn/c/api_utilities.h>
 #include <map>
+#include <dsn/utility/autoref_ptr.h>
 
 namespace dsn {
 
@@ -54,7 +55,7 @@ public:
                      /*out*/ std::string &output);
 
 private:
-    struct command_instance
+    struct command_instance : public ref_counter
     {
         std::vector<std::string> commands;
         std::string help_short;
@@ -62,8 +63,9 @@ private:
         command_handler handler;
     };
 
-    ::dsn::utils::rw_lock_nr _lock;
-    std::map<std::string, command_instance *> _handlers;
+    typedef ref_ptr<command_instance> command_instance_ptr;
+    utils::rw_lock_nr _lock;
+    std::map<std::string, command_instance_ptr> _handlers;
 };
 
 } // namespace dsn

@@ -70,10 +70,8 @@ void command_manager::deregister_command(dsn_handle_t handle)
     dassert(c != nullptr, "cannot deregister a null handle");
     utils::auto_write_lock l(_lock);
     for (const std::string &cmd : c->commands) {
-        ddebug("unregister command: %s", cmd.c_str());
         _handlers.erase(cmd);
     }
-    delete c;
 }
 
 bool command_manager::run_command(const std::string &cmd,
