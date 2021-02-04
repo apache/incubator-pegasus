@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+          submodules: recursive
       - name: clang-format
         run: |
           ./rdsn/scripts/linux/run-clang-format.py
