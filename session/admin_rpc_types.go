@@ -308,3 +308,28 @@ func (m *MetaManager) MetaControl(ctx context.Context, req *admin.MetaControlReq
 	}
 	return nil, err
 }
+
+func (ms *metaSession) queryBackupPolicy(ctx context.Context, req *admin.QueryBackupPolicyRequest) (*admin.QueryBackupPolicyResponse, error) {
+	arg := admin.NewAdminClientQueryBackupPolicyArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BACKUP_POLICY")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQueryBackupPolicyResult)
+	return ret.GetSuccess(), nil
+}
+
+// QueryBackupPolicy is auto-generated
+func (m *MetaManager) QueryBackupPolicy(ctx context.Context, req *admin.QueryBackupPolicyRequest) (*admin.QueryBackupPolicyResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.queryBackupPolicy(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.QueryBackupPolicyResponse), fmt.Errorf("QueryBackupPolicy failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.QueryBackupPolicyResponse), nil
+	}
+	return nil, err
+}

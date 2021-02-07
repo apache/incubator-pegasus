@@ -5945,6 +5945,1089 @@ func (p *DuplicationQueryResponse) String() string {
 	return fmt.Sprintf("DuplicationQueryResponse(%+v)", *p)
 }
 
+// Attributes:
+//  - PolicyName
+//  - BackupProviderType
+//  - BackupIntervalSeconds
+//  - AppIds
+//  - BackupHistoryCountToKeep
+//  - StartTime
+//  - IsDisable
+type PolicyEntry struct {
+	PolicyName               string  `thrift:"policy_name,1" db:"policy_name" json:"policy_name"`
+	BackupProviderType       string  `thrift:"backup_provider_type,2" db:"backup_provider_type" json:"backup_provider_type"`
+	BackupIntervalSeconds    string  `thrift:"backup_interval_seconds,3" db:"backup_interval_seconds" json:"backup_interval_seconds"`
+	AppIds                   []int32 `thrift:"app_ids,4" db:"app_ids" json:"app_ids"`
+	BackupHistoryCountToKeep int32   `thrift:"backup_history_count_to_keep,5" db:"backup_history_count_to_keep" json:"backup_history_count_to_keep"`
+	StartTime                string  `thrift:"start_time,6" db:"start_time" json:"start_time"`
+	IsDisable                bool    `thrift:"is_disable,7" db:"is_disable" json:"is_disable"`
+}
+
+func NewPolicyEntry() *PolicyEntry {
+	return &PolicyEntry{}
+}
+
+func (p *PolicyEntry) GetPolicyName() string {
+	return p.PolicyName
+}
+
+func (p *PolicyEntry) GetBackupProviderType() string {
+	return p.BackupProviderType
+}
+
+func (p *PolicyEntry) GetBackupIntervalSeconds() string {
+	return p.BackupIntervalSeconds
+}
+
+func (p *PolicyEntry) GetAppIds() []int32 {
+	return p.AppIds
+}
+
+func (p *PolicyEntry) GetBackupHistoryCountToKeep() int32 {
+	return p.BackupHistoryCountToKeep
+}
+
+func (p *PolicyEntry) GetStartTime() string {
+	return p.StartTime
+}
+
+func (p *PolicyEntry) GetIsDisable() bool {
+	return p.IsDisable
+}
+func (p *PolicyEntry) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.SET {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField7(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.PolicyName = v
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.BackupProviderType = v
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.BackupIntervalSeconds = v
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadSetBegin()
+	if err != nil {
+		return thrift.PrependError("error reading set begin: ", err)
+	}
+	tSet := make([]int32, 0, size)
+	p.AppIds = tSet
+	for i := 0; i < size; i++ {
+		var _elem14 int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_elem14 = v
+		}
+		p.AppIds = append(p.AppIds, _elem14)
+	}
+	if err := iprot.ReadSetEnd(); err != nil {
+		return thrift.PrependError("error reading set end: ", err)
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.BackupHistoryCountToKeep = v
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.StartTime = v
+	}
+	return nil
+}
+
+func (p *PolicyEntry) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 7: ", err)
+	} else {
+		p.IsDisable = v
+	}
+	return nil
+}
+
+func (p *PolicyEntry) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("policy_entry"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *PolicyEntry) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("policy_name", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:policy_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.PolicyName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.policy_name (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:policy_name: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("backup_provider_type", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:backup_provider_type: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.BackupProviderType)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.backup_provider_type (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:backup_provider_type: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("backup_interval_seconds", thrift.STRING, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:backup_interval_seconds: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.BackupIntervalSeconds)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.backup_interval_seconds (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:backup_interval_seconds: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_ids", thrift.SET, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:app_ids: ", p), err)
+	}
+	if err := oprot.WriteSetBegin(thrift.I32, len(p.AppIds)); err != nil {
+		return thrift.PrependError("error writing set begin: ", err)
+	}
+	for i := 0; i < len(p.AppIds); i++ {
+		for j := i + 1; j < len(p.AppIds); j++ {
+			if reflect.DeepEqual(p.AppIds[i], p.AppIds[j]) {
+				return thrift.PrependError("", fmt.Errorf("%T error writing set field: slice is not unique", p.AppIds[i]))
+			}
+		}
+	}
+	for _, v := range p.AppIds {
+		if err := oprot.WriteI32(int32(v)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+	}
+	if err := oprot.WriteSetEnd(); err != nil {
+		return thrift.PrependError("error writing set end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:app_ids: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("backup_history_count_to_keep", thrift.I32, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:backup_history_count_to_keep: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.BackupHistoryCountToKeep)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.backup_history_count_to_keep (5) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:backup_history_count_to_keep: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) writeField6(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("start_time", thrift.STRING, 6); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:start_time: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.StartTime)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.start_time (6) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:start_time: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) writeField7(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("is_disable", thrift.BOOL, 7); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:is_disable: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.IsDisable)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.is_disable (7) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 7:is_disable: ", p), err)
+	}
+	return err
+}
+
+func (p *PolicyEntry) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PolicyEntry(%+v)", *p)
+}
+
+// Attributes:
+//  - BackupID
+//  - StartTimeMs
+//  - EndTimeMs
+//  - AppIds
+type BackupEntry struct {
+	BackupID    int64   `thrift:"backup_id,1" db:"backup_id" json:"backup_id"`
+	StartTimeMs int64   `thrift:"start_time_ms,2" db:"start_time_ms" json:"start_time_ms"`
+	EndTimeMs   int64   `thrift:"end_time_ms,3" db:"end_time_ms" json:"end_time_ms"`
+	AppIds      []int32 `thrift:"app_ids,4" db:"app_ids" json:"app_ids"`
+}
+
+func NewBackupEntry() *BackupEntry {
+	return &BackupEntry{}
+}
+
+func (p *BackupEntry) GetBackupID() int64 {
+	return p.BackupID
+}
+
+func (p *BackupEntry) GetStartTimeMs() int64 {
+	return p.StartTimeMs
+}
+
+func (p *BackupEntry) GetEndTimeMs() int64 {
+	return p.EndTimeMs
+}
+
+func (p *BackupEntry) GetAppIds() []int32 {
+	return p.AppIds
+}
+func (p *BackupEntry) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.SET {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *BackupEntry) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.BackupID = v
+	}
+	return nil
+}
+
+func (p *BackupEntry) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.StartTimeMs = v
+	}
+	return nil
+}
+
+func (p *BackupEntry) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.EndTimeMs = v
+	}
+	return nil
+}
+
+func (p *BackupEntry) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadSetBegin()
+	if err != nil {
+		return thrift.PrependError("error reading set begin: ", err)
+	}
+	tSet := make([]int32, 0, size)
+	p.AppIds = tSet
+	for i := 0; i < size; i++ {
+		var _elem15 int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_elem15 = v
+		}
+		p.AppIds = append(p.AppIds, _elem15)
+	}
+	if err := iprot.ReadSetEnd(); err != nil {
+		return thrift.PrependError("error reading set end: ", err)
+	}
+	return nil
+}
+
+func (p *BackupEntry) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("backup_entry"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *BackupEntry) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("backup_id", thrift.I64, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:backup_id: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.BackupID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.backup_id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:backup_id: ", p), err)
+	}
+	return err
+}
+
+func (p *BackupEntry) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("start_time_ms", thrift.I64, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:start_time_ms: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.StartTimeMs)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.start_time_ms (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:start_time_ms: ", p), err)
+	}
+	return err
+}
+
+func (p *BackupEntry) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("end_time_ms", thrift.I64, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:end_time_ms: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.EndTimeMs)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.end_time_ms (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:end_time_ms: ", p), err)
+	}
+	return err
+}
+
+func (p *BackupEntry) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_ids", thrift.SET, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:app_ids: ", p), err)
+	}
+	if err := oprot.WriteSetBegin(thrift.I32, len(p.AppIds)); err != nil {
+		return thrift.PrependError("error writing set begin: ", err)
+	}
+	for i := 0; i < len(p.AppIds); i++ {
+		for j := i + 1; j < len(p.AppIds); j++ {
+			if reflect.DeepEqual(p.AppIds[i], p.AppIds[j]) {
+				return thrift.PrependError("", fmt.Errorf("%T error writing set field: slice is not unique", p.AppIds[i]))
+			}
+		}
+	}
+	for _, v := range p.AppIds {
+		if err := oprot.WriteI32(int32(v)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+	}
+	if err := oprot.WriteSetEnd(); err != nil {
+		return thrift.PrependError("error writing set end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:app_ids: ", p), err)
+	}
+	return err
+}
+
+func (p *BackupEntry) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BackupEntry(%+v)", *p)
+}
+
+// Attributes:
+//  - PolicyNames
+//  - BackupInfoCount
+type QueryBackupPolicyRequest struct {
+	PolicyNames     []string `thrift:"policy_names,1" db:"policy_names" json:"policy_names"`
+	BackupInfoCount int32    `thrift:"backup_info_count,2" db:"backup_info_count" json:"backup_info_count"`
+}
+
+func NewQueryBackupPolicyRequest() *QueryBackupPolicyRequest {
+	return &QueryBackupPolicyRequest{}
+}
+
+func (p *QueryBackupPolicyRequest) GetPolicyNames() []string {
+	return p.PolicyNames
+}
+
+func (p *QueryBackupPolicyRequest) GetBackupInfoCount() int32 {
+	return p.BackupInfoCount
+}
+func (p *QueryBackupPolicyRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyRequest) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]string, 0, size)
+	p.PolicyNames = tSlice
+	for i := 0; i < size; i++ {
+		var _elem16 string
+		if v, err := iprot.ReadString(); err != nil {
+			return thrift.PrependError("error reading field 0: ", err)
+		} else {
+			_elem16 = v
+		}
+		p.PolicyNames = append(p.PolicyNames, _elem16)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.BackupInfoCount = v
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("query_backup_policy_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("policy_names", thrift.LIST, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:policy_names: ", p), err)
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.PolicyNames)); err != nil {
+		return thrift.PrependError("error writing list begin: ", err)
+	}
+	for _, v := range p.PolicyNames {
+		if err := oprot.WriteString(string(v)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T. (0) field write error: ", p), err)
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return thrift.PrependError("error writing list end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:policy_names: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryBackupPolicyRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("backup_info_count", thrift.I32, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:backup_info_count: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.BackupInfoCount)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.backup_info_count (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:backup_info_count: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryBackupPolicyRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("QueryBackupPolicyRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - Policys
+//  - BackupInfos
+//  - HintMsg
+type QueryBackupPolicyResponse struct {
+	Err         *base.ErrorCode  `thrift:"err,1" db:"err" json:"err"`
+	Policys     []*PolicyEntry   `thrift:"policys,2" db:"policys" json:"policys"`
+	BackupInfos [][]*BackupEntry `thrift:"backup_infos,3" db:"backup_infos" json:"backup_infos"`
+	HintMsg     *string          `thrift:"hint_msg,4" db:"hint_msg" json:"hint_msg,omitempty"`
+}
+
+func NewQueryBackupPolicyResponse() *QueryBackupPolicyResponse {
+	return &QueryBackupPolicyResponse{}
+}
+
+var QueryBackupPolicyResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *QueryBackupPolicyResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return QueryBackupPolicyResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+func (p *QueryBackupPolicyResponse) GetPolicys() []*PolicyEntry {
+	return p.Policys
+}
+
+func (p *QueryBackupPolicyResponse) GetBackupInfos() [][]*BackupEntry {
+	return p.BackupInfos
+}
+
+var QueryBackupPolicyResponse_HintMsg_DEFAULT string
+
+func (p *QueryBackupPolicyResponse) GetHintMsg() string {
+	if !p.IsSetHintMsg() {
+		return QueryBackupPolicyResponse_HintMsg_DEFAULT
+	}
+	return *p.HintMsg
+}
+func (p *QueryBackupPolicyResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *QueryBackupPolicyResponse) IsSetHintMsg() bool {
+	return p.HintMsg != nil
+}
+
+func (p *QueryBackupPolicyResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyResponse) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*PolicyEntry, 0, size)
+	p.Policys = tSlice
+	for i := 0; i < size; i++ {
+		_elem17 := &PolicyEntry{}
+		if err := _elem17.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem17), err)
+		}
+		p.Policys = append(p.Policys, _elem17)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyResponse) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([][]*BackupEntry, 0, size)
+	p.BackupInfos = tSlice
+	for i := 0; i < size; i++ {
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
+			return thrift.PrependError("error reading list begin: ", err)
+		}
+		tSlice := make([]*BackupEntry, 0, size)
+		_elem18 := tSlice
+		for i := 0; i < size; i++ {
+			_elem19 := &BackupEntry{}
+			if err := _elem19.Read(iprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem19), err)
+			}
+			_elem18 = append(_elem18, _elem19)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
+			return thrift.PrependError("error reading list end: ", err)
+		}
+		p.BackupInfos = append(p.BackupInfos, _elem18)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyResponse) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.HintMsg = &v
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("query_backup_policy_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *QueryBackupPolicyResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryBackupPolicyResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("policys", thrift.LIST, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:policys: ", p), err)
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Policys)); err != nil {
+		return thrift.PrependError("error writing list begin: ", err)
+	}
+	for _, v := range p.Policys {
+		if err := v.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return thrift.PrependError("error writing list end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:policys: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryBackupPolicyResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("backup_infos", thrift.LIST, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:backup_infos: ", p), err)
+	}
+	if err := oprot.WriteListBegin(thrift.LIST, len(p.BackupInfos)); err != nil {
+		return thrift.PrependError("error writing list begin: ", err)
+	}
+	for _, v := range p.BackupInfos {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(v)); err != nil {
+			return thrift.PrependError("error writing list begin: ", err)
+		}
+		for _, v := range v {
+			if err := v.Write(oprot); err != nil {
+				return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return thrift.PrependError("error writing list end: ", err)
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return thrift.PrependError("error writing list end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:backup_infos: ", p), err)
+	}
+	return err
+}
+
+func (p *QueryBackupPolicyResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetHintMsg() {
+		if err := oprot.WriteFieldBegin("hint_msg", thrift.STRING, 4); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:hint_msg: ", p), err)
+		}
+		if err := oprot.WriteString(string(*p.HintMsg)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.hint_msg (4) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 4:hint_msg: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *QueryBackupPolicyResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("QueryBackupPolicyResponse(%+v)", *p)
+}
+
 type AdminClient interface {
 	// Parameters:
 	//  - Req
@@ -5982,6 +7065,9 @@ type AdminClient interface {
 	// Parameters:
 	//  - Req
 	MetaControl(ctx context.Context, req *MetaControlRequest) (r *MetaControlResponse, err error)
+	// Parameters:
+	//  - Req
+	QueryBackupPolicy(ctx context.Context, req *QueryBackupPolicyRequest) (r *QueryBackupPolicyResponse, err error)
 }
 
 type AdminClientClient struct {
@@ -6013,46 +7099,10 @@ func (p *AdminClientClient) Client_() thrift.TClient {
 // Parameters:
 //  - Req
 func (p *AdminClientClient) CreateApp(ctx context.Context, req *CreateAppRequest) (r *CreateAppResponse, err error) {
-	var _args14 AdminClientCreateAppArgs
-	_args14.Req = req
-	var _result15 AdminClientCreateAppResult
-	if err = p.Client_().Call(ctx, "create_app", &_args14, &_result15); err != nil {
-		return
-	}
-	return _result15.GetSuccess(), nil
-}
-
-// Parameters:
-//  - Req
-func (p *AdminClientClient) DropApp(ctx context.Context, req *DropAppRequest) (r *DropAppResponse, err error) {
-	var _args16 AdminClientDropAppArgs
-	_args16.Req = req
-	var _result17 AdminClientDropAppResult
-	if err = p.Client_().Call(ctx, "drop_app", &_args16, &_result17); err != nil {
-		return
-	}
-	return _result17.GetSuccess(), nil
-}
-
-// Parameters:
-//  - Req
-func (p *AdminClientClient) RecallApp(ctx context.Context, req *RecallAppRequest) (r *RecallAppResponse, err error) {
-	var _args18 AdminClientRecallAppArgs
-	_args18.Req = req
-	var _result19 AdminClientRecallAppResult
-	if err = p.Client_().Call(ctx, "recall_app", &_args18, &_result19); err != nil {
-		return
-	}
-	return _result19.GetSuccess(), nil
-}
-
-// Parameters:
-//  - Req
-func (p *AdminClientClient) ListApps(ctx context.Context, req *ListAppsRequest) (r *ListAppsResponse, err error) {
-	var _args20 AdminClientListAppsArgs
+	var _args20 AdminClientCreateAppArgs
 	_args20.Req = req
-	var _result21 AdminClientListAppsResult
-	if err = p.Client_().Call(ctx, "list_apps", &_args20, &_result21); err != nil {
+	var _result21 AdminClientCreateAppResult
+	if err = p.Client_().Call(ctx, "create_app", &_args20, &_result21); err != nil {
 		return
 	}
 	return _result21.GetSuccess(), nil
@@ -6060,11 +7110,11 @@ func (p *AdminClientClient) ListApps(ctx context.Context, req *ListAppsRequest) 
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) AddDuplication(ctx context.Context, req *DuplicationAddRequest) (r *DuplicationAddResponse, err error) {
-	var _args22 AdminClientAddDuplicationArgs
+func (p *AdminClientClient) DropApp(ctx context.Context, req *DropAppRequest) (r *DropAppResponse, err error) {
+	var _args22 AdminClientDropAppArgs
 	_args22.Req = req
-	var _result23 AdminClientAddDuplicationResult
-	if err = p.Client_().Call(ctx, "add_duplication", &_args22, &_result23); err != nil {
+	var _result23 AdminClientDropAppResult
+	if err = p.Client_().Call(ctx, "drop_app", &_args22, &_result23); err != nil {
 		return
 	}
 	return _result23.GetSuccess(), nil
@@ -6072,11 +7122,11 @@ func (p *AdminClientClient) AddDuplication(ctx context.Context, req *Duplication
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *DuplicationQueryRequest) (r *DuplicationQueryResponse, err error) {
-	var _args24 AdminClientQueryDuplicationArgs
+func (p *AdminClientClient) RecallApp(ctx context.Context, req *RecallAppRequest) (r *RecallAppResponse, err error) {
+	var _args24 AdminClientRecallAppArgs
 	_args24.Req = req
-	var _result25 AdminClientQueryDuplicationResult
-	if err = p.Client_().Call(ctx, "query_duplication", &_args24, &_result25); err != nil {
+	var _result25 AdminClientRecallAppResult
+	if err = p.Client_().Call(ctx, "recall_app", &_args24, &_result25); err != nil {
 		return
 	}
 	return _result25.GetSuccess(), nil
@@ -6084,11 +7134,11 @@ func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *Duplicati
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *DuplicationModifyRequest) (r *DuplicationModifyResponse, err error) {
-	var _args26 AdminClientModifyDuplicationArgs
+func (p *AdminClientClient) ListApps(ctx context.Context, req *ListAppsRequest) (r *ListAppsResponse, err error) {
+	var _args26 AdminClientListAppsArgs
 	_args26.Req = req
-	var _result27 AdminClientModifyDuplicationResult
-	if err = p.Client_().Call(ctx, "modify_duplication", &_args26, &_result27); err != nil {
+	var _result27 AdminClientListAppsResult
+	if err = p.Client_().Call(ctx, "list_apps", &_args26, &_result27); err != nil {
 		return
 	}
 	return _result27.GetSuccess(), nil
@@ -6096,11 +7146,11 @@ func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *Duplicat
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error) {
-	var _args28 AdminClientQueryAppInfoArgs
+func (p *AdminClientClient) AddDuplication(ctx context.Context, req *DuplicationAddRequest) (r *DuplicationAddResponse, err error) {
+	var _args28 AdminClientAddDuplicationArgs
 	_args28.Req = req
-	var _result29 AdminClientQueryAppInfoResult
-	if err = p.Client_().Call(ctx, "query_app_info", &_args28, &_result29); err != nil {
+	var _result29 AdminClientAddDuplicationResult
+	if err = p.Client_().Call(ctx, "add_duplication", &_args28, &_result29); err != nil {
 		return
 	}
 	return _result29.GetSuccess(), nil
@@ -6108,11 +7158,11 @@ func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoR
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *UpdateAppEnvRequest) (r *UpdateAppEnvResponse, err error) {
-	var _args30 AdminClientUpdateAppEnvArgs
+func (p *AdminClientClient) QueryDuplication(ctx context.Context, req *DuplicationQueryRequest) (r *DuplicationQueryResponse, err error) {
+	var _args30 AdminClientQueryDuplicationArgs
 	_args30.Req = req
-	var _result31 AdminClientUpdateAppEnvResult
-	if err = p.Client_().Call(ctx, "update_app_env", &_args30, &_result31); err != nil {
+	var _result31 AdminClientQueryDuplicationResult
+	if err = p.Client_().Call(ctx, "query_duplication", &_args30, &_result31); err != nil {
 		return
 	}
 	return _result31.GetSuccess(), nil
@@ -6120,11 +7170,11 @@ func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *UpdateAppEnvR
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) ListNodes(ctx context.Context, req *ListNodesRequest) (r *ListNodesResponse, err error) {
-	var _args32 AdminClientListNodesArgs
+func (p *AdminClientClient) ModifyDuplication(ctx context.Context, req *DuplicationModifyRequest) (r *DuplicationModifyResponse, err error) {
+	var _args32 AdminClientModifyDuplicationArgs
 	_args32.Req = req
-	var _result33 AdminClientListNodesResult
-	if err = p.Client_().Call(ctx, "list_nodes", &_args32, &_result33); err != nil {
+	var _result33 AdminClientModifyDuplicationResult
+	if err = p.Client_().Call(ctx, "modify_duplication", &_args32, &_result33); err != nil {
 		return
 	}
 	return _result33.GetSuccess(), nil
@@ -6132,11 +7182,11 @@ func (p *AdminClientClient) ListNodes(ctx context.Context, req *ListNodesRequest
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ClusterInfoRequest) (r *ClusterInfoResponse, err error) {
-	var _args34 AdminClientQueryClusterInfoArgs
+func (p *AdminClientClient) QueryAppInfo(ctx context.Context, req *QueryAppInfoRequest) (r *QueryAppInfoResponse, err error) {
+	var _args34 AdminClientQueryAppInfoArgs
 	_args34.Req = req
-	var _result35 AdminClientQueryClusterInfoResult
-	if err = p.Client_().Call(ctx, "query_cluster_info", &_args34, &_result35); err != nil {
+	var _result35 AdminClientQueryAppInfoResult
+	if err = p.Client_().Call(ctx, "query_app_info", &_args34, &_result35); err != nil {
 		return
 	}
 	return _result35.GetSuccess(), nil
@@ -6144,14 +7194,62 @@ func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ClusterIn
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) MetaControl(ctx context.Context, req *MetaControlRequest) (r *MetaControlResponse, err error) {
-	var _args36 AdminClientMetaControlArgs
+func (p *AdminClientClient) UpdateAppEnv(ctx context.Context, req *UpdateAppEnvRequest) (r *UpdateAppEnvResponse, err error) {
+	var _args36 AdminClientUpdateAppEnvArgs
 	_args36.Req = req
-	var _result37 AdminClientMetaControlResult
-	if err = p.Client_().Call(ctx, "meta_control", &_args36, &_result37); err != nil {
+	var _result37 AdminClientUpdateAppEnvResult
+	if err = p.Client_().Call(ctx, "update_app_env", &_args36, &_result37); err != nil {
 		return
 	}
 	return _result37.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) ListNodes(ctx context.Context, req *ListNodesRequest) (r *ListNodesResponse, err error) {
+	var _args38 AdminClientListNodesArgs
+	_args38.Req = req
+	var _result39 AdminClientListNodesResult
+	if err = p.Client_().Call(ctx, "list_nodes", &_args38, &_result39); err != nil {
+		return
+	}
+	return _result39.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) QueryClusterInfo(ctx context.Context, req *ClusterInfoRequest) (r *ClusterInfoResponse, err error) {
+	var _args40 AdminClientQueryClusterInfoArgs
+	_args40.Req = req
+	var _result41 AdminClientQueryClusterInfoResult
+	if err = p.Client_().Call(ctx, "query_cluster_info", &_args40, &_result41); err != nil {
+		return
+	}
+	return _result41.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) MetaControl(ctx context.Context, req *MetaControlRequest) (r *MetaControlResponse, err error) {
+	var _args42 AdminClientMetaControlArgs
+	_args42.Req = req
+	var _result43 AdminClientMetaControlResult
+	if err = p.Client_().Call(ctx, "meta_control", &_args42, &_result43); err != nil {
+		return
+	}
+	return _result43.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) QueryBackupPolicy(ctx context.Context, req *QueryBackupPolicyRequest) (r *QueryBackupPolicyResponse, err error) {
+	var _args44 AdminClientQueryBackupPolicyArgs
+	_args44.Req = req
+	var _result45 AdminClientQueryBackupPolicyResult
+	if err = p.Client_().Call(ctx, "query_backup_policy", &_args44, &_result45); err != nil {
+		return
+	}
+	return _result45.GetSuccess(), nil
 }
 
 type AdminClientProcessor struct {
@@ -6174,20 +7272,21 @@ func (p *AdminClientProcessor) ProcessorMap() map[string]thrift.TProcessorFuncti
 
 func NewAdminClientProcessor(handler AdminClient) *AdminClientProcessor {
 
-	self38 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self38.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
-	self38.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
-	self38.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
-	self38.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
-	self38.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
-	self38.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
-	self38.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
-	self38.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
-	self38.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
-	self38.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
-	self38.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
-	self38.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
-	return self38
+	self46 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self46.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
+	self46.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
+	self46.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
+	self46.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
+	self46.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
+	self46.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
+	self46.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
+	self46.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
+	self46.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
+	self46.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
+	self46.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
+	self46.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
+	self46.processorMap["query_backup_policy"] = &adminClientProcessorQueryBackupPolicy{handler: handler}
+	return self46
 }
 
 func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -6200,12 +7299,12 @@ func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x39 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x47 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x39.Write(oprot)
+	x47.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x39
+	return false, x47
 
 }
 
@@ -6768,6 +7867,54 @@ func (p *adminClientProcessorMetaControl) Process(ctx context.Context, seqId int
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("meta_control", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type adminClientProcessorQueryBackupPolicy struct {
+	handler AdminClient
+}
+
+func (p *adminClientProcessorQueryBackupPolicy) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := AdminClientQueryBackupPolicyArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("query_backup_policy", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := AdminClientQueryBackupPolicyResult{}
+	var retval *QueryBackupPolicyResponse
+	var err2 error
+	if retval, err2 = p.handler.QueryBackupPolicy(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing query_backup_policy: "+err2.Error())
+		oprot.WriteMessageBegin("query_backup_policy", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("query_backup_policy", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -9383,4 +10530,220 @@ func (p *AdminClientMetaControlResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("AdminClientMetaControlResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Req
+type AdminClientQueryBackupPolicyArgs struct {
+	Req *QueryBackupPolicyRequest `thrift:"req,1" db:"req" json:"req"`
+}
+
+func NewAdminClientQueryBackupPolicyArgs() *AdminClientQueryBackupPolicyArgs {
+	return &AdminClientQueryBackupPolicyArgs{}
+}
+
+var AdminClientQueryBackupPolicyArgs_Req_DEFAULT *QueryBackupPolicyRequest
+
+func (p *AdminClientQueryBackupPolicyArgs) GetReq() *QueryBackupPolicyRequest {
+	if !p.IsSetReq() {
+		return AdminClientQueryBackupPolicyArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *AdminClientQueryBackupPolicyArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *AdminClientQueryBackupPolicyArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientQueryBackupPolicyArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req = &QueryBackupPolicyRequest{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
+	}
+	return nil
+}
+
+func (p *AdminClientQueryBackupPolicyArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("query_backup_policy_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientQueryBackupPolicyArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
+	}
+	return err
+}
+
+func (p *AdminClientQueryBackupPolicyArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientQueryBackupPolicyArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type AdminClientQueryBackupPolicyResult struct {
+	Success *QueryBackupPolicyResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewAdminClientQueryBackupPolicyResult() *AdminClientQueryBackupPolicyResult {
+	return &AdminClientQueryBackupPolicyResult{}
+}
+
+var AdminClientQueryBackupPolicyResult_Success_DEFAULT *QueryBackupPolicyResponse
+
+func (p *AdminClientQueryBackupPolicyResult) GetSuccess() *QueryBackupPolicyResponse {
+	if !p.IsSetSuccess() {
+		return AdminClientQueryBackupPolicyResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *AdminClientQueryBackupPolicyResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *AdminClientQueryBackupPolicyResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientQueryBackupPolicyResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &QueryBackupPolicyResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *AdminClientQueryBackupPolicyResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("query_backup_policy_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientQueryBackupPolicyResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *AdminClientQueryBackupPolicyResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientQueryBackupPolicyResult(%+v)", *p)
 }

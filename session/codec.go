@@ -190,6 +190,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewDuplicationAddResponse(),
 		}
 	},
+	"RPC_CM_QUERY_BACKUP_POLICY_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryBackupPolicyResult{
+			Success: admin.NewQueryBackupPolicyResponse(),
+		}
+	},
 	"RPC_CM_CLUSTER_INFO_ACK": func() RpcResponseResult {
 		return &admin.AdminClientQueryClusterInfoResult{
 			Success: admin.NewClusterInfoResponse(),
