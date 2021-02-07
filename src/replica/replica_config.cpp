@@ -554,24 +554,30 @@ void replica::update_app_envs(const std::map<std::string, std::string> &envs)
 
 void replica::update_app_envs_internal(const std::map<std::string, std::string> &envs)
 {
-    // DENY_CLIENT_WRITE
-    bool deny_client_write = false;
-    auto find = envs.find(replica_envs::DENY_CLIENT_WRITE);
-    if (find != envs.end()) {
-        if (!buf2bool(find->second, deny_client_write)) {
-            dwarn_replica(
-                "invalid value of env {}: \"{}\"", replica_envs::DENY_CLIENT_WRITE, find->second);
-        }
-    }
-    if (deny_client_write != _deny_client_write) {
-        ddebug_replica(
-            "switch _deny_client_write from {} to {}", _deny_client_write, deny_client_write);
-        _deny_client_write = deny_client_write;
-    }
+    update_bool_envs(envs, replica_envs::DENY_CLIENT_WRITE, _deny_client_write);
+
+    update_bool_envs(envs, replica_envs::SPLIT_VALIDATE_PARTITION_HASH, _validate_partition_hash);
 
     update_throttle_envs(envs);
 
     update_ac_allowed_users(envs);
+}
+
+void replica::update_bool_envs(const std::map<std::string, std::string> &envs,
+                               const std::string &name,
+                               bool &value)
+{
+    bool new_value = value;
+    auto iter = envs.find(name);
+    if (iter != envs.end()) {
+        if (!buf2bool(iter->second, new_value)) {
+            dwarn_replica("invalid value of env {}: \"{}\"", name, iter->second);
+        }
+    }
+    if (new_value != value) {
+        ddebug_replica("switch env[{}] from {} to {}", name, value, new_value);
+        value = new_value;
+    }
 }
 
 void replica::update_ac_allowed_users(const std::map<std::string, std::string> &envs)

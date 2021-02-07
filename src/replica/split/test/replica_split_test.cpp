@@ -410,6 +410,12 @@ public:
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
+    bool test_check_partition_hash(const int32_t &partition_version, const uint64_t &partition_hash)
+    {
+        _parent_split_mgr->_partition_version.store(partition_version);
+        return _parent_split_mgr->check_partition_hash(partition_hash, "write");
+    }
+
     /// helper functions
     void cleanup_prepare_list(mock_replica_ptr rep) { rep->_prepare_list->reset(0); }
     void cleanup_child_split_context()
@@ -915,6 +921,27 @@ TEST_F(replica_split_test, primary_parent_handle_stop_test)
             test.meta_split_status, test.lack_of_secondary, test.will_all_stop);
         ASSERT_EQ(parent_stopped_split_size(), test.expected_size);
         ASSERT_EQ(primary_parent_not_in_split(), test.expected_all_stopped);
+    }
+}
+
+TEST_F(replica_split_test, check_partition_hash_test)
+{
+    uint64_t send_to_parent_after_split = 1;
+    uint64_t send_to_child_after_split = 9;
+
+    struct check_partition_hash_test
+    {
+        int32_t partition_version;
+        uint64_t partition_hash;
+        bool expected_result;
+    } tests[]{{OLD_PARTITION_COUNT - 1, send_to_parent_after_split, true},
+              {OLD_PARTITION_COUNT - 1, send_to_child_after_split, true},
+              {NEW_PARTITION_COUNT - 1, send_to_parent_after_split, true},
+              {NEW_PARTITION_COUNT - 1, send_to_child_after_split, false}};
+
+    for (const auto &test : tests) {
+        ASSERT_EQ(test_check_partition_hash(test.partition_version, test.partition_hash),
+                  test.expected_result);
     }
 }
 

@@ -7,6 +7,7 @@
 #include <dsn/utility/fail_point.h>
 #include "replica_test_base.h"
 #include <dsn/utility/defer.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include "replica/replica_http_service.h"
 
 namespace dsn {
@@ -36,6 +37,22 @@ public:
     int get_table_level_backup_request_qps()
     {
         return _mock_replica->_counter_backup_request_qps->get_integer_value();
+    }
+
+    bool get_validate_partition_hash() const { return _mock_replica->_validate_partition_hash; }
+
+    void reset_validate_partition_hash() { _mock_replica->_validate_partition_hash = false; }
+
+    void update_validate_partition_hash(bool old_value, bool set_in_map, std::string new_value)
+    {
+        _mock_replica->_validate_partition_hash = old_value;
+        std::map<std::string, std::string> envs;
+        if (set_in_map) {
+            envs[replica_envs::SPLIT_VALIDATE_PARTITION_HASH] = new_value;
+        }
+        _mock_replica->update_bool_envs(envs,
+                                        replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
+                                        _mock_replica->_validate_partition_hash);
     }
 
     void mock_app_info()
@@ -143,6 +160,31 @@ TEST_F(replica_test, query_compaction_test)
             expected_json += "\n";
         }
         ASSERT_EQ(resp.body, expected_json);
+    }
+}
+
+TEST_F(replica_test, update_validate_partition_hash_test)
+{
+    struct update_validate_partition_hash_test
+    {
+        bool old_value;
+        bool set_in_map;
+        std::string new_value;
+        bool expected_value;
+    } tests[]{
+        {false, false, "false", false},
+        {false, true, "false", false},
+        {false, false, "true", false},
+        {false, true, "true", true},
+        {false, true, "ture", false},
+        {true, true, "false", false},
+        {true, true, "true", true},
+        {true, true, "flase", true},
+    };
+    for (const auto &test : tests) {
+        update_validate_partition_hash(test.old_value, test.set_in_map, test.new_value);
+        ASSERT_EQ(get_validate_partition_hash(), test.expected_value);
+        reset_validate_partition_hash();
     }
 }
 

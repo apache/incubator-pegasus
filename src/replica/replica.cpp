@@ -176,6 +176,8 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
         response_client_read(request, ERR_ACL_DENY);
     }
 
+    CHECK_REQUEST_IF_SPLITTING(read)
+
     if (status() == partition_status::PS_INACTIVE ||
         status() == partition_status::PS_POTENTIAL_SECONDARY) {
         response_client_read(request, ERR_INVALID_STATE);

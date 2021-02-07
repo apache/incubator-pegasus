@@ -77,6 +77,8 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
+    CHECK_REQUEST_IF_SPLITTING(write)
+
     if (partition_status::PS_PRIMARY != status()) {
         response_client_write(request, ERR_INVALID_STATE);
         return;

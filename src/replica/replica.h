@@ -86,6 +86,19 @@ enum manual_compaction_status
 };
 const char *manual_compaction_status_to_string(manual_compaction_status status);
 
+#define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
+    if (_validate_partition_hash) {                                                                \
+        if (_split_mgr->should_reject_request()) {                                                 \
+            response_client_##op_type(request, ERR_SPLITTING);                                     \
+            return;                                                                                \
+        }                                                                                          \
+        if (!_split_mgr->check_partition_hash(                                                     \
+                ((dsn::message_ex *)request)->header->client.partition_hash, #op_type)) {          \
+            response_client_##op_type(request, ERR_PARENT_PARTITION_MISUSED);                      \
+            return;                                                                                \
+        }                                                                                          \
+    }
+
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
@@ -414,6 +427,11 @@ private:
     // update allowed users for access controller
     void update_ac_allowed_users(const std::map<std::string, std::string> &envs);
 
+    // update bool app envs
+    void update_bool_envs(const std::map<std::string, std::string> &envs,
+                          const std::string &name,
+                          /*out*/ bool &value);
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
@@ -519,6 +537,7 @@ private:
 
     // partition split
     std::unique_ptr<replica_split_manager> _split_mgr;
+    bool _validate_partition_hash{false};
 
     // disk migrator
     std::unique_ptr<replica_disk_migrator> _disk_migrator;
