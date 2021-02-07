@@ -62,9 +62,7 @@ jobs:
       - name: Unpack prebuilt third-parties
         run: unzip /root/pegasus-thirdparty-output.zip -d ./rdsn/thirdparty
       - name: Compilation
-        run: |
-          source config_hdfs.sh
-          ./run.sh build -c --skip_thirdparty
+        run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
         run: |
           source config_hdfs.sh
