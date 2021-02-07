@@ -18,6 +18,9 @@ on:
       - 'rdsn/**'
       - 'src/**'
 
+  # for manually triggering workflow
+  workflow_dispatch:
+
 defaults:
   run:
     shell: bash
