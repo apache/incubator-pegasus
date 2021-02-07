@@ -35,17 +35,12 @@
 
 #include "runtime/message_utils.cpp"
 #include <dsn/utility/crc.h>
-#include <dsn/utility/transient_memory.h>
 #include <dsn/tool-api/rpc_message.h>
 #include <gtest/gtest.h>
 
 using namespace ::dsn;
 
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
-
-namespace dsn {
-extern void tls_trans_mem_alloc(size_t min_size);
-}
 
 TEST(core, message_ex)
 {
@@ -133,17 +128,15 @@ TEST(core, message_ex)
         request->write_next(&ptr, &sz, data_size);
         memcpy(ptr, data, data_size);
         request->write_commit(data_size);
-        ASSERT_EQ(1u, request->buffers.size());
+        ASSERT_EQ(2u, request->buffers.size());
         ASSERT_EQ(ptr, request->rw_ptr(0));
         ASSERT_EQ((void *)((char *)ptr + 10), request->rw_ptr(10));
         ASSERT_EQ(nullptr, request->rw_ptr(data_size));
 
-        tls_trans_mem_alloc(1024); // reset tls buffer
-
         request->write_next(&ptr, &sz, data_size);
         memcpy(ptr, data, data_size);
         request->write_commit(data_size);
-        ASSERT_EQ(2u, request->buffers.size());
+        ASSERT_EQ(3u, request->buffers.size());
         ASSERT_EQ(ptr, request->rw_ptr(data_size));
         ASSERT_EQ((void *)((char *)ptr + 10), request->rw_ptr(data_size + 10));
         ASSERT_EQ(nullptr, request->rw_ptr(data_size + data_size));
@@ -164,9 +157,16 @@ TEST(core, message_ex)
         memcpy(ptr, data, data_size);
         request->write_commit(data_size);
 
-        ASSERT_EQ(1u, request->buffers.size());
-        message_ex *receive = message_ex::create_receive_message(request->buffers[0]);
-        ASSERT_EQ(1u, receive->buffers.size());
+        ASSERT_EQ(2u, request->buffers.size());
+
+        message_ex *receive = message_ex::create_received_request(
+            request->local_rpc_code,
+            (dsn_msg_serialize_format)request->header->context.u.serialize_format,
+            (void *)request->buffers[1].data(),
+            request->buffers[1].size(),
+            request->header->client.thread_hash,
+            request->header->client.partition_hash);
+        ASSERT_EQ(2u, receive->buffers.size());
 
         ASSERT_STREQ(dsn::task_code(RPC_CODE_FOR_TEST).to_string(), receive->header->rpc_name);
 

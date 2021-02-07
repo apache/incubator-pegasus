@@ -85,6 +85,8 @@ public:
     // buffers at the same time.
     // e.g., alloc1, commit1, alloc2, commit2 is ok
     // while alloc1, alloc2, commit2, commit 1 is invalid
+    // TODO(zhaoliwei): remove functions and variables below, because msg is not implemented by tls
+    // memory now
     void commit_buffer()
     {
         if (!_last_write_next_committed) {
