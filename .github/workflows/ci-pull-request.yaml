@@ -47,7 +47,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     container:
-      image: apachepegasus/ci-env
+      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
     defaults:
       run:
         working-directory: /root/incubator-pegasus
@@ -57,7 +57,7 @@ jobs:
         run: |
           git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
       - name: Unpack prebuilt third-parties
-        run: unzip /root/pegasus-thirdparty-output.zip -d ./rdsn/thirdparty
+        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
