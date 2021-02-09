@@ -27,16 +27,6 @@ namespace dsn {
 namespace dist {
 namespace block_service {
 
-DSN_DEFINE_uint64("pegasus.server",
-                  rocksdb_target_file_size_base,
-                  64 << 20,
-                  "rocksdb options.target_file_size_base");
-
-DSN_DEFINE_uint64("pegasus.server",
-                  rocksdb_write_buffer_size,
-                  64 << 20,
-                  "rocksdb options.write_buffer_size");
-
 DSN_DEFINE_uint32("replication", fds_write_limit_rate, 100, "write rate limit of fds(MB/s)");
 
 DSN_DEFINE_uint32("replication", fds_read_limit_rate, 100, "read rate limit of fds(MB/s)");
