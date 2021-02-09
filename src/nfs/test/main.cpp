@@ -140,11 +140,15 @@ TEST(nfs, basic)
         ASSERT_TRUE(utils::filesystem::file_size("nfs_test_dir_copy/nfs_test_file2", sz2));
         ASSERT_EQ(sz1, sz2);
     }
+
+    nfs->stop();
 }
 
+int g_test_ret = 0;
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
     dsn_run_config("config.ini", false);
-    return RUN_ALL_TESTS();
+    g_test_ret = RUN_ALL_TESTS();
+    dsn_exit(g_test_ret);
 }
