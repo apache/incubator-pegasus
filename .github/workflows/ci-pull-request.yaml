@@ -17,7 +17,7 @@ on:
     paths:
       - 'rdsn/**'
       - 'src/**'
-      - '.github/workflows/ci-pull-request.yml'
+      - '.github/workflows/ci-pull-request.yaml'
   # for manually triggering workflow
   workflow_dispatch:
 
