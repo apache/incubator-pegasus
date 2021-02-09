@@ -17,10 +17,7 @@ on:
     paths:
       - 'rdsn/**'
       - 'src/**'
-      - '.github/workflows/ci-pull-request.yml'
-  push:
-    paths:
-      - '.github/workflows/ci-pull-request.yml'
+      - '.github/workflows/ci-pull-request.yaml'
   # for manually triggering workflow
   workflow_dispatch:
 
@@ -64,4 +61,6 @@ jobs:
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
-        run: ./run.sh test --on_travis
+        run: |
+          source ./config_hdfs.sh
+          ./run.sh test --on_travis
