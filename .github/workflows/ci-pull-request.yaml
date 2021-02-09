@@ -62,5 +62,5 @@ jobs:
         run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
         run: |
-          source config_hdfs.sh
+          source ./config_hdfs.sh
           ./run.sh test --on_travis
