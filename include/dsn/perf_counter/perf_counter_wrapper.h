@@ -63,7 +63,7 @@ public:
     perf_counter_wrapper &operator=(perf_counter_wrapper &other) = delete;
     perf_counter_wrapper &operator=(perf_counter_wrapper &&other) = delete;
 
-    ~perf_counter_wrapper() { clear(); }
+    ~perf_counter_wrapper() {}
 
     // clear the real perf-counter object.
     // call this function if you want free the counter before the wrapper's destructor is called
@@ -103,6 +103,7 @@ public:
 
     dsn::perf_counter *get() const { return _counter; }
     dsn::perf_counter *operator->() const { return _counter; }
+
 private:
     // use raw pointer to make the class object small, so it can be accessed quickly
     dsn::perf_counter *_counter;

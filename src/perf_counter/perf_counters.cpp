@@ -91,6 +91,7 @@ perf_counters::perf_counters()
 
 perf_counters::~perf_counters()
 {
+    _counters.clear();
     UNREGISTER_VALID_HANDLER(_perf_counters_cmd);
     UNREGISTER_VALID_HANDLER(_perf_counters_by_substr_cmd);
     UNREGISTER_VALID_HANDLER(_perf_counters_by_prefix_cmd);
