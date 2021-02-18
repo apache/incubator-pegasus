@@ -64,7 +64,6 @@ error_code nfs_node_simple::start()
 
 error_code nfs_node_simple::stop()
 {
-    _server->close_service();
     delete _server;
     _server = nullptr;
 

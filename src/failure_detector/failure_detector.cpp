@@ -108,8 +108,6 @@ error_code failure_detector::stop()
 
     _is_started = false;
 
-    close_service();
-
     {
         zauto_lock l(_lock);
         for (auto &m : _masters) {
