@@ -1053,6 +1053,7 @@ void replica_split_manager::on_register_child_on_meta_reply(
 
     // update primary parent group partition_count
     update_local_partition_count(_replica->_app_info.partition_count * 2);
+    _meta_split_status = split_status::NOT_SPLIT;
     _replica->broadcast_group_check();
 
     parent_cleanup_split_context();

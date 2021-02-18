@@ -823,13 +823,24 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                       rep.pid.get_partition_index());
                 std::shared_ptr<app_state> app = get_app(rep.pid.get_app_id());
                 if (app == nullptr || rep.pid.get_partition_index() >= app->partition_count) {
-                    // app is not recognized or partition is not recognized
-                    dassert(false,
-                            "gpid(%d.%d) on node(%s) is not exist on meta server, administrator "
-                            "should check consistency of meta data",
-                            rep.pid.get_app_id(),
-                            rep.pid.get_partition_index(),
-                            request.node.to_string());
+                    // This app has garbage partition after cancel split, the canceled child
+                    // partition should be gc
+                    if (app != nullptr &&
+                        rep.pid.get_partition_index() < app->partition_count * 2 &&
+                        rep.status == partition_status::PS_ERROR) {
+                        response.gc_replicas.push_back(rep);
+                        dwarn_f("notify node({}) to gc replica({}) because it is useless partition "
+                                "which is caused by cancel split",
+                                request.node.to_string(),
+                                rep.pid);
+                    } else {
+                        // app is not recognized or partition is not recognized
+                        dassert(false,
+                                "gpid({}) on node({}) is not exist on meta server, administrator "
+                                "should check consistency of meta data",
+                                rep.pid,
+                                request.node.to_string());
+                    }
                 } else if (app->status == app_status::AS_DROPPED) {
                     if (app->expire_second == 0) {
                         ddebug("gpid(%d.%d) on node(%s) is of dropped table, but expire second is "

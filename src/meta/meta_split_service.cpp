@@ -128,7 +128,6 @@ void meta_split_service::do_start_partition_split(std::shared_ptr<app_state> app
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
 
-// TODO(heyuchen): refactor this function
 void meta_split_service::register_child_on_meta(register_child_rpc rpc)
 {
     const auto &request = rpc.request();
@@ -167,7 +166,16 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
         return;
     }
 
-    // TODO(heyuchen): pause/cancel split check
+    if (child_gpid.get_partition_index() >= app->partition_count) {
+        derror_f(
+            "app({}) partition({}) register child({}) failed, partition split has been canceled",
+            app_name,
+            parent_gpid,
+            child_gpid);
+        response.err = ERR_INVALID_STATE;
+        response.parent_config = parent_config;
+        return;
+    }
 
     auto iter = app->helpers->split_states.status.find(parent_gpid.get_partition_index());
     if (iter == app->helpers->split_states.status.end()) {

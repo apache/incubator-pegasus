@@ -320,7 +320,7 @@ TEST_F(meta_split_service_test, register_child_test)
     // Test case:
     // - request is out-dated
     // - child has been registered
-    // - TODO(heyuchen): parent partition has been paused splitting
+    // - parent partition has been paused splitting
     // - parent partition is sync config to remote storage
     // - register child succeed
     struct register_test
@@ -334,6 +334,7 @@ TEST_F(meta_split_service_test, register_child_test)
     } tests[] = {
         {PARENT_BALLOT - 1, false, false, false, ERR_INVALID_VERSION, false},
         {PARENT_BALLOT, true, false, false, ERR_CHILD_REGISTERED, false},
+        {PARENT_BALLOT, false, true, false, ERR_INVALID_STATE, false},
         {PARENT_BALLOT, false, false, true, ERR_IO_PENDING, false},
         {PARENT_BALLOT, false, false, false, ERR_OK, true},
     };
@@ -344,7 +345,7 @@ TEST_F(meta_split_service_test, register_child_test)
             mock_child_registered();
         }
         if (test.mock_parent_paused) {
-            // TODO(heyuchen): mock split paused
+            mock_split_states(split_status::PAUSED, PARENT_INDEX);
         }
         if (test.mock_pending) {
             app->helpers->contexts[PARENT_INDEX].stage = config_status::pending_remote_sync;
@@ -379,13 +380,13 @@ TEST_F(meta_split_service_test, on_config_sync_test)
     // Test case:
     // - partition is splitting
     // - partition is not splitting
-    // - TODO(heyuchen): partition split is paused({false, true, 1})
+    // - partition split is paused
     struct config_sync_test
     {
         bool mock_child_registered;
         bool mock_parent_paused;
         int32_t expected_count;
-    } tests[] = {{false, false, 1}, {true, false, 0}};
+    } tests[] = {{false, false, 1}, {true, false, 0}, {false, true, 1}};
 
     for (const auto &test : tests) {
         mock_app_partition_split_context();
@@ -393,7 +394,7 @@ TEST_F(meta_split_service_test, on_config_sync_test)
             mock_child_registered();
         }
         if (test.mock_parent_paused) {
-            // TODO(heyuchen): TBD
+            mock_split_states(split_status::PAUSED, PARENT_INDEX);
         }
         ASSERT_EQ(on_config_sync(req), test.expected_count);
     }
