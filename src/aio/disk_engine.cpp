@@ -26,6 +26,7 @@
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/tool-api/aio_task.h>
+
 #include "disk_engine.h"
 #include "sim_aio_provider.h"
 #include "runtime/service_engine.h"
@@ -143,8 +144,6 @@ aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err,
 //----------------- disk_engine ------------------------
 disk_engine::disk_engine()
 {
-    _node = service_engine::instance().get_all_nodes().begin()->second.get();
-
     aio_provider *provider = utils::factory_store<aio_provider>::create(
         FLAGS_aio_factory_name, dsn::PROVIDER_TYPE_MAIN, this);
     // use native_aio_provider in default

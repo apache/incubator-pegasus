@@ -53,8 +53,6 @@ public:
     explicit aio_provider(disk_engine *disk);
     virtual ~aio_provider() = default;
 
-    service_node *node() const;
-
     // return DSN_INVALID_FILE_HANDLE if failed
     // TODO(wutao1): return uint64_t instead (because we only support linux now)
     virtual dsn_handle_t open(const char *file_name, int flag, int pmode) = 0;

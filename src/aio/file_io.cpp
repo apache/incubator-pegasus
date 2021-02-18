@@ -25,7 +25,6 @@
  */
 
 #include "disk_engine.h"
-
 #include <dsn/tool-api/file_io.h>
 
 namespace dsn {
@@ -43,13 +42,13 @@ namespace file {
 
 /*extern*/ error_code close(disk_file *file)
 {
-    if (nullptr != file) {
-        auto ret = disk_engine::provider().close(file->native_handle());
+    error_code result = ERR_INVALID_HANDLE;
+    if (file != nullptr) {
+        result = disk_engine::provider().close(file->native_handle());
         delete file;
-        return ret;
-    } else {
-        return ERR_INVALID_HANDLE;
+        file = nullptr;
     }
+    return result;
 }
 
 /*extern*/ error_code flush(disk_file *file)

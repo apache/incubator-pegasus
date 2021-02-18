@@ -72,8 +72,6 @@ class disk_engine : public utils::singleton<disk_engine>
 {
 public:
     void write(aio_task *aio);
-
-    service_node *node() const { return _node; }
     static aio_provider &provider() { return *instance()._provider.get(); }
 
 private:
@@ -85,7 +83,6 @@ private:
     void complete_io(aio_task *aio, error_code err, uint32_t bytes);
 
     std::unique_ptr<aio_provider> _provider;
-    service_node *_node;
 
     friend class aio_provider;
     friend class batch_write_io_task;

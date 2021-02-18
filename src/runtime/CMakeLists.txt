@@ -30,5 +30,5 @@ add_library(dsn_runtime STATIC
         tracer.cpp
         zlocks.cpp
         )
-target_link_libraries(dsn_runtime dsn_utils sasl2 gssapi_krb5 krb5)
+target_link_libraries(dsn_runtime PRIVATE dsn_utils sasl2 gssapi_krb5 krb5 dsn_aio)
 install(TARGETS dsn_runtime DESTINATION "lib")
