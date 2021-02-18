@@ -634,6 +634,8 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
     response.values.push_back(fmt::format("{:.{}f}", primary_stddev, 2));
     response.keys.push_back("total_replica_count_stddev");
     response.values.push_back(fmt::format("{:.{}f}", total_stddev, 2));
+    response.keys.push_back("cluster_name");
+    response.values.push_back(get_current_cluster_name());
     response.err = dsn::ERR_OK;
 }
 
