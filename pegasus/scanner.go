@@ -118,6 +118,7 @@ func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []by
 	}
 
 	completed, hashKey, sortKey, value, err = func() (completed bool, hashKey []byte, sortKey []byte, value []byte, err error) {
+		// TODO(tangyanzhao): This method is not thread safe, should use r/w lock
 		// Prevent two concurrent calls on Next of the same Scanner.
 		if p.isNextRunning.Load() != 0 {
 			err = fmt.Errorf("there can be no concurrent calls on Next of the same Scanner")
@@ -223,13 +224,11 @@ func (p *pegasusScanner) onRecvScanResponse(response *rrdb.ScanResponse, err err
 	if err == nil {
 		if response.Error == 0 {
 			// ERR_OK
-			if len(response.Kvs) != 0 {
-				p.batchEntries = make([]*KeyValue, len(response.Kvs))
-				for i := 0; i < len(response.Kvs); i++ {
-					p.batchEntries[i] = &KeyValue{
-						SortKey: response.Kvs[i].Key.Data, // batch.SortKey=<hashKey,sortKey>
-						Value:   response.Kvs[i].Value.Data,
-					}
+			p.batchEntries = make([]*KeyValue, len(response.Kvs))
+			for i := 0; i < len(response.Kvs); i++ {
+				p.batchEntries[i] = &KeyValue{
+					SortKey: response.Kvs[i].Key.Data, // batch.SortKey=<hashKey,sortKey>
+					Value:   response.Kvs[i].Value.Data,
 				}
 			}
 
