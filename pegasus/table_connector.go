@@ -209,6 +209,9 @@ func ConnectTable(ctx context.Context, tableName string, meta *session.MetaManag
 		confUpdateCh: make(chan bool, 1),
 		logger:       pegalog.GetLogger(),
 	}
+	p.replica.SetUnresponsiveHandler(func(n session.NodeSession) {
+		p.tryConfUpdate(errors.New("session unresponsive for long"), n)
+	})
 
 	if err := p.updateConf(ctx); err != nil {
 		return nil, err
@@ -939,7 +942,7 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 }
 
 // tryConfUpdate makes an attempt to update table configuration by querying meta server.
-func (p *pegasusTableConnector) tryConfUpdate(err error, replica *session.ReplicaSession) {
+func (p *pegasusTableConnector) tryConfUpdate(err error, replica session.NodeSession) {
 	select {
 	case p.confUpdateCh <- true:
 		p.logger.Printf("trigger configuration update of table [%s] due to RPC failure [%s] to %s", p.tableName, err, replica)

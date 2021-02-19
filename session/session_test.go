@@ -108,10 +108,10 @@ func TestNodeSession_LoopForDialingCancelled(t *testing.T) {
 	n.tryDial()
 
 	time.Sleep(time.Second)
-	// time.Second < rpc.RpcConnDialTimeout, it must still be connecting.
+	// time.Second < rpc.ConnDialTimeout, it must still be connecting.
 	assert.Equal(t, rpc.ConnStateConnecting, n.conn.GetState())
 
-	time.Sleep(rpc.RpcConnDialTimeout) // dial failed.
+	time.Sleep(rpc.ConnDialTimeout) // dial failed.
 	assert.Equal(t, rpc.ConnStateTransientFailure, n.conn.GetState())
 	n.Close()
 }

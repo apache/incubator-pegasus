@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -73,6 +74,18 @@ type nodeSession struct {
 	lastDialTime time.Time
 
 	codec rpc.Codec
+
+	unresponsiveHandler UnresponsiveHandler
+	lastWriteTime       int64
+}
+
+func withUnresponsiveHandler(s NodeSession, handler UnresponsiveHandler) NodeSession {
+	ns, ok := s.(*nodeSession)
+	if !ok {
+		return nil
+	}
+	ns.unresponsiveHandler = handler
+	return ns
 }
 
 type requestListener struct {
@@ -193,7 +206,7 @@ func (n *nodeSession) notifyCallerAndDrop(req *requestListener) {
 }
 
 // single-routine worker used for sending requests.
-// Any un-retryable error occurred will end up this goroutine.
+// Any error occurred will end up this goroutine as well as the connection.
 func (n *nodeSession) loopForRequest() error { // no error returned actually
 	for {
 		select {
@@ -204,6 +217,7 @@ func (n *nodeSession) loopForRequest() error { // no error returned actually
 			n.pendingResp[req.call.SeqId] = req
 			n.mu.Unlock()
 
+			atomic.StoreInt64(&n.lastWriteTime, time.Now().UnixNano())
 			req.call.OnRpcSend = time.Now()
 			if err := n.writeRequest(req.call); err != nil {
 				n.logger.Printf("failed to send request to %s: %s", n, err)
@@ -221,6 +235,13 @@ func (n *nodeSession) loopForRequest() error { // no error returned actually
 	}
 }
 
+// hasRecentUnresponsiveWrite returns if session is active in sending tcp request but gets no response.
+func (n *nodeSession) hasRecentUnresponsiveWrite() bool {
+	// 10s is usually the max limit that the server promises to respond.
+	var unresponsiveThreshold = int64(math.Max(float64(rpc.ConnReadTimeout.Nanoseconds()/2), float64(time.Second.Nanoseconds()*10)))
+	return time.Now().UnixNano()-atomic.LoadInt64(&n.lastWriteTime) < unresponsiveThreshold
+}
+
 // single-routine worker used for reading response.
 // We register a map of sequence id -> recvItem for each coming request,
 // so that when a response is received, we are able to notify its caller.
@@ -236,6 +257,12 @@ func (n *nodeSession) loopForResponse() error { // no error returned actually
 		call, err := n.readResponse()
 		if err != nil {
 			if rpc.IsNetworkTimeoutErr(err) {
+				// If a session encounters a read-timeout, and it's simultaneously writing (depends on lastWriteTime),
+				// this sesion is considered as unresponsive.
+				// When in this state, it's in very danger with potential network failure.
+				if n.unresponsiveHandler != nil && n.hasRecentUnresponsiveWrite() {
+					n.unresponsiveHandler(n)
+				}
 				continue // retry if no data to read
 			}
 			if rpc.IsNetworkClosed(err) { // EOF

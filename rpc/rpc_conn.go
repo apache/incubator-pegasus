@@ -16,10 +16,9 @@ import (
 
 // TODO(wutao1): make these parameters configurable
 const (
-	RpcConnKeepAliveInterval = time.Second * 30
-	RpcConnDialTimeout       = time.Second * 3
-	RpcConnReadTimeout       = time.Second
-	RpcConnWriteTimeout      = time.Second
+	ConnDialTimeout  = time.Second * 3
+	ConnReadTimeout  = 30 * time.Second
+	ConnWriteTimeout = 10 * time.Second
 )
 
 type ConnState int
@@ -102,8 +101,7 @@ func (rc *RpcConn) TryConnect() (err error) {
 
 			// unlock for blocking call
 			d := &net.Dialer{
-				KeepAlive: RpcConnKeepAliveInterval,
-				Timeout:   RpcConnDialTimeout,
+				Timeout: ConnDialTimeout,
 			}
 			conn, err := d.Dial("tcp", rc.Endpoint)
 
@@ -191,8 +189,8 @@ func NewRpcConn(addr string) *RpcConn {
 		Endpoint:     addr,
 		logger:       pegalog.GetLogger(),
 		cstate:       ConnStateInit,
-		readTimeout:  RpcConnReadTimeout,
-		writeTimeout: RpcConnWriteTimeout,
+		readTimeout:  ConnReadTimeout,
+		writeTimeout: ConnWriteTimeout,
 	}
 }
 

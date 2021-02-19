@@ -171,6 +171,16 @@ type ReplicaManager struct {
 	sync.RWMutex
 
 	creator NodeSessionCreator
+
+	unresponsiveHandler UnresponsiveHandler
+}
+
+// UnresponsiveHandler is a callback executed when the session is in unresponsive state.
+type UnresponsiveHandler func(NodeSession)
+
+// SetUnresponsiveHandler inits the UnresponsiveHandler.
+func (rm *ReplicaManager) SetUnresponsiveHandler(handler UnresponsiveHandler) {
+	rm.unresponsiveHandler = handler
 }
 
 // Create a new session to the replica server if no existing one.
@@ -179,9 +189,11 @@ func (rm *ReplicaManager) GetReplica(addr string) *ReplicaSession {
 	defer rm.Unlock()
 
 	if _, ok := rm.replicas[addr]; !ok {
-		rm.replicas[addr] = &ReplicaSession{
+		r := &ReplicaSession{
 			NodeSession: rm.creator(addr, NodeTypeReplica),
 		}
+		withUnresponsiveHandler(r.NodeSession, rm.unresponsiveHandler)
+		rm.replicas[addr] = r
 	}
 	return rm.replicas[addr]
 }
