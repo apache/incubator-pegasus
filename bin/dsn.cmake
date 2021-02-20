@@ -342,4 +342,7 @@ function(dsn_common_setup)
     dsn_setup_compiler_flags()
     dsn_setup_include_path()
     dsn_setup_thirdparty_libs()
+
+    include(bin/thrift_utils.cmake)
+
 endfunction(dsn_common_setup)

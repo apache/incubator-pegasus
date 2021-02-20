@@ -1,8 +1,12 @@
 set(MY_PROJ_NAME dsn.security)
 
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+thrift_generate_cpp(
+    SECURITY_THRIFT_SRCS
+    SECURITY_THRIFT_HDRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/security.thrift
+)
+
+set(MY_PROJ_SRC ${SECURITY_THRIFT_SRCS})
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search

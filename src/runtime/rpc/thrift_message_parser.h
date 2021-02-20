@@ -33,6 +33,8 @@
 #include <gtest/gtest_prod.h>
 #include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
 
+#include "request_meta_types.h"
+
 namespace dsn {
 
 struct request_meta_v0

@@ -1,8 +1,12 @@
 set(MY_PROJ_NAME dsn_nfs)
 
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+thrift_generate_cpp(
+    NFS_THRIFT_SRCS
+    NFS_THRIFT_HDRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/nfs.thrift
+)
+
+set(MY_PROJ_SRC ${NFS_THRIFT_SRCS})
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search

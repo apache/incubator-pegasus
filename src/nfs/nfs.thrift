@@ -37,9 +37,3 @@ struct get_file_size_response
     2: list<string> file_list;
     3: list<i64> size_list;
 }
-
-service nfs
-{
-    copy_response copy(1: copy_request request);
-    get_file_size_response get_file_size(1: get_file_size_request request);
-}
