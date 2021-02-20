@@ -23,6 +23,7 @@ export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
 export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$LD_LIBRARY_PATH
+source $ROOT/config_hdfs.sh
 
 function usage()
 {
