@@ -28,9 +28,9 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
+        dsn_aio
         dsn_runtime
         dsn_utils
-        dsn_aio
         pegasus_base
         gtest)
 
