@@ -29,23 +29,6 @@ thrift_description = [
         }
     },
     {
-        "name": "fd",
-        "path": "src/failure_detector",
-        "file_move": {
-            "_types.h": "include/dsn/dist/failure_detector"
-        },
-        "include_fix": {
-            "_types.h": {
-                "add": ["<dsn/service_api_cpp.h>"],
-                "remove": ["\"dsn_types.h\""]
-            },
-            "_types.cpp": {
-                "add": ["<dsn/dist/failure_detector/fd_types.h>"],
-                "remove": ["\"fd_types.h\""]
-            },
-        }
-    },
-    {
         "name": "replication",
         "path": "src/",
         "file_move": {
@@ -62,10 +45,6 @@ thrift_description = [
                 "remove": ["\"replication_types.h\""]
             },
         },
-    },
-    {
-        "name": "simple_kv",
-        "path": "src/replica/storage/simple_kv"
     },
 ]
 

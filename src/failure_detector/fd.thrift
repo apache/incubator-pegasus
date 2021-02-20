@@ -24,8 +24,3 @@ struct config_master_message
     1: dsn.rpc_address master;
     2: bool is_register;
 }
-
-service failure_detector
-{
-    beacon_ack ping(1:beacon_msg beacon)
-}

@@ -1,8 +1,12 @@
 set(MY_PROJ_NAME dsn.replication.simple_kv)
 
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+thrift_generate_cpp(
+    SIMPLE_KV_THRIFT_SRCS
+    SIMPLE_KV_THRIFT_HDRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/simple_kv.thrift
+)
+
+set(MY_PROJ_SRC ${SIMPLE_KV_THRIFT_SRCS})
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search

@@ -1,8 +1,13 @@
 set(MY_PROJ_NAME dsn.failure_detector)
 
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+thrift_generate_cpp(
+    FD_THRIFT_SRCS
+    FD_THRIFT_HDRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/fd.thrift
+)
+
+seT(MY_PROJ_SRC ${FD_THRIFT_SRCS})
+
 
 # Search mode for source files under CURRENT project directory?
 # "GLOB_RECURSE" for recursive search
