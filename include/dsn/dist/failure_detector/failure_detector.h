@@ -93,7 +93,7 @@ class failure_detector : public failure_detector_service,
 {
 public:
     failure_detector();
-    virtual ~failure_detector() { unregister_ctrl_commands(); }
+    virtual ~failure_detector();
 
     virtual void on_ping(const beacon_msg &beacon, ::dsn::rpc_replier<beacon_ack> &reply);
 
@@ -109,7 +109,7 @@ public:
                      uint32_t grace_seconds,
                      bool use_allow_list = false);
 
-    error_code stop();
+    void stop();
 
     uint32_t get_lease_ms() const { return _lease_milliseconds; }
     uint32_t get_grace_ms() const { return _grace_milliseconds; }

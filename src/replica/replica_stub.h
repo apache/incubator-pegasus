@@ -334,7 +334,7 @@ private:
     ::dsn::rpc_address _primary_address;
     char _primary_address_str[64];
 
-    ::dsn::dist::slave_failure_detector_with_multimaster *_failure_detector;
+    std::shared_ptr<dsn::dist::slave_failure_detector_with_multimaster> _failure_detector;
     mutable zlock _state_lock;
     volatile replica_node_state _state;
 

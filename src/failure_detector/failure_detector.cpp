@@ -56,6 +56,12 @@ failure_detector::failure_detector()
     _is_started = false;
 }
 
+failure_detector::~failure_detector()
+{
+    stop();
+    unregister_ctrl_commands();
+}
+
 void failure_detector::register_ctrl_commands()
 {
     static std::once_flag flag;
@@ -100,30 +106,17 @@ error_code failure_detector::start(uint32_t check_interval_seconds,
     return ERR_OK;
 }
 
-error_code failure_detector::stop()
+void failure_detector::stop()
 {
-    if (_is_started == false) {
-        return ERR_OK;
-    }
+    _tracker.cancel_outstanding_tasks();
 
+    zauto_lock l(_lock);
+    if (!_is_started) {
+        return;
+    }
     _is_started = false;
-
-    {
-        zauto_lock l(_lock);
-        for (auto &m : _masters) {
-            m.second.send_beacon_timer->cancel(true);
-        }
-
-        _masters.clear();
-        _workers.clear();
-    }
-
-    if (_check_task != nullptr) {
-        _check_task->cancel(true);
-        _check_task = nullptr;
-    }
-
-    return ERR_OK;
+    _masters.clear();
+    _workers.clear();
 }
 
 void failure_detector::register_master(::dsn::rpc_address target)

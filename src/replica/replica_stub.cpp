@@ -766,7 +766,7 @@ void replica_stub::initialize_start()
     // init liveness monitor
     dassert(NS_Disconnected == _state, "");
     if (_options.fd_disabled == false) {
-        _failure_detector = new ::dsn::dist::slave_failure_detector_with_multimaster(
+        _failure_detector = std::make_shared<dsn::dist::slave_failure_detector_with_multimaster>(
             _options.meta_servers,
             [this]() { this->on_meta_server_disconnected(); },
             [this]() { this->on_meta_server_connected(); });
@@ -2510,17 +2510,6 @@ void replica_stub::close()
             _counter_replicas_count->decrement();
             _replicas.erase(_replicas.begin());
         }
-    }
-
-    if (_failure_detector != nullptr) {
-        _failure_detector->stop();
-        delete _failure_detector;
-        _failure_detector = nullptr;
-    }
-
-    if (_log != nullptr) {
-        _log->close();
-        _log = nullptr;
     }
 }
 
