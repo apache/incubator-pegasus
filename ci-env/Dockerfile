@@ -28,6 +28,6 @@ RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
     mkdir -p build; \
     cmake -DCMAKE_BUILD_TYPE=Release -B build/ .; \
     cmake --build build/ -j $(($(nproc)/2+1)); \
-    zip -r ~/pegasus-thirdparty-output.zip output/ build/Source/rocksdb/cmake build/Source/http-parser build/Download/zookeeper; \
+    zip -r ~/pegasus-thirdparty-output.zip output/ build/Source/rocksdb/cmake build/Source/http-parser build/Source/hadoop build/Download/zookeeper; \
     cd ~; \
     rm -rf rdsn;
