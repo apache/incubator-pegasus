@@ -51,6 +51,7 @@ jobs:
     defaults:
       run:
         working-directory: /root/incubator-pegasus
+        shell: bash
     steps:
       - name: Clone Apache Pegasus Source
         working-directory: /root
@@ -59,7 +60,9 @@ jobs:
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
-        run: ./run.sh build -c --skip_thirdparty
+        run: |
+          source ./config_hdfs.sh
+          ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
         run: |
           source ./config_hdfs.sh
