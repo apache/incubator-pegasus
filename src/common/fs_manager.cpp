@@ -37,6 +37,7 @@
 #include <dsn/utility/filesystem.h>
 #include <thread>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 namespace replication {
@@ -76,6 +77,7 @@ unsigned dir_node::remove(const gpid &pid)
 
 void dir_node::update_disk_stat()
 {
+    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) {});
     dsn::utils::filesystem::disk_space_info info;
     if (dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
         disk_capacity_mb = info.capacity / 1024 / 1024;

@@ -43,14 +43,15 @@ private:
     bool init_target_dir(const replica_disk_migrate_request &req);
     bool migrate_replica_checkpoint(const replica_disk_migrate_request &req);
     bool migrate_replica_app_info(const replica_disk_migrate_request &req);
-
-    void close_current_replica();
+    /// return nullptr if close failed. The returned value is only used in unit-tests.
+    dsn::task_ptr close_current_replica(const replica_disk_migrate_request &req);
     void update_replica_dir();
 
     void reset_status() { _status = disk_migration_status::IDLE; }
 
 private:
     const static std::string kReplicaDirTempSuffix;
+    const static std::string kReplicaDirOriginSuffix;
     const static std::string kDataDirFolder;
     const static std::string kAppInfo;
 
@@ -61,6 +62,7 @@ private:
     disk_migration_status::type _status{disk_migration_status::IDLE};
 
     friend class replica;
+    friend class replica_stub;
     friend class replica_disk_migrate_test;
 };
 

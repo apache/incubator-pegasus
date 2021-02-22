@@ -257,12 +257,14 @@ public:
                 continue;
             }
             const std::set<gpid> &pids = replica_iter->second;
+            int primary_count = primary_count_for_disk;
+            int secondary_count = secondary_count_for_disk;
             for (const gpid &pid : pids) {
                 // generate primary replica and secondary replica.
-                if (primary_count_for_disk-- > 0) {
+                if (primary_count-- > 0) {
                     add_replica(generate_replica(
                         mock_app, pid, partition_status::PS_PRIMARY, mock_app.app_id));
-                } else if (secondary_count_for_disk-- > 0) {
+                } else if (secondary_count-- > 0) {
                     add_replica(generate_replica(
                         mock_app, pid, partition_status::PS_SECONDARY, mock_app.app_id));
                 }

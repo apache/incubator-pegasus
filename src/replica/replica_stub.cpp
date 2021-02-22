@@ -42,7 +42,9 @@
 #include "backup/replica_backup_server.h"
 #include "split/replica_split_manager.h"
 #include "replica_disk_migrator.h"
+#include "disk_cleaner.h"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <dsn/cpp/json_helper.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/rand.h>
@@ -74,13 +76,10 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _trigger_chkpt_command(nullptr),
       _query_compact_command(nullptr),
       _query_app_envs_command(nullptr),
-      _useless_dir_reserve_seconds_command(nullptr),
       _max_concurrent_bulk_load_downloading_count_command(nullptr),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
-      _gc_disk_error_replica_interval_seconds(3600),
-      _gc_disk_garbage_replica_interval_seconds(3600),
       _release_tcmalloc_memory(false),
       _mem_release_max_reserved_mem_percentage(10),
       _max_concurrent_bulk_load_downloading_count(5),
@@ -217,15 +216,26 @@ void replica_stub::install_perf_counters()
         "replicas.recent.replica.remove.dir.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "replica directory remove count in the recent period");
-    _counter_replicas_error_replica_dir_count.init_app_counter("eon.replica_stub",
-                                                               "replicas.error.replica.dir.count",
-                                                               COUNTER_TYPE_NUMBER,
-                                                               "error replica directory count");
+    _counter_replicas_error_replica_dir_count.init_app_counter(
+        "eon.replica_stub",
+        "replicas.error.replica.dir.count",
+        COUNTER_TYPE_NUMBER,
+        "error replica directory(*.err) count");
     _counter_replicas_garbage_replica_dir_count.init_app_counter(
         "eon.replica_stub",
         "replicas.garbage.replica.dir.count",
         COUNTER_TYPE_NUMBER,
-        "garbage replica directory count");
+        "garbage replica directory(*.gar) count");
+    _counter_replicas_tmp_replica_dir_count.init_app_counter(
+        "eon.replica_stub",
+        "replicas.tmp.replica.dir.count",
+        COUNTER_TYPE_NUMBER,
+        "disk migration tmp replica directory(*.tmp) count");
+    _counter_replicas_origin_replica_dir_count.init_app_counter(
+        "eon.replica_stub",
+        "replicas.origin.replica.dir.count",
+        COUNTER_TYPE_NUMBER,
+        "disk migration origin replica directory(.ori) count");
 
     _counter_replicas_recent_group_check_fail_count.init_app_counter(
         "eon.replica_stub",
@@ -422,8 +432,6 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _deny_client = _options.deny_client_on_start;
     _verbose_client_log = _options.verbose_client_log_on_start;
     _verbose_commit_log = _options.verbose_commit_log_on_start;
-    _gc_disk_error_replica_interval_seconds = _options.gc_disk_error_replica_interval_seconds;
-    _gc_disk_garbage_replica_interval_seconds = _options.gc_disk_garbage_replica_interval_seconds;
     _release_tcmalloc_memory = _options.mem_release_enabled;
     _mem_release_max_reserved_mem_percentage = _options.mem_release_max_reserved_mem_percentage;
     _max_concurrent_bulk_load_downloading_count =
@@ -493,10 +501,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     std::deque<task_ptr> load_tasks;
     uint64_t start_time = dsn_now_ms();
     for (auto &dir : dir_list) {
-        if (dir.length() >= 4 &&
-            (dir.substr(dir.length() - 4) == ".err" || dir.substr(dir.length() - 4) == ".gar" ||
-             dir.substr(dir.length() - 4) == ".bak")) {
-            ddebug("ignore dir %s", dir.c_str());
+        if (dsn::replication::is_data_dir_invalid(dir)) {
+            ddebug_f("ignore dir {}", dir);
             continue;
         }
 
@@ -1775,65 +1781,17 @@ void replica_stub::on_disk_stat()
 {
     ddebug("start to update disk stat");
     uint64_t start = dsn_now_ns();
+    disk_cleaning_report report{};
 
-    // gc on-disk rps
-    std::vector<std::string> sub_list;
-    for (auto &dir : _options.data_dirs) {
-        std::vector<std::string> tmp_list;
-        if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
-            dwarn("gc_disk: failed to get subdirectories in %s", dir.c_str());
-            return;
-        }
-        sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
-    }
-    int error_replica_dir_count = 0;
-    int garbage_replica_dir_count = 0;
-    for (auto &fpath : sub_list) {
-        auto name = dsn::utils::filesystem::get_file_name(fpath);
-        // don't delete ".bak" directory because it is backed by administrator.
-        if (name.length() >= 4 && (name.substr(name.length() - 4) == ".err" ||
-                                   name.substr(name.length() - 4) == ".gar")) {
-            if (name.substr(name.length() - 4) == ".err") {
-                error_replica_dir_count++;
-            } else {
-                garbage_replica_dir_count++;
-            }
-
-            time_t mt;
-            if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
-                dwarn("gc_disk: failed to get last write time of %s", fpath.c_str());
-                continue;
-            }
-
-            uint64_t last_write_time = (uint64_t)mt;
-            uint64_t current_time_ms = dsn_now_ms();
-            uint64_t interval_seconds = (name.substr(name.length() - 4) == ".err"
-                                             ? _gc_disk_error_replica_interval_seconds
-                                             : _gc_disk_garbage_replica_interval_seconds);
-            if (last_write_time + interval_seconds <= current_time_ms / 1000) {
-                if (!dsn::utils::filesystem::remove_path(fpath)) {
-                    dwarn("gc_disk: failed to delete directory '%s', time_used_ms = %" PRIu64,
-                          fpath.c_str(),
-                          dsn_now_ms() - current_time_ms);
-                } else {
-                    dwarn("gc_disk: {replica_dir_op} succeed to delete directory '%s'"
-                          ", time_used_ms = %" PRIu64,
-                          fpath.c_str(),
-                          dsn_now_ms() - current_time_ms);
-                    _counter_replicas_recent_replica_remove_dir_count->increment();
-                }
-            } else {
-                ddebug("gc_disk: reserve directory '%s', wait_seconds = %" PRIu64,
-                       fpath.c_str(),
-                       last_write_time + interval_seconds - current_time_ms / 1000);
-            }
-        }
-    }
-    _counter_replicas_error_replica_dir_count->set(error_replica_dir_count);
-    _counter_replicas_garbage_replica_dir_count->set(garbage_replica_dir_count);
-
+    dsn::replication::disk_remove_useless_dirs(_options.data_dirs, report);
     _fs_manager.update_disk_stat();
     update_disk_holding_replicas();
+
+    _counter_replicas_error_replica_dir_count->set(report.error_replica_count);
+    _counter_replicas_garbage_replica_dir_count->set(report.garbage_replica_count);
+    _counter_replicas_tmp_replica_dir_count->set(report.disk_migrate_tmp_count);
+    _counter_replicas_origin_replica_dir_count->set(report.disk_migrate_origin_count);
+    _counter_replicas_recent_replica_remove_dir_count->add(report.remove_dir_count);
 
     ddebug("finish to update disk stat, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
@@ -1925,6 +1883,33 @@ void replica_stub::open_replica(const app_info &app,
                req ? "with" : "without",
                dir.c_str());
         rep = replica::load(this, dir.c_str());
+
+        // if load data failed, re-open the `*.ori` folder which is the origin replica dir of disk
+        // migration
+        if (rep == nullptr) {
+            std::string origin_tmp_dir = get_replica_dir(
+                fmt::format("{}{}", app.app_type, replica_disk_migrator::kReplicaDirOriginSuffix)
+                    .c_str(),
+                id,
+                false);
+            if (!origin_tmp_dir.empty()) {
+                ddebug_f("mark the dir {} is garbage, start revert and load disk migration origin "
+                         "replica data({})",
+                         dir,
+                         origin_tmp_dir);
+                dsn::utils::filesystem::rename_path(dir,
+                                                    fmt::format("{}{}", dir, kFolderSuffixGar));
+
+                std::string origin_dir = origin_tmp_dir;
+                // revert the origin replica dir
+                boost::replace_first(
+                    origin_dir, replica_disk_migrator::kReplicaDirOriginSuffix, "");
+                dsn::utils::filesystem::rename_path(origin_tmp_dir, origin_dir);
+                rep = replica::load(this, origin_dir.c_str());
+
+                FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> void {});
+            }
+        }
     }
 
     if (rep == nullptr) {
@@ -1986,11 +1971,14 @@ void replica_stub::open_replica(const app_info &app,
 
 ::dsn::task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
-    dassert(r->status() == partition_status::PS_ERROR ||
-                r->status() == partition_status::PS_INACTIVE,
-            "%s: invalid state %s when calling begin_close_replica",
-            r->name(),
-            enum_to_string(r->status()));
+    dassert_f(r->status() == partition_status::PS_ERROR ||
+                  r->status() == partition_status::PS_INACTIVE ||
+                  r->disk_migrator()->status() >= disk_migration_status::MOVED,
+              "invalid state(partition_status={}, migration_status={}) when calling "
+              "replica({}) close",
+              enum_to_string(r->status()),
+              enum_to_string(r->disk_migrator()->status()),
+              r->name());
 
     gpid id = r->get_gpid();
 
@@ -2203,37 +2191,6 @@ void replica_stub::register_ctrl_command()
                 });
             });
 
-        _useless_dir_reserve_seconds_command = dsn::command_manager::instance().register_command(
-            {"replica.useless-dir-reserve-seconds"},
-            "useless-dir-reserve-seconds [num | DEFAULT]",
-            "control gc_disk_error_replica_interval_seconds and "
-            "gc_disk_garbage_replica_interval_seconds",
-            [this](const std::vector<std::string> &args) {
-                std::string result("OK");
-                if (args.empty()) {
-                    result = "error_dir_reserve_seconds=" +
-                             std::to_string(_gc_disk_error_replica_interval_seconds) +
-                             ",garbage_dir_reserve_seconds=" +
-                             std::to_string(_gc_disk_garbage_replica_interval_seconds);
-                } else {
-                    if (args[0] == "DEFAULT") {
-                        _gc_disk_error_replica_interval_seconds =
-                            _options.gc_disk_error_replica_interval_seconds;
-                        _gc_disk_garbage_replica_interval_seconds =
-                            _options.gc_disk_garbage_replica_interval_seconds;
-                    } else {
-                        int32_t seconds = 0;
-                        if (!dsn::buf2int32(args[0], seconds) || seconds < 0) {
-                            result = std::string("ERR: invalid arguments");
-                        } else {
-                            _gc_disk_error_replica_interval_seconds = seconds;
-                            _gc_disk_garbage_replica_interval_seconds = seconds;
-                        }
-                    }
-                }
-                return result;
-            });
-
 #ifdef DSN_ENABLE_GPERF
         _release_tcmalloc_memory_command = ::dsn::command_manager::instance().register_command(
             {"replica.release-tcmalloc-memory"},
@@ -2423,7 +2380,6 @@ void replica_stub::close()
     UNREGISTER_VALID_HANDLER(_trigger_chkpt_command);
     UNREGISTER_VALID_HANDLER(_query_compact_command);
     UNREGISTER_VALID_HANDLER(_query_app_envs_command);
-    UNREGISTER_VALID_HANDLER(_useless_dir_reserve_seconds_command);
 #ifdef DSN_ENABLE_GPERF
     UNREGISTER_VALID_HANDLER(_release_tcmalloc_memory_command);
     UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
@@ -2437,7 +2393,6 @@ void replica_stub::close()
     _trigger_chkpt_command = nullptr;
     _query_compact_command = nullptr;
     _query_app_envs_command = nullptr;
-    _useless_dir_reserve_seconds_command = nullptr;
 #ifdef DSN_ENABLE_GPERF
     _release_tcmalloc_memory_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;

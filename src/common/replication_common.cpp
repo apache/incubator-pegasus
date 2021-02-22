@@ -76,10 +76,8 @@ replication_options::replication_options()
     checkpoint_max_interval_hours = 2;
 
     gc_disabled = false;
-    gc_interval_ms = 30 * 1000;                             // 30 seconds
-    gc_memory_replica_interval_ms = 10 * 60 * 1000;         // 10 minutes
-    gc_disk_error_replica_interval_seconds = 7 * 24 * 3600; // 1 week
-    gc_disk_garbage_replica_interval_seconds = 24 * 3600;   // 1 day
+    gc_interval_ms = 30 * 1000;                     // 30 seconds
+    gc_memory_replica_interval_ms = 10 * 60 * 1000; // 10 minutes
 
     disk_stat_disabled = false;
     disk_stat_interval_seconds = 600;
@@ -357,18 +355,6 @@ void replication_options::initialize()
         gc_memory_replica_interval_ms,
         "after closing a healthy replica (due to LB), the replica will remain in memory for this "
         "long (ms) for quick recover");
-    gc_disk_error_replica_interval_seconds =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "gc_disk_error_replica_interval_seconds",
-                                         gc_disk_error_replica_interval_seconds,
-                                         "error replica are deleted after they have been closed "
-                                         "and lasted on disk this long (seconds)");
-    gc_disk_garbage_replica_interval_seconds =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "gc_disk_garbage_replica_interval_seconds",
-                                         gc_disk_garbage_replica_interval_seconds,
-                                         "garbage replica are deleted after they have been closed "
-                                         "and lasted on disk this long (seconds)");
 
     disk_stat_disabled = dsn_config_get_value_bool(
         "replication", "disk_stat_disabled", disk_stat_disabled, "whether to disable disk stat");

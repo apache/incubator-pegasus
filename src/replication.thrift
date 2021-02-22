@@ -1218,7 +1218,8 @@ enum detect_action
     QUERY
 }
 
-enum disk_migration_status {
+enum disk_migration_status 
+{
     IDLE,
     MOVING,
     MOVED,

@@ -33,6 +33,7 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 namespace replication {
@@ -124,6 +125,8 @@ error_code replica::initialize_on_load()
 
 /*static*/ replica *replica::load(replica_stub *stub, const char *dir)
 {
+    FAIL_POINT_INJECT_F("mock_replica_load", [&](string_view) -> replica * { return nullptr; });
+
     char splitters[] = {'\\', '/', 0};
     std::string name = utils::get_last_component(std::string(dir), splitters);
     if (name == "") {

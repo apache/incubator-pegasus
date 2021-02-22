@@ -83,8 +83,6 @@ public:
     bool gc_disabled;
     int32_t gc_interval_ms;
     int32_t gc_memory_replica_interval_ms;
-    int32_t gc_disk_error_replica_interval_seconds;
-    int32_t gc_disk_garbage_replica_interval_seconds;
 
     bool disk_stat_disabled;
     int32_t disk_stat_interval_seconds;

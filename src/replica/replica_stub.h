@@ -317,6 +317,7 @@ private:
     friend class duplication_test_base;
     friend class replica_test;
     friend class replica_disk_test_base;
+    friend class replica_disk_migrate_test;
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
@@ -361,7 +362,6 @@ private:
     dsn_handle_t _trigger_chkpt_command;
     dsn_handle_t _query_compact_command;
     dsn_handle_t _query_app_envs_command;
-    dsn_handle_t _useless_dir_reserve_seconds_command;
 #ifdef DSN_ENABLE_GPERF
     dsn_handle_t _release_tcmalloc_memory_command;
     dsn_handle_t _max_reserved_memory_percentage_command;
@@ -371,8 +371,6 @@ private:
     bool _deny_client;
     bool _verbose_client_log;
     bool _verbose_commit_log;
-    int32_t _gc_disk_error_replica_interval_seconds;
-    int32_t _gc_disk_garbage_replica_interval_seconds;
     bool _release_tcmalloc_memory;
     int32_t _mem_release_max_reserved_mem_percentage;
     int32_t _max_concurrent_bulk_load_downloading_count;
@@ -424,6 +422,8 @@ private:
     perf_counter_wrapper _counter_replicas_recent_replica_remove_dir_count;
     perf_counter_wrapper _counter_replicas_error_replica_dir_count;
     perf_counter_wrapper _counter_replicas_garbage_replica_dir_count;
+    perf_counter_wrapper _counter_replicas_tmp_replica_dir_count;
+    perf_counter_wrapper _counter_replicas_origin_replica_dir_count;
 
     perf_counter_wrapper _counter_replicas_recent_group_check_fail_count;
 
