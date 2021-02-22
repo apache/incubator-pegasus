@@ -35,7 +35,7 @@ Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to target node 
 * after the `learn` is completed, the `migration` is successful
 
 ## Replica States
-In the process of migration, the `origin replica dir` and `new replica dir` will have different status as follow
+In the process of migration, the `origin replica ` and `new replica` will have different states as follow
 | process  |origin replica status[dir name]  | new replica status[dir name]   |
 |---|---|---|
 |IDEL  |primary/secondary[gpid.pegasus]  |--[--]   |
