@@ -2,8 +2,11 @@ package admin
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/session"
 )
 
@@ -40,6 +43,32 @@ type rpcBasedClient struct {
 	metaManager *session.MetaManager
 }
 
+func (c *rpcBasedClient) waitTableReady(ctx context.Context, tableName string, partitionCount int) error {
+	const replicaCount int = 3
+
+	for {
+		resp, err := c.metaManager.QueryConfig(ctx, tableName)
+		if err != nil {
+			return err
+		}
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return fmt.Errorf("QueryConfig failed: %s", resp.GetErr().String())
+		}
+
+		readyCount := 0
+		for _, part := range resp.Partitions {
+			if part.Primary.GetRawAddress() != 0 && len(part.Secondaries)+1 == replicaCount {
+				readyCount++
+			}
+		}
+		if readyCount == partitionCount {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+	return nil
+}
+
 func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int) error {
 	_, err := c.metaManager.CreateApp(ctx, &admin.CreateAppRequest{
 		AppName: tableName,
@@ -51,6 +80,10 @@ func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, part
 			IsStateful:     true,
 		},
 	})
+	if err != nil {
+		return err
+	}
+	err = c.waitTableReady(ctx, tableName, partitionCount)
 	return err
 }
 

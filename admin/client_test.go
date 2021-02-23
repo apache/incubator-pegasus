@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/pegasus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,6 +51,37 @@ func TestAdmin_ListTablesTimeout(t *testing.T) {
 	defer cancel()
 	_, err := c.ListTables(ctx)
 	assert.Equal(t, err, context.DeadlineExceeded)
+}
+
+func TestAdmin_CreateTableMustAvailable(t *testing.T) {
+	const tableName = "admin_table_test"
+
+	c := NewClient(Config{
+		MetaServers: []string{"0.0.0.0:34601"},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := c.CreateTable(context.Background(), tableName, 4)
+	assert.Nil(t, err)
+
+	// ensures the created table must be available for read and write
+	rwClient := pegasus.NewClient(pegasus.Config{
+		MetaServers: []string{"0.0.0.0:34601"},
+	})
+	defer func() {
+		err = rwClient.Close()
+		assert.Nil(t, err)
+	}()
+	tb, err := rwClient.OpenTable(ctx, tableName)
+	assert.Nil(t, err)
+	err = tb.Set(ctx, []byte("a"), []byte("a"), []byte("a"))
+	assert.Nil(t, err)
+
+	// cleanup
+	err = c.DropTable(context.Background(), tableName)
+	assert.Nil(t, err)
 }
 
 func TestAdmin_GetAppEnvs(t *testing.T) {
