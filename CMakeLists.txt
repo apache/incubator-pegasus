@@ -41,6 +41,12 @@ message (STATUS "dsn Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_IN
 # install rdsn/include to ${CMAKE_INCLUDE_PREFIX}/include
 install(DIRECTORY include/ DESTINATION include)
 
+# NOTE: dsn_types.h is not actually a thrift-generated file. As pegasus may reference it,
+# we should copy also this file to the path the same as other thrift-generated files.
+install(FILES include/dsn/cpp/serialization_helper/dsn_types.h DESTINATION include)
+# TODO(wutao1): remove this line after dsn.layer2_types.h is removed from repo.
+install(FILES include/dsn/cpp/serialization_helper/dsn.layer2_types.h DESTINATION include)
+
 include_directories(${DSN_PROJECT_DIR}/include)
 include_directories(${DSN_PROJECT_DIR}/include/dsn/cpp/serialization_helper)
 include_directories(${DSN_PROJECT_DIR}/src)

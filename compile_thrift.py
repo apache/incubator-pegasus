@@ -28,24 +28,6 @@ thrift_description = [
             "_types.cpp": "src/runtime"
         }
     },
-    {
-        "name": "replication",
-        "path": "src/",
-        "file_move": {
-            "_types.h": "include/dsn/dist/replication",
-            "_types.cpp": "src/common"
-        },
-        "include_fix": {
-            "_types.h": {
-                "add": ["<dsn/cpp/serialization_helper/dsn.layer2_types.h>"],
-                "remove": ["\"dsn_types.h\"", "\"dsn.layer2_types.h\""]
-            },
-            "_types.cpp": {
-                "add": ["<dsn/dist/replication/replication_types.h>"],
-                "remove": ["\"replication_types.h\""]
-            },
-        },
-    },
 ]
 
 

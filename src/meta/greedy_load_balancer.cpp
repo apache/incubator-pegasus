@@ -32,6 +32,7 @@
 #include <dsn/dist/fmt_logging.h>
 #include "greedy_load_balancer.h"
 #include "meta_data.h"
+#include "meta_admin_types.h"
 
 namespace dsn {
 namespace replication {
@@ -220,29 +221,28 @@ greedy_load_balancer::generate_balancer_request(const partition_configuration &p
         ans = "move_primary";
         result.balance_type = balancer_request_type::move_primary;
         result.action_list.emplace_back(
-            configuration_proposal_action{from, from, config_type::CT_DOWNGRADE_TO_SECONDARY});
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         result.action_list.emplace_back(
-            configuration_proposal_action{to, to, config_type::CT_UPGRADE_TO_PRIMARY});
+            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
         break;
     case balance_type::copy_primary:
         ans = "copy_primary";
         result.balance_type = balancer_request_type::copy_primary;
         result.action_list.emplace_back(
-            configuration_proposal_action{from, to, config_type::CT_ADD_SECONDARY_FOR_LB});
+            new_proposal_action(from, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
-            configuration_proposal_action{from, from, config_type::CT_DOWNGRADE_TO_SECONDARY});
+            new_proposal_action(from, from, config_type::CT_DOWNGRADE_TO_SECONDARY));
         result.action_list.emplace_back(
-            configuration_proposal_action{to, to, config_type::CT_UPGRADE_TO_PRIMARY});
-        result.action_list.emplace_back(
-            configuration_proposal_action{to, from, config_type::CT_REMOVE});
+            new_proposal_action(to, to, config_type::CT_UPGRADE_TO_PRIMARY));
+        result.action_list.emplace_back(new_proposal_action(to, from, config_type::CT_REMOVE));
         break;
     case balance_type::copy_secondary:
         ans = "copy_secondary";
         result.balance_type = balancer_request_type::copy_secondary;
         result.action_list.emplace_back(
-            configuration_proposal_action{pc.primary, to, config_type::CT_ADD_SECONDARY_FOR_LB});
+            new_proposal_action(pc.primary, to, config_type::CT_ADD_SECONDARY_FOR_LB));
         result.action_list.emplace_back(
-            configuration_proposal_action{pc.primary, from, config_type::CT_REMOVE});
+            new_proposal_action(pc.primary, from, config_type::CT_REMOVE));
         break;
     default:
         dassert(false, "");

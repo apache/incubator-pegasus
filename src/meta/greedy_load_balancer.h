@@ -160,5 +160,16 @@ private:
 
     bool is_ignored_app(app_id app_id);
 };
+
+inline configuration_proposal_action
+new_proposal_action(const rpc_address &target, const rpc_address &node, config_type::type type)
+{
+    configuration_proposal_action act;
+    act.__set_target(target);
+    act.__set_node(node);
+    act.__set_type(type);
+    return act;
+}
+
 } // namespace replication
 } // namespace dsn

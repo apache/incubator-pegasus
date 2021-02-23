@@ -820,19 +820,21 @@ void meta_load_balance_test::simple_lb_from_proposal_test()
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 2: test invalid proposal: invalid target" << std::endl;
-    cpa2 = {dsn::rpc_address(), node_list[0], config_type::CT_UPGRADE_TO_PRIMARY};
+    cpa2 =
+        new_proposal_action(dsn::rpc_address(), node_list[0], config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     ASSERT_FALSE(simple_lb.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 3: test invalid proposal: invalid node" << std::endl;
-    cpa2 = {node_list[0], dsn::rpc_address(), config_type::CT_UPGRADE_TO_PRIMARY};
+    cpa2 =
+        new_proposal_action(node_list[0], dsn::rpc_address(), config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     ASSERT_FALSE(simple_lb.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 4: test invalid proposal: dead target" << std::endl;
-    cpa2 = {node_list[0], node_list[0], config_type::CT_UPGRADE_TO_PRIMARY};
+    cpa2 = new_proposal_action(node_list[0], node_list[0], config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     get_node_state(nodes, node_list[0], false)->set_alive(false);
     ASSERT_FALSE(simple_lb.from_proposals(mv, p, cpa));
@@ -840,7 +842,7 @@ void meta_load_balance_test::simple_lb_from_proposal_test()
     get_node_state(nodes, node_list[0], false)->set_alive(true);
 
     std::cerr << "Case 5: test invalid proposal: dead node" << std::endl;
-    cpa2 = {node_list[0], node_list[1], config_type::CT_ADD_SECONDARY};
+    cpa2 = new_proposal_action(node_list[0], node_list[1], config_type::CT_ADD_SECONDARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     get_node_state(nodes, node_list[1], false)->set_alive(false);
     ASSERT_FALSE(simple_lb.from_proposals(mv, p, cpa));
@@ -848,21 +850,21 @@ void meta_load_balance_test::simple_lb_from_proposal_test()
     get_node_state(nodes, node_list[1], false)->set_alive(true);
 
     std::cerr << "Case 6: test invalid proposal: already have priamry but assign" << std::endl;
-    cpa2 = {node_list[0], node_list[0], config_type::CT_ASSIGN_PRIMARY};
+    cpa2 = new_proposal_action(node_list[0], node_list[0], config_type::CT_ASSIGN_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     pc.primary = node_list[1];
     ASSERT_FALSE(simple_lb.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 7: test invalid proposal: upgrade non-secondary" << std::endl;
-    cpa2 = {node_list[0], node_list[0], config_type::CT_UPGRADE_TO_PRIMARY};
+    cpa2 = new_proposal_action(node_list[0], node_list[0], config_type::CT_UPGRADE_TO_PRIMARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     pc.primary.set_invalid();
     ASSERT_FALSE(simple_lb.from_proposals(mv, p, cpa));
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 8: test invalid proposal: add exist secondary" << std::endl;
-    cpa2 = {node_list[0], node_list[1], config_type::CT_ADD_SECONDARY};
+    cpa2 = new_proposal_action(node_list[0], node_list[1], config_type::CT_ADD_SECONDARY);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     pc.primary = node_list[0];
     pc.secondaries = {node_list[1]};
@@ -870,7 +872,7 @@ void meta_load_balance_test::simple_lb_from_proposal_test()
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 9: test invalid proposal: downgrade non member" << std::endl;
-    cpa2 = {node_list[0], node_list[1], config_type::CT_REMOVE};
+    cpa2 = new_proposal_action(node_list[0], node_list[1], config_type::CT_REMOVE);
     cc.lb_actions.assign_balancer_proposals({cpa2});
     pc.primary = node_list[0];
     pc.secondaries.clear();
@@ -878,7 +880,7 @@ void meta_load_balance_test::simple_lb_from_proposal_test()
     ASSERT_EQ(config_type::CT_INVALID, cpa.type);
 
     std::cerr << "Case 10: test abnormal learning detect" << std::endl;
-    cpa2 = {node_list[0], node_list[1], config_type::CT_ADD_SECONDARY};
+    cpa2 = new_proposal_action(node_list[0], node_list[1], config_type::CT_ADD_SECONDARY);
     pc.primary = node_list[0];
     pc.secondaries.clear();
     cc.lb_actions.assign_balancer_proposals({cpa2});

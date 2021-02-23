@@ -343,6 +343,6 @@ function(dsn_common_setup)
     dsn_setup_include_path()
     dsn_setup_thirdparty_libs()
 
-    include(bin/thrift_utils.cmake)
+    include(${DSN_PROJECT_DIR}/bin/thrift_utils.cmake)
 
 endfunction(dsn_common_setup)

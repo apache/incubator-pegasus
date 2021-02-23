@@ -146,7 +146,12 @@ void simple_kv_client_app::send_config_to_meta(const rpc_address &receiver,
 
     configuration_balancer_request request;
     request.gpid = g_default_gpid;
-    request.action_list.emplace_back(configuration_proposal_action{receiver, node, type});
+
+    configuration_proposal_action act;
+    act.__set_target(receiver);
+    act.__set_node(node);
+    act.__set_type(type);
+    request.action_list.emplace_back(std::move(act));
     request.__set_force(true);
 
     dsn::marshall(req, request);
