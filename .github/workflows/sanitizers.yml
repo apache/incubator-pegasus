@@ -29,11 +29,6 @@ jobs:
       image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
     steps:
       -
-        name: Install dependencies
-        run: |
-          apt-get update -y
-          apt-get install -y nmap netcat
-      -
         uses: actions/checkout@v2
         with:
           repository: 'XiaoMi/rdsn'
