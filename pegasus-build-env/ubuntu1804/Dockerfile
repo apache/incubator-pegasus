@@ -35,6 +35,8 @@ RUN apt-get update -y; \
                        zlib1g.dev \
                        patch \
                        netcat \
+                       wget \
+                       ccache \
                        git \
                        curl \
                        zip \
