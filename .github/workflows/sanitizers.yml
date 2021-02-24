@@ -49,4 +49,4 @@ jobs:
       -
         name: Testing
         run: |
-          ./run.sh test --sanitizer ${{ matrix.sanitizer }} --skip_thirdparty
+          LD_LIBRARY_PATH=/root/rdsn/thirdparty/output/lib ./run.sh test --sanitizer ${{ matrix.sanitizer }} --skip_thirdparty
