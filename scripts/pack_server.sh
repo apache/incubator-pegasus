@@ -119,21 +119,15 @@ copy_file ./config_hdfs.sh ${pack}/bin
 
 copy_file "$(get_stdcpp_lib $custom_gcc)" "${pack}/bin"
 
-pack_system_lib() {
-    SYS_LIB_PATH=$(get_system_lib server "$1")
-    if [ -z "${SYS_LIB_PATH}" ]; then
-        echo "ERROR: library $1 is missing on your system"
-        exit 1
-    fi
-    SYS_LIB_NAME=$(get_system_libname server "$1")
-    copy_file "${SYS_LIB_PATH}" "${pack}/bin/${SYS_LIB_NAME}"
+pack_server_lib() {
+    pack_system_lib "${pack}/bin" server "$1"
 }
 
-pack_system_lib snappy
-pack_system_lib crypto
-pack_system_lib ssl
-pack_system_lib zstd
-pack_system_lib lz4
+pack_server_lib snappy
+pack_server_lib crypto
+pack_server_lib ssl
+pack_server_lib zstd
+pack_server_lib lz4
 
 # Pack hadoop-related files.
 # If you want to use hdfs service to backup/restore/bulkload pegasus tables,
