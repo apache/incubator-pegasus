@@ -27,6 +27,11 @@ jobs:
           - undefined
     container:
       image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
+    defaults:
+      run:
+        # Replace `sh`.
+        # Should always use `bash` to run testing.
+        shell: bash
     steps:
       -
         uses: actions/checkout@v2
