@@ -29,6 +29,7 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 
 set(MY_PROJ_LIBS
         dsn_runtime
+        dsn_aio
         dsn_utils
         pegasus_base
         gtest)

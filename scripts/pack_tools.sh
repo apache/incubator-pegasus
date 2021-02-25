@@ -114,12 +114,17 @@ copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
-copy_file `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/`get_system_libname shell snappy`
-copy_file `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/`get_system_libname shell crypto`
-copy_file `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/`get_system_libname shell ssl`
-copy_file `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/`get_system_libname shell aio`
-copy_file `get_system_lib shell zstd` ${pack}/DSN_ROOT/lib/`get_system_libname shell zstd`
-copy_file `get_system_lib shell lz4` ${pack}/DSN_ROOT/lib/`get_system_libname shell lz4`
+
+pack_tools_lib() {
+    pack_system_lib "${pack}/DSN_ROOT/lib" shell "$1"
+}
+
+pack_tools_lib snappy
+pack_tools_lib crypto
+pack_tools_lib ssl
+pack_tools_lib zstd
+pack_tools_lib lz4
+
 chmod -x ${pack}/DSN_ROOT/lib/*
 
 mkdir -p ${pack}/scripts
