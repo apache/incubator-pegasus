@@ -782,7 +782,10 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                 // request
                 if (cc.stage == config_status::pending_remote_sync) {
                     configuration_update_request *req = cc.pending_sync_request.get();
-                    if (req->node == request.node)
+                    // when register child partition, stage is config_status::pending_remote_sync,
+                    // but cc.pending_sync_request is not set, see more in function
+                    // 'register_child_on_meta'
+                    if (req == nullptr || req->node == request.node)
                         return false;
                 }
 
