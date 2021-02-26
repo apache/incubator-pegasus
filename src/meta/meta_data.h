@@ -359,6 +359,7 @@ public:
         dsn::blob result = dsn::json::json_forwarder<app_info>::encode(another);
         return result;
     }
+    bool splitting() const { return helpers->split_states.splitting_count > 0; }
 };
 
 typedef std::set<dsn::gpid> partition_set;

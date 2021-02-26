@@ -794,7 +794,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                 response.partitions[i].host_node = request.node;
                 // set meta_split_status
                 const split_state &app_split_states = app->helpers->split_states;
-                if (app_split_states.splitting_count > 0) {
+                if (app->splitting()) {
                     auto iter = app_split_states.status.find(pid.get_partition_index());
                     if (iter != app_split_states.status.end()) {
                         response.partitions[i].__set_meta_split_status(iter->second);

@@ -71,7 +71,7 @@ void meta_split_service::start_partition_split(start_split_rpc rpc)
             return;
         }
 
-        if (app->helpers->split_states.splitting_count > 0) {
+        if (app->splitting()) {
             response.err = ERR_BUSY;
             auto err_msg =
                 fmt::format("app({}) is already executing partition split", request.app_name);
@@ -318,7 +318,7 @@ void meta_split_service::query_partition_split(query_split_rpc rpc) const
         return;
     }
 
-    if (app->helpers->split_states.splitting_count <= 0) {
+    if (!app->splitting()) {
         response.err = ERR_INVALID_STATE;
         response.__set_hint_msg(fmt::format("app({}) is not splitting", app_name));
         derror_f("query partition split failed, {}", response.hint_msg);
@@ -349,7 +349,7 @@ void meta_split_service::control_partition_split(control_split_rpc rpc)
         return;
     }
 
-    if (app->helpers->split_states.splitting_count <= 0) {
+    if (!app->splitting()) {
         response.err = ERR_INVALID_STATE;
         response.__set_hint_msg(fmt::format("app({}) is not splitting", req.app_name));
         derror_f("{} split failed, {}", control_type_str(control_type), response.hint_msg);
