@@ -1194,7 +1194,9 @@ void replica_split_manager::copy_mutation(mutation_ptr &mu) // on parent partiti
 {
     dassert_replica(_child_gpid.get_app_id() > 0, "child_gpid({}) is invalid", _child_gpid);
 
-    // TODO(hyc): if copy mutation synchronously, add flags
+    if (mu->is_sync_to_child()) {
+        mu->wait_child();
+    }
 
     mutation_ptr new_mu = mutation::copy_no_reply(mu);
     error_code ec = _stub->split_replica_exec(
@@ -1253,16 +1255,30 @@ void replica_split_manager::on_copy_mutation(mutation_ptr &mu) // on child parti
             mu, LPC_WRITE_REPLICATION_LOG, tracker(), nullptr, get_gpid().thread_hash());
         _replica->_private_log->append(
             mu, LPC_WRITE_REPLICATION_LOG_COMMON, tracker(), nullptr, get_gpid().thread_hash());
-    } else {
-        // TODO(heyuchen): child copy mutation synchronously
+    } else { // child sync copy mutation
+        mu->log_task() = _stub->_log->append(mu,
+                                             LPC_WRITE_REPLICATION_LOG,
+                                             tracker(),
+                                             std::bind(&replica::on_append_log_completed,
+                                                       _replica,
+                                                       mu,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2),
+                                             get_gpid().thread_hash());
     }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
 void replica_split_manager::ack_parent(error_code ec, mutation_ptr &mu) // on child partition
 {
-    // TODO(heyuchen): when child copy mutation synchronously, child replica send ack to its parent
-    // TBD
+    dassert_replica(mu->is_sync_to_child(), "mutation({}) should be copied synchronously");
+    _stub->split_replica_exec(LPC_PARTITION_SPLIT,
+                              _replica->_split_states.parent_gpid,
+                              std::bind(&replica_split_manager::on_copy_mutation_reply,
+                                        std::placeholders::_1,
+                                        ec,
+                                        mu->data.header.ballot,
+                                        mu->data.header.decree));
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -1270,8 +1286,57 @@ void replica_split_manager::on_copy_mutation_reply(error_code ec,
                                                    ballot b,
                                                    decree d) // on parent partition
 {
-    // TODO(heyuchen): when child copy mutation synchronously, parent replica handle child ack
-    // TBD
+    _replica->_checker.only_one_thread_access();
+
+    auto mu = _replica->_prepare_list->get_mutation_by_decree(d);
+    if (mu == nullptr) {
+        derror_replica("failed to get mutation in prepare list, decree = {}", d);
+        return;
+    }
+
+    if (mu->data.header.ballot != b) {
+        derror_replica("ballot not match, mutation ballot({}) vs child mutation ballot({})",
+                       mu->data.header.ballot,
+                       b);
+        return;
+    }
+
+    // set child prepare mutation flag
+    if (ec == ERR_OK) {
+        mu->child_acked();
+    } else {
+        derror_replica("child({}) copy mutation({}) failed, ballot={}, decree={}, error={}",
+                       _child_gpid,
+                       mu->name(),
+                       b,
+                       d,
+                       ec);
+    }
+
+    // handle child ack
+    if (mu->data.header.ballot >= get_ballot() && status() != partition_status::PS_INACTIVE) {
+        switch (status()) {
+        case partition_status::PS_PRIMARY:
+            if (ec != ERR_OK) {
+                _replica->handle_local_failure(ec);
+            } else {
+                _replica->do_possible_commit_on_primary(mu);
+            }
+            break;
+        case partition_status::PS_SECONDARY:
+        case partition_status::PS_POTENTIAL_SECONDARY:
+            if (ec != ERR_OK) {
+                _replica->handle_local_failure(ec);
+            }
+            _replica->ack_prepare_message(ec, mu);
+            break;
+        case partition_status::PS_ERROR:
+            break;
+        default:
+            dassert_replica(false, "wrong status({})", enum_to_string(status()));
+            break;
+        }
+    }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

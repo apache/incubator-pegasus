@@ -164,6 +164,9 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
          mu->name(),
          mu->tid());
 
+    // child should prepare mutation synchronously
+    mu->set_is_sync_to_child(_primary_states.sync_send_write_request);
+
     // check bounded staleness
     if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit) {
         err = ERR_CAPACITY_EXCEEDED;
@@ -298,6 +301,9 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
     replica_configuration rconfig;
     _primary_states.get_replica_config(status, rconfig, learn_signature);
     rconfig.__set_pop_all(pop_all_committed_mutations);
+    if (status == partition_status::PS_SECONDARY && _primary_states.sync_send_write_request) {
+        rconfig.__set_split_sync_to_child(true);
+    }
 
     {
         rpc_write_stream writer(msg);
@@ -349,6 +355,8 @@ void replica::on_prepare(dsn::message_ex *request)
         rpc_read_stream reader(request);
         unmarshall(reader, rconfig, DSF_THRIFT_BINARY);
         mu = mutation::read_from(reader, request);
+        mu->set_is_sync_to_child(rconfig.split_sync_to_child);
+        rconfig.split_sync_to_child = false;
     }
 
     ADD_POINT(mu->tracer);
@@ -537,6 +545,12 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
             }
             // always ack
             ack_prepare_message(err, mu);
+            break;
+        case partition_status::PS_PARTITION_SPLIT:
+            if (err != ERR_OK) {
+                handle_local_failure(err);
+            }
+            _split_mgr->ack_parent(err, mu);
             break;
         case partition_status::PS_ERROR:
             break;
@@ -738,14 +752,28 @@ void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
 
     const std::vector<dsn::message_ex *> &prepare_requests = mu->prepare_requests();
     dassert(!prepare_requests.empty(), "mutation = %s", mu->name());
-    for (auto &request : prepare_requests) {
-        reply(request, resp);
-    }
 
     if (err == ERR_OK) {
-        dinfo("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
-    } else {
-        dwarn("%s: mutation %s ack_prepare_message, err = %s", name(), mu->name(), err.to_string());
+        if (mu->is_child_acked()) {
+            dinfo_replica("mutation {} ack_prepare_message, err = {}", mu->name(), err);
+            for (auto &request : prepare_requests) {
+                reply(request, resp);
+            }
+        }
+        return;
+    }
+    // only happened when prepare failed during partition split child copy mutation synchronously
+    if (mu->is_error_acked()) {
+        dwarn_replica("mutation {} has been ack_prepare_message, err = {}", mu->name(), err);
+        return;
+    }
+
+    dwarn_replica("mutation {} ack_prepare_message, err = {}", mu->name(), err);
+    if (mu->is_sync_to_child()) {
+        mu->set_error_acked();
+    }
+    for (auto &request : prepare_requests) {
+        reply(request, resp);
     }
 }
 

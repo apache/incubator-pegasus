@@ -88,6 +88,12 @@ struct replica_configuration
     // Used for bulk load
     // secondary will pop all committed mutations even if buffer is not full
     6:optional bool       pop_all = false;
+    // Used for partition split when primary send prepare message to secondary
+    // 1. true - secondary should copy mutation in this prepare message synchronously,
+    //           and _is_sync_to_child in mutation structure should set true
+    // 2. false - secondary copy mutation in this prepare message asynchronously
+    // NOTICE: it should always be false when update_local_configuration
+    7:optional bool       split_sync_to_child = false;
 }
 
 struct replica_info
