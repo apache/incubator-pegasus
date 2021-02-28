@@ -38,13 +38,21 @@ jobs:
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
       -
+        name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
         name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
           file: ./thirdparties-bin/Dockerfile
           push: true
-          tags: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
+          tags: |
+            apachepegasus/thirdparties-bin:${{ matrix.osversion }}
+            ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
           build-args: |
             OS_VERSION=${{ matrix.osversion }}
       -
