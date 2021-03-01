@@ -4,7 +4,7 @@
 Disk-Migrater is for migrating data among different local disks within one node. This feature is different from node-rebalance that is for migrating data among different nodes. 
 
 ## Flow Process
-Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to target node and goes on to trigger the node to migrate the `replica` from one disk to another. The whole migration process as follow: 
+Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to the targeted node that triggers the node to migrate the specified `replica` from one disk to another. The whole migration process is as follow: 
 
 ```
 +---------------+      +---------------+       +--------------+
