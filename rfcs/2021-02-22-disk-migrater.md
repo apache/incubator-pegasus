@@ -8,7 +8,7 @@ Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to the targeted
 
 ```
 +---------------+      +---------------+       +--------------+
-| client(shell) +------+ replicaServer +-------+  metaServer  |
+| Client(shell) +------+ replicaServer +-------+  metaServer  |
 +------+--------+      +-------+-------+       +-------+------+
        |                       |                       |
        +------migrateRPC-----> +-----IDLE              |
@@ -47,8 +47,8 @@ In the process of migration, the `origin replica ` and `new replica` will have d
 | COMPLETED  |error[gpid.pegasus.disk.migrate.ori]   |secondary[gpid.pegasus]   |
 
 **Note:** 
-* if replica status is `primary`, you need assign `secondary`  manually via [propose](http://pegasus.apache.org/administration/rebalance)
-* any process is failed, the operation will be failed and reverted the `IDEL` status
+* If replica status is `primary`, you need assign it `secondary`  manually via [propose](http://pegasus.apache.org/administration/rebalance).
+* Any process is failed, the operation will be failed and reverted the `IDEL` status.
 
 ## Client Command
 The `client` sending rpc now is [admin-cli](https://github.com/pegasus-kv/admin-cli) which support `query disk info` and `migrate disk replica`, the command like this(`help` can see the detail command ):
@@ -61,4 +61,4 @@ disk-replica -n node -d disk
 disk-migrate -n node -g gpid -f disk1 -t disk2 
 ```
 
-It's noticed that the migration is manual, and  we hope  the future work is  `admin-cli` can create `whole disk balance plan/step` and then automatically migrate data to balance all disk as much as possible 
+It's noticed that the migration is manual, and  we hope  the future work is  `admin-cli` can create `whole disk balance plan/step` and then automatically migrate data to balance all disk as much as possible .
