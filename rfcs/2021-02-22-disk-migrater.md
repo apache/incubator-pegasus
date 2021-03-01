@@ -28,11 +28,11 @@ Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to the targeted
        |                +----->+                       |
 ```
 
-* target node receive the migrate-rpc and start validate rpc arguments
-* if the rpc is valid, node start migrate `replica` which contain `checkpoint`, `.init-info`,`.app-info`
-* after data migrate successfuly, the origin `replica` will be closed and `replica-server` re-opens the new `replica`
-* if the new `repica`  data is inconsistent with other replica(new write operation when migrating), it will be trigger to `learn` to catch up with the latest data by `meta-server`
-* after the `learn` is completed, the `migration` is successful
+1. The targeted node receives the migrateRPC and starts validating the request arguments.
+2. If the RPC is valid, node starts migrating the specified `replica`.
+3. After replica migration finishes successfuly, the original `replica` will be closed and ReplicaServer re-opens the new `replica`.
+4. If the new replica's data is inconsistent with its primary, MetaServer will automatically start to trigger replica-learn to catch up with the latest data.
+5. After the learning process is completed, the entire disk-migration ends.
 
 ## Replica States
 In the process of migration, the `origin replica ` and `new replica` will have different states as follow
