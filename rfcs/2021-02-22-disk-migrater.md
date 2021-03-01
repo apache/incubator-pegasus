@@ -1,7 +1,7 @@
 # Disk-Migrater
 
 ## Overall
-Disk-Migrater is for migrating data among different disk volumns at one node,  which is different from [node-balancer](http://pegasus.apache.org/administration/rebalance) that is for migrating data among different nodes. 
+Disk-Migrater is for migrating data among different local disks within one node. This feature is different from node-rebalance that is for migrating data among different nodes. 
 
 ## Flow Process
 Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to target node and goes on to trigger the node to migrate the `replica` from one disk to another. The whole migration process as follow: 
