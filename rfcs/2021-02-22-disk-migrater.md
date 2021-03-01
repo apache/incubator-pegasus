@@ -1,6 +1,6 @@
 # Disk-Migrater
 
-## Overall
+## Design Goals
 Disk-Migrater is for migrating data among different local disks within one node. This feature is different from node-rebalance that is for migrating data among different nodes. 
 
 ## Flow Process
