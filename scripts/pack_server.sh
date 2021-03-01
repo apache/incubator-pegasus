@@ -160,9 +160,9 @@ DISTRIB_ID=$(cat /etc/*-release | grep DISTRIB_ID | awk -F'=' '{print $2}')
 DISTRIB_RELEASE=$(cat /etc/*-release | grep DISTRIB_RELEASE | awk -F'=' '{print $2}')
 if [ -n "$DISTRIB_ID" ] && [ -n "$DISTRIB_RELEASE" ]; then
     if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "18.04" ]; then
-        pack_system_lib icui18n
-        pack_system_lib icuuc
-        pack_system_lib icudata
+        pack_server_lib icui18n
+        pack_server_lib icuuc
+        pack_server_lib icudata
     fi
     # more cases can be added here.
 fi
