@@ -51,7 +51,9 @@ In the process of migration, the original replica and the new replica will have 
 * Any process is failed, the operation will be failed and reverted the `IDEL` status.
 
 ## Client Command
-The `client` sending rpc now is [admin-cli](https://github.com/pegasus-kv/admin-cli) which support `query disk info` and `migrate disk replica`, the command like this(`help` can see the detail command ):
+The client sending migrateRPC is [admin-cli](https://github.com/pegasus-kv/admin-cli) which supports `disk-capacity`, `disk-replica` and `disk-migrate` commands. 
+
+Use `help` to see the command manuals. The example:
 ```
 # query replica capacity
 disk-capacity -n node -d disk
