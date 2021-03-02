@@ -2364,8 +2364,8 @@ bool server_state::check_all_partitions()
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             partition_configuration &pc = app->partitions[i];
             config_context &cc = app->helpers->contexts[i];
-
-            if (cc.stage != config_status::pending_remote_sync) {
+            // partition is under re-configuration or is child partition
+            if (cc.stage != config_status::pending_remote_sync && pc.ballot != invalid_ballot) {
                 configuration_proposal_action action;
                 pc_status s =
                     _meta_svc->get_balancer()->cure({&_all_apps, &_nodes}, pc.pid, action);

@@ -833,7 +833,7 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
             ddebug_f("skip to do primary balance for the ignored app[{}]", app->get_logname());
             continue;
         }
-        if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading)
+        if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
             continue;
 
         bool enough_information = primary_balancer_per_app(app);
@@ -880,7 +880,7 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
             continue;
         }
 
-        if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading)
+        if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
             continue;
 
         bool enough_information = copy_secondary_per_app(app);
