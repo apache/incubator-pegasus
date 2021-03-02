@@ -63,4 +63,4 @@ disk-replica -n node -d disk
 disk-migrate -n node -g gpid -f disk1 -t disk2 
 ```
 
-It's noticed that the migration is manual, and  we hope  the future work is  `admin-cli` can create `whole disk balance plan/step` and then automatically migrate data to balance all disk as much as possible .
+It should be noticed that disk migration is currently a manual operation. It's in our future plan to design a disk-rebalance planner. It can generate a series of steps, which automatically migrate data and eventually make all disks balanced.
