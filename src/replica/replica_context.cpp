@@ -244,6 +244,11 @@ bool potential_secondary_context::is_cleaned()
 bool partition_split_context::cleanup(bool force)
 {
     CLEANUP_TASK(async_learn_task, force)
+    if (!force) {
+        CLEANUP_TASK_ALWAYS(check_state_task)
+    } else {
+        CLEANUP_TASK(check_state_task, force)
+    }
 
     parent_gpid.set_app_id(0);
     is_prepare_list_copied = false;
@@ -251,7 +256,10 @@ bool partition_split_context::cleanup(bool force)
     return true;
 }
 
-bool partition_split_context::is_cleaned() const { return async_learn_task == nullptr; }
+bool partition_split_context::is_cleaned() const
+{
+    return async_learn_task == nullptr && check_state_task == nullptr;
+}
 
 } // namespace replication
 } // namespace dsn

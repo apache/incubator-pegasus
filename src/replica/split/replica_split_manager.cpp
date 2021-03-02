@@ -121,6 +121,12 @@ void replica_split_manager::child_init_replica(gpid parent_gpid,
     _replica->_split_states.parent_gpid = parent_gpid;
     _replica->_split_states.is_prepare_list_copied = false;
     _replica->_split_states.is_caught_up = false;
+    _replica->_split_states.check_state_task =
+        tasking::enqueue(LPC_PARTITION_SPLIT,
+                         tracker(),
+                         std::bind(&replica_split_manager::child_check_split_context, this),
+                         get_gpid().thread_hash(),
+                         std::chrono::seconds(3));
     // TODO(heyuchen): add other states
 
     ddebug_replica(
@@ -135,6 +141,34 @@ void replica_split_manager::child_init_replica(gpid parent_gpid,
     if (ec != ERR_OK) {
         child_handle_split_error("parent not exist when execute parent_prepare_states");
     }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_split_manager::child_check_split_context() // on child partition
+{
+    FAIL_POINT_INJECT_F("replica_child_check_split_context", [](dsn::string_view) {});
+
+    if (status() != partition_status::PS_PARTITION_SPLIT) {
+        derror_replica("wrong status({})", enum_to_string(status()));
+        _replica->_split_states.check_state_task = nullptr;
+        return;
+    }
+    // let parent partition check its status
+    error_code ec = _stub->split_replica_exec(
+        LPC_PARTITION_SPLIT,
+        _replica->_split_states.parent_gpid,
+        std::bind(&replica_split_manager::parent_check_states, std::placeholders::_1));
+    if (ec != ERR_OK) {
+        child_handle_split_error("check_child_state failed because parent gpid is invalid");
+        return;
+    }
+
+    _replica->_split_states.check_state_task =
+        tasking::enqueue(LPC_PARTITION_SPLIT,
+                         tracker(),
+                         std::bind(&replica_split_manager::child_check_split_context, this),
+                         get_gpid().thread_hash(),
+                         std::chrono::seconds(3));
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

@@ -244,7 +244,11 @@ public:
     bool is_caught_up{false};
 
     // child replica async learn parent states
-    dsn::task_ptr async_learn_task;
+    task_ptr async_learn_task;
+
+    // partition split states checker, start when initialize child replica
+    // see more in function `child_check_split_context` and `parent_check_states`
+    task_ptr check_state_task;
 };
 
 //---------------inline impl----------------------------------------------------------------

@@ -202,6 +202,21 @@ public:
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
+    void test_child_init_replica()
+    {
+        _child_replica = stub->generate_replica(
+            _app_info, CHILD_GPID, partition_status::PS_INACTIVE, INIT_BALLOT);
+        _child_split_mgr = make_unique<replica_split_manager>(_child_replica.get());
+        _child_split_mgr->child_init_replica(PARENT_GPID, PRIMARY, INIT_BALLOT);
+        // check_state_task will cost 3 seconds, cancel it immediatly
+        bool finished = false;
+        _child_replica->_split_states.check_state_task->cancel(false, &finished);
+        if (finished) {
+            _child_replica->_split_states.check_state_task = nullptr;
+        }
+        _child_replica->tracker()->wait_outstanding_tasks();
+    }
+
     bool test_parent_check_states()
     {
         bool flag = _parent_split_mgr->parent_check_states();
@@ -524,6 +539,16 @@ TEST_F(replica_split_test, parent_start_split_tests)
             ASSERT_EQ(stub->get_replica(CHILD_GPID)->status(), partition_status::PS_INACTIVE);
         }
     }
+}
+
+// child_init_replica test
+TEST_F(replica_split_test, child_init_replica_test)
+{
+    fail::cfg("replica_stub_split_replica_exec", "return()");
+    test_child_init_replica();
+    ASSERT_EQ(_child_replica->status(), partition_status::PS_PARTITION_SPLIT);
+    ASSERT_FALSE(child_is_prepare_list_copied());
+    ASSERT_FALSE(child_is_caught_up());
 }
 
 // parent_check_states tests

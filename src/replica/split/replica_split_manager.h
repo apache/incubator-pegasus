@@ -123,6 +123,8 @@ private:
 
     // return true if parent status is valid
     bool parent_check_states();
+    // check if child status is valid
+    void child_check_split_context();
 
     // parent reset child information when partition split failed
     void parent_cleanup_split_context();
