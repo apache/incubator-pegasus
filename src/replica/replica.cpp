@@ -174,6 +174,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 {
     if (!_access_controller->allowed(request)) {
         response_client_read(request, ERR_ACL_DENY);
+        return;
     }
 
     CHECK_REQUEST_IF_SPLITTING(read)
