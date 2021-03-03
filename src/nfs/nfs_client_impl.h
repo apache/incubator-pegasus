@@ -24,17 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
 #pragma once
+
 #include <vector>
 #include <deque>
+#include <iostream>
 #include <dsn/tool-api/task_tracker.h>
 #include <dsn/tool-api/zlocks.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
@@ -42,14 +36,41 @@
 #include <dsn/utility/defer.h>
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/utility/flags.h>
-#include "nfs_client.h"
+#include <dsn/tool-api/async_calls.h>
+
+#include "nfs_types.h"
+#include "nfs_code_definition.h"
 
 namespace dsn {
 namespace service {
 
 using TokenBucket = folly::BasicTokenBucket<std::chrono::steady_clock>;
 
-class nfs_client_impl : public ::dsn::service::nfs_client
+template <typename TCallback>
+task_ptr async_nfs_get_file_size(const get_file_size_request &request,
+                                 TCallback &&callback,
+                                 std::chrono::milliseconds timeout,
+                                 rpc_address server_addr)
+{
+    return rpc::call(server_addr,
+                     RPC_NFS_GET_FILE_SIZE,
+                     request,
+                     nullptr,
+                     std::forward<TCallback>(callback),
+                     timeout);
+}
+
+template <typename TCallback>
+task_ptr async_nfs_copy(const copy_request &request,
+                        TCallback &&callback,
+                        std::chrono::milliseconds timeout,
+                        rpc_address server_addr)
+{
+    return rpc::call(
+        server_addr, RPC_NFS_COPY, request, nullptr, std::forward<TCallback>(callback), timeout);
+}
+
+class nfs_client_impl
 {
 public:
     struct user_request;
