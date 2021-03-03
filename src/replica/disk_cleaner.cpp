@@ -32,22 +32,28 @@ DSN_DEFINE_uint64(
     gc_disk_error_replica_interval_seconds,
     7 * 24 * 3600 /*7day*/,
     "Duration of error replica being removed, which is in a directory with '.err' suffixed");
+DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
+
 DSN_DEFINE_uint64(
     "replication",
     gc_disk_garbage_replica_interval_seconds,
     24 * 3600 /*1day*/,
     "Duration of garbaged replica being removed, which is in a directory with '.gar' suffixed");
+DSN_TAG_VARIABLE(gc_disk_garbage_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64("replication",
                   gc_disk_migration_tmp_replica_interval_seconds,
                   24 * 3600 /*1day*/,
                   "Duration of disk-migration tmp replica being removed, which is in a directory "
                   "with '.tmp' suffixed");
+DSN_TAG_VARIABLE(gc_disk_migration_tmp_replica_interval_seconds, FT_MUTABLE);
+
 DSN_DEFINE_uint64("replication",
                   gc_disk_migration_origin_replica_interval_seconds,
                   7 * 24 * 3600 /*7day*/,
                   "Duration of disk-migration origin replica being removed, which is in a "
                   "directory with '.ori' suffixed");
+DSN_TAG_VARIABLE(gc_disk_migration_origin_replica_interval_seconds, FT_MUTABLE);
 
 const std::string kFolderSuffixErr = ".err";
 const std::string kFolderSuffixGar = ".gar";
