@@ -37,7 +37,7 @@ jobs:
     needs: lint
     runs-on: self-hosted
     container:
-      image: apachepegasus/ci-env
+      image: registry.cn-beijing.aliyuncs.com/apachepegasus/thirdparties-bin:ubuntu1804
       env:
         CCACHE_DIR: /tmp/ccache/pegasus
         CCACHE_MAXSIZE: 10G
@@ -45,14 +45,19 @@ jobs:
         # Place ccache compilation intermediate results in host memory, that's shared among containers.
         - /tmp/ccache/pegasus:/tmp/ccache/pegasus
       # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
-      options: --mount type=tmpfs,destination=/tmp/pegasus,tmpfs-size=10737418240 --cap-add=SYS_PTRACE
+      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+    defaults:
+      run:
+        shell: bash
+        working-directory: /root/rdsn
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
+      - name: Clone rdsn source
+        working-directory: /root
+        run: |
+          git clone --depth=1 https://hub.fastgit.org/XiaoMi/rdsn.git
       - name: Unpack prebuilt third-parties
         if: contains(github.event.pull_request.labels.*.name, 'thirdparty-modified') == false
-        run: unzip /root/pegasus-thirdparty-output.zip -d ./thirdparty
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: contains(github.event.pull_request.labels.*.name, 'thirdparty-modified')
         working-directory: thirdparty
@@ -63,4 +68,6 @@ jobs:
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
-        run: ./run.sh test --skip_thirdparty
+        run: |
+          export LD_LIBRARY_PATH=/root/rdsn/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
+          ./run.sh test --skip_thirdparty
