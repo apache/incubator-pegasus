@@ -44,7 +44,7 @@ type ScanCommand struct {
 func (s *ScanCommand) IterateAll(rootCtx *Context) error {
 	hashkey, err := rootCtx.HashKeyEnc.EncodeAll(s.HashKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid hashkey: %s", err)
 	}
 
 	var startSortKey, stopSortKey, filterPattern []byte

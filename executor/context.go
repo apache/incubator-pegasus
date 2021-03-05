@@ -108,15 +108,17 @@ func readPegasusArgs(ctx *Context, args []string) ([][]byte, error) {
 func printPegasusRecord(ctx *Context, hashKey, sortKey, value []byte) error {
 	hashKeyStr, err := ctx.HashKeyEnc.DecodeAll(hashKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid Pegasus HashKey: %s", err)
 	}
 	sortkeyStr, err := ctx.SortKeyEnc.DecodeAll(sortKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid Pegasus SortKey: %s", err)
 	}
 	valueStr, err := ctx.ValueEnc.DecodeAll(value)
 	if err != nil {
-		return err
+		bytesEnc := util.NewEncoder("javabytes")
+		valueStr, _ := bytesEnc.DecodeAll(value)
+		return fmt.Errorf("invalid Pegasus Value: %s [SortKey: \"%s\"]\nValue: [JAVABYTES]\n%s", err, sortKey, valueStr)
 	}
 	fmt.Fprintf(ctx, "%s : %s : %s\n", hashKeyStr, sortkeyStr, valueStr)
 	return nil
