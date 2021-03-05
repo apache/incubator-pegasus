@@ -348,6 +348,18 @@ bool run(const char *config_file,
          bool is_server,
          std::string &app_list)
 {
+    // We put the loading of configuration at the beginning of this func.
+    // Because in dsn_global_init(), it calls perf_counters::instance(), which calls
+    // shared_io_service::instance(). And in the cstor of shared_io_service, it calls
+    // dsn_config_get_value_uint64() to load the corresponding configs. That will make
+    // dsn_config_get_value_uint64() get wrong value if we put dsn_config_load at behind of
+    // dsn_global_init()
+    if (!dsn_config_load(config_file, config_arguments)) {
+        printf("Fail to load config file %s\n", config_file);
+        return false;
+    }
+    dsn::flags_initialize();
+
     dsn_global_init();
     dsn_core_init();
     ::dsn::task::set_tls_dsn_context(nullptr, nullptr);
@@ -357,13 +369,6 @@ bool run(const char *config_file,
     dsn_all.tool = nullptr;
     dsn_all.engine = &::dsn::service_engine::instance();
     dsn_all.magic = 0xdeadbeef;
-
-    if (!dsn_config_load(config_file, config_arguments)) {
-        printf("Fail to load config file %s\n", config_file);
-        return false;
-    }
-
-    dsn::flags_initialize();
 
     // pause when necessary
     if (dsn_config_get_value_bool("core",

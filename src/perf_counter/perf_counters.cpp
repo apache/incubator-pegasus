@@ -46,6 +46,12 @@ namespace dsn {
 
 perf_counters::perf_counters()
 {
+    // make shared_io_service destructed after perf_counters,
+    // because shared_io_service will destruct the timer created by perf_counters
+    // It will produce heap-use-after-free error if shared_io_service destructed in front of
+    // perf_counters
+    tools::shared_io_service::instance();
+
     _perf_counters_cmd = command_manager::instance().register_command(
         {"perf-counters"},
         "perf-counters - query perf counters, filtered by OR of POSIX basic regular expressions",
