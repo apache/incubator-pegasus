@@ -40,10 +40,6 @@ namespace tools {
 
 void nativerun::install(service_spec &spec)
 {
-    if (0 == strlen(FLAGS_aio_factory_name)) {
-        FLAGS_aio_factory_name = "dsn::tools::native_aio_provider";
-    }
-
     if (spec.env_factory_name == "")
         spec.env_factory_name = ("dsn::env_provider");
 
@@ -105,5 +101,5 @@ void nativerun::install(service_spec &spec)
 }
 
 void nativerun::run() { tool_app::run(); }
-}
-} // end namespace dsn::tools
+} // namespace tools
+} // namespace dsn

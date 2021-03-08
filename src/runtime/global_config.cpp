@@ -47,8 +47,6 @@
 
 namespace dsn {
 
-DSN_DEFINE_string("core", aio_factory_name, "", "asynchonous file system provider");
-
 static bool build_client_network_confs(const char *section,
                                        /*out*/ network_client_configs &nss,
                                        network_client_configs *default_spec)

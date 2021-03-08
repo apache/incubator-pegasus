@@ -26,6 +26,7 @@
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/tool-api/aio_task.h>
+#include <dsn/utility/flags.h>
 
 #include "disk_engine.h"
 #include "sim_aio_provider.h"
@@ -41,6 +42,11 @@ DEFINE_TASK_CODE_AIO(LPC_AIO_BATCH_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFA
 const char *native_aio_provider = "dsn::tools::native_aio_provider";
 DSN_REGISTER_COMPONENT_PROVIDER(native_linux_aio_provider, native_aio_provider);
 DSN_REGISTER_COMPONENT_PROVIDER(sim_aio_provider, "dsn::tools::sim_aio_provider");
+
+DSN_DEFINE_string("core",
+                  aio_factory_name,
+                  native_aio_provider,
+                  "asynchonous file system provider");
 
 //----------------- disk_file ------------------------
 aio_task *disk_write_queue::unlink_next_workload(void *plength)
@@ -146,12 +152,8 @@ disk_engine::disk_engine()
 {
     aio_provider *provider = utils::factory_store<aio_provider>::create(
         FLAGS_aio_factory_name, dsn::PROVIDER_TYPE_MAIN, this);
-    // use native_aio_provider in default
     if (nullptr == provider) {
-        derror_f("The config value of aio_factory_name is invalid, use {} in default",
-                 native_aio_provider);
-        provider = utils::factory_store<aio_provider>::create(
-            native_aio_provider, dsn::PROVIDER_TYPE_MAIN, this);
+        dassert_f(false, "The config value of aio_factory_name is invalid");
     }
     _provider.reset(provider);
 }

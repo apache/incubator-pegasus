@@ -198,6 +198,4 @@ CONFIG_FLD_STRING(rwlock_nr_factory_name, "", "non-recurisve rwlock provider")
 CONFIG_FLD_STRING(semaphore_factory_name, "", "semaphore provider")
 CONFIG_FLD_STRING(logging_factory_name, "", "logging provider")
 CONFIG_END
-
-extern const char *FLAGS_aio_factory_name;
 } // namespace dsn
