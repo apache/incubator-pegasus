@@ -1569,5 +1569,45 @@ std::string backup_service::get_backup_path(const std::string &policy_name, int6
     ss << _policy_meta_root << "/" << policy_name << "/" << backup_id;
     return ss.str();
 }
+
+void backup_service::start_backup_app(start_backup_app_rpc rpc)
+{
+    const start_backup_app_request &request = rpc.request();
+    start_backup_app_response &response = rpc.response();
+
+    int32_t app_id = request.app_id;
+    std::shared_ptr<backup_engine> engine = std::make_shared<backup_engine>(this);
+    error_code err = engine->init_backup(app_id);
+    if (err != ERR_OK) {
+        response.err = err;
+        response.hint_message = fmt::format("Backup failed: invalid app id {}.", app_id);
+        return;
+    }
+
+    err = engine->set_block_service(request.backup_provider_type);
+    if (err != ERR_OK) {
+        response.err = err;
+        response.hint_message = fmt::format("Backup failed: invalid backup_provider_type {}.",
+                                            request.backup_provider_type);
+        return;
+    }
+
+    for (const auto &it : _backup_states) {
+        const auto &tmp_engine = it.second;
+        if (app_id == tmp_engine->get_backup_app_id() && tmp_engine->is_backing_up()) {
+            response.err = ERR_INVALID_STATE;
+            response.hint_message = fmt::format("Backup failed: app {} is backing up now.", app_id);
+            return;
+        }
+    }
+
+    err = engine->run();
+    if (err == ERR_OK) {
+        int64_t backup_id = engine->get_current_backup_id();
+        _backup_states.emplace(backup_id, std::move(engine));
+    }
+    response.err = err;
+}
+
 } // namespace replication
 } // namespace dsn

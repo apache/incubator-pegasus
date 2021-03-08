@@ -27,6 +27,7 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <gtest/gtest_prod.h>
 
+#include "backup_engine.h"
 #include "meta_data.h"
 
 namespace dsn {
@@ -42,6 +43,7 @@ typedef rpc_holder<configuration_query_backup_policy_request,
 typedef rpc_holder<configuration_modify_backup_policy_request,
                    configuration_modify_backup_policy_response>
     configuration_modify_backup_policy_rpc;
+typedef rpc_holder<start_backup_app_request, start_backup_app_response> start_backup_app_rpc;
 
 struct backup_info_status
 {
@@ -339,6 +341,7 @@ public:
     void add_backup_policy(dsn::message_ex* msg);
     void query_backup_policy(query_backup_policy_rpc rpc);
     void modify_backup_policy(configuration_modify_backup_policy_rpc rpc);
+    void start_backup_app(start_backup_app_rpc rpc);
 
     // compose the absolute path(AP) for policy
     // input:
@@ -375,10 +378,12 @@ private:
     meta_service *_meta_svc;
     server_state *_state;
 
-    // _lock is only used to lock _policy_states
+    // lock _policy_states and _backup_states.
     zlock _lock;
     std::map<std::string, std::shared_ptr<policy_context>>
         _policy_states; // policy_name -> policy_context
+    // backup_id -> backup_engine
+    std::unordered_map<int32_t, std::shared_ptr<backup_engine>> _backup_states;
 
     // the root of policy metas, stored on remote_storage(zookeeper)
     std::string _policy_meta_root;

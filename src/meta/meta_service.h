@@ -165,6 +165,9 @@ private:
     // meta control
     void on_control_meta_level(configuration_meta_control_rpc rpc);
     void on_start_recovery(configuration_recovery_rpc rpc);
+
+    // backup/restore
+    void on_start_backup_app(start_backup_app_rpc rpc);
     void on_start_restore(dsn::message_ex *req);
     void on_add_backup_policy(dsn::message_ex *req);
     void on_query_backup_policy(query_backup_policy_rpc policy_rpc);

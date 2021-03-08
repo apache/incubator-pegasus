@@ -154,3 +154,19 @@ struct configuration_query_restore_response
     2:list<dsn.error_code>  restore_status;
     3:list<i32>             restore_progress;
 }
+
+struct start_backup_app_request
+{
+    1:string    backup_provider_type;
+    2:i32       app_id;
+}
+
+struct start_backup_app_response
+{
+    // Possible error:
+    // - ERR_INVALID_STATE: app is not available or is backing up
+    // - ERR_INVALID_PARAMETERS: backup provider type is invalid
+    // - ERR_SERVICE_NOT_ACTIVE: meta doesn't enable backup service
+    1:dsn.error_code    err;
+    2:string            hint_message;
+}
