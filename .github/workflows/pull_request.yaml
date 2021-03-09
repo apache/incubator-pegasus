@@ -9,7 +9,7 @@ name: pull_request
 on:
   # run on each pull request
   pull_request:
-    types: [ synchronize, reopened, labeled ]
+    types: [ synchronize, opened ]
     branches:
       - master
       - 'v[0-9]+.*' # release branch
@@ -46,15 +46,8 @@ jobs:
         - /tmp/ccache/pegasus:/tmp/ccache/pegasus
       # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
       options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
-    defaults:
-      run:
-        shell: bash
-        working-directory: /root/rdsn
     steps:
-      - name: Clone rdsn source
-        working-directory: /root
-        run: |
-          git clone --depth=1 https://hub.fastgit.org/XiaoMi/rdsn.git
+      - uses: actions/checkout@v2
       - name: Unpack prebuilt third-parties
         if: contains(github.event.pull_request.labels.*.name, 'thirdparty-modified') == false
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
@@ -69,5 +62,5 @@ jobs:
         run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
         run: |
-          export LD_LIBRARY_PATH=/root/rdsn/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ./run.sh test --skip_thirdparty
