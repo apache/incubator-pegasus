@@ -1458,6 +1458,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     // only enable filter after correct pegasus_data_version set
     _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
+    _key_ttl_compaction_filter_factory->SetPartitionIndex(_gpid.get_partition_index());
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(_gpid.get_partition_index() - 1);
     _key_ttl_compaction_filter_factory->EnableFilter();
 
     parse_checkpoints();
@@ -2750,8 +2752,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     int32_t old_partition_version = _partition_version.exchange(partition_version);
     ddebug_replica(
         "update partition version from {} to {}", old_partition_version, partition_version);
-
-    // TODO(heyuchen): set filter _partition_version in further pr
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(partition_version);
 }
 
 ::dsn::error_code pegasus_server_impl::flush_all_family_columns(bool wait)
