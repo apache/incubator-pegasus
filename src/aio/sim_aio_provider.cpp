@@ -38,7 +38,7 @@ void sim_aio_provider::submit_aio_task(aio_task *aio)
     error_code err;
     uint32_t bytes;
 
-    err = aio_internal(aio, false, &bytes);
+    err = aio_internal(aio, &bytes);
     complete_io(aio, err, bytes);
 }
 

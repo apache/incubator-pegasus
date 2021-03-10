@@ -96,14 +96,11 @@ error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
 
 void native_linux_aio_provider::submit_aio_task(aio_task *aio_tsk)
 {
-    tasking::enqueue(aio_tsk->code(),
-                     aio_tsk->tracker(),
-                     [=]() { aio_internal(aio_tsk, true); },
-                     aio_tsk->hash());
+    tasking::enqueue(
+        aio_tsk->code(), aio_tsk->tracker(), [=]() { aio_internal(aio_tsk); }, aio_tsk->hash());
 }
 
 error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk,
-                                                   bool async,
                                                    /*out*/ uint32_t *pbytes /*= nullptr*/)
 {
     aio_context *aio_ctx = aio_tsk->get_aio_context();
@@ -124,13 +121,7 @@ error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk,
         *pbytes = processed_bytes;
     }
 
-    if (async) {
-        complete_io(aio_tsk, err, processed_bytes);
-    } else {
-        utils::notify_event notify;
-        notify.notify();
-    }
-
+    complete_io(aio_tsk, err, processed_bytes);
     return err;
 }
 
