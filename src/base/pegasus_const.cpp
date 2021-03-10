@@ -88,4 +88,7 @@ const std::string ROCKSDB_ENV_SLOW_QUERY_THRESHOLD("replica.slow_query_threshold
 /// time threshold of each rocksdb iteration
 const std::string
     ROCKSDB_ITERATION_THRESHOLD_TIME_MS("replica.rocksdb_iteration_threshold_time_ms");
+
+/// true means compaction and scan will check partition_hash, otherwise false
+const std::string SPLIT_VALIDATE_PARTITION_HASH("replica.split.validate_partition_hash");
 } // namespace pegasus

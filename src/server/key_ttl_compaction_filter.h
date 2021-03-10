@@ -38,12 +38,14 @@ public:
                                uint32_t default_ttl,
                                bool enabled,
                                int32_t pidx,
-                               int32_t partition_version)
+                               int32_t partition_version,
+                               bool check_hash)
         : _pegasus_data_version(pegasus_data_version),
           _default_ttl(default_ttl),
           _enabled(enabled),
           _partition_index(pidx),
-          _partition_version(partition_version)
+          _partition_version(partition_version),
+          _check_partition_hash(check_hash)
     {
     }
 
@@ -74,7 +76,8 @@ public:
 
     bool check_if_stale_split_data(const rocksdb::Slice &key) const
     {
-        if (_partition_version < 0 || _partition_index > _partition_version) {
+        if (!_check_partition_hash || key.size() < 2 || _partition_version < 0 ||
+            _partition_index > _partition_version) {
             return false;
         }
         return !check_pegasus_key_hash(key, _partition_index, _partition_version);
@@ -87,6 +90,7 @@ private:
     mutable pegasus_value_generator _gen;
     int32_t _partition_index;
     int32_t _partition_version;
+    bool _check_partition_hash;
 };
 
 class KeyWithTTLCompactionFilterFactory : public rocksdb::CompactionFilterFactory
@@ -103,7 +107,8 @@ public:
                                            _default_ttl.load(),
                                            _enabled.load(),
                                            _partition_index.load(),
-                                           _partition_version.load()));
+                                           _partition_version.load(),
+                                           _check_partition_hash.load()));
     }
     const char *Name() const override { return "KeyWithTTLCompactionFilterFactory"; }
 
@@ -113,6 +118,10 @@ public:
     }
     void EnableFilter() { _enabled.store(true, std::memory_order_release); }
     void SetDefaultTTL(uint32_t ttl) { _default_ttl.store(ttl, std::memory_order_release); }
+    void SetCheckPartitionHash(bool check_hash)
+    {
+        _check_partition_hash.store(check_hash, std::memory_order_release);
+    }
     void SetPartitionIndex(int32_t pidx)
     {
         _partition_index.store(pidx, std::memory_order_release);
@@ -128,6 +137,7 @@ private:
     std::atomic_bool _enabled; // only process filtering when _enabled == true
     std::atomic<int32_t> _partition_index{0};
     std::atomic<int32_t> _partition_version{-1};
+    std::atomic_bool _check_partition_hash{false};
 };
 
 } // namespace server
