@@ -35,11 +35,8 @@ sim_aio_provider::sim_aio_provider(disk_engine *disk) : native_linux_aio_provide
 
 void sim_aio_provider::submit_aio_task(aio_task *aio)
 {
-    error_code err;
     uint32_t bytes;
-
-    err = aio_internal(aio, &bytes);
-    complete_io(aio, err, bytes);
+    aio_internal(aio, &bytes);
 }
 
 } // namespace aio
