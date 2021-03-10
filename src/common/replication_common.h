@@ -35,6 +35,9 @@ namespace replication {
 typedef std::unordered_map<::dsn::rpc_address, partition_status::type> node_statuses;
 typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
+typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
+    update_app_env_rpc;
+
 typedef rpc_holder<start_bulk_load_request, start_bulk_load_response> start_bulk_load_rpc;
 typedef rpc_holder<bulk_load_request, bulk_load_response> bulk_load_rpc;
 typedef rpc_holder<control_bulk_load_request, control_bulk_load_response> control_bulk_load_rpc;
@@ -43,9 +46,9 @@ typedef rpc_holder<query_bulk_load_request, query_bulk_load_response> query_bulk
 typedef rpc_holder<start_partition_split_request, start_partition_split_response> start_split_rpc;
 typedef rpc_holder<control_split_request, control_split_response> control_split_rpc;
 typedef rpc_holder<query_split_request, query_split_response> query_split_rpc;
+typedef rpc_holder<register_child_request, register_child_response> register_child_rpc;
 typedef rpc_holder<notify_stop_split_request, notify_stop_split_response> notify_stop_split_rpc;
-typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
-    update_app_env_rpc;
+typedef rpc_holder<query_child_state_request, query_child_state_response> query_child_state_rpc;
 
 class replication_options
 {
@@ -133,8 +136,6 @@ public:
 private:
     void sanity_check();
 };
-
-typedef rpc_holder<register_child_request, register_child_response> register_child_rpc;
 
 extern const char *partition_status_to_string(partition_status::type status);
 

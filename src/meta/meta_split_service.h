@@ -63,6 +63,9 @@ private:
     void notify_stop_split(notify_stop_split_rpc rpc);
     void do_cancel_partition_split(std::shared_ptr<app_state> app, notify_stop_split_rpc rpc);
 
+    // primary replica -> meta to query child state
+    void query_child_state(query_child_state_rpc rpc);
+
     static const std::string control_type_str(split_control_type::type type)
     {
         std::string str = "";

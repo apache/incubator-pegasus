@@ -551,5 +551,40 @@ void meta_split_service::do_cancel_partition_split(std::shared_ptr<app_state> ap
         _state->get_app_path(*app), std::move(value), on_write_storage_complete);
 }
 
+void meta_split_service::query_child_state(query_child_state_rpc rpc)
+{
+    const auto &request = rpc.request();
+    const auto &app_name = request.app_name;
+    const auto &parent_pid = request.pid;
+    auto &response = rpc.response();
+
+    zauto_read_lock l(app_lock());
+    std::shared_ptr<app_state> app = _state->get_app(app_name);
+    dassert_f(app != nullptr, "app({}) is not existed", app_name);
+    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+
+    if (app->partition_count == request.partition_count) {
+        response.err = ERR_INVALID_STATE;
+        derror_f("app({}) is not executing partition split", app_name);
+        return;
+    }
+
+    dassert_f(app->partition_count == request.partition_count * 2,
+              "app({}) has invalid partition_count",
+              app_name);
+
+    auto child_pidx = parent_pid.get_partition_index() + request.partition_count;
+    if (app->partitions[child_pidx].ballot == invalid_ballot) {
+        response.err = ERR_INVALID_STATE;
+        derror_f("app({}) parent partition({}) split has been canceled", app_name, parent_pid);
+        return;
+    }
+    ddebug_f(
+        "app({}) child partition({}.{}) is ready", app_name, parent_pid.get_app_id(), child_pidx);
+    response.err = ERR_OK;
+    response.__set_partition_count(app->partition_count);
+    response.__set_child_config(app->partitions[child_pidx]);
+}
+
 } // namespace replication
 } // namespace dsn

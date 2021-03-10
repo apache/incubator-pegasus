@@ -158,6 +158,11 @@ public:
     // secondary replica address who has paused or canceled split
     std::unordered_set<rpc_address> split_stopped_secondary;
 
+    // Used for partition split
+    // primary parent query child on meta_server task
+    // Called by `trigger_primary_parent_split`
+    dsn::task_ptr query_child_task;
+
     // Used for bulk load
     // group bulk_load response tasks of RPC_GROUP_BULK_LOAD for each secondary replica
     node_tasks group_bulk_load_pending_replies;

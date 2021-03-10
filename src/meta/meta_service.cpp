@@ -483,6 +483,8 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(
         RPC_CM_NOTIFY_STOP_SPLIT, "notify_stop_split", &meta_service::on_notify_stop_split);
     register_rpc_handler_with_rpc_holder(
+        RPC_CM_QUERY_CHILD_STATE, "query_child_state", &meta_service::on_query_child_state);
+    register_rpc_handler_with_rpc_holder(
         RPC_CM_START_BULK_LOAD, "start_bulk_load", &meta_service::on_start_bulk_load);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_CONTROL_BULK_LOAD, "control_bulk_load", &meta_service::on_control_bulk_load);
@@ -1078,6 +1080,19 @@ void meta_service::on_notify_stop_split(notify_stop_split_rpc rpc)
                      tracker(),
                      [this, rpc]() { _split_svc->notify_stop_split(std::move(rpc)); },
                      server_state::sStateHash);
+}
+
+void meta_service::on_query_child_state(query_child_state_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+    if (_split_svc == nullptr) {
+        derror_f("meta doesn't support partition split");
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+    _split_svc->query_child_state(std::move(rpc));
 }
 
 void meta_service::on_start_bulk_load(start_bulk_load_rpc rpc)

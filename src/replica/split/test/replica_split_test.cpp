@@ -425,6 +425,30 @@ public:
         _parent_replica->tracker()->wait_outstanding_tasks();
     }
 
+    void test_on_query_child_state_reply()
+    {
+        _parent_split_mgr->_partition_version.store(-1);
+
+        query_child_state_request req;
+        req.app_name = APP_NAME;
+        req.partition_count = OLD_PARTITION_COUNT;
+        req.pid = PARENT_GPID;
+
+        partition_configuration child_config;
+        child_config.pid = CHILD_GPID;
+        child_config.ballot = INIT_BALLOT + 1;
+        child_config.last_committed_decree = 0;
+
+        query_child_state_response resp;
+        resp.err = ERR_OK;
+        resp.__set_partition_count(NEW_PARTITION_COUNT);
+        resp.__set_child_config(child_config);
+
+        _parent_split_mgr->on_query_child_state_reply(ERR_OK, req, resp);
+        _parent_split_mgr->tracker()->wait_outstanding_tasks();
+        _child_split_mgr->tracker()->wait_outstanding_tasks();
+    }
+
     bool test_check_partition_hash(const int32_t &partition_version, const uint64_t &partition_hash)
     {
         _parent_split_mgr->_partition_version.store(partition_version);
@@ -474,7 +498,7 @@ public:
     {
         auto context = _parent_replica->_primary_states;
         return context.caught_up_children.size() == 0 && context.register_child_task == nullptr &&
-               context.sync_send_write_request == false &&
+               context.sync_send_write_request == false && context.query_child_task == nullptr &&
                context.split_stopped_secondary.size() == 0 && is_parent_not_in_split();
     }
 
@@ -947,6 +971,18 @@ TEST_F(replica_split_test, primary_parent_handle_stop_test)
         ASSERT_EQ(parent_stopped_split_size(), test.expected_size);
         ASSERT_EQ(primary_parent_not_in_split(), test.expected_all_stopped);
     }
+}
+
+TEST_F(replica_split_test, query_child_state_reply_test)
+{
+    fail::cfg("replica_init_group_check", "return()");
+    fail::cfg("replica_broadcast_group_check", "return()");
+    generate_child(true, true);
+    mock_primary_parent_split_context(true);
+
+    test_on_query_child_state_reply();
+    ASSERT_EQ(_parent_split_mgr->get_partition_version(), NEW_PARTITION_COUNT - 1);
+    ASSERT_TRUE(primary_parent_not_in_split());
 }
 
 TEST_F(replica_split_test, check_partition_hash_test)

@@ -142,6 +142,20 @@ public:
         return rpc.response().err;
     }
 
+    query_child_state_response query_child_state()
+    {
+        auto req = make_unique<query_child_state_request>();
+        req->__set_app_name(NAME);
+        req->__set_pid(dsn::gpid(app->app_id, PARENT_INDEX));
+        req->__set_partition_count(PARTITION_COUNT);
+
+        query_child_state_rpc rpc(std::move(req), RPC_CM_QUERY_CHILD_STATE);
+        split_svc().query_child_state(rpc);
+        wait_all();
+
+        return rpc.response();
+    }
+
     int32_t on_config_sync(configuration_query_by_node_request req)
     {
         auto request = make_unique<configuration_query_by_node_request>(req);
@@ -662,6 +676,38 @@ TEST_F(meta_split_service_test, notify_stop_split_test)
         }
 
         clear_app_partition_split_context();
+    }
+}
+
+TEST_F(meta_split_service_test, query_child_state_test)
+{
+    // Test case:
+    // - other partition is still canceling
+    // - app split canceled
+    // - child partition registered
+    struct query_child_state_test
+    {
+        bool mock_splitting;
+        bool mock_registered;
+        error_code expected_err;
+    } tests[] = {
+        {true, false, ERR_INVALID_STATE}, {false, false, ERR_INVALID_STATE}, {true, true, ERR_OK}};
+
+    for (const auto &test : tests) {
+        if (test.mock_splitting) {
+            mock_app_partition_split_context();
+        }
+        if (test.mock_registered) {
+            mock_child_registered();
+        }
+        auto resp = query_child_state();
+        ASSERT_EQ(resp.err, test.expected_err);
+        if (resp.err == ERR_OK) {
+            ASSERT_EQ(resp.partition_count, NEW_PARTITION_COUNT);
+        }
+        if (test.mock_splitting) {
+            clear_app_partition_split_context();
+        }
     }
 }
 
