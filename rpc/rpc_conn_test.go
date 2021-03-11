@@ -36,7 +36,7 @@ func TestRpcConn_CreateConnected(t *testing.T) {
 func TestRpcConn_ReadWriteNotReady(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRpcConn("www.baidu.com:80")
+	conn := NewRpcConn("0.0.0.0:8800")
 	err := conn.TryConnect()
 	assert.Nil(t, err)
 
@@ -57,7 +57,7 @@ func TestRpcConn_ReadWriteNotReady(t *testing.T) {
 func TestRpcConn_ReadCancelled(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	conn := NewRpcConn("www.baidu.com:80")
+	conn := NewRpcConn("0.0.0.0:8800")
 	err := conn.TryConnect()
 	assert.Nil(t, err)
 

@@ -19,10 +19,14 @@ import (
 	"gopkg.in/tomb.v2"
 )
 
+// NodeType represents the type of the NodeSession.
 type NodeType string
 
 const (
-	NodeTypeMeta    NodeType = "meta"
+	// NodeTypeMeta indicates it's a session to MetaServer.
+	NodeTypeMeta NodeType = "meta"
+
+	// NodeTypeReplica indicates it's a session to ReplicaServer.
 	NodeTypeReplica NodeType = "replica"
 
 	kDialInterval = time.Second * 60
@@ -79,13 +83,14 @@ type nodeSession struct {
 	lastWriteTime       int64
 }
 
-func withUnresponsiveHandler(s NodeSession, handler UnresponsiveHandler) NodeSession {
+// withUnresponsiveHandler enables the session to handle the event when a network connection becomes unresponsive.
+func withUnresponsiveHandler(s NodeSession, handler UnresponsiveHandler) {
 	ns, ok := s.(*nodeSession)
 	if !ok {
-		return nil
+		return
 	}
 	ns.unresponsiveHandler = handler
-	return ns
+	return
 }
 
 type requestListener struct {

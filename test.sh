@@ -16,7 +16,7 @@ if [ ! -f $PEGASUS_PKG.tar.gz ]; then
 fi
 cd $PEGASUS_PKG
 
-./run.sh start_onebox -w
+./run.sh start_onebox -m 2 -r 3 -w
 cd ../
 
 GO111MODULE=on make build
