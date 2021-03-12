@@ -167,20 +167,18 @@ TEST_F(replica_test, update_validate_partition_hash_test)
 {
     struct update_validate_partition_hash_test
     {
-        bool old_value;
         bool set_in_map;
+        bool old_value;
         std::string new_value;
         bool expected_value;
-    } tests[]{
-        {false, false, "false", false},
-        {false, true, "false", false},
-        {false, false, "true", false},
-        {false, true, "true", true},
-        {false, true, "ture", false},
-        {true, true, "false", false},
-        {true, true, "true", true},
-        {true, true, "flase", true},
-    };
+    } tests[]{{true, false, "false", false},
+              {true, false, "true", true},
+              {true, true, "true", true},
+              {true, true, "false", false},
+              {false, false, "", false},
+              {false, true, "", false},
+              {true, true, "flase", true},
+              {true, false, "ture", false}};
     for (const auto &test : tests) {
         update_validate_partition_hash(test.old_value, test.set_in_map, test.new_value);
         ASSERT_EQ(get_validate_partition_hash(), test.expected_value);

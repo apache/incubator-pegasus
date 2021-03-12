@@ -567,11 +567,12 @@ void replica::update_bool_envs(const std::map<std::string, std::string> &envs,
                                const std::string &name,
                                bool &value)
 {
-    bool new_value = value;
+    bool new_value = false;
     auto iter = envs.find(name);
     if (iter != envs.end()) {
         if (!buf2bool(iter->second, new_value)) {
             dwarn_replica("invalid value of env {}: \"{}\"", name, iter->second);
+            return;
         }
     }
     if (new_value != value) {
