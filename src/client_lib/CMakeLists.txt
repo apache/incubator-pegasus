@@ -46,6 +46,7 @@ add_dependencies(pegasus_client_static combine_lib)
 set_target_properties(pegasus_client_static
     PROPERTIES
     IMPORTED_LOCATION ${pegasus_client_static_lib})
+target_link_libraries(pegasus_client_static INTERFACE dsn_aio)
 install(FILES ${pegasus_client_static_lib} DESTINATION "lib")
 
 # link the shared lib of pegasus client
