@@ -318,6 +318,12 @@ void replica::execute_mutation(mutation_ptr &mu)
             dassert(_private_log != nullptr, "");
         }
         break;
+    case partition_status::PS_PARTITION_SPLIT:
+        if (_split_states.is_caught_up) {
+            dcheck_eq(_app->last_committed_decree() + 1, d);
+            err = _app->apply_mutation(mu);
+        }
+        break;
     case partition_status::PS_ERROR:
         break;
     default:
