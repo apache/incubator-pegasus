@@ -29,8 +29,7 @@ func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, key *base.Blob, value *base.Blob, expireTsSeconds int32) (*rrdb.UpdateResponse, error) {
-	update := &rrdb.UpdateRequest{Key: key, Value: value, ExpireTsSeconds: expireTsSeconds}
+func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, update *rrdb.UpdateRequest) (*rrdb.UpdateResponse, error) {
 	args := &rrdb.RrdbPutArgs{Update: update}
 
 	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_PUT")
