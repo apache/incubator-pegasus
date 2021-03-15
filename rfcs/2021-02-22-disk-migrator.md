@@ -1,10 +1,10 @@
-# Disk-Migrater
+# Disk-Migrator
 
 ## Design Goals
-Disk-Migrater is for migrating data among different local disks within one node. This feature is different from node-rebalance that is for migrating data among different nodes. 
+Disk-Migrator is used for migrating data among different local disks within one node. This feature is different from node-rebalance that is for migrating data among different nodes. 
 
 ## Flow Process
-Disk-Migrater operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to the targeted node that triggers the node to migrate the specified replica from one disk to another. The whole migration process is as follow: 
+Disk-Migrator operates by sending `RPC_REPLICA_DISK_MIGRATE` rpc to the targeted node that triggers the node to migrate the specified replica from one disk to another. The whole migration process is as follow: 
 
 ```
 +---------------+      +---------------+       +--------------+
@@ -47,13 +47,13 @@ In the process of migration, the original replica and the new replica will have 
 | COMPLETED  |error[gpid.pegasus.disk.migrate.ori]   |secondary[gpid.pegasus]   |
 
 **Note:** 
-* If replica status is `primary`, you need assign it `secondary`  manually via [propose](http://pegasus.apache.org/administration/rebalance).
-* Any process is failed, the operation will be failed and reverted the `IDEL` status.
+* If replica status is `primary`, you need assign it as `secondary` manually via [propose](http://pegasus.apache.org/administration/rebalance).
+* Once any process is failed, the operation will be failed and reverted the `IDEL` status.
 
 ## Client Command
 The client sending migrateRPC is [admin-cli](https://github.com/pegasus-kv/admin-cli) which supports `disk-capacity`, `disk-replica` and `disk-migrate` commands. 
 
-Use `help` to see the command manuals. The example:
+Use `help` to see the command manuals. For example:
 ```
 # query replica capacity
 disk-capacity -n node -d disk
