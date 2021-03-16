@@ -46,7 +46,7 @@ public:
     aio_context *prepare_aio_context(aio_task *tsk) override { return new aio_context; }
 
 protected:
-    error_code aio_internal(aio_task *aio, /*out*/ uint32_t *pbytes = nullptr);
+    error_code aio_internal(aio_task *aio);
 };
 
 } // namespace dsn

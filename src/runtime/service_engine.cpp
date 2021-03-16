@@ -284,4 +284,8 @@ std::string service_engine::get_queue_info(const std::vector<std::string> &args)
     return ss.str();
 }
 
+bool service_engine::is_simulator() const { return _simulator; }
+
+void service_engine::set_simulator() { _simulator = true; }
+
 } // namespace dsn

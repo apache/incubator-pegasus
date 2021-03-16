@@ -123,6 +123,8 @@ public:
 
     void start_node(service_app_spec &app_spec);
     const service_nodes_by_app_id &get_all_nodes() const { return _nodes_by_app_id; }
+    bool is_simulator() const;
+    void set_simulator();
 
 private:
     service_spec _spec;
@@ -130,6 +132,8 @@ private:
 
     dsn_handle_t _get_runtime_info_cmd;
     dsn_handle_t _get_queue_info_cmd;
+
+    bool _simulator;
 
     // <port, servicenode>
     typedef std::map<int, service_node *>

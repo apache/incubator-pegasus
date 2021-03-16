@@ -29,19 +29,25 @@
 #include <dsn/utility/flags.h>
 
 #include "disk_engine.h"
-#include "sim_aio_provider.h"
 #include "runtime/service_engine.h"
+#include "native_linux_aio_provider.h"
 
 using namespace dsn::utils;
 
 namespace dsn {
-using namespace aio;
-
 DEFINE_TASK_CODE_AIO(LPC_AIO_BATCH_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
 const char *native_aio_provider = "dsn::tools::native_aio_provider";
 DSN_REGISTER_COMPONENT_PROVIDER(native_linux_aio_provider, native_aio_provider);
-DSN_REGISTER_COMPONENT_PROVIDER(sim_aio_provider, "dsn::tools::sim_aio_provider");
+
+struct disk_engine_initializer
+{
+    disk_engine_initializer() { disk_engine::instance(); }
+};
+
+// make disk_engine destructed after service_engine, which is inited in dsn_global_init,
+// because service_engine relies on the former to close files.
+static disk_engine_initializer disk_engine_init;
 
 DSN_DEFINE_string("core",
                   aio_factory_name,
@@ -151,10 +157,7 @@ aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err,
 disk_engine::disk_engine()
 {
     aio_provider *provider = utils::factory_store<aio_provider>::create(
-        FLAGS_aio_factory_name, dsn::PROVIDER_TYPE_MAIN, this);
-    if (nullptr == provider) {
-        dassert_f(false, "The config value of aio_factory_name is invalid");
-    }
+        native_aio_provider, dsn::PROVIDER_TYPE_MAIN, this);
     _provider.reset(provider);
 }
 

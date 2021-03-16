@@ -35,6 +35,7 @@
 
 #include <dsn/tool/simulator.h>
 #include "scheduler.h"
+#include "service_engine.h"
 
 #include "env.sim.h"
 #include "runtime/task/task_engine.sim.h"
@@ -114,6 +115,8 @@ void simulator::install(service_spec &spec)
 
     // the new sim_clock is taken over by unique_ptr in clock instance
     utils::clock::instance()->mock(new sim_clock());
+
+    service_engine::instance().set_simulator();
 }
 
 void simulator::on_system_exit(sys_exit_type st)
