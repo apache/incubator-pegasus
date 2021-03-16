@@ -60,10 +60,21 @@ public:
 
     int64_t get_current_backup_id() const { return _cur_backup.backup_id; }
     int32_t get_backup_app_id() const { return _cur_backup.app_id; }
-    bool is_backing_up();
+    bool is_backing_up() const;
 
 private:
-    error_code get_app_stat(int32_t app_id, std::shared_ptr<app_state> &app);
+    error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
+    error_code backup_app_meta();
+    void backup_app_partition(const gpid &pid);
+    void on_backup_reply(error_code err,
+                         const backup_response &response,
+                         gpid pid,
+                         const rpc_address &primary);
+
+    const std::string get_policy_name() const
+    {
+        return "fake_policy_" + std::to_string(_cur_backup.backup_id);
+    }
 
     backup_service *_backup_service;
     dist::block_service::block_filesystem *_block_service;
@@ -71,7 +82,7 @@ private:
     dsn::task_tracker _tracker;
 
     // lock the following variables.
-    dsn::zlock _lock;
+    mutable dsn::zlock _lock;
     bool is_backup_failed;
     app_backup_info _cur_backup;
     // partition_id -> backup_status

@@ -50,6 +50,8 @@ typedef rpc_holder<register_child_request, register_child_response> register_chi
 typedef rpc_holder<notify_stop_split_request, notify_stop_split_response> notify_stop_split_rpc;
 typedef rpc_holder<query_child_state_request, query_child_state_response> query_child_state_rpc;
 
+typedef rpc_holder<backup_request, backup_response> backup_rpc;
+
 class replication_options
 {
 public:
