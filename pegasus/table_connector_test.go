@@ -355,31 +355,31 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// clear keyspace
 	results, allFetched, err := tb.MultiGetRange(context.Background(), hashKey, nil, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, allFetched)
 	for _, result := range results {
-		assert.Nil(t, tb.Del(context.Background(), hashKey, result.SortKey))
+		assert.NoError(t, tb.Del(context.Background(), hashKey, result.SortKey))
 	}
 	count, err := tb.SortKeyCount(context.Background(), hashKey)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, count, int64(0))
 
 	// empty database
 	results, allFetched, err = tb.MultiGet(context.Background(), hashKey, sortKeys)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, results)
 	assert.True(t, allFetched)
 	results, allFetched, err = tb.MultiGetRange(context.Background(), hashKey, nil, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, results)
 	assert.True(t, allFetched)
 
 	// === read after write === //
 
-	assert.Nil(t, tb.MultiSet(context.Background(), hashKey, sortKeys, values))
+	assert.NoError(t, tb.MultiSet(context.Background(), hashKey, sortKeys, values))
 
 	results, allFetched, err = tb.MultiGet(context.Background(), hashKey, sortKeys)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(results), len(values))
 	for i, result := range results {
 		assert.Equal(t, result.Value, values[i])
@@ -388,14 +388,14 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 	assert.True(t, allFetched)
 
 	count, err = tb.SortKeyCount(context.Background(), hashKey)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, count, int64(len(sortKeys)))
 
 	// test StartInclusive & StopInclusive
 
 	results, allFetched, err = tb.MultiGetRangeOpt(context.Background(), hashKey, sortKeys[0], sortKeys[len(sortKeys)-1],
 		&MultiGetOptions{StartInclusive: true, StopInclusive: true})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(results), len(values))
 	for i, result := range results {
 		assert.Equal(t, result.Value, values[i])
@@ -405,7 +405,7 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	results, allFetched, err = tb.MultiGetRangeOpt(context.Background(), hashKey, sortKeys[0], sortKeys[len(sortKeys)-1],
 		&MultiGetOptions{StartInclusive: false, StopInclusive: false})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(results), len(values)-2) // exclude start and stop
 	for i, result := range results {
 		assert.Equal(t, result.Value, values[i+1])
@@ -415,25 +415,25 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// test MaxFetchCount
 	results, allFetched, err = tb.MultiGetOpt(context.Background(), hashKey, sortKeys, &MultiGetOptions{MaxFetchCount: 4})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(results), 4)
 	assert.False(t, allFetched)
 
 	// test MaxFetchSize
 	results, allFetched, err = tb.MultiGetOpt(context.Background(), hashKey, sortKeys, &MultiGetOptions{MaxFetchSize: len(values[0])})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(results), 1)
 	assert.False(t, allFetched)
 
 	// ensure passing nil to `sortKeys` in MultiGet retrieves all entries
 	results, allFetched, err = tb.MultiGetOpt(context.Background(), hashKey, nil, &MultiGetOptions{})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(results), len(sortKeys))
 	assert.True(t, allFetched)
 
 	// test Reverse
 	results, allFetched, err = tb.MultiGetRangeOpt(context.Background(), hashKey, nil, nil, &MultiGetOptions{Reverse: true, MaxFetchCount: 1})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, allFetched, false)
 	assert.Equal(t, results, []*KeyValue{
 		{SortKey: sortKeys[len(sortKeys)-1], Value: values[len(sortKeys)-1]},
@@ -441,7 +441,7 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// test NoValue
 	results, allFetched, err = tb.MultiGetRangeOpt(context.Background(), hashKey, nil, nil, &MultiGetOptions{NoValue: true, MaxFetchCount: 1})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.False(t, allFetched)
 	assert.Equal(t, results, []*KeyValue{
 		{SortKey: sortKeys[0], Value: []byte("")},
@@ -449,10 +449,10 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 
 	// === ttl === //
 
-	assert.Nil(t, tb.MultiSetOpt(context.Background(), hashKey, sortKeys, values, 10*time.Second))
+	assert.NoError(t, tb.MultiSetOpt(context.Background(), hashKey, sortKeys, values, 10*time.Second))
 	for _, sortKey := range sortKeys {
 		ttl, err := tb.TTL(context.Background(), hashKey, sortKey)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Condition(t, func() bool {
 			// pegasus server may return a ttl slightly different
 			// from the value we set.
