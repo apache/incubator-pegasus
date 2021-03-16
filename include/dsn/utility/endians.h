@@ -13,11 +13,15 @@ namespace dsn {
 
 namespace endian {
 
+inline uint8_t hton(uint8_t v) { return v; }
+
 inline uint16_t hton(uint16_t v) { return htobe16(v); }
 
 inline uint32_t hton(uint32_t v) { return htobe32(v); }
 
 inline uint64_t hton(uint64_t v) { return htobe64(v); }
+
+inline uint8_t ntoh(uint8_t v) { return v; }
 
 inline uint16_t ntoh(uint16_t v) { return be16toh(v); }
 
@@ -34,6 +38,8 @@ public:
     data_output(char *p, size_t size) : _ptr(p), _end(p + size) {}
 
     explicit data_output(std::string &s) : data_output(&s[0], s.length()) {}
+
+    data_output &write_u8(uint8_t val) { return write_unsigned(val); }
 
     data_output &write_u16(uint16_t val) { return write_unsigned(val); }
 
@@ -70,6 +76,8 @@ class data_input
 {
 public:
     explicit data_input(string_view s) : _p(s.data()), _size(s.size()) {}
+
+    uint8_t read_u8() { return read_unsigned<uint8_t>(); }
 
     uint16_t read_u16() { return read_unsigned<uint16_t>(); }
 

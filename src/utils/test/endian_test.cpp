@@ -26,6 +26,13 @@ TEST(endian, write_and_read)
 
     {
         std::string data;
+        data.resize(1);
+        data_output(data).write_u8(100);
+        ASSERT_EQ(100, data_input(data).read_u8());
+    }
+
+    {
+        std::string data;
         data.resize(1000 * 8);
 
         data_output output(data);
