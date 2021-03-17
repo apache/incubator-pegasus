@@ -46,7 +46,6 @@ jobs:
       image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
     defaults:
       run:
-        working-directory: /root/incubator-pegasus
         shell: bash
     steps:
       - uses: actions/checkout@v2
