@@ -127,7 +127,8 @@ void replica_split_manager::child_init_replica(gpid parent_gpid,
                          std::bind(&replica_split_manager::child_check_split_context, this),
                          get_gpid().thread_hash(),
                          std::chrono::seconds(3));
-    // TODO(heyuchen): add other states
+    _replica->_split_states.splitting_start_ts_ns = dsn_now_ns();
+    _stub->_counter_replicas_splitting_recent_start_count->increment();
 
     ddebug_replica(
         "child initialize succeed, init_ballot={}, parent_gpid={}", init_ballot, parent_gpid);
@@ -279,6 +280,7 @@ void replica_split_manager::child_copy_prepare_list(
 
     // learning parent states is time-consuming, should execute in THREAD_POOL_REPLICATION_LONG
     decree last_committed_decree = plist->last_committed_decree();
+    _replica->_split_states.splitting_start_async_learn_ts_ns = dsn_now_ns();
     _replica->_split_states.async_learn_task =
         tasking::enqueue(LPC_PARTITION_SPLIT_ASYNC_LEARN,
                          tracker(),
@@ -435,6 +437,11 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
         return ec;
     }
 
+    _replica->_split_states.splitting_copy_file_count += plog_files.size();
+    _replica->_split_states.splitting_copy_file_size += total_file_size;
+    _stub->_counter_replicas_splitting_recent_copy_file_count->add(plog_files.size());
+    _stub->_counter_replicas_splitting_recent_copy_file_size->add(total_file_size);
+
     ddebug_replica("replay private_log files succeed, file count={}, app last_committed_decree={}",
                    plog_files.size(),
                    _replica->_app->last_committed_decree());
@@ -456,6 +463,8 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
         plist.prepare(mu, partition_status::PS_SECONDARY);
         ++count;
     }
+    _replica->_split_states.splitting_copy_mutation_count += count;
+    _stub->_counter_replicas_splitting_recent_copy_mutation_count->add(count);
     plist.commit(last_committed_decree, COMMIT_TO_DECREE_HARD);
     ddebug_replica(
         "apply in-memory mutations succeed, mutation count={}, app last_committed_decree={}",
@@ -1105,6 +1114,7 @@ void replica_split_manager::child_partition_active(
     _replica->_primary_states.last_prepare_decree_on_new_primary =
         _replica->_prepare_list->max_decree();
     _replica->update_configuration(config);
+    _stub->_counter_replicas_splitting_recent_split_succ_count->increment();
     ddebug_replica("child partition is active, status={}", enum_to_string(status()));
 }
 
@@ -1121,10 +1131,13 @@ void replica_split_manager::child_handle_split_error(
     const std::string &error_msg) // on child partition
 {
     if (status() != partition_status::PS_ERROR) {
-        derror_replica("child partition split failed because {}, parent = {}",
+        derror_replica("child partition split failed because {}, parent = {}, split_duration = "
+                       "{}ms, async_learn_duration = {}ms",
                        error_msg,
-                       _replica->_split_states.parent_gpid);
-        // TODO(heyuchen): add perf-counter (split_failed_count)
+                       _replica->_split_states.parent_gpid,
+                       _replica->_split_states.total_ms(),
+                       _replica->_split_states.async_learn_ms());
+        _stub->_counter_replicas_splitting_recent_split_fail_count->increment();
         _replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
     }
 }

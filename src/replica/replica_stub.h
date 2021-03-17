@@ -68,6 +68,7 @@ namespace test {
 class test_checker;
 }
 class cold_backup_context;
+class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
 typedef std::function<void(
@@ -472,6 +473,18 @@ private:
     perf_counter_wrapper _counter_bulk_load_download_file_size;
     perf_counter_wrapper _counter_bulk_load_max_ingestion_time_ms;
     perf_counter_wrapper _counter_bulk_load_max_duration_time_ms;
+
+    // <- Partition split Metrics ->
+    perf_counter_wrapper _counter_replicas_splitting_count;
+    perf_counter_wrapper _counter_replicas_splitting_max_duration_time_ms;
+    perf_counter_wrapper _counter_replicas_splitting_max_async_learn_time_ms;
+    perf_counter_wrapper _counter_replicas_splitting_max_copy_file_size;
+    perf_counter_wrapper _counter_replicas_splitting_recent_start_count;
+    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_count;
+    perf_counter_wrapper _counter_replicas_splitting_recent_copy_file_size;
+    perf_counter_wrapper _counter_replicas_splitting_recent_copy_mutation_count;
+    perf_counter_wrapper _counter_replicas_splitting_recent_split_fail_count;
+    perf_counter_wrapper _counter_replicas_splitting_recent_split_succ_count;
 
     dsn::task_tracker _tracker;
 };
