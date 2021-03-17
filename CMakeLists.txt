@@ -31,6 +31,7 @@ if(ENABLE_GCOV)
     message(STATUS "Appending code coverage compiler flags: ${COVERAGE_COMPILER_FLAGS}")
 
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
+    add_definitions(-DENABLE_GCOV=1)
 endif()
 
 # Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
