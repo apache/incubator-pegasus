@@ -298,6 +298,7 @@ private:
     friend class meta_duplication_service_test;
     friend class meta_load_balance_test;
     friend class meta_split_service;
+    friend class meta_split_service_test;
     friend class meta_service_test_app;
     friend class meta_test_base;
     friend class test::test_checker;

@@ -26,11 +26,13 @@
 
 #include <gtest/gtest.h>
 #include <dsn/service_api_c.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replica_envs.h>
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "meta/meta_split_service.h"
+#include "meta/meta_server_failure_detector.h"
 
 namespace dsn {
 namespace replication {
@@ -250,6 +252,90 @@ public:
             }
             return true;
         }
+    }
+
+    void initialize_meta_server_with_mock_app()
+    {
+        // initialize meta service
+        auto meta_svc = new fake_receiver_meta_service();
+        meta_svc->remote_storage_initialize();
+
+        // initialize server_state
+        auto state = meta_svc->_state;
+        state->initialize(meta_svc, meta_svc->_cluster_root + "/apps");
+        meta_svc->_started = true;
+        _ms.reset(meta_svc);
+
+        // initialize bulk load service
+        _ms->_split_svc = make_unique<meta_split_service>(_ms.get());
+
+        // mock splitting app
+        create_splitting_app_on_remote_stroage(state->_apps_root);
+        state->initialize_data_structure();
+
+        _ms->_failure_detector.reset(new meta_server_failure_detector(_ms.get()));
+        _ss = _ms->_state;
+    }
+
+    void create_splitting_app_on_remote_stroage(const std::string &app_root)
+    {
+        static const char *lock_state = "lock";
+        static const char *unlock_state = "unlock";
+        std::string path = app_root;
+
+        _ms->get_meta_storage()->create_node(
+            std::move(path), blob(lock_state, 0, strlen(lock_state)), [this, &app_root]() {
+                ddebug_f("create app root {}", app_root);
+            });
+        wait_all();
+
+        // create splitting app
+        app_info ainfo;
+        ainfo.app_id = 1;
+        ainfo.app_name = NAME;
+        ainfo.app_type = "pegasus";
+        ainfo.is_stateful = true;
+        ainfo.max_replica_count = 3;
+        ainfo.partition_count = NEW_PARTITION_COUNT;
+        ainfo.init_partition_count = PARTITION_COUNT;
+        ainfo.status = app_status::AS_AVAILABLE;
+
+        blob value = json::json_forwarder<app_info>::encode(ainfo);
+        _ms->get_meta_storage()->create_node(
+            app_root + "/" + boost::lexical_cast<std::string>(ainfo.app_id),
+            std::move(value),
+            [this, &app_root, &ainfo]() {
+                ddebug_f("create app({}) app_id={}, dir succeed", ainfo.app_name, ainfo.app_id);
+                for (int i = 0; i < ainfo.init_partition_count; ++i) {
+                    create_partition_configuration_on_remote_storage(app_root, ainfo.app_id, i);
+                }
+                create_partition_configuration_on_remote_storage(
+                    app_root, ainfo.app_id, CHILD_INDEX);
+            });
+        wait_all();
+
+        std::string root = app_root;
+        _ms->get_meta_storage()->set_data(
+            std::move(root), blob(unlock_state, 0, strlen(unlock_state)), []() {});
+        wait_all();
+    }
+
+    void create_partition_configuration_on_remote_storage(const std::string &app_root,
+                                                          const int32_t app_id,
+                                                          const int32_t pidx)
+    {
+        partition_configuration config;
+        config.max_replica_count = 3;
+        config.pid = gpid(app_id, pidx);
+        config.ballot = PARENT_BALLOT;
+        blob value = json::json_forwarder<partition_configuration>::encode(config);
+        _ms->get_meta_storage()->create_node(
+            app_root + "/" + boost::lexical_cast<std::string>(app_id) + "/" +
+                boost::lexical_cast<std::string>(pidx),
+            std::move(value),
+            [app_id, pidx, this]() {
+                ddebug_f("create app({}), partition({}.{}) dir succeed", NAME, app_id, pidx);
+            });
     }
 
     const std::string NAME = "split_table";
@@ -709,6 +795,24 @@ TEST_F(meta_split_service_test, query_child_state_test)
             clear_app_partition_split_context();
         }
     }
+}
+
+class meta_split_service_failover_test : public meta_split_service_test
+{
+public:
+    void SetUp() {}
+    void TearDown() { meta_test_base::TearDown(); }
+};
+
+TEST_F(meta_split_service_failover_test, half_split_test)
+{
+    initialize_meta_server_with_mock_app();
+    auto app = find_app(NAME);
+    auto split_states = app->helpers->split_states;
+    ASSERT_EQ(split_states.splitting_count, PARTITION_COUNT - 1);
+    ASSERT_EQ(split_states.status.find(PARENT_INDEX), split_states.status.end());
+    ASSERT_EQ(app->partition_count, NEW_PARTITION_COUNT);
+    ASSERT_EQ(app->partitions.size(), NEW_PARTITION_COUNT);
 }
 
 } // namespace replication
