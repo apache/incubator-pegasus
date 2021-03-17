@@ -49,8 +49,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
+      - name: Clone rdsn
+        run: git submodule update --init --recursive
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
