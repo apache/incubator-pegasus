@@ -14,10 +14,6 @@ on:
       - master
       - 'v[0-9]+.*' # release branch
       - ci-test # testing branch for github action
-    paths:
-      - 'rdsn/**'
-      - 'src/**'
-      - '.github/workflows/ci-pull-request.yaml'
   # for manually triggering workflow
   workflow_dispatch:
 
@@ -50,13 +46,11 @@ jobs:
       image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
     defaults:
       run:
-        working-directory: /root/incubator-pegasus
         shell: bash
     steps:
-      - name: Clone Apache Pegasus Source
-        working-directory: /root
-        run: |
-          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
