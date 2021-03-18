@@ -431,6 +431,9 @@ void replica::close()
 
         r = _potential_secondary_states.cleanup(true);
         dassert(r, "potential secondary context is not cleared");
+
+        r = _split_states.cleanup(true);
+        dassert_replica(r, "partition split context is not cleared");
     }
 
     if (_private_log != nullptr) {
