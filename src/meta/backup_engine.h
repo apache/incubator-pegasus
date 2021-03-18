@@ -70,6 +70,8 @@ private:
                          const backup_response &response,
                          gpid pid,
                          const rpc_address &primary);
+    void write_backup_info();
+    void complete_current_backup();
 
     const std::string get_policy_name() const
     {
