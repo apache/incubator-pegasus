@@ -1274,6 +1274,11 @@ void replica_stub::get_local_replicas(std::vector<replica_info> &replicas)
 
     for (auto &pairs : _replicas) {
         replica_ptr &rep = pairs.second;
+        // child partition should not sync config from meta server
+        // because it is not ready in meta view
+        if (rep->status() == partition_status::PS_PARTITION_SPLIT) {
+            continue;
+        }
         replica_info info;
         get_replica_info(info, rep);
         replicas.push_back(std::move(info));
@@ -1479,7 +1484,8 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
 void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
 {
     replica_ptr replica = get_replica(id);
-    if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY) {
+    if (replica != nullptr && replica->status() != partition_status::PS_POTENTIAL_SECONDARY &&
+        replica->status() != partition_status::PS_PARTITION_SPLIT) {
         if (replica->status() == partition_status::PS_INACTIVE &&
             dsn_now_ms() - replica->create_time_milliseconds() <
                 _options.gc_memory_replica_interval_ms) {
@@ -2637,7 +2643,7 @@ void replica_stub::create_child_replica(rpc_address primary_address,
 {
     replica_ptr child_replica = create_child_replica_if_not_found(child_gpid, &app, parent_dir);
     if (child_replica != nullptr) {
-        ddebug_f("create child replica ({}) succeed", child_gpid);
+        ddebug_f("app({}), create child replica ({}) succeed", app.app_name, child_gpid);
         tasking::enqueue(LPC_PARTITION_SPLIT,
                          child_replica->tracker(),
                          std::bind(&replica_split_manager::child_init_replica,
