@@ -117,7 +117,8 @@ void replica::assign_primary(configuration_update_request &proposal)
     }
 
     if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY &&
-        (status() != partition_status::PS_SECONDARY || _secondary_states.checkpoint_is_running)) {
+        (status() != partition_status::PS_SECONDARY || _secondary_states.checkpoint_is_running) &&
+        status() != partition_status::PS_PARTITION_SPLIT) {
         dwarn(
             "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
             name(),
