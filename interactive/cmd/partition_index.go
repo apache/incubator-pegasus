@@ -36,14 +36,16 @@ func init() {
 			if len(c.Args) != 1 {
 				return fmt.Errorf("invalid number (%d) of arguments for `partition-index`", len(c.Args))
 			}
-			err := executor.PartitionIndex(globalContext, c.Args[0])
+			err := executor.PartitionIndex(globalContext, c.Args.String("HASHKEY"))
 			if err != nil {
 				return err
 			}
 			c.App.Println(globalContext)
 			return nil
 		}),
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("HASHKEY", "HashKey")
+		},
 	}
 	interactive.App.AddCommand(rootCmd)
 }

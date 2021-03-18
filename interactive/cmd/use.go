@@ -41,7 +41,7 @@ func init() {
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
-			var tableName = c.Args[0]
+			var tableName = c.Args.String("TABLE")
 			var err error
 			globalContext.UseTable, err = globalContext.OpenTable(ctx, tableName)
 			if err != nil && strings.Contains(err.Error(), "ERR_OBJECT_NOT_FOUND") {
@@ -56,6 +56,8 @@ func init() {
 			c.App.Println("ok")
 			return nil
 		},
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("TABLE", "The table name to access.")
+		},
 	})
 }

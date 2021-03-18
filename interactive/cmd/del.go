@@ -36,8 +36,11 @@ func init() {
 			if len(c.Args) != 2 {
 				return fmt.Errorf("invalid number (%d) of arguments for `del`", len(c.Args))
 			}
-			return executor.Del(globalContext, c.Args[0], c.Args[1])
+			return executor.Del(globalContext, c.Args.String("HASHKEY"), c.Args.String("SORTKEY"))
 		})),
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("HASHKEY", "HashKey")
+			a.String("SORTKEY", "SortKey")
+		},
 	})
 }

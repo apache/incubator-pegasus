@@ -43,7 +43,7 @@ func init() {
 		Run: func(c *grumble.Context) error {
 			return resetEncoding(c, &globalContext.HashKeyEnc)
 		},
-		AllowArgs: true,
+		Args:      registerArgs,
 		Completer: encodingCompleter,
 	})
 
@@ -53,7 +53,7 @@ func init() {
 		Run: func(c *grumble.Context) error {
 			return resetEncoding(c, &globalContext.SortKeyEnc)
 		},
-		AllowArgs: true,
+		Args:      registerArgs,
 		Completer: encodingCompleter,
 	})
 
@@ -63,7 +63,7 @@ func init() {
 		Run: func(c *grumble.Context) error {
 			return resetEncoding(c, &globalContext.ValueEnc)
 		},
-		AllowArgs: true,
+		Args:      registerArgs,
 		Completer: encodingCompleter,
 	})
 
@@ -76,7 +76,7 @@ func resetEncoding(c *grumble.Context, encPtr *util.Encoder) error {
 		return fmt.Errorf("invalid number (%d) of arguments for `encoding %s`", len(c.Args), c.Command.Name)
 	}
 
-	encoding := c.Args[0]
+	encoding := c.Args.String("ENCODING")
 	enc := util.NewEncoder(encoding)
 	if enc == nil {
 		return fmt.Errorf("uncognized encoding: %s", encoding)
@@ -95,4 +95,8 @@ func encodingCompleter(prefix string, args []string) []string {
 		"javabytes",
 		"asciihex",
 	}, prefix)
+}
+
+func registerArgs(a *grumble.Args) {
+	a.String("ENCODING", "The encoding from user string to raw bytes", grumble.Default("utf8"))
 }

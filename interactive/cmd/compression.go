@@ -34,7 +34,9 @@ func init() {
 			c.App.Println("ok")
 			return nil
 		},
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("ALGORITHM", "Compression algorithm. By default no compression is used.")
+		},
 	}
 
 	rootCmd.AddCommand(&grumble.Command{
@@ -48,7 +50,9 @@ func init() {
 
 			return nil
 		},
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("ALGORITHM", "Compression algorithm. By default no compression is used.")
+		},
 	})
 
 	interactive.App.AddCommand(rootCmd)

@@ -48,8 +48,10 @@ func init() {
 			}
 			return cmd.IterateAll(globalContext)
 		})),
-		Flags:     scanFlags,
-		AllowArgs: true,
+		Flags: scanFlags,
+		Args: func(a *grumble.Args) {
+			a.String("HASHKEY", "HashKey")
+		},
 	}
 
 	scanCmd.AddCommand(&grumble.Command{
@@ -64,8 +66,10 @@ func init() {
 			cmd.CountOnly = true
 			return cmd.IterateAll(globalContext)
 		})),
-		Flags:     scanFlags,
-		AllowArgs: true,
+		Flags: scanFlags,
+		Args: func(a *grumble.Args) {
+			a.String("HASHKEY", "HashKey")
+		},
 	})
 
 	interactive.App.AddCommand(scanCmd)
@@ -82,7 +86,7 @@ func newScanCommand(c *grumble.Context) (*executor.ScanCommand, error) {
 	prefix := c.Flags.String("prefix")
 	contains := c.Flags.String("contains")
 
-	cmd := &executor.ScanCommand{HashKey: c.Args[0]}
+	cmd := &executor.ScanCommand{HashKey: c.Args.String("HASHKEY")}
 	if from != "" {
 		cmd.From = &from
 	}

@@ -36,8 +36,12 @@ func init() {
 			if len(c.Args) != 3 {
 				return fmt.Errorf("invalid number (%d) of arguments for `set`", len(c.Args))
 			}
-			return executor.Set(globalContext, c.Args[0], c.Args[1], c.Args[2])
+			return executor.Set(globalContext, c.Args.String("HASHKEY"), c.Args.String("SORTKEY"), c.Args.String("VALUE"))
 		})),
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("HASHKEY", "HashKey")
+			a.String("SORTKEY", "SortKey")
+			a.String("VALUE", "Value of the record")
+		},
 	})
 }

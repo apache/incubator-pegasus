@@ -20,15 +20,11 @@
 package cmd
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"os"
 	"pegic/executor"
 	"strings"
-	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/desertbit/grumble"
 )
@@ -43,24 +39,6 @@ func Init(metaAddrs []string) error {
 	}
 
 	globalContext = executor.NewContext(os.Stdout, metaAddrs)
-
-	// Prints cluster name
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
-	resp, err := globalContext.Meta.QueryClusterInfo(ctx, &admin.ClusterInfoRequest{})
-	if err != nil {
-		if err == context.DeadlineExceeded {
-			fmt.Fprintln(globalContext, "Failed to connect to cluster, please check your network connectivity to the specified address.")
-			return err
-		}
-		return err
-	}
-	for idx, key := range resp.Keys {
-		if key == "zookeeper_root" {
-			fmt.Fprintln(globalContext, resp.Values[idx])
-		}
-	}
-
 	return nil
 }
 

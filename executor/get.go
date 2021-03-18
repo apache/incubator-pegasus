@@ -45,5 +45,16 @@ func Get(rootCtx *Context, hashKeyStr, sortkeyStr string) error {
 		return err
 	}
 	fmt.Fprintf(rootCtx, "\n%s : %s : %s\n", hashKeyStr, sortkeyStr, value)
+
+	ttl, err := rootCtx.UseTable.TTL(ctx, pegasusArgs[0], pegasusArgs[1])
+	if err != nil {
+		return err
+	}
+	if ttl == -1 {
+		fmt.Fprintf(rootCtx, "TTL(Time-To-Live) is not set\n")
+	} else {
+		fmt.Fprintf(rootCtx, "TTL(Time-To-Live) : %d seconds\n", ttl)
+	}
+
 	return nil
 }
