@@ -132,6 +132,8 @@ private:
     void child_handle_split_error(const std::string &error_msg);
     // child handle error while async learn parent states
     void child_handle_async_learn_error();
+    // parent reset its split context and let child handle error
+    void parent_handle_split_error(const std::string &child_err_msg, bool parent_clear_sync);
 
     // called by `on_config_sync` in `replica_config.cpp`
     // primary parent start or stop split according to meta_split_status
