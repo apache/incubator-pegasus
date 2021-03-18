@@ -773,6 +773,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
                   _config.ballot,
                   result.to_string());
         }
+        _split_mgr->parent_cleanup_split_context();
     }
     _last_config_change_time_ms = dsn_now_ms();
     dassert(max_prepared_decree() >= last_committed_decree(),
