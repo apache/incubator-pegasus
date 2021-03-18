@@ -100,11 +100,21 @@ function check_bit()
     fi
 }
 
-function pack_system_lib()
-{
+function need_system_lib() {
+    # return if system libname is not empty, if false, it means this library is not a dependency
+    libname=$(ldd ./DSN_ROOT/bin/pegasus_"$1"/pegasus_"$1" 2>/dev/null | grep "lib${2}\.so")
+    [ -n "${libname}" ]
+}
+
+function pack_system_lib() {
     local package_path=$1
     local package_type=$2
     local lib_name=$3
+
+    if ! need_system_lib "${package_type}" "${lib_name}"; then
+        echo "ERROR: ${lib_name} is not a required dependency, skip packaging this lib"
+        return;
+    fi
 
     SYS_LIB_PATH=$(get_system_lib "${package_type}" "${lib_name}")
     if [ -z "${SYS_LIB_PATH}" ]; then

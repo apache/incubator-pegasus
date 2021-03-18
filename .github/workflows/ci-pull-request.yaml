@@ -55,6 +55,12 @@ jobs:
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
+      -
+        name: Packaging Server
+        run: ./run.sh pack_server
+      -
+        name: Packaging Tools
+        run: ./run.sh pack_tools
       - name: Unit Testing
         run: |
           source ./config_hdfs.sh
