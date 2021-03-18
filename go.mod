@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/apache/thrift v0.13.0
+	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0

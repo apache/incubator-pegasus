@@ -26,11 +26,11 @@ func TestPegasusClient_OpenTable(t *testing.T) {
 	defer client.Close()
 
 	tb1, err := client.OpenTable(context.Background(), "temp")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, tb1)
 
 	tb2, err := client.OpenTable(context.Background(), "temp")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, tb1)
 
 	// must reuse previous connection
@@ -40,7 +40,8 @@ func TestPegasusClient_OpenTable(t *testing.T) {
 	assert.NotNil(t, pclient.findTable("temp"))
 
 	tb, err := client.OpenTable(context.Background(), "table_not_exists")
-	assert.NotNil(t, err)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ERR_OBJECT_NOT_FOUND")
 	assert.Nil(t, tb)
 }
 

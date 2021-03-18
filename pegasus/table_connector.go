@@ -311,6 +311,20 @@ func WrapError(err error, op OpType) error {
 	return nil
 }
 
+func (p *pegasusTableConnector) wrapPartitionError(err error, gpid *base.Gpid, replica *session.ReplicaSession, opType OpType) error {
+	err = WrapError(err, opType)
+	if err == nil {
+		return nil
+	}
+	perr := err.(*PError)
+	if perr.Err != nil {
+		perr.Err = fmt.Errorf("%s [%s, %s, table=%s]", perr.Err, gpid, replica, p.tableName)
+	} else {
+		perr.Err = fmt.Errorf("[%s, %s, table=%s]", gpid, replica, p.tableName)
+	}
+	return perr
+}
+
 func (p *pegasusTableConnector) Get(ctx context.Context, hashKey []byte, sortKey []byte) ([]byte, error) {
 	res, err := p.runPartitionOp(ctx, hashKey, &op.Get{HashKey: hashKey, SortKey: sortKey}, OpGet)
 	if err != nil {
@@ -569,19 +583,17 @@ func (p *pegasusTableConnector) Incr(ctx context.Context, hashKey []byte, sortKe
 }
 
 func (p *pegasusTableConnector) runPartitionOp(ctx context.Context, hashKey []byte, req op.Request, optype OpType) (interface{}, error) {
-	res, err := func() (interface{}, error) {
-		// validate arguments
-		if err := req.Validate(); err != nil {
-			return 0, err
-		}
-		gpid, part := p.getPartition(hashKey)
-		res, err := req.Run(ctx, gpid, part)
-		if err = p.handleReplicaError(err, gpid, part); err != nil {
-			return nil, err
-		}
-		return res, nil
-	}()
-	return res, WrapError(err, optype)
+	// validate arguments
+	if err := req.Validate(); err != nil {
+		return 0, WrapError(err, optype)
+	}
+	gpid, part := p.getPartition(hashKey)
+	res, err := retryFailOver(ctx, func() (confUpdated bool, result interface{}, err error) {
+		result, err = req.Run(ctx, gpid, part)
+		confUpdated, err = p.handleReplicaError(err, part)
+		return
+	})
+	return res, p.wrapPartitionError(err, gpid, part, optype)
 }
 
 func (p *pegasusTableConnector) BatchGet(ctx context.Context, keys []CompositeKey) (values [][]byte, err error) {
@@ -637,22 +649,22 @@ func (p *pegasusTableConnector) Close() error {
 	return nil
 }
 
-func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, replica *session.ReplicaSession) error {
+func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.ReplicaSession) (bool, error) {
 	if err != nil {
 		confUpdate := false
 
 		switch err {
 		case base.ERR_OK:
 			// should not happen
-			return nil
+			return false, nil
 
 		case base.ERR_TIMEOUT:
 		case context.DeadlineExceeded:
+		case context.Canceled:
 			// timeout will not trigger a configuration update
 
 		case base.ERR_NOT_ENOUGH_MEMBER:
 		case base.ERR_CAPACITY_EXCEEDED:
-			// confUpdate later
 
 		case base.ERR_BUSY:
 			// throttled by server, skip confUpdate
@@ -675,16 +687,9 @@ func (p *pegasusTableConnector) handleReplicaError(err error, gpid *base.Gpid, r
 			p.tryConfUpdate(err, replica)
 		}
 
-		// add gpid and remote address to error
-		perr := WrapError(err, 0).(*PError)
-		if perr.Err != nil {
-			perr.Err = fmt.Errorf("%s [%s, %s, table=\"%s\"]", perr.Err, gpid, replica, p.tableName)
-		} else {
-			perr.Err = fmt.Errorf("[%s, %s, table=\"%s\"]", gpid, replica, p.tableName)
-		}
-		return perr
+		return confUpdate, err
 	}
-	return nil
+	return false, nil
 }
 
 // tryConfUpdate makes an attempt to update table configuration by querying meta server.
