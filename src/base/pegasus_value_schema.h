@@ -242,6 +242,6 @@ enum pegasus_data_version
 class pegasus_value_schema
 {
 public:
-    virtual ~pegasus_value_schema() = default;
+    virtual ~pegasus_value_schema() = 0;
 };
 } // namespace pegasus

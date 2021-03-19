@@ -20,6 +20,7 @@
 #include "pegasus_value_service.h"
 
 namespace pegasus {
+pegasus_value_schema::~pegasus_value_schema() = default;
 
 pegasus_value_schema *pegasus_value_service::get_value_schema(uint32_t meta_store_data_version,
                                                               dsn::string_view value) const
@@ -45,6 +46,10 @@ void pegasus_value_service::register_schema(pegasus_value_schema *schema)
     // TBD(zlw)
 }
 
+/**
+ * If someone wants to add a new data version, he only need to implement the new value schema,
+ * and register it here. No more other modifications.
+ */
 void register_value_schemas()
 {
     // TBD(zlw)
