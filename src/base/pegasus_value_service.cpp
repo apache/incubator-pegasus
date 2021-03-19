@@ -25,16 +25,19 @@ pegasus_value_schema *pegasus_value_service::get_value_schema(uint32_t meta_stor
                                                               dsn::string_view value) const
 {
     // TBD(zlw)
+    return nullptr;
 }
 
 pegasus_value_schema *pegasus_value_service::get_value_schema(uint32_t version) const
 {
     // TBD(zlw)
+    return nullptr;
 }
 
 pegasus_value_schema *pegasus_value_service::get_latest_value_schema() const
 {
     // TBD(zlw)
+    return nullptr;
 }
 
 void pegasus_value_service::register_schema(pegasus_value_schema *schema)
