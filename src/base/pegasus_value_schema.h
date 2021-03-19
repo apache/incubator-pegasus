@@ -234,4 +234,29 @@ private:
     std::vector<rocksdb::Slice> _write_slices;
 };
 
+enum pegasus_data_version
+{
+    /// TBD(zlw):
+};
+
+struct generage_value_params
+{
+    // TBD(zlw):
+};
+
+class pegasus_value_schema
+{
+public:
+    virtual ~pegasus_value_schema() = default;
+
+    /// In order to keep high performance, this interface can use tricky code to avoid memory copy.
+    /// So the parameter type of value is std::string &&
+    virtual dsn::blob extract_user_data(std::string &&value) = 0;
+    virtual uint64_t extract_timetag(dsn::string_view value) = 0;
+    virtual uint32_t extract_expire_ts(dsn::string_view raw_value) = 0;
+
+    virtual pegasus_data_version get_data_version() = 0;
+    virtual void update_expire_ts(std::string &value, uint32_t new_expire_ts) = 0;
+    virtual rocksdb::SliceParts generate_value(generage_value_params params) = 0;
+};
 } // namespace pegasus
