@@ -1592,29 +1592,64 @@ void backup_service::start_backup_app(start_backup_app_rpc rpc)
         return;
     }
 
-    for (const auto &it : _backup_states) {
-        const auto &tmp_engine = it.second;
-        if (app_id == tmp_engine->get_backup_app_id() && tmp_engine->is_backing_up()) {
-            response.err = ERR_INVALID_STATE;
-            response.hint_message = fmt::format("Backup failed: app {} is backing up now.", app_id);
-            return;
+    {
+        zauto_lock l(_lock);
+        for (const auto &backup : _backup_states) {
+            if (app_id == backup->get_backup_app_id() && backup->is_in_progress()) {
+                response.err = ERR_INVALID_STATE;
+                response.hint_message =
+                    fmt::format("Backup failed: app {} is actively being backed up.", app_id);
+                return;
+            }
         }
     }
 
     err = engine->start();
     if (err == ERR_OK) {
         int64_t backup_id = engine->get_current_backup_id();
-        _backup_states.emplace(backup_id, std::move(engine));
+        {
+            zauto_lock l(_lock);
+            _backup_states.emplace_back(std::move(engine));
+        }
+        response.__isset.backup_id = true;
+        response.backup_id = backup_id;
         response.hint_message =
-            fmt::format("Backup id {} : metadata of app {} has been successfully backed up and "
-                        "backup request has been sent to replica servers.",
-                        backup_id,
+            fmt::format("Backup succeed: metadata of app {} has been successfully backed up "
+                        "and backup request has been sent to replica servers.",
                         app_id);
     } else {
         response.hint_message =
             fmt::format("Backup failed: could not backup metadata for app {}.", app_id);
     }
     response.err = err;
+}
+
+void backup_service::query_backup_status(query_backup_status_rpc rpc)
+{
+    const query_backup_status_request &request = rpc.request();
+    query_backup_status_response &response = rpc.response();
+
+    int32_t app_id = request.app_id;
+    {
+        zauto_lock l(_lock);
+        for (const auto &backup : _backup_states) {
+            if (app_id == backup->get_backup_app_id() &&
+                (!request.__isset.backup_id ||
+                 request.backup_id == backup->get_current_backup_id())) {
+                response.backup_items.emplace_back(backup->get_backup_item());
+            }
+        }
+    }
+
+    if (response.backup_items.empty()) {
+        response.err = ERR_INVALID_PARAMETERS;
+        response.hint_message = "Backup not found, please check app_id or backup_id.";
+        return;
+    }
+    response.__isset.backup_items = true;
+    response.hint_message = fmt::format(
+        "There are {} available backups for app {}.", response.backup_items.size(), app_id);
+    response.err = ERR_OK;
 }
 
 } // namespace replication

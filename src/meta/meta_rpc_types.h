@@ -47,6 +47,15 @@ typedef rpc_holder<configuration_report_restore_status_request,
     configuration_report_restore_status_rpc;
 typedef rpc_holder<configuration_query_restore_request, configuration_query_restore_response>
     configuration_query_restore_rpc;
+typedef rpc_holder<configuration_query_backup_policy_request,
+                   configuration_query_backup_policy_response>
+    query_backup_policy_rpc;
+typedef rpc_holder<configuration_modify_backup_policy_request,
+                   configuration_modify_backup_policy_response>
+    configuration_modify_backup_policy_rpc;
+typedef rpc_holder<start_backup_app_request, start_backup_app_response> start_backup_app_rpc;
+typedef rpc_holder<query_backup_status_request, query_backup_status_response>
+    query_backup_status_rpc;
 
 } // namespace replication
 } // namespace dsn

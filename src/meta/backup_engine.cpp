@@ -25,7 +25,7 @@ namespace dsn {
 namespace replication {
 
 backup_engine::backup_engine(backup_service *service)
-    : _backup_service(service), _block_service(nullptr), is_backup_failed(false)
+    : _backup_service(service), _block_service(nullptr), _is_backup_failed(false)
 {
 }
 
@@ -139,7 +139,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
             derror_f("app {} is not available, couldn't do backup now.", pid.get_app_id());
 
             zauto_lock lock(_lock);
-            is_backup_failed = true;
+            _is_backup_failed = true;
             return;
         }
         partition_primary = app->partitions[pid.get_partition_index()].primary;
@@ -191,7 +191,7 @@ void backup_engine::on_backup_reply(error_code err,
     {
         zauto_lock l(_lock);
         // if backup of some partition failed, we would not handle response from other partitions.
-        if (is_backup_failed) {
+        if (_is_backup_failed) {
             return;
         }
     }
@@ -220,7 +220,7 @@ void backup_engine::on_backup_reply(error_code err,
                  _cur_backup.backup_id,
                  pid.to_string());
         zauto_lock l(_lock);
-        is_backup_failed = true;
+        _is_backup_failed = true;
         _backup_status[partition] = backup_status::FAILED;
         return;
     }
@@ -301,10 +301,23 @@ error_code backup_engine::start()
     return ERR_OK;
 }
 
-bool backup_engine::is_backing_up() const
+bool backup_engine::is_in_progress() const
 {
     zauto_lock l(_lock);
-    return _cur_backup.end_time_ms == 0 && !is_backup_failed;
+    return _cur_backup.end_time_ms == 0 && !_is_backup_failed;
+}
+
+backup_item backup_engine::get_backup_item() const
+{
+    zauto_lock l(_lock);
+    backup_item item;
+    item.backup_id = _cur_backup.backup_id;
+    item.app_name = _cur_backup.app_name;
+    item.backup_provider_type = _provider_type;
+    item.start_time_ms = _cur_backup.start_time_ms;
+    item.end_time_ms = _cur_backup.end_time_ms;
+    item.is_backup_failed = _is_backup_failed;
+    return item;
 }
 
 } // namespace replication
