@@ -2453,11 +2453,11 @@ void pegasus_server_impl::update_validate_partition_hash(
             return;
         }
     }
-    if (new_value != _check_partition_hash) {
+    if (new_value != _validate_partition_hash) {
         ddebug_replica(
-            "update '_check_partition_hash' from {} to {}", _check_partition_hash, new_value);
-        _check_partition_hash = new_value;
-        _key_ttl_compaction_filter_factory->SetCheckPartitionHash(_check_partition_hash);
+            "update '_validate_partition_hash' from {} to {}", _validate_partition_hash, new_value);
+        _validate_partition_hash = new_value;
+        _key_ttl_compaction_filter_factory->SetValidatePartitionHash(_validate_partition_hash);
     }
 }
 

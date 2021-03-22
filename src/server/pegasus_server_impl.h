@@ -404,7 +404,7 @@ private:
     pegasus_manual_compact_service _manual_compact_svc;
 
     std::atomic<int32_t> _partition_version;
-    bool _check_partition_hash{false};
+    bool _validate_partition_hash{false};
 
     dsn::replication::ingestion_status::type _ingestion_status{
         dsn::replication::ingestion_status::IS_INVALID};
