@@ -1458,6 +1458,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     // only enable filter after correct pegasus_data_version set
     _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
+    _key_ttl_compaction_filter_factory->SetPartitionIndex(_gpid.get_partition_index());
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(_gpid.get_partition_index() - 1);
     _key_ttl_compaction_filter_factory->EnableFilter();
 
     parse_checkpoints();
@@ -2294,6 +2296,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
+    update_validate_partition_hash(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2310,6 +2313,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
+    update_validate_partition_hash(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2435,6 +2439,25 @@ void pegasus_server_impl::update_rocksdb_iteration_threshold(
                        _rng_rd_opts.rocksdb_iteration_threshold_time_ms,
                        threshold_ms);
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms = threshold_ms;
+    }
+}
+
+void pegasus_server_impl::update_validate_partition_hash(
+    const std::map<std::string, std::string> &envs)
+{
+    bool new_value = false;
+    auto iter = envs.find(SPLIT_VALIDATE_PARTITION_HASH);
+    if (iter != envs.end()) {
+        if (!dsn::buf2bool(iter->second, new_value)) {
+            derror_replica("{}={} is invalid.", iter->first, iter->second);
+            return;
+        }
+    }
+    if (new_value != _validate_partition_hash) {
+        ddebug_replica(
+            "update '_validate_partition_hash' from {} to {}", _validate_partition_hash, new_value);
+        _validate_partition_hash = new_value;
+        _key_ttl_compaction_filter_factory->SetValidatePartitionHash(_validate_partition_hash);
     }
 }
 
@@ -2750,8 +2773,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     int32_t old_partition_version = _partition_version.exchange(partition_version);
     ddebug_replica(
         "update partition version from {} to {}", old_partition_version, partition_version);
-
-    // TODO(heyuchen): set filter _partition_version in further pr
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(partition_version);
 }
 
 ::dsn::error_code pegasus_server_impl::flush_all_family_columns(bool wait)
