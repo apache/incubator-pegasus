@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"pegic/executor/util"
 	"pegic/interactive"
+	"strings"
 
 	"github.com/desertbit/grumble"
 )
@@ -34,12 +35,10 @@ func init() {
 		Run: func(c *grumble.Context) error {
 			if globalContext.Compressor == nil {
 				c.App.Println("No compression is used")
+			} else {
+				c.App.Printf("Compression: %s\n", globalContext.Compressor.String())
 			}
-			c.App.Printf("Compression: %s\n", globalContext.Compressor.String())
 			return nil
-		},
-		Args: func(a *grumble.Args) {
-			a.String("ALGORITHM", "Compression algorithm. By default no compression is used.")
 		},
 	}
 
@@ -48,7 +47,12 @@ func init() {
 		Aliases: []string{"SET"},
 		Help:    "reset the compression algorithm, default no",
 		Run: func(c *grumble.Context) error {
-			algo := c.Args.String("ALGORITHM")
+			algo := strings.TrimSpace(c.Args.String("ALGORITHM"))
+			if algo == "" || algo == "no" {
+				c.App.Println("Reset to no compression mode")
+				globalContext.Compressor = nil
+				return nil
+			}
 			globalContext.Compressor = util.NewCompression(algo)
 			if globalContext.Compressor == nil {
 				return fmt.Errorf("Invalid compression algorithm \"%s\"", algo)
@@ -57,7 +61,7 @@ func init() {
 			return nil
 		},
 		Args: func(a *grumble.Args) {
-			a.String("ALGORITHM", "Compression algorithm. By default no compression is used. Options: zstd")
+			a.String("ALGORITHM", "Compression algorithm. By default no compression is used. Options: zstd", grumble.Default(""))
 		},
 		Completer: compressionCompleter,
 	})
@@ -68,5 +72,6 @@ func init() {
 func compressionCompleter(prefix string, args []string) []string {
 	return filterStringWithPrefix([]string{
 		"zstd",
+		"no",
 	}, prefix)
 }
