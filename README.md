@@ -143,6 +143,30 @@ HASH_KEY=19491001
 SORT_KEY=sortkey
 ```
 
+### Compression
+
+In some use-cases, we need to compress our value in order to improve read/write
+performance and latency stability.
+
+For those data, you need to specify the compression algorithm in pegic:
+
+```
+pegic » compression set zstd
+ok
+
+pegic » get novelcoldstart novelcoldstart
+novelcoldstart : novelcoldstart : abcdef
+
+TTL(Time-To-Live) is not set
+
+Encoding:
+  - HashKey: UTF8
+  - SortKey: UTF8
+  - Value: UTF8
+Compression:
+  zstd
+```
+
 ### Scan
 
 ```

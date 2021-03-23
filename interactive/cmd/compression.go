@@ -20,6 +20,8 @@
 package cmd
 
 import (
+	"fmt"
+	"pegic/executor/util"
 	"pegic/interactive"
 
 	"github.com/desertbit/grumble"
@@ -30,8 +32,10 @@ func init() {
 		Name: "compression",
 		Help: "read the current compression algorithm",
 		Run: func(c *grumble.Context) error {
-			// TODO(wutao): verify if the use table exists
-			c.App.Println("ok")
+			if globalContext.Compressor == nil {
+				c.App.Println("No compression is used")
+			}
+			c.App.Printf("Compression: %s\n", globalContext.Compressor.String())
 			return nil
 		},
 		Args: func(a *grumble.Args) {
@@ -44,16 +48,25 @@ func init() {
 		Aliases: []string{"SET"},
 		Help:    "reset the compression algorithm, default no",
 		Run: func(c *grumble.Context) error {
+			algo := c.Args.String("ALGORITHM")
+			globalContext.Compressor = util.NewCompression(algo)
+			if globalContext.Compressor == nil {
+				return fmt.Errorf("Invalid compression algorithm \"%s\"", algo)
+			}
 			c.App.Println("ok")
-
-			// TODO: require use table
-
 			return nil
 		},
 		Args: func(a *grumble.Args) {
-			a.String("ALGORITHM", "Compression algorithm. By default no compression is used.")
+			a.String("ALGORITHM", "Compression algorithm. By default no compression is used. Options: zstd")
 		},
+		Completer: compressionCompleter,
 	})
 
 	interactive.App.AddCommand(rootCmd)
+}
+
+func compressionCompleter(prefix string, args []string) []string {
+	return filterStringWithPrefix([]string{
+		"zstd",
+	}, prefix)
 }

@@ -20,6 +20,8 @@
 package util
 
 import (
+	"strings"
+
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -28,6 +30,20 @@ type BytesCompression interface {
 	Compress([]byte) ([]byte, error)
 
 	Decompress([]byte) ([]byte, error)
+
+	// String returns name of the algorithm.
+	String() string
+}
+
+// NewCompression returns nil if the given name is invalid.
+func NewCompression(name string) BytesCompression {
+	name = strings.ToLower(name)
+	switch name {
+	case "zstd":
+		return newZstdCompression()
+	default:
+		return nil
+	}
 }
 
 type zstdCompression struct {
@@ -43,14 +59,16 @@ func (z *zstdCompression) Decompress(data []byte) ([]byte, error) {
 	return z.decoder.DecodeAll(data, nil)
 }
 
-// TODO(wutao): compression command is not implemented yet.
-//
-// func newZstdCompression() BytesCompression {
-// 	decoder, _ := zstd.NewReader(nil)
-// 	encoder, _ := zstd.NewWriter(nil)
+func (z *zstdCompression) String() string {
+	return "zstd"
+}
 
-// 	return &zstdCompression{
-// 		encoder: encoder,
-// 		decoder: decoder,
-// 	}
-// }
+func newZstdCompression() BytesCompression {
+	decoder, _ := zstd.NewReader(nil)
+	encoder, _ := zstd.NewWriter(nil)
+
+	return &zstdCompression{
+		encoder: encoder,
+		decoder: decoder,
+	}
+}

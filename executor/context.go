@@ -70,6 +70,10 @@ func (c *Context) String() string {
 	output += "  - HashKey: " + c.HashKeyEnc.String() + "\n"
 	output += "  - SortKey: " + c.SortKeyEnc.String() + "\n"
 	output += "  - Value: " + c.ValueEnc.String() + "\n"
+	if c.Compressor != nil {
+		output += "Compression:\n"
+		output += "  " + c.Compressor.String() + "\n"
+	}
 	return output
 }
 
@@ -106,19 +110,27 @@ func readPegasusArgs(ctx *Context, args []string) ([][]byte, error) {
 
 // printPegasusRecord prints bytes from pegasus in pretty and parsable form.
 func printPegasusRecord(ctx *Context, hashKey, sortKey, value []byte) error {
+	if ctx.Compressor != nil {
+		var err error
+		value, err = ctx.Compressor.Decompress(value)
+		if err != nil {
+			return fmt.Errorf("%s failed to decompress value: %s", ctx.Compressor, err)
+		}
+	}
+
 	hashKeyStr, err := ctx.HashKeyEnc.DecodeAll(hashKey)
 	if err != nil {
-		return fmt.Errorf("invalid Pegasus HashKey: %s", err)
+		return fmt.Errorf("HashKey can not be decoded in %s: %s", ctx.HashKeyEnc, err)
 	}
 	sortkeyStr, err := ctx.SortKeyEnc.DecodeAll(sortKey)
 	if err != nil {
-		return fmt.Errorf("invalid Pegasus SortKey: %s", err)
+		return fmt.Errorf("SortKey can not be decoded in %s: %s", ctx.SortKeyEnc, err)
 	}
 	valueStr, err := ctx.ValueEnc.DecodeAll(value)
 	if err != nil {
 		bytesEnc := util.NewEncoder("javabytes")
 		valueStr, _ := bytesEnc.DecodeAll(value)
-		return fmt.Errorf("invalid Pegasus Value: %s [SortKey: \"%s\"]\nValue: [JAVABYTES]\n%s", err, sortKey, valueStr)
+		return fmt.Errorf("Value can not be decoded in %s: %s [SortKey: \"%s\"]\nValue: [JAVABYTES]\n%s", ctx.ValueEnc, err, sortKey, valueStr)
 	}
 	fmt.Fprintf(ctx, "%s : %s : %s\n", hashKeyStr, sortkeyStr, valueStr)
 	return nil

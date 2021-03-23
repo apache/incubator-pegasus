@@ -40,20 +40,19 @@ func Get(rootCtx *Context, hashKeyStr, sortkeyStr string) error {
 	if rawValue == nil {
 		return fmt.Errorf("record not found\nHASH_KEY=%s\nSORT_KEY=%s", hashKeyStr, sortkeyStr)
 	}
-	value, err := rootCtx.ValueEnc.DecodeAll(rawValue)
-	if err != nil {
+
+	if err = printPegasusRecord(rootCtx, pegasusArgs[0], pegasusArgs[1], rawValue); err != nil {
 		return err
 	}
-	fmt.Fprintf(rootCtx, "\n%s : %s : %s\n", hashKeyStr, sortkeyStr, value)
 
 	ttl, err := rootCtx.UseTable.TTL(ctx, pegasusArgs[0], pegasusArgs[1])
 	if err != nil {
 		return err
 	}
 	if ttl == -1 {
-		fmt.Fprintf(rootCtx, "TTL(Time-To-Live) is not set\n")
+		fmt.Fprintf(rootCtx, "\nTTL(Time-To-Live) is not set\n")
 	} else {
-		fmt.Fprintf(rootCtx, "TTL(Time-To-Live) : %d seconds\n", ttl)
+		fmt.Fprintf(rootCtx, "\nTTL(Time-To-Live) : %d seconds\n", ttl)
 	}
 
 	return nil
