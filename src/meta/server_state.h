@@ -185,6 +185,8 @@ public:
     void wait_all_task() { _tracker.wait_outstanding_tasks(); }
 
 private:
+    FRIEND_TEST(backup_service_test, test_invalid_backup_request);
+
     //-1 means waiting forever
     bool spin_wait_staging(int timeout_seconds = -1);
     bool can_run_balancer();

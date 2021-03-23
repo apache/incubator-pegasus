@@ -65,6 +65,10 @@ public:
     backup_item get_backup_item() const;
 
 private:
+    friend class backup_engine_test;
+    FRIEND_TEST(backup_engine_test, test_on_backup_reply);
+    FRIEND_TEST(backup_engine_test, test_backup_completed);
+
     error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
     error_code backup_app_meta();
     void backup_app_partition(const gpid &pid);
