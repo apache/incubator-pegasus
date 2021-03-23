@@ -206,6 +206,7 @@ private:
     // return 1 if value is appended
     // return 2 if value is expired
     // return 3 if value is filtered
+    // return 4 if key is not pass partition_hash validation
     int append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
                                   const rocksdb::Slice &key,
                                   const rocksdb::Slice &value,
@@ -214,7 +215,8 @@ private:
                                   ::dsn::apps::filter_type::type sort_key_filter_type,
                                   const ::dsn::blob &sort_key_filter_pattern,
                                   uint32_t epoch_now,
-                                  bool no_value);
+                                  bool no_value,
+                                  bool request_validate_hash);
 
     // return 1 if value is appended
     // return 2 if value is expired

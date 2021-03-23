@@ -1016,15 +1016,17 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         limiter->add_count();
 
-        int r = append_key_value_for_scan(resp.kvs,
-                                          it->key(),
-                                          it->value(),
-                                          request.hash_key_filter_type,
-                                          request.hash_key_filter_pattern,
-                                          request.sort_key_filter_type,
-                                          request.sort_key_filter_pattern,
-                                          epoch_now,
-                                          request.no_value);
+        int r = append_key_value_for_scan(
+            resp.kvs,
+            it->key(),
+            it->value(),
+            request.hash_key_filter_type,
+            request.hash_key_filter_pattern,
+            request.sort_key_filter_type,
+            request.sort_key_filter_pattern,
+            epoch_now,
+            request.no_value,
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true);
         if (r == 1) {
             count++;
         } else if (r == 2) {
@@ -1081,18 +1083,19 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                       limiter->max_duration_time());
     } else if (it->Valid() && !complete) {
         // scan not completed
-        std::unique_ptr<pegasus_scan_context> context(
-            new pegasus_scan_context(std::move(it),
-                                     std::string(stop.data(), stop.size()),
-                                     request.stop_inclusive,
-                                     request.hash_key_filter_type,
-                                     std::string(request.hash_key_filter_pattern.data(),
-                                                 request.hash_key_filter_pattern.length()),
-                                     request.sort_key_filter_type,
-                                     std::string(request.sort_key_filter_pattern.data(),
-                                                 request.sort_key_filter_pattern.length()),
-                                     batch_count,
-                                     request.no_value));
+        std::unique_ptr<pegasus_scan_context> context(new pegasus_scan_context(
+            std::move(it),
+            std::string(stop.data(), stop.size()),
+            request.stop_inclusive,
+            request.hash_key_filter_type,
+            std::string(request.hash_key_filter_pattern.data(),
+                        request.hash_key_filter_pattern.length()),
+            request.sort_key_filter_type,
+            std::string(request.sort_key_filter_pattern.data(),
+                        request.sort_key_filter_pattern.length()),
+            batch_count,
+            request.no_value,
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1140,6 +1143,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         ::dsn::apps::filter_type::type sort_key_filter_type = context->sort_key_filter_type;
         const ::dsn::blob &sort_key_filter_pattern = context->sort_key_filter_pattern;
         bool no_value = context->no_value;
+        bool validate_hash = context->validate_partition_hash;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
         uint64_t expire_count = 0;
@@ -1171,7 +1175,8 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                               sort_key_filter_type,
                                               sort_key_filter_pattern,
                                               epoch_now,
-                                              no_value);
+                                              no_value,
+                                              validate_hash);
             if (r == 1) {
                 count++;
             } else if (r == 2) {
@@ -2055,13 +2060,24 @@ int pegasus_server_impl::append_key_value_for_scan(
     ::dsn::apps::filter_type::type sort_key_filter_type,
     const ::dsn::blob &sort_key_filter_pattern,
     uint32_t epoch_now,
-    bool no_value)
+    bool no_value,
+    bool request_validate_hash)
 {
     if (check_if_record_expired(epoch_now, value)) {
         if (_verbose_log) {
             derror("%s: rocksdb data expired for scan", replica_name());
         }
         return 2;
+    }
+
+    if (request_validate_hash && _validate_partition_hash) {
+        if (_partition_version < 0 || _gpid.get_partition_index() > _partition_version ||
+            !check_pegasus_key_hash(key, _gpid.get_partition_index(), _partition_version)) {
+            if (_verbose_log) {
+                derror_replica("not serve hash key while scan");
+            }
+            return 4;
+        }
     }
 
     ::dsn::apps::key_value kv;
