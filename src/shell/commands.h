@@ -227,6 +227,10 @@ bool enable_backup_policy(command_executor *e, shell_context *sc, arguments args
 
 bool restore(command_executor *e, shell_context *sc, arguments args);
 
+bool backup_app(command_executor *e, shell_context *sc, arguments args);
+
+bool query_backup(command_executor *e, shell_context *sc, arguments args);
+
 bool query_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool query_restore_status(command_executor *e, shell_context *sc, arguments args);

@@ -73,4 +73,6 @@ if [ $on_travis == "NO" ]; then
     exit_if_fail $? "run test bulk load failed: $test_case $config_file $table_name"
     GTEST_OUTPUT="xml:$REPORT_DIR/test_detect_hotspot.xml" GTEST_FILTER="test_detect_hotspot.*" ./$test_case $config_file $table_name
     exit_if_fail $? "run test test_detect_hotspot load failed: $test_case $config_file $table_name"
+    GTEST_OUTPUT="xml:$REPORT_DIR/backup_restore_test.xml" GTEST_FILTER="backup_restore_test.*" ./$test_case $config_file $table_name
+    exit_if_fail $? "run test backup_restore_test load failed: $test_case $config_file $table_name"
 fi

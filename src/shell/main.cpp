@@ -416,11 +416,22 @@ static command_executor commands[] = {
         enable_backup_policy,
     },
     {
+        "backup_app",
+        "backup an app",
+        "<-a|--app_id num> <-b|--backup_provider_type str> [-p|--backup_path str]",
+        backup_app,
+    },
+    {
+        "query_backup", "query a backup", "<-a|--app_id num> [-i|--backup_id num]", query_backup,
+    },
+    {
         "restore_app",
         "restore app from backup media",
-        "<-c|--old_cluster_name str> <-p|--old_policy_name str> <-a|--old_app_name str> "
+        "<-c|--old_cluster_name str> <-a|--old_app_name str> "
         "<-i|--old_app_id id> <-t|--timestamp/backup_id timestamp> "
-        "<-b|--backup_provider_type str> [-n|--new_app_name str] [-s|--skip_bad_partition]",
+        "<-b|--backup_provider_type str> "
+        "[-n|--new_app_name str] [-r|--restore_path str] "
+        "[-s|--skip_bad_partition] [-p|--old_policy_name(deprecated) str]",
         restore,
     },
     {

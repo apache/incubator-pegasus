@@ -122,6 +122,150 @@ bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+bool backup_app(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"app_id", required_argument, 0, 'a'},
+                                           {"backup_provider_type", required_argument, 0, 'b'},
+                                           {"backup_path", required_argument, 0, 'p'},
+                                           {0, 0, 0, 0}};
+    int32_t app_id = 0;
+    std::string backup_provider_type;
+    std::string backup_path;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "a:b:p:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            app_id = boost::lexical_cast<int32_t>(optarg);
+            break;
+        case 'b':
+            backup_provider_type = optarg;
+            break;
+        case 'p':
+            backup_path = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (app_id <= 0) {
+        fprintf(stderr, "invalid app_id, %d\n", app_id);
+        return false;
+    }
+
+    if (backup_provider_type.empty()) {
+        fprintf(stderr, "backup_provider_type should not be empty\n");
+        return false;
+    }
+
+    auto err_resp = sc->ddl_client->backup_app(app_id, backup_provider_type, backup_path);
+    dsn::error_s err = err_resp.get_error();
+    auto resp = err_resp.get_value();
+    if (!err.is_ok()) {
+        fprintf(stderr, "start backup failed: %s\n", err.code().to_string());
+        return true;
+    }
+    if (resp.err != dsn::ERR_OK) {
+        fprintf(stderr, "start backup failed: %s\n", resp.hint_message.c_str());
+        return true;
+    }
+    fprintf(stdout, "backup id : %ld\n%s\n", resp.backup_id, resp.hint_message.c_str());
+    return true;
+}
+
+void print_backup_item(const backup_item &item)
+{
+    char start_time[30] = {'\0'};
+    char end_time[30] = {'\0'};
+    dsn::utils::time_ms_to_date_time(item.start_time_ms, start_time, 30);
+    if (item.end_time_ms == 0) {
+        end_time[0] = '-';
+        end_time[1] = '\0';
+    } else {
+        dsn::utils::time_ms_to_date_time(item.end_time_ms, end_time, 30);
+    }
+
+    dsn::utils::table_printer tp;
+    tp.add_row_name_and_data("    backup_id", item.backup_id);
+    tp.add_row_name_and_data("    app_name", item.app_name);
+    tp.add_row_name_and_data("    backup_provider_type", item.backup_provider_type);
+    tp.add_row_name_and_data("    backup_path", item.backup_path);
+    tp.add_row_name_and_data("    start_time", start_time);
+    tp.add_row_name_and_data("    end_time", end_time);
+    if (item.is_backup_failed) {
+        tp.add_row_name_and_data("    backup_status", "failed");
+    } else if (item.end_time_ms == 0) {
+        tp.add_row_name_and_data("    backup_status", "in progress");
+    } else {
+        tp.add_row_name_and_data("    backup_status", "completed");
+    }
+    tp.output(std::cout);
+}
+
+bool query_backup(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"app_id", required_argument, 0, 'a'},
+                                           {"backup_id", required_argument, 0, 'i'},
+                                           {0, 0, 0, 0}};
+    int32_t app_id = 0;
+    int64_t backup_id = 0;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "a:i:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            app_id = boost::lexical_cast<int32_t>(optarg);
+            break;
+        case 'i':
+            backup_id = boost::lexical_cast<int64_t>(optarg);
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (app_id <= 0) {
+        fprintf(stderr, "invalid app_id, %d\n", app_id);
+        return false;
+    }
+
+    if (backup_id < 0) {
+        fprintf(stderr, "invalid backup_id, %ld\n", backup_id);
+        return false;
+    }
+
+    auto err_resp = sc->ddl_client->query_backup(app_id, backup_id);
+    dsn::error_s err = err_resp.get_error();
+    auto resp = err_resp.get_value();
+    if (!err.is_ok()) {
+        fprintf(stderr, "query backup failed: %s\n", err.code().to_string());
+        return true;
+    }
+    if (resp.err != dsn::ERR_OK) {
+        fprintf(stderr, "query backup failed: %s\n", resp.hint_message.c_str());
+        return true;
+    }
+
+    fprintf(stderr, "query backup succeed: %s\n", resp.hint_message.c_str());
+    for (int i = 0; i < resp.backup_items.size(); ++i) {
+        fprintf(stdout, "[%d]\n", i + 1);
+        print_backup_item(resp.backup_items[i]);
+    }
+    std::cout << std::endl;
+    return true;
+}
+
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
     ::dsn::error_code err = sc->ddl_client->ls_backup_policy();
@@ -368,6 +512,7 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
                                            {"new_app_name", required_argument, 0, 'n'},
                                            {"timestamp", required_argument, 0, 't'},
                                            {"backup_provider_type", required_argument, 0, 'b'},
+                                           {"restore_path", required_argument, 0, 'r'},
                                            {"skip_bad_partition", no_argument, 0, 's'},
                                            {0, 0, 0, 0}};
     std::string old_cluster_name, old_policy_name;
@@ -376,12 +521,13 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
     int32_t old_app_id = 0;
     int64_t timestamp = 0;
     bool skip_bad_partition = false;
+    std::string restore_path;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:s", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "c:p:a:i:n:t:b:s:r:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -409,6 +555,9 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
         case 's':
             skip_bad_partition = true;
             break;
+        case 'r':
+            restore_path = optarg;
+            break;
         default:
             fprintf(stderr, "invalid parameter\n");
             return false;
@@ -433,7 +582,8 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
                                                        old_app_name,
                                                        old_app_id,
                                                        new_app_name,
-                                                       skip_bad_partition);
+                                                       skip_bad_partition,
+                                                       restore_path);
     if (err != ::dsn::ERR_OK) {
         fprintf(stderr, "restore app failed with err(%s)\n", err.to_string());
     }
