@@ -35,10 +35,10 @@ func retryFailOver(ctx context.Context, op tableRPCOp) (interface{}, error) {
 	bf.Multiplier = 2
 	for {
 		confUpdated, res, err := op()
-		ticker := time.NewTicker(bf.NextBackOff())
+		backoffCh := time.After(bf.NextBackOff())
 		if confUpdated { // must fail
 			select {
-			case <-ticker.C:
+			case <-backoffCh:
 				continue
 			case <-ctx.Done():
 				err = ctx.Err()

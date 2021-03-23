@@ -63,9 +63,8 @@ func (c *metaCall) Run(ctx context.Context) (metaResponse, error) {
 	go func() {
 		// Automatically issue backup RPC after a period
 		// when the current leader is suspected unvailable.
-		ticker := time.NewTicker(1 * time.Second) // TODO(wutao): make it configurable
 		select {
-		case <-ticker.C:
+		case <-time.After(1 * time.Second): // TODO(wutao): make it configurable
 			c.issueBackupMetas(subCtx)
 		case <-c.backupCh:
 			c.issueBackupMetas(subCtx)
