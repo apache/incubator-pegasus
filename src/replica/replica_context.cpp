@@ -252,6 +252,10 @@ bool partition_split_context::cleanup(bool force)
         CLEANUP_TASK(check_state_task, force)
     }
 
+    splitting_start_ts_ns = 0;
+    splitting_start_async_learn_ts_ns = 0;
+    splitting_copy_file_count = 0;
+    splitting_copy_file_size = 0;
     parent_gpid.set_app_id(0);
     is_prepare_list_copied = false;
     is_caught_up = false;

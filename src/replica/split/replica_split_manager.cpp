@@ -1068,6 +1068,7 @@ void replica_split_manager::child_partition_active(
         return;
     }
 
+    _stub->_counter_replicas_splitting_recent_split_succ_count->increment();
     _replica->_primary_states.last_prepare_decree_on_new_primary =
         _replica->_prepare_list->max_decree();
     _replica->update_configuration(config);

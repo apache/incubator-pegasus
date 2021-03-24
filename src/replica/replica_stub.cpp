@@ -1846,6 +1846,10 @@ void replica_stub::on_gc()
     _counter_bulk_load_running_count->set(bulk_load_running_count);
     _counter_bulk_load_max_ingestion_time_ms->set(bulk_load_max_ingestion_time_ms);
     _counter_bulk_load_max_duration_time_ms->set(bulk_load_max_duration_time_ms);
+    _counter_replicas_splitting_count->set(splitting_count);
+    _counter_replicas_splitting_max_duration_time_ms->set(splitting_max_duration_time_ms);
+    _counter_replicas_splitting_max_async_learn_time_ms->set(splitting_max_async_learn_time_ms);
+    _counter_replicas_splitting_max_copy_file_size->set(splitting_max_copy_file_size);
 
     ddebug("finish to garbage collection, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
