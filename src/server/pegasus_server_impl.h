@@ -262,6 +262,8 @@ private:
 
     void update_rocksdb_iteration_threshold(const std::map<std::string, std::string> &envs);
 
+    void update_validate_partition_hash(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -402,6 +404,7 @@ private:
     pegasus_manual_compact_service _manual_compact_svc;
 
     std::atomic<int32_t> _partition_version;
+    bool _validate_partition_hash{false};
 
     dsn::replication::ingestion_status::type _ingestion_status{
         dsn::replication::ingestion_status::IS_INVALID};
