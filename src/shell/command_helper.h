@@ -1146,3 +1146,14 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     st_stat.timestamp = buf;
     return true;
 }
+
+inline configuration_proposal_action new_proposal_action(const dsn::rpc_address &target,
+                                                         const dsn::rpc_address &node,
+                                                         config_type::type type)
+{
+    configuration_proposal_action act;
+    act.__set_target(target);
+    act.__set_node(node);
+    act.__set_type(type);
+    return act;
+}

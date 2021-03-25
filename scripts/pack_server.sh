@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,8 +18,7 @@
 
 source $(dirname $0)/pack_common.sh
 
-function usage()
-{
+function usage() {
     echo "Options for subcommand 'pack_server':"
     echo "  -h"
     echo "  -p|--update-package-template <minos-package-template-file-path>"
@@ -28,55 +27,49 @@ function usage()
     exit 0
 }
 
-pwd="$( cd "$( dirname "$0"  )" && pwd )"
-shell_dir="$( cd $pwd/.. && pwd )"
-cd $shell_dir
+pwd="$(cd "$(dirname "$0")" && pwd)"
+shell_dir="$(cd $pwd/.. && pwd)"
+cd "$shell_dir" || exit 1
 
-if [ ! -f src/include/pegasus/git_commit.h ]
-then
+if [ ! -f src/include/pegasus/git_commit.h ]; then
     echo "ERROR: src/include/pegasus/git_commit.h not found"
     exit 1
 fi
 
-if [ ! -f DSN_ROOT/bin/pegasus_server/pegasus_server ]
-then
+if [ ! -f DSN_ROOT/bin/pegasus_server/pegasus_server ]; then
     echo "ERROR: DSN_ROOT/bin/pegasus_server/pegasus_server not found"
     exit 1
 fi
 
-if [ ! -f src/builder/CMAKE_OPTIONS ]
-then
+if [ ! -f src/builder/CMAKE_OPTIONS ]; then
     echo "ERROR: src/builder/CMAKE_OPTIONS not found"
     exit 1
 fi
 
-if grep -q Debug src/builder/CMAKE_OPTIONS
-then
+if grep -q Debug src/builder/CMAKE_OPTIONS; then
     build_type=debug
 else
     build_type=release
 fi
-version=`grep "VERSION" src/include/pegasus/version.h | cut -d "\"" -f 2`
-commit_id=`grep "GIT_COMMIT" src/include/pegasus/git_commit.h | cut -d "\"" -f 2`
-glibc_ver=`ldd --version | grep ldd | grep -Eo "[0-9]+.[0-9]+$"`
+version=$(grep "VERSION" src/include/pegasus/version.h | cut -d "\"" -f 2)
+commit_id=$(grep "GIT_COMMIT" src/include/pegasus/git_commit.h | cut -d "\"" -f 2)
+glibc_ver=$(ldd --version | grep ldd | grep -Eo "[0-9]+.[0-9]+$")
 echo "Packaging pegasus server $version ($commit_id) glibc-$glibc_ver $build_type ..."
 
 pack_version=server-$version-${commit_id:0:7}-glibc${glibc_ver}-${build_type}
 pack=pegasus-$pack_version
 
-if [ -f ${pack}.tar.gz ]
-then
+if [ -f ${pack}.tar.gz ]; then
     rm -f ${pack}.tar.gz
 fi
 
-if [ -d ${pack} ]
-then
+if [ -d ${pack} ]; then
     rm -rf ${pack}
 fi
 
 pack_template=""
 if [ -n "$MINOS_CONFIG_FILE" ]; then
-    pack_template=`dirname $MINOS_CONFIG_FILE`/xiaomi-config/package/pegasus.yaml
+    pack_template=$(dirname $MINOS_CONFIG_FILE)/xiaomi-config/package/pegasus.yaml
 fi
 
 custom_gcc="false"
@@ -85,20 +78,20 @@ keytab_file=""
 while [[ $# > 0 ]]; do
     option_key="$1"
     case $option_key in
-        -p|--update-package-template)
-            pack_template="$2"
-            shift
-            ;;
-        -g|--custom-gcc)
-            custom_gcc="true"
-            ;;
-        -h|--help)
-            usage
-            ;;
-        -k|--keytab-file)
-            keytab_file="$2"
-            shift
-            ;;
+    -p | --update-package-template)
+        pack_template="$2"
+        shift
+        ;;
+    -g | --custom-gcc)
+        custom_gcc="true"
+        ;;
+    -h | --help)
+        usage
+        ;;
+    -k | --keytab-file)
+        keytab_file="$2"
+        shift
+        ;;
     esac
     shift
 done
@@ -121,14 +114,20 @@ copy_file ./rdsn/thirdparty/output/lib/libk5crypto.so.3 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/sasl2 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
+copy_file ./src/server/config.min.ini ${pack}/bin
+copy_file ./config_hdfs.sh ${pack}/bin
 
-copy_file `get_stdcpp_lib $custom_gcc` ${pack}/bin
-copy_file `get_system_lib server snappy` ${pack}/bin/`get_system_libname server snappy`
-copy_file `get_system_lib server crypto` ${pack}/bin/`get_system_libname server crypto`
-copy_file `get_system_lib server ssl` ${pack}/bin/`get_system_libname server ssl`
-copy_file `get_system_lib server aio` ${pack}/bin/`get_system_libname server aio`
-copy_file `get_system_lib server zstd` ${pack}/bin/`get_system_libname server zstd`
-copy_file `get_system_lib server lz4` ${pack}/bin/`get_system_libname server lz4`
+copy_file "$(get_stdcpp_lib $custom_gcc)" "${pack}/bin"
+
+pack_server_lib() {
+    pack_system_lib "${pack}/bin" server "$1"
+}
+
+pack_server_lib snappy
+pack_server_lib crypto
+pack_server_lib ssl
+pack_server_lib zstd
+pack_server_lib lz4
 
 # Pack hadoop-related files.
 # If you want to use hdfs service to backup/restore/bulkload pegasus tables,
@@ -160,12 +159,12 @@ fi
 DISTRIB_ID=$(cat /etc/*-release | grep DISTRIB_ID | awk -F'=' '{print $2}')
 DISTRIB_RELEASE=$(cat /etc/*-release | grep DISTRIB_RELEASE | awk -F'=' '{print $2}')
 if [ -n "$DISTRIB_ID" ] && [ -n "$DISTRIB_RELEASE" ]; then
-  if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "18.04" ]; then
-    copy_file "$(get_system_lib server icui18n)" "$pack/bin/$(get_system_libname server icui18n)"
-    copy_file "$(get_system_lib server icuuc)" "$pack/bin/$(get_system_libname server icuuc)"
-    copy_file "$(get_system_lib server icudata)" "$pack/bin/$(get_system_libname server icudata)"
-  fi
-  # more cases can be added here.
+    if [ "$DISTRIB_ID" == "Ubuntu" ] && [ "$DISTRIB_RELEASE" == "18.04" ]; then
+        pack_server_lib icui18n
+        pack_server_lib icuuc
+        pack_server_lib icudata
+    fi
+    # more cases can be added here.
 fi
 
 chmod +x ${pack}/bin/pegasus_* ${pack}/bin/*.sh
@@ -182,6 +181,6 @@ if [ -f $pack_template ]; then
     sed -i "/^source:/c source: \"$PEGASUS_ROOT\"" $pack_template
 fi
 
-echo ${pack} > PACKAGE
+echo ${pack} >PACKAGE
 
 echo "Done"

@@ -100,3 +100,17 @@ function check_bit()
     fi
 }
 
+function pack_system_lib()
+{
+    local package_path=$1
+    local package_type=$2
+    local lib_name=$3
+
+    SYS_LIB_PATH=$(get_system_lib "${package_type}" "${lib_name}")
+    if [ -z "${SYS_LIB_PATH}" ]; then
+        echo "ERROR: library ${lib_name} is missing on your system"
+        exit 1
+    fi
+    SYS_LIB_NAME=$(get_system_libname "${package_type}" "${lib_name}")
+    copy_file "${SYS_LIB_PATH}" "${package_path}/${SYS_LIB_NAME}"
+}
