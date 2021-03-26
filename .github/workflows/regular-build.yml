@@ -24,6 +24,9 @@ jobs:
           - ubuntu2004
           #- centos6 is EOL
           - centos7
+        compiler:
+          - clang
+          - gcc
     container:
       image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
     steps:
@@ -35,5 +38,10 @@ jobs:
         name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       -
-        name: Compilation
+        name: Compilation on GCC
+        if: ${{ matrix.compiler == 'gcc' }}
         run: ./run.sh build -c --skip_thirdparty
+      -
+        name: Compilation on Clang
+        if: ${{ matrix.compiler == 'clang' && matrix.osversion == 'ubuntu2004' }}
+        run: ./run.sh build --compiler clang-10,clang++-10 --skip_thirdparty
