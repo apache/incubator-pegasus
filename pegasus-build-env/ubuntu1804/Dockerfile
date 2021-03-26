@@ -25,6 +25,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update -y; \
     apt-get -y install build-essential \
                        software-properties-common \
+                       clang-10 \
                        openjdk-8-jdk \
                        python3-pip \
                        libaio-dev \
