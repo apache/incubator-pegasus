@@ -76,9 +76,9 @@ public:
             recent_write_throttling_reject_count->set(
                 row_stats.total_recent_write_throttling_reject_count);
             recent_read_throttling_delay_count->set(
-                    row_stats.total_recent_read_throttling_delay_count);
+                row_stats.total_recent_read_throttling_delay_count);
             recent_read_throttling_reject_count->set(
-                    row_stats.total_recent_read_throttling_reject_count);
+                row_stats.total_recent_read_throttling_reject_count);
             storage_mb->set(row_stats.total_storage_mb);
             storage_count->set(row_stats.total_storage_count);
             rdb_block_cache_hit_rate->set(
