@@ -2,26 +2,37 @@
 # coding=utf-8
 
 import time
-import commands
+from subprocess import check_output, CalledProcessError, STDOUT
 
 from twisted.trial import unittest
 
 from pypegasus.pgclient import *
 
 
+def getstatusoutput(cmd):
+    try:
+        data = check_output(cmd, shell=True, universal_newlines=True, stderr=STDOUT)
+        status = 0
+    except CalledProcessError as ex:
+        data = ex.output
+        status = ex.returncode
+    if data[-1:] == '\n':
+        data = data[:-1]
+    return status, data
+
 class ServerOperator(object):
-    shell_path = '/home/mi/git.xiaomi/Pegasus/pegasus'
+    shell_path = '/your/pegasus-shell/dir'
 
     @classmethod
     def modify_conf(cls, old_conf, new_conf):
         origin_conf_file = cls.shell_path + '/src/server/config-server.ini'
-        status, output = commands.getstatusoutput('sed -i "s/%s/%s/" %s'
+        status, output = getstatusoutput('sed -i "s/%s/%s/" %s'
                                                   % (old_conf, new_conf, origin_conf_file))
         # print(status, output)
 
     @classmethod
     def start_cluster(cls, meta_count, replica_count, check_health):
-        status, output = commands.getstatusoutput('cd %s && ./run.sh start_onebox -m %s -r %s'
+        status, output = getstatusoutput('cd %s && ./run.sh start_onebox -m %s -r %s'
                                                   % (cls.shell_path, meta_count, replica_count))
         # print(status, output)
         if check_health:
@@ -31,17 +42,17 @@ class ServerOperator(object):
 
     @classmethod
     def stop_and_clear_cluster(cls):
-        status, output = commands.getstatusoutput('cd %s && ./run.sh stop_onebox'
+        status, output = getstatusoutput('cd %s && ./run.sh stop_onebox'
                                                   % cls.shell_path)
         # print(status, output)
 
-        status, output = commands.getstatusoutput('cd %s && ./run.sh clear_onebox'
+        status, output = getstatusoutput('cd %s && ./run.sh clear_onebox'
                                                   % cls.shell_path)
         # print(status, output)
 
     @classmethod
     def operate_1_server(cls, op_type, server_type, index):
-        status, output = commands.getstatusoutput('cd %s && ./run.sh %s_onebox_instance -%s %s'
+        status, output = getstatusoutput('cd %s && ./run.sh %s_onebox_instance -%s %s'
                                                   % (cls.shell_path, op_type, server_type, index))
         # print(status, output)
 
@@ -68,7 +79,7 @@ class ServerOperator(object):
     @classmethod
     def wait_until_cluster_health(cls):
         while True:
-            status, output = commands.getstatusoutput(
+            status, output = getstatusoutput(
                 'cd %s && echo "app temp -d" | ./run.sh shell |'
                 ' grep fully_healthy_partition_count | awk \'{print $NF}\''
                 % cls.shell_path)
@@ -80,7 +91,7 @@ class TestIntegration(unittest.TestCase):
     TEST_HKEY = 'test_hkey_1'
     TEST_SKEY = 'test_skey_1'
     TEST_VALUE = 'test_value_1'
-    DATA_COUNT = 1000
+    DATA_COUNT = 500
     MAX_RETRY_COUNT = 30
     check_health = True
 
@@ -94,7 +105,7 @@ class TestIntegration(unittest.TestCase):
     @inlineCallbacks
     def init(self, meta_count, replica_count, confs=None):
         if isinstance(confs, dict):
-            for old_conf, new_conf in confs.iteritems():
+            for old_conf, new_conf in confs.items():
                 ServerOperator.modify_conf(old_conf, new_conf)
         ServerOperator.start_cluster(meta_count, replica_count, self.check_health)
         self.c = Pegasus(['127.0.0.1:34601', '127.0.0.1:34602', '127.0.0.1:34603'], 'temp')
@@ -116,7 +127,7 @@ class TestIntegration(unittest.TestCase):
             ret = yield self.loop_op()
             if not ret:
                 wait_times += 1
-                time.sleep(1)
+                time.sleep(2)
                 if wait_times >= self.MAX_RETRY_COUNT:
                     self.assertTrue(False)
             else:
@@ -256,5 +267,5 @@ class TestIntegration(unittest.TestCase):
             ret = yield s.get_next()
             self.assertEqual(ret, None)
             s.close()
-        except Exception, e:
+        except Exception as e:
             self.assertEqual(e.args[0], 'session or packet error!')

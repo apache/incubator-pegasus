@@ -8,7 +8,7 @@
 
 from thrift.Thrift import TType, TMessageType, TException, TApplicationException
 import logging
-from ttypes import *
+from .ttypes import *
 from thrift.Thrift import TProcessor
 from thrift.transport import TTransport
 from thrift.protocol import TBinaryProtocol, TProtocol
@@ -722,7 +722,7 @@ class put_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -787,7 +787,7 @@ class put_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -853,7 +853,7 @@ class multi_put_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -918,7 +918,7 @@ class multi_put_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -984,7 +984,7 @@ class remove_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1049,7 +1049,7 @@ class remove_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1115,7 +1115,7 @@ class multi_remove_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1180,7 +1180,7 @@ class multi_remove_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1246,7 +1246,7 @@ class get_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1311,7 +1311,7 @@ class get_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1377,7 +1377,7 @@ class multi_get_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1442,7 +1442,7 @@ class multi_get_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1508,7 +1508,7 @@ class sortkey_count_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1573,7 +1573,7 @@ class sortkey_count_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1639,7 +1639,7 @@ class ttl_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1704,7 +1704,7 @@ class ttl_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1770,7 +1770,7 @@ class get_scanner_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1835,7 +1835,7 @@ class get_scanner_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1901,7 +1901,7 @@ class scan_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -1966,7 +1966,7 @@ class scan_result:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -2031,7 +2031,7 @@ class clear_scanner_args:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):

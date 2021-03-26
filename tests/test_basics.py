@@ -1,7 +1,10 @@
 #! /usr/bin/env python
 # coding=utf-8
 import uuid
+import random
+from datetime import time
 
+from twisted.test import proto_helpers
 from twisted.trial import unittest
 
 from pypegasus.pgclient import *
@@ -30,7 +33,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_set_timeout(self):
-        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*1000000, 0, 10)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*70000, 0, 5)
         self.assertEqual(ret, error_types.ERR_TIMEOUT.value)
 
     @inlineCallbacks
@@ -190,21 +193,23 @@ class TestBasics(unittest.TestCase):
         count = 50
         rand_key = uuid.uuid1().hex
         rand_key2 = uuid.uuid4().hex
+        rand_hkey = self.TEST_HKEY + str(random.randint(0, 99))
         kvs = {self.TEST_SKEY + str(x) + "_" + rand_key: self.TEST_VALUE + str(x) for x in range(count)}
         kvs2 = {self.TEST_SKEY + str(x) + "_" + rand_key2: self.TEST_VALUE + str(x) for x in range(count)}
 
-        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(rand_hkey, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
-        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs2)
+        (ret, ign) = yield self.c.multi_set(rand_hkey, kvs2)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         opt = MultiGetOptions()
         opt.sortkey_filter_type = filter_type.FT_MATCH_POSTFIX
         opt.sortkey_filter_pattern = rand_key
-        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+        (rc, get_kvs) = yield self.c.multi_get_opt(rand_hkey,
                                                    '',
                                                    '',
                                                    opt)
+
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(get_kvs, kvs)
@@ -214,18 +219,19 @@ class TestBasics(unittest.TestCase):
         count = 50
         rand_key = uuid.uuid1().hex
         rand_key2 = uuid.uuid4().hex
+        rand_hkey = self.TEST_HKEY + str(random.randint(0,99))
         kvs = {self.TEST_SKEY + str(x) + "_" + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
         kvs2 = {self.TEST_SKEY + str(x) + "_" + rand_key2 + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
-        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(rand_hkey, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
-        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs2)
+        (ret, ign) = yield self.c.multi_set(rand_hkey, kvs2)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         opt = MultiGetOptions()
         opt.sortkey_filter_type = filter_type.FT_MATCH_ANYWHERE
         opt.sortkey_filter_pattern = rand_key
-        (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+        (rc, get_kvs) = yield self.c.multi_get_opt(rand_hkey,
                                                    '',
                                                    '',
                                                    opt)
@@ -321,20 +327,21 @@ class TestBasics(unittest.TestCase):
     def test_multi_get_opt_reverse_ok(self):
         count = 50
         steps = 5
+        rand_hkey = self.TEST_HKEY + str(random.randint(0, 99))
         self.assertTrue(count % steps == 0)
-        split_count = count / 5
+        split_count = int(count / 5)
         rand_key = uuid.uuid1().hex
         ks = sorted({self.TEST_SKEY + rand_key + "_" + str(x) for x in range(count)})
         kvs = {self.TEST_SKEY + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
-        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
+        (ret, ign) = yield self.c.multi_set(rand_hkey, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         stop_key = self.TEST_SKEY + rand_key + '_' + '9'*len(str(count))
         opt = MultiGetOptions()
         opt.reverse = True
         for step in range(steps):
-            (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
+            (rc, get_kvs) = yield self.c.multi_get_opt(rand_hkey,
                                                        self.TEST_SKEY + rand_key + '_0',
                                                        stop_key,
                                                        opt,
@@ -385,7 +392,7 @@ class TestBasics(unittest.TestCase):
     @inlineCallbacks
     def test_multi_get_part_ok(self):
         count = 50
-        ks = {self.TEST_SKEY + str(x) for x in range(count/2)}
+        ks = {self.TEST_SKEY + str(x) for x in range(int(count/2))}
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
         (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
@@ -403,7 +410,7 @@ class TestBasics(unittest.TestCase):
     def test_multi_get_more_ok(self):
         count = 50
         ks = {self.TEST_SKEY + str(x) for x in range(count)}
-        kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count/2)}
+        kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(int(count/2))}
 
         (rc, del_count) = yield self.c.multi_del(self.TEST_HKEY, ks)
         self.assertEqual(rc, error_types.ERR_OK.value)
@@ -456,7 +463,7 @@ class TestBasics(unittest.TestCase):
     def test_scan_none(self):
         rand_key = uuid.uuid1().hex
         o = ScanOptions()
-        s = self.c.get_scanner(self.TEST_HKEY + rand_key, b'\x00\x00', b'\xFF\xFF', o)
+        s = self.c.get_scanner(self.TEST_HKEY + rand_key, '\x00\x00', '\xFF\xFF', o)
         ret = yield s.get_next()
         self.assertEqual(ret, None)
         s.close()
@@ -467,11 +474,12 @@ class TestBasics(unittest.TestCase):
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
         rand_key = uuid.uuid1().hex
-        (ret, ign) = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
+        rand_hkey = self.TEST_HKEY + str(random.randint(0, 99))
+        (ret, ign) = yield self.c.multi_set(rand_hkey + rand_key, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
         o = ScanOptions()
-        s = self.c.get_scanner(self.TEST_HKEY + rand_key, b'\x00\x00', b'\xFF\xFF', o)
+        s = self.c.get_scanner(rand_hkey + rand_key, '\x00\x00', '\xFF\xFF', o)
         get_count = 0
         last_sk = None
         while True:
@@ -489,7 +497,7 @@ class TestBasics(unittest.TestCase):
                     self.assertLess(last_sk, sk)
                 last_sk = sk
 
-                self.assertEqual(hk, self.TEST_HKEY + rand_key)
+                self.assertEqual(hk, rand_hkey + rand_key)
                 self.assertIn(sk, kvs)
                 self.assertEqual(v, kvs[sk])
         s.close()

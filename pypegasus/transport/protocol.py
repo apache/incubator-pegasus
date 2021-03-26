@@ -5,8 +5,11 @@ from __future__ import print_function
 
 from struct import unpack
 
-from compat import BufferIO
-from cStringIO import StringIO
+from .compat import BufferIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
 
 from thrift.transport import TTwisted
 from thrift.transport import TTransport

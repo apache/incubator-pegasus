@@ -16,7 +16,7 @@ from pypegasus.utils import tools
 
 class ThriftHeader(object):
     HEADER_LENGTH = 48
-    HEADER_TYPE = 'THFT'
+    HEADER_TYPE = b'THFT'
 
     def __init__(self, gpid):
         self.hdr_version = 0

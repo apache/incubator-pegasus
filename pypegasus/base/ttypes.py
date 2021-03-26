@@ -7,9 +7,11 @@
 #
 
 from aenum import Enum
+import six
 
 import socket
 import struct
+import logging
 from thrift.Thrift import TType
 
 from thrift.transport import TTransport
@@ -26,10 +28,19 @@ class blob:
   )
 
   def read(self, iprot):
-    self.data = iprot.readString()
+    try:
+      self.data = iprot.readString()
+    except UnicodeDecodeError:
+      logger = logging.getLogger("pgclient")
+      logger.warn("Decode as Unicode Error")
+      self.data = None
 
   def write(self, oprot):
-    oprot.writeString(self.data)
+    this_data = self.data
+    if six.PY3 and (isinstance(self.data, six.binary_type) \
+        or isinstance(self.data[:], six.binary_type)):
+      this_data = str(self.data, "utf-8")
+    oprot.writeString(this_data)
 
   def validate(self):
     return
@@ -43,7 +54,7 @@ class blob:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -177,7 +188,7 @@ class error_code:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -223,7 +234,7 @@ class task_code:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -275,7 +286,7 @@ class rpc_address:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):
@@ -307,7 +318,7 @@ class gpid:
 
   def __repr__(self):
     L = ['%s=%r' % (key, value)
-      for key, value in self.__dict__.iteritems()]
+      for key, value in self.__dict__.items()]
     return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
 
   def __eq__(self, other):

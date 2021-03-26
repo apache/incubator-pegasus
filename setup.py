@@ -23,5 +23,5 @@ setup(
         'Programming Language :: Python :: 2',
         'Topic :: Software Development :: Libraries'
     ],
-    zip_safe=True
+    zip_safe=False
 )

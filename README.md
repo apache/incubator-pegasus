@@ -7,11 +7,12 @@ It uses [Twisted](http://twistedmatrix.com) for the asynchronous communication w
 
 Installation
 ------------
-Python 2.x
+Python 3.8+
 
 pypegasus can be installed via pip as follows:
 
-`pip install pypegasus`
+`git clone https://git.n.xiaomi.com/pegasus/pegasus-python-client`
+`cd pegasus-python-client && python setup.py install`
 
 Usage
 -----
@@ -23,17 +24,19 @@ Before testing, you should firstly start an onebox cluster, referring to [`how t
 
 ## Basic interfaces test:
 
-`python -m twisted.trial test_basics.py`
+`cd tests && python -m unittest test_basics.TestBasics`
 
 ## Integration test:
 
-`python -m twisted.trial test_integration.py`
+`cd tests && python -m twisted.trial test_integration.py`
 
 ATTENTION: you should firstly set proper pegasus shell path in [`test_integration.py`](test_integration.py#L10).
 
+Can't pass test_integration.test_2of5_replica_stop in this preview version
+
 ## Benchmark test:
 
-`python -m twisted.trial test_benchmark.py`
+`cd tests && python -m unittest test_benchmark.TestBasics`
 
 The test result on my personal PC (CPU: Intel i7-7700 3.60GHz, mem: 8G) is:
 ```

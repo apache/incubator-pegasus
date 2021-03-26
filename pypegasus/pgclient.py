@@ -3,6 +3,7 @@ from __future__ import with_statement
 
 import os
 import logging.config
+import six
 
 from thrift.Thrift import TMessageType, TApplicationException
 from twisted.internet import defer
@@ -337,6 +338,8 @@ class Table(SessionManager):
         return dlist
 
     def get_hash_key_pid(self, hash_key):
+        if six.PY3 and isinstance(hash_key, six.string_types):
+            hash_key = hash_key.encode("utf8")
         hash_value = PegasusHash.default_hash(hash_key)
         pidx = hash_value % self.get_partition_count()
         return gpid(self.app_id, pidx)
@@ -374,7 +377,7 @@ class PegasusScanner(object):
     CONTEXT_ID_NOT_EXIST = -2
 
     def __init__(self, table, gpid_list, scan_options,
-                 start_key=blob(b'\x00\x00'), stop_key=blob(b'\xFF\xFF')):
+                 start_key=blob('\x00\x00'), stop_key=blob('\xFF\xFF')):
         self._table = table
         self._gpid = gpid(0)
         self._gpid_list = gpid_list
@@ -486,7 +489,7 @@ class PegasusScanner(object):
 
 
 class PegasusHash(object):
-    polynomial, = struct.unpack('<q', struct.pack('<Q', 0x9a6c9329ac4bc9b5L))
+    polynomial, = struct.unpack('<q', struct.pack('<Q', 0x9a6c9329ac4bc9b5))
     table_forward = [0] * 256
 
     @classmethod
@@ -513,8 +516,12 @@ class PegasusHash(object):
     def crc64(cls, data, offset, length):
         crc = 0xffffffffffffffff
         end = offset + length
+
         for c in data[offset:end:1]:
-            crc = cls.table_forward[(ord(c) ^ crc) & 0xFF] ^ cls.unsigned_right_shift(crc, 8)
+            if six.PY2:
+                crc = cls.table_forward[(ord(c) ^ crc) & 0xFF] ^ (crc >> 8)
+            elif six.PY3:
+                crc = cls.table_forward[(c ^ crc) & 0xFF] ^ (crc >> 8)
         return ~crc
 
     @classmethod
@@ -544,6 +551,10 @@ class Pegasus(object):
     @classmethod
     def generate_key(cls, hash_key, sort_key):
         # assert(len(hash_key) < sys.maxsize > 1)
+        if six.PY3 and isinstance(hash_key, six.string_types):
+            hash_key = hash_key.encode("utf8")
+        if six.PY3 and isinstance(sort_key, six.string_types):
+            sort_key = sort_key.encode("utf8")
 
         # hash_key_len is in big endian
         hash_key_len = len(hash_key)
@@ -969,7 +980,7 @@ class Pegasus(object):
         all_gpid_list = self.table.get_all_gpid()
         split = min(len(all_gpid_list), max_split_count)
         count = len(all_gpid_list)
-        size = count / split
+        size = count // split
         more = count % split
 
         opt = ScanOptions()

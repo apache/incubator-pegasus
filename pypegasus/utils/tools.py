@@ -1,5 +1,5 @@
 # coding=utf-8
-
+import six
 import time
 import struct
 from pypegasus.base.ttypes import (
@@ -73,11 +73,17 @@ class MultiGetOptions(object):
 
 def restore_key(merge_key):
     s = struct.Struct('>H')
+    if six.PY3 and isinstance(merge_key, str):
+        merge_key = merge_key.encode("utf8")
     hash_key_len = s.unpack(merge_key[:2])[0]
 
     hash_key = merge_key[2:2+hash_key_len]
     sort_key = merge_key[2+hash_key_len:]
 
+    if six.PY3:
+        hash_key = hash_key.decode("utf8")
+        sort_key = sort_key.decode("utf8")
+    
     return hash_key, sort_key
 
 
