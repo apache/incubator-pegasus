@@ -83,17 +83,14 @@ void replica_http_service::query_app_data_version_handler(const http_request &re
         return;
     }
 
-    dsn::utils::table_printer tp;
-    tp.add_title("pidx");
-    tp.add_column("data_version");
+    nlohmann::json json;
     for (const auto &kv : version_map) {
-        tp.add_row(kv.first);
-        tp.append_data(kv.second);
+        json[std::to_string(kv.first)] = nlohmann::json{
+            {"data_version", std::to_string(kv.second)},
+        };
     }
-    std::ostringstream out;
-    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
-    resp.body = out.str();
     resp.status_code = http_status_code::ok;
+    resp.body = json.dump();
 }
 
 void replica_http_service::query_compaction_handler(const http_request &req, http_response &resp)

@@ -112,7 +112,7 @@ TEST_F(replica_test, query_data_version_test)
                  {"wrong", http_status_code::bad_request, "invalid app_id=wrong"},
                  {"2",
                   http_status_code::ok,
-                  R"({"1":{"pidx":"1","data_version":"1"}})"},
+                  R"({"1":{"data_version":"1"}})"},
                  {"4", http_status_code::not_found, "app_id=4 not found"}};
     for (const auto &test : tests) {
         http_request req;
@@ -123,9 +123,6 @@ TEST_F(replica_test, query_data_version_test)
         http_svc.query_app_data_version_handler(req, resp);
         ASSERT_EQ(resp.status_code, test.expected_code);
         std::string expected_json = test.expected_response_json;
-        if (test.expected_code == http_status_code::ok) {
-            expected_json += "\n";
-        }
         ASSERT_EQ(resp.body, expected_json);
     }
 }
