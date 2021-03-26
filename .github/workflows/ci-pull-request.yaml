@@ -27,13 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: apachepegasus/clang-format-3.9
-    defaults:
-      run:
-        working-directory: /root/incubator-pegasus
     steps:
       - uses: actions/checkout@v2
         with:
-            path: /root/incubator-pegasus
             fetch-depth: 1
             submodules: true
       - name: clang-format
