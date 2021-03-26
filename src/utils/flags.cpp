@@ -108,14 +108,13 @@ public:
     void add_tag(const flag_tag &tag) { _tags.insert(tag); }
     bool has_tag(const flag_tag &tag) const { return _tags.find(tag) != _tags.end(); }
 
-    std::string to_json() const
+    void to_table_printer(utils::table_printer &tp) const
     {
 #define TABLE_PRINTER_ADD_VALUE(type, type_enum)                                                   \
     case type_enum:                                                                                \
         tp.add_row_name_and_data("value", value<type>());                                          \
         break;
 
-        utils::table_printer tp;
         tp.add_row_name_and_data("name", _name);
         tp.add_row_name_and_data("section", _section);
         tp.add_row_name_and_data("type", enum_to_string(_type));
@@ -130,7 +129,12 @@ public:
             TABLE_PRINTER_ADD_VALUE(double, FV_DOUBLE);
             TABLE_PRINTER_ADD_VALUE(const char *, FV_STRING);
         }
+    }
 
+    std::string to_json() const
+    {
+        utils::table_printer tp;
+        to_table_printer(tp);
         std::ostringstream out;
         tp.output(out, utils::table_printer::output_format::kJsonCompact);
         return out.str();
@@ -227,13 +231,15 @@ public:
 
     std::string list_all_flags() const
     {
-        utils::table_printer tp;
+        utils::multi_table_printer mtp;
         for (const auto &flag : _flags) {
-            tp.add_row_name_and_data(flag.first, flag.second.to_json());
+            utils::table_printer tp(flag.first);
+            flag.second.to_table_printer(tp);
+            mtp.add(std::move(tp));
         }
 
         std::ostringstream out;
-        tp.output(out, utils::table_printer::output_format::kJsonCompact);
+        mtp.output(out, utils::table_printer::output_format::kJsonCompact);
         return out.str();
     }
 
