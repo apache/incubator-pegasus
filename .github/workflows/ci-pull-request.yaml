@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-            working-directory: /root
+            path: /root/incubator-pegasus
             fetch-depth: 1
             submodules: true
       - name: clang-format
