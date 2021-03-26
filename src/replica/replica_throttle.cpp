@@ -56,7 +56,6 @@ bool replica::throttle_write_request(message_ex *request)
 bool replica::throttle_read_request(message_ex *request)
 {
     THROTTLE_REQUEST(read, qps, request, 1);
-    THROTTLE_REQUEST(read, size, request, request->body_size());
     return false;
 }
 
@@ -68,8 +67,6 @@ void replica::update_throttle_envs(const std::map<std::string, std::string> &env
         envs, replica_envs::WRITE_SIZE_THROTTLING, _write_size_throttling_controller);
     update_throttle_env_internal(
         envs, replica_envs::READ_QPS_THROTTLING, _read_qps_throttling_controller);
-    update_throttle_env_internal(
-        envs, replica_envs::READ_SIZE_THROTTLING, _read_size_throttling_controller);
 }
 
 void replica::update_throttle_env_internal(const std::map<std::string, std::string> &envs,

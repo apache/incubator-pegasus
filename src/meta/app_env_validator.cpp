@@ -181,8 +181,6 @@ void app_env_validator::register_all_validators()
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
         {replica_envs::READ_QPS_THROTTLING,
          std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
-        {replica_envs::READ_SIZE_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
          std::bind(&check_split_validation, std::placeholders::_1, std::placeholders::_2)}};
 }
