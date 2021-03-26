@@ -117,9 +117,9 @@ struct table_stats
         total_recent_write_throttling_reject_count +=
             row_stats.total_recent_write_throttling_reject_count;
         total_recent_read_throttling_delay_count +=
-                row_stats.total_recent_read_throttling_delay_count;
+            row_stats.total_recent_read_throttling_delay_count;
         total_recent_read_throttling_reject_count +=
-                row_stats.total_recent_read_throttling_reject_count;
+            row_stats.total_recent_read_throttling_reject_count;
         total_storage_mb += row_stats.total_storage_mb;
         total_storage_count += row_stats.total_storage_count;
         total_rdb_block_cache_hit_count += row_stats.total_rdb_block_cache_hit_count;
