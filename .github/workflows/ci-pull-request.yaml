@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-	    fetch-depth: 1
+            fetch-depth: 1
       - name: clang-format
         run: ./rdsn/scripts/linux/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn -r ./src
 
