@@ -72,7 +72,7 @@ class replica_disk_migrator;
 
 class cold_backup_context;
 typedef dsn::ref_ptr<cold_backup_context> cold_backup_context_ptr;
-class cold_backup_metadata;
+struct cold_backup_metadata;
 
 namespace test {
 class test_checker;

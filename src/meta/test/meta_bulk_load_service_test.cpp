@@ -210,7 +210,7 @@ public:
                          ainfo.app_id,
                          app_path,
                          dsn::enum_to_string(ainfo.status));
-                for (const auto kv : partition_bulk_load_info_map) {
+                for (const auto &kv : partition_bulk_load_info_map) {
                     mock_partition_bulk_load_info_on_remote_storage(gpid(ainfo.app_id, kv.first),
                                                                     kv.second);
                 }
@@ -280,7 +280,7 @@ public:
     int32_t get_partition_bulk_load_info_size(int32_t app_id)
     {
         int count = 0;
-        for (const auto kv : bulk_svc()._partition_bulk_load_info) {
+        for (const auto &kv : bulk_svc()._partition_bulk_load_info) {
             if (kv.first.get_app_id() == app_id) {
                 ++count;
             }

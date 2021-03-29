@@ -284,7 +284,7 @@ public:
         std::string path = app_root;
 
         _ms->get_meta_storage()->create_node(
-            std::move(path), blob(lock_state, 0, strlen(lock_state)), [this, &app_root]() {
+            std::move(path), blob(lock_state, 0, strlen(lock_state)), [&app_root]() {
                 ddebug_f("create app root {}", app_root);
             });
         wait_all();

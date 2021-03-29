@@ -474,9 +474,9 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
 
     useconds_t seconds = 60000000;
 
-    const char *req_url = req.full_url.to_string().data();
+    std::string req_url = req.full_url.to_string();
     size_t len = req.full_url.length();
-    string_splitter url_sp(req_url, req_url + len, '?');
+    string_splitter url_sp(req_url.data(), req_url.data() + len, '?');
     if (url_sp != NULL && ++url_sp != NULL) {
         string_splitter param_sp(url_sp.field(), url_sp.field() + url_sp.length(), '&');
         while (param_sp != NULL) {
