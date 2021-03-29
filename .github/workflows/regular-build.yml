@@ -29,7 +29,6 @@ jobs:
           - gcc
     container:
       image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
-    if: ${{ matrix.compiler == 'gcc' || (matrix.compiler == 'clang' && matrix.osversion == 'ubuntu2004') }}
     steps:
       -
         uses: actions/checkout@v2
