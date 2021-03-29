@@ -41,6 +41,8 @@ RUN apt-get update -y; \
                        git \
                        curl \
                        zip \
+                       gdb \
+                       vim \
                        automake \
                        libtool \
                        libssl-dev \

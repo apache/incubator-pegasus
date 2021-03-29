@@ -36,6 +36,8 @@ wget \
 ccache \
 nmap-ncat \
 zip \
+gdb \
+vim \
 unzip \
 which \
 openssl-devel \
