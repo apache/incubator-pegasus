@@ -123,10 +123,12 @@ func NewPegasusNodeManager(metaAddrs []string, replicaAddrs []string) *PegasusNo
 		nodes:            make(map[string]*PegasusNode),
 	}
 	for _, addr := range metaAddrs {
-		m.nodes[addr] = newNodeFromTCPAddr(addr, session.NodeTypeMeta)
+		n := newNodeFromTCPAddr(addr, session.NodeTypeMeta)
+		m.nodes[n.TCPAddr()] = n
 	}
 	for _, addr := range replicaAddrs {
-		m.nodes[addr] = newNodeFromTCPAddr(addr, session.NodeTypeReplica)
+		n := newNodeFromTCPAddr(addr, session.NodeTypeReplica)
+		m.nodes[n.TCPAddr()] = n
 	}
 	return m
 }
@@ -161,12 +163,11 @@ func (m *PegasusNodeManager) GetNode(addr string, ntype session.NodeType) (*Pega
 		return node, nil
 	}
 	return nil, err
-
 }
 
-func (m *PegasusNodeManager) getNodeFromHost(host string, ntype session.NodeType) (*PegasusNode, error) {
+func (m *PegasusNodeManager) getNodeFromHost(hostPort string, ntype session.NodeType) (*PegasusNode, error) {
 	for _, node := range m.nodes {
-		if fmt.Sprintf("%s:%d", node.Hostname, node.Port) == host {
+		if fmt.Sprintf("%s:%d", node.Hostname, node.Port) == hostPort {
 			if node.Type != ntype {
 				return nil, fmt.Errorf("node(%s) is not %s", node, ntype)
 			}
@@ -174,7 +175,7 @@ func (m *PegasusNodeManager) getNodeFromHost(host string, ntype session.NodeType
 		}
 	}
 
-	return nil, fmt.Errorf("Invalid node %s", host)
+	return nil, fmt.Errorf("Invalid node %s", hostPort)
 }
 
 // GetAllNodes returns all nodes that matches the type. The result could be inconsistent
