@@ -337,6 +337,8 @@ const std::string restore_test::backup_provider_name = "local_service";
 // period is 5min, so the time between two backup is at least 5min, but if we set the
 // backup_interval_seconds smaller enough such as smaller than the time of finishing once backup, we
 // can start next backup immediately when current backup is finished
+// The backup interval must be greater than checkpoint reserve time, see
+// backup_service::add_backup_policy() for details.
 const int restore_test::backup_interval_seconds = 700;
 const int restore_test::backup_history_count_to_keep = 6;
 const std::string restore_test::start_time = "24:0";
