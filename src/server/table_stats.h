@@ -68,6 +68,8 @@ struct table_stats
         total_recent_abnormal_count += row.recent_abnormal_count;
         total_recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
         total_recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+        total_recent_read_throttling_delay_count += row.recent_read_throttling_delay_count;
+        total_recent_read_throttling_reject_count += row.recent_read_throttling_reject_count;
         total_storage_mb += row.storage_mb;
         total_storage_count += row.storage_count;
         total_rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
@@ -114,6 +116,10 @@ struct table_stats
             row_stats.total_recent_write_throttling_delay_count;
         total_recent_write_throttling_reject_count +=
             row_stats.total_recent_write_throttling_reject_count;
+        total_recent_read_throttling_delay_count +=
+            row_stats.total_recent_read_throttling_delay_count;
+        total_recent_read_throttling_reject_count +=
+            row_stats.total_recent_read_throttling_reject_count;
         total_storage_mb += row_stats.total_storage_mb;
         total_storage_count += row_stats.total_storage_count;
         total_rdb_block_cache_hit_count += row_stats.total_rdb_block_cache_hit_count;
@@ -158,6 +164,8 @@ struct table_stats
     double total_recent_abnormal_count = 0;
     double total_recent_write_throttling_delay_count = 0;
     double total_recent_write_throttling_reject_count = 0;
+    double total_recent_read_throttling_delay_count = 0;
+    double total_recent_read_throttling_reject_count = 0;
     double total_storage_mb = 0;
     double total_storage_count = 0;
     double total_rdb_block_cache_hit_count = 0;
