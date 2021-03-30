@@ -28,7 +28,7 @@ class pegasus_value_manager : public dsn::utils::singleton<pegasus_value_manager
 {
 public:
     void register_schema(pegasus_value_schema *schema);
-    /// using data value and data version stored in meta column family to get data version
+    /// using raw value in rocksdb and data version stored in meta column family to get data version
     pegasus_value_schema *get_value_schema(uint32_t meta_cf_data_version,
                                            dsn::string_view value) const;
     pegasus_value_schema *get_value_schema(uint32_t version) const;
