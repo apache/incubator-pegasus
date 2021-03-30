@@ -24,11 +24,13 @@
 
 namespace pegasus {
 
-enum segment_type {
+enum segment_type
+{
     /// TBD(zlw)
 };
 
-struct pegasus_value_segment {
+struct pegasus_value_segment
+{
     virtual ~pegasus_value_segment() = default;
     virtual segment_type type() = 0;
 };
