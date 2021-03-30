@@ -135,28 +135,23 @@ TEST_F(replica_test, query_compaction_test)
         std::string app_id;
         http_status_code expected_code;
         std::string expected_response_json;
-    } tests[] = {
-        {"", http_status_code::bad_request, "app_id should not be empty"},
-        {"xxx", http_status_code::bad_request, "invalid app_id=xxx"},
-        {"2",
-         http_status_code::ok,
-         R"({"status":{"CompactionRunning":"0","CompactionQueue":"0","CompactionFinish":"1"}})"},
-        {"4",
-         http_status_code::ok,
-         R"({"status":{"CompactionRunning":"0","CompactionQueue":"0","CompactionFinish":"0"}})"}};
+    } tests[] = {{"", http_status_code::bad_request, "app_id should not be empty"},
+                 {"xxx", http_status_code::bad_request, "invalid app_id=xxx"},
+                 {"2",
+                  http_status_code::ok,
+                  R"({"status":{"finished":0,"idle":1,"queuing":0,"running":0}})"},
+                 {"4",
+                  http_status_code::ok,
+                  R"({"status":{"finished":0,"idle":0,"queuing":0,"running":0}})"}};
     for (const auto &test : tests) {
         http_request req;
         http_response resp;
         if (!test.app_id.empty()) {
             req.query_args["app_id"] = test.app_id;
         }
-        http_svc.query_compaction_handler(req, resp);
+        http_svc.query_manual_compaction_handler(req, resp);
         ASSERT_EQ(resp.status_code, test.expected_code);
-        std::string expected_json = test.expected_response_json;
-        if (test.expected_code == http_status_code::ok) {
-            expected_json += "\n";
-        }
-        ASSERT_EQ(resp.body, expected_json);
+        ASSERT_EQ(resp.body, test.expected_response_json);
     }
 }
 

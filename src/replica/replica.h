@@ -80,9 +80,10 @@ class test_checker;
 
 enum manual_compaction_status
 {
-    kFinish = 0,
+    kIdle = 0,
+    kQueuing,
     kRunning,
-    kQueue
+    kFinished
 };
 const char *manual_compaction_status_to_string(manual_compaction_status status);
 
@@ -408,10 +409,10 @@ private:
     // Used for remote command
     // TODO: remove this interface and only expose the http interface
     // now this remote commend will be used by `scripts/pegasus_manual_compact.sh`
-    std::string query_compact_state() const;
+    std::string query_manual_compact_state() const;
 
     // Used for http interface
-    manual_compaction_status get_compact_status() const;
+    manual_compaction_status get_manual_compact_status() const;
 
     void init_table_level_latency_counters();
 

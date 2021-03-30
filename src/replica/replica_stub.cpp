@@ -2255,8 +2255,9 @@ void replica_stub::register_ctrl_command()
             "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
             "query-compact - query full compact status on the underlying storage engine",
             [this](const std::vector<std::string> &args) {
-                return exec_command_on_replica(
-                    args, true, [](const replica_ptr &rep) { return rep->query_compact_state(); });
+                return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
+                    return rep->query_manual_compact_state();
+                });
             });
 
         _query_app_envs_command = ::dsn::command_manager::instance().register_command(
@@ -2846,13 +2847,13 @@ void replica_stub::query_app_data_version(
     }
 }
 
-void replica_stub::query_app_compact_status(
+void replica_stub::query_app_manual_compact_status(
     int32_t app_id, std::unordered_map<gpid, manual_compaction_status> &status)
 {
     zauto_read_lock l(_replicas_lock);
     for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {
         if (it->first.get_app_id() == app_id) {
-            status[it->first] = it->second->get_compact_status();
+            status[it->first] = it->second->get_manual_compact_status();
         }
     }
 }
