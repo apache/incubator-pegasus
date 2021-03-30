@@ -19,9 +19,6 @@
 
 #pragma once
 
-#include <cstdint>
-#include <dsn/utility/string_view.h>
-
 namespace pegasus {
 
 enum segment_type
