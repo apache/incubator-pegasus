@@ -206,9 +206,9 @@ function(dsn_setup_compiler_flags)
     # -Wno-deprecated-register
     #   kbr5.h uses the legacy 'register' keyword.
     add_compile_options(-Wno-deprecated-register)
-    # -Wimplicit-int-float-conversion
+    # -Wno-implicit-float-conversion
     #   Poco/Dynamic/VarHolder.h uses 'unsigned long' to 'float' conversion
-    add_compile_options(-Wno-implicit-int-float-conversion)
+    add_compile_options(-Wno-implicit-float-conversion)
 
     find_program(CCACHE_FOUND ccache)
     if(CCACHE_FOUND)
