@@ -35,6 +35,8 @@ public:
                              std::shared_ptr<hotkey_collector> read_hotkey_collector,
                              std::shared_ptr<hotkey_collector> write_hotkey_collector);
 
+    virtual ~capacity_unit_calculator() = default;
+
     void add_get_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_multi_get_cu(int32_t status,
                           const dsn::blob &hash_key,

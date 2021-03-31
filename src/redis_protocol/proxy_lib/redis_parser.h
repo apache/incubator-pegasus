@@ -31,6 +31,8 @@ class rrdb_client;
 }
 }
 
+class proxy_test;
+
 namespace pegasus {
 namespace proxy {
 
@@ -38,6 +40,8 @@ namespace proxy {
 class redis_parser : public proxy_session
 {
 protected:
+    friend class ::proxy_test;
+
     struct redis_base_type
     {
         virtual ~redis_base_type() = default;
