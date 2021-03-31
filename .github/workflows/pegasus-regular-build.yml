@@ -45,6 +45,3 @@ jobs:
       -
         name: Packaging Server
         run: ./run.sh pack_server
-      -
-        name: Packaging Tools
-        run: ./run.sh pack_tools
