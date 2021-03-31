@@ -415,8 +415,8 @@ bool restore(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    if (old_cluster_name.empty() || old_policy_name.empty() || old_app_name.empty() ||
-        old_app_id <= 0 || timestamp <= 0 || backup_provider_type.empty()) {
+    if (old_cluster_name.empty() || old_app_name.empty() || old_app_id <= 0 || timestamp <= 0 ||
+        backup_provider_type.empty()) {
         fprintf(stderr, "invalid parameter\n");
         return false;
     }

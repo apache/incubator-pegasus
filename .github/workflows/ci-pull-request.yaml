@@ -27,14 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: apachepegasus/clang-format-3.9
-    defaults:
-      run:
-        working-directory: /root/incubator-pegasus
     steps:
-      - name: Clone Apache Pegasus Source
-        working-directory: /root
-        run: |
-          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+      - uses: actions/checkout@v2
+        with:
+            fetch-depth: 1
+            submodules: true
       - name: clang-format
         run: ./rdsn/scripts/linux/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn -r ./src
 
