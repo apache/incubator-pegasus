@@ -1179,7 +1179,7 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
     if (c < 0 || (c == 0 && o.start_inclusive && o.stop_inclusive)) {
         v.push_back(pegasus_key_hash(start));
     }
-    scanner = new pegasus_scanner_impl(_client, std::move(v), o, start, stop);
+    scanner = new pegasus_scanner_impl(_client, std::move(v), o, start, stop, false);
 
     return PERR_OK;
 }
@@ -1223,7 +1223,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
                     std::vector<uint64_t> hash(s);
                     for (int j = 0; j < s; j++)
                         hash[j] = --count;
-                    scanners[i] = new pegasus_scanner_impl(_client, std::move(hash), options);
+                    scanners[i] = new pegasus_scanner_impl(_client, std::move(hash), options, true);
                 }
             }
         }
