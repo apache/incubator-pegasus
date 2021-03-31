@@ -18,14 +18,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        osversion:
+        os:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
           #- centos6 is EOL
           - centos7
+        compiler-family:
+          - gcc
+        include:
+          - compiler-family: clang
+            compiler: "clang-10,clang++-10"
+            os: ubuntu2004
+          - compiler-family: clang
+            compiler: "clang-9,clang++-9"
+            os: ubuntu1804
     container:
-      image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.osversion }}
+      image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.os }}
     defaults:
       run:
         working-directory: /root/incubator-pegasus
@@ -39,9 +48,15 @@ jobs:
         name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       -
-        name: Compilation
-        run: |
-          ./run.sh build -c --skip_thirdparty
+        name: Compilation on GCC
+        if: ${{ matrix.compiler-family == 'gcc' }}
+        run: ./run.sh build -c --skip_thirdparty
+      -
+        name: Compilation on Clang
+        if: ${{ matrix.compiler-family == 'clang' }}
+        env:
+          COMPILER: ${{ matrix.compiler }}
+        run: ./run.sh build --compiler $COMPILER --skip_thirdparty
       -
         name: Packaging Server
         run: ./run.sh pack_server
