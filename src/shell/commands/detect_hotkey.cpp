@@ -107,7 +107,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     auto err = sc->ddl_client->detect_hotkey(dsn::rpc_address(target_address), req, resp);
     if (err != dsn::ERR_OK) {
         fmt::print(stderr,
-                   "Hotkey detect rpc sending failed, in {}.{}, error_hint:{}\n",
+                   "Hotkey detection rpc sending failed, in {}.{}, error_hint:{}\n",
                    app_id,
                    partition_index,
                    err.to_string());
@@ -116,7 +116,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     if (resp.err != dsn::ERR_OK) {
         fmt::print(stderr,
-                   "Hotkey detect rpc performed failed, in {}.{}, error_hint:{} {}\n",
+                   "Hotkey detection performed failed, in {}.{}, error_hint:{} {}\n",
                    app_id,
                    partition_index,
                    resp.err,
@@ -134,7 +134,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
                    ip_str);
         break;
     case dsn::replication::detect_action::STOP:
-        fmt::print("Detect hotkey rpc is stopped now\n");
+        fmt::print("Hotkey detection is stopped now\n");
         break;
     case dsn::replication::detect_action::QUERY:
         fmt::print("Find {} hotkey in {}.{} result:{}\n",
