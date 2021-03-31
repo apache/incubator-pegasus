@@ -126,7 +126,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 
     switch (req.action) {
     case dsn::replication::detect_action::START:
-        fmt::print("Detect hotkey rpc is starting, use 'detect_hotkey -a {} -p {} -t {} -c "
+        fmt::print("Hotkey detection is starting, using 'detect_hotkey -a {} -p {} -t {} -c "
                    "query -d {}' to get the result later\n",
                    app_id,
                    partition_index,
