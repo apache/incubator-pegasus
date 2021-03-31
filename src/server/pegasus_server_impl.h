@@ -45,6 +45,14 @@ class capacity_unit_calculator;
 class pegasus_server_write;
 class hotkey_collector;
 
+enum class range_iteration_state
+{
+    kNormal = 1,
+    kExpired,
+    kFiltered,
+    kHashInvalid
+};
+
 class pegasus_server_impl : public pegasus_read_service
 {
 public:
@@ -203,29 +211,26 @@ private:
 
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
-    // return 1 if value is appended
-    // return 2 if value is expired
-    // return 3 if value is filtered
-    int append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                                  const rocksdb::Slice &key,
-                                  const rocksdb::Slice &value,
-                                  ::dsn::apps::filter_type::type hash_key_filter_type,
-                                  const ::dsn::blob &hash_key_filter_pattern,
-                                  ::dsn::apps::filter_type::type sort_key_filter_type,
-                                  const ::dsn::blob &sort_key_filter_pattern,
-                                  uint32_t epoch_now,
-                                  bool no_value);
+    range_iteration_state
+    append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
+                              const rocksdb::Slice &key,
+                              const rocksdb::Slice &value,
+                              ::dsn::apps::filter_type::type hash_key_filter_type,
+                              const ::dsn::blob &hash_key_filter_pattern,
+                              ::dsn::apps::filter_type::type sort_key_filter_type,
+                              const ::dsn::blob &sort_key_filter_pattern,
+                              uint32_t epoch_now,
+                              bool no_value,
+                              bool request_validate_hash);
 
-    // return 1 if value is appended
-    // return 2 if value is expired
-    // return 3 if value is filtered
-    int append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
-                                       const rocksdb::Slice &key,
-                                       const rocksdb::Slice &value,
-                                       ::dsn::apps::filter_type::type sort_key_filter_type,
-                                       const ::dsn::blob &sort_key_filter_pattern,
-                                       uint32_t epoch_now,
-                                       bool no_value);
+    range_iteration_state
+    append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
+                                   const rocksdb::Slice &key,
+                                   const rocksdb::Slice &value,
+                                   ::dsn::apps::filter_type::type sort_key_filter_type,
+                                   const ::dsn::blob &sort_key_filter_pattern,
+                                   uint32_t epoch_now,
+                                   bool no_value);
 
     // return true if the filter type is supported
     bool is_filter_type_supported(::dsn::apps::filter_type::type filter_type)

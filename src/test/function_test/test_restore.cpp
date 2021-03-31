@@ -68,6 +68,7 @@ public:
         std::string provider_dir = ss.str().substr(0, ss.str().length() - 1);
         policy_dir = "onebox/" + provider_dir + '/' +
                      dsn::utils::filesystem::path_combine(cluster_name, policy_name);
+        backup_dir = "onebox/" + provider_dir + '/' + cluster_name;
 
         std::vector<dsn::rpc_address> meta_list;
         replica_helper::load_meta_servers(
@@ -173,11 +174,9 @@ public:
     bool restore()
     {
         std::this_thread::sleep_for(std::chrono::seconds(3));
-        time_stamp = get_first_backup_timestamp();
-        std::cout << "first backup_timestamp = " << time_stamp << std::endl;
         error_code err = ddl_client->do_restore(backup_provider_name,
                                                 cluster_name,
-                                                policy_name,
+                                                /*old_policy_name=*/"",
                                                 time_stamp,
                                                 app_name,
                                                 old_app_id,
@@ -259,14 +258,17 @@ public:
             std::cout << "sleep " << sleep_time << "s to wait backup complete..." << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
 
-            is_backup_complete = find_second_backup_timestamp();
+            time_stamp = get_first_backup_timestamp();
+            std::cout << "first backup_timestamp = " << time_stamp << std::endl;
+
+            is_backup_complete = is_app_info_backup_complete();
         }
         return is_backup_complete;
     }
 
     int64_t get_first_backup_timestamp()
     {
-        std::string cmd = "cd " + policy_dir + "; "
+        std::string cmd = "cd " + backup_dir + "; "
                                                "ls -c > restore_app_from_backup_test_tmp; "
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
                                                "rm restore_app_from_backup_test_tmp";
@@ -294,12 +296,19 @@ public:
         return (dirs.size() >= 2);
     }
 
+    bool is_app_info_backup_complete()
+    {
+        std::string backup_info = backup_dir + "/" + std::to_string(time_stamp) + "/backup_info";
+        return dsn::utils::filesystem::file_exists(backup_info);
+    }
+
 public:
     pegasus_client *pg_client;
     pegasus_client *new_pg_client;
     std::shared_ptr<replication_ddl_client> ddl_client;
     std::string pegasus_root_dir;
     std::string policy_dir;
+    std::string backup_dir;
 
     const std::string cluster_name = "mycluster";
     const std::string new_app_name = "backup_test_new";
@@ -328,7 +337,9 @@ const std::string restore_test::backup_provider_name = "local_service";
 // period is 5min, so the time between two backup is at least 5min, but if we set the
 // backup_interval_seconds smaller enough such as smaller than the time of finishing once backup, we
 // can start next backup immediately when current backup is finished
-const int restore_test::backup_interval_seconds = 1;
+// The backup interval must be greater than checkpoint reserve time, see
+// backup_service::add_backup_policy() for details.
+const int restore_test::backup_interval_seconds = 700;
 const int restore_test::backup_history_count_to_keep = 6;
 const std::string restore_test::start_time = "24:0";
 
