@@ -248,26 +248,28 @@ public class ClientOptions {
     }
 
     /**
-     * The timeout for failing to finish an operation. Defaults to {@literal 1000ms}, see {@link
-     * #DEFAULT_OPERATION_TIMEOUT}.
+     * The timeout for failing to finish an operation, must be positive. Defaults to {@literal
+     * 1000ms}, see {@link #DEFAULT_OPERATION_TIMEOUT}.
      *
      * @param operationTimeout operationTimeout
      * @return {@code this}
      */
     public Builder operationTimeout(Duration operationTimeout) {
+      validatePositiveNum(operationTimeout.toMillis());
       this.operationTimeout = operationTimeout;
       return this;
     }
 
     /**
-     * The number of background worker threads. Internally it is the number of Netty NIO threads for
-     * handling RPC events between client and Replica Servers. Defaults to {@literal 4}, see {@link
-     * #DEFAULT_ASYNC_WORKERS}.
+     * The number of background worker threads, must be positive. Internally it is the number of
+     * Netty NIO threads for handling RPC events between client and Replica Servers. Defaults to
+     * {@literal 4}, see {@link #DEFAULT_ASYNC_WORKERS}.
      *
      * @param asyncWorkers asyncWorkers thread number
      * @return {@code this}
      */
     public Builder asyncWorkers(int asyncWorkers) {
+      validatePositiveNum(asyncWorkers);
       this.asyncWorkers = asyncWorkers;
       return this;
     }
@@ -299,13 +301,14 @@ public class ClientOptions {
     }
 
     /**
-     * The interval to report metrics to local falcon agent. Defaults to {@literal 10s}, see {@link
-     * #DEFAULT_FALCON_PUSH_INTERVAL}.
+     * The interval to report metrics to local falcon agent, must be positive. Defaults to {@literal
+     * 10s}, see {@link #DEFAULT_FALCON_PUSH_INTERVAL}.
      *
      * @param falconPushInterval falconPushInterval
      * @return {@code this}
      */
     public Builder falconPushInterval(Duration falconPushInterval) {
+      validatePositiveNum(falconPushInterval.toMillis());
       this.falconPushInterval = falconPushInterval;
       return this;
     }
@@ -324,13 +327,14 @@ public class ClientOptions {
     }
 
     /**
-     * The timeout for query meta server. Defaults to {@literal 5000ms}, see {@link
-     * #DEFAULT_META_QUERY_TIMEOUT}.
+     * The timeout for query meta server, must be positive. Defaults to {@literal 5000ms}, see
+     * {@link #DEFAULT_META_QUERY_TIMEOUT}.
      *
      * @param metaQueryTimeout metaQueryTimeout
      * @return {@code this}
      */
     public Builder metaQueryTimeout(Duration metaQueryTimeout) {
+      validatePositiveNum(metaQueryTimeout.toMillis());
       this.metaQueryTimeout = metaQueryTimeout;
       return this;
     }
@@ -368,6 +372,10 @@ public class ClientOptions {
      */
     public ClientOptions build() {
       return new ClientOptions(this);
+    }
+
+    private static void validatePositiveNum(long value) {
+      assert value > 0 : String.format("must pass positive value: %d", value);
     }
   }
 
