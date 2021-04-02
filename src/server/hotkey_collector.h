@@ -126,6 +126,8 @@ class internal_collector_base : public dsn::replication::replica_base
 {
 public:
     explicit internal_collector_base(replica_base *base) : replica_base(base){};
+    virtual ~internal_collector_base() = default;
+
     virtual void capture_data(const dsn::blob &hash_key, uint64_t weight) = 0;
     virtual void analyse_data(detect_hotkey_result &result) = 0;
     virtual void clear() = 0;

@@ -1507,7 +1507,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
-            [this]() { update_server_rocksdb_statistics(); },
+            []() { update_server_rocksdb_statistics(); },
             kServerStatUpdateTimeSec);
     });
 

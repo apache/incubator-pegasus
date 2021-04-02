@@ -29,7 +29,7 @@
 namespace dsn {
 class rpc_address;
 }
-class shell_context;
+struct shell_context;
 
 inline bool validate_cmd(const argh::parser &cmd,
                          const std::set<std::string> &params,
