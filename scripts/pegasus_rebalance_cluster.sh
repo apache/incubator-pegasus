@@ -22,7 +22,7 @@
 PID=$$
 
 if [ $# -le 1 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false)<nfs_copy_rate_megabytes>(default 100)"
   echo 
   echo "for example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true"
@@ -37,6 +37,12 @@ if [ -z $3 ]; then
   only_move_primary=false
 else
   only_move_primary=$3
+fi
+
+if [ -z $4 ]; then
+  nfs_copy_rate_megabytes=100
+else
+  nfs_copy_rate_megabytes=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -81,6 +87,14 @@ if [ "$only_move_primary" == "true" ]; then
   fi
 fi
 echo
+
+echo "Set nfs_copy_rate_megabytes $nfs_copy_rate_megabytes"
+echo "remote_command -t replica-server replica.nfs.max_copy_rate_megabytes $nfs_copy_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.cluster_rebalance.set_nfs_copy_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.cluster_rebalance.set_nfs_copy_rate_megabytes | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  exit 1
+fi
 
 echo "Set meta level to lively..."
 echo "set_meta_level lively" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance.set_meta_level
