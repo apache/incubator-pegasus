@@ -40,8 +40,6 @@ public:
 private:
     uint32_t report_step(uint64_t current_report) const;
 
-    // thread id which controls this statistics
-    int _tid;
     // the start time of benchmark
     uint64_t _start;
     // the stop time of benchmark

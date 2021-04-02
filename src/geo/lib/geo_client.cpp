@@ -319,7 +319,7 @@ void geo_client::async_del(const std::string &hash_key,
                 del_count->fetch_sub(1);
             }
             if (del_count->load() == 0) {
-                cb(PERR_OK, std::move(pegasus_client::internal_info()));
+                cb(PERR_OK, pegasus_client::internal_info());
                 return;
             }
 
