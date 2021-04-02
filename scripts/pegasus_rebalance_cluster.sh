@@ -25,7 +25,7 @@ if [ $# -le 1 ]; then
   echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false)<nfs_copy_rate_megabytes>(default 100)"
   echo 
   echo "for example:"
-  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true"
+  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true 100"
   echo
   exit 1
 fi
