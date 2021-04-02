@@ -81,8 +81,8 @@ void server_state::register_cli_commands()
 {
     _cli_dump_handle = dsn::command_manager::instance().register_command(
         {"meta.dump"},
-        "dump: dump app_states of meta server to local file",
-        "dump -t|--target target_file",
+        "meta.dump - dump app_states of meta server to local file",
+        "meta.dump -t|--target target_file",
         [this](const std::vector<std::string> &args) {
             dsn::error_code err;
             if (args.size() != 2) {
@@ -106,7 +106,7 @@ void server_state::register_cli_commands()
 
     _ctrl_add_secondary_enable_flow_control = dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_enable_flow_control"},
-        "lb.add_secondary_enable_flow_control <true|false>",
+        "meta.lb.add_secondary_enable_flow_control <true|false>",
         "control whether enable add secondary flow control",
         [this](const std::vector<std::string> &args) {
             return remote_command_set_bool_flag(
@@ -116,7 +116,7 @@ void server_state::register_cli_commands()
 
     _ctrl_add_secondary_max_count_for_one_node = dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_max_count_for_one_node"},
-        "lb.add_secondary_max_count_for_one_node [num | DEFAULT]",
+        "meta.lb.add_secondary_max_count_for_one_node [num | DEFAULT]",
         "control the max count to add secondary for one node",
         [this](const std::vector<std::string> &args) {
             std::string result("OK");

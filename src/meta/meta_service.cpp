@@ -255,7 +255,7 @@ void meta_service::register_ctrl_commands()
     _ctrl_node_live_percentage_threshold_for_update =
         dsn::command_manager::instance().register_command(
             {"meta.live_percentage"},
-            "live_percentage [num | DEFAULT]",
+            "meta.live_percentage [num | DEFAULT]",
             "node live percentage threshold for update",
             [this](const std::vector<std::string> &args) {
                 std::string result("OK");

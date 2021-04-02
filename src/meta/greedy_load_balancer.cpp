@@ -93,7 +93,7 @@ void greedy_load_balancer::register_ctrl_commands()
 
     _ctrl_balancer_in_turn = dsn::command_manager::instance().register_command(
         {"meta.lb.balancer_in_turn"},
-        "lb.balancer_in_turn <true|false>",
+        "meta.lb.balancer_in_turn <true|false>",
         "control whether do app balancer in turn",
         [this](const std::vector<std::string> &args) {
             return remote_command_set_bool_flag(_balancer_in_turn, "lb.balancer_in_turn", args);
@@ -101,7 +101,7 @@ void greedy_load_balancer::register_ctrl_commands()
 
     _ctrl_only_primary_balancer = dsn::command_manager::instance().register_command(
         {"meta.lb.only_primary_balancer"},
-        "lb.only_primary_balancer <true|false>",
+        "meta.lb.only_primary_balancer <true|false>",
         "control whether do only primary balancer",
         [this](const std::vector<std::string> &args) {
             return remote_command_set_bool_flag(
@@ -110,7 +110,7 @@ void greedy_load_balancer::register_ctrl_commands()
 
     _ctrl_only_move_primary = dsn::command_manager::instance().register_command(
         {"meta.lb.only_move_primary"},
-        "lb.only_move_primary <true|false>",
+        "meta.lb.only_move_primary <true|false>",
         "control whether only move primary in balancer",
         [this](const std::vector<std::string> &args) {
             return remote_command_set_bool_flag(_only_move_primary, "lb.only_move_primary", args);
@@ -118,13 +118,13 @@ void greedy_load_balancer::register_ctrl_commands()
 
     _get_balance_operation_count = dsn::command_manager::instance().register_command(
         {"meta.lb.get_balance_operation_count"},
-        "lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
+        "meta.lb.get_balance_operation_count [total | move_pri | copy_pri | copy_sec | detail]",
         "get balance operation count",
         [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
 
     _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
         {"meta.lb.ignored_app_list"},
-        "lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
+        "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
         "get, set and clear balancer ignored_app_list",
         [this](const std::vector<std::string> &args) {
             return remote_command_balancer_ignored_app_ids(args);

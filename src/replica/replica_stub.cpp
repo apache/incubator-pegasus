@@ -2189,8 +2189,8 @@ void replica_stub::register_ctrl_command()
     std::call_once(flag, [&]() {
         _kill_partition_command = ::dsn::command_manager::instance().register_command(
             {"replica.kill_partition"},
-            "kill_partition [app_id [partition_index]]",
-            "kill_partition: kill partitions by (all, one app, one partition)",
+            "replica.kill_partition [app_id [partition_index]]",
+            "replica.kill_partition: kill partitions by (all, one app, one partition)",
             [this](const std::vector<std::string> &args) {
                 dsn::gpid pid;
                 if (args.size() == 0) {
@@ -2211,17 +2211,17 @@ void replica_stub::register_ctrl_command()
 
         _deny_client_command = ::dsn::command_manager::instance().register_command(
             {"replica.deny-client"},
-            "deny-client <true|false>",
-            "deny-client - control if deny client read & write request",
+            "replica.deny-client <true|false>",
+            "replica.deny-client - control if deny client read & write request",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(_deny_client, "deny-client", args);
             });
 
         _verbose_client_log_command = ::dsn::command_manager::instance().register_command(
             {"replica.verbose-client-log"},
-            "verbose-client-log <true|false>",
-            "verbose-client-log - control if print verbose error log when reply read & write "
-            "request",
+            "replica.verbose-client-log <true|false>",
+            "replica.verbose-client-log - control if print verbose error log when reply read & "
+            "write request",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(
                     _verbose_client_log, "verbose-client-log", args);
@@ -2229,8 +2229,8 @@ void replica_stub::register_ctrl_command()
 
         _verbose_commit_log_command = ::dsn::command_manager::instance().register_command(
             {"replica.verbose-commit-log"},
-            "verbose-commit-log <true|false>",
-            "verbose-commit-log - control if print verbose log when commit mutation",
+            "replica.verbose-commit-log <true|false>",
+            "replica.verbose-commit-log - control if print verbose log when commit mutation",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(
                     _verbose_commit_log, "verbose-commit-log", args);
@@ -2238,8 +2238,9 @@ void replica_stub::register_ctrl_command()
 
         _trigger_chkpt_command = ::dsn::command_manager::instance().register_command(
             {"replica.trigger-checkpoint"},
-            "trigger-checkpoint [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "trigger-checkpoint - trigger replicas to do checkpoint",
+            "replica.trigger-checkpoint [id1,id2,...] (where id is 'app_id' or "
+            "'app_id.partition_id')",
+            "replica.trigger-checkpoint - trigger replicas to do checkpoint",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [this](const replica_ptr &rep) {
                     tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
@@ -2252,8 +2253,8 @@ void replica_stub::register_ctrl_command()
 
         _query_compact_command = ::dsn::command_manager::instance().register_command(
             {"replica.query-compact"},
-            "query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "query-compact - query full compact status on the underlying storage engine",
+            "replica.query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+            "replica.query-compact - query full compact status on the underlying storage engine",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     return rep->query_manual_compact_state();
@@ -2262,8 +2263,8 @@ void replica_stub::register_ctrl_command()
 
         _query_app_envs_command = ::dsn::command_manager::instance().register_command(
             {"replica.query-app-envs"},
-            "query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
-            "query-app-envs - query app envs on the underlying storage engine",
+            "replica.query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
+            "replica.query-app-envs - query app envs on the underlying storage engine",
             [this](const std::vector<std::string> &args) {
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     std::map<std::string, std::string> kv_map;
@@ -2275,8 +2276,8 @@ void replica_stub::register_ctrl_command()
 #ifdef DSN_ENABLE_GPERF
         _release_tcmalloc_memory_command = ::dsn::command_manager::instance().register_command(
             {"replica.release-tcmalloc-memory"},
-            "release-tcmalloc-memory <true|false>",
-            "release-tcmalloc-memory - control if try to release tcmalloc memory",
+            "replica.release-tcmalloc-memory <true|false>",
+            "replica.release-tcmalloc-memory - control if try to release tcmalloc memory",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(
                     _release_tcmalloc_memory, "release-tcmalloc-memory", args);
@@ -2284,7 +2285,7 @@ void replica_stub::register_ctrl_command()
 
         _max_reserved_memory_percentage_command = dsn::command_manager::instance().register_command(
             {"replica.mem-release-max-reserved-percentage"},
-            "mem-release-max-reserved-percentage [num | DEFAULT]",
+            "replica.mem-release-max-reserved-percentage [num | DEFAULT]",
             "control tcmalloc max reserved but not-used memory percentage",
             [this](const std::vector<std::string> &args) {
                 std::string result("OK");
@@ -2312,7 +2313,7 @@ void replica_stub::register_ctrl_command()
         _max_concurrent_bulk_load_downloading_count_command =
             dsn::command_manager::instance().register_command(
                 {"replica.max-concurrent-bulk-load-downloading-count"},
-                "max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
+                "replica.max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
                 "control stub max_concurrent_bulk_load_downloading_count",
                 [this](const std::vector<std::string> &args) {
                     std::string result("OK");
