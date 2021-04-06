@@ -328,88 +328,6 @@ static void profiler_on_rpc_response_enqueue(rpc_response_task *resp)
         ptr->increment();
 }
 
-void register_command_profiler()
-{
-    std::stringstream textp, textpjs, textpd, textquery, textarg;
-    textp << "NAME:" << std::endl;
-    textp << "  profiler - collect performance data" << std::endl;
-    textp << "SYNOPSIS:" << std::endl;
-    textp << "  show how tasks call each other with what frequency:" << std::endl;
-    textp << "      p|P|profile|Profile dependency|dep matrix" << std::endl;
-    textp << "  show how tasks call each oether with list format sort by caller/callee:"
-          << std::endl;
-    textp << "      p|P|profile|Profile dependency|dep list [$task] [caller(default)|callee]"
-          << std::endl;
-    textp << "  show performance data for specific tasks:" << std::endl;
-    textp << "      p|P|profile|Profile info [all|$task]" << std::endl;
-    textp << "  show the top N task kinds sort by counter_name:" << std::endl;
-    textp << "      p|P|profile|Profile top $N $counter_name [$percentile]" << std::endl;
-
-    textpd << "NAME:" << std::endl;
-    textpd << "  profiler data - get appointed data, using by pjs" << std::endl;
-    textpd << "SYNOPSIS:" << std::endl;
-    textpd << "  pd|PD|profiledata|ProfileData $task_name:$counter_name:$percentile ..."
-           << std::endl;
-    textpd << "  pd|PD|profiledata|ProfileData $task_name:AllPercentile:$percentile" << std::endl;
-
-    textquery << "NAME:" << std::endl;
-    textquery << "  query profiler data in batch" << std::endl;
-    textquery << "SYNOPSIS:" << std::endl;
-    textquery << "  show a matrix for all task codes contained with perf_counter percentile value"
-              << std::endl;
-    textquery << "    profiler.query|pq table" << std::endl;
-    textquery << "  show a list of names of all task codes" << std::endl;
-    textquery << "    profiler.query|pq task_list" << std::endl;
-    textquery << "  show a list of all perf_counters and 1000 samples for each perf_counter"
-              << std::endl;
-    textquery << "    profiler.query|pq counter_sample $task" << std::endl;
-    textquery << "  show raw counter values for a specific task" << std::endl;
-    textquery << "    profiler.query|pq counter_raw $task" << std::endl;
-    textquery << "  show 6 types of latency times for a specific task" << std::endl;
-    textquery << "    profiler.query|pq counter_calc $task" << std::endl;
-    textquery << "  show caller and callee list for a specific task" << std::endl;
-    textquery << "    profiler.query|pq call $task" << std::endl;
-    textquery << "  show a list of all sharer using the same pool with a specific task"
-              << std::endl;
-    textquery << "    profiler.query|pq pool_sharer $task" << std::endl;
-
-    textarg << "ARGUMENTS:" << std::endl;
-    textarg << "  $percentile : e.g, 50 for latency at 50 percentile, 50(default)|90|95|99|999"
-            << std::endl;
-    textarg << "  $counter_name :" << std::endl;
-    for (int i = 0; i < PERF_COUNTER_COUNT; i++) {
-        textarg << "      " << std::setw(data_width) << counter_info_ptr[i]->title << " :";
-        for (size_t j = 0; j < counter_info_ptr[i]->keys.size(); j++) {
-            textarg << " " << counter_info_ptr[i]->keys[j];
-        }
-        textarg << std::endl;
-    }
-    textarg << "  $task : all task code, such as" << std::endl;
-    for (int i = 1; i <= dsn::task_code::max() && i <= 10; i++) {
-        textarg << "      " << dsn::task_code(i).to_string() << std::endl;
-    }
-
-    textp << textarg.str();
-    textpjs << textarg.str();
-    textpd << textarg.str();
-    textquery << textarg.str();
-
-    command_manager::instance().register_command({"p", "P", "profile", "Profile"},
-                                                 "profile|Profile|p|P - performance profiling",
-                                                 textp.str().c_str(),
-                                                 profiler_output_handler);
-
-    command_manager::instance().register_command({"pd", "PD", "profiledata", "ProfileData"},
-                                                 "profiler data - get appointed data, using by pjs",
-                                                 textpd.str().c_str(),
-                                                 profiler_data_handler);
-    command_manager::instance().register_command(
-        {"profiler.query", "pq"},
-        "profiler.query|pq - query profiling data, output in json format",
-        textquery.str().c_str(),
-        query_data_handler);
-}
-
 void profiler::install(service_spec &)
 {
     s_task_code_max = dsn::task_code::max();
@@ -605,8 +523,6 @@ void profiler::install(service_spec &)
         spec->on_rpc_reply.put_back(profiler_on_rpc_reply, "profiler");
         spec->on_rpc_response_enqueue.put_back(profiler_on_rpc_response_enqueue, "profiler");
     }
-
-    register_command_profiler();
 }
 
 profiler::profiler(const char *name) : toollet(name) {}

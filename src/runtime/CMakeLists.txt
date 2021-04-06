@@ -18,8 +18,6 @@ add_library(dsn_runtime STATIC
         message_utils.cpp
         nativerun.cpp
         profiler.cpp
-        profiler_command.cpp
-        profiler_output.cpp
         providers.common.cpp
         scheduler.cpp
         service_api_c.cpp
