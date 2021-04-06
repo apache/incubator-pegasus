@@ -22,7 +22,7 @@
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list><<nfs_copy_rate_megabytes>(default 100)>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_copy_rate_megabytes>(default 100)>"
   echo
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 100"
