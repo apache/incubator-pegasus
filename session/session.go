@@ -303,7 +303,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		n.tryDial()
 
 		var ready bool
-		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms a time to minimize the connection time.
+		ticker := time.NewTicker(1 * time.Millisecond) // polling 1ms each time to minimize the connection time.
 		defer ticker.Stop()
 		for {
 			breakLoop := false
@@ -322,7 +322,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 		}
 
 		if !ready {
-			return fmt.Errorf("session %s is unable to connect within %dms", n, time.Since(dialStart)/time.Millisecond)
+			return fmt.Errorf("session %s is unable to connect (used %dms), the context error: %s", n, time.Since(dialStart)/time.Millisecond, ctx.Err())
 		}
 	}
 	return nil
