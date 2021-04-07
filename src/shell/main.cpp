@@ -488,7 +488,7 @@ static command_executor commands[] = {
         "<-a|--app_id num> "
         "<-p|--partition_index num> "
         "<-t|--hotkey_type read|write> "
-        "<-c|--detect_action start|stop> "
+        "<-c|--detect_action start|stop|query> "
         "<-d|--address str>",
         detect_hotkey,
     },

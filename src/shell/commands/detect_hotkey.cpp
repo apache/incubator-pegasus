@@ -40,7 +40,7 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
         req.action = dsn::replication::detect_action::START;
     } else if (!strcasecmp(hotkey_action.c_str(), "stop")) {
         req.action = dsn::replication::detect_action::STOP;
-    } else if (!strcasecmp(hotkey_type.c_str(), "query")) {
+    } else if (!strcasecmp(hotkey_action.c_str(), "query")) {
         req.action = dsn::replication::detect_action::QUERY;
     } else {
         err_info =
@@ -57,7 +57,7 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
 {
     // detect_hotkey
     // <-a|--app_id str><-p|--partition_index num><-t|--hotkey_type read|write>
-    // <-c|--detect_action start|stop><-d|--address str>
+    // <-c|--detect_action start|stop|query><-d|--address str>
     const std::set<std::string> params = {"a",
                                           "app_id",
                                           "p",
@@ -107,21 +107,42 @@ bool detect_hotkey(command_executor *e, shell_context *sc, arguments args)
     auto err = sc->ddl_client->detect_hotkey(dsn::rpc_address(target_address), req, resp);
     if (err != dsn::ERR_OK) {
         fmt::print(stderr,
-                   "Hotkey detect rpc sending failed, in {}.{}, error_hint:{}\n",
+                   "Hotkey detection rpc sending failed, in {}.{}, error_hint:{}\n",
                    app_id,
                    partition_index,
                    err.to_string());
-        return false;
+        return true;
     }
 
     if (resp.err != dsn::ERR_OK) {
         fmt::print(stderr,
-                   "Hotkey detect rpc performed failed, in {}.{}, error_hint:{} {}\n",
+                   "Hotkey detection performed failed, in {}.{}, error_hint:{} {}\n",
                    app_id,
                    partition_index,
                    resp.err,
                    resp.err_hint);
-        return false;
+        return true;
+    }
+
+    switch (req.action) {
+    case dsn::replication::detect_action::START:
+        fmt::print("Hotkey detection is starting, using 'detect_hotkey -a {} -p {} -t {} -c "
+                   "query -d {}' to get the result later\n",
+                   app_id,
+                   partition_index,
+                   hotkey_type,
+                   ip_str);
+        break;
+    case dsn::replication::detect_action::STOP:
+        fmt::print("Hotkey detection is stopped now\n");
+        break;
+    case dsn::replication::detect_action::QUERY:
+        fmt::print("Find {} hotkey in {}.{} result:{}\n",
+                   hotkey_type,
+                   app_id,
+                   partition_index,
+                   resp.hotkey_result);
+        break;
     }
 
     return true;
