@@ -60,7 +60,7 @@ Documentation:
 				if len(c.Args) != 1 {
 					return fmt.Errorf("invalid number (%d) of arguments for `meta-level set`", len(c.Args))
 				}
-				return executor.SetMetaLevel(pegasusClient, c.Args[0])
+				return executor.SetMetaLevel(pegasusClient, c.Args.String("level"))
 			},
 			Completer: func(prefix string, args []string) []string {
 				if len(args) == 0 {
@@ -68,7 +68,9 @@ Documentation:
 				}
 				return []string{}
 			},
-			AllowArgs: true,
+			Args: func(a *grumble.Args) {
+				a.String("level", "the MetaServer rebalancing level")
+			},
 		},
 	)
 	shell.App.AddCommand(rootCmd)

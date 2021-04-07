@@ -40,19 +40,18 @@ range.`
 		Usage:    "create <table> [-p|--partitions <NUM>] [-r|--replica <NUM>]",
 		LongHelp: longHelp,
 		Run: func(c *grumble.Context) error {
-			if len(c.Args) != 1 {
-				return fmt.Errorf("must specify a table name")
-			}
 			partitionCount := c.Flags.Int("partitions")
 			if partitionCount%2 != 0 {
 				return fmt.Errorf("partitions number must be a multiply of 2")
 			}
-			return executor.CreateTable(pegasusClient, c.Args[0], partitionCount, c.Flags.Int("replica"))
+			return executor.CreateTable(pegasusClient, c.Args.String("table"), partitionCount, c.Flags.Int("replica"))
 		},
 		Flags: func(f *grumble.Flags) {
 			f.Int("p", "partitions", 4, "the number of partitions")
 			f.Int("r", "replica", 3, "the number of replicas")
 		},
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("table", "the table name")
+		},
 	})
 }

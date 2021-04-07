@@ -27,9 +27,8 @@ import (
 
 func init() {
 	shell.AddCommand(&grumble.Command{
-		Name:      "table-partitions",
-		Help:      "show how the partitions distributed in the cluster",
-		AllowArgs: true,
+		Name: "table-partitions",
+		Help: "show how the partitions distributed in the cluster",
 		Run: shell.RequireUseTable(func(c *shell.Context) error {
 			return executor.ShowTablePartitions(pegasusClient, c.UseTable)
 		}),

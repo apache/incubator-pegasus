@@ -21,6 +21,7 @@ package shell
 
 import (
 	"fmt"
+
 	"github.com/desertbit/grumble"
 )
 
@@ -34,6 +35,7 @@ type Context struct {
 
 var globalUseTable string
 
+// SetUseTable selects a table for the following commands.
 func SetUseTable(tb string) {
 	globalUseTable = tb
 }

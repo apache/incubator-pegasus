@@ -54,12 +54,14 @@ Documentation:
 			if len(c.Args) != 1 {
 				return fmt.Errorf("must specify a table name")
 			}
-			return executor.DropTable(pegasusClient, c.Args[0], c.Flags.Int64("reserved"))
+			return executor.DropTable(pegasusClient, c.Args.String("table"), c.Flags.Int64("reserved"))
 		},
 		Flags: func(f *grumble.Flags) {
 			// 7 days by default.
 			f.Int64("r", "reserved", 86400*7, "the soft-deletion period, which is the time before table actually deleted")
 		},
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("table", "the table name")
+		},
 	})
 }

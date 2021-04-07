@@ -45,15 +45,17 @@ func init() {
 				c.App.Println(c.Command.Usage)
 				return fmt.Errorf("invalid number (%d) of arguments for `use`", len(c.Args))
 			}
-			err := executor.UseTable(pegasusClient, c.Args[0])
+			err := executor.UseTable(pegasusClient, c.Args.String("table"))
 			if err != nil {
 				return err
 			}
-			shell.SetUseTable(c.Args[0])
+			shell.SetUseTable(c.Args.String("table"))
 			c.App.Println("ok")
 			return nil
 		},
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("table", "the table name")
+		},
 		Completer: func(prefix string, args []string) []string {
 			return useCompletion(prefix)
 		},

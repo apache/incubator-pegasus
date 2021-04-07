@@ -68,9 +68,12 @@ func init() {
 			if len(c.Args) != 2 {
 				return fmt.Errorf("invalid number (%d) of arguments for `table-env set`", len(c.Args))
 			}
-			return executor.SetAppEnv(pegasusClient, c.UseTable, c.Args[0], c.Args[1])
+			return executor.SetAppEnv(pegasusClient, c.UseTable, c.Args.String("key"), c.Args.String("value"))
 		}),
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("key", "table environment key")
+			a.String("value", "table environment value")
+		},
 		Completer: func(prefix string, args []string) []string {
 			/* fill with predefined table-envs */
 			if len(args) == 0 {
@@ -87,9 +90,11 @@ func init() {
 			if len(c.Args) != 1 {
 				return fmt.Errorf("invalid number (%d) of arguments for `table-env delete`", len(c.Args))
 			}
-			return executor.DelAppEnv(pegasusClient, c.UseTable, c.Args[0], c.Flags.Bool("prefix"))
+			return executor.DelAppEnv(pegasusClient, c.UseTable, c.Args.String("key"), c.Flags.Bool("prefix"))
 		}),
-		AllowArgs: true,
+		Args: func(a *grumble.Args) {
+			a.String("key", "table environment key")
+		},
 		Flags: func(f *grumble.Flags) {
 			f.BoolL("prefix", false, "to delete with key prefix")
 		},

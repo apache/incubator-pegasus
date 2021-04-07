@@ -20,8 +20,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/desertbit/grumble"
 	"github.com/pegasus-kv/admin-cli/executor"
 	"github.com/pegasus-kv/admin-cli/shell"
@@ -42,22 +40,17 @@ Documentation:
   https://pegasus.apache.org/administration/table-soft-delete`
 
 	shell.AddCommand(&grumble.Command{
-		Name:      "recall",
-		Help:      "recall the dropped table",
-		LongHelp:  longHelp,
-		Usage:     "recall <ORIGIN_TABLE_ID> [NEW_TABLE_NAME]",
-		AllowArgs: true,
+		Name:     "recall",
+		Help:     "recall the dropped table",
+		LongHelp: longHelp,
+		Usage:    "recall <ORIGIN_TABLE_ID> [NEW_TABLE_NAME]",
+		Args: func(a *grumble.Args) {
+			a.Int("originTableID", "the orginal table ID")
+			a.String("newTableName", "the name of the recreated table", grumble.Default(""))
+		},
 		Run: func(c *grumble.Context) error {
-			var originTableID string
-			var newTableName string
-			if len(c.Args) == 1 {
-				originTableID = c.Args[0]
-			} else if len(c.Args) == 2 {
-				originTableID = c.Args[0]
-				newTableName = c.Args[1]
-			} else {
-				return fmt.Errorf("Invalid argument")
-			}
+			originTableID := c.Args.Int("originTableID")
+			newTableName := c.Args.String("newTableName")
 			return executor.RecallTable(pegasusClient, originTableID, newTableName)
 		},
 	})
