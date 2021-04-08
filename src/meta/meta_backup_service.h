@@ -296,6 +296,7 @@ mock_private :
 
     // backup related
     backup_info _cur_backup;
+    bool _is_backup_failed;
     // backup_id --> backup_info
     std::map<int64_t, backup_info> _backup_history;
     backup_progress _progress;
