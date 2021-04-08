@@ -143,6 +143,10 @@ do
       echo "Send migrate propose, refer to /tmp/$UID.$PID.pegasus.rolling_update.migrate_node for details"
     fi
     pri_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $4}'`
+    if [ -z $pri_count ]; then
+      echo "unable to get primaries count on $node"
+      exit 1
+    fi
     if [ $pri_count -eq 0 ]; then
       echo "Migrate done."
       break
