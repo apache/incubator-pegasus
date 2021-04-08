@@ -171,6 +171,10 @@ do
       echo "Send downgrade propose, refer to /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node for details"
     fi
     rep_count=`echo 'nodes -d' | ./run.sh shell --cluster $meta_list | grep $node | awk '{print $3}'`
+    if [ -z $rep_count ]; then
+      echo "unable to get replicas count on $node"
+      exit 1
+    fi
     if [ $rep_count -eq 0 ]; then
       echo "Downgrade done."
       break
