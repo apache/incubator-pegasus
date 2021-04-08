@@ -18,4 +18,4 @@
  */
 
 #pragma once
-#define PEGASUS_VERSION "v2.2.0-mi-beta1"
+#define PEGASUS_VERSION "2.2.0-mi-beta2"
