@@ -2858,7 +2858,7 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
         auto multi_put = multi_put_rpc(request).request();
         return fmt::format("multi_put: hash_key={}, multi_put_count={}",
                            pegasus::utils::c_escape_string(multi_put.hash_key),
-                           std::to_string(multi_put.kvs.size()));
+                           multi_put.kvs.size());
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
@@ -2874,7 +2874,7 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
         return fmt::format("check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
                            pegasus::utils::c_escape_string(check_and_mutate.hash_key),
                            pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
-                           std::to_string(check_and_mutate.mutate_list.size()));
+                           check_and_mutate.mutate_list.size());
     }
 
     return "default";
