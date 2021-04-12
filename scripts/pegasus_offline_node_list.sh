@@ -22,10 +22,10 @@
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_copy_rate_megabytes>(default 100)>"
   echo
   echo "For example:"
-  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3"
+  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 100"
   echo
   exit 1
 fi
@@ -40,6 +40,12 @@ cluster=$1
 meta_list=$2
 replica_task_id_list=$3
 
+if [ -z $4 ]; then
+  nfs_copy_rate_megabytes=100
+else
+  nfs_copy_rate_megabytes=$4
+fi
+
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
@@ -50,6 +56,14 @@ source ./scripts/pegasus_check_arguments.sh offline_node_list $cluster $meta_lis
 if [ $? -ne 0 ]; then
     echo "ERROR: the argument check failed"
     exit 1
+fi
+
+echo "Set nfs_copy_rate_megabytes $nfs_copy_rate_megabytes"
+echo "remote_command -t replica-server replica.nfs.max_copy_rate_megabytes $nfs_copy_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  exit 1
 fi
 
 echo "Set lb.assign_secondary_black_list..."
