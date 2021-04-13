@@ -591,8 +591,6 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             tp.append_data(row.recent_abnormal_count);
             tp.append_data(row.recent_write_throttling_delay_count);
             tp.append_data(row.recent_write_throttling_reject_count);
-            tp.append_data(row.recent_read_throttling_delay_count);
-            tp.append_data(row.recent_read_throttling_reject_count);
         }
         if (!only_qps) {
             tp.append_data(row.storage_mb);
