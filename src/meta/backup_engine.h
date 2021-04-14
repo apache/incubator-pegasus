@@ -68,6 +68,7 @@ private:
     friend class backup_engine_test;
     FRIEND_TEST(backup_engine_test, test_on_backup_reply);
     FRIEND_TEST(backup_engine_test, test_backup_completed);
+    FRIEND_TEST(backup_engine_test, test_write_backup_info_failed);
 
     error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
     error_code backup_app_meta();

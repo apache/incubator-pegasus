@@ -254,6 +254,15 @@ void backup_engine::write_backup_info()
         cold_backup::get_backup_info_file(_backup_service->backup_root(), _cur_backup.backup_id);
     blob buf = dsn::json::json_forwarder<app_backup_info>::encode(_cur_backup);
     error_code err = write_backup_file(file_name, buf);
+    if (err == ERR_FS_INTERNAL) {
+        derror_f(
+            "backup_id({}): write backup info failed, error {}, do not try again for this error.",
+            _cur_backup.backup_id,
+            err.to_string());
+        zauto_lock l(_lock);
+        _is_backup_failed = true;
+        return;
+    }
     if (err != ERR_OK) {
         dwarn_f("backup_id({}): write backup info failed, retry it later.", _cur_backup.backup_id);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
@@ -266,6 +275,8 @@ void backup_engine::write_backup_info()
     ddebug_f("backup_id({}): successfully wrote backup info, backup for app {} completed.",
              _cur_backup.backup_id,
              _cur_backup.app_id);
+    zauto_lock l(_lock);
+    _cur_backup.end_time_ms = dsn_now_ms();
 }
 
 void backup_engine::complete_current_backup()
@@ -274,12 +285,12 @@ void backup_engine::complete_current_backup()
         zauto_lock l(_lock);
         for (const auto &status : _backup_status) {
             if (status.second != backup_status::COMPLETED) {
+                // backup for some partition was not finished.
                 return;
             }
         }
-        // complete backup for all partitions.
-        _cur_backup.end_time_ms = dsn_now_ms();
     }
+    // complete backup for all partitions.
     write_backup_info();
 }
 
