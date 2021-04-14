@@ -20,6 +20,7 @@ def getstatusoutput(cmd):
         data = data[:-1]
     return status, data
 
+
 class ServerOperator(object):
     shell_path = '/your/pegasus-shell/dir'
 
@@ -27,33 +28,30 @@ class ServerOperator(object):
     def modify_conf(cls, old_conf, new_conf):
         origin_conf_file = cls.shell_path + '/src/server/config-server.ini'
         status, output = getstatusoutput('sed -i "s/%s/%s/" %s'
-                                                  % (old_conf, new_conf, origin_conf_file))
+                                         % (old_conf, new_conf, origin_conf_file))
         # print(status, output)
 
     @classmethod
     def start_cluster(cls, meta_count, replica_count, check_health):
         status, output = getstatusoutput('cd %s && ./run.sh start_onebox -m %s -r %s'
-                                                  % (cls.shell_path, meta_count, replica_count))
-        # print(status, output)
+                                         % (cls.shell_path, meta_count, replica_count))
         if check_health:
             cls.wait_until_cluster_health()
         else:
-            time.sleep(1)   # wait a while for meta ready
+            time.sleep(1)  # wait a while for meta ready
 
     @classmethod
     def stop_and_clear_cluster(cls):
         status, output = getstatusoutput('cd %s && ./run.sh stop_onebox'
-                                                  % cls.shell_path)
-        # print(status, output)
+                                         % cls.shell_path)
 
         status, output = getstatusoutput('cd %s && ./run.sh clear_onebox'
-                                                  % cls.shell_path)
-        # print(status, output)
+                                         % cls.shell_path)
 
     @classmethod
     def operate_1_server(cls, op_type, server_type, index):
         status, output = getstatusoutput('cd %s && ./run.sh %s_onebox_instance -%s %s'
-                                                  % (cls.shell_path, op_type, server_type, index))
+                                         % (cls.shell_path, op_type, server_type, index))
         # print(status, output)
 
     @classmethod
@@ -78,12 +76,13 @@ class ServerOperator(object):
 
     @classmethod
     def wait_until_cluster_health(cls):
+        cmd = ('cd %s && echo "app temp -d" | ./run.sh shell |'
+               ' grep fully_healthy_partition_count | awk \'{print $NF}\''
+               % cls.shell_path)
         while True:
-            status, output = getstatusoutput(
-                'cd %s && echo "app temp -d" | ./run.sh shell |'
-                ' grep fully_healthy_partition_count | awk \'{print $NF}\''
-                % cls.shell_path)
-            if status == 0 and output == '8':           # TODO '8' should fix
+            status, output = getstatusoutput(cmd)
+            # 0 means return value, 8 means fully_healthy_partition_count = 8
+            if status == 0 and output == '8':
                 break
 
 
@@ -115,8 +114,8 @@ class TestIntegration(unittest.TestCase):
     @inlineCallbacks
     def loop_op(self):
         for i in range(self.DATA_COUNT):
-            ret = yield self.c.get(self.TEST_HKEY + str(i), self.TEST_SKEY, 200)
-            if not isinstance(ret, tuple) or ret[0] != error_types.ERR_OK.value or ret[1] != self.TEST_VALUE:
+            ret = yield self.c.get(self.TEST_HKEY + str(i), self.TEST_SKEY, 1000)
+            if not isinstance(ret, tuple) or ret[0] != error_types.ERR_OK.value or bytes.decode(ret[1]) != self.TEST_VALUE:
                 defer.returnValue(False)
         defer.returnValue(True)
 
@@ -127,11 +126,17 @@ class TestIntegration(unittest.TestCase):
             ret = yield self.loop_op()
             if not ret:
                 wait_times += 1
-                time.sleep(2)
+                time.sleep(1)
                 if wait_times >= self.MAX_RETRY_COUNT:
                     self.assertTrue(False)
             else:
                 break
+
+    @inlineCallbacks
+    def test_replica_start(self):
+        yield self.init(3, 3)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE)
+        self.assertEqual(ret, error_types.ERR_OK.value)
 
     @inlineCallbacks
     def test_can_not_connect(self):
@@ -246,12 +251,12 @@ class TestIntegration(unittest.TestCase):
 
         for i in range(2):
             ServerOperator.stop_1_replica(1)
-            ServerOperator.stop_1_meta(i+1)
+            ServerOperator.stop_1_meta(i + 1)
             time.sleep(3)
 
             yield self.check_data()
 
-            ServerOperator.start_1_meta(i+1)
+            ServerOperator.start_1_meta(i + 1)
             ServerOperator.start_1_replica(1)
             time.sleep(3)
 

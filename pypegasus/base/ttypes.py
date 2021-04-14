@@ -28,24 +28,17 @@ class blob:
   )
 
   def read(self, iprot):
-    try:
-      self.data = iprot.readString()
-    except UnicodeDecodeError:
-      logger = logging.getLogger("pgclient")
-      logger.warn("Decode as Unicode Error")
-      self.data = None
+    self.data = iprot.readBinary()
 
   def write(self, oprot):
-    this_data = self.data
-    if six.PY3 and (isinstance(self.data, six.binary_type) \
-        or isinstance(self.data[:], six.binary_type)):
-      this_data = str(self.data, "utf-8")
-    oprot.writeString(this_data)
+    oprot.writeBinary(self.data)
 
   def validate(self):
     return
 
   def __init__(self, data=None):
+    if isinstance(data,str):
+        data = data.encode('UTF-8')
     self.data = data
 
   def __hash__(self):

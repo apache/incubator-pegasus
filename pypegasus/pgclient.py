@@ -339,7 +339,7 @@ class Table(SessionManager):
 
     def get_hash_key_pid(self, hash_key):
         if six.PY3 and isinstance(hash_key, six.string_types):
-            hash_key = hash_key.encode("utf8")
+            hash_key = hash_key.encode("UTF-8")
         hash_value = PegasusHash.default_hash(hash_key)
         pidx = hash_value % self.get_partition_count()
         return gpid(self.app_id, pidx)
@@ -552,9 +552,9 @@ class Pegasus(object):
     def generate_key(cls, hash_key, sort_key):
         # assert(len(hash_key) < sys.maxsize > 1)
         if six.PY3 and isinstance(hash_key, six.string_types):
-            hash_key = hash_key.encode("utf8")
+            hash_key = hash_key.encode("UTF-8")
         if six.PY3 and isinstance(sort_key, six.string_types):
-            sort_key = sort_key.encode("utf8")
+            sort_key = sort_key.encode("UTF-8")
 
         # hash_key_len is in big endian
         hash_key_len = len(hash_key)
@@ -663,8 +663,8 @@ class Pegasus(object):
         """
         Get ttl(time to live) of the data.
 
-        :param hash_key: (str) which hash key used for this API.
-        :param sort_key: (str) which sort key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param sort_key: (bytes) which sort key used for this API.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
@@ -685,8 +685,8 @@ class Pegasus(object):
         """
         Check value exist.
 
-        :param hash_key: (str) which hash key used for this API.
-        :param sort_key: (str) which sort key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param sort_key: (bytes) which sort key used for this API.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
@@ -700,12 +700,12 @@ class Pegasus(object):
         """
         Get value stored in <hash_key, sort_key>.
 
-        :param hash_key: (str) which hash key used for this API.
-        :param sort_key: (str) which sort key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param sort_key: (bytes) which sort key used for this API.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
-        :return: (tuple<error_types.code.value, str>) (code, value).
+        :return: (tuple<error_types.code.value, bytes>) (code, value).
                  code: error_types.ERR_OK.value when data got succeed, error_types.ERR_OBJECT_NOT_FOUND.value when data not found.
                  value: data stored in this <hash_key, sort_key>
         """
@@ -722,9 +722,9 @@ class Pegasus(object):
         """
         Set value to be stored in <hash_key, sort_key>.
 
-        :param hash_key: (str) which hash key used for this API.
-        :param sort_key: (str) which sort key used for this API.
-        :param value: (str) value to be stored under <hash_key, sort_key>.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param sort_key: (bytes) which sort key used for this API.
+        :param value: (bytes) value to be stored under <hash_key, sort_key>.
         :param ttl: (int) ttl(time to live) in seconds of this data.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
@@ -746,8 +746,8 @@ class Pegasus(object):
         """
         Remove the entire <hash_key, sort_key>-value in pegasus.
 
-        :param hash_key: (str) which hash key used for this API.
-        :param sort_key: (str) which sort key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param sort_key: (bytes) which sort key used for this API.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
@@ -768,7 +768,7 @@ class Pegasus(object):
         """
         Get the total sort key count under the hash_key.
 
-        :param hash_key: (str) which hash key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
                         else the timeout value specified to create the instance will be used.
@@ -788,7 +788,7 @@ class Pegasus(object):
         """
         Set multiple sort_keys-values under hash_key to be stored.
 
-        :param hash_key: (str) which hash key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
         :param sortkey_value_dict: (dict) <sort_key, value> pairs in dict.
         :param ttl: (int) ttl(time to live) in seconds of these data.
         :param timeout: (int) how long will the operation timeout in milliseconds.
@@ -818,7 +818,7 @@ class Pegasus(object):
         """
         Get multiple values stored in <hash_key, sortkey> pairs.
 
-        :param hash_key: (str) which hash key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
         :param sortkey_set: (set) sort keys in set.
         :param max_kv_count: (int) max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
         :param max_kv_size: (int) max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
@@ -858,9 +858,9 @@ class Pegasus(object):
         """
         Get multiple values stored in hash_key, and sort key range in [start_sort_key, stop_sort_key) as default.
 
-        :param hash_key: (str) which hash key used for this API.
-        :param start_sort_key: (str) returned k-v pairs is start from start_sort_key.
-        :param stop_sort_key: (str) returned k-v pairs is stop at stop_sort_key.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param start_sort_key: (bytes) returned k-v pairs is start from start_sort_key.
+        :param stop_sort_key: (bytes) returned k-v pairs is stop at stop_sort_key.
         :param multi_get_options: (MultiGetOptions) configurable multi_get options.
         :param max_kv_count: (int) max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
         :param max_kv_size: (int) max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
@@ -898,7 +898,7 @@ class Pegasus(object):
         """
         Get multiple sort keys under hash_key.
 
-        :param hash_key: (str) which hash key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
         :param max_kv_count: (int) max count of k-v pairs to be fetched. max_fetch_count <= 0 means no limit.
         :param max_kv_size: (int) max total data size of k-v pairs to be fetched. max_fetch_size <= 0 means no limit.
         :param timeout: (int) how long will the operation timeout in milliseconds.
@@ -916,7 +916,7 @@ class Pegasus(object):
         """
         Remove multiple entire <hash_key, sort_key>-values in pegasus.
 
-        :param hash_key: (str) which hash key used for this API.
+        :param hash_key: (bytes) which hash key used for this API.
         :param sortkey_set: (set) sort keys in set.
         :param timeout: (int) how long will the operation timeout in milliseconds.
                         if timeout > 0, it is a timeout value for current operation,
@@ -947,9 +947,9 @@ class Pegasus(object):
         Get scanner for hash_key, start from start_sort_key, and stop at stop_sort_key.
         Whether the scanner include the start_sort_key and stop_sort_key is configurable by scan_options
 
-        :param hash_key: (str) which hash key used for this API.
-        :param start_sort_key: (str) returned scanner is start from start_sort_key.
-        :param stop_sort_key: (str) returned scanner is stop at stop_sort_key.
+        :param hash_key: (bytes) which hash key used for this API.
+        :param start_sort_key: (bytes) returned scanner is start from start_sort_key.
+        :param stop_sort_key: (bytes) returned scanner is stop at stop_sort_key.
         :param scan_options: (ScanOptions) configurable scan options.
         :return: (PegasusScanner) scanner, instance of PegasusScanner.
         """

@@ -33,7 +33,7 @@ class TestBasics(unittest.TestCase):
 
     @inlineCallbacks
     def test_set_timeout(self):
-        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE*70000, 0, 5)
+        (ret, ign) = yield self.c.set(self.TEST_HKEY, self.TEST_SKEY, self.TEST_VALUE * 70000, 0, 5)
         self.assertEqual(ret, error_types.ERR_TIMEOUT.value)
 
     @inlineCallbacks
@@ -67,7 +67,20 @@ class TestBasics(unittest.TestCase):
 
         (rc, v) = yield self.c.get(self.TEST_HKEY, self.TEST_SKEY)
         self.assertEqual(rc, error_types.ERR_OK.value)
-        self.assertEqual(v, self.TEST_VALUE)
+        self.assertEqual(bytes.decode(v), self.TEST_VALUE)
+
+    @inlineCallbacks
+    def test_binary_get_ok(self):
+        b_hk = b"\x00" + os.urandom(4) + b"\x00"
+        b_sk = b"\x00" + os.urandom(4) + b"\x00"
+        b_v = b"\x00" + os.urandom(4) + b"\x00"
+
+        (ret, ign) = yield self.c.set(b_hk, b_sk, b_v)
+        self.assertEqual(ret, error_types.ERR_OK.value)
+
+        (rc, v) = yield self.c.get(b_hk, b_sk)
+        self.assertEqual(rc, error_types.ERR_OK.value)
+        self.assertEqual(v, b_v)
 
     @inlineCallbacks
     def test_get_none(self):
@@ -144,7 +157,7 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get(self.TEST_HKEY, ks)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
-        self.assertEqual(get_kvs, kvs)
+        self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
 
     @inlineCallbacks
     def test_multi_get_opt_ok(self):
@@ -158,11 +171,11 @@ class TestBasics(unittest.TestCase):
         opt = MultiGetOptions()
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    self.TEST_SKEY + rand_key + '_0',
-                                                   self.TEST_SKEY + rand_key + '_' + '9'*len(str(count)),
+                                                   self.TEST_SKEY + rand_key + '_' + '9' * len(str(count)),
                                                    opt)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
-        self.assertEqual(get_kvs, kvs)
+        self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
 
     @inlineCallbacks
     def test_multi_get_opt_prefix_ok(self):
@@ -186,7 +199,7 @@ class TestBasics(unittest.TestCase):
                                                    opt)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
-        self.assertEqual(get_kvs, kvs)
+        self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
 
     @inlineCallbacks
     def test_multi_get_opt_postfix_ok(self):
@@ -212,16 +225,17 @@ class TestBasics(unittest.TestCase):
 
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
-        self.assertEqual(get_kvs, kvs)
+        self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
 
     @inlineCallbacks
     def test_multi_get_opt_anywhere_ok(self):
         count = 50
         rand_key = uuid.uuid1().hex
         rand_key2 = uuid.uuid4().hex
-        rand_hkey = self.TEST_HKEY + str(random.randint(0,99))
+        rand_hkey = self.TEST_HKEY + str(random.randint(0, 99))
         kvs = {self.TEST_SKEY + str(x) + "_" + rand_key + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
-        kvs2 = {self.TEST_SKEY + str(x) + "_" + rand_key2 + "_" + str(x): self.TEST_VALUE + str(x) for x in range(count)}
+        kvs2 = {self.TEST_SKEY + str(x) + "_" + rand_key2 + "_" + str(x): self.TEST_VALUE + str(x) for x in
+                range(count)}
 
         (ret, ign) = yield self.c.multi_set(rand_hkey, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
@@ -235,6 +249,7 @@ class TestBasics(unittest.TestCase):
                                                    '',
                                                    '',
                                                    opt)
+        get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(get_kvs, kvs)
@@ -248,7 +263,7 @@ class TestBasics(unittest.TestCase):
         stop_value = self.TEST_VALUE + 'stop'
         kvs = {start_key: start_value,
                stop_key: stop_value
-              }
+               }
 
         (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
@@ -272,6 +287,7 @@ class TestBasics(unittest.TestCase):
                                                    start_key,
                                                    stop_key,
                                                    opt)
+        get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 1)
         self.assertTrue(stop_key in get_kvs)
@@ -284,6 +300,7 @@ class TestBasics(unittest.TestCase):
                                                    start_key,
                                                    stop_key,
                                                    opt)
+        get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 1)
         self.assertTrue(start_key in get_kvs)
@@ -296,6 +313,7 @@ class TestBasics(unittest.TestCase):
                                                    start_key,
                                                    stop_key,
                                                    opt)
+        get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 2)
         self.assertTrue(start_key in get_kvs)
@@ -316,12 +334,12 @@ class TestBasics(unittest.TestCase):
         opt.no_value = True
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    self.TEST_SKEY + rand_key + '_0',
-                                                   self.TEST_SKEY + rand_key + '_' + '9'*len(str(count)),
+                                                   self.TEST_SKEY + rand_key + '_' + '9' * len(str(count)),
                                                    opt)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         for k in kvs.keys():
-            self.assertTrue(k in get_kvs)
+            self.assertTrue(k in bytesmap_to_strmap(get_kvs))
 
     @inlineCallbacks
     def test_multi_get_opt_reverse_ok(self):
@@ -337,7 +355,7 @@ class TestBasics(unittest.TestCase):
         (ret, ign) = yield self.c.multi_set(rand_hkey, kvs)
         self.assertEqual(ret, error_types.ERR_OK.value)
 
-        stop_key = self.TEST_SKEY + rand_key + '_' + '9'*len(str(count))
+        stop_key = self.TEST_SKEY + rand_key + '_' + '9' * len(str(count))
         opt = MultiGetOptions()
         opt.reverse = True
         for step in range(steps):
@@ -351,6 +369,7 @@ class TestBasics(unittest.TestCase):
             else:
                 self.assertEqual(rc, error_types.ERR_INCOMPLETE_DATA.value)
             self.assertEqual(len(get_kvs), split_count)
+            get_kvs = bytesmap_to_strmap(get_kvs)
             for _ in range(split_count):
                 k = ks.pop()
                 self.assertTrue(k in get_kvs)
@@ -369,14 +388,14 @@ class TestBasics(unittest.TestCase):
         get_count = 0
         while ks:
             (rc, get_kvs) = yield self.c.multi_get(self.TEST_HKEY, ks, 1)
-            if rc == error_types.ERR_INCOMPLETE_DATA.value\
-               or rc == error_types.ERR_OK.value:
+            if rc == error_types.ERR_INCOMPLETE_DATA.value \
+                    or rc == error_types.ERR_OK.value:
                 for (k, v) in get_kvs.items():
                     get_count += 1
-                    self.assertIn(k, ks)
-                    ks.remove(k)
-                    self.assertIn(k, kvs)
-                    self.assertEqual(v, kvs[k])
+                    self.assertIn(bytes.decode(k), ks)
+                    ks.remove(bytes.decode(k))
+                    self.assertIn(bytes.decode(k), kvs)
+                    self.assertEqual(bytes.decode(v), kvs[bytes.decode(k)])
 
         self.assertEqual(get_count, len(kvs))
 
@@ -392,7 +411,7 @@ class TestBasics(unittest.TestCase):
     @inlineCallbacks
     def test_multi_get_part_ok(self):
         count = 50
-        ks = {self.TEST_SKEY + str(x) for x in range(int(count/2))}
+        ks = {self.TEST_SKEY + str(x) for x in range(int(count / 2))}
         kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(count)}
 
         (ret, ign) = yield self.c.multi_set(self.TEST_HKEY, kvs)
@@ -402,6 +421,8 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(ks))
         for (k, v) in get_kvs.items():
+            k = bytes.decode(k)
+            v = bytes.decode(v)
             self.assertIn(k, ks)
             self.assertIn(k, kvs)
             self.assertEqual(v, kvs[k])
@@ -410,7 +431,7 @@ class TestBasics(unittest.TestCase):
     def test_multi_get_more_ok(self):
         count = 50
         ks = {self.TEST_SKEY + str(x) for x in range(count)}
-        kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(int(count/2))}
+        kvs = {self.TEST_SKEY + str(x): self.TEST_VALUE + str(x) for x in range(int(count / 2))}
 
         (rc, del_count) = yield self.c.multi_del(self.TEST_HKEY, ks)
         self.assertEqual(rc, error_types.ERR_OK.value)
@@ -423,9 +444,9 @@ class TestBasics(unittest.TestCase):
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         for (k, v) in get_kvs.items():
-            self.assertIn(k, ks)
-            self.assertIn(k, kvs)
-            self.assertEqual(v, kvs[k])
+            self.assertIn(bytes.decode(k), ks)
+            self.assertIn(bytes.decode(k), kvs)
+            self.assertEqual(bytes.decode(v), kvs[bytes.decode(k)])
 
     @inlineCallbacks
     def test_sort_key_count_ok(self):
@@ -499,7 +520,7 @@ class TestBasics(unittest.TestCase):
 
                 self.assertEqual(hk, rand_hkey + rand_key)
                 self.assertIn(sk, kvs)
-                self.assertEqual(v, kvs[sk])
+                self.assertEqual(bytes.decode(v), kvs[sk])
         s.close()
         self.assertEqual(count, get_count)
 
@@ -509,7 +530,7 @@ class TestBasics(unittest.TestCase):
         self.assertLess(2, count)
         count_len = len(str(count))
         kvs = {self.TEST_SKEY + str(x).zfill(count_len): self.TEST_VALUE + str(x) for x in range(count)}
-        sub_kvs = {self.TEST_SKEY + str(x).zfill(count_len): self.TEST_VALUE + str(x) for x in range(1, count-1)}
+        sub_kvs = {self.TEST_SKEY + str(x).zfill(count_len): self.TEST_VALUE + str(x) for x in range(1, count - 1)}
 
         rand_key = uuid.uuid1().hex
         (ret, ign) = yield self.c.multi_set(self.TEST_HKEY + rand_key, kvs)
@@ -518,7 +539,7 @@ class TestBasics(unittest.TestCase):
         o = ScanOptions()
         s = self.c.get_scanner(self.TEST_HKEY + rand_key,
                                self.TEST_SKEY + str(1).zfill(count_len),
-                               self.TEST_SKEY + str(count-1).zfill(count_len),
+                               self.TEST_SKEY + str(count - 1).zfill(count_len),
                                o)
         get_count = 0
         last_sk = None
@@ -539,7 +560,7 @@ class TestBasics(unittest.TestCase):
 
                 self.assertEqual(hk, self.TEST_HKEY + rand_key)
                 self.assertIn(sk, sub_kvs)
-                self.assertEqual(v, sub_kvs[sk])
+                self.assertEqual(bytes.decode(v), sub_kvs[sk])
         s.close()
         self.assertEqual(len(sub_kvs), get_count)
 
@@ -610,10 +631,17 @@ class TestBasics(unittest.TestCase):
                 if hk in hks:
                     hk_found = True
                     self.assertIn(sk, kvs)
-                    self.assertEqual(v, kvs[sk])
+                    self.assertEqual(bytes.decode(v), kvs[sk])
                 else:
                     hk_found = False
 
             scanner.close()
 
         self.assertLessEqual(hkey_count, get_hk_count)
+
+
+def bytesmap_to_strmap(bm):
+    sm = {}
+    for k, v in bm.items():
+        sm[bytes.decode(k)] = bytes.decode(v)
+    return sm

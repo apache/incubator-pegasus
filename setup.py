@@ -4,7 +4,7 @@ import pypegasus
 setup(
     name='pypegasus',
     version=pypegasus.__version__,
-    install_requires=['twisted>=17.9.0', 'aenum>=2.0.9', 'thrift>=0.9.3', 'pyopenssl>=17.5.0'],
+    install_requires=['Twisted==21.2.0', 'aenum==3.0.0', 'thrift==0.13.0', 'pyOpenSSL==20.0.1','cryptography==3.2'],
     packages=find_packages(),
     package_data={'': ['logger.conf']},
     platforms='any',
@@ -12,7 +12,7 @@ setup(
     license='Apache License 2.0',
     author='Lai Yingchun',
     author_email='laiyingchun@xiaomi.com',
-    description='python client for xiaomi/pegasus',
+    description='python3 client for apache/incubator-pegasus',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Operating System :: OS Independent',
@@ -20,7 +20,7 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: Implementation',
-        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Libraries'
     ],
     zip_safe=False
