@@ -33,7 +33,7 @@
 #include <dsn/utility/flags.h>
 
 #include "base/pegasus_key_schema.h"
-#include "base/value_schema.h"
+#include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
 #include "capacity_unit_calculator.h"
 #include "pegasus_server_write.h"

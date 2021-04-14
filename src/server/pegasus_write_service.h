@@ -24,7 +24,7 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/replication/replication_types.h>
 
-#include "base/value_schema.h"
+#include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
 
