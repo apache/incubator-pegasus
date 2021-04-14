@@ -22,7 +22,7 @@
 #include <dsn/utility/fail_point.h>
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
-#include "base/pegasus_value_schema.h"
+#include "base/value_schema.h"
 
 namespace pegasus {
 namespace server {

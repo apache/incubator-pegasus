@@ -45,7 +45,7 @@
 #include <geo/lib/geo_client.h>
 
 #include "base/pegasus_key_schema.h"
-#include "base/pegasus_value_schema.h"
+#include "base/value_schema.h"
 #include "base/pegasus_utils.h"
 
 #include "command_executor.h"

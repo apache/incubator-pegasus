@@ -19,16 +19,25 @@
 
 #pragma once
 
+#include "value_schema.h"
+#include <dsn/utility/singleton.h>
+
 namespace pegasus {
 
-enum segment_type
+class value_manager : public dsn::utils::singleton<value_manager>
 {
-    /// TBD(zlw)
-};
+public:
+    void register_schema(value_schema *schema);
+    /// using raw value in rocksdb and data version stored in meta column family to get data version
+    value_schema *get_value_schema(uint32_t meta_cf_data_version,
+                                   dsn::string_view value) const;
+    value_schema *get_value_schema(uint32_t version) const;
+    value_schema *get_latest_value_schema() const;
 
-struct pegasus_value_segment
-{
-    virtual ~pegasus_value_segment() = default;
-    virtual segment_type type() = 0;
+private:
+    value_manager() = default;
+    friend class dsn::utils::singleton<value_manager>;
+
+    std::map<data_version, value_schema *> _schemas;
 };
 } // namespace pegasus

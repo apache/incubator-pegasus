@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "base/pegasus_value_schema.h"
+#include "base/value_schema.h"
 
 #include <gtest/gtest.h>
 

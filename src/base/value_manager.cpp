@@ -17,29 +17,29 @@
  * under the License.
  */
 
-#include "pegasus_value_manager.h"
+#include "value_manager.h"
 
 namespace pegasus {
 
-void pegasus_value_manager::register_schema(pegasus_value_schema *schema)
+void value_manager::register_schema(value_schema *schema)
 {
     /// TBD(zlw)
 }
 
-pegasus_value_schema *pegasus_value_manager::get_value_schema(uint32_t meta_cf_data_version,
-                                                              dsn::string_view value) const
-{
-    /// TBD(zlw)
-    return nullptr;
-}
-
-pegasus_value_schema *pegasus_value_manager::get_value_schema(uint32_t version) const
+value_schema *value_manager::get_value_schema(uint32_t meta_cf_data_version,
+                                              dsn::string_view value) const
 {
     /// TBD(zlw)
     return nullptr;
 }
 
-pegasus_value_schema *pegasus_value_manager::get_latest_value_schema() const
+value_schema *value_manager::get_value_schema(uint32_t version) const
+{
+    /// TBD(zlw)
+    return nullptr;
+}
+
+value_schema *value_manager::get_latest_value_schema() const
 {
     /// TBD(zlw)
     return nullptr;
