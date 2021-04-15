@@ -24,7 +24,7 @@
 
 namespace pegasus {
 
-class value_manager : public dsn::utils::singleton<value_manager>
+class value_schema_manager : public dsn::utils::singleton<value_schema_manager>
 {
 public:
     void register_schema(value_schema *schema);
@@ -35,8 +35,8 @@ public:
     value_schema *get_latest_value_schema() const;
 
 private:
-    value_manager() = default;
-    friend class dsn::utils::singleton<value_manager>;
+    value_schema_manager() = default;
+    friend class dsn::utils::singleton<value_schema_manager>;
 
     std::map<data_version, value_schema *> _schemas;
 };
