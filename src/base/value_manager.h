@@ -28,7 +28,7 @@ class value_manager : public dsn::utils::singleton<value_manager>
 {
 public:
     void register_schema(value_schema *schema);
-    /// using raw value in rocksdb and data version stored in meta column family to get data version
+    /// using the raw value in rocksdb and data version stored in meta column family to get data version
     value_schema *get_value_schema(uint32_t meta_cf_data_version,
                                    dsn::string_view value) const;
     value_schema *get_value_schema(uint32_t version) const;
