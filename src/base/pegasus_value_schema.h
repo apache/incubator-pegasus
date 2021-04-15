@@ -257,7 +257,7 @@ public:
     /// In order to avoid data copy, the ownership of `raw_value` will be transferred
     /// into the returned blob value.
     virtual dsn::blob extract_user_data(std::string &&value) = 0;
-    virtual void update_segment(std::string &value, std::unique_ptr<value_field> segment) = 0;
+    virtual void update_field(std::string &value, std::unique_ptr<value_field> segment) = 0;
     virtual rocksdb::SliceParts generate_value(const value_params &params) = 0;
 
     virtual data_version version() const = 0;
