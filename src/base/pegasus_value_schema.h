@@ -243,6 +243,7 @@ enum data_version
 
 struct value_params
 {
+    std::map<value_field_type, std::unique_ptr<value_field>> fields;
     /// TBD(zlw)
 };
 

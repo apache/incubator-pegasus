@@ -51,7 +51,6 @@ value_schema *value_schema_manager::get_latest_value_schema() const
  */
 void register_value_schemas()
 {
-    std::map<value_field_type, std::unique_ptr<value_field>> fields;
     /// TBD(zlw)
 }
 
