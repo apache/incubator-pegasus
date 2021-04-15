@@ -254,7 +254,7 @@ public:
 
     virtual std::unique_ptr<value_field> extract_field(dsn::string_view value,
                                                        value_field_type type) = 0;
-    /// Extracts user value from a raw rocksdb value.
+    /// Extracts user value from the raw rocksdb value.
     /// In order to avoid data copy, the ownership of `raw_value` will be transferred
     /// into the returned blob value.
     virtual dsn::blob extract_user_data(std::string &&value) = 0;
