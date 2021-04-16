@@ -149,16 +149,16 @@ void info_collector::on_app_stat()
         return;
     }
 
-    table_stats all_stats("_all_");
+    row_data all_stats("_all_");
     for (const auto &app_rows : all_rows) {
         // get statistics data for app
-        table_stats app_stats(app_rows.first);
+        row_data app_stats(app_rows.first);
         for (auto partition_row : app_rows.second) {
             app_stats.aggregate(partition_row);
         }
-        get_app_counters(app_stats.app_name)->set(app_stats);
+        get_app_counters(app_stats.row_name)->set(app_stats);
         // get row data statistics for all of the apps
-        all_stats.merge(app_stats);
+        all_stats.aggregate(app_stats);
 
         // hotspot_partition_calculator is used for detecting hotspots
         auto hotspot_partition_calculator =
@@ -166,7 +166,7 @@ void info_collector::on_app_stat()
         hotspot_partition_calculator->data_aggregate(app_rows.second);
         hotspot_partition_calculator->data_analyse();
     }
-    get_app_counters(all_stats.app_name)->set(all_stats);
+    get_app_counters(all_stats.row_name)->set(all_stats);
 
     ddebug_f("stat apps succeed, app_count = {}, total_read_qps = {}, total_write_qps = {}",
              all_rows.size(),
