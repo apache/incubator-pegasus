@@ -33,7 +33,6 @@
 #include <event2/bufferevent.h>
 
 #include "../shell/commands.h"
-#include "table_stats.h"
 
 namespace pegasus {
 namespace server {
@@ -51,65 +50,58 @@ public:
             return std::abs(total) < 1e-6 ? 0 : hit / total * 1e6;
         }
 
-        void set(const table_stats &row_stats)
+        void set(const row_data &row_stats)
         {
-            get_qps->set(row_stats.total_get_qps);
-            multi_get_qps->set(row_stats.total_multi_get_qps);
-            put_qps->set(row_stats.total_put_qps);
-            multi_put_qps->set(row_stats.total_multi_put_qps);
-            remove_qps->set(row_stats.total_remove_qps);
-            multi_remove_qps->set(row_stats.total_multi_remove_qps);
-            incr_qps->set(row_stats.total_incr_qps);
-            check_and_set_qps->set(row_stats.total_check_and_set_qps);
-            check_and_mutate_qps->set(row_stats.total_check_and_mutate_qps);
-            scan_qps->set(row_stats.total_scan_qps);
-            duplicate_qps->set(row_stats.total_duplicate_qps);
-            dup_shipped_ops->set(row_stats.total_dup_shipped_ops);
-            dup_failed_shipping_ops->set(row_stats.total_dup_failed_shipping_ops);
-            recent_read_cu->set(row_stats.total_recent_read_cu);
-            recent_write_cu->set(row_stats.total_recent_write_cu);
-            recent_expire_count->set(row_stats.total_recent_expire_count);
-            recent_filter_count->set(row_stats.total_recent_filter_count);
-            recent_abnormal_count->set(row_stats.total_recent_abnormal_count);
-            recent_write_throttling_delay_count->set(
-                row_stats.total_recent_write_throttling_delay_count);
+            get_qps->set(row_stats.get_qps);
+            multi_get_qps->set(row_stats.multi_get_qps);
+            put_qps->set(row_stats.put_qps);
+            multi_put_qps->set(row_stats.multi_put_qps);
+            remove_qps->set(row_stats.remove_qps);
+            multi_remove_qps->set(row_stats.multi_remove_qps);
+            incr_qps->set(row_stats.incr_qps);
+            check_and_set_qps->set(row_stats.check_and_set_qps);
+            check_and_mutate_qps->set(row_stats.check_and_mutate_qps);
+            scan_qps->set(row_stats.scan_qps);
+            duplicate_qps->set(row_stats.duplicate_qps);
+            dup_shipped_ops->set(row_stats.dup_shipped_ops);
+            dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
+            recent_read_cu->set(row_stats.recent_read_cu);
+            recent_write_cu->set(row_stats.recent_write_cu);
+            recent_expire_count->set(row_stats.recent_expire_count);
+            recent_filter_count->set(row_stats.recent_filter_count);
+            recent_abnormal_count->set(row_stats.recent_abnormal_count);
+            recent_write_throttling_delay_count->set(row_stats.recent_write_throttling_delay_count);
             recent_write_throttling_reject_count->set(
-                row_stats.total_recent_write_throttling_reject_count);
-            recent_read_throttling_delay_count->set(
-                row_stats.total_recent_read_throttling_delay_count);
-            recent_read_throttling_reject_count->set(
-                row_stats.total_recent_read_throttling_reject_count);
-            storage_mb->set(row_stats.total_storage_mb);
-            storage_count->set(row_stats.total_storage_count);
-            rdb_block_cache_hit_rate->set(
-                convert_to_1M_ratio(row_stats.total_rdb_block_cache_hit_count,
-                                    row_stats.total_rdb_block_cache_total_count));
+                row_stats.recent_write_throttling_reject_count);
+            recent_read_throttling_delay_count->set(row_stats.recent_read_throttling_delay_count);
+            recent_read_throttling_reject_count->set(row_stats.recent_read_throttling_reject_count);
+            storage_mb->set(row_stats.storage_mb);
+            storage_count->set(row_stats.storage_count);
+            rdb_block_cache_hit_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_block_cache_hit_count, row_stats.rdb_block_cache_total_count));
             rdb_index_and_filter_blocks_mem_usage->set(
-                row_stats.total_rdb_index_and_filter_blocks_mem_usage);
-            rdb_memtable_mem_usage->set(row_stats.total_rdb_memtable_mem_usage);
-            rdb_estimate_num_keys->set(row_stats.total_rdb_estimate_num_keys);
-            rdb_bf_seek_negatives_rate->set(convert_to_1M_ratio(
-                row_stats.total_rdb_bf_seek_negatives, row_stats.total_rdb_bf_seek_total));
-            rdb_bf_point_negatives_rate->set(
-                convert_to_1M_ratio(row_stats.total_rdb_bf_point_negatives,
-                                    row_stats.total_rdb_bf_point_negatives +
-                                        row_stats.total_rdb_bf_point_positive_total));
-            rdb_bf_point_false_positive_rate->set(
-                convert_to_1M_ratio(row_stats.total_rdb_bf_point_positive_total -
-                                        row_stats.total_rdb_bf_point_positive_true,
-                                    (row_stats.total_rdb_bf_point_positive_total -
-                                     row_stats.total_rdb_bf_point_positive_true) +
-                                        row_stats.total_rdb_bf_point_negatives));
+                row_stats.rdb_index_and_filter_blocks_mem_usage);
+            rdb_memtable_mem_usage->set(row_stats.rdb_memtable_mem_usage);
+            rdb_estimate_num_keys->set(row_stats.rdb_estimate_num_keys);
+            rdb_bf_seek_negatives_rate->set(
+                convert_to_1M_ratio(row_stats.rdb_bf_seek_negatives, row_stats.rdb_bf_seek_total));
+            rdb_bf_point_negatives_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_bf_point_negatives,
+                row_stats.rdb_bf_point_negatives + row_stats.rdb_bf_point_positive_total));
+            rdb_bf_point_false_positive_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_bf_point_positive_total - row_stats.rdb_bf_point_positive_true,
+                (row_stats.rdb_bf_point_positive_total - row_stats.rdb_bf_point_positive_true) +
+                    row_stats.rdb_bf_point_negatives));
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
-            backup_request_qps->set(row_stats.total_backup_request_qps);
-            get_bytes->set(row_stats.total_get_bytes);
-            multi_get_bytes->set(row_stats.total_multi_get_bytes);
-            scan_bytes->set(row_stats.total_scan_bytes);
-            put_bytes->set(row_stats.total_put_bytes);
-            multi_put_bytes->set(row_stats.total_multi_put_bytes);
-            check_and_set_bytes->set(row_stats.total_check_and_set_bytes);
-            check_and_mutate_bytes->set(row_stats.total_check_and_mutate_bytes);
+            backup_request_qps->set(row_stats.backup_request_qps);
+            get_bytes->set(row_stats.get_bytes);
+            multi_get_bytes->set(row_stats.multi_get_bytes);
+            scan_bytes->set(row_stats.scan_bytes);
+            put_bytes->set(row_stats.put_bytes);
+            multi_put_bytes->set(row_stats.multi_put_bytes);
+            check_and_set_bytes->set(row_stats.check_and_set_bytes);
+            check_and_mutate_bytes->set(row_stats.check_and_mutate_bytes);
             read_bytes->set(row_stats.get_total_read_bytes());
             write_bytes->set(row_stats.get_total_write_bytes());
         }
