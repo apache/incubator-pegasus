@@ -563,7 +563,7 @@ struct row_data
     double get_total_write_qps() const
     {
         return put_qps + remove_qps + multi_put_qps + multi_remove_qps + check_and_set_qps +
-               check_and_mutate_qps;
+               check_and_mutate_qps + incr_qps + duplicate_qps;
     }
 
     double get_total_read_bytes() const { return get_bytes + multi_get_bytes + scan_bytes; }
