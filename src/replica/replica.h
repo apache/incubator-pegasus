@@ -370,7 +370,7 @@ private:
 
     /////////////////////////////////////////////////////////////////
     // cold backup
-    void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
+    virtual void generate_backup_checkpoint(cold_backup_context_ptr backup_context);
     void trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
     void wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_context);
     void local_create_backup_checkpoint(cold_backup_context_ptr backup_context);

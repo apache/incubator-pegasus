@@ -45,6 +45,8 @@ struct backup_request
     2:policy_info           policy;
     3:string                app_name;
     4:i64                   backup_id;
+    // user specified backup_path.
+    5:optional string       backup_path;
 }
 
 struct backup_response
@@ -157,8 +159,10 @@ struct configuration_query_restore_response
 
 struct start_backup_app_request
 {
-    1:string    backup_provider_type;
-    2:i32       app_id;
+    1:string             backup_provider_type;
+    2:i32                app_id;
+    // user specified backup_path.
+    3:optional string    backup_path;
 }
 
 struct start_backup_app_response
@@ -177,9 +181,11 @@ struct backup_item
     1:i64           backup_id;
     2:string        app_name;
     3:string        backup_provider_type;
-    4:i64           start_time_ms;
-    5:i64           end_time_ms;
-    6:bool          is_backup_failed;
+    // user specified backup_path.
+    4:string        backup_path;
+    5:i64           start_time_ms;
+    6:i64           end_time_ms;
+    7:bool          is_backup_failed;
 }
 
 struct query_backup_status_request

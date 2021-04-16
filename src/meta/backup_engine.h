@@ -55,6 +55,7 @@ public:
 
     error_code init_backup(int32_t app_id);
     error_code set_block_service(const std::string &provider);
+    error_code set_backup_path(const std::string &path);
 
     error_code start();
 
@@ -66,6 +67,8 @@ public:
 
 private:
     friend class backup_engine_test;
+    friend class backup_service_test;
+
     FRIEND_TEST(backup_engine_test, test_on_backup_reply);
     FRIEND_TEST(backup_engine_test, test_backup_completed);
     FRIEND_TEST(backup_engine_test, test_write_backup_info_failed);
@@ -87,6 +90,7 @@ private:
 
     backup_service *_backup_service;
     dist::block_service::block_filesystem *_block_service;
+    std::string _backup_path;
     std::string _provider_type;
     dsn::task_tracker _tracker;
 

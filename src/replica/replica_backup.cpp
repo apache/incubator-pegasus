@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include <boost/lexical_cast.hpp>
 
 #include <dsn/utility/filesystem.h>
@@ -57,7 +74,10 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             dassert(r.second, "");
             backup_context = r.first->second;
             backup_context->block_service = block_service;
-            backup_context->backup_root = _options->cold_backup_root;
+            backup_context->backup_root = request.__isset.backup_path
+                                              ? dsn::utils::filesystem::path_combine(
+                                                    request.backup_path, _options->cold_backup_root)
+                                              : _options->cold_backup_root;
         }
 
         dcheck_eq_replica(backup_context->request.policy.policy_name, policy_name);

@@ -1624,6 +1624,17 @@ void backup_service::start_backup_app(start_backup_app_rpc rpc)
         return;
     }
 
+    if (request.__isset.backup_path) {
+        err = engine->set_backup_path(request.backup_path);
+        if (err != ERR_OK) {
+            response.err = err;
+            response.hint_message = "Backup failed: the default backup path has already configured "
+                                    "in `hdfs_service`, please modify the configuration if you "
+                                    "want to use a specific backup path.";
+            return;
+        }
+    }
+
     {
         zauto_lock l(_lock);
         for (const auto &backup : _backup_states) {

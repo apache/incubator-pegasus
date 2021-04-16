@@ -56,6 +56,8 @@ public:
 
     static std::string get_hdfs_entry_name(const std::string &hdfs_path);
 
+    bool is_root_path_set() const override { return _hdfs_path != "/"; }
+
 private:
     hdfsFS _fs;
     std::string _hdfs_name_node;
