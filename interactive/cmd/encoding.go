@@ -23,9 +23,19 @@ import (
 	"fmt"
 	"pegic/executor/util"
 	"pegic/interactive"
+	"strings"
 
 	"github.com/desertbit/grumble"
 )
+
+var supportedEncodings = []string{
+	"utf8",
+	"int32",
+	"int64",
+	"bytes",
+	"javabytes",
+	"asciihex",
+}
 
 func init() {
 	rootCmd := &grumble.Command{
@@ -39,7 +49,7 @@ func init() {
 
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "hashkey",
-		Help: "set encoding for hashkey",
+		Help: fmt.Sprintf("Set encoding for hashkey. Supported encodings: %s", supportedEncodingsToString()),
 		Run: func(c *grumble.Context) error {
 			return resetEncoding(c, &globalContext.HashKeyEnc)
 		},
@@ -49,7 +59,7 @@ func init() {
 
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "sortkey",
-		Help: "set encoding for sortkey",
+		Help: fmt.Sprintf("Set encoding for sortkey. Supported encodings: %s", supportedEncodingsToString()),
 		Run: func(c *grumble.Context) error {
 			return resetEncoding(c, &globalContext.SortKeyEnc)
 		},
@@ -59,7 +69,7 @@ func init() {
 
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "value",
-		Help: "set encoding for value",
+		Help: fmt.Sprintf("Set encoding for value. Supported encodings: %s", supportedEncodingsToString()),
 		Run: func(c *grumble.Context) error {
 			return resetEncoding(c, &globalContext.ValueEnc)
 		},
@@ -87,16 +97,15 @@ func resetEncoding(c *grumble.Context, encPtr *util.Encoder) error {
 }
 
 func encodingCompleter(prefix string, args []string) []string {
-	return filterStringWithPrefix([]string{
-		"utf8",
-		"int32",
-		"int64",
-		"bytes",
-		"javabytes",
-		"asciihex",
-	}, prefix)
+	return filterStringWithPrefix(supportedEncodings, prefix)
+}
+
+func supportedEncodingsToString() string {
+	return strings.Join(supportedEncodings, ",")
 }
 
 func registerArgs(a *grumble.Args) {
-	a.String("ENCODING", "The encoding from user string to raw bytes", grumble.Default("utf8"))
+	a.String("ENCODING",
+		fmt.Sprintf("The encoding from user string to raw bytes. Supported encodings: %s", supportedEncodingsToString()),
+		grumble.Default("utf8"))
 }
