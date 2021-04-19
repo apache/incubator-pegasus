@@ -44,6 +44,7 @@
 #include <dsn/utils/time_utils.h>
 
 #include "common/replication_common.h"
+#include "meta/meta_rpc_types.h"
 
 namespace dsn {
 namespace replication {
@@ -1036,6 +1037,30 @@ dsn::error_code replication_ddl_client::add_backup_policy(const std::string &pol
         std::cout << "add backup policy succeed, policy_name = " << policy_name << std::endl;
     }
     return ERR_OK;
+}
+
+error_with<start_backup_app_response> replication_ddl_client::backup_app(
+    int32_t app_id, const std::string &backup_provider_type, const std::string &backup_path)
+{
+    auto req = make_unique<start_backup_app_request>();
+    req->app_id = app_id;
+    req->backup_provider_type = backup_provider_type;
+    if (!backup_path.empty()) {
+        req->__set_backup_path(backup_path);
+    }
+    return call_rpc_sync(start_backup_app_rpc(std::move(req), RPC_CM_START_BACKUP_APP));
+}
+
+error_with<query_backup_status_response> replication_ddl_client::query_backup(int32_t app_id,
+                                                                              int64_t backup_id)
+{
+    auto req = make_unique<query_backup_status_request>();
+    req->app_id = app_id;
+
+    if (backup_id > 0) {
+        req->__set_backup_id(backup_id);
+    }
+    return call_rpc_sync(query_backup_status_rpc(std::move(req), RPC_CM_QUERY_BACKUP_STATUS));
 }
 
 dsn::error_code replication_ddl_client::disable_backup_policy(const std::string &policy_name)

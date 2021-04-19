@@ -142,6 +142,12 @@ public:
                                       int32_t backup_history_cnt,
                                       const std::string &start_time);
 
+    error_with<start_backup_app_response> backup_app(int32_t app_id,
+                                                     const std::string &backup_provider_type,
+                                                     const std::string &backup_path = "");
+
+    error_with<query_backup_status_response> query_backup(int32_t app_id, int64_t backup_id);
+
     dsn::error_code ls_backup_policy();
 
     dsn::error_code disable_backup_policy(const std::string &policy_name);
