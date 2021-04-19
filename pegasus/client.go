@@ -70,7 +70,7 @@ func (p *pegasusClient) Close() error {
 	}
 
 	if err := p.metaMgr.Close(); err != nil {
-		pegalog.GetLogger().Fatal("pegasus-go-client: unable to close metaMgr: ", err)
+		pegalog.GetLogger().Fatal("pegasus-go-client: unable to close MetaManager: ", err)
 	}
 	return p.replicaMgr.Close()
 }

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -77,10 +78,24 @@ func TestAdmin_CreateTableMustAvailable(t *testing.T) {
 		err = rwClient.Close()
 		assert.NoError(t, err)
 	}()
-	tb, err := rwClient.OpenTable(ctx, tableName)
-	if !assert.NoError(t, err) {
-		assert.Fail(t, err.Error())
+
+	var tb pegasus.TableConnector
+	retries := 0
+	for { // retry for timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		tb, err = rwClient.OpenTable(ctx, tableName)
+		if err != nil && strings.Contains(err.Error(), "context deadline exceeded") && retries <= 3 {
+			retries++
+			continue
+		} else if err != nil {
+			assert.Fail(t, err.Error())
+			return
+		} else {
+			break
+		}
 	}
+
 	err = tb.Set(ctx, []byte("a"), []byte("a"), []byte("a"))
 	if !assert.NoError(t, err) {
 		assert.Fail(t, err.Error())

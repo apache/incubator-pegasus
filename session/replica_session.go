@@ -10,6 +10,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // ReplicaSession represents the network session between client and
@@ -208,12 +209,14 @@ func (rm *ReplicaManager) Close() error {
 	rm.Lock()
 	defer rm.Unlock()
 
+	funcs := make([]func() error, 0, len(rm.replicas))
 	for _, r := range rm.replicas {
-		if err := r.Close(); err != nil {
-			return err
-		}
+		rep := r
+		funcs = append(funcs, func() error {
+			return rep.Close()
+		})
 	}
-	return nil
+	return kerrors.AggregateGoroutines(funcs...)
 }
 
 func (rm *ReplicaManager) ReplicaCount() int {

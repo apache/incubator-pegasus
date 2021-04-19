@@ -110,6 +110,8 @@ func TestPegasusTableConnector_SingleKeyOperations(t *testing.T) {
 }
 
 func TestPegasusTableConnector_EmptyInput(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	client := NewClient(testingCfg)
 	defer client.Close()
 

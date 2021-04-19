@@ -12,6 +12,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 )
 
 // metaSession represents the network session between client and meta server.
@@ -118,10 +119,12 @@ func (m *MetaManager) setCurrentLeader(lead int) {
 
 // Close the sessions.
 func (m *MetaManager) Close() error {
-	for _, ns := range m.metas {
-		if err := ns.Close(); err != nil {
-			return err
+	funcs := make([]func() error, len(m.metas))
+	for i := 0; i < len(m.metas); i++ {
+		idx := i
+		funcs[idx] = func() error {
+			return m.metas[idx].Close()
 		}
 	}
-	return nil
+	return kerrors.AggregateGoroutines(funcs...)
 }
