@@ -945,7 +945,8 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
                                                    const std::string &old_app_name,
                                                    int32_t old_app_id,
                                                    const std::string &new_app_name,
-                                                   bool skip_bad_partition)
+                                                   bool skip_bad_partition,
+                                                   const std::string &restore_path)
 {
     if (old_app_name.empty() ||
         !std::all_of(old_app_name.cbegin(),
@@ -974,6 +975,10 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
     req->backup_provider_name = backup_provider_name;
     req->time_stamp = timestamp;
     req->skip_bad_partition = skip_bad_partition;
+    if (!restore_path.empty()) {
+        req->__set_restore_path(restore_path);
+        std::cout << "restore app from the specified path : " << restore_path << std::endl;
+    }
 
     auto resp_task = request_meta<configuration_restore_request>(RPC_CM_START_RESTORE, req);
     bool finish = false;

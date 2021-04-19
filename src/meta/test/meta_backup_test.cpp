@@ -57,8 +57,7 @@ public:
         request->app_id = app_id;
         request->backup_provider_type = provider;
         if (!backup_path.empty()) {
-            request->__isset.backup_path = true;
-            request->backup_path = backup_path;
+            request->__set_backup_path(backup_path);
         }
 
         start_backup_app_rpc rpc(std::move(request), RPC_CM_START_BACKUP_APP);

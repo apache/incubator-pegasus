@@ -577,6 +577,7 @@ const std::string backup_restore_constant::APP_NAME("restore.app_name");
 const std::string backup_restore_constant::APP_ID("restore.app_id");
 const std::string backup_restore_constant::BACKUP_ID("restore.backup_id");
 const std::string backup_restore_constant::SKIP_BAD_PARTITION("restore.skip_bad_partition");
+const std::string backup_restore_constant::RESTORE_PATH("restore.restore_path");
 
 const std::string replica_envs::DENY_CLIENT_WRITE("replica.deny_client_write");
 const std::string replica_envs::WRITE_QPS_THROTTLING("replica.write_throttling");

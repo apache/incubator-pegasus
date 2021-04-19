@@ -37,6 +37,7 @@ struct configuration_restore_request
     6:string            new_app_name;
     7:string            backup_provider_name;
     8:bool              skip_bad_partition;
+    9:optional string   restore_path;
 }
 
 struct backup_request

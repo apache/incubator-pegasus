@@ -129,9 +129,9 @@ public:
                                int64_t timestamp /*backup_id*/,
                                const std::string &old_app_name,
                                int32_t old_app_id,
-                               /* paras above is used to combine the path on block service*/
                                const std::string &new_app_name,
-                               bool skip_bad_partition);
+                               bool skip_bad_partition,
+                               const std::string &restore_path = "");
 
     dsn::error_code query_restore(int32_t restore_app_id, bool detailed);
 

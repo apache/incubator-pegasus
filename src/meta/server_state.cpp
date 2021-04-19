@@ -1028,7 +1028,6 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
 void server_state::do_app_create(std::shared_ptr<app_state> &app)
 {
     auto on_create_app_root = [this, app](error_code ec) mutable {
-        configuration_create_app_response resp;
         if (ERR_OK == ec || ERR_NODE_ALREADY_EXIST == ec) {
             dinfo("create app(%s) on storage service ok", app->get_logname());
             for (unsigned int i = 0; i != app->partition_count; ++i) {

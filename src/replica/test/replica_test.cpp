@@ -99,8 +99,7 @@ public:
         req.app_name = _app_info.app_name;
         req.backup_id = _backup_id;
         if (!user_specified_path.empty()) {
-            req.__isset.backup_path = true;
-            req.backup_path = user_specified_path;
+            req.__set_backup_path(user_specified_path);
         }
 
         // test cold backup could complete.
@@ -119,6 +118,22 @@ public:
         int64_t size = 0;
         dsn::utils::filesystem::file_size(current_chkpt_file, size);
         ASSERT_LT(0, size);
+    }
+
+    error_code test_find_valid_checkpoint(const std::string user_specified_path = "")
+    {
+        configuration_restore_request req;
+        req.app_id = _app_info.app_id;
+        req.app_name = _app_info.app_name;
+        req.backup_provider_name = _provider_name;
+        req.cluster_name = _mock_replica->_options->cold_backup_root;
+        req.time_stamp = _backup_id;
+        if (!user_specified_path.empty()) {
+            req.__set_restore_path(user_specified_path);
+        }
+
+        std::string remote_chkpt_dir;
+        return _mock_replica->find_valid_checkpoint(req, remote_chkpt_dir);
     }
 
 public:
@@ -244,9 +259,20 @@ TEST_F(replica_test, update_validate_partition_hash_test)
     }
 }
 
-TEST_F(replica_test, test_replica_backup) { test_on_cold_backup(); }
+TEST_F(replica_test, test_replica_backup_and_restore)
+{
+    test_on_cold_backup();
+    auto err = test_find_valid_checkpoint();
+    ASSERT_EQ(ERR_OK, err);
+}
 
-TEST_F(replica_test, test_replica_backup_with_specific_path) { test_on_cold_backup("test/backup"); }
+TEST_F(replica_test, test_replica_backup_and_restore_with_specific_path)
+{
+    std::string user_specified_path = "test/backup";
+    test_on_cold_backup(user_specified_path);
+    auto err = test_find_valid_checkpoint(user_specified_path);
+    ASSERT_EQ(ERR_OK, err);
+}
 
 } // namespace replication
 } // namespace dsn

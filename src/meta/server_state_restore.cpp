@@ -27,6 +27,7 @@
 
 #include <dsn/dist/block_service.h>
 #include <boost/lexical_cast.hpp>
+#include <dsn/utility/filesystem.h>
 
 #include "block_service/block_service_manager.h"
 #include "common/backup_utils.h"
@@ -56,11 +57,15 @@ void server_state::sync_app_from_backup_media(
     }
 
     std::string cluster_root = request.cluster_name;
+    std::string backup_root;
+    if (request.__isset.restore_path) {
+        backup_root = dsn::utils::filesystem::path_combine(request.restore_path, cluster_root);
+    }
     if (!request.policy_name.empty()) {
-        cluster_root += ("/" + request.policy_name);
+        backup_root = dsn::utils::filesystem::path_combine(backup_root, request.policy_name);
     }
     std::string app_metadata = cold_backup::get_app_metadata_file(
-        cluster_root, request.app_name, request.app_id, request.time_stamp);
+        backup_root, request.app_name, request.app_id, request.time_stamp);
 
     error_code err = ERR_OK;
     block_file_ptr file_handle = nullptr;
@@ -142,6 +147,9 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
     app->envs[backup_restore_constant::BACKUP_ID] = std::to_string(req.time_stamp);
     if (req.skip_bad_partition) {
         app->envs[backup_restore_constant::SKIP_BAD_PARTITION] = std::string("true");
+    }
+    if (req.__isset.restore_path) {
+        app->envs[backup_restore_constant::RESTORE_PATH] = req.restore_path;
     }
     res.second.swap(app);
     return res;

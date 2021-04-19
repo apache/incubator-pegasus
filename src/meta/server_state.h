@@ -304,6 +304,7 @@ private:
     friend class meta_service_test_app;
     friend class meta_test_base;
     friend class test::test_checker;
+    friend class server_state_restore_test;
 
     FRIEND_TEST(meta_backup_service_test, test_add_backup_policy);
     FRIEND_TEST(policy_context_test, test_app_dropped_during_backup);

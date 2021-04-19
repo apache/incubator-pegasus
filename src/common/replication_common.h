@@ -152,6 +152,7 @@ public:
     static const std::string APP_ID;
     static const std::string BACKUP_ID;
     static const std::string SKIP_BAD_PARTITION;
+    static const std::string RESTORE_PATH;
 };
 
 class bulk_load_constant
