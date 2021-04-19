@@ -143,19 +143,21 @@ HASH_KEY=19491001
 SORT_KEY=sortkey
 ```
 
-#### Supported encodings
+### Supported encodings
 
-- utf8
+- `utf8`: The default encoding.
 
--	int32
+-	`int32`: 32-bit integer.
 
--	int64
+-	`int64`: 64-bit integer.
 
--	bytes: The golang byte array. Each byte is from range [0, 255]. For example: "104,101,108,108,111,32,119,111,114,108,100".
+-	`bytes`: The golang byte array. Each byte is from range [0, 255]. For example: "104,101,108,108,111,32,119,111,114,108,100".
 
--	javabytes: The java byte array. Each byte is from range [-128, 127]. For example: "49,48,52,48,56,10,0,3,-1,-1,0".
+-	`javabytes`: The java byte array. Each byte is from range [-128, 127]. For example: `49,48,52,48,56,10,0,3,-1,-1,0`.
 
--	asciihex: For example "\x00\x00\x00e\x0C\x00\x01\x08\x00\x01\x00\x00\x00e\x08".
+-	`asciihex`: For example `\x00\x00\x00e\x0C\x00\x01\x08\x00\x01\x00\x00\x00e\x08`.
+
+Please submit an issue if there's encoding not supported but generally useful.
 
 ### Compression
 
