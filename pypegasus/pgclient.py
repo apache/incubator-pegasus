@@ -518,10 +518,7 @@ class PegasusHash(object):
         end = offset + length
 
         for c in data[offset:end:1]:
-            if six.PY2:
-                crc = cls.table_forward[(ord(c) ^ crc) & 0xFF] ^ (crc >> 8)
-            elif six.PY3:
-                crc = cls.table_forward[(c ^ crc) & 0xFF] ^ (crc >> 8)
+                crc = cls.table_forward[(c ^ crc) & 0xFF] ^ cls.unsigned_right_shift(crc, 8)
         return ~crc
 
     @classmethod
