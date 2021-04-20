@@ -238,13 +238,21 @@ private:
 
 enum data_version
 {
+    VERSION_0 = 0,
+    VERSION_MAX = VERSION_0,
     /// TBD(zlw)
 };
 
 struct value_params
 {
+    value_params(std::string &buf, std::vector<rocksdb::Slice> &slices)
+    : write_buf(buf), write_slices(slices)
+    {
+    }
+
     std::map<value_field_type, std::unique_ptr<value_field>> fields;
-    /// TBD(zlw)
+    std::string &write_buf;
+    std::vector<rocksdb::Slice> &write_slices;
 };
 
 class value_schema

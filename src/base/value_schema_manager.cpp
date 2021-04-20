@@ -18,12 +18,12 @@
  */
 
 #include "value_schema_manager.h"
+#include "value_schema_v0.h"
 
 namespace pegasus {
-
-void value_schema_manager::register_schema(value_schema *schema)
+void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
 {
-    /// TBD(zlw)
+    _schemas[schema->version()] = std::move(schema);
 }
 
 value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_version,
@@ -35,14 +35,15 @@ value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_versi
 
 value_schema *value_schema_manager::get_value_schema(uint32_t version) const
 {
-    /// TBD(zlw)
-    return nullptr;
+    if (version > data_version::VERSION_MAX) {
+        return nullptr;
+    }
+    return _schemas[version].get();
 }
 
 value_schema *value_schema_manager::get_latest_value_schema() const
 {
-    /// TBD(zlw)
-    return nullptr;
+    return _schemas.rbegin()->get();
 }
 
 /**
@@ -51,6 +52,7 @@ value_schema *value_schema_manager::get_latest_value_schema() const
  */
 void register_value_schemas()
 {
+    value_schema_manager::instance().register_schema(dsn::make_unique<value_schema_v0>());
     /// TBD(zlw)
 }
 
