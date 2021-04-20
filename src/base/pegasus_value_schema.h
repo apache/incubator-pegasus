@@ -32,6 +32,8 @@
 #include <dsn/service_api_c.h>
 #include <rocksdb/slice.h>
 
+#include "value_field.h"
+
 namespace pegasus {
 
 constexpr int PEGASUS_DATA_VERSION_MAX = 1u;
@@ -234,4 +236,31 @@ private:
     std::vector<rocksdb::Slice> _write_slices;
 };
 
+enum data_version
+{
+    /// TBD(zlw)
+};
+
+struct value_params
+{
+    std::map<value_field_type, std::unique_ptr<value_field>> fields;
+    /// TBD(zlw)
+};
+
+class value_schema
+{
+public:
+    virtual ~value_schema() = default;
+
+    virtual std::unique_ptr<value_field> extract_field(dsn::string_view value,
+                                                       value_field_type type) = 0;
+    /// Extracts user value from the raw rocksdb value.
+    /// In order to avoid data copy, the ownership of `raw_value` will be transferred
+    /// into the returned blob value.
+    virtual dsn::blob extract_user_data(std::string &&value) = 0;
+    virtual void update_field(std::string &value, std::unique_ptr<value_field> field) = 0;
+    virtual rocksdb::SliceParts generate_value(const value_params &params) = 0;
+
+    virtual data_version version() const = 0;
+};
 } // namespace pegasus
