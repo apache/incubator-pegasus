@@ -35,7 +35,7 @@ value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_versi
 
 value_schema *value_schema_manager::get_value_schema(uint32_t version) const
 {
-    if (version > data_version::VERSION_MAX) {
+    if (version >= _schemas.size()) {
         return nullptr;
     }
     return _schemas[version].get();
