@@ -33,16 +33,24 @@ TEST(value_schema_manager, get_latest_value_schema)
     ASSERT_EQ(data_version::VERSION_MAX, schema->version());
 }
 
-TEST(value_schema_manager, get_value_schema) {
+TEST(value_schema_manager, get_value_schema)
+{
     struct test_case
     {
-        data_version version;
+        uint32_t version;
+        bool schema_exist;
     } tests[] = {
-            {pegasus::data_version::VERSION_0},
+        {pegasus::data_version::VERSION_0, true},
+        {pegasus::data_version::VERSION_MAX + 1, false},
     };
 
     for (const auto &t : tests) {
         auto schema = value_schema_manager::instance().get_value_schema(t.version);
-        ASSERT_EQ(t.version, schema->version());
+        if (t.schema_exist) {
+            ASSERT_NE(schema, nullptr);
+            ASSERT_EQ(t.version, schema->version());
+        } else {
+            ASSERT_EQ(schema, nullptr);
+        }
     }
 }

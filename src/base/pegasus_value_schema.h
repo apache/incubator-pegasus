@@ -239,6 +239,7 @@ private:
 enum data_version
 {
     VERSION_0 = 0,
+    VERSION_COUNT,
     VERSION_MAX = VERSION_0,
     /// TBD(zlw)
 };
@@ -246,11 +247,13 @@ enum data_version
 struct value_params
 {
     value_params(std::string &buf, std::vector<rocksdb::Slice> &slices)
-    : write_buf(buf), write_slices(slices)
+        : write_buf(buf), write_slices(slices)
     {
     }
 
     std::map<value_field_type, std::unique_ptr<value_field>> fields;
+    // write_buf and write_slices are transferred from `pegasus_value_generator`, Which are used to
+    // prevent data copy
     std::string &write_buf;
     std::vector<rocksdb::Slice> &write_slices;
 };

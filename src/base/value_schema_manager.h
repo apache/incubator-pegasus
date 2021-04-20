@@ -38,6 +38,6 @@ private:
     value_schema_manager() = default;
     friend class dsn::utils::singleton<value_schema_manager>;
 
-    std::array<std::unique_ptr<value_schema>, VERSION_MAX> _schemas;
+    std::array<std::unique_ptr<value_schema>, data_version::VERSION_COUNT> _schemas;
 };
 } // namespace pegasus
