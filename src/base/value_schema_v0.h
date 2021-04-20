@@ -32,8 +32,7 @@ class value_schema_v0 : public value_schema
 public:
     value_schema_v0() = default;
 
-    std::unique_ptr<value_field> extract_field(dsn::string_view value,
-                                               value_field_type type);
+    std::unique_ptr<value_field> extract_field(dsn::string_view value, value_field_type type);
     dsn::blob extract_user_data(std::string &&value);
     void update_field(std::string &value, std::unique_ptr<value_field> segment);
     rocksdb::SliceParts generate_value(const value_params &params);
