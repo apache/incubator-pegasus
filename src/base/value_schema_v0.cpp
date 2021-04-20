@@ -19,8 +19,6 @@
 
 #include "value_schema_v0.h"
 
-#include <dsn/utility/endians.h>
-#include <dsn/c/api_utilities.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/smart_pointers.h>
 
