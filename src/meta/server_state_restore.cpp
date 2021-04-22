@@ -1,32 +1,23 @@
-/*
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
- * The MIT License (MIT)
- *
- * Copyright (c) 2015 Microsoft Corporation
- *
- * -=- Robust Distributed System Nucleus (rDSN) -=-
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
-#include <dsn/dist/block_service.h>
 #include <boost/lexical_cast.hpp>
+#include <dsn/dist/block_service.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>
 
 #include "block_service/block_service_manager.h"
@@ -56,10 +47,9 @@ void server_state::sync_app_from_backup_media(
         return;
     }
 
-    std::string cluster_root = request.cluster_name;
-    std::string backup_root;
+    std::string backup_root = request.cluster_name;
     if (request.__isset.restore_path) {
-        backup_root = dsn::utils::filesystem::path_combine(request.restore_path, cluster_root);
+        backup_root = dsn::utils::filesystem::path_combine(request.restore_path, backup_root);
     }
     if (!request.policy_name.empty()) {
         backup_root = dsn::utils::filesystem::path_combine(backup_root, request.policy_name);
@@ -69,7 +59,7 @@ void server_state::sync_app_from_backup_media(
 
     error_code err = ERR_OK;
     block_file_ptr file_handle = nullptr;
-    ddebug("in sync_app_from_backup_media and start to create file(%s)", app_metadata.c_str());
+    ddebug_f("start to create metadata file {}", app_metadata);
     blk_fs
         ->create_file(create_file_request{app_metadata, true},
                       TASK_CODE_EXEC_INLINED,
@@ -78,10 +68,9 @@ void server_state::sync_app_from_backup_media(
                           file_handle = resp.file_handle;
                       })
         ->wait();
-    ddebug("after create app_metadata file(%s)", app_metadata.c_str());
 
     if (err != ERR_OK) {
-        derror("create file failed for meta entry(%s)", app_metadata.c_str());
+        derror_f("create metadata file {} failed.", app_metadata);
         callback_tsk->enqueue_with(err, dsn::blob());
         return;
     }
@@ -90,8 +79,6 @@ void server_state::sync_app_from_backup_media(
         read_request{0, -1}, TASK_CODE_EXEC_INLINED, [callback_tsk](const read_response &resp) {
             callback_tsk->enqueue_with(resp.err, resp.buffer);
         });
-    ddebug("after read app_metadata");
-    return;
 }
 
 std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app_info(
@@ -102,7 +89,7 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
     dsn::app_info info;
     if (!::dsn::json::json_forwarder<dsn::app_info>::decode(app_info, info)) {
         std::string b_str(app_info.data(), app_info.length());
-        derror("restore app failed, because app_metadata is damaged, app_info(%s)", b_str.c_str());
+        derror_f("decode app_info '{}' failed", b_str);
         // NOTICE : maybe find a better error_code to replace err_corruption
         res.first = ERR_CORRUPTION;
         return res;

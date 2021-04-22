@@ -233,6 +233,7 @@ private:
     friend class meta_split_service_test;
     friend class meta_test_base;
     friend class policy_context_test;
+    friend class server_state_restore_test;
     friend class test::test_checker;
 
     replication_options _opts;

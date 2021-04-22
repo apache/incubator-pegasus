@@ -994,9 +994,7 @@ dsn::error_code replication_ddl_client::do_restore(const std::string &backup_pro
         configuration_create_app_response resp;
         dsn::unmarshall(resp_task->get_response(), resp);
         if (resp.err == ERR_OBJECT_NOT_FOUND) {
-            std::cout << "app metadata is damaged on cold backup media, restore app failed"
-                      << std::endl;
-            return ERR_OK;
+            std::cout << "restore app failed: couldn't find valid app metadata" << std::endl;
         } else if (resp.err == ERR_OK) {
             std::cout << "\t"
                       << "new app_id = " << resp.appid << std::endl;
