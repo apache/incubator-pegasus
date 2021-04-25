@@ -65,21 +65,21 @@ void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_fie
 
 rocksdb::SliceParts value_schema_v0::generate_value(const value_params &params)
 {
-    auto expire_iter = params.fields.find(value_field_type::EXPIRE_TIMESTAMP);
-    auto user_data_iter = params.fields.find(value_field_type::USER_DATA);
-    if (dsn_unlikely(expire_iter == params.fields.end() || user_data_iter == params.fields.end())) {
+    auto expire_ts_field = static_cast<expire_timestamp_field *>(
+        params.fields[value_field_type::EXPIRE_TIMESTAMP].get());
+    auto data_field =
+        static_cast<user_data_field *>(params.fields[value_field_type::USER_DATA].get());
+    if (dsn_unlikely(expire_ts_field == nullptr || data_field == nullptr)) {
         dassert_f(false, "USER_DATA or EXPIRE_TIMESTAMP is not provided");
         return {nullptr, 0};
     }
 
-    auto expire_segment = static_cast<expire_timestamp_field *>(expire_iter->second.get());
     params.write_buf.resize(sizeof(uint32_t));
-    dsn::data_output(params.write_buf).write_u32(expire_segment->expire_ts);
+    dsn::data_output(params.write_buf).write_u32(expire_ts_field->expire_ts);
     params.write_slices.clear();
     params.write_slices.emplace_back(params.write_buf.data(), params.write_buf.size());
 
-    auto user_data_segment = static_cast<user_data_field *>(user_data_iter->second.get());
-    dsn::string_view user_data = user_data_segment->user_data;
+    dsn::string_view user_data = data_field->user_data;
     if (user_data.length() > 0) {
         params.write_slices.emplace_back(user_data.data(), user_data.length());
     }
