@@ -21,6 +21,7 @@
 #include "builtin_http_calls.h"
 #include "http_call_registry.h"
 #include "pprof_http_service.h"
+#include "service_version.h"
 
 namespace dsn {
 
@@ -34,6 +35,19 @@ namespace dsn {
     }
     tp.output(oss, utils::table_printer::output_format::kJsonCompact);
     resp.body = oss.str();
+    resp.status_code = http_status_code::ok;
+}
+
+/*extern*/ void get_version_handler(const http_request &req, http_response &resp)
+{
+    std::ostringstream out;
+    dsn::utils::table_printer tp;
+
+    tp.add_row_name_and_data("Version", app_version.version);
+    tp.add_row_name_and_data("GitCommit", app_version.git_commit);
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+
+    resp.body = out.str();
     resp.status_code = http_status_code::ok;
 }
 
@@ -60,6 +74,11 @@ namespace dsn {
         .with_callback(
             [](const http_request &req, http_response &resp) { get_help_handler(req, resp); })
         .with_help("Lists all supported calls");
+
+    register_http_call("version")
+        .with_callback(
+            [](const http_request &req, http_response &resp) { get_version_handler(req, resp); })
+        .with_help("Gets the server version.");
 
     register_http_call("recentStartTime")
         .with_callback([](const http_request &req, http_response &resp) {

@@ -30,6 +30,7 @@
 #include "common/replication_common.h"
 #include "replica_stub.h"
 #include "replica_http_service.h"
+#include "http/service_version.h"
 
 namespace dsn {
 namespace replication {
@@ -52,6 +53,11 @@ replication_service_app::~replication_service_app(void) {}
 
 error_code replication_service_app::start(const std::vector<std::string> &args)
 {
+    if (args.size() >= 2) {
+        app_version.version = *(args.end() - 2);
+        app_version.git_commit = *(args.end() - 1);
+    }
+
     replication_options opts;
     opts.initialize();
 

@@ -40,6 +40,7 @@
 
 #include "meta_service.h"
 #include "meta_http_service.h"
+#include "http/service_version.h"
 
 namespace dsn {
 namespace service {
@@ -94,6 +95,10 @@ meta_service_app::~meta_service_app() {}
 
 error_code meta_service_app::start(const std::vector<std::string> &args)
 {
+    if (args.size() >= 2) {
+        app_version.version = *(args.end() - 2);
+        app_version.git_commit = *(args.end() - 1);
+    }
     return _service->start();
 }
 

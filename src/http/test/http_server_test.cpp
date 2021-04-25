@@ -59,6 +59,17 @@ TEST(http_server, parse_url)
     }
 }
 
+TEST(bultin_http_calls_test, meta_query)
+{
+    http_request req;
+    http_response resp;
+    get_recent_start_time_handler(req, resp);
+    ASSERT_EQ(resp.status_code, http_status_code::ok);
+
+    get_version_handler(req, resp);
+    ASSERT_EQ(resp.status_code, http_status_code::ok);
+}
+
 TEST(bultin_http_calls_test, get_help)
 {
     for (const auto &call : http_call_registry::instance().list_all_calls()) {

@@ -30,6 +30,14 @@ extern void get_perf_counter_handler(const http_request &req, http_response &res
 
 extern void get_help_handler(const http_request &req, http_response &resp);
 
+// Get <meta_server_ipport>/version
+// Request body:
+// {
+//    Version: "2.1.SNAPSHOT",
+//    GitCommit: "88783e1ec28c326974f808d91c1531391d38acb5"
+// }
+extern void get_version_handler(const http_request &req, http_response &resp);
+
 extern void get_recent_start_time_handler(const http_request &req, http_response &resp);
 
 extern void update_config(const http_request &req, http_response &resp);
