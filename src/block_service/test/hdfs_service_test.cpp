@@ -52,14 +52,22 @@ protected:
     virtual void SetUp() override;
     virtual void TearDown() override;
     void generate_test_file(const char *filename);
+    void write_test_files_async();
     std::string name_node;
     std::string backup_path;
+    std::string local_test_dir;
+    std::string test_data_str;
 };
 
 void HDFSClientTest::SetUp()
 {
     name_node = FLAGS_test_name_node;
     backup_path = FLAGS_test_backup_path;
+    local_test_dir = "test_dir";
+    test_data_str = "";
+    for (int i = 0; i < FLAGS_num_test_file_lines; ++i) {
+        test_data_str += "test";
+    }
 }
 
 void HDFSClientTest::TearDown() {}
@@ -73,6 +81,22 @@ void HDFSClientTest::generate_test_file(const char *filename)
         fprintf(fp, "%04d_this_is_a_simple_test_file\n", i);
     }
     fclose(fp);
+}
+
+void HDFSClientTest::write_test_files_async()
+{
+    dsn::utils::filesystem::create_directory(local_test_dir);
+    for (int i = 0; i < 100; ++i) {
+        tasking::enqueue(LPC_TEST_HDFS, nullptr, [this, i]() {
+            // mock the writing process in hdfs_file_object::download().
+            std::string test_file_name = local_test_dir + "/test_file_" + std::to_string(i);
+            std::ofstream out(test_file_name, std::ios::binary | std::ios::out | std::ios::trunc);
+            if (out.is_open()) {
+                out.write(test_data_str.c_str(), test_data_str.length());
+            }
+            out.close();
+        });
+    }
 }
 
 TEST_F(HDFSClientTest, test_basic_operation)
@@ -340,4 +364,21 @@ TEST_F(HDFSClientTest, test_concurrent_upload_download)
         utils::filesystem::remove_path(local_file_names[i]);
         utils::filesystem::remove_path(downloaded_file_names[i]);
     }
+}
+
+TEST_F(HDFSClientTest, test_rename_path_while_writing)
+{
+    write_test_files_async();
+    usleep(100);
+    std::string rename_dir = "rename_dir." + std::to_string(dsn_now_ms());
+    // rename succeed but writing failed.
+    ASSERT_TRUE(dsn::utils::filesystem::rename_path(local_test_dir, rename_dir));
+}
+
+TEST_F(HDFSClientTest, test_remove_path_while_writing)
+{
+    write_test_files_async();
+    usleep(100);
+    // couldn't remove the directory while writing files in it.
+    ASSERT_FALSE(dsn::utils::filesystem::remove_path(local_test_dir));
 }

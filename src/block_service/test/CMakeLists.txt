@@ -40,6 +40,7 @@ set(MY_PROJ_LIBS
 set(MY_BINPLACES
     config-test.ini
     run.sh
+    clear.sh
 )
 
 dsn_add_test()
