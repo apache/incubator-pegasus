@@ -20,10 +20,8 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/pegasus-kv/admin-cli/tabular"
 	"github.com/pegasus-kv/collector/aggregate"
@@ -60,9 +58,7 @@ Overall:
 
 // ShowPartitionsStats is partition-stat command
 func ShowPartitionsStats(client *Client, tableName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := client.Meta.QueryConfig(ctx, tableName)
+	resp, err := client.Meta.QueryConfig(tableName)
 	if err != nil {
 		return err
 	}

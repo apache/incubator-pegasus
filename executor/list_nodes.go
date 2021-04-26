@@ -20,10 +20,8 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
@@ -43,17 +41,12 @@ type nodeInfoStruct struct {
 
 // ListNodes is nodes command.
 func ListNodes(client *Client) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	nodes, err := getNodesMap(ctx, client)
+	nodes, err := getNodesMap(client)
 	if err != nil {
 		return err
 	}
 
-	listTableResp, errTable := client.Meta.ListApps(ctx, &admin.ListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
-	})
+	apps, errTable := client.Meta.ListAvailableApps()
 	if errTable != nil {
 		return errTable
 	}
@@ -61,10 +54,10 @@ func ListNodes(client *Client) error {
 	var mu sync.Mutex
 	var funcs []func() error
 
-	for _, info := range listTableResp.Infos {
+	for _, info := range apps {
 		info := info
 		funcs = append(funcs, func() error {
-			queryCfgResp, err := client.Meta.QueryConfig(ctx, info.AppName)
+			queryCfgResp, err := client.Meta.QueryConfig(info.AppName)
 			if err != nil {
 				return fmt.Errorf("query config failed for \"%s\" : %s", info.AppName, err)
 			}
@@ -87,15 +80,13 @@ func ListNodes(client *Client) error {
 	return nil
 }
 
-func getNodesMap(ctx context.Context, client *Client) (map[string]*nodeInfoStruct, error) {
-	listNodeResp, errNode := client.Meta.ListNodes(ctx, &admin.ListNodesRequest{
-		Status: admin.NodeStatus_NS_INVALID,
-	})
-	if errNode != nil {
-		return nil, errNode
+func getNodesMap(client *Client) (map[string]*nodeInfoStruct, error) {
+	nodeInfos, err := client.Meta.ListNodes()
+	if err != nil {
+		return nil, err
 	}
 	nodes := make(map[string]*nodeInfoStruct)
-	for _, ninfo := range listNodeResp.Infos {
+	for _, ninfo := range nodeInfos {
 		n := client.Nodes.MustGetReplica(ninfo.Address.GetAddress())
 		nodes[ninfo.Address.GetAddress()] = &nodeInfoStruct{
 			Address: n.CombinedAddr(),

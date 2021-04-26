@@ -17,22 +17,13 @@
  * under the License.
  */
 
-package cmd
+package client
 
-import (
-	"os"
+import "time"
 
-	"github.com/pegasus-kv/admin-cli/executor"
-)
+var rpcTimeout = time.Second * 10
 
-// globalMetaList is the user-input MetaServer IP:Port addresses
-var globalMetaList []string
-
-var pegasusClient *executor.Client
-
-// Init all commands to the shell app.
-func Init(metaList []string) {
-	globalMetaList = metaList
-
-	pegasusClient = executor.NewClient(os.Stdout, globalMetaList)
+// SetRPCTimeout is the global timeout setting of RPC.
+func SetRPCTimeout(d time.Duration) {
+	rpcTimeout = d
 }

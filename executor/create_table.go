@@ -20,11 +20,9 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/cheggaaa/pb/v3"
 )
@@ -39,23 +37,12 @@ func CreateTable(c *Client, tableName string, partitionCount int, replicaCount i
 	}
 	// TODO(wutao): reject request with invalid table name
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := c.Meta.CreateApp(ctx, &admin.CreateAppRequest{
-		AppName: tableName,
-		Options: &admin.CreateAppOptions{
-			PartitionCount: int32(partitionCount),
-			IsStateful:     true,
-			AppType:        "pegasus",
-			SuccessIfExist: true,
-			ReplicaCount:   int32(replicaCount),
-		},
-	})
+	appID, err := c.Meta.CreateApp(tableName, map[string]string{}, partitionCount)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(c, "Creating table \"%s\" (AppID: %d)\n", tableName, resp.Appid)
+	fmt.Fprintf(c, "Creating table \"%s\" (AppID: %d)\n", tableName, appID)
 	return waitTableReady(c, tableName, partitionCount, replicaCount)
 }
 
@@ -64,9 +51,7 @@ func waitTableReady(c *Client, tableName string, partitionCount int, replicaCoun
 	bar := pb.Full.Start(partitionCount) // Add a new bar
 
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-		resp, err := c.Meta.QueryConfig(ctx, tableName)
+		resp, err := c.Meta.QueryConfig(tableName)
 		if err != nil {
 			return err
 		}

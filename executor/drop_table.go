@@ -20,27 +20,12 @@
 package executor
 
 import (
-	"context"
 	"fmt"
-	"time"
-
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 )
 
 // DropTable command
 func DropTable(c *Client, tableName string, reservePeriod int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	reserveSecond := new(int64)
-	*reserveSecond = reservePeriod
-	_, err := c.Meta.DropApp(ctx, &admin.DropAppRequest{
-		AppName: tableName,
-		Options: &admin.DropAppOptions{
-			SuccessIfNotExist: true,
-			ReserveSeconds:    reserveSecond,
-		},
-	})
+	err := c.Meta.DropApp(tableName, reservePeriod)
 	if err != nil {
 		return err
 	}

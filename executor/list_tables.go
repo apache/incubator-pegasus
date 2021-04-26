@@ -20,9 +20,6 @@
 package executor
 
 import (
-	"context"
-	"time"
-
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/admin-cli/tabular"
@@ -30,9 +27,6 @@ import (
 
 // ListTables command.
 func ListTables(client *Client, showDropped bool) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
 	var status admin.AppStatus
 	if showDropped {
 		status = admin.AppStatus_AS_DROPPED
@@ -40,9 +34,7 @@ func ListTables(client *Client, showDropped bool) error {
 		status = admin.AppStatus_AS_AVAILABLE
 	}
 
-	resp, err := client.Meta.ListApps(ctx, &admin.ListAppsRequest{
-		Status: status,
-	})
+	tables, err := client.Meta.ListApps(status)
 	if err != nil {
 		return err
 	}
@@ -68,7 +60,7 @@ func ListTables(client *Client, showDropped bool) error {
 	}
 
 	var tbList []interface{}
-	for _, tb := range resp.Infos {
+	for _, tb := range tables {
 		if status == admin.AppStatus_AS_AVAILABLE {
 			unHealthy, writeUnHealthy, readUnHealthy, err := getPartitionHealthyCount(client, tb)
 			if err != nil {
@@ -104,9 +96,7 @@ func ListTables(client *Client, showDropped bool) error {
 
 // return (UnHealthy, WriteUnHealthy, ReadUnHealthy, Err)
 func getPartitionHealthyCount(client *Client, table *admin.AppInfo) (int32, int32, int32, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := client.Meta.QueryConfig(ctx, table.AppName)
+	resp, err := client.Meta.QueryConfig(table.AppName)
 	if err != nil {
 		return 0, 0, 0, err
 	}

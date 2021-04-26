@@ -20,24 +20,17 @@
 package executor
 
 import (
-	"context"
 	"fmt"
-	"time"
-
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 )
 
 func RecallTable(client *Client, originTableID int, newTableName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	resp, errRecall := client.Meta.RecallApp(ctx, &admin.RecallAppRequest{AppID: int32(originTableID), NewAppName_: newTableName})
+	info, errRecall := client.Meta.RecallApp(originTableID, newTableName)
 	if errRecall != nil {
 		return errRecall
 	}
 
-	fmt.Printf("Recalling table \"%s\", ", resp.Info.AppName)
-	errWait := waitTableReady(client, resp.Info.AppName, int(resp.Info.PartitionCount), int(resp.Info.MaxReplicaCount))
+	fmt.Printf("Recalling table \"%s\", ", info.AppName)
+	errWait := waitTableReady(client, info.AppName, int(info.PartitionCount), int(info.MaxReplicaCount))
 
 	if errWait != nil {
 		return errWait

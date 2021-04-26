@@ -1,0 +1,8 @@
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - golint
+    - bodyclose
+    - exhaustive
+    - exportloopref

@@ -20,14 +20,11 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
-	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/pegasus-kv/admin-cli/client"
 	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/collector/aggregate"
 )
@@ -39,7 +36,7 @@ type Client struct {
 	io.Writer
 
 	// to access administration APIs
-	Meta *session.MetaManager
+	Meta client.Meta
 
 	// to obtain perf-counters of ReplicaServers
 	Perf *aggregate.PerfClient
@@ -49,22 +46,17 @@ type Client struct {
 
 // NewClient creates a client for accessing Pegasus cluster for use of admin-cli.
 func NewClient(writer io.Writer, metaAddrs []string) *Client {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	meta := session.NewMetaManager(metaAddrs, session.NewNodeSession)
+	meta := client.NewRPCBasedMeta(metaAddrs)
 
 	// TODO(wutao): initialize replica-nodes lazily
-	resp, err := meta.ListNodes(ctx, &admin.ListNodesRequest{
-		Status: admin.NodeStatus_NS_INVALID,
-	})
+	nodes, err := meta.ListNodes()
 	if err != nil {
 		fmt.Fprintf(writer, "fatal: failed to list nodes [%s]\n", err)
 		os.Exit(1)
 	}
 
 	var replicaAddrs []string
-	for _, node := range resp.Infos {
+	for _, node := range nodes {
 		replicaAddrs = append(replicaAddrs, node.Address.GetAddress())
 	}
 

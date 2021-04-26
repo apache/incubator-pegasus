@@ -20,26 +20,18 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 )
 
 // ListAppEnvs command
 func ListAppEnvs(c *Client, useTable string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := c.Meta.ListApps(ctx, &admin.ListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
-	})
+	tables, err := c.Meta.ListAvailableApps()
 	if err != nil {
 		return err
 	}
 
-	for _, app := range resp.Infos {
+	for _, app := range tables {
 		if app.AppName == useTable {
 			outputBytes, _ := json.MarshalIndent(app.Envs, "", "  ")
 			fmt.Fprintln(c, string(outputBytes))
@@ -51,50 +43,26 @@ func ListAppEnvs(c *Client, useTable string) error {
 
 // SetAppEnv command
 func SetAppEnv(c *Client, useTable string, key, value string) error {
-	return updateAppEnv(c, &admin.UpdateAppEnvRequest{
-		Keys:    []string{key},
-		Values:  []string{value},
-		Op:      admin.AppEnvOperation_APP_ENV_OP_SET,
-		AppName: useTable,
-	})
+	return wrapUpdateAppEnvError(c.Meta.UpdateAppEnvs(useTable, map[string]string{key: value}))
 }
 
 // ClearAppEnv command
 func ClearAppEnv(c *Client, useTable string) error {
-	return updateAppEnv(c, &admin.UpdateAppEnvRequest{
-		Op:          admin.AppEnvOperation_APP_ENV_OP_CLEAR,
-		AppName:     useTable,
-		ClearPrefix: new(string), /*empty prefix means clear of all*/
-	})
+	return wrapUpdateAppEnvError(c.Meta.ClearAppEnvs(useTable, "" /*empty prefix means clear of all*/))
 }
 
 // DelAppEnv command
 // TODO(wutao): deleting a non-existed key returns "OK" now.
 func DelAppEnv(c *Client, useTable string, key string, deletePrefix bool) error {
 	if deletePrefix {
-		return updateAppEnv(c, &admin.UpdateAppEnvRequest{
-			Op:          admin.AppEnvOperation_APP_ENV_OP_CLEAR,
-			AppName:     useTable,
-			ClearPrefix: &key,
-		})
+		return wrapUpdateAppEnvError(c.Meta.ClearAppEnvs(useTable, key))
 	}
-	return updateAppEnv(c, &admin.UpdateAppEnvRequest{
-		Op:      admin.AppEnvOperation_APP_ENV_OP_DEL,
-		Keys:    []string{key},
-		AppName: useTable,
-	})
+	return wrapUpdateAppEnvError(c.Meta.DelAppEnvs(useTable, []string{key}))
 }
 
-func updateAppEnv(c *Client, req *admin.UpdateAppEnvRequest) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := c.Meta.UpdateAppEnv(ctx, req)
+func wrapUpdateAppEnvError(err error) error {
 	if err != nil {
-		if resp != nil {
-			return fmt.Errorf("failed to update app envs:\n%s\nErrno:%s\nHint message:%s", req.String(), resp.Err.Errno, resp.HintMessage)
-		}
-		return err
+		return fmt.Errorf("failed to update app envs:\nErr:%s", err)
 	}
-	fmt.Fprintln(c, "ok")
 	return nil
 }

@@ -20,11 +20,8 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/desertbit/grumble"
 	"github.com/pegasus-kv/admin-cli/executor"
 	"github.com/pegasus-kv/admin-cli/shell"
@@ -70,17 +67,13 @@ func useCompletion(prefix string) []string {
 
 	// TODO(wutao): auto-completes in background
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
-	resp, err := pegasusClient.Meta.ListApps(ctx, &admin.ListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
-	})
+	tables, err := pegasusClient.Meta.ListAvailableApps()
 	if err != nil {
 		return []string{}
 	}
 
 	var tableNames []string
-	for _, app := range resp.Infos {
+	for _, app := range tables {
 		tableNames = append(tableNames, app.AppName)
 	}
 	cachedTableNames = tableNames

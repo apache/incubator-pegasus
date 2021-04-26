@@ -20,25 +20,20 @@
 package executor
 
 import (
-	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/pegasus-kv/admin-cli/tabular"
 )
 
 // ShowTablePartitions is table-partitions command
 func ShowTablePartitions(client *Client, tableName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	resp, err := client.Meta.QueryConfig(ctx, tableName)
+	resp, err := client.Meta.QueryConfig(tableName)
 	if err != nil {
 		return err
 	}
 
-	nodes, err := getNodesMap(ctx, client)
+	nodes, err := getNodesMap(client)
 	if err != nil {
 		return err
 	}

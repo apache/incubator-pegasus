@@ -20,28 +20,22 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 )
 
 // GetMetaLevel command
 func GetMetaLevel(c *Client) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := c.Meta.MetaControl(ctx, &admin.MetaControlRequest{
-		Level: admin.MetaFunctionLevel_fl_invalid,
-	})
+	oldLevel, err := c.Meta.MetaControl(admin.MetaFunctionLevel_fl_invalid)
 	if err != nil {
 		return err
 	}
 
 	var result = map[string]string{
-		"meta_level": resp.OldLevel.String(),
+		"meta_level": oldLevel.String(),
 	}
 	outputBytes, _ := json.MarshalIndent(result, "", "  ")
 	fmt.Fprintln(c, string(outputBytes))
@@ -55,15 +49,11 @@ func SetMetaLevel(c *Client, lvlStr string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	resp, err := c.Meta.MetaControl(ctx, &admin.MetaControlRequest{
-		Level: metaLvl,
-	})
+	oldLevel, err := c.Meta.MetaControl(metaLvl)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(c, "Successfully update meta function level from \"%s\" to \"%s\"\n", resp.OldLevel.String(), metaLvl.String())
+	fmt.Fprintf(c, "Successfully update meta function level from \"%s\" to \"%s\"\n", oldLevel.String(), metaLvl.String())
 	return nil
 }
