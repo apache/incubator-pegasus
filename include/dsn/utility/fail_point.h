@@ -35,8 +35,8 @@
 
 #include <dsn/utility/string_view.h>
 
-/// The only entry to define a fail point.
-/// When a fail point is defined, it's referenced via the name.
+/// The only entry to define a fail point with `return` function: lambda function must be
+/// return non-void type. When a fail point is defined, it's referenced via the name.
 #define FAIL_POINT_INJECT_F(name, lambda)                                                          \
     do {                                                                                           \
         if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED))                                       \
@@ -45,6 +45,19 @@
         auto __Res = ::dsn::fail::eval(name);                                                      \
         if (__Res != nullptr) {                                                                    \
             return __Func(*__Res);                                                                 \
+        }                                                                                          \
+    } while (0)
+
+/// The only entry to define a fail point with `void` function: lambda  function must be
+/// return void type. When a fail point is defined, it's referenced via the name.
+#define FAIL_POINT_INJECT_VOID_F(name, lambda)                                                     \
+    do {                                                                                           \
+        if (dsn_likely(!::dsn::fail::_S_FAIL_POINT_ENABLED))                                       \
+            break;                                                                                 \
+        auto __Func = lambda;                                                                      \
+        auto __Res = ::dsn::fail::eval(name);                                                      \
+        if (__Res == nullptr) {                                                                    \
+            __Func();                                                                              \
         }                                                                                          \
     } while (0)
 

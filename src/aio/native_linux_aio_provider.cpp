@@ -29,6 +29,8 @@
 
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/c/api_utilities.h>
+#include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 
 namespace dsn {
 
@@ -68,15 +70,43 @@ error_code native_linux_aio_provider::flush(dsn_handle_t fh)
 error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
                                             /*out*/ uint32_t *processed_bytes)
 {
-    ssize_t ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
-                         aio_ctx.buffer,
-                         aio_ctx.buffer_size,
-                         aio_ctx.file_offset);
-    if (ret < 0) {
-        return ERR_FILE_OPERATION_FAILED;
-    }
-    *processed_bytes = static_cast<uint32_t>(ret);
-    return ERR_OK;
+    dsn::error_code resp = ERR_OK;
+    uint32_t buffer_offset = 0;
+    do {
+        // ret is the written data size
+        uint32_t ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
+                              (char *)aio_ctx.buffer + buffer_offset,
+                              aio_ctx.buffer_size - buffer_offset,
+                              aio_ctx.file_offset + buffer_offset);
+        if (dsn_unlikely(ret < 0)) {
+            if (errno == EINTR) {
+                dwarn_f("write failed with errno={} and will retry it.", strerror(errno));
+                continue;
+            }
+            resp = ERR_FILE_OPERATION_FAILED;
+            derror_f("write failed with errno={}, return {}.", strerror(errno), resp);
+            return resp;
+        }
+
+        // mock the `ret` to reproduce the `write incomplete` case in the first write
+        FAIL_POINT_INJECT_VOID_F("aio_pwrite_incomplete", [&]() -> void {
+            if (dsn_unlikely(buffer_offset == 0)) {
+                --ret;
+            }
+        });
+
+        buffer_offset += ret;
+        if (dsn_unlikely(buffer_offset != aio_ctx.buffer_size)) {
+            dwarn_f("write incomplete, request_size={}, total_write_size={}, this_write_size={}, "
+                    "and will retry it.",
+                    aio_ctx.buffer_size,
+                    buffer_offset,
+                    ret);
+        }
+    } while (dsn_unlikely(buffer_offset < aio_ctx.buffer_size));
+
+    *processed_bytes = buffer_offset;
+    return resp;
 }
 
 error_code native_linux_aio_provider::read(const aio_context &aio_ctx,

@@ -27,6 +27,7 @@
 #include <dsn/tool-api/async_calls.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/smart_pointers.h>
+#include <dsn/utility/fail_point.h>
 
 #include <gtest/gtest.h>
 
@@ -37,6 +38,8 @@ DEFINE_TASK_CODE_AIO(LPC_AIO_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_TEST_SERVER
 
 TEST(core, aio)
 {
+    fail::setup();
+    fail::cfg("aio_pwrite_incomplete", "off()");
     const char *buffer = "hello, world";
     int len = (int)strlen(buffer);
 
@@ -122,6 +125,7 @@ TEST(core, aio)
     }
 
     err = file::close(fp);
+    fail::teardown();
     EXPECT_TRUE(err == ERR_OK);
 
     utils::filesystem::remove_path("tmp");
@@ -143,6 +147,9 @@ TEST(core, aio_share)
 
 TEST(core, operation_failed)
 {
+    fail::setup();
+    fail::cfg("aio_pwrite_incomplete", "off()");
+
     auto fp = file::open("tmp_test_file", O_WRONLY, 0600);
     EXPECT_TRUE(fp == nullptr);
 
@@ -171,16 +178,19 @@ TEST(core, operation_failed)
     t = ::dsn::file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
+    EXPECT_TRUE(strncmp(buffer, str, 10) == 0);
 
     t = ::dsn::file::read(fp2, buffer, 5, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == 5);
+    EXPECT_TRUE(strncmp(buffer, str, 5) == 0);
 
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     ddebug("error code: %s", err->to_string());
     file::close(fp);
     file::close(fp2);
+    fail::teardown();
 
     EXPECT_TRUE(utils::filesystem::remove_path("tmp_test_file"));
 }
