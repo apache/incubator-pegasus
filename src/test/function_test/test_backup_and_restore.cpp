@@ -18,6 +18,7 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/service_api_c.h>
 #include <dsn/utility/filesystem.h>
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 #include <pegasus/client.h>
 #include <pegasus/error.h>
@@ -25,8 +26,8 @@
 #include "base/pegasus_const.h"
 #include "global_env.h"
 
-using namespace ::dsn;
-using namespace ::dsn::replication;
+using namespace dsn;
+using namespace dsn::replication;
 using namespace pegasus;
 
 class backup_restore_test : public testing::Test
@@ -35,6 +36,7 @@ public:
     backup_restore_test()
         : _ddl_client(nullptr),
           _num_of_rows(1000),
+          _check_interval_sec(10),
           _cluster_name("onebox"),
           _old_app_name("test_app"),
           _new_app_name("new_app"),
@@ -57,8 +59,9 @@ public:
         system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c "
                "cold_backup_checkpoint_reserve_minutes = 0\" "
                "config.test_backup_restore.ini");
-        std::string cmd = "sed -i \"/^\\s*cold_backup_root/c cold_backup_root = " + _cluster_name;
-        cmd = cmd + std::string("\" config.test_backup_restore.ini");
+        std::string cmd = fmt::format("sed -i \"/^\\s*cold_backup_root/c cold_backup_root = {}\" "
+                                      "config.test_backup_restore.ini",
+                                      _cluster_name);
         system(cmd.c_str());
         system("./run.sh start_onebox --config_path config.test_backup_restore.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -130,14 +133,12 @@ public:
 
     start_backup_app_response start_backup(const std::string &user_specified_path = "")
     {
-        auto err_resp = _ddl_client->backup_app(_old_app_id, _provider, user_specified_path);
-        return err_resp.get_value();
+        return _ddl_client->backup_app(_old_app_id, _provider, user_specified_path).get_value();
     }
 
     query_backup_status_response query_backup(int64_t backup_id)
     {
-        auto err_resp = _ddl_client->query_backup(_old_app_id, backup_id);
-        return err_resp.get_value();
+        return _ddl_client->query_backup(_old_app_id, backup_id).get_value();
     }
 
     error_code start_restore(int64_t backup_id, const std::string &user_specified_path = "")
@@ -158,9 +159,9 @@ public:
         int sleep_sec = 0;
         bool is_backup_complete = false;
         while (!is_backup_complete && sleep_sec <= max_sleep_seconds) {
-            std::cout << "sleep 10s to wait backup complete." << std::endl;
-            sleep(10);
-            sleep_sec += 10;
+            std::cout << "sleep a while to wait backup complete." << std::endl;
+            sleep(_check_interval_sec);
+            sleep_sec += _check_interval_sec;
 
             auto resp = query_backup(backup_id);
             if (resp.err != ERR_OK) {
@@ -173,14 +174,14 @@ public:
         return is_backup_complete;
     }
 
-    bool wait_app_become_healthy(const std::string &app_name, int max_sleep_seconds)
+    bool wait_app_become_healthy(const std::string &app_name, uint32_t max_sleep_seconds)
     {
         int sleep_sec = 0;
         bool is_app_healthy = false;
         while (!is_app_healthy && sleep_sec <= max_sleep_seconds) {
-            std::cout << "sleep 10s to wait app become healthy." << std::endl;
-            sleep(10);
-            sleep_sec += 10;
+            std::cout << "sleep a while to wait app become healthy." << std::endl;
+            sleep(_check_interval_sec);
+            sleep_sec += _check_interval_sec;
 
             int32_t new_app_id;
             int32_t partition_count;
@@ -228,7 +229,8 @@ public:
 private:
     std::shared_ptr<replication_ddl_client> _ddl_client;
 
-    const int _num_of_rows;
+    const uint32_t _num_of_rows;
+    const uint8_t _check_interval_sec;
     const std::string _cluster_name;
     const std::string _old_app_name;
     const std::string _new_app_name;
