@@ -21,6 +21,15 @@
 #include "value_schema_v0.h"
 
 namespace pegasus {
+value_schema_manager::value_schema_manager()
+{
+    /**
+     * If someone wants to add a new data version, he only need to implement the new value schema,
+     * and register it here.
+     */
+    value_schema_manager::instance().register_schema(dsn::make_unique<value_schema_v0>());
+}
+
 void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
 {
     _schemas[schema->version()] = std::move(schema);
@@ -45,20 +54,4 @@ value_schema *value_schema_manager::get_latest_value_schema() const
 {
     return _schemas.rbegin()->get();
 }
-
-/**
- * If someone wants to add a new data version, he only need to implement the new value schema,
- * and register it here.
- */
-void register_value_schemas()
-{
-    value_schema_manager::instance().register_schema(dsn::make_unique<value_schema_v0>());
-    /// TBD(zlw)
-}
-
-struct value_schemas_registerer
-{
-    value_schemas_registerer() { register_value_schemas(); }
-};
-static value_schemas_registerer value_schemas_reg;
 } // namespace pegasus

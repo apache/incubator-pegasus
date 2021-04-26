@@ -35,7 +35,7 @@ public:
     value_schema *get_latest_value_schema() const;
 
 private:
-    value_schema_manager() = default;
+    value_schema_manager();
     friend class dsn::utils::singleton<value_schema_manager>;
 
     std::array<std::unique_ptr<value_schema>, data_version::VERSION_COUNT> _schemas;

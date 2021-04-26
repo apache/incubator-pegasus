@@ -26,15 +26,15 @@ namespace pegasus {
 std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view value,
                                                             value_field_type type)
 {
-    std::unique_ptr<value_field> segment = nullptr;
+    std::unique_ptr<value_field> field = nullptr;
     switch (type) {
     case value_field_type::EXPIRE_TIMESTAMP:
-        segment = extract_timestamp(value);
+        field = extract_timestamp(value);
         break;
     default:
-        dassert_f(false, "Unsupported segment type: {}", type);
+        dassert_f(false, "Unsupported field type: {}", type);
     }
-    return segment;
+    return field;
 }
 
 dsn::blob value_schema_v0::extract_user_data(std::string &&value)
@@ -51,15 +51,15 @@ dsn::blob value_schema_v0::extract_user_data(std::string &&value)
     return user_data;
 }
 
-void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_field> segment)
+void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_field> field)
 {
-    auto type = segment->type();
-    switch (segment->type()) {
+    auto type = field->type();
+    switch (field->type()) {
     case value_field_type::EXPIRE_TIMESTAMP:
-        update_expire_ts(value, std::move(segment));
+        update_expire_ts(value, std::move(field));
         break;
     default:
-        dassert_f(false, "Unsupported update segment type: {}", type);
+        dassert_f(false, "Unsupported update field type: {}", type);
     }
 }
 
@@ -92,12 +92,12 @@ std::unique_ptr<value_field> value_schema_v0::extract_timestamp(dsn::string_view
     return dsn::make_unique<expire_timestamp_field>(expire_ts);
 }
 
-void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value_field> segment)
+void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value_field> field)
 {
     dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
-    auto expire_segment = static_cast<expire_timestamp_field *>(segment.get());
+    auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
-    auto new_expire_ts = expire_segment->expire_ts;
+    auto new_expire_ts = expire_field->expire_ts;
     new_expire_ts = dsn::endian::hton(new_expire_ts);
     memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
 }
