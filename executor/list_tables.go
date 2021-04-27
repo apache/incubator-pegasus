@@ -21,6 +21,7 @@ package executor
 
 import (
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/pegasus-kv/admin-cli/client"
 	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/admin-cli/tabular"
 )
@@ -95,27 +96,10 @@ func ListTables(client *Client, showDropped bool) error {
 }
 
 // return (UnHealthy, WriteUnHealthy, ReadUnHealthy, Err)
-func getPartitionHealthyCount(client *Client, table *admin.AppInfo) (int32, int32, int32, error) {
-	resp, err := client.Meta.QueryConfig(table.AppName)
+func getPartitionHealthyCount(c *Client, table *admin.AppInfo) (int32, int32, int32, error) {
+	info, err := client.GetTableHealthInfo(c.Meta, table.AppName)
 	if err != nil {
 		return 0, 0, 0, err
 	}
-
-	var fullHealthy, unHealthy, writeUnHealthy, readUnHealthy int32
-	for _, partition := range resp.Partitions {
-		var replicaCnt int32
-		if partition.Primary.GetRawAddress() == 0 {
-			writeUnHealthy++
-			readUnHealthy++
-		} else {
-			replicaCnt = int32(len(partition.Secondaries) + 1)
-			if replicaCnt >= partition.MaxReplicaCount {
-				fullHealthy++
-			} else if replicaCnt < 2 {
-				writeUnHealthy++
-			}
-		}
-	}
-	unHealthy = table.PartitionCount - fullHealthy
-	return unHealthy, writeUnHealthy, readUnHealthy, nil
+	return info.Unhealthy, info.WriteUnhealthy, info.ReadUnhealthy, nil
 }
