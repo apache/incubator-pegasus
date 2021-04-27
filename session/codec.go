@@ -210,6 +210,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewListNodesResponse(),
 		}
 	},
+	"RPC_CM_PROPOSE_BALANCER_ACK": func() RpcResponseResult {
+		return &admin.AdminClientBalanceResult{
+			Success: admin.NewBalanceResponse(),
+		}
+	},
 	"RPC_QUERY_DISK_INFO_ACK": func() RpcResponseResult {
 		return &radmin.ReplicaClientQueryDiskInfoResult{
 			Success: radmin.NewQueryDiskInfoResponse(),

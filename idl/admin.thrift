@@ -345,6 +345,51 @@ struct query_backup_policy_response
     4:optional string           hint_msg;
 }
 
+/////////////////// rebalance-related structs ////////////////////
+
+enum config_type
+{
+    CT_INVALID,
+    CT_ASSIGN_PRIMARY,
+    CT_UPGRADE_TO_PRIMARY,
+    CT_ADD_SECONDARY,
+    CT_UPGRADE_TO_SECONDARY, // not used by meta server
+    CT_DOWNGRADE_TO_SECONDARY,
+    CT_DOWNGRADE_TO_INACTIVE,
+    CT_REMOVE,
+    CT_ADD_SECONDARY_FOR_LB,
+    CT_PRIMARY_FORCE_UPDATE_BALLOT,
+    CT_DROP_PARTITION,
+    CT_REGISTER_CHILD
+}
+
+struct configuration_proposal_action
+{
+    1:base.rpc_address target;
+    2:base.rpc_address node;
+    3:config_type type;
+}
+
+enum balancer_request_type
+{
+    move_primary,
+    copy_primary,
+    copy_secondary,
+}
+
+struct balance_request
+{
+    1:base.gpid gpid;
+    2:list<configuration_proposal_action> action_list;
+    3:optional bool force = false;
+    4:optional balancer_request_type balance_type;
+}
+
+struct balance_response
+{
+    1:base.error_code err;
+}
+
 // A client to MetaServer's administration API.
 service admin_client 
 {
@@ -373,4 +418,6 @@ service admin_client
     meta_control_response meta_control(1: meta_control_request req);
 
     query_backup_policy_response query_backup_policy(1: query_backup_policy_request req);
+
+    balance_response balance(1: balance_request req);
 }

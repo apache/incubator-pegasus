@@ -333,3 +333,28 @@ func (m *MetaManager) QueryBackupPolicy(ctx context.Context, req *admin.QueryBac
 	}
 	return nil, err
 }
+
+func (ms *metaSession) balance(ctx context.Context, req *admin.BalanceRequest) (*admin.BalanceResponse, error) {
+	arg := admin.NewAdminClientBalanceArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_PROPOSE_BALANCER")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientBalanceResult)
+	return ret.GetSuccess(), nil
+}
+
+// Balance is auto-generated
+func (m *MetaManager) Balance(ctx context.Context, req *admin.BalanceRequest) (*admin.BalanceResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.balance(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.BalanceResponse), fmt.Errorf("Balance failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.BalanceResponse), nil
+	}
+	return nil, err
+}
