@@ -20,8 +20,8 @@
 package executor
 
 import (
-	"github.com/pegasus-kv/admin-cli/executor/util"
 	"github.com/pegasus-kv/admin-cli/tabular"
+	"github.com/pegasus-kv/admin-cli/util"
 	"github.com/pegasus-kv/collector/aggregate"
 )
 

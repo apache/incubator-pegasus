@@ -24,11 +24,19 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/pegasus-kv/admin-cli/util"
+)
+
+type BalanceType int
+
+const (
+	BalanceMovePri BalanceType = iota
+	BalanceCopyPri
+	BalanceCopySec
 )
 
 // Meta is a helper over pegasus-go-client's primitive session.MetaManager.
@@ -67,6 +75,8 @@ type Meta interface {
 	ListNodes() ([]*admin.NodeInfo, error)
 
 	RecallApp(originTableID int, newTableName string) (*admin.AppInfo, error)
+
+	Balance(gpid *base.Gpid, opType BalanceType, from *util.PegasusNode, to *util.PegasusNode) error
 }
 
 type rpcBasedMeta struct {
@@ -303,4 +313,44 @@ func (m *rpcBasedMeta) RecallApp(originTableID int, newTableName string) (*admin
 		result = resp.(*admin.RecallAppResponse).Info
 	})
 	return result, err
+}
+
+func getNodeAddress(n *util.PegasusNode) *base.RPCAddress {
+	if n == nil {
+		return &base.RPCAddress{}
+	}
+	return base.NewRPCAddress(n.IP, n.Port)
+}
+
+func newProposalAction(target *util.PegasusNode, node *util.PegasusNode, cfgType admin.ConfigType) *admin.ConfigurationProposalAction {
+	return &admin.ConfigurationProposalAction{
+		Target: getNodeAddress(target),
+		Node:   getNodeAddress(node),
+		Type:   cfgType,
+	}
+}
+
+func (m *rpcBasedMeta) Balance(gpid *base.Gpid, opType BalanceType, from *util.PegasusNode, to *util.PegasusNode) error {
+	req := &admin.BalanceRequest{
+		Gpid: gpid,
+	}
+
+	var actions []*admin.ConfigurationProposalAction
+	switch opType {
+	case BalanceMovePri:
+		actions = append(actions, newProposalAction(from, from, admin.ConfigType_CT_DOWNGRADE_TO_SECONDARY))
+		actions = append(actions, newProposalAction(to, to, admin.ConfigType_CT_UPGRADE_TO_PRIMARY))
+	case BalanceCopyPri:
+		actions = append(actions, newProposalAction(from, to, admin.ConfigType_CT_ADD_SECONDARY_FOR_LB))
+		actions = append(actions, newProposalAction(to, to, admin.ConfigType_CT_UPGRADE_TO_PRIMARY))
+	case BalanceCopySec:
+		actions = append(actions, newProposalAction(nil, to, admin.ConfigType_CT_ADD_SECONDARY_FOR_LB))
+		actions = append(actions, newProposalAction(nil, from, admin.ConfigType_CT_DOWNGRADE_TO_INACTIVE))
+	default:
+		return fmt.Errorf("illegal balance type %d", opType)
+	}
+	req.ActionList = actions
+
+	err := m.callMeta("Balance", req, func(resp interface{}) {})
+	return err
 }
