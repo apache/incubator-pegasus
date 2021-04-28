@@ -355,6 +355,11 @@ error_code replica_bulk_loader::start_download(const std::string &remote_dir,
     }
 
     // reset local bulk load context and state
+    if (_status == bulk_load_status::BLS_INVALID) {
+        // try to remove possible garbage bulk load data when actually starting bulk load
+        remove_local_bulk_load_dir(utils::filesystem::path_combine(
+            _replica->_dir, bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR));
+    }
     if (status() == partition_status::PS_PRIMARY) {
         _replica->_primary_states.cleanup_bulk_load_states();
     }
