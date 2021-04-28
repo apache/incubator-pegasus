@@ -22,7 +22,8 @@
 PID=$$
 
 if [ $# -le 3 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <type> <start_task_id>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <type> <start_task_id> "
+       "<rebalance_cluster_after_rolling>(default false) <rebalance_only_move_primary>(default true)"
   echo
   echo "The type may be 'one' or 'all':"
   echo "  - one: rolling update only one task of replica server."
@@ -46,6 +47,18 @@ start_task_id=$4
 if [ "$type" != "one" -a "$type" != "all" ]; then
   echo "ERROR: invalid type, should be one or all"
   exit 1
+fi
+
+if [ -z $5 ]; then
+  rebalance_cluster_after_rolling=false
+else
+  rebalance_cluster_after_rolling=$5
+fi
+
+if [ -z $6 ]; then
+  rebalance_only_move_primary=true
+else
+  rebalance_only_move_primary=$6
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -222,14 +235,6 @@ do
 
   echo "remote_command -l $node flush-log" | ./run.sh shell --cluster $meta_list &>/dev/null
 
-  echo "Set lb.add_secondary_max_count_for_one_node to 100..."
-  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
-  set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
-  if [ $set_ok -ne 1 ]; then
-    echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
-    exit 1
-  fi
-
   echo "Rolling update by minos..."
   minos_rolling_update $cluster replica $task_id
   echo "Rolling update by minos done."
@@ -249,6 +254,14 @@ do
   done
   echo
   sleep 1
+
+  echo "Set lb.add_secondary_max_count_for_one_node to 100..."
+  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+  set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+  if [ $set_ok -ne 1 ]; then
+    echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
+    exit 1
+  fi
 
   echo "Wait cluster to become healthy..."
   while true
@@ -294,8 +307,11 @@ if [ "$type" = "all" ]; then
   minos_rolling_update $cluster collector
   echo "Rolling update collectors done."
   echo
+fi
 
-  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list
+if [ "$rebalance_cluster_after_rolling" == "true" ]; then
+  echo "Start to rebalance cluster..."
+  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
 fi
 
 echo "Finish time: `date`"
