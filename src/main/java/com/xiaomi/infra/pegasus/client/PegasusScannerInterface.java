@@ -3,7 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
-import java.util.concurrent.Future;
+import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
