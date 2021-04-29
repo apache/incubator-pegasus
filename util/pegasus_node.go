@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/pegasus-kv/collector/aggregate"
 )
@@ -77,6 +78,10 @@ func (n *PegasusNode) Session() session.NodeSession {
 		n.session = session.NewNodeSession(n.TCPAddr(), session.NodeTypeReplica)
 	}
 	return n.session
+}
+
+func (n *PegasusNode) RPCAddress() *base.RPCAddress {
+	return base.NewRPCAddress(n.IP, n.Port)
 }
 
 // NewNodeFromTCPAddr creates a node from tcp address.

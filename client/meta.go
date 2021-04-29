@@ -39,6 +39,19 @@ const (
 	BalanceCopySec
 )
 
+func (t BalanceType) String() string {
+	switch t {
+	case BalanceMovePri:
+		return "MovePri"
+	case BalanceCopyPri:
+		return "CopyPri"
+	case BalanceCopySec:
+		return "CopySec"
+	default:
+		panic(fmt.Sprintf("unexpected BalanceType: %d", t))
+	}
+}
+
 // Meta is a helper over pegasus-go-client's primitive session.MetaManager.
 // It aims to provide an easy-to-use API that eliminates some boilerplate code, like
 // context creation, request/response creation, etc.
@@ -77,6 +90,8 @@ type Meta interface {
 	RecallApp(originTableID int, newTableName string) (*admin.AppInfo, error)
 
 	Balance(gpid *base.Gpid, opType BalanceType, from *util.PegasusNode, to *util.PegasusNode) error
+
+	Propose(gpid *base.Gpid, action admin.ConfigType, target *util.PegasusNode, node *util.PegasusNode) error
 }
 
 type rpcBasedMeta struct {
@@ -351,6 +366,17 @@ func (m *rpcBasedMeta) Balance(gpid *base.Gpid, opType BalanceType, from *util.P
 	}
 	req.ActionList = actions
 
+	err := m.callMeta("Balance", req, func(resp interface{}) {})
+	return err
+}
+
+func (m *rpcBasedMeta) Propose(gpid *base.Gpid, action admin.ConfigType, target *util.PegasusNode, node *util.PegasusNode) error {
+	req := &admin.BalanceRequest{
+		Gpid: gpid,
+		ActionList: []*admin.ConfigurationProposalAction{
+			newProposalAction(target, node, action),
+		},
+	}
 	err := m.callMeta("Balance", req, func(resp interface{}) {})
 	return err
 }

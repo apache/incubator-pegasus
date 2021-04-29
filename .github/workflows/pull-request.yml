@@ -39,3 +39,5 @@ jobs:
           go-version: 1.14
       - name: Compile 
         run: make
+      - name: Test
+        run: make test
