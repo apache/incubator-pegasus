@@ -21,6 +21,7 @@ package client
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
@@ -28,7 +29,6 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/pegasus-kv/admin-cli/util"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 func SetMetaLevelLively(meta Meta) error {

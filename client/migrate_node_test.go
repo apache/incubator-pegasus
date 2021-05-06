@@ -37,6 +37,7 @@ func TestMigratePrimariesOut(t *testing.T) {
 
 		assertReplicasNotOnSameNode(t)
 
+		// no primary is located on this node now
 		assert.Empty(t, replicaServer.primaries)
 		assertNoMissingReplicaInCluster(t, 16)
 	}
@@ -63,15 +64,14 @@ func TestDowngradeNode(t *testing.T) {
 	}
 }
 
-// safelyDowngradeNode returns the effected partitions.
+// safelyDowngradeNode first migrates all primaries out from this node, then shuts down all replicas.
+// Returns the effected partitions.
 // NOTE: map[base.Gpid]int, `int` is the times that this partition has been downgraded until now.
 func safelyDowngradeNode(t *testing.T, replicaServer *fakeNode, effectedReplicas map[base.Gpid]int) map[base.Gpid]int {
 	// ensure no primary on this node
 	_ = MigratePrimariesOut(fakePegasusCluster.meta, replicaServer.n)
 
-	for r := range replicaServer.primaries {
-		effectedReplicas[r]++
-	}
+	assert.Empty(t, replicaServer.primaries)
 	for r := range replicaServer.secondaries {
 		effectedReplicas[r]++
 	}
