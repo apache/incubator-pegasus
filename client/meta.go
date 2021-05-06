@@ -105,6 +105,8 @@ func NewRPCBasedMeta(metaAddrs []string) Meta {
 	}
 }
 
+// Some responses have not only error-code but also a string-type "hint" that can tells the error details.
+// This function wraps the "hint" into error.
 func wrapHintIntoError(hint string, err error) error {
 	if err != nil {
 		if hint != "" {

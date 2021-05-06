@@ -9,6 +9,9 @@ on:
     branches:
       - main
       - ci-test # testing branch for github action
+  push:
+    branches:
+      - main
 
 # workflow tasks
 jobs:

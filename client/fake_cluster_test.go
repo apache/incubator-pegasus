@@ -121,6 +121,22 @@ func TestFakeCluster(t *testing.T) {
 	assertNoMissingReplicaInCluster(t, expectedTotalPartitions)
 }
 
+func TestFakeQueryConfigNeverReturnNilPrimary(t *testing.T) {
+	fakePegasusCluster = newFakeCluster(4)
+	createFakeTable("test", 128)
+	meta := fakePegasusCluster.meta
+
+	resp, _ := meta.QueryConfig("test")
+	part := resp.Partitions[0]
+	_ = shutdownReplica(meta, part.GetPid(), part.Primary)
+
+	resp, _ = meta.QueryConfig("test")
+	part = resp.Partitions[0]
+	assert.NotNil(t, part.Primary) // never nil, since this field is non-optional
+
+	assert.Equal(t, part.MaxReplicaCount, int32(3))
+}
+
 // ensure 3-replica for every partitions are not distributed on the same node.
 func assertReplicasNotOnSameNode(t *testing.T) {
 	tables, _ := fakePegasusCluster.meta.ListAvailableApps()

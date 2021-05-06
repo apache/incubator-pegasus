@@ -57,7 +57,9 @@ func (m *fakeMeta) QueryConfig(tbName string) (*replication.QueryCfgResponse, er
 			resp.Partitions = make([]*replication.PartitionConfiguration, app.PartitionCount)
 			for i := range resp.Partitions {
 				resp.Partitions[i] = &replication.PartitionConfiguration{
-					Pid: &base.Gpid{Appid: app.AppID, PartitionIndex: int32(i)},
+					Pid:             &base.Gpid{Appid: app.AppID, PartitionIndex: int32(i)},
+					Primary:         &base.RPCAddress{}, // even the primary is unavailable, it should still not be nil
+					MaxReplicaCount: 3,
 				}
 			}
 
@@ -133,7 +135,14 @@ func (m *fakeMeta) QueryDuplication(string) (*admin.DuplicationQueryResponse, er
 }
 
 func (m *fakeMeta) ListNodes() ([]*admin.NodeInfo, error) {
-	panic("unimplemented")
+	var result []*admin.NodeInfo
+	for _, n := range fakePegasusCluster.nodes {
+		result = append(result, &admin.NodeInfo{
+			Status:  admin.NodeStatus_NS_ALIVE,
+			Address: base.NewRPCAddress(n.n.IP, n.n.Port),
+		})
+	}
+	return result, nil
 }
 
 func (m *fakeMeta) RecallApp(int, string) (*admin.AppInfo, error) {
