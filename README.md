@@ -1,5 +1,7 @@
 # admin-cli
 
+[![Pull Request](https://github.com/pegasus-kv/admin-cli/actions/workflows/pull-request.yml/badge.svg?branch=main&event=push)](https://github.com/pegasus-kv/admin-cli/actions/workflows/pull-request.yml)
+
 The command-line tool for the administration of Pegasus.
 
 Thanks to the portability of Go, we have provided binaries of admin-cli for multiple platforms. This is a tremendous advantage

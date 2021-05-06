@@ -52,7 +52,7 @@ func TestDowngradeNode(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		effectedReplicas := map[base.Gpid]int{}
 		replicaServer := fakePegasusCluster.nodes[1]
-		effectedReplicas = safelyDowngradeNode(t, replicaServer, effectedReplicas)
+		safelyDowngradeNode(t, replicaServer, &effectedReplicas)
 
 		resp, _ := fakePegasusCluster.meta.QueryConfig("test")
 		for _, p := range resp.Partitions {
@@ -67,17 +67,16 @@ func TestDowngradeNode(t *testing.T) {
 // safelyDowngradeNode first migrates all primaries out from this node, then shuts down all replicas.
 // Returns the effected partitions.
 // NOTE: map[base.Gpid]int, `int` is the times that this partition has been downgraded until now.
-func safelyDowngradeNode(t *testing.T, replicaServer *fakeNode, effectedReplicas map[base.Gpid]int) map[base.Gpid]int {
+func safelyDowngradeNode(t *testing.T, replicaServer *fakeNode, effectedReplicas *map[base.Gpid]int) {
 	// ensure no primary on this node
 	_ = MigratePrimariesOut(fakePegasusCluster.meta, replicaServer.n)
 
 	assert.Empty(t, replicaServer.primaries)
 	for r := range replicaServer.secondaries {
-		effectedReplicas[r]++
+		(*effectedReplicas)[r]++
 	}
 	err := DowngradeNode(fakePegasusCluster.meta, replicaServer.n)
 	assert.NoError(t, err)
-	return effectedReplicas
 }
 
 // ensure when the node has primaries running, downgrade will fail.
@@ -85,7 +84,6 @@ func TestDowngradeNodeHasPrimaries(t *testing.T) {
 	fakePegasusCluster = newFakeCluster(4)
 	createFakeTable("test", 16)
 
-	// node must have no primary
 	err := DowngradeNode(fakePegasusCluster.meta, fakePegasusCluster.nodes[0].n)
-	assert.Error(t, err)
+	assert.Error(t, err) // failed
 }

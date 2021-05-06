@@ -145,9 +145,12 @@ func assertReplicasNotOnSameNode(t *testing.T) {
 		assert.Equal(t, len(resp.Partitions), int(tb.PartitionCount))
 
 		for _, p := range resp.Partitions {
-			assert.NotEqual(t, p.Primary.GetAddress(), p.Secondaries[0].GetAddress())
-			assert.NotEqual(t, p.Primary.GetAddress(), p.Secondaries[1].GetAddress())
-			assert.NotEqual(t, p.Secondaries[0].GetAddress(), p.Secondaries[1].GetAddress())
+			for _, sec := range p.Secondaries {
+				assert.NotEqual(t, p.Primary.GetAddress(), sec.GetAddress())
+			}
+			if len(p.Secondaries) >= 2 {
+				assert.NotEqual(t, p.Secondaries[0].GetAddress(), p.Secondaries[1].GetAddress())
+			}
 		}
 	}
 }

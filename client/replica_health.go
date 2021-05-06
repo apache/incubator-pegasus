@@ -58,7 +58,7 @@ func GetTableHealthInfo(meta Meta, tableName string) (*TableHealthInfo, error) {
 	return tbHealth, nil
 }
 
-func aggregateReplicaInfo(meta Meta, tableName string, nodes map[string]*NodeState) (*TableHealthInfo, error) {
+func aggregateReplicaInfo(meta Meta, tableName string, nodes *map[string]*NodeState) (*TableHealthInfo, error) {
 	resp, err := meta.QueryConfig(tableName)
 	if err != nil {
 		return nil, err
@@ -96,15 +96,18 @@ func aggregateTableHealthInfo(resp *replication.QueryCfgResponse) *TableHealthIn
 	}
 }
 
-func aggregateNodeState(resp *replication.QueryCfgResponse, nodes map[string]*NodeState) {
+func aggregateNodeState(resp *replication.QueryCfgResponse, nodesPtr *map[string]*NodeState) {
+	nodes := *nodesPtr
 	for _, p := range resp.Partitions {
-		if p.Primary.GetRawAddress() == 0 {
-			n := p.Primary.GetAddress()
-			nodes[n].PrimariesNum++
+		if p.Primary.GetRawAddress() != 0 {
+			naddr := p.Primary.GetAddress()
+			nodes[naddr].PrimariesNum++
+			nodes[naddr].ReplicaCount++
 		}
 		for _, sec := range p.Secondaries {
-			n := sec.GetAddress()
-			nodes[n].SecondariesNum++
+			naddr := sec.GetAddress()
+			nodes[naddr].SecondariesNum++
+			nodes[naddr].ReplicaCount++
 		}
 	}
 }
@@ -136,7 +139,7 @@ func GetClusterReplicaInfo(meta Meta) (*ClusterReplicaInfo, error) {
 	}
 
 	for _, tb := range metaTables {
-		tbHealthInfo, err := aggregateReplicaInfo(meta, tb.AppName, nodesMap)
+		tbHealthInfo, err := aggregateReplicaInfo(meta, tb.AppName, &nodesMap)
 		if err != nil {
 			return nil, err
 		}

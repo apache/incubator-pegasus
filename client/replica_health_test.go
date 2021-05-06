@@ -84,3 +84,39 @@ func TestGetTableHealthInfo(t *testing.T) {
 		assert.Equal(t, tb.Unhealthy, tt.unhealthy)
 	}
 }
+
+func TestGetClusterReplicaInfo(t *testing.T) {
+	fakePegasusCluster = newFakeCluster(4)
+	createFakeTable("test1", 32)
+	createFakeTable("test2", 64)
+	createFakeTable("test3", 128)
+	meta := fakePegasusCluster.meta
+
+	{
+		// all nodes must have primaries/secondaries
+		c, _ := GetClusterReplicaInfo(meta)
+		for i := 0; i < len(c.Nodes); i++ {
+			assert.NotZero(t, c.Nodes[i].PrimariesNum)
+			assert.NotZero(t, c.Nodes[i].SecondariesNum)
+			assert.NotZero(t, c.Nodes[i].ReplicaCount)
+		}
+	}
+
+	{
+		effectedReplicas := map[base.Gpid]int{}
+		safelyDowngradeNode(t, fakePegasusCluster.nodes[0], &effectedReplicas)
+
+		c, _ := GetClusterReplicaInfo(meta)
+		assert.Equal(t, len(c.Nodes), 4)
+		assert.Equal(t, len(c.Tables), 3)
+
+		assert.Equal(t, c.Nodes[0].PrimariesNum, 0)
+		assert.Equal(t, c.Nodes[0].SecondariesNum, 0)
+		assert.Equal(t, c.Nodes[0].ReplicaCount, 0)
+		for i := 1; i < len(c.Nodes); i++ {
+			assert.NotZero(t, c.Nodes[i].PrimariesNum)
+			assert.NotZero(t, c.Nodes[i].SecondariesNum)
+			assert.NotZero(t, c.Nodes[i].ReplicaCount)
+		}
+	}
+}
