@@ -3342,8 +3342,8 @@ check_and_mutate_request::check_and_mutate_request(check_and_mutate_request &&ot
     return_check_value = std::move(other99.return_check_value);
     __isset = std::move(other99.__isset);
 }
-check_and_mutate_request &
-check_and_mutate_request::operator=(const check_and_mutate_request &other100)
+check_and_mutate_request &check_and_mutate_request::
+operator=(const check_and_mutate_request &other100)
 {
     hash_key = other100.hash_key;
     check_sort_key = other100.check_sort_key;
@@ -3589,8 +3589,8 @@ check_and_mutate_response::check_and_mutate_response(check_and_mutate_response &
     server = std::move(other103.server);
     __isset = std::move(other103.__isset);
 }
-check_and_mutate_response &
-check_and_mutate_response::operator=(const check_and_mutate_response &other104)
+check_and_mutate_response &check_and_mutate_response::
+operator=(const check_and_mutate_response &other104)
 {
     error = other104.error;
     check_value_returned = other104.check_value_returned;
@@ -3603,8 +3603,8 @@ check_and_mutate_response::operator=(const check_and_mutate_response &other104)
     __isset = other104.__isset;
     return *this;
 }
-check_and_mutate_response &
-check_and_mutate_response::operator=(check_and_mutate_response &&other105)
+check_and_mutate_response &check_and_mutate_response::
+operator=(check_and_mutate_response &&other105)
 {
     error = std::move(other105.error);
     check_value_returned = std::move(other105.check_value_returned);

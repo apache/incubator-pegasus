@@ -1031,7 +1031,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         limiter->add_count();
 
-
         auto state = append_key_value_for_scan(
             resp.kvs,
             it->key(),
