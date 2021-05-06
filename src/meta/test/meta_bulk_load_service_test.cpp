@@ -86,7 +86,8 @@ public:
 
     void mock_meta_bulk_load_context(int32_t app_id,
                                      int32_t in_progress_partition_count,
-                                     bulk_load_status::type status)
+                                     bulk_load_status::type status,
+                                     bool mock_rollback_count = false)
     {
         bulk_svc()._bulk_load_app_id.insert(app_id);
         bulk_svc()._apps_in_progress_count[app_id] = in_progress_partition_count;
@@ -94,6 +95,9 @@ public:
         for (int i = 0; i < in_progress_partition_count; ++i) {
             gpid pid = gpid(app_id, i);
             bulk_svc()._partition_bulk_load_info[pid].status = status;
+        }
+        if (mock_rollback_count) {
+            bulk_svc()._apps_rollback_count[app_id] = FLAGS_bulk_load_max_rollback_times;
         }
     }
 
@@ -515,9 +519,10 @@ public:
 
     void test_on_partition_bulk_load_reply(int32_t in_progress_count,
                                            bulk_load_status::type status,
-                                           error_code resp_err = ERR_OK)
+                                           error_code resp_err = ERR_OK,
+                                           bool mock_rollback_count = false)
     {
-        mock_meta_bulk_load_context(_app_id, in_progress_count, status);
+        mock_meta_bulk_load_context(_app_id, in_progress_count, status, mock_rollback_count);
         create_request(status);
         auto response = _resp;
         response.err = resp_err;
@@ -699,6 +704,14 @@ TEST_F(bulk_load_process_test, response_object_not_found)
     test_on_partition_bulk_load_reply(
         _partition_count, bulk_load_status::BLS_CANCELED, ERR_OBJECT_NOT_FOUND);
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_CANCELED);
+    ASSERT_EQ(get_app_in_process_count(_app_id), _partition_count);
+}
+
+TEST_F(bulk_load_process_test, rollback_count_exceed)
+{
+    test_on_partition_bulk_load_reply(
+        _partition_count, bulk_load_status::BLS_DOWNLOADING, ERR_INVALID_STATE, true);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
     ASSERT_EQ(get_app_in_process_count(_app_id), _partition_count);
 }
 
