@@ -20,81 +20,35 @@
 package executor
 
 import (
-	"context"
 	"fmt"
-	"sync"
-	"time"
 
-	adminCli "github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/client"
 	"github.com/pegasus-kv/admin-cli/util"
 )
 
 // RemoteCommand command.
-func RemoteCommand(client *Client, nodeType session.NodeType, nodeAddr string, cmd string, args []string) error {
-	rc := &adminCli.RemoteCommand{
-		Command:   cmd,
-		Arguments: args,
-	}
-
+func RemoteCommand(c *Client, nodeType session.NodeType, nodeAddr string, cmd string, args []string) error {
 	var nodes []*util.PegasusNode
 	if len(nodeAddr) == 0 {
 		// send remote-commands to all nodeType nodes
-		nodes = client.Nodes.GetAllNodes(nodeType)
+		nodes = c.Nodes.GetAllNodes(nodeType)
 	} else {
-		n, err := client.Nodes.GetNode(nodeAddr, nodeType)
+		n, err := c.Nodes.GetNode(nodeAddr, nodeType)
 		if err != nil {
 			return err
 		}
 		nodes = append(nodes, n)
 	}
 
-	results := batchCallCmd(nodes, rc)
-	printCmdResults(client, rc, results)
+	results := client.BatchCallCmd(nodes, cmd, args)
+	printCmdResults(c, cmd, args, results)
 	return nil
 }
 
-type cmdResult struct {
-	resp string
-	err  error
-}
-
-func (c *cmdResult) String() string {
-	if c.err != nil {
-		return fmt.Sprintf("failure: %s", c.err)
-	}
-	return c.resp
-}
-
-func batchCallCmd(nodes []*util.PegasusNode, cmd *adminCli.RemoteCommand) map[*util.PegasusNode]*cmdResult {
-	results := make(map[*util.PegasusNode]*cmdResult)
-
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	wg.Add(len(nodes))
-	for _, n := range nodes {
-		go func(node *util.PegasusNode) {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-			defer cancel()
-			result, err := cmd.Call(ctx, node.Session())
-			mu.Lock()
-			if err != nil {
-				results[node] = &cmdResult{err: err}
-			} else {
-				results[node] = &cmdResult{resp: result}
-			}
-			mu.Unlock()
-			wg.Done()
-		}(n)
-	}
-	wg.Wait()
-
-	return results
-}
-
-func printCmdResults(client *Client, cmd *adminCli.RemoteCommand, results map[*util.PegasusNode]*cmdResult) {
-	fmt.Fprintf(client, "CMD: %s %s\n\n", cmd.Command, cmd.Arguments)
+func printCmdResults(client *Client, cmd string, args []string, results map[*util.PegasusNode]*client.CmdResult) {
+	fmt.Fprintf(client, "CMD: %s %s\n\n", cmd, args)
 
 	for n, res := range results {
 		// print title for the node
