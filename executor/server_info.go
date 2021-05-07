@@ -20,23 +20,20 @@
 package executor
 
 import (
-	"github.com/XiaoMi/pegasus-go-client/admin"
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pegasus-kv/admin-cli/client"
 	"github.com/pegasus-kv/admin-cli/tabular"
 	"github.com/pegasus-kv/admin-cli/util"
 )
 
 // ServerInfo command
-func ServerInfo(client *Client) error {
+func ServerInfo(c *Client) error {
 
-	nodes := client.Nodes.GetAllNodes(session.NodeTypeMeta)
-	nodes = append(nodes, client.Nodes.GetAllNodes(session.NodeTypeReplica)...)
+	nodes := c.Nodes.GetAllNodes(session.NodeTypeMeta)
+	nodes = append(nodes, c.Nodes.GetAllNodes(session.NodeTypeReplica)...)
 
-	results := batchCallCmd(nodes, &admin.RemoteCommand{
-		Command:   "server-info",
-		Arguments: []string{},
-	})
+	results := client.BatchCallCmd(nodes, "server-info", []string{})
 
 	type serverInfoStruct struct {
 		Server  string `json:"server"`
@@ -64,7 +61,7 @@ func ServerInfo(client *Client) error {
 	util.SortStructsByField(metaList, "Node")
 	util.SortStructsByField(replicaList, "Node")
 	valueList := append(metaList, replicaList...)
-	tabular.New(client, valueList, func(table *tablewriter.Table) {
+	tabular.New(c, valueList, func(table *tablewriter.Table) {
 		table.SetAutoWrapText(false)
 	}).Render()
 	return nil

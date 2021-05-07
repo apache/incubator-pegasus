@@ -67,6 +67,11 @@ type response struct {
 	Value   string
 }
 
+type cmdResult struct {
+	resp string
+	err  error
+}
+
 //TODO(jiashuo1) not support update collector config
 func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, name string, actionType string, value int64) error {
 	var nodes []*util.PegasusNode

@@ -49,6 +49,10 @@ func (c *CmdResult) Error() error {
 	return c.err
 }
 
+func (c *CmdResult) RespBody() string {
+	return c.resp
+}
+
 // BatchCallCmd performs remote commands in parallel to multiple nodes.
 func BatchCallCmd(nodes []*util.PegasusNode, cmd string, args []string) map[*util.PegasusNode]*CmdResult {
 	results := make(map[*util.PegasusNode]*CmdResult)
