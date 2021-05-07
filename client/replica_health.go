@@ -152,3 +152,12 @@ func GetClusterReplicaInfo(meta Meta) (*ClusterReplicaInfo, error) {
 
 	return c, nil
 }
+
+// ListNodesReplicaInfo returns how replicas distributed among nodes.
+func ListNodesReplicaInfo(meta Meta) ([]*NodeState, error) {
+	c, err := GetClusterReplicaInfo(meta)
+	if err != nil {
+		return nil, err
+	}
+	return c.Nodes, nil
+}
