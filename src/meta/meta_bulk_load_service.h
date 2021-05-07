@@ -24,6 +24,7 @@ namespace dsn {
 namespace replication {
 
 DSN_DECLARE_uint32(bulk_load_max_rollback_times);
+DSN_DECLARE_uint32(bulk_load_ingestion_concurrent_count);
 
 ///
 /// bulk load path on remote storage:
@@ -171,6 +172,10 @@ private:
     // Called when app bulk load status update to ingesting
     // create ingestion_request and send it to primary
     void partition_ingestion(const std::string &app_name, const gpid &pid);
+
+    void send_ingestion_request(const std::string &app_name,
+                                const gpid &pid,
+                                const rpc_address &primary_addr);
 
     void on_partition_ingestion_reply(error_code err,
                                       const ingestion_response &&resp,
@@ -370,6 +375,15 @@ private:
         return (_bulk_load_app_id.find(app_id) != _bulk_load_app_id.end());
     }
 
+    inline void decrease_app_ingestion_count(const gpid &pid)
+    {
+        zauto_write_lock l(_lock);
+        auto app_id = pid.get_app_id();
+        if (_apps_ingesting_count.find(app_id) != _apps_ingesting_count.end()) {
+            _apps_ingesting_count[app_id]--;
+        }
+    }
+
 private:
     friend class bulk_load_service_test;
     friend class meta_bulk_load_http_test;
@@ -408,6 +422,8 @@ private:
     std::unordered_map<app_id, bool> _apps_rolling_back;
     // Used for restrict bulk load rollback count
     std::unordered_map<app_id, int32_t> _apps_rollback_count;
+    // app_id -> ingesting partition count
+    std::unordered_map<app_id, int32_t> _apps_ingesting_count;
 };
 
 } // namespace replication
