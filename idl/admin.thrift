@@ -390,6 +390,69 @@ struct balance_response
     1:base.error_code err;
 }
 
+/////////////////// backup&restore-related structs ////////////////////
+
+struct start_backup_app_request
+{
+    1:string             backup_provider_type;
+    2:i32                app_id;
+    // user specified backup_path.
+    3:optional string    backup_path;
+}
+
+struct start_backup_app_response
+{
+    // Possible error:
+    // - ERR_INVALID_STATE: app is not available or is backing up
+    // - ERR_INVALID_PARAMETERS: backup provider type is invalid
+    // - ERR_SERVICE_NOT_ACTIVE: meta doesn't enable backup service
+    1:base.error_code    err;
+    2:string            hint_message;
+    3:optional i64      backup_id;
+}
+
+struct backup_item
+{
+    1:i64           backup_id;
+    2:string        app_name;
+    3:string        backup_provider_type;
+    // user specified backup_path.
+    4:string        backup_path;
+    5:i64           start_time_ms;
+    6:i64           end_time_ms;
+    7:bool          is_backup_failed;
+}
+
+struct query_backup_status_request
+{
+    1:i32                 app_id;
+    2:optional i64        backup_id;
+}
+
+struct query_backup_status_response
+{
+    // Possible error:
+    // - ERR_INVALID_PARAMETERS: no available backup for requested app
+    // - ERR_SERVICE_NOT_ACTIVE: meta doesn't enable backup service
+    1:base.error_code                 err;
+    2:string                         hint_message;
+    3:optional list<backup_item>     backup_items;
+}
+
+// using create_app_response to response
+struct restore_app_request
+{
+    1:string            cluster_name;
+    2:string            policy_name;
+    3:i64               time_stamp;   // namely backup_id
+    4:string            app_name;
+    5:i32               app_id;
+    6:string            new_app_name;
+    7:string            backup_provider_name;
+    8:bool              skip_bad_partition;
+    9:optional string   restore_path;
+}
+
 // A client to MetaServer's administration API.
 service admin_client 
 {
@@ -420,4 +483,10 @@ service admin_client
     query_backup_policy_response query_backup_policy(1: query_backup_policy_request req);
 
     balance_response balance(1: balance_request req);
+
+    start_backup_app_response start_backup_app(1: start_backup_app_request req);
+
+    query_backup_status_response query_backup_status(1: query_backup_status_request req);
+
+    create_app_response restore_app(1: restore_app_request req);
 }

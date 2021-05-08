@@ -358,3 +358,78 @@ func (m *MetaManager) Balance(ctx context.Context, req *admin.BalanceRequest) (*
 	}
 	return nil, err
 }
+
+func (ms *metaSession) startBackupApp(ctx context.Context, req *admin.StartBackupAppRequest) (*admin.StartBackupAppResponse, error) {
+	arg := admin.NewAdminClientStartBackupAppArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_START_BACKUP_APP")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientStartBackupAppResult)
+	return ret.GetSuccess(), nil
+}
+
+// StartBackupApp is auto-generated
+func (m *MetaManager) StartBackupApp(ctx context.Context, req *admin.StartBackupAppRequest) (*admin.StartBackupAppResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.startBackupApp(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.StartBackupAppResponse), fmt.Errorf("StartBackupApp failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.StartBackupAppResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) queryBackupStatus(ctx context.Context, req *admin.QueryBackupStatusRequest) (*admin.QueryBackupStatusResponse, error) {
+	arg := admin.NewAdminClientQueryBackupStatusArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BACKUP_STATUS")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQueryBackupStatusResult)
+	return ret.GetSuccess(), nil
+}
+
+// QueryBackupStatus is auto-generated
+func (m *MetaManager) QueryBackupStatus(ctx context.Context, req *admin.QueryBackupStatusRequest) (*admin.QueryBackupStatusResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.queryBackupStatus(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.QueryBackupStatusResponse), fmt.Errorf("QueryBackupStatus failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.QueryBackupStatusResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) restoreApp(ctx context.Context, req *admin.RestoreAppRequest) (*admin.CreateAppResponse, error) {
+	arg := admin.NewAdminClientRestoreAppArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_START_RESTORE")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientRestoreAppResult)
+	return ret.GetSuccess(), nil
+}
+
+// RestoreApp is auto-generated
+func (m *MetaManager) RestoreApp(ctx context.Context, req *admin.RestoreAppRequest) (*admin.CreateAppResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.restoreApp(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.CreateAppResponse), fmt.Errorf("RestoreApp failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.CreateAppResponse), nil
+	}
+	return nil, err
+}

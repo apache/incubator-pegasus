@@ -215,6 +215,21 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewBalanceResponse(),
 		}
 	},
+	"RPC_CM_START_BACKUP_APP_ACK": func() RpcResponseResult {
+		return &admin.AdminClientStartBackupAppResult{
+			Success: admin.NewStartBackupAppResponse(),
+		}
+	},
+	"RPC_CM_QUERY_BACKUP_STATUS_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryBackupStatusResult{
+			Success: admin.NewQueryBackupStatusResponse(),
+		}
+	},
+	"RPC_CM_START_RESTORE_ACK": func() RpcResponseResult {
+		return &admin.AdminClientRestoreAppResult{
+			Success: admin.NewCreateAppResponse(),
+		}
+	},
 	"RPC_QUERY_DISK_INFO_ACK": func() RpcResponseResult {
 		return &radmin.ReplicaClientQueryDiskInfoResult{
 			Success: radmin.NewQueryDiskInfoResponse(),
