@@ -223,6 +223,7 @@ public class PegasusScanner implements PegasusScannerInterface {
       }
     } else { // rpc failed
       _encounterError = true;
+      _rpcFailed = true;
       _cause = new PException("scan failed with error: " + err.errno);
     }
   }
@@ -233,7 +234,17 @@ public class PegasusScanner implements PegasusScannerInterface {
         p.setFailure(_cause);
       }
       _promises.clear();
-      // we don't reset the flag, just abandon this scan operation
+      if (_rpcFailed) { // reset _encounterError so that next loop will recall server
+        // for read, if error is equal with:
+        // - ERR_SESSION_RESET,ERR_OBJECT_NOT_FOUND,ERR_INVALID_STATE: the meta config must have
+        // been updated, next loop will use new config and try recover.
+        // - ERR_TIMEOUT or other error: meta config not be updated, next loop will only be retry.
+        // detail see TableHandler#onRpcReplay
+        _encounterError = false;
+        _rpcFailed = false;
+      }
+      // rpc succeed but still encounter unknown error in server side, not reset _encounterError and
+      // abandon the scanner
       return;
     }
     while (!_promises.isEmpty()) {
@@ -288,6 +299,17 @@ public class PegasusScanner implements PegasusScannerInterface {
     _contextId = CONTEXT_ID_NOT_EXIST;
   }
 
+  protected void mockEncounterErrorForTest() {
+    _encounterError = true;
+    _cause = new PException("encounter unknown error");
+  }
+
+  protected void mockRpcErrorForTest() {
+    _encounterError = true;
+    _rpcFailed = true;
+    _cause = new PException("scan failed with error rpc");
+  }
+
   private Table _table;
   private blob _startKey;
   private blob _stopKey;
@@ -308,7 +330,8 @@ public class PegasusScanner implements PegasusScannerInterface {
   private Deque<DefaultPromise<Pair<Pair<byte[], byte[]>, byte[]>>> _promises;
   private boolean _rpcRunning;
   // mark whether scan operation encounter error
-  private boolean _encounterError;
+  protected boolean _encounterError; // set protect only for test class access
+  protected boolean _rpcFailed; // set protect only for test class access
   Throwable _cause;
 
   private boolean _needCheckHash;
