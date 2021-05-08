@@ -20,6 +20,7 @@
 package client
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
@@ -86,7 +87,7 @@ func TestGetTableHealthInfo(t *testing.T) {
 }
 
 func TestGetClusterReplicaInfo(t *testing.T) {
-	fakePegasusCluster = newFakeCluster(4)
+	fakePegasusCluster = newFakeCluster(9)
 	createFakeTable("test1", 32)
 	createFakeTable("test2", 64)
 	createFakeTable("test3", 128)
@@ -107,9 +108,13 @@ func TestGetClusterReplicaInfo(t *testing.T) {
 		safelyDowngradeNode(t, fakePegasusCluster.nodes[0], &effectedReplicas)
 
 		c, _ := GetClusterReplicaInfo(meta)
-		assert.Equal(t, len(c.Nodes), 4)
+		assert.Equal(t, len(c.Nodes), 9)
 		assert.Equal(t, len(c.Tables), 3)
 
+		// sort nodes by ipport
+		sort.Slice(c.Nodes, func(i, j int) bool {
+			return c.Nodes[i].IPPort < c.Nodes[j].IPPort
+		})
 		assert.Equal(t, c.Nodes[0].PrimariesNum, 0)
 		assert.Equal(t, c.Nodes[0].SecondariesNum, 0)
 		assert.Equal(t, c.Nodes[0].ReplicaCount, 0)

@@ -51,34 +51,36 @@ func (m *fakeMeta) QueryConfig(tbName string) (*replication.QueryCfgResponse, er
 	resp := &replication.QueryCfgResponse{}
 
 	for _, app := range m.availableApps {
-		if app.AppName == tbName {
-			resp.AppID = app.AppID
-			resp.PartitionCount = app.PartitionCount
-			resp.Partitions = make([]*replication.PartitionConfiguration, app.PartitionCount)
-			for i := range resp.Partitions {
-				resp.Partitions[i] = &replication.PartitionConfiguration{
-					Pid:             &base.Gpid{Appid: app.AppID, PartitionIndex: int32(i)},
-					Primary:         &base.RPCAddress{}, // even the primary is unavailable, it should still not be nil
-					MaxReplicaCount: 3,
-				}
-			}
-
-			for _, n := range fakePegasusCluster.nodes {
-				for pri := range n.primaries {
-					if pri.Appid == app.AppID {
-						pc := resp.Partitions[int(pri.PartitionIndex)]
-						pc.Primary = n.n.RPCAddress()
-					}
-				}
-				for sec := range n.secondaries {
-					if sec.Appid == app.AppID {
-						pc := resp.Partitions[int(sec.PartitionIndex)]
-						pc.Secondaries = append(pc.Secondaries, n.n.RPCAddress())
-					}
-				}
-			}
-			return resp, nil
+		if app.AppName != tbName {
+			continue
 		}
+
+		resp.AppID = app.AppID
+		resp.PartitionCount = app.PartitionCount
+		resp.Partitions = make([]*replication.PartitionConfiguration, app.PartitionCount)
+		for i := range resp.Partitions {
+			resp.Partitions[i] = &replication.PartitionConfiguration{
+				Pid:             &base.Gpid{Appid: app.AppID, PartitionIndex: int32(i)},
+				Primary:         &base.RPCAddress{}, // even the primary is unavailable, it should still not be nil
+				MaxReplicaCount: 3,
+			}
+		}
+
+		for _, n := range fakePegasusCluster.nodes {
+			for pri := range n.primaries {
+				if pri.Appid == app.AppID {
+					pc := resp.Partitions[int(pri.PartitionIndex)]
+					pc.Primary = n.n.RPCAddress()
+				}
+			}
+			for sec := range n.secondaries {
+				if sec.Appid == app.AppID {
+					pc := resp.Partitions[int(sec.PartitionIndex)]
+					pc.Secondaries = append(pc.Secondaries, n.n.RPCAddress())
+				}
+			}
+		}
+		return resp, nil
 	}
 
 	resp.Err = &base.ErrorCode{Errno: base.ERR_OBJECT_NOT_FOUND.String()}

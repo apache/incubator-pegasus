@@ -87,3 +87,18 @@ func TestDowngradeNodeHasPrimaries(t *testing.T) {
 	err := DowngradeNode(fakePegasusCluster.meta, fakePegasusCluster.nodes[0].n)
 	assert.Error(t, err) // failed
 }
+
+func TestDowngrade1Node(t *testing.T) {
+	fakePegasusCluster = newFakeCluster(4)
+	createFakeTable("test1", 32)
+	createFakeTable("test2", 64)
+	createFakeTable("test3", 128)
+
+	effectedReplicas := map[base.Gpid]int{}
+	replicaServer := fakePegasusCluster.nodes[1]
+	safelyDowngradeNode(t, replicaServer, &effectedReplicas)
+
+	// ensure all replicas are shutdown
+	assert.Empty(t, fakePegasusCluster.nodes[1].primaries)
+	assert.Empty(t, fakePegasusCluster.nodes[1].secondaries)
+}
