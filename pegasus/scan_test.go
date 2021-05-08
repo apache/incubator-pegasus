@@ -3,10 +3,15 @@ package pegasus
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/agiledragon/gomonkey"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )
@@ -188,6 +193,85 @@ func TestPegasusTableConnector_ScanInclusive(t *testing.T) {
 	_, err = tb.GetScanner(context.Background(), []byte("h1"), []byte("6"), []byte("6"), opts)
 	assert.NotNil(t, err) // scanning interval is empty
 
+	clearDatabase(t, tb)
+}
+
+func ScanRpcErrorForTest(_ *session.ReplicaSession, ctx context.Context, gpid *base.Gpid, request *rrdb.ScanRequest) (*rrdb.ScanResponse, error) {
+	return nil, base.ERR_INVALID_STATE
+}
+
+func ScanUnknownErrorForTest(_ *session.ReplicaSession, ctx context.Context, gpid *base.Gpid, request *rrdb.ScanRequest) (*rrdb.ScanResponse, error) {
+	return &rrdb.ScanResponse{Error: -4}, nil
+}
+
+func TestPegasusTableConnector_ScanFailRecover(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+
+	for i := 0; i < 100; i++ {
+		err := tb.Set(context.Background(), []byte("h1"), []byte(fmt.Sprint(i)), []byte("hello world"))
+		assert.Nil(t, err)
+	}
+
+	opts := NewScanOptions()
+	opts.BatchSize = 1
+	var session = &session.ReplicaSession{}
+	// test unknown error
+	mockUnknownErrorTable, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	scanner, _ := mockUnknownErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+	unknownErrorMocked := false
+	successCount := 0
+	var mock *gomonkey.Patches
+	for i := 0; i < 100; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		_, _, _, _, error := scanner.Next(ctx)
+		if error == nil {
+			successCount++
+		}
+		// only mock unknown error,  all the follow request will be failed
+		if !unknownErrorMocked {
+			mock = gomonkey.ApplyMethod(reflect.TypeOf(session), "Scan", ScanUnknownErrorForTest)
+			unknownErrorMocked = true
+		} else {
+			mock.Reset()
+		}
+		cancel()
+	}
+	assert.Equal(t, 1, successCount)
+
+	mockRpcFailedErrorTable, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	scanner, _ = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+	rpcFailedMocked := false
+	successCount = 0
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		complete, _, _, _, error := scanner.Next(ctx)
+		// mock rpc error, follow request will be recovered automatically
+		if !rpcFailedMocked {
+			mock = gomonkey.ApplyMethod(reflect.TypeOf(session), "Scan", ScanRpcErrorForTest)
+			rpcFailedMocked = true
+		} else {
+			mock.Reset()
+		}
+		cancel()
+		if complete {
+			break
+		}
+		if error == nil {
+			successCount++
+		}
+	}
+	assert.Equal(t, 100, successCount)
 	clearDatabase(t, tb)
 }
 

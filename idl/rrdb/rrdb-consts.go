@@ -7,10 +7,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
+
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/pegasus-kv/thrift/lib/go/thrift"
-	"reflect"
 )
 
 // (needed to ensure safety because of naive import list construction.)

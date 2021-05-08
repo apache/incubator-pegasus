@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/pegasus-kv/thrift/lib/go/thrift"
 	"reflect"
+
+	"github.com/pegasus-kv/thrift/lib/go/thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)

@@ -29,8 +29,9 @@ type ScannerOptions struct {
 const (
 	batchScanning     = 0
 	batchScanFinished = -1 // Scanner's batch is finished, clean up it and switch to the status batchEmpty
-	batchEmpty        = -2
-	batchError        = -3
+	batchEmpty        = -2 // scan context has been removed
+	batchRpcError     = -3 // rpc error, include ERR_SESSION_RESET,ERR_OBJECT_NOT_FOUND,ERR_INVALID_STATE, ERR_TIMEOUT
+	batchUnknownError = -4 // rpc succeed, but operation encounter some unknown error in server side
 )
 
 // Scanner defines the interface of client-side scanning.
@@ -108,8 +109,13 @@ func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSli
 
 func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []byte,
 	sortKey []byte, value []byte, err error) {
-	if p.batchStatus == batchError {
-		err = fmt.Errorf("last Next() failed")
+	if p.batchStatus == batchUnknownError {
+		err = fmt.Errorf("last Next() encounter unknow error, please retry after resloving it manually")
+		return
+	}
+	if p.batchStatus == batchRpcError {
+		err = fmt.Errorf("last Next() encounter rpc error, it may recover after next loop")
+		p.batchStatus = batchScanning
 		return
 	}
 	if p.closed {
@@ -128,10 +134,6 @@ func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []by
 		defer p.isNextRunning.Store(0)
 		return p.doNext(ctx)
 	}()
-
-	if err != nil {
-		p.batchStatus = batchError
-	}
 
 	err = WrapError(err, OpNext)
 	return
@@ -212,11 +214,17 @@ func (p *pegasusScanner) nextBatch(ctx context.Context) (completed bool, hashKey
 	request := &rrdb.ScanRequest{ContextID: p.batchStatus}
 	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.Scan(ctx, p.curGpid, request)
+	if err != nil {
+		p.batchStatus = batchRpcError
+		if updateConfig, errHandler := p.table.handleReplicaError(err, part); errHandler != nil {
+			err = fmt.Errorf("scan failed, error = %s, try resolve it(updateConfig=%v), result = %s", err, updateConfig, errHandler)
+		}
+		return
+	}
 	err = p.onRecvScanResponse(response, err)
 	if err == nil {
 		return p.doNext(ctx)
 	}
-
 	return
 }
 
@@ -239,14 +247,13 @@ func (p *pegasusScanner) onRecvScanResponse(response *rrdb.ScanResponse, err err
 			p.batchStatus = batchEmpty
 		} else {
 			// rpc succeed, but operation encounter some error in server side
+			p.batchStatus = batchUnknownError
 			return base.NewRocksDBErrFromInt(response.Error)
 		}
-	} else {
-		// rpc failed
-		return fmt.Errorf("scan failed with error:" + err.Error())
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("scan failed with error:" + err.Error())
 }
 
 func (p *pegasusScanner) Close() error {

@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/agiledragon/gomonkey v2.0.2+incompatible
 	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/fortytw2/leaktest v1.3.0
 	github.com/pegasus-kv/thrift v0.13.0
