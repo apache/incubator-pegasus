@@ -192,3 +192,16 @@ func findNodeInFakeCluster(pn *util.PegasusNode) *fakeNode {
 	}
 	return ret
 }
+
+func (m *fakeMeta) StartBackupApp(tableID int, providerType string, backupPath string) (*admin.StartBackupAppResponse, error) {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) QueryBackupStatus(tableID int, backupID int64) (*admin.QueryBackupStatusResponse, error) {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) RestoreApp(oldClusterName string, oldTableName string, oldTableID int, backupID int64, providerType string,
+	newTableName string, restorePath string, skipBadPartition bool, policyName string) (*admin.CreateAppResponse, error) {
+	panic("unimplemented")
+}

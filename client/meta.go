@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
@@ -92,6 +93,13 @@ type Meta interface {
 	Balance(gpid *base.Gpid, opType BalanceType, from *util.PegasusNode, to *util.PegasusNode) error
 
 	Propose(gpid *base.Gpid, action admin.ConfigType, target *util.PegasusNode, node *util.PegasusNode) error
+
+	StartBackupApp(tableID int, providerType string, backupPath string) (*admin.StartBackupAppResponse, error)
+
+	QueryBackupStatus(tableID int, backupID int64) (*admin.QueryBackupStatusResponse, error)
+
+	RestoreApp(oldClusterName string, oldTableName string, oldTableID int, backupID int64, providerType string,
+		newTableName string, restorePath string, skipBadPartition bool, policyName string) (*admin.CreateAppResponse, error)
 }
 
 type rpcBasedMeta struct {
@@ -381,4 +389,57 @@ func (m *rpcBasedMeta) Propose(gpid *base.Gpid, action admin.ConfigType, target 
 	}
 	err := m.callMeta("Balance", req, func(resp interface{}) {})
 	return err
+}
+
+func (m *rpcBasedMeta) StartBackupApp(tableID int, providerType string, backupPath string) (*admin.StartBackupAppResponse, error) {
+	req := &admin.StartBackupAppRequest{
+		BackupProviderType: providerType,
+		AppID:              int32(tableID),
+		BackupPath:         &backupPath,
+	}
+	var result *admin.StartBackupAppResponse
+	err := m.callMeta("StartBackupApp", req, func(resp interface{}) {
+		result = resp.(*admin.StartBackupAppResponse)
+	})
+	return result, wrapHintIntoError(result.HintMessage, err)
+}
+
+func (m *rpcBasedMeta) QueryBackupStatus(tableID int, backupID int64) (*admin.QueryBackupStatusResponse, error) {
+	var realBackupID *int64
+	if backupID == 0 {
+		realBackupID = nil
+	} else {
+		realBackupID = &backupID
+	}
+	req := &admin.QueryBackupStatusRequest{
+		AppID:    int32(tableID),
+		BackupID: realBackupID,
+	}
+	var result *admin.QueryBackupStatusResponse
+	err := m.callMeta("QueryBackupStatus", req, func(resp interface{}) {
+		result = resp.(*admin.QueryBackupStatusResponse)
+	})
+	return result, wrapHintIntoError(result.HintMessage, err)
+}
+
+func (m *rpcBasedMeta) RestoreApp(oldClusterName string, oldTableName string, oldTableID int,
+	backupID int64, providerType string, newTableName string, restorePath string,
+	skipBadPartition bool, policyName string) (*admin.CreateAppResponse, error) {
+	req := &admin.RestoreAppRequest{
+		ClusterName:        oldClusterName,
+		PolicyName:         policyName,
+		TimeStamp:          backupID,
+		AppName:            oldTableName,
+		AppID:              int32(oldTableID),
+		NewAppName_:        newTableName,
+		BackupProviderName: providerType,
+		SkipBadPartition:   skipBadPartition,
+		RestorePath:        &restorePath,
+	}
+	var result *admin.CreateAppResponse
+	SetRPCTimeout(time.Second * 20)
+	err := m.callMeta("RestoreApp", req, func(resp interface{}) {
+		result = resp.(*admin.CreateAppResponse)
+	})
+	return result, err
 }
