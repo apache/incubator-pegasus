@@ -87,7 +87,7 @@ func replicaNode(addr *base.RPCAddress) *util.PegasusNode {
 // Eventually, the node will have no primaries because they are all turned to secondaries.
 func MigratePrimariesOut(meta Meta, node *util.PegasusNode) error {
 	cmd := fmt.Sprintf("MigratePrimariesOut from=%s", node.CombinedAddr())
-	log.Info(cmd)
+	log.Debug(cmd)
 
 	if err := SetMetaLevelSteady(meta); err != nil {
 		return fmt.Errorf("%s failed: %s", cmd, err)
@@ -100,7 +100,7 @@ func MigratePrimariesOut(meta Meta, node *util.PegasusNode) error {
 
 	for _, tb := range tables {
 		tbCmd := cmd + fmt.Sprintf(" table=%s", tb.AppName)
-		log.Info(tbCmd)
+		log.Debug(tbCmd)
 
 		partitions, err := listPrimariesOnNode(meta, node, tb.AppName)
 		if err != nil {
@@ -114,7 +114,7 @@ func MigratePrimariesOut(meta Meta, node *util.PegasusNode) error {
 			to := replicaNode(sec)
 
 			balanceCmd := tbCmd + fmt.Sprintf(" to=%s gpid=%s", to.CombinedAddr(), part.Pid)
-			log.Info(balanceCmd)
+			log.Debug(balanceCmd)
 
 			err := meta.Balance(part.Pid, BalanceMovePri, from, to)
 			if err != nil {
@@ -128,8 +128,22 @@ func MigratePrimariesOut(meta Meta, node *util.PegasusNode) error {
 // DowngradeNode sets all secondaries from the specified node to inactive state.
 // NOTE: this step requires that the node has no primary, otherwise error is returned.
 func DowngradeNode(meta Meta, node *util.PegasusNode) error {
+	return downgradeNode(meta, node, nil)
+}
+
+// DowngradeNodeWithDetails is like DowngradeNode but also returns the partitions that were downgraded.
+func DowngradeNodeWithDetails(meta Meta, node *util.PegasusNode) ([]*base.Gpid, error) {
+	var downgradedParts []*base.Gpid
+	err := downgradeNode(meta, node, &downgradedParts)
+	if err != nil {
+		return nil, err
+	}
+	return downgradedParts, nil
+}
+
+func downgradeNode(meta Meta, node *util.PegasusNode, downgradedParts *[]*base.Gpid) error {
 	cmd := fmt.Sprintf("DowngradeNode node=%s", node.CombinedAddr())
-	log.Info(cmd)
+	log.Debug(cmd)
 
 	if err := SetMetaLevelSteady(meta); err != nil {
 		return fmt.Errorf("%s failed: %s", cmd, err)
@@ -142,7 +156,7 @@ func DowngradeNode(meta Meta, node *util.PegasusNode) error {
 
 	for _, tb := range tables {
 		tbCmd := cmd + fmt.Sprintf(" table=%s", tb.AppName)
-		log.Info(tbCmd)
+		log.Debug(tbCmd)
 
 		partitions, err := listReplicasOnNode(meta, node, tb.AppName)
 		if err != nil {
@@ -155,11 +169,15 @@ func DowngradeNode(meta Meta, node *util.PegasusNode) error {
 
 			pri := replicaNode(part.Primary)
 			proposeCmd := tbCmd + fmt.Sprintf(" target=%s gpid=%s", pri.CombinedAddr(), part.Pid)
-			log.Info(proposeCmd)
+			log.Debug(proposeCmd)
 
 			err := meta.Propose(part.Pid, admin.ConfigType_CT_DOWNGRADE_TO_INACTIVE, pri, node)
 			if err != nil {
 				return fmt.Errorf("%s failed: %s", proposeCmd, err)
+			}
+
+			if downgradedParts != nil {
+				*downgradedParts = append(*downgradedParts, part.Pid)
 			}
 		}
 	}
