@@ -251,7 +251,7 @@ struct value_params
     {
     }
 
-    std::map<value_field_type, std::unique_ptr<value_field>> fields;
+    std::array<std::unique_ptr<value_field>, FIELD_COUNT> fields;
     // write_buf and write_slices are transferred from `pegasus_value_generator`, Which are used to
     // prevent data copy
     std::string &write_buf;

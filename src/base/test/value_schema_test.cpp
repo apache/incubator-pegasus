@@ -26,16 +26,16 @@ using namespace pegasus;
 
 uint32_t extract_expire_ts(value_schema *schema, const std::string &raw_value)
 {
-    auto segment = schema->extract_field(raw_value, pegasus::value_field_type::EXPIRE_TIMESTAMP);
-    auto expire_ts_segment = static_cast<expire_timestamp_field *>(segment.get());
-    return expire_ts_segment->expire_ts;
+    auto field = schema->extract_field(raw_value, pegasus::value_field_type::EXPIRE_TIMESTAMP);
+    auto expire_ts_field = static_cast<expire_timestamp_field *>(field.get());
+    return expire_ts_field->expire_ts;
 }
 
 uint64_t extract_time_tag(value_schema *schema, const std::string &raw_value)
 {
-    auto segment = schema->extract_field(raw_value, pegasus::value_field_type::TIME_TAG);
-    auto time_tag_segment = static_cast<time_tag_field *>(segment.get());
-    return time_tag_segment->time_tag;
+    auto field = schema->extract_field(raw_value, pegasus::value_field_type::TIME_TAG);
+    auto time_field = static_cast<time_tag_field *>(field.get());
+    return time_field->time_tag;
 }
 
 std::string generate_value(value_schema *schema,
@@ -105,9 +105,9 @@ TEST(value_schema, update_expire_ts)
         auto schema = value_schema_manager::instance().get_value_schema(t.data_version);
         std::string raw_value = generate_value(schema, t.expire_ts, 0, "");
 
-        std::unique_ptr<value_field> segment =
+        std::unique_ptr<value_field> field =
             dsn::make_unique<expire_timestamp_field>(t.update_expire_ts);
-        schema->update_field(raw_value, std::move(segment));
+        schema->update_field(raw_value, std::move(field));
         ASSERT_EQ(t.update_expire_ts, extract_expire_ts(schema, raw_value));
     }
 }

@@ -26,6 +26,7 @@ enum value_field_type
     EXPIRE_TIMESTAMP = 0,
     TIME_TAG,
     USER_DATA,
+    FIELD_COUNT,
 };
 
 struct value_field

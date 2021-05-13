@@ -26,60 +26,53 @@ namespace pegasus {
 std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view value,
                                                             value_field_type type)
 {
-    std::unique_ptr<value_field> segment = nullptr;
+    std::unique_ptr<value_field> field = nullptr;
     switch (type) {
     case value_field_type::EXPIRE_TIMESTAMP:
-        segment = extract_timestamp(value);
+        field = extract_timestamp(value);
         break;
     default:
-        dassert_f(false, "Unsupported segment type: {}", type);
+        dassert_f(false, "Unsupported field type: {}", type);
     }
-    return segment;
+    return field;
 }
 
 dsn::blob value_schema_v0::extract_user_data(std::string &&value)
 {
-    auto *s = new std::string(std::move(value));
-    dsn::data_input input(*s);
-    input.skip(sizeof(uint32_t));
-    dsn::string_view view = input.read_str();
-
-    // tricky code to avoid memory copy
-    dsn::blob user_data;
-    std::shared_ptr<char> buf(const_cast<char *>(view.data()), [s](char *) { delete s; });
-    user_data.assign(std::move(buf), 0, static_cast<unsigned int>(view.length()));
-    return user_data;
+    auto ret = dsn::blob::create_from_bytes(std::move(value));
+    ret.range(sizeof(uint32_t));
+    return ret;
 }
 
-void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_field> segment)
+void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_field> field)
 {
-    auto type = segment->type();
-    switch (segment->type()) {
+    auto type = field->type();
+    switch (field->type()) {
     case value_field_type::EXPIRE_TIMESTAMP:
-        update_expire_ts(value, std::move(segment));
+        update_expire_ts(value, std::move(field));
         break;
     default:
-        dassert_f(false, "Unsupported update segment type: {}", type);
+        dassert_f(false, "Unsupported update field type: {}", type);
     }
 }
 
 rocksdb::SliceParts value_schema_v0::generate_value(const value_params &params)
 {
-    auto expire_iter = params.fields.find(value_field_type::EXPIRE_TIMESTAMP);
-    auto user_data_iter = params.fields.find(value_field_type::USER_DATA);
-    if (dsn_unlikely(expire_iter == params.fields.end() || user_data_iter == params.fields.end())) {
+    auto expire_ts_field = static_cast<expire_timestamp_field *>(
+        params.fields[value_field_type::EXPIRE_TIMESTAMP].get());
+    auto data_field =
+        static_cast<user_data_field *>(params.fields[value_field_type::USER_DATA].get());
+    if (dsn_unlikely(expire_ts_field == nullptr || data_field == nullptr)) {
         dassert_f(false, "USER_DATA or EXPIRE_TIMESTAMP is not provided");
         return {nullptr, 0};
     }
 
-    auto expire_segment = static_cast<expire_timestamp_field *>(expire_iter->second.get());
     params.write_buf.resize(sizeof(uint32_t));
-    dsn::data_output(params.write_buf).write_u32(expire_segment->expire_ts);
+    dsn::data_output(params.write_buf).write_u32(expire_ts_field->expire_ts);
     params.write_slices.clear();
     params.write_slices.emplace_back(params.write_buf.data(), params.write_buf.size());
 
-    auto user_data_segment = static_cast<user_data_field *>(user_data_iter->second.get());
-    dsn::string_view user_data = user_data_segment->user_data;
+    dsn::string_view user_data = data_field->user_data;
     if (user_data.length() > 0) {
         params.write_slices.emplace_back(user_data.data(), user_data.length());
     }
@@ -92,12 +85,12 @@ std::unique_ptr<value_field> value_schema_v0::extract_timestamp(dsn::string_view
     return dsn::make_unique<expire_timestamp_field>(expire_ts);
 }
 
-void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value_field> segment)
+void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value_field> field)
 {
     dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
-    auto expire_segment = static_cast<expire_timestamp_field *>(segment.get());
+    auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
-    auto new_expire_ts = expire_segment->expire_ts;
+    auto new_expire_ts = expire_field->expire_ts;
     new_expire_ts = dsn::endian::hton(new_expire_ts);
     memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
 }
