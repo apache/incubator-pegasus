@@ -505,6 +505,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.recent_abnormal_count += row.recent_abnormal_count;
         sum.recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
         sum.recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+        sum.recent_read_throttling_delay_count += row.recent_read_throttling_delay_count;
+        sum.recent_read_throttling_reject_count += row.recent_read_throttling_reject_count;
         sum.storage_mb += row.storage_mb;
         sum.storage_count += row.storage_count;
         sum.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;

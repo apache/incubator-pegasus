@@ -483,23 +483,30 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 limiter->add_count();
 
                 // extract value
-                int r = append_key_value_for_multi_get(resp.kvs,
-                                                       it->key(),
-                                                       it->value(),
-                                                       request.sort_key_filter_type,
-                                                       request.sort_key_filter_pattern,
-                                                       epoch_now,
-                                                       request.no_value);
-                if (r == 1) {
+                auto state = append_key_value_for_multi_get(resp.kvs,
+                                                            it->key(),
+                                                            it->value(),
+                                                            request.sort_key_filter_type,
+                                                            request.sort_key_filter_pattern,
+                                                            epoch_now,
+                                                            request.no_value);
+
+                switch (state) {
+                case range_iteration_state::kNormal: {
                     count++;
                     auto &kv = resp.kvs.back();
                     uint64_t kv_size = kv.key.length() + kv.value.length();
                     size += kv_size;
                     limiter->add_size(kv_size);
-                } else if (r == 2) {
+                } break;
+                case range_iteration_state::kExpired:
                     expire_count++;
-                } else { // r == 3
+                    break;
+                case range_iteration_state::kFiltered:
                     filter_count++;
+                    break;
+                default:
+                    break;
                 }
 
                 if (c == 0) {
@@ -548,23 +555,29 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                 limiter->add_count();
 
                 // extract value
-                int r = append_key_value_for_multi_get(reverse_kvs,
-                                                       it->key(),
-                                                       it->value(),
-                                                       request.sort_key_filter_type,
-                                                       request.sort_key_filter_pattern,
-                                                       epoch_now,
-                                                       request.no_value);
-                if (r == 1) {
+                auto state = append_key_value_for_multi_get(reverse_kvs,
+                                                            it->key(),
+                                                            it->value(),
+                                                            request.sort_key_filter_type,
+                                                            request.sort_key_filter_pattern,
+                                                            epoch_now,
+                                                            request.no_value);
+                switch (state) {
+                case range_iteration_state::kNormal: {
                     count++;
                     auto &kv = reverse_kvs.back();
                     uint64_t kv_size = kv.key.length() + kv.value.length();
                     size += kv_size;
                     limiter->add_size(kv_size);
-                } else if (r == 2) {
+                } break;
+                case range_iteration_state::kExpired:
                     expire_count++;
-                } else { // r == 3
+                    break;
+                case range_iteration_state::kFiltered:
                     filter_count++;
+                    break;
+                default:
+                    break;
                 }
 
                 if (c == 0) {
@@ -1016,21 +1029,29 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         limiter->add_count();
 
-        int r = append_key_value_for_scan(resp.kvs,
-                                          it->key(),
-                                          it->value(),
-                                          request.hash_key_filter_type,
-                                          request.hash_key_filter_pattern,
-                                          request.sort_key_filter_type,
-                                          request.sort_key_filter_pattern,
-                                          epoch_now,
-                                          request.no_value);
-        if (r == 1) {
+        auto state = append_key_value_for_scan(
+            resp.kvs,
+            it->key(),
+            it->value(),
+            request.hash_key_filter_type,
+            request.hash_key_filter_pattern,
+            request.sort_key_filter_type,
+            request.sort_key_filter_pattern,
+            epoch_now,
+            request.no_value,
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true);
+        switch (state) {
+        case range_iteration_state::kNormal:
             count++;
-        } else if (r == 2) {
+            break;
+        case range_iteration_state::kExpired:
             expire_count++;
-        } else { // r == 3
+            break;
+        case range_iteration_state::kFiltered:
             filter_count++;
+            break;
+        default:
+            break;
         }
 
         if (c == 0) {
@@ -1081,18 +1102,19 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                       limiter->max_duration_time());
     } else if (it->Valid() && !complete) {
         // scan not completed
-        std::unique_ptr<pegasus_scan_context> context(
-            new pegasus_scan_context(std::move(it),
-                                     std::string(stop.data(), stop.size()),
-                                     request.stop_inclusive,
-                                     request.hash_key_filter_type,
-                                     std::string(request.hash_key_filter_pattern.data(),
-                                                 request.hash_key_filter_pattern.length()),
-                                     request.sort_key_filter_type,
-                                     std::string(request.sort_key_filter_pattern.data(),
-                                                 request.sort_key_filter_pattern.length()),
-                                     batch_count,
-                                     request.no_value));
+        std::unique_ptr<pegasus_scan_context> context(new pegasus_scan_context(
+            std::move(it),
+            std::string(stop.data(), stop.size()),
+            request.stop_inclusive,
+            request.hash_key_filter_type,
+            std::string(request.hash_key_filter_pattern.data(),
+                        request.hash_key_filter_pattern.length()),
+            request.sort_key_filter_type,
+            std::string(request.sort_key_filter_pattern.data(),
+                        request.sort_key_filter_pattern.length()),
+            batch_count,
+            request.no_value,
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1140,6 +1162,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         ::dsn::apps::filter_type::type sort_key_filter_type = context->sort_key_filter_type;
         const ::dsn::blob &sort_key_filter_pattern = context->sort_key_filter_pattern;
         bool no_value = context->no_value;
+        bool validate_hash = context->validate_partition_hash;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
         uint64_t expire_count = 0;
@@ -1163,21 +1186,28 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
 
             limiter->add_count();
 
-            int r = append_key_value_for_scan(resp.kvs,
-                                              it->key(),
-                                              it->value(),
-                                              hash_key_filter_type,
-                                              hash_key_filter_pattern,
-                                              sort_key_filter_type,
-                                              sort_key_filter_pattern,
-                                              epoch_now,
-                                              no_value);
-            if (r == 1) {
+            auto state = append_key_value_for_scan(resp.kvs,
+                                                   it->key(),
+                                                   it->value(),
+                                                   hash_key_filter_type,
+                                                   hash_key_filter_pattern,
+                                                   sort_key_filter_type,
+                                                   sort_key_filter_pattern,
+                                                   epoch_now,
+                                                   no_value,
+                                                   validate_hash);
+            switch (state) {
+            case range_iteration_state::kNormal:
                 count++;
-            } else if (r == 2) {
+                break;
+            case range_iteration_state::kExpired:
                 expire_count++;
-            } else { // r == 3
+                break;
+            case range_iteration_state::kFiltered:
                 filter_count++;
+                break;
+            default:
+                break;
             }
 
             if (c == 0) {
@@ -1458,6 +1488,8 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     // only enable filter after correct pegasus_data_version set
     _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
+    _key_ttl_compaction_filter_factory->SetPartitionIndex(_gpid.get_partition_index());
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(_gpid.get_partition_index() - 1);
     _key_ttl_compaction_filter_factory->EnableFilter();
 
     parse_checkpoints();
@@ -1507,7 +1539,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
-            [this]() { update_server_rocksdb_statistics(); },
+            []() { update_server_rocksdb_statistics(); },
             kServerStatUpdateTimeSec);
     });
 
@@ -2044,22 +2076,33 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
     return false;
 }
 
-int pegasus_server_impl::append_key_value_for_scan(
-    std::vector<::dsn::apps::key_value> &kvs,
-    const rocksdb::Slice &key,
-    const rocksdb::Slice &value,
-    ::dsn::apps::filter_type::type hash_key_filter_type,
-    const ::dsn::blob &hash_key_filter_pattern,
-    ::dsn::apps::filter_type::type sort_key_filter_type,
-    const ::dsn::blob &sort_key_filter_pattern,
-    uint32_t epoch_now,
-    bool no_value)
+range_iteration_state
+pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
+                                               const rocksdb::Slice &key,
+                                               const rocksdb::Slice &value,
+                                               ::dsn::apps::filter_type::type hash_key_filter_type,
+                                               const ::dsn::blob &hash_key_filter_pattern,
+                                               ::dsn::apps::filter_type::type sort_key_filter_type,
+                                               const ::dsn::blob &sort_key_filter_pattern,
+                                               uint32_t epoch_now,
+                                               bool no_value,
+                                               bool request_validate_hash)
 {
     if (check_if_record_expired(epoch_now, value)) {
         if (_verbose_log) {
             derror("%s: rocksdb data expired for scan", replica_name());
         }
-        return 2;
+        return range_iteration_state::kExpired;
+    }
+
+    if (request_validate_hash && _validate_partition_hash) {
+        if (_partition_version < 0 || _gpid.get_partition_index() > _partition_version ||
+            !check_pegasus_key_hash(key, _gpid.get_partition_index(), _partition_version)) {
+            if (_verbose_log) {
+                derror_replica("not serve hash key while scan");
+            }
+            return range_iteration_state::kHashInvalid;
+        }
     }
 
     ::dsn::apps::key_value kv;
@@ -2075,14 +2118,14 @@ int pegasus_server_impl::append_key_value_for_scan(
             if (_verbose_log) {
                 derror("%s: hash key filtered for scan", replica_name());
             }
-            return 3;
+            return range_iteration_state::kFiltered;
         }
         if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
             !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
             if (_verbose_log) {
                 derror("%s: sort key filtered for scan", replica_name());
             }
-            return 3;
+            return range_iteration_state::kFiltered;
         }
     }
     std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
@@ -2096,10 +2139,10 @@ int pegasus_server_impl::append_key_value_for_scan(
     }
 
     kvs.emplace_back(std::move(kv));
-    return 1;
+    return range_iteration_state::kNormal;
 }
 
-int pegasus_server_impl::append_key_value_for_multi_get(
+range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     std::vector<::dsn::apps::key_value> &kvs,
     const rocksdb::Slice &key,
     const rocksdb::Slice &value,
@@ -2112,7 +2155,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
         if (_verbose_log) {
             derror("%s: rocksdb data expired for multi get", replica_name());
         }
-        return 2;
+        return range_iteration_state::kExpired;
     }
 
     ::dsn::apps::key_value kv;
@@ -2126,7 +2169,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
         if (_verbose_log) {
             derror("%s: sort key filtered for multi get", replica_name());
         }
-        return 3;
+        return range_iteration_state::kFiltered;
     }
     std::shared_ptr<char> sort_key_buf(::dsn::utils::make_shared_array<char>(sort_key.length()));
     ::memcpy(sort_key_buf.get(), sort_key.data(), sort_key.length());
@@ -2139,7 +2182,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
     }
 
     kvs.emplace_back(std::move(kv));
-    return 1;
+    return range_iteration_state::kNormal;
 }
 
 void pegasus_server_impl::update_replica_rocksdb_statistics()
@@ -2294,6 +2337,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
+    update_validate_partition_hash(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2310,6 +2354,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
+    update_validate_partition_hash(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2435,6 +2480,25 @@ void pegasus_server_impl::update_rocksdb_iteration_threshold(
                        _rng_rd_opts.rocksdb_iteration_threshold_time_ms,
                        threshold_ms);
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms = threshold_ms;
+    }
+}
+
+void pegasus_server_impl::update_validate_partition_hash(
+    const std::map<std::string, std::string> &envs)
+{
+    bool new_value = false;
+    auto iter = envs.find(SPLIT_VALIDATE_PARTITION_HASH);
+    if (iter != envs.end()) {
+        if (!dsn::buf2bool(iter->second, new_value)) {
+            derror_replica("{}={} is invalid.", iter->first, iter->second);
+            return;
+        }
+    }
+    if (new_value != _validate_partition_hash) {
+        ddebug_replica(
+            "update '_validate_partition_hash' from {} to {}", _validate_partition_hash, new_value);
+        _validate_partition_hash = new_value;
+        _key_ttl_compaction_filter_factory->SetValidatePartitionHash(_validate_partition_hash);
     }
 }
 
@@ -2750,8 +2814,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     int32_t old_partition_version = _partition_version.exchange(partition_version);
     ddebug_replica(
         "update partition version from {} to {}", old_partition_version, partition_version);
-
-    // TODO(heyuchen): set filter _partition_version in further pr
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(partition_version);
 }
 
 ::dsn::error_code pegasus_server_impl::flush_all_family_columns(bool wait)
@@ -2783,49 +2846,35 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
 {
     dsn::task_code rpc_code(request->rpc_code());
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-        auto put = put_rpc::auto_reply(request).request();
+        auto put = put_rpc(request).request();
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(put.key, hash_key, sort_key);
-        std::string request("put:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(hash_key))
-            .append(",sort_key=")
-            .append(pegasus::utils::c_escape_string(sort_key));
-        return request;
+        return fmt::format("put: hash_key={}, sort_key={}",
+                           pegasus::utils::c_escape_string(hash_key),
+                           pegasus::utils::c_escape_string(sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        auto multi_put = multi_put_rpc::auto_reply(request).request();
-        std::string request("multi_put:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string((multi_put.hash_key))
-                        .append(",multi_put_count=")
-                        .append(std::to_string(multi_put.kvs.size())));
-        return request;
+        auto multi_put = multi_put_rpc(request).request();
+        return fmt::format("multi_put: hash_key={}, multi_put_count={}",
+                           pegasus::utils::c_escape_string(multi_put.hash_key),
+                           multi_put.kvs.size());
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-        auto check_and_set = check_and_set_rpc::auto_reply(request).request();
-        std::string request("check_and_set:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.hash_key))
-            .append(",check_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.check_sort_key))
-            .append(",set_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.set_sort_key));
-        return request;
+        auto check_and_set = check_and_set_rpc(request).request();
+        return fmt::format("check_and_set: hash_key={}, check_sort_key={}, set_sort_key={}",
+                           pegasus::utils::c_escape_string(check_and_set.hash_key),
+                           pegasus::utils::c_escape_string(check_and_set.check_sort_key),
+                           pegasus::utils::c_escape_string(check_and_set.set_sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-        auto check_and_mutate = check_and_mutate_rpc::auto_reply(request).request();
-        std::string request("check_and_mutate:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(check_and_mutate.hash_key))
-            .append(",check_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_mutate.check_sort_key))
-            .append(",set_value_count=")
-            .append(std::to_string(check_and_mutate.mutate_list.size()));
-        return request;
+        auto check_and_mutate = check_and_mutate_rpc(request).request();
+        return fmt::format("check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
+                           pegasus::utils::c_escape_string(check_and_mutate.hash_key),
+                           pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
+                           check_and_mutate.mutate_list.size());
     }
 
     return "default";

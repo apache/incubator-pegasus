@@ -9,15 +9,11 @@ name: pull_request
 on:
   # run on each pull request
   pull_request:
-    types: [ synchronize, reopened, labeled ]
+    types: [ synchronize, opened ]
     branches:
       - master
       - 'v[0-9]+.*' # release branch
       - ci-test # testing branch for github action
-    paths:
-      - 'rdsn/**'
-      - 'src/**'
-      - '.github/workflows/ci-pull-request.yaml'
   # for manually triggering workflow
   workflow_dispatch:
 
@@ -31,14 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: apachepegasus/clang-format-3.9
-    defaults:
-      run:
-        working-directory: /root/incubator-pegasus
     steps:
-      - name: Clone Apache Pegasus Source
-        working-directory: /root
-        run: |
-          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+      - uses: actions/checkout@v2
+        with:
+            fetch-depth: 1
+            submodules: true
       - name: clang-format
         run: ./rdsn/scripts/linux/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn -r ./src
 
@@ -50,17 +43,21 @@ jobs:
       image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
     defaults:
       run:
-        working-directory: /root/incubator-pegasus
         shell: bash
     steps:
-      - name: Clone Apache Pegasus Source
-        working-directory: /root
-        run: |
-          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
+      -
+        name: Packaging Server
+        run: ./run.sh pack_server
+      -
+        name: Packaging Tools
+        run: ./run.sh pack_tools
       - name: Unit Testing
         run: |
           source ./config_hdfs.sh
