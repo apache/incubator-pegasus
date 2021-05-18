@@ -48,7 +48,7 @@ See our documentation on the [Pegasus Website][website].
 
 ## Client drivers
 
-Pegasus has support for serveral languages:
+Pegasus has support for several languages:
 
 - [Java](https://github.com/xiaomi/pegasus-java-client)
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
