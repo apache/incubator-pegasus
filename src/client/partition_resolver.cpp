@@ -105,13 +105,13 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                 // update gpid when necessary
                 auto &hdr = *(t->get_request()->header);
                 if (hdr.gpid.value() != result.pid.value()) {
-                    dassert(hdr.gpid.value() == 0, "inconsistent gpid");
-                    hdr.gpid = result.pid;
-
-                    // update thread hash if not assigned by applications
-                    if (hdr.client.thread_hash == 0) {
+                    if (hdr.client.thread_hash == 0 // thread_hash is not assigned by applications
+                        ||
+                        hdr.gpid.value() != 0 // requests set to child redirect to parent
+                        ) {
                         hdr.client.thread_hash = result.pid.thread_hash();
                     }
+                    hdr.gpid = result.pid;
                 }
                 dsn_rpc_call(result.address, t.get());
             },
