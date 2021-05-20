@@ -26,7 +26,7 @@
 namespace pegasus {
 namespace server {
 
-typedef std::vector<std::shared_ptr<compaction_filter_rule>> filter_rules;
+typedef std::vector<std::unique_ptr<compaction_filter_rule>> filter_rules;
 class compaction_operation
 {
 public:
