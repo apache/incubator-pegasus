@@ -37,24 +37,24 @@ struct value_field
 
 struct expire_timestamp_field : public value_field
 {
-    explicit expire_timestamp_field(uint32_t timestamp) { expire_ts = timestamp; }
-    value_field_type type() { return value_field_type::EXPIRE_TIMESTAMP; };
+    explicit expire_timestamp_field(uint32_t timestamp) : expire_ts(timestamp) {}
+    value_field_type type() { return value_field_type::EXPIRE_TIMESTAMP; }
 
     uint32_t expire_ts;
 };
 
 struct time_tag_field : public value_field
 {
-    explicit time_tag_field(uint64_t tag) { time_tag = tag; }
-    value_field_type type() { return value_field_type::TIME_TAG; };
+    explicit time_tag_field(uint64_t tag) : time_tag(tag) {}
+    value_field_type type() { return value_field_type::TIME_TAG; }
 
     uint64_t time_tag;
 };
 
 struct user_data_field : public value_field
 {
-    explicit user_data_field(dsn::string_view data) { user_data = data; }
-    value_field_type type() { return value_field_type::USER_DATA; };
+    explicit user_data_field(dsn::string_view data) : user_data(data) {}
+    value_field_type type() { return value_field_type::USER_DATA; }
 
     dsn::string_view user_data;
 };
