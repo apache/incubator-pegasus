@@ -59,15 +59,19 @@ public:
 private:
     // empirical rule to calculate hot point of each partition
     // ref: https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
-    void stat_histories_analyse(int data_type, std::vector<int> &hot_points);
+    void stat_histories_analyse(uint32_t data_type, std::vector<int> &hot_points);
     // set hot_point to corresponding perf_counter
-    void update_hot_point(int data_type, std::vector<int> &hot_points);
+    void update_hot_point(uint32_t data_type, std::vector<int> &hot_points);
     void detect_hotkey_in_hotpartition(int data_type);
 
     const std::string _app_name;
     void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     hot_partition_counters _hot_points;
+    // hotspot_cnt c[type_of_read(0)/write(1)_stat] = number of hot partition count in one table per
+    // data_analyse
+    std::array<dsn::perf_counter_wrapper, 2> _total_hotspot_cnt;
+
     // saving historical data can improve accuracy
     stat_histories _partitions_stat_histories;
     std::shared_ptr<shell_context> _shell_context;
