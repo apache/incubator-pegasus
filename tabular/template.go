@@ -22,6 +22,7 @@ package tabular
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/dustin/go-humanize"
 	"gopkg.in/yaml.v2"
@@ -66,6 +67,7 @@ func NewTemplate(template string) *Template {
 				}
 			}
 			colAttrs.formatter = getFormatter(colAttrs.Attrs)
+			colAttrs.aggregator = getAggregator(colAttrs.Attrs)
 			sec.columns = append(sec.columns, colAttrs)
 		}
 
@@ -86,6 +88,20 @@ func getFormatter(attrs map[string]string) columnValueFormatter {
 		return megabyteStatFormatter
 	default:
 		panic(fmt.Sprintf("unexpected unit %vs", t))
+	}
+}
+
+func getAggregator(attrs map[string]string) columnValueAggregator {
+	t, ok := attrs["aggregate"]
+	if !ok {
+		return defaultAggregator
+	}
+
+	switch t {
+	case "average":
+		return averageAggregator
+	default:
+		panic(fmt.Sprintf("unexpected aggregate %vs", t))
 	}
 }
 
@@ -117,15 +133,39 @@ func (t *Template) Render(writer io.Writer, rows []interface{}) {
 		for _, col := range sect.columns {
 			header = append(header, col.Name)
 		}
+
+		var totalRowColumns = []string{"total"}
+		for n := range header {
+			if n == 0 {
+				continue
+			}
+			totalRowColumns = append(totalRowColumns, "0")
+		}
+
 		tabWriter := NewTabWriter(writer, header)
 		for _, row := range rows {
 			rowColumns := t.commonColFunc(row)
-			for _, col := range sect.columns {
+			for n, row := range rowColumns {
+				if n == 0 {
+					continue
+				}
+				value, _ := strconv.ParseFloat(row, 64)
+				defaultAggregator(len(rows), totalRowColumns, n, value)
+			}
+
+			for n, col := range sect.columns {
 				columnValue := t.colValFunc(col, row)
+				col.aggregator(len(rows), totalRowColumns, n+len(t.commonColNames), columnValue.(float64))
 				rowColumns = append(rowColumns, col.formatter(columnValue))
 			}
 			tabWriter.Append(rowColumns)
 		}
+
+		for n, col := range sect.columns {
+			value, _ := strconv.ParseFloat(totalRowColumns[n+len(t.commonColNames)], 64)
+			totalRowColumns[n+len(t.commonColNames)] = col.formatter(value)
+		}
+		tabWriter.SetFooter(totalRowColumns)
 		tabWriter.Render()
 	}
 }
@@ -147,6 +187,10 @@ type ColumnAttributes struct {
 	// If `unit` is "MB", megabyteStatFormatter is used.
 	// Otherwise defaultFormatter is used.
 	formatter columnValueFormatter
+	// The aggregator is optionally declared in `aggregate`
+	// if `aggregate` is `average`, averageAggregator is used
+	// Otherwise defaultAggregator is used
+	aggregator columnValueAggregator
 }
 
 // The default if no unit is specified.
@@ -179,3 +223,19 @@ func megabyteStatFormatter(v interface{}) string {
 }
 
 type columnValueFormatter func(interface{}) string
+
+// The default column aggregate type, sum(value...)
+func defaultAggregator(rows int, totalRowColumns []string, index int, deltaValue float64) {
+	oldValue, _ := strconv.ParseFloat(totalRowColumns[index], 64)
+	total := oldValue + deltaValue
+	totalRowColumns[index] = strconv.FormatFloat(total, 'g', 5, 64)
+}
+
+// The column aggregate type, average(value...)
+func averageAggregator(rows int, totalRowColumns []string, index int, deltaValue float64) {
+	oldValue, _ := strconv.ParseFloat(totalRowColumns[index], 64)
+	average := oldValue + deltaValue/float64(rows)
+	totalRowColumns[index] = strconv.FormatFloat(average, 'g', 5, 64)
+}
+
+type columnValueAggregator func(int, []string, int, float64)

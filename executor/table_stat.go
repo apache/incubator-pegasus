@@ -67,6 +67,7 @@ Usage:
  AvgPartitionSize:
   counter: avg_partition_mb
   unit: MB
+  aggregate: average
  Index:
   counter: rdb_index_and_filter_blocks_mem_usage
   unit: byte
