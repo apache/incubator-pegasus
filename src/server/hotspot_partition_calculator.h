@@ -68,8 +68,8 @@ private:
     void init_perf_counter(int perf_counter_count);
     // usually a partition with "hot-point value" >= 3 can be considered as a hotspot partition.
     hot_partition_counters _hot_points;
-    // hotspot_cnt c[type_of_read(0)/write(1)_stat] = number of hot partition count in one table per
-    // data_analyse
+    // hotspot_cnt c[type_of_read(0)/write(1)_stat] = number of hot partition count in one table
+    // per data_analyse
     std::array<dsn::perf_counter_wrapper, 2> _total_hotspot_cnt;
 
     // saving historical data can improve accuracy
