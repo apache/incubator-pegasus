@@ -27,14 +27,14 @@ namespace pegasus {
 namespace server {
 
 typedef std::vector<std::shared_ptr<compaction_filter_rule>> filter_rules;
-class compaction_filter_operation
+class compaction_operation
 {
 public:
-    compaction_filter_operation(filter_rules &&rules, uint32_t pegasus_data_version)
+    compaction_operation(filter_rules &&rules, uint32_t pegasus_data_version)
         : rules(std::move(rules)), pegasus_data_version(pegasus_data_version)
     {
     }
-    virtual ~compaction_filter_operation() = 0;
+    virtual ~compaction_operation() = 0;
 
     bool all_rules_match(const std::string &hash_key,
                          const std::string &sort_key,

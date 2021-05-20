@@ -17,13 +17,13 @@
  * under the License.
  */
 
-#include "compaction_filter_operation.h"
+#include "compaction_operation.h"
 
 namespace pegasus {
 namespace server {
-compaction_filter_operation::~compaction_filter_operation() = default;
+compaction_operation::~compaction_operation() = default;
 
-bool compaction_filter_operation::all_rules_match(const std::string &hash_key,
+bool compaction_operation::all_rules_match(const std::string &hash_key,
                                                   const std::string &sort_key,
                                                   const rocksdb::Slice &existing_value) const
 {
