@@ -24,8 +24,8 @@ namespace server {
 compaction_operation::~compaction_operation() = default;
 
 bool compaction_operation::all_rules_match(const std::string &hash_key,
-                                                  const std::string &sort_key,
-                                                  const rocksdb::Slice &existing_value) const
+                                           const std::string &sort_key,
+                                           const rocksdb::Slice &existing_value) const
 {
     if (rules.size() == 0) {
         return false;
