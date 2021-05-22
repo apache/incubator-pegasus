@@ -89,6 +89,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
 {
 #ifdef DSN_ENABLE_GPERF
     _release_tcmalloc_memory_command = nullptr;
+    _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
 #endif
     _replica_state_subscriber = subscriber;
@@ -2283,6 +2284,16 @@ void replica_stub::register_ctrl_command()
                     _release_tcmalloc_memory, "release-tcmalloc-memory", args);
             });
 
+        _get_tcmalloc_status_command = ::dsn::command_manager::instance().register_command(
+            {"replica.get-tcmalloc-status"},
+            "replica.get-tcmalloc-status",
+            "replica.get-tcmalloc-status - get status of tcmalloc",
+            [this](const std::vector<std::string> &args) {
+                char buf[4096];
+                MallocExtension::instance()->GetStats(buf, 4096);
+                return std::string(buf);
+            });
+
         _max_reserved_memory_percentage_command = dsn::command_manager::instance().register_command(
             {"replica.mem-release-max-reserved-percentage"},
             "replica.mem-release-max-reserved-percentage [num | DEFAULT]",
@@ -2464,6 +2475,7 @@ void replica_stub::close()
     UNREGISTER_VALID_HANDLER(_query_app_envs_command);
 #ifdef DSN_ENABLE_GPERF
     UNREGISTER_VALID_HANDLER(_release_tcmalloc_memory_command);
+    UNREGISTER_VALID_HANDLER(_get_tcmalloc_status_command);
     UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
 #endif
     UNREGISTER_VALID_HANDLER(_max_concurrent_bulk_load_downloading_count_command);
@@ -2477,6 +2489,7 @@ void replica_stub::close()
     _query_app_envs_command = nullptr;
 #ifdef DSN_ENABLE_GPERF
     _release_tcmalloc_memory_command = nullptr;
+    _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
 #endif
     _max_concurrent_bulk_load_downloading_count_command = nullptr;
