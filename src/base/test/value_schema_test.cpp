@@ -100,8 +100,7 @@ TEST(value_schema, update_expire_ts)
         uint32_t expire_ts;
         uint32_t update_expire_ts;
     } tests[] = {
-        {0, 1000, 10086},
-        {1, 1000, 10086},
+        {0, 1000, 10086}, {1, 1000, 10086},
     };
 
     for (const auto &t : tests) {
