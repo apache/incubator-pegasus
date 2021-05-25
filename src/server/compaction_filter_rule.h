@@ -28,7 +28,7 @@ class compaction_filter_rule
 public:
     virtual ~compaction_filter_rule() = default;
 
-    // we can use `value_filed` to replace existing_value in the later,
+    // TODO(zhaoliwei): we can use `value_filed` to replace existing_value in the later,
     // after the refactor of value schema
     virtual bool match(const std::string &hash_key,
                        const std::string &sort_key,
