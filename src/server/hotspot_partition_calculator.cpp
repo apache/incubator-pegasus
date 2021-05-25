@@ -153,6 +153,9 @@ void hotspot_partition_calculator::data_analyse()
 
     std::vector<int> hot_points;
     stat_histories_analyse(READ_HOTSPOT_DATA, hot_points);
+    update_hot_point(READ_HOTSPOT_DATA, hot_points);
+
+    stat_histories_analyse(WRITE_HOTSPOT_DATA, hot_points);
     update_hot_point(WRITE_HOTSPOT_DATA, hot_points);
 
     if (!FLAGS_enable_detect_hotkey) {
