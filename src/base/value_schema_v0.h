@@ -20,24 +20,27 @@
 #pragma once
 
 #include "pegasus_value_schema.h"
+
 #include <dsn/utility/singleton.h>
 
 namespace pegasus {
-
-class value_schema_manager : public dsn::utils::singleton<value_schema_manager>
+/**
+ *  rocksdb value: |- expire_ts(4bytes) -|- user value(bytes) -|
+ */
+class value_schema_v0 : public value_schema
 {
 public:
-    void register_schema(std::unique_ptr<value_schema> schema);
-    /// using the raw value in rocksdb and data version stored in meta column family to get data
-    /// version
-    value_schema *get_value_schema(uint32_t meta_cf_data_version, dsn::string_view value) const;
-    value_schema *get_value_schema(uint32_t version) const;
-    value_schema *get_latest_value_schema() const;
+    value_schema_v0() = default;
+
+    std::unique_ptr<value_field> extract_field(dsn::string_view value,
+                                               value_field_type type) override;
+    dsn::blob extract_user_data(std::string &&value) override;
+    void update_field(std::string &value, std::unique_ptr<value_field> field) override;
+    rocksdb::SliceParts generate_value(const value_params &params) override;
+    data_version version() const override { return VERSION_0; }
 
 private:
-    value_schema_manager();
-    friend class dsn::utils::singleton<value_schema_manager>;
-
-    std::array<std::unique_ptr<value_schema>, data_version::VERSION_COUNT> _schemas;
+    std::unique_ptr<value_field> extract_timestamp(dsn::string_view value);
+    void update_expire_ts(std::string &value, std::unique_ptr<value_field> field);
 };
 } // namespace pegasus
