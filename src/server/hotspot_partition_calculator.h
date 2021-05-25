@@ -61,7 +61,7 @@ private:
     // ref: https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule
     void stat_histories_analyse(uint32_t data_type, std::vector<int> &hot_points);
     // set hot_point to corresponding perf_counter
-    void update_hot_point(uint32_t data_type, std::vector<int> &hot_points);
+    void update_hot_point(uint32_t data_type, const std::vector<int> &hot_points);
     void detect_hotkey_in_hotpartition(int data_type);
 
     const std::string _app_name;

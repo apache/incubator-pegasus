@@ -151,18 +151,16 @@ void hotspot_partition_calculator::data_analyse()
             "performed,in %s",
             _app_name.c_str());
 
-    for (uint32_t data_type = 0; data_type <= 1; data_type++) {
-        // data_type 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
-        std::vector<int> hot_points;
-        stat_histories_analyse(data_type, hot_points);
-        update_hot_point(data_type, hot_points);
-    }
+    std::vector<int> hot_points;
+    stat_histories_analyse(READ_HOTSPOT_DATA, hot_points);
+    update_hot_point(WRITE_HOTSPOT_DATA, hot_points);
+
     if (!FLAGS_enable_detect_hotkey) {
         return;
     }
-    for (int data_type = 0; data_type <= 1; data_type++) {
-        detect_hotkey_in_hotpartition(data_type);
-    }
+
+    detect_hotkey_in_hotpartition(READ_HOTSPOT_DATA);
+    detect_hotkey_in_hotpartition(WRITE_HOTSPOT_DATA);
 }
 
 void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
