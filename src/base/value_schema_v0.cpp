@@ -39,16 +39,8 @@ std::unique_ptr<value_field> value_schema_v0::extract_field(dsn::string_view val
 
 dsn::blob value_schema_v0::extract_user_data(std::string &&value)
 {
-    auto *s = new std::string(std::move(value));
-    dsn::data_input input(*s);
-    input.skip(sizeof(uint32_t));
-    dsn::string_view view = input.read_str();
-
-    // tricky code to avoid memory copy
-    dsn::blob user_data;
-    std::shared_ptr<char> buf(const_cast<char *>(view.data()), [s](char *) { delete s; });
-    user_data.assign(std::move(buf), 0, static_cast<unsigned int>(view.length()));
-    return user_data;
+    auto ret = dsn::blob::create_from_bytes(std::move(value));
+    return ret.range(sizeof(uint32_t));
 }
 
 void value_schema_v0::update_field(std::string &value, std::unique_ptr<value_field> field)
