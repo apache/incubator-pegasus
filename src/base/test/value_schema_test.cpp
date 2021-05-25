@@ -72,6 +72,10 @@ TEST(value_schema, generate_and_extract)
         {0, std::numeric_limits<uint32_t>::max(), 0, "pegasus"},
         {0, std::numeric_limits<uint32_t>::max(), 0, ""},
         {0, 0, 0, "a"},
+
+        {1, 1000, 10001, ""},
+        {1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint64_t>::max(), "pegasus"},
+        {1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint64_t>::max(), ""},
     };
 
     for (const auto &t : tests) {
@@ -97,6 +101,7 @@ TEST(value_schema, update_expire_ts)
         uint32_t update_expire_ts;
     } tests[] = {
         {0, 1000, 10086},
+        {1, 1000, 10086},
     };
 
     for (const auto &t : tests) {
