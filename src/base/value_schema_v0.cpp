@@ -89,8 +89,7 @@ void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value
     dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
     auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
-    auto new_expire_ts = expire_field->expire_ts;
-    new_expire_ts = dsn::endian::hton(new_expire_ts);
+    auto new_expire_ts = dsn::endian::hton(expire_field->expire_ts);
     memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
 }
 
