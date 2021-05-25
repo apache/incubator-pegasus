@@ -36,7 +36,6 @@ public:
     dsn::blob extract_user_data(std::string &&value);
     void update_field(std::string &value, std::unique_ptr<value_field> field);
     rocksdb::SliceParts generate_value(const value_params &params);
-
     data_version version() const override { return VERSION_1; }
 
 protected:
