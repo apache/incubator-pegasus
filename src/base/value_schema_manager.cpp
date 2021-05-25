@@ -28,8 +28,8 @@ value_schema_manager::value_schema_manager()
      * If someone wants to add a new data version, he only need to implement the new value schema,
      * and register it here.
      */
-    value_schema_manager::instance().register_schema(dsn::make_unique<value_schema_v0>());
-    value_schema_manager::instance().register_schema(dsn::make_unique<value_schema_v1>());
+    register_schema(dsn::make_unique<value_schema_v0>());
+    register_schema(dsn::make_unique<value_schema_v1>());
 }
 
 void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
