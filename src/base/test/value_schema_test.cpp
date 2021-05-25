@@ -76,6 +76,7 @@ TEST(value_schema, generate_and_extract)
         {1, 1000, 10001, ""},
         {1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint64_t>::max(), "pegasus"},
         {1, std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint64_t>::max(), ""},
+        {1, 0, 0, "a"},
     };
 
     for (const auto &t : tests) {
