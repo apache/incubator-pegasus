@@ -98,8 +98,7 @@ std::unique_ptr<value_field> value_schema_v1::extract_time_tag(dsn::string_view 
 {
     dsn::data_input input(value);
     input.skip(sizeof(uint32_t));
-    uint64_t time_tag = input.read_u64();
-    return dsn::make_unique<time_tag_field>(time_tag);
+    return dsn::make_unique<time_tag_field>(input.read_u64());
 }
 
 void value_schema_v1::update_expire_ts(std::string &value, std::unique_ptr<value_field> field)
