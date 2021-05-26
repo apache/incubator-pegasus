@@ -21,8 +21,6 @@
 
 #include "pegasus_value_schema.h"
 
-#include <dsn/utility/singleton.h>
-
 namespace pegasus {
 /**
  *  rocksdb value: |- expire_ts(4bytes) -|- user value(bytes) -|
