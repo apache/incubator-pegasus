@@ -2288,7 +2288,7 @@ void replica_stub::register_ctrl_command()
             {"replica.get-tcmalloc-status"},
             "replica.get-tcmalloc-status",
             "replica.get-tcmalloc-status - get status of tcmalloc",
-            [this](const std::vector<std::string> &args) {
+            [](const std::vector<std::string> &args) {
                 char buf[4096];
                 MallocExtension::instance()->GetStats(buf, 4096);
                 return std::string(buf);
