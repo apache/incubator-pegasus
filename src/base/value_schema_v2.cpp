@@ -76,7 +76,7 @@ rocksdb::SliceParts value_schema_v2::generate_value(const value_params &params)
     }
 
     params.write_buf.resize(sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t));
-    uint8_t version_2 = 2;
+    const uint8_t version_2 = 2;
     dsn::data_output output(params.write_buf);
     output.write_u8(0x80 | version_2);            // version
     output.write_u32(expire_ts_field->expire_ts); // expire_ts
