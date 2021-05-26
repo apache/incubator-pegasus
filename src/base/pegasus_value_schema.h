@@ -243,7 +243,6 @@ enum data_version
     VERSION_2 = 2,
     VERSION_COUNT,
     VERSION_MAX = VERSION_2,
-    /// TBD(zlw)
 };
 
 struct value_params
