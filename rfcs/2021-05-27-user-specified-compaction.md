@@ -10,7 +10,7 @@ Add two classes named with `compaction_operation` and `compaction_rule`.
 
 `compaction_filter_rule` represents the compaction rule to filter the keys which are stored in rocksdb.
 There are three types of compaction filter rule:
-1. Hashkey rule, which supports prefix match, postfix match and anywhere match.
+- Hashkey rule, which supports prefix match, postfix match and anywhere match.
 2. Sortkey rule. Just like hashkey rule, it also supports prefix match, postfix match and anywhere match.
 3. TTL rule. It supports time range match with format [begin_ttl, end_ttl]
 
