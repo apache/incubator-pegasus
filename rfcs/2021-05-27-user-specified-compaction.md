@@ -12,7 +12,7 @@ Add two classes named with `compaction_operation` and `compaction_rule`.
 There are three types of compaction filter rule:
 1. hashkey rule, which supports prefix match, postfix match and anywhere match.
 2. sortkey rule. Just like hashkey rule, it also supports prefix match, postfix match and anywhere match.
-3. ttl rule. It supports time range match with format [begin_ttl, end_ttl]
+3. TTL rule. It supports time range match with format [begin_ttl, end_ttl]
 
 `compaction_operation` represents the compaction operation. A compaction operation will be executed when all the corresponding compaction rules are matched.
 There are two types of compaction filter rule:
