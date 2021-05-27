@@ -89,8 +89,6 @@ partitioned = false
 name = THREAD_POOL_FOR_TEST_1
 worker_count = 2
 partitioned = false
-admission_controller_factory_name = dsn::tools::admission_controller_for_test
-admission_controller_arguments = this is test argument
 
 [threadpool.THREAD_POOL_FOR_TEST_2]
 name = THREAD_POOL_FOR_TEST_2

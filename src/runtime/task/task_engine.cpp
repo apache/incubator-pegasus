@@ -48,23 +48,6 @@ void task_worker_pool::create()
             q = factory_store<task_queue>::create(it->c_str(), PROVIDER_TYPE_ASPECT, this, i, q);
         }
         _queues.push_back(q);
-
-        if (_spec.admission_controller_factory_name != "") {
-            admission_controller *controller = factory_store<admission_controller>::create(
-                _spec.admission_controller_factory_name.c_str(),
-                PROVIDER_TYPE_MAIN,
-                q,
-                _spec.admission_controller_arguments.c_str());
-
-            if (controller) {
-                _controllers.push_back(controller);
-                q->set_controller(controller);
-            } else {
-                _controllers.push_back(nullptr);
-            }
-        } else {
-            _controllers.push_back(nullptr);
-        }
     }
 
     for (int i = 0; i < qCount; ++i) {

@@ -37,17 +37,12 @@
 #include "gtest/gtest.h"
 #include "test_utils.h"
 
-extern void task_engine_module_init();
-
 int g_test_count = 0;
 int g_test_ret = 0;
 
 GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
-
-    // register all tools
-    task_engine_module_init();
 
     // register all possible services
     dsn::service_app::register_factory<test_client>("test");

@@ -69,8 +69,6 @@ struct threadpool_spec
     std::list<std::string> worker_aspects;
     int queue_length_throttling_threshold;
     bool enable_virtual_queue_throttling;
-    std::string admission_controller_factory_name;
-    std::string admission_controller_arguments;
 
     threadpool_spec(const dsn::threadpool_code &code) : name(code.to_string()), pool_code(code) {}
     threadpool_spec(const threadpool_spec &source) = default;
@@ -121,11 +119,5 @@ CONFIG_FLD(bool,
            enable_virtual_queue_throttling,
            false,
            "throttling: whether to enable throttling with virtual queues")
-CONFIG_FLD_STRING(admission_controller_factory_name,
-                  "",
-                  "customized admission controller for the task queues")
-CONFIG_FLD_STRING(admission_controller_arguments,
-                  "",
-                  "arguments for the cusotmized admission controller")
 CONFIG_END
 }

@@ -136,8 +136,6 @@ class aio_task;
 class rpc_request_task;
 class rpc_response_task;
 class message_ex;
-class admission_controller;
-typedef void (*task_rejection_handler)(task *, admission_controller *);
 
 std::set<dsn::task_code> &get_storage_rpc_req_codes();
 
@@ -192,8 +190,6 @@ public:
     throttling_mode_t rpc_request_throttling_mode;    //
     std::vector<int> rpc_request_delays_milliseconds; // see exp_delay for delaying recving
     bool rpc_request_dropped_before_execution_when_timeout;
-
-    task_rejection_handler rejection_handler;
 
     // COMPUTE
     /*!

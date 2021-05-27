@@ -96,7 +96,6 @@ worker_priority = THREAD_xPRIORITY_NORMAL
 
 [threadpool.THREAD_POOL_TEST_SERVER]
 partitioned = false
-admission_controller_factory_name = dsn::tools::admission_controller_for_test
 
 [threadpool.THREAD_POOL_FOR_TEST_1]
 name = THREAD_POOL_FOR_TEST_1
@@ -106,8 +105,6 @@ worker_share_core = false
 worker_affinity_mask = 1
 max_input_queue_length = 1024
 partitioned = false
-admission_controller_factory_name = dsn::tools::admission_controller_for_test
-admission_controller_arguments = this is test argument
 
 [threadpool.THREAD_POOL_FOR_TEST_2]
 name = THREAD_POOL_FOR_TEST_2

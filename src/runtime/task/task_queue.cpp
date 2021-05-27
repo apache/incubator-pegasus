@@ -32,7 +32,7 @@
 namespace dsn {
 
 task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_provider)
-    : _pool(pool), _controller(nullptr), _queue_length(0)
+    : _pool(pool), _queue_length(0)
 {
     char num[30];
     sprintf(num, "%u", index);
@@ -97,4 +97,4 @@ void task_queue::enqueue_internal(task *task)
     tls_dsn.last_worker_queue_size = increase_count();
     enqueue(task);
 }
-}
+} // namespace dsn

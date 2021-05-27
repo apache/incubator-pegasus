@@ -43,7 +43,6 @@ namespace dsn {
 
 class task_worker;
 class task_worker_pool;
-class admission_controller;
 
 /*!
 @addtogroup tool-api-providers
@@ -90,9 +89,6 @@ public:
     int index() const { return _index; }
     volatile int *get_virtual_length_ptr() { return &_virtual_queue_length; }
 
-    admission_controller *controller() const { return _controller; }
-    void set_controller(admission_controller *controller) { _controller = controller; }
-
 private:
     friend class task_worker_pool;
     void enqueue_internal(task *task);
@@ -101,7 +97,6 @@ private:
     task_worker_pool *_pool;
     std::string _name;
     int _index;
-    admission_controller *_controller;
     std::atomic<int> _queue_length;
     dsn::perf_counter_wrapper _queue_length_counter;
     threadpool_spec *_spec;
