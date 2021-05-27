@@ -27,7 +27,7 @@ bool compaction_operation::all_rules_match(const std::string &hash_key,
                                            const std::string &sort_key,
                                            const rocksdb::Slice &existing_value) const
 {
-    if (rules.size() == 0) {
+    if (rules.empty()) {
         return false;
     }
 
