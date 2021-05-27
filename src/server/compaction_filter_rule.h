@@ -23,6 +23,8 @@
 
 namespace pegasus {
 namespace server {
+/** compaction_filter_rule represents the compaction rule to filter the keys which are stored in
+ * rocksdb. */
 class compaction_filter_rule
 {
 public:

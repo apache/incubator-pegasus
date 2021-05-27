@@ -27,6 +27,8 @@ namespace pegasus {
 namespace server {
 
 typedef std::vector<std::unique_ptr<compaction_filter_rule>> filter_rules;
+/** compaction_operation represents the compaction operation. A compaction operation will be
+ * executed when all the corresponding compaction rules are matched. */
 class compaction_operation
 {
 public:
