@@ -9,7 +9,7 @@ name: pull_request
 on:
   # run on each pull request
   pull_request:
-    types: [ synchronize, opened ]
+    types: [ synchronize, opened, reopened ]
     branches:
       - master
       - 'v[0-9]+.*' # release branch
