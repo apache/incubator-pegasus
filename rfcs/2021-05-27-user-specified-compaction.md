@@ -16,8 +16,8 @@ There are three types of compaction filter rule:
 
 `compaction_operation` represents the compaction operation. A compaction operation will be executed when all the corresponding compaction rules are matched.
 There are two types of compaction filter rule:
-1. Delete. It represents that we should delete this key when all the rules are matched.
-2. Update TTL. It represents that we should update TTL when all the rules are matched.
+- Delete. It represents that we should delete this key when all the rules are matched.
+- Update TTL. It represents that we should update TTL when all the rules are matched.
 
 Finally, we should save the information about user specified compaction in app env. In order to make these information can still be retrieved after the machine is restarted.
 
