@@ -2,7 +2,7 @@
 
 ## Summary
 
-In pegasus, sometimes we should add user specified compaction policy to reduce disk usage. This RFC proposes a user specified compaction design.
+In Pegasus, sometimes we should add user specified compaction policy to reduce disk usage. This RFC proposes a user specified compaction design.
 
 ## Design
 
