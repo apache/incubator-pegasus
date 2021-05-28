@@ -20,6 +20,7 @@
 #include "value_schema_manager.h"
 #include "value_schema_v0.h"
 #include "value_schema_v1.h"
+#include "value_schema_v2.h"
 
 namespace pegasus {
 value_schema_manager::value_schema_manager()
@@ -30,6 +31,7 @@ value_schema_manager::value_schema_manager()
      */
     register_schema(dsn::make_unique<value_schema_v0>());
     register_schema(dsn::make_unique<value_schema_v1>());
+    register_schema(dsn::make_unique<value_schema_v2>());
 }
 
 void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)

@@ -42,6 +42,7 @@ TEST(value_schema_manager, get_value_schema)
     } tests[] = {
         {pegasus::data_version::VERSION_0, true},
         {pegasus::data_version::VERSION_1, true},
+        {pegasus::data_version::VERSION_2, true},
         {pegasus::data_version::VERSION_MAX + 1, false},
     };
 
