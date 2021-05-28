@@ -276,6 +276,8 @@ private:
                          error_code error);
     void update_disk_holding_replicas();
 
+    void update_disks_status();
+
     void register_ctrl_command();
 
     int get_app_id_from_replicas(std::string app_name)

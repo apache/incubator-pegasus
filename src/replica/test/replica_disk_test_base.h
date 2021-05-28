@@ -71,6 +71,8 @@ public:
 
     void update_disk_replica() { stub->on_disk_stat(); }
 
+    void update_disks_status() { stub->update_disks_status(); }
+
     std::vector<std::shared_ptr<dir_node>> get_dir_nodes() { return stub->_fs_manager._dir_nodes; }
 
     void generate_mock_dir_node(const app_info &app,
@@ -93,6 +95,32 @@ public:
                 break;
             }
         }
+    }
+
+    void
+    mock_node_status(int32_t node_index, disk_status::type old_status, disk_status::type new_status)
+    {
+        auto node = get_dir_nodes()[node_index];
+        for (const auto &kv : node->holding_replicas) {
+            for (const auto &pid : kv.second) {
+                update_replica_disk_status(pid, old_status);
+            }
+        }
+        stub->_fs_manager._status_updated_dir_nodes.clear();
+        if (old_status != new_status) {
+            node->status = new_status;
+            stub->_fs_manager._status_updated_dir_nodes.emplace_back(node);
+        }
+    }
+
+    error_code replica_disk_space_insufficient(const gpid &pid, bool &flag)
+    {
+        replica_ptr replica = stub->get_replica(pid);
+        if (replica == nullptr) {
+            return ERR_OBJECT_NOT_FOUND;
+        }
+        flag = replica->disk_space_insufficient();
+        return ERR_OK;
     }
 
 public:
@@ -178,6 +206,15 @@ private:
 
             stub->_fs_manager._dir_nodes.emplace_back(node_disk);
         }
+    }
+
+    void update_replica_disk_status(const gpid &pid, const disk_status::type status)
+    {
+        replica_ptr replica = stub->get_replica(pid);
+        if (replica == nullptr) {
+            return;
+        }
+        replica->set_disk_status(status);
     }
 };
 

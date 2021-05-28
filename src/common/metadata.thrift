@@ -70,6 +70,12 @@ enum split_status
     CANCELING
 }
 
+enum disk_status
+{
+    NORMAL = 0,
+    SPACE_INSUFFICIENT
+}
+
 // Used for cold backup and bulk load
 struct file_meta
 {

@@ -17,14 +17,20 @@
 
 #pragma once
 
+#include <memory>
+
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/tool-api/zlocks.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <memory>
+#include <dsn/utility/flags.h>
+
 #include "replication_common.h"
 
 namespace dsn {
 namespace replication {
+
+DSN_DECLARE_bool(enable_disk_available_space_check);
+DSN_DECLARE_int32(disk_min_available_space_ratio);
 
 struct dir_node
 {
@@ -34,6 +40,7 @@ public:
     int64_t disk_capacity_mb;
     int64_t disk_available_mb;
     int disk_available_ratio;
+    disk_status::type status;
     std::map<app_id, std::set<gpid>> holding_replicas;
     std::map<app_id, std::set<gpid>> holding_primary_replicas;
     std::map<app_id, std::set<gpid>> holding_secondary_replicas;
@@ -43,19 +50,21 @@ public:
              const std::string &dir_,
              int64_t disk_capacity_mb_ = 0,
              int64_t disk_available_mb_ = 0,
-             int disk_available_ratio_ = 0)
+             int disk_available_ratio_ = 0,
+             disk_status::type status_ = disk_status::NORMAL)
         : tag(tag_),
           full_dir(dir_),
           disk_capacity_mb(disk_capacity_mb_),
           disk_available_mb(disk_available_mb_),
-          disk_available_ratio(disk_available_ratio_)
+          disk_available_ratio(disk_available_ratio_),
+          status(status_)
     {
     }
     unsigned replicas_count(app_id id) const;
     unsigned replicas_count() const;
     bool has(const dsn::gpid &pid) const;
     unsigned remove(const dsn::gpid &pid);
-    void update_disk_stat();
+    void update_disk_stat(bool &status_changed);
 };
 
 class fs_manager
@@ -87,6 +96,7 @@ private:
         _total_available_ratio = 0;
         _min_available_ratio = 100;
         _max_available_ratio = 0;
+        _status_updated_dir_nodes.clear();
     }
 
     dir_node *get_dir_node(const std::string &subdir);
@@ -102,6 +112,10 @@ private:
     int _max_available_ratio = 0;
 
     std::vector<std::shared_ptr<dir_node>> _dir_nodes;
+    // Used for disk available space check
+    // disk status will be updated periodically, this vector record nodes whose disk_status changed
+    // in this round
+    std::vector<std::shared_ptr<dir_node>> _status_updated_dir_nodes;
 
     perf_counter_wrapper _counter_total_capacity_mb;
     perf_counter_wrapper _counter_total_available_mb;

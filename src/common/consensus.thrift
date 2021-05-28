@@ -208,5 +208,6 @@ struct group_check_response
     // Used for pause or cancel partition split
     // if secondary pause or cancel split succeed, is_split_stopped = true
     8:optional bool       is_split_stopped;
+    9:optional metadata.disk_status disk_status = metadata.disk_status.NORMAL;
 }
 

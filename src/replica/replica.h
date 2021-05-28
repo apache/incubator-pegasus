@@ -232,6 +232,10 @@ public:
     // routine for get extra envs from replica
     const std::map<std::string, std::string> &get_replica_extra_envs() const { return _extra_envs; }
 
+    void set_disk_status(disk_status::type status) { _disk_status = status; }
+    bool disk_space_insufficient() { return _disk_status == disk_status::SPACE_INSUFFICIENT; }
+    disk_status::type get_disk_status() { return _disk_status; }
+
 protected:
     // this method is marked protected to enable us to mock it in unit tests.
     virtual decree max_gced_decree_no_lock() const;
@@ -566,6 +570,8 @@ private:
     dsn::thread_access_checker _checker;
 
     std::unique_ptr<security::access_controller> _access_controller;
+
+    disk_status::type _disk_status;
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 } // namespace replication

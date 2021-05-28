@@ -117,4 +117,9 @@ ENUM_REG(replication::disk_migration_status::MOVING)
 ENUM_REG(replication::disk_migration_status::MOVED)
 ENUM_REG(replication::disk_migration_status::CLOSED)
 ENUM_END2(replication::disk_migration_status::type, disk_migration_status)
+
+ENUM_BEGIN2(replication::disk_status::type, disk_status, replication::disk_status::NORMAL)
+ENUM_REG(replication::disk_status::NORMAL)
+ENUM_REG(replication::disk_status::SPACE_INSUFFICIENT)
+ENUM_END2(replication::disk_status::type, disk_status)
 } // namespace dsn

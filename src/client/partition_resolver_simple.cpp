@@ -86,6 +86,8 @@ void partition_resolver_simple::on_access_failure(int partition_index, error_cod
         err == ERR_BUSY //  busy (rpc busy or throttling busy)
         ||
         err == ERR_SPLITTING // partition is splitting, reject read and write
+        ||
+        err == ERR_DISK_INSUFFICIENT // replica disk space is insufficient
         ) {
         return;
     }

@@ -186,6 +186,7 @@ void replica::on_group_check(const group_check_request &request,
         }
         // the group check may trigger start/finish/cancel/pause a split on the secondary.
         _split_mgr->trigger_secondary_parent_split(request, response);
+        response.__set_disk_status(_disk_status);
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         init_learn(request.config.learner_signature);
@@ -235,6 +236,9 @@ void replica::on_group_check_reply(error_code err,
             handle_learning_succeeded_on_primary(req->node, resp->learner_signature);
         }
         _split_mgr->primary_parent_handle_stop_split(req, resp);
+        if (req->config.status == partition_status::PS_SECONDARY) {
+            _primary_states.secondary_disk_status[req->node] = resp->disk_status;
+        }
     }
 }
 

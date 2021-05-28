@@ -104,6 +104,8 @@ public:
 
     void cleanup_split_states();
 
+    bool secondary_disk_space_insufficient() const;
+
 public:
     // membership mgr, including learners
     partition_configuration membership;
@@ -171,6 +173,9 @@ public:
     // if primary send an empty prepare after ingestion succeed to gurantee secondary commit its
     // ingestion request
     bool ingestion_is_empty_prepare_sent{false};
+
+    // secondary rpc_address -> secondary disk_status
+    std::unordered_map<rpc_address, disk_status::type> secondary_disk_status;
 };
 
 class secondary_context
