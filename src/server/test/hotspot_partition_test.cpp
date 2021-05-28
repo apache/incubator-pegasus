@@ -72,13 +72,26 @@ public:
         return result;
     }
 
+    std::array<uint32_t, 2>
+    get_calculator_total_hotspot_cnt(const std::array<dsn::perf_counter_wrapper, 2> &cnts)
+    {
+        std::array<uint32_t, 2> result;
+        result[READ_HOTSPOT_DATA] = cnts[READ_HOTSPOT_DATA].get()->get_value();
+        result[WRITE_HOTSPOT_DATA] = cnts[WRITE_HOTSPOT_DATA].get()->get_value();
+        return result;
+    }
+
     void test_policy_in_scenarios(std::vector<row_data> scenario,
-                                  std::vector<std::vector<double>> &expect_result)
+                                  std::vector<std::vector<double>> &expect_result,
+                                  std::array<uint32_t, 2> expect_cnt)
     {
         calculator.data_aggregate(std::move(scenario));
         calculator.data_analyse();
         std::vector<std::vector<double>> result = get_calculator_result(calculator._hot_points);
+        auto cnt = get_calculator_total_hotspot_cnt(calculator._total_hotspot_cnt);
+
         ASSERT_EQ(result, expect_result);
+        ASSERT_EQ(cnt, expect_cnt);
     }
 
     void aggregate_analyse_data(std::vector<row_data> scenario,
@@ -101,7 +114,9 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     std::vector<row_data> test_rows = generate_row_data();
     std::vector<std::vector<double>> expect_vector = {{0, 0, 0, 0, 0, 0, 0, 0},
                                                       {0, 0, 0, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector);
+
+    std::array<uint32_t, 2> expect_hotspot_cnt = {0, 0};
+    test_policy_in_scenarios(test_rows, expect_vector, expect_hotspot_cnt);
 
     // Insert hotspot scenario_0 data to test
     test_rows = generate_row_data();
@@ -110,14 +125,16 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 0, 0, 0, 0, 4}, {4, 0, 0, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector);
+    expect_hotspot_cnt = {1, 1};
+    test_policy_in_scenarios(test_rows, expect_vector, expect_hotspot_cnt);
 
     // Insert hotspot scenario_0 data to test again
     test_rows = generate_row_data();
     test_rows[HOT_SCENARIO_0_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_0_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 0, 0, 0, 0, 4}, {4, 0, 0, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector);
+    expect_hotspot_cnt = {1, 1};
+    test_policy_in_scenarios(test_rows, expect_vector, expect_hotspot_cnt);
 
     // Insert hotspot scenario_1 data to test again
     test_rows = generate_row_data();
@@ -126,7 +143,21 @@ TEST_F(hotspot_partition_test, hotspot_partition_policy)
     test_rows[HOT_SCENARIO_1_READ_HOT_PARTITION].get_qps = 5000.0;
     test_rows[HOT_SCENARIO_1_WRITE_HOT_PARTITION].put_qps = 5000.0;
     expect_vector = {{0, 0, 0, 4, 0, 0, 0, 0}, {0, 0, 4, 0, 0, 0, 0, 0}};
-    test_policy_in_scenarios(test_rows, expect_vector);
+    expect_hotspot_cnt = {1, 1};
+    test_policy_in_scenarios(test_rows, expect_vector, expect_hotspot_cnt);
+
+    test_rows = generate_row_data();
+    const int HOT_SCENARIO_2_READ_HOT_PARTITION_0 = 3;
+    const int HOT_SCENARIO_2_READ_HOT_PARTITION_1 = 5;
+    const int HOT_SCENARIO_2_WRITE_HOT_PARTITION = 2;
+
+    test_rows[HOT_SCENARIO_2_READ_HOT_PARTITION_0].get_qps = 7000.0;
+    test_rows[HOT_SCENARIO_2_READ_HOT_PARTITION_1].get_qps = 8000.0;
+    test_rows[HOT_SCENARIO_2_WRITE_HOT_PARTITION].put_qps = 7000.0;
+
+    expect_vector = {{0, 0, 0, 4, 0, 4, 0, 0}, {0, 0, 4, 0, 0, 0, 0, 0}};
+    expect_hotspot_cnt = {2, 1};
+    test_policy_in_scenarios(test_rows, expect_vector, expect_hotspot_cnt);
     clear_calculator_histories();
 }
 
