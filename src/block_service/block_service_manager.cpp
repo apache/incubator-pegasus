@@ -124,7 +124,7 @@ download_block_file_sync(const std::string &local_file_path, block_file *bf, tas
     return ret;
 }
 
-// ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_REPLICATION_LONG
+// ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_DEFAULT
 error_code block_service_manager::download_file(const std::string &remote_dir,
                                                 const std::string &local_dir,
                                                 const std::string &file_name,

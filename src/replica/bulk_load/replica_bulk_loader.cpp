@@ -501,7 +501,7 @@ error_code replica_bulk_loader::parse_bulk_load_metadata(const std::string &fnam
     return ERR_OK;
 }
 
-// ThreadPool: THREAD_POOL_REPLICATION_LONG
+// ThreadPool: THREAD_POOL_DEFAULT
 void replica_bulk_loader::update_bulk_load_download_progress(uint64_t file_size,
                                                              const std::string &file_name)
 {
@@ -531,7 +531,7 @@ void replica_bulk_loader::update_bulk_load_download_progress(uint64_t file_size,
                      get_gpid().thread_hash());
 }
 
-// ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_REPLICATION_LONG
+// ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_DEFAULT
 void replica_bulk_loader::try_decrease_bulk_load_download_count()
 {
     if (!_is_downloading.load()) {
