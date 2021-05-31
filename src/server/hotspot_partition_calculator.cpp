@@ -82,10 +82,18 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
             _hot_points[i][data_type].init_app_counter(
                 "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
         }
+
+        string total_desc =
+            _app_name + '.' +
+            (data_type == partition_qps_type::WRITE_HOTSPOT_DATA ? "write.total" : "read.total");
+        std::string counter_name = fmt::format("app.stat.hotspots.{}", total_desc);
+        std::string counter_desc = fmt::format("statistic the hotspots of app {}", total_desc);
+        _total_hotspot_cnt[data_type].init_app_counter(
+            "app.pegasus", counter_name.c_str(), COUNTER_TYPE_NUMBER, counter_desc.c_str());
     }
 }
 
-void hotspot_partition_calculator::stat_histories_analyse(int data_type,
+void hotspot_partition_calculator::stat_histories_analyse(uint32_t data_type,
                                                           std::vector<int> &hot_points)
 {
     double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
@@ -121,13 +129,19 @@ void hotspot_partition_calculator::stat_histories_analyse(int data_type,
     }
 }
 
-void hotspot_partition_calculator::update_hot_point(int data_type, std::vector<int> &hot_points)
+void hotspot_partition_calculator::update_hot_point(uint32_t data_type,
+                                                    const std::vector<int> &hot_points)
 {
     dcheck_eq(_hot_points.size(), hot_points.size());
     int size = hot_points.size();
+    uint32_t hotspot_count = 0;
     for (int i = 0; i < size; i++) {
         _hot_points[i][data_type].get()->set(hot_points[i]);
+        if (hot_points[i] >= FLAGS_hot_partition_threshold) {
+            hotspot_count++;
+        }
     }
+    _total_hotspot_cnt[data_type].get()->set(hotspot_count);
 }
 
 void hotspot_partition_calculator::data_analyse()
@@ -136,18 +150,21 @@ void hotspot_partition_calculator::data_analyse()
             "The number of partitions in this table has changed, and hotspot analysis cannot be "
             "performed,in %s",
             _app_name.c_str());
-    for (int data_type = 0; data_type <= 1; data_type++) {
-        // data_type 0: READ_HOTSPOT_DATA; 1: WRITE_HOTSPOT_DATA
-        std::vector<int> hot_points;
-        stat_histories_analyse(data_type, hot_points);
-        update_hot_point(data_type, hot_points);
-    }
+
+    std::vector<int> read_hot_points;
+    stat_histories_analyse(READ_HOTSPOT_DATA, read_hot_points);
+    update_hot_point(READ_HOTSPOT_DATA, read_hot_points);
+
+    std::vector<int> write_hot_points;
+    stat_histories_analyse(WRITE_HOTSPOT_DATA, write_hot_points);
+    update_hot_point(WRITE_HOTSPOT_DATA, write_hot_points);
+
     if (!FLAGS_enable_detect_hotkey) {
         return;
     }
-    for (int data_type = 0; data_type <= 1; data_type++) {
-        detect_hotkey_in_hotpartition(data_type);
-    }
+
+    detect_hotkey_in_hotpartition(READ_HOTSPOT_DATA);
+    detect_hotkey_in_hotpartition(WRITE_HOTSPOT_DATA);
 }
 
 void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
