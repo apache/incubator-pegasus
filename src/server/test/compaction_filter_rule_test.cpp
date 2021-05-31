@@ -46,10 +46,12 @@ TEST(hashkey_pattern_rule_test, match)
         {"hashkey", "hash", SMT_MATCH_POSTFIX, false},
         {"hashkey", "key", SMT_MATCH_POSTFIX, true},
         {"hashkey", "sortkey", SMT_MATCH_POSTFIX, false},
+        {"hash", "hashkey", SMT_MATCH_POSTFIX, false},
+        {"hashkey", "hashkey", SMT_INVALID, false},
     };
 
     rocksdb::Slice slice;
-    hashkey_pattern_rule rule(1);
+    hashkey_pattern_rule rule;
     for (const auto &test : tests) {
         rule.match_type = test.match_type;
         rule.pattern = test.pattern;

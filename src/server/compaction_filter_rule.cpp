@@ -29,7 +29,7 @@ bool string_pattern_match(const std::string &value,
                           string_match_type type,
                           const std::string &filter_pattern)
 {
-    if (filter_pattern.length() == 0)
+    if (filter_pattern.empty())
         return false;
     if (value.length() < filter_pattern.length())
         return false;
@@ -48,8 +48,6 @@ bool string_pattern_match(const std::string &value,
         return false;
     }
 }
-
-hashkey_pattern_rule::hashkey_pattern_rule(uint32_t pegasus_data_version) {}
 
 bool hashkey_pattern_rule::match(const std::string &hash_key,
                                  const std::string &sort_key,
