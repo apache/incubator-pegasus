@@ -55,7 +55,7 @@ ENUM_END(string_match_type)
 class hashkey_pattern_rule : public compaction_filter_rule
 {
 public:
-    explicit hashkey_pattern_rule(uint32_t pegasus_data_version) = default;
+    explicit hashkey_pattern_rule(uint32_t pegasus_data_version);
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,

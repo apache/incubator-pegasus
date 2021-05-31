@@ -49,6 +49,8 @@ bool string_pattern_match(const std::string &value,
     }
 }
 
+hashkey_pattern_rule::hashkey_pattern_rule(uint32_t pegasus_data_version) {}
+
 bool hashkey_pattern_rule::match(const std::string &hash_key,
                                  const std::string &sort_key,
                                  const rocksdb::Slice &existing_value) const
