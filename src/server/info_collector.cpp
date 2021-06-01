@@ -227,6 +227,7 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
     INIT_COUNTER(backup_request_qps);
+    INIT_COUNTER(backup_request_bytes);
     INIT_COUNTER(get_bytes);
     INIT_COUNTER(multi_get_bytes);
     INIT_COUNTER(scan_bytes);
