@@ -47,7 +47,7 @@ value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_versi
     // first bit = 1 means the data version is >= VERSION_2
     if (first_byte & 0x80) {
         // In order to keep backward compatibility, we should return latest version if the data
-        // version in value is not found. In other words, it will works well in future version if it
+        // version in value is not found. In other words, it will work well in future version if it
         // is compatible with latest version in current
         auto schema = get_value_schema(first_byte & 0x7F);
         if (nullptr == schema) {
