@@ -56,3 +56,30 @@ TEST(value_schema_manager, get_value_schema)
         }
     }
 }
+
+TEST(pegasus_value_manager, get_value_schema)
+{
+    struct test_case
+    {
+        uint32_t meta_store_data_version;
+        uint32_t value_schema_version;
+        data_version expect_version;
+    } tests[] = {
+        {0, 0, pegasus::data_version::VERSION_0},
+        {1, 0, pegasus::data_version::VERSION_1},
+        {0, 1, pegasus::data_version::VERSION_0},
+        {1, 1, pegasus::data_version::VERSION_1},
+        {0, 2, pegasus::data_version::VERSION_2},
+        {1, 2, pegasus::data_version::VERSION_2},
+    };
+
+    for (const auto &t : tests) {
+        auto generate_schema =
+            value_schema_manager::instance().get_value_schema(t.value_schema_version);
+        std::string raw_value = generate_value(generate_schema, 0, 0, "");
+
+        auto schema =
+            value_schema_manager::instance().get_value_schema(t.meta_store_data_version, raw_value);
+        ASSERT_EQ(t.expect_version, schema->version());
+    }
+}
