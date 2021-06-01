@@ -46,7 +46,8 @@ std::unique_ptr<value_field> value_schema_v2::extract_field(dsn::string_view val
 dsn::blob value_schema_v2::extract_user_data(std::string &&value)
 {
     auto ret = dsn::blob::create_from_bytes(std::move(value));
-    return ret.range(sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t));
+    static const auto USER_DATA_OFFSET = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t);
+    return ret.range(USER_DATA_OFFSET);
 }
 
 void value_schema_v2::update_field(std::string &value, std::unique_ptr<value_field> field)
