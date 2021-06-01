@@ -18,6 +18,7 @@
  */
 
 #include "base/pegasus_value_schema.h"
+#include "base/value_schema_manager.h"
 
 #include <gtest/gtest.h>
 

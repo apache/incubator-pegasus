@@ -59,7 +59,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
       _data_cf(nullptr),
       _meta_cf(nullptr),
       _is_open(false),
-      _pegasus_data_version(PEGASUS_DATA_VERSION_MAX),
+      _pegasus_data_version(data_version::VERSION_MAX),
       _last_durable_decree(0),
       _is_checkpointing(false),
       _manual_compact_svc(this),

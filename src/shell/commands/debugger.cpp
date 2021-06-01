@@ -19,6 +19,7 @@
 
 #include "shell/commands.h"
 #include "base/idl_utils.h"
+#include "base/value_schema_manager.h"
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/utilities/ldb_cmd.h>
 #include <fmt/time.h>

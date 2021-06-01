@@ -36,6 +36,7 @@
 #include "pegasus_write_service.h"
 #include "range_read_limiter.h"
 #include "pegasus_read_service.h"
+#include "base/value_schema_manager.h"
 
 namespace pegasus {
 namespace server {
