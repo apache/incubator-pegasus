@@ -36,8 +36,6 @@
 
 namespace pegasus {
 
-constexpr int PEGASUS_DATA_VERSION_MAX = 1u;
-
 /// Helper class for generating value.
 /// NOTES:
 /// * the instance of pegasus_value_generator must be alive while the returned SliceParts is.
