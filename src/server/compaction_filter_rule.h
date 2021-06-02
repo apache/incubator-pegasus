@@ -66,6 +66,7 @@ private:
     string_match_type match_type;
 
     FRIEND_TEST(hashkey_pattern_rule_test, match);
+    FRIEND_TEST(delete_key_test, filter);
 };
 } // namespace server
 } // namespace pegasus

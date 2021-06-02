@@ -39,5 +39,21 @@ bool compaction_operation::all_rules_match(const std::string &hash_key,
     return true;
 }
 
+delete_key::delete_key(filter_rules &&rules, uint32_t pegasus_data_version)
+    : compaction_operation(std::move(rules), pegasus_data_version)
+{
+}
+
+bool delete_key::filter(const std::string &hash_key,
+                        const std::string &sort_key,
+                        const rocksdb::Slice &existing_value,
+                        std::string *new_value,
+                        bool *value_changed) const
+{
+    if (!all_rules_match(hash_key, sort_key, existing_value)) {
+        return false;
+    }
+    return true;
+}
 } // namespace server
 } // namespace pegasus
