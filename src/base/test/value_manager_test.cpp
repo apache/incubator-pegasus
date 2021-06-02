@@ -209,7 +209,7 @@ TEST(pegasus_value_manager, pegasus_update_expire_ts)
         // update expire timestamp
         pegasus_update_expire_ts(test.version, value, test.update_expire_ts);
 
-        auto new_expire_ts = pegasus_extract_expire_ts(test.version, value);
-        ASSERT_EQ(new_expire_ts, test.update_expire_ts);
+        auto expire_ts = pegasus_extract_expire_ts(test.version, value);
+        ASSERT_EQ(expire_ts, test.update_expire_ts);
     }
 }
