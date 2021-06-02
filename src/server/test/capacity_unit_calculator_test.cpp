@@ -42,6 +42,13 @@ public:
         return write_cu;
     }
 
+    void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes)
+    {
+        if (req->is_backup_request()) {
+            backup_request_bytes += bytes;
+        }
+    }
+
     explicit mock_capacity_unit_calculator(dsn::replication::replica_base *r)
         : capacity_unit_calculator(
               r,
@@ -54,10 +61,12 @@ public:
     {
         write_cu = 0;
         read_cu = 0;
+        backup_request_bytes = 0;
     }
 
     int64_t write_cu{0};
     int64_t read_cu{0};
+    uint64_t backup_request_bytes{0};
 };
 
 static constexpr int MAX_ROCKSDB_STATUS_CODE = 13;
@@ -124,105 +133,117 @@ TEST_F(capacity_unit_calculator_test, init) { test_init(); }
 
 TEST_F(capacity_unit_calculator_test, get)
 {
+    dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
+    msg->header->context.u.is_backup_request = false;
+
     // value < 4KB
-    _cal->add_get_cu(rocksdb::Status::kOk, key, dsn::blob::create_from_bytes("value"));
+    _cal->add_get_cu(msg, rocksdb::Status::kOk, key, dsn::blob::create_from_bytes("value"));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     // value = 4KB
     _cal->add_get_cu(
-        rocksdb::Status::kOk, key, dsn::blob::create_from_bytes(std::string(4093, ' ')));
+        msg, rocksdb::Status::kOk, key, dsn::blob::create_from_bytes(std::string(4093, ' ')));
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     // value > 4KB
     _cal->add_get_cu(
-        rocksdb::Status::kOk, key, dsn::blob::create_from_bytes(std::string(4097, ' ')));
+        msg, rocksdb::Status::kOk, key, dsn::blob::create_from_bytes(std::string(4097, ' ')));
     ASSERT_EQ(_cal->read_cu, 2);
     _cal->reset();
 
     // value > 8KB
-    _cal->add_get_cu(
-        rocksdb::Status::kOk, key, dsn::blob::create_from_bytes(std::string(4096 * 2 + 1, ' ')));
+    _cal->add_get_cu(msg,
+                     rocksdb::Status::kOk,
+                     key,
+                     dsn::blob::create_from_bytes(std::string(4096 * 2 + 1, ' ')));
     ASSERT_EQ(_cal->read_cu, 3);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
-    _cal->add_get_cu(rocksdb::Status::kNotFound, key, dsn::blob());
+    _cal->add_get_cu(msg, rocksdb::Status::kNotFound, key, dsn::blob());
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_get_cu(rocksdb::Status::kCorruption, key, dsn::blob());
+    _cal->add_get_cu(msg, rocksdb::Status::kCorruption, key, dsn::blob());
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
 
 TEST_F(capacity_unit_calculator_test, multi_get)
 {
+    dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
+    msg->header->context.u.is_backup_request = false;
+
     std::vector<::dsn::apps::key_value> kvs;
 
     generate_n_kvs(100, kvs);
-    _cal->add_multi_get_cu(rocksdb::Status::kIncomplete, hash_key, kvs);
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kIncomplete, hash_key, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     generate_n_kvs(500, kvs);
-    _cal->add_multi_get_cu(rocksdb::Status::kOk, hash_key, kvs);
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kOk, hash_key, kvs);
     ASSERT_GT(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     kvs.clear();
-    _cal->add_multi_get_cu(rocksdb::Status::kNotFound, hash_key, kvs);
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kNotFound, hash_key, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_multi_get_cu(rocksdb::Status::kInvalidArgument, hash_key, kvs);
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kInvalidArgument, hash_key, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_multi_get_cu(rocksdb::Status::kCorruption, hash_key, kvs);
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kCorruption, hash_key, kvs);
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
 
 TEST_F(capacity_unit_calculator_test, scan)
 {
+    dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
+    msg->header->context.u.is_backup_request = false;
     std::vector<::dsn::apps::key_value> kvs;
 
     generate_n_kvs(100, kvs);
-    _cal->add_scan_cu(rocksdb::Status::kIncomplete, kvs);
+    _cal->add_scan_cu(msg, rocksdb::Status::kIncomplete, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
     generate_n_kvs(500, kvs);
-    _cal->add_scan_cu(rocksdb::Status::kIncomplete, kvs);
+    _cal->add_scan_cu(msg, rocksdb::Status::kIncomplete, kvs);
     ASSERT_GT(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_scan_cu(rocksdb::Status::kOk, kvs);
+    _cal->add_scan_cu(msg, rocksdb::Status::kOk, kvs);
     ASSERT_GT(_cal->read_cu, 1);
     ASSERT_EQ(_cal->write_cu, 0);
     _cal->reset();
 
     kvs.clear();
-    _cal->add_scan_cu(rocksdb::Status::kInvalidArgument, kvs);
+    _cal->add_scan_cu(msg, rocksdb::Status::kInvalidArgument, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_scan_cu(rocksdb::Status::kNotFound, kvs);
+    _cal->add_scan_cu(msg, rocksdb::Status::kNotFound, kvs);
     ASSERT_EQ(_cal->read_cu, 1);
     _cal->reset();
 
-    _cal->add_scan_cu(rocksdb::Status::kCorruption, kvs);
+    _cal->add_scan_cu(msg, rocksdb::Status::kCorruption, kvs);
     ASSERT_EQ(_cal->read_cu, 0);
     _cal->reset();
 }
 
 TEST_F(capacity_unit_calculator_test, sortkey_count)
 {
+    dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
+    msg->header->context.u.is_backup_request = false;
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_sortkey_count_cu(i, hash_key);
+        _cal->add_sortkey_count_cu(msg, i, hash_key);
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -235,8 +256,10 @@ TEST_F(capacity_unit_calculator_test, sortkey_count)
 
 TEST_F(capacity_unit_calculator_test, ttl)
 {
+    dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
+    msg->header->context.u.is_backup_request = false;
     for (int i = 0; i < MAX_ROCKSDB_STATUS_CODE; i++) {
-        _cal->add_ttl_cu(i, key);
+        _cal->add_ttl_cu(msg, i, key);
         if (i == rocksdb::Status::kOk || i == rocksdb::Status::kNotFound) {
             ASSERT_EQ(_cal->read_cu, 1);
         } else {
@@ -403,6 +426,70 @@ TEST_F(capacity_unit_calculator_test, check_and_mutate)
         rocksdb::Status::kCorruption, cam_hash_key, check_sort_key, mutate_list);
     ASSERT_EQ(_cal->read_cu, 0);
     ASSERT_EQ(_cal->write_cu, 0);
+    _cal->reset();
+}
+
+TEST_F(capacity_unit_calculator_test, backup_request_bytes)
+{
+    dsn::message_ptr msg = dsn::message_ex::create_request(RPC_TEST, static_cast<int>(1000), 1, 1);
+
+    msg->header->context.u.is_backup_request = false;
+    dsn::blob value = dsn::blob::create_from_bytes("value");
+    _cal->add_get_cu(msg, rocksdb::Status::kOk, key, value);
+    ASSERT_EQ(_cal->backup_request_bytes, 0);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = true;
+    value = dsn::blob::create_from_bytes("value");
+    _cal->add_get_cu(msg, rocksdb::Status::kOk, key, value);
+    ASSERT_EQ(_cal->backup_request_bytes, key.size() + value.size());
+    _cal->reset();
+
+    std::vector<::dsn::apps::key_value> kvs;
+    generate_n_kvs(100, kvs);
+    uint64_t total_size = 0;
+    for (const auto &kv : kvs) {
+        total_size += kv.key.size() + kv.value.size();
+    }
+
+    msg->header->context.u.is_backup_request = false;
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kOk, hash_key, kvs);
+    ASSERT_EQ(_cal->backup_request_bytes, 0);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = true;
+    _cal->add_multi_get_cu(msg, rocksdb::Status::kOk, hash_key, kvs);
+    ASSERT_EQ(_cal->backup_request_bytes, total_size + hash_key.size());
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = false;
+    _cal->add_scan_cu(msg, rocksdb::Status::kOk, kvs);
+    ASSERT_EQ(_cal->backup_request_bytes, 0);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = true;
+    _cal->add_scan_cu(msg, rocksdb::Status::kOk, kvs);
+    ASSERT_EQ(_cal->backup_request_bytes, total_size);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = false;
+    _cal->add_sortkey_count_cu(msg, rocksdb::Status::kOk, hash_key);
+    ASSERT_EQ(_cal->backup_request_bytes, 0);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = true;
+    _cal->add_sortkey_count_cu(msg, rocksdb::Status::kOk, hash_key);
+    ASSERT_EQ(_cal->backup_request_bytes, 1);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = false;
+    _cal->add_ttl_cu(msg, rocksdb::Status::kOk, key);
+    ASSERT_EQ(_cal->backup_request_bytes, 0);
+    _cal->reset();
+
+    msg->header->context.u.is_backup_request = true;
+    _cal->add_ttl_cu(msg, rocksdb::Status::kOk, key);
+    ASSERT_EQ(_cal->backup_request_bytes, 1);
     _cal->reset();
 }
 
