@@ -22,6 +22,8 @@
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/string_view.h>
 #include <dsn/c/api_utilities.h>
+#include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
 
 namespace pegasus {
 namespace server {
@@ -56,5 +58,26 @@ bool hashkey_pattern_rule::match(const std::string &hash_key,
     return string_pattern_match(hash_key, match_type, pattern);
 }
 
+ttl_range_rule::ttl_range_rule(uint32_t pegasus_data_version)
+    : pegasus_data_version(pegasus_data_version)
+{
+}
+
+bool ttl_range_rule::match(const std::string &hash_key,
+                           const std::string &sort_key,
+                           const rocksdb::Slice &existing_value) const
+{
+    uint32_t expire_ts =
+        pegasus_extract_expire_ts(pegasus_data_version, utils::to_string_view(existing_value));
+    if (0 == expire_ts && 0 == start_ttl && 0 == stop_ttl) {
+        return true;
+    }
+
+    auto now_ts = utils::epoch_now();
+    if (start_ttl + now_ts <= expire_ts && stop_ttl + now_ts >= expire_ts) {
+        return true;
+    }
+    return false;
+}
 } // namespace server
 } // namespace pegasus
