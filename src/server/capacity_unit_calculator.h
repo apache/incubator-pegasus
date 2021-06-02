@@ -37,13 +37,17 @@ public:
 
     virtual ~capacity_unit_calculator() = default;
 
-    void add_get_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
-    void add_multi_get_cu(int32_t status,
+    void
+    add_get_cu(dsn::message_ex *req, int32_t status, const dsn::blob &key, const dsn::blob &value);
+    void add_multi_get_cu(dsn::message_ex *req,
+                          int32_t status,
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
-    void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
-    void add_sortkey_count_cu(int32_t status, const dsn::blob &hash_key);
-    void add_ttl_cu(int32_t status, const dsn::blob &key);
+    void add_scan_cu(dsn::message_ex *req,
+                     int32_t status,
+                     const std::vector<::dsn::apps::key_value> &kvs);
+    void add_sortkey_count_cu(dsn::message_ex *req, int32_t status, const dsn::blob &hash_key);
+    void add_ttl_cu(dsn::message_ex *req, int32_t status, const dsn::blob &key);
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
@@ -70,9 +74,11 @@ protected:
 #ifdef PEGASUS_UNIT_TEST
     virtual int64_t add_read_cu(int64_t read_data_size);
     virtual int64_t add_write_cu(int64_t write_data_size);
+    virtual void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes);
 #else
     int64_t add_read_cu(int64_t read_data_size);
     int64_t add_write_cu(int64_t write_data_size);
+    void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes);
 #endif
 
 private:
@@ -91,6 +97,7 @@ private:
     ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
+    ::dsn::perf_counter_wrapper _pfc_backup_request_bytes;
 
     /*
         hotkey capturing weight rules:
