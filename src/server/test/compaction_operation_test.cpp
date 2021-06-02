@@ -38,12 +38,13 @@ TEST(delete_key_test, filter)
         {true, "hashkey", "hashkey", SMT_MATCH_ANYWHERE},
         {false, "hashkey", "hashkey111", SMT_MATCH_ANYWHERE},
     };
+
     uint32_t data_version = 1;
     filter_rules rules;
-    auto hash_rule = dsn::make_unique<hashkey_pattern_rule>();
-    rules.push_back(std::move(hash_rule));
+    rules.push_back(dsn::make_unique<hashkey_pattern_rule>());
     delete_key delete_operation(std::move(rules), data_version);
     for (const auto &test : tests) {
+        auto hash_rule = static_cast<hashkey_pattern_rule *>(delete_operation.rules.begin()->get());
         hash_rule->pattern = test.hashkey_pattern;
         hash_rule->match_type = test.hashkey_match_type;
         ASSERT_EQ(test.filter,
