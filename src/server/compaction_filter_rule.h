@@ -20,6 +20,8 @@
 #pragma once
 
 #include <rocksdb/slice.h>
+#include <dsn/utility/enum_helper.h>
+#include <gtest/gtest.h>
 
 namespace pegasus {
 namespace server {
@@ -35,6 +37,35 @@ public:
     virtual bool match(const std::string &hash_key,
                        const std::string &sort_key,
                        const rocksdb::Slice &existing_value) const = 0;
+};
+
+enum string_match_type
+{
+    SMT_MATCH_ANYWHERE,
+    SMT_MATCH_PREFIX,
+    SMT_MATCH_POSTFIX,
+    SMT_INVALID,
+};
+ENUM_BEGIN(string_match_type, SMT_INVALID)
+ENUM_REG(SMT_MATCH_ANYWHERE)
+ENUM_REG(SMT_MATCH_PREFIX)
+ENUM_REG(SMT_MATCH_POSTFIX)
+ENUM_END(string_match_type)
+
+class hashkey_pattern_rule : public compaction_filter_rule
+{
+public:
+    explicit hashkey_pattern_rule() = default;
+
+    bool match(const std::string &hash_key,
+               const std::string &sort_key,
+               const rocksdb::Slice &existing_value) const;
+
+private:
+    std::string pattern;
+    string_match_type match_type;
+
+    FRIEND_TEST(hashkey_pattern_rule_test, match);
 };
 } // namespace server
 } // namespace pegasus
