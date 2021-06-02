@@ -610,6 +610,7 @@ struct row_data
         rdb_bf_point_positive_total += row.rdb_bf_point_positive_total;
         rdb_bf_point_negatives += row.rdb_bf_point_negatives;
         backup_request_qps += row.backup_request_qps;
+        backup_request_bytes += row.backup_request_bytes;
         get_bytes += row.get_bytes;
         multi_get_bytes += row.multi_get_bytes;
         scan_bytes += row.scan_bytes;
@@ -657,6 +658,7 @@ struct row_data
     double rdb_bf_point_positive_total = 0;
     double rdb_bf_point_negatives = 0;
     double backup_request_qps = 0;
+    double backup_request_bytes = 0;
     double get_bytes = 0;
     double multi_get_bytes = 0;
     double scan_bytes = 0;
@@ -739,6 +741,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_bf_point_negatives += value;
     else if (counter_name == "backup_request_qps")
         row.backup_request_qps += value;
+    else if (counter_name == "backup_request_bytes")
+        row.backup_request_bytes += value;
     else if (counter_name == "get_bytes")
         row.get_bytes += value;
     else if (counter_name == "multi_get_bytes")

@@ -95,6 +95,7 @@ public:
             read_qps->set(row_stats.get_total_read_qps());
             write_qps->set(row_stats.get_total_write_qps());
             backup_request_qps->set(row_stats.backup_request_qps);
+            backup_request_bytes->set(row_stats.backup_request_bytes);
             get_bytes->set(row_stats.get_bytes);
             multi_get_bytes->set(row_stats.multi_get_bytes);
             scan_bytes->set(row_stats.scan_bytes);
@@ -141,6 +142,7 @@ public:
         ::dsn::perf_counter_wrapper read_qps;
         ::dsn::perf_counter_wrapper write_qps;
         ::dsn::perf_counter_wrapper backup_request_qps;
+        ::dsn::perf_counter_wrapper backup_request_bytes;
 
         ::dsn::perf_counter_wrapper get_bytes;
         ::dsn::perf_counter_wrapper multi_get_bytes;
