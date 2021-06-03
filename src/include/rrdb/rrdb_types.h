@@ -1559,7 +1559,8 @@ typedef struct _get_scanner_request__isset
           hash_key_filter_pattern(false),
           sort_key_filter_type(false),
           sort_key_filter_pattern(false),
-          validate_partition_hash(false)
+          validate_partition_hash(false),
+          return_expire_ts(false)
     {
     }
     bool start_key : 1;
@@ -1573,6 +1574,7 @@ typedef struct _get_scanner_request__isset
     bool sort_key_filter_type : 1;
     bool sort_key_filter_pattern : 1;
     bool validate_partition_hash : 1;
+    bool return_expire_ts : 1;
 } _get_scanner_request__isset;
 
 class get_scanner_request
@@ -1589,7 +1591,8 @@ public:
           no_value(0),
           hash_key_filter_type((filter_type::type)0),
           sort_key_filter_type((filter_type::type)0),
-          validate_partition_hash(0)
+          validate_partition_hash(0),
+          return_expire_ts(0)
     {
     }
 
@@ -1605,6 +1608,7 @@ public:
     filter_type::type sort_key_filter_type;
     ::dsn::blob sort_key_filter_pattern;
     bool validate_partition_hash;
+    bool return_expire_ts;
 
     _get_scanner_request__isset __isset;
 
@@ -1629,6 +1633,8 @@ public:
     void __set_sort_key_filter_pattern(const ::dsn::blob &val);
 
     void __set_validate_partition_hash(const bool val);
+
+    void __set_return_expire_ts(const bool val);
 
     bool operator==(const get_scanner_request &rhs) const
     {
@@ -1656,6 +1662,10 @@ public:
             return false;
         else if (__isset.validate_partition_hash &&
                  !(validate_partition_hash == rhs.validate_partition_hash))
+            return false;
+        if (__isset.return_expire_ts != rhs.__isset.return_expire_ts)
+            return false;
+        else if (__isset.return_expire_ts && !(return_expire_ts == rhs.return_expire_ts))
             return false;
         return true;
     }
@@ -1731,7 +1741,8 @@ typedef struct _scan_response__isset
           context_id(false),
           app_id(false),
           partition_index(false),
-          server(false)
+          server(false),
+          expire_ts_seconds_list(false)
     {
     }
     bool error : 1;
@@ -1740,6 +1751,7 @@ typedef struct _scan_response__isset
     bool app_id : 1;
     bool partition_index : 1;
     bool server : 1;
+    bool expire_ts_seconds_list : 1;
 } _scan_response__isset;
 
 class scan_response
@@ -1758,6 +1770,7 @@ public:
     int32_t app_id;
     int32_t partition_index;
     std::string server;
+    std::vector<int32_t> expire_ts_seconds_list;
 
     _scan_response__isset __isset;
 
@@ -1773,6 +1786,8 @@ public:
 
     void __set_server(const std::string &val);
 
+    void __set_expire_ts_seconds_list(const std::vector<int32_t> &val);
+
     bool operator==(const scan_response &rhs) const
     {
         if (!(error == rhs.error))
@@ -1786,6 +1801,11 @@ public:
         if (!(partition_index == rhs.partition_index))
             return false;
         if (!(server == rhs.server))
+            return false;
+        if (__isset.expire_ts_seconds_list != rhs.__isset.expire_ts_seconds_list)
+            return false;
+        else if (__isset.expire_ts_seconds_list &&
+                 !(expire_ts_seconds_list == rhs.expire_ts_seconds_list))
             return false;
         return true;
     }

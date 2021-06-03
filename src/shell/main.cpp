@@ -276,7 +276,8 @@ static command_executor commands[] = {
         "[-y|--sort_key_filter_pattern str] "
         "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
         "[-z|--value_filter_pattern str] "
-        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data]",
+        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data] "
+        "[-k|--preserve_ttl]",
         data_operations,
     },
     {

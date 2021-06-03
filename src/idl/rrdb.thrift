@@ -253,6 +253,7 @@ struct get_scanner_request
     9:filter_type  sort_key_filter_type;
     10:dsn.blob    sort_key_filter_pattern;
     11:optional bool    validate_partition_hash;
+    12:optional bool    return_expire_ts;
 }
 
 struct scan_request
@@ -268,6 +269,7 @@ struct scan_response
     4:i32           app_id;
     5:i32           partition_index;
     6:string        server;
+    7:optional list<i32>    expire_ts_seconds_list;
 }
 
 struct duplicate_request

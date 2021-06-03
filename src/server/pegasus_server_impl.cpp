@@ -1007,6 +1007,12 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     uint32_t batch_count = std::min(request_batch_size, _rng_rd_opts.rocksdb_max_iteration_count);
     resp.kvs.reserve(batch_count);
 
+    bool return_expire_ts = request.__isset.return_expire_ts ? request.return_expire_ts : false;
+    if (return_expire_ts) {
+        resp.__isset.expire_ts_seconds_list = true;
+        resp.expire_ts_seconds_list.reserve(batch_count);
+    }
+
     std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
         batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
 
@@ -1031,6 +1037,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         auto state = append_key_value_for_scan(
             resp.kvs,
+            resp.expire_ts_seconds_list,
             it->key(),
             it->value(),
             request.hash_key_filter_type,
@@ -1039,7 +1046,8 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.sort_key_filter_pattern,
             epoch_now,
             request.no_value,
-            request.__isset.validate_partition_hash ? request.validate_partition_hash : true);
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
+            return_expire_ts);
         switch (state) {
         case range_iteration_state::kNormal:
             count++;
@@ -1114,7 +1122,8 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                         request.sort_key_filter_pattern.length()),
             batch_count,
             request.no_value,
-            request.__isset.validate_partition_hash ? request.validate_partition_hash : true));
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
+            return_expire_ts));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1163,6 +1172,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         const ::dsn::blob &sort_key_filter_pattern = context->sort_key_filter_pattern;
         bool no_value = context->no_value;
         bool validate_hash = context->validate_partition_hash;
+        bool return_expire_ts = context->return_expire_ts;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
         uint64_t expire_count = 0;
@@ -1187,6 +1197,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             limiter->add_count();
 
             auto state = append_key_value_for_scan(resp.kvs,
+                                                   resp.expire_ts_seconds_list,
                                                    it->key(),
                                                    it->value(),
                                                    hash_key_filter_type,
@@ -1195,7 +1206,8 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                                    sort_key_filter_pattern,
                                                    epoch_now,
                                                    no_value,
-                                                   validate_hash);
+                                                   validate_hash,
+                                                   return_expire_ts);
             switch (state) {
             case range_iteration_state::kNormal:
                 count++;
@@ -2078,6 +2090,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
 
 range_iteration_state
 pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
+                                               std::vector<int32_t> &expire_ts_seconds_list,
                                                const rocksdb::Slice &key,
                                                const rocksdb::Slice &value,
                                                ::dsn::apps::filter_type::type hash_key_filter_type,
@@ -2086,7 +2099,8 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
                                                const ::dsn::blob &sort_key_filter_pattern,
                                                uint32_t epoch_now,
                                                bool no_value,
-                                               bool request_validate_hash)
+                                               bool request_validate_hash,
+                                               bool request_expire_ts)
 {
     if (check_if_record_expired(epoch_now, value)) {
         if (_verbose_log) {
@@ -2131,6 +2145,13 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
     std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
     ::memcpy(key_buf.get(), raw_key.data(), raw_key.length());
     kv.key.assign(std::move(key_buf), 0, raw_key.length());
+
+    // extract expire ts if necessary
+    if (request_expire_ts) {
+        auto expire_ts_seconds =
+            pegasus_extract_expire_ts(_pegasus_data_version, utils::to_string_view(value));
+        expire_ts_seconds_list.push_back(static_cast<int32_t>(expire_ts_seconds));
+    }
 
     // extract value
     if (!no_value) {

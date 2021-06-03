@@ -3679,6 +3679,12 @@ void get_scanner_request::__set_validate_partition_hash(const bool val)
     __isset.validate_partition_hash = true;
 }
 
+void get_scanner_request::__set_return_expire_ts(const bool val)
+{
+    this->return_expire_ts = val;
+    __isset.return_expire_ts = true;
+}
+
 uint32_t get_scanner_request::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -3790,6 +3796,14 @@ uint32_t get_scanner_request::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 12:
+            if (ftype == ::apache::thrift::protocol::T_BOOL) {
+                xfer += iprot->readBool(this->return_expire_ts);
+                this->__isset.return_expire_ts = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -3856,6 +3870,11 @@ uint32_t get_scanner_request::write(::apache::thrift::protocol::TProtocol *oprot
         xfer += oprot->writeBool(this->validate_partition_hash);
         xfer += oprot->writeFieldEnd();
     }
+    if (this->__isset.return_expire_ts) {
+        xfer += oprot->writeFieldBegin("return_expire_ts", ::apache::thrift::protocol::T_BOOL, 12);
+        xfer += oprot->writeBool(this->return_expire_ts);
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -3875,6 +3894,7 @@ void swap(get_scanner_request &a, get_scanner_request &b)
     swap(a.sort_key_filter_type, b.sort_key_filter_type);
     swap(a.sort_key_filter_pattern, b.sort_key_filter_pattern);
     swap(a.validate_partition_hash, b.validate_partition_hash);
+    swap(a.return_expire_ts, b.return_expire_ts);
     swap(a.__isset, b.__isset);
 }
 
@@ -3891,6 +3911,7 @@ get_scanner_request::get_scanner_request(const get_scanner_request &other108)
     sort_key_filter_type = other108.sort_key_filter_type;
     sort_key_filter_pattern = other108.sort_key_filter_pattern;
     validate_partition_hash = other108.validate_partition_hash;
+    return_expire_ts = other108.return_expire_ts;
     __isset = other108.__isset;
 }
 get_scanner_request::get_scanner_request(get_scanner_request &&other109)
@@ -3906,6 +3927,7 @@ get_scanner_request::get_scanner_request(get_scanner_request &&other109)
     sort_key_filter_type = std::move(other109.sort_key_filter_type);
     sort_key_filter_pattern = std::move(other109.sort_key_filter_pattern);
     validate_partition_hash = std::move(other109.validate_partition_hash);
+    return_expire_ts = std::move(other109.return_expire_ts);
     __isset = std::move(other109.__isset);
 }
 get_scanner_request &get_scanner_request::operator=(const get_scanner_request &other110)
@@ -3921,6 +3943,7 @@ get_scanner_request &get_scanner_request::operator=(const get_scanner_request &o
     sort_key_filter_type = other110.sort_key_filter_type;
     sort_key_filter_pattern = other110.sort_key_filter_pattern;
     validate_partition_hash = other110.validate_partition_hash;
+    return_expire_ts = other110.return_expire_ts;
     __isset = other110.__isset;
     return *this;
 }
@@ -3937,6 +3960,7 @@ get_scanner_request &get_scanner_request::operator=(get_scanner_request &&other1
     sort_key_filter_type = std::move(other111.sort_key_filter_type);
     sort_key_filter_pattern = std::move(other111.sort_key_filter_pattern);
     validate_partition_hash = std::move(other111.validate_partition_hash);
+    return_expire_ts = std::move(other111.return_expire_ts);
     __isset = std::move(other111.__isset);
     return *this;
 }
@@ -3967,6 +3991,9 @@ void get_scanner_request::printTo(std::ostream &out) const
         << "validate_partition_hash=";
     (__isset.validate_partition_hash ? (out << to_string(validate_partition_hash))
                                      : (out << "<null>"));
+    out << ", "
+        << "return_expire_ts=";
+    (__isset.return_expire_ts ? (out << to_string(return_expire_ts)) : (out << "<null>"));
     out << ")";
 }
 
@@ -4079,6 +4106,12 @@ void scan_response::__set_partition_index(const int32_t val) { this->partition_i
 
 void scan_response::__set_server(const std::string &val) { this->server = val; }
 
+void scan_response::__set_expire_ts_seconds_list(const std::vector<int32_t> &val)
+{
+    this->expire_ts_seconds_list = val;
+    __isset.expire_ts_seconds_list = true;
+}
+
 uint32_t scan_response::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -4157,6 +4190,25 @@ uint32_t scan_response::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
+        case 7:
+            if (ftype == ::apache::thrift::protocol::T_LIST) {
+                {
+                    this->expire_ts_seconds_list.clear();
+                    uint32_t _size121;
+                    ::apache::thrift::protocol::TType _etype124;
+                    xfer += iprot->readListBegin(_etype124, _size121);
+                    this->expire_ts_seconds_list.resize(_size121);
+                    uint32_t _i125;
+                    for (_i125 = 0; _i125 < _size121; ++_i125) {
+                        xfer += iprot->readI32(this->expire_ts_seconds_list[_i125]);
+                    }
+                    xfer += iprot->readListEnd();
+                }
+                this->__isset.expire_ts_seconds_list = true;
+            } else {
+                xfer += iprot->skip(ftype);
+            }
+            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -4183,9 +4235,9 @@ uint32_t scan_response::write(::apache::thrift::protocol::TProtocol *oprot) cons
     {
         xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT,
                                       static_cast<uint32_t>(this->kvs.size()));
-        std::vector<key_value>::const_iterator _iter121;
-        for (_iter121 = this->kvs.begin(); _iter121 != this->kvs.end(); ++_iter121) {
-            xfer += (*_iter121).write(oprot);
+        std::vector<key_value>::const_iterator _iter126;
+        for (_iter126 = this->kvs.begin(); _iter126 != this->kvs.end(); ++_iter126) {
+            xfer += (*_iter126).write(oprot);
         }
         xfer += oprot->writeListEnd();
     }
@@ -4207,6 +4259,23 @@ uint32_t scan_response::write(::apache::thrift::protocol::TProtocol *oprot) cons
     xfer += oprot->writeString(this->server);
     xfer += oprot->writeFieldEnd();
 
+    if (this->__isset.expire_ts_seconds_list) {
+        xfer +=
+            oprot->writeFieldBegin("expire_ts_seconds_list", ::apache::thrift::protocol::T_LIST, 7);
+        {
+            xfer +=
+                oprot->writeListBegin(::apache::thrift::protocol::T_I32,
+                                      static_cast<uint32_t>(this->expire_ts_seconds_list.size()));
+            std::vector<int32_t>::const_iterator _iter127;
+            for (_iter127 = this->expire_ts_seconds_list.begin();
+                 _iter127 != this->expire_ts_seconds_list.end();
+                 ++_iter127) {
+                xfer += oprot->writeI32((*_iter127));
+            }
+            xfer += oprot->writeListEnd();
+        }
+        xfer += oprot->writeFieldEnd();
+    }
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -4221,49 +4290,54 @@ void swap(scan_response &a, scan_response &b)
     swap(a.app_id, b.app_id);
     swap(a.partition_index, b.partition_index);
     swap(a.server, b.server);
+    swap(a.expire_ts_seconds_list, b.expire_ts_seconds_list);
     swap(a.__isset, b.__isset);
 }
 
-scan_response::scan_response(const scan_response &other122)
+scan_response::scan_response(const scan_response &other128)
 {
-    error = other122.error;
-    kvs = other122.kvs;
-    context_id = other122.context_id;
-    app_id = other122.app_id;
-    partition_index = other122.partition_index;
-    server = other122.server;
-    __isset = other122.__isset;
+    error = other128.error;
+    kvs = other128.kvs;
+    context_id = other128.context_id;
+    app_id = other128.app_id;
+    partition_index = other128.partition_index;
+    server = other128.server;
+    expire_ts_seconds_list = other128.expire_ts_seconds_list;
+    __isset = other128.__isset;
 }
-scan_response::scan_response(scan_response &&other123)
+scan_response::scan_response(scan_response &&other129)
 {
-    error = std::move(other123.error);
-    kvs = std::move(other123.kvs);
-    context_id = std::move(other123.context_id);
-    app_id = std::move(other123.app_id);
-    partition_index = std::move(other123.partition_index);
-    server = std::move(other123.server);
-    __isset = std::move(other123.__isset);
+    error = std::move(other129.error);
+    kvs = std::move(other129.kvs);
+    context_id = std::move(other129.context_id);
+    app_id = std::move(other129.app_id);
+    partition_index = std::move(other129.partition_index);
+    server = std::move(other129.server);
+    expire_ts_seconds_list = std::move(other129.expire_ts_seconds_list);
+    __isset = std::move(other129.__isset);
 }
-scan_response &scan_response::operator=(const scan_response &other124)
+scan_response &scan_response::operator=(const scan_response &other130)
 {
-    error = other124.error;
-    kvs = other124.kvs;
-    context_id = other124.context_id;
-    app_id = other124.app_id;
-    partition_index = other124.partition_index;
-    server = other124.server;
-    __isset = other124.__isset;
+    error = other130.error;
+    kvs = other130.kvs;
+    context_id = other130.context_id;
+    app_id = other130.app_id;
+    partition_index = other130.partition_index;
+    server = other130.server;
+    expire_ts_seconds_list = other130.expire_ts_seconds_list;
+    __isset = other130.__isset;
     return *this;
 }
-scan_response &scan_response::operator=(scan_response &&other125)
+scan_response &scan_response::operator=(scan_response &&other131)
 {
-    error = std::move(other125.error);
-    kvs = std::move(other125.kvs);
-    context_id = std::move(other125.context_id);
-    app_id = std::move(other125.app_id);
-    partition_index = std::move(other125.partition_index);
-    server = std::move(other125.server);
-    __isset = std::move(other125.__isset);
+    error = std::move(other131.error);
+    kvs = std::move(other131.kvs);
+    context_id = std::move(other131.context_id);
+    app_id = std::move(other131.app_id);
+    partition_index = std::move(other131.partition_index);
+    server = std::move(other131.server);
+    expire_ts_seconds_list = std::move(other131.expire_ts_seconds_list);
+    __isset = std::move(other131.__isset);
     return *this;
 }
 void scan_response::printTo(std::ostream &out) const
@@ -4281,6 +4355,10 @@ void scan_response::printTo(std::ostream &out) const
         << "partition_index=" << to_string(partition_index);
     out << ", "
         << "server=" << to_string(server);
+    out << ", "
+        << "expire_ts_seconds_list=";
+    (__isset.expire_ts_seconds_list ? (out << to_string(expire_ts_seconds_list))
+                                    : (out << "<null>"));
     out << ")";
 }
 
@@ -4434,42 +4512,42 @@ void swap(duplicate_request &a, duplicate_request &b)
     swap(a.__isset, b.__isset);
 }
 
-duplicate_request::duplicate_request(const duplicate_request &other126)
+duplicate_request::duplicate_request(const duplicate_request &other132)
 {
-    timestamp = other126.timestamp;
-    task_code = other126.task_code;
-    raw_message = other126.raw_message;
-    cluster_id = other126.cluster_id;
-    verify_timetag = other126.verify_timetag;
-    __isset = other126.__isset;
+    timestamp = other132.timestamp;
+    task_code = other132.task_code;
+    raw_message = other132.raw_message;
+    cluster_id = other132.cluster_id;
+    verify_timetag = other132.verify_timetag;
+    __isset = other132.__isset;
 }
-duplicate_request::duplicate_request(duplicate_request &&other127)
+duplicate_request::duplicate_request(duplicate_request &&other133)
 {
-    timestamp = std::move(other127.timestamp);
-    task_code = std::move(other127.task_code);
-    raw_message = std::move(other127.raw_message);
-    cluster_id = std::move(other127.cluster_id);
-    verify_timetag = std::move(other127.verify_timetag);
-    __isset = std::move(other127.__isset);
+    timestamp = std::move(other133.timestamp);
+    task_code = std::move(other133.task_code);
+    raw_message = std::move(other133.raw_message);
+    cluster_id = std::move(other133.cluster_id);
+    verify_timetag = std::move(other133.verify_timetag);
+    __isset = std::move(other133.__isset);
 }
-duplicate_request &duplicate_request::operator=(const duplicate_request &other128)
+duplicate_request &duplicate_request::operator=(const duplicate_request &other134)
 {
-    timestamp = other128.timestamp;
-    task_code = other128.task_code;
-    raw_message = other128.raw_message;
-    cluster_id = other128.cluster_id;
-    verify_timetag = other128.verify_timetag;
-    __isset = other128.__isset;
+    timestamp = other134.timestamp;
+    task_code = other134.task_code;
+    raw_message = other134.raw_message;
+    cluster_id = other134.cluster_id;
+    verify_timetag = other134.verify_timetag;
+    __isset = other134.__isset;
     return *this;
 }
-duplicate_request &duplicate_request::operator=(duplicate_request &&other129)
+duplicate_request &duplicate_request::operator=(duplicate_request &&other135)
 {
-    timestamp = std::move(other129.timestamp);
-    task_code = std::move(other129.task_code);
-    raw_message = std::move(other129.raw_message);
-    cluster_id = std::move(other129.cluster_id);
-    verify_timetag = std::move(other129.verify_timetag);
-    __isset = std::move(other129.__isset);
+    timestamp = std::move(other135.timestamp);
+    task_code = std::move(other135.task_code);
+    raw_message = std::move(other135.raw_message);
+    cluster_id = std::move(other135.cluster_id);
+    verify_timetag = std::move(other135.verify_timetag);
+    __isset = std::move(other135.__isset);
     return *this;
 }
 void duplicate_request::printTo(std::ostream &out) const
@@ -4583,30 +4661,30 @@ void swap(duplicate_response &a, duplicate_response &b)
     swap(a.__isset, b.__isset);
 }
 
-duplicate_response::duplicate_response(const duplicate_response &other130)
+duplicate_response::duplicate_response(const duplicate_response &other136)
 {
-    error = other130.error;
-    error_hint = other130.error_hint;
-    __isset = other130.__isset;
+    error = other136.error;
+    error_hint = other136.error_hint;
+    __isset = other136.__isset;
 }
-duplicate_response::duplicate_response(duplicate_response &&other131)
+duplicate_response::duplicate_response(duplicate_response &&other137)
 {
-    error = std::move(other131.error);
-    error_hint = std::move(other131.error_hint);
-    __isset = std::move(other131.__isset);
+    error = std::move(other137.error);
+    error_hint = std::move(other137.error_hint);
+    __isset = std::move(other137.__isset);
 }
-duplicate_response &duplicate_response::operator=(const duplicate_response &other132)
+duplicate_response &duplicate_response::operator=(const duplicate_response &other138)
 {
-    error = other132.error;
-    error_hint = other132.error_hint;
-    __isset = other132.__isset;
+    error = other138.error;
+    error_hint = other138.error_hint;
+    __isset = other138.__isset;
     return *this;
 }
-duplicate_response &duplicate_response::operator=(duplicate_response &&other133)
+duplicate_response &duplicate_response::operator=(duplicate_response &&other139)
 {
-    error = std::move(other133.error);
-    error_hint = std::move(other133.error_hint);
-    __isset = std::move(other133.__isset);
+    error = std::move(other139.error);
+    error_hint = std::move(other139.error_hint);
+    __isset = std::move(other139.__isset);
     return *this;
 }
 void duplicate_response::printTo(std::ostream &out) const

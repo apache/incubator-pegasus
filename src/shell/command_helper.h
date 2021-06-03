@@ -269,7 +269,8 @@ inline void scan_data_next(scan_data_context *context)
                                                std::string &&hash_key,
                                                std::string &&sort_key,
                                                std::string &&value,
-                                               pegasus::pegasus_client::internal_info &&info) {
+                                               pegasus::pegasus_client::internal_info &&info,
+                                               int ttl_seconds) {
             if (ret == pegasus::PERR_OK) {
                 if (validate_filter(context, sort_key, value)) {
                     switch (context->op) {
@@ -299,6 +300,7 @@ inline void scan_data_next(scan_data_context *context)
                                 context->split_request_count--;
                             };
                             pegasus::pegasus_client::check_and_set_options options;
+                            options.set_value_ttl_seconds = ttl_seconds;
                             context->client->async_check_and_set(
                                 hash_key,
                                 sort_key,
@@ -332,7 +334,8 @@ inline void scan_data_next(scan_data_context *context)
                                                        sort_key,
                                                        value,
                                                        std::move(callback),
-                                                       context->timeout_ms);
+                                                       context->timeout_ms,
+                                                       ttl_seconds);
                         }
                         break;
                     case SCAN_CLEAR:

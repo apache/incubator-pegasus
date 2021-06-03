@@ -861,7 +861,8 @@ void geo_client::do_scan(pegasus_client::pegasus_scanner_wrapper scanner_wrapper
             std::string &&geo_hash_key,
             std::string &&geo_sort_key,
             std::string &&value,
-            pegasus_client::internal_info &&info) mutable {
+            pegasus_client::internal_info &&info,
+            int ttl_seconds) mutable {
             if (ret == PERR_SCAN_COMPLETE) {
                 cb();
                 return;
