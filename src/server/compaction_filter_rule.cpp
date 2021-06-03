@@ -69,6 +69,7 @@ bool ttl_range_rule::match(const std::string &hash_key,
 {
     uint32_t expire_ts =
         pegasus_extract_expire_ts(pegasus_data_version, utils::to_string_view(existing_value));
+    // if start_ttl and stop_ttl = 0, it means we want to delete keys which have no ttl
     if (0 == expire_ts && 0 == start_ttl && 0 == stop_ttl) {
         return true;
     }
