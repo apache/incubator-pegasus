@@ -187,6 +187,7 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
                norm_path.c_str(),
                tags[i].c_str());
     }
+    _available_data_dirs = data_dirs;
 
     if (!for_test) {
         update_disk_stat();

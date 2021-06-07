@@ -97,6 +97,8 @@ public:
     //
     void initialize(const replication_options &opts, bool clear = false);
     void initialize(bool clear = false);
+    void initialize_fs_manager(std::vector<std::string> &data_dirs,
+                               std::vector<std::string> &data_dir_tags);
     void set_options(const replication_options &opts) { _options = opts; }
     void open_service();
     void close();
