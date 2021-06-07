@@ -31,22 +31,26 @@ import (
 	"github.com/pegasus-kv/admin-cli/util"
 )
 
-type DiskInfoType int32
+type DiskInfoType string
 
 const (
-	CapacitySize DiskInfoType = 0
-	ReplicaCount DiskInfoType = 1
+	CapacitySize DiskInfoType = "CapacitySize"
+	ReplicaCount DiskInfoType = "ReplicaCount"
 )
 
 // QueryDiskInfo command
-// TODO(jiashuo1) need refactor
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string) error {
+	_, err := queryDiskInfo(client, infoType, replicaServer, tableName, diskTag, true)
+	return err
+}
+
+func queryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, print bool) ([]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	n, err := client.Nodes.GetNode(replicaServer, session.NodeTypeReplica)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	replica := n.Replica()
 
@@ -55,36 +59,34 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 		AppName: tableName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch infoType {
 	case CapacitySize:
-		queryDiskCapacity(client, n.TCPAddr(), resp, diskTag)
+		return queryDiskCapacity(client, n.TCPAddr(), resp, diskTag, print), nil
 	case ReplicaCount:
-		queryDiskReplicaCount(client, resp)
+		return queryDiskReplicaCount(client, resp, print), nil
 	default:
-		break
+		return nil, fmt.Errorf("not support query this disk info: %s", infoType)
 	}
-	return nil
 }
 
-func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string) {
+type DiskCapacityStruct struct {
+	Disk     string `json:"disk"`
+	Capacity int64  `json:"capacity"`
+	Usage    int64  `json:"usage"`
+	Ratio    int64  `json:"ratio"`
+}
 
-	type nodeCapacityStruct struct {
-		Disk      string `json:"disk"`
-		Capacity  int64  `json:"capacity"`
-		Available int64  `json:"available"`
-		Ratio     int64  `json:"ratio"`
-	}
+type ReplicaCapacityStruct struct {
+	Gpid   string `json:"replica"`
+	Status string `json:"status"`
+	Size   int64  `json:"size"`
+}
 
-	type replicaCapacityStruct struct {
-		Replica  string  `json:"replica"`
-		Status   string  `json:"status"`
-		Capacity float64 `json:"capacity"`
-	}
-
-	var nodeCapacityInfos []interface{}
+func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, print bool) []interface{} {
+	var diskCapacityInfos []interface{}
 	var replicaCapacityInfos []interface{}
 
 	perfSession := client.Nodes.GetPerfSession(replicaServer, session.NodeTypeReplica)
@@ -96,10 +98,10 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 				for _, replicas := range replicasWithAppId {
 					for _, replica := range replicas {
 						var gpidStr = fmt.Sprintf("%d.%d", replica.Appid, replica.PartitionIndex)
-						replicaCapacityInfos = append(replicaCapacityInfos, replicaCapacityStruct{
-							Replica:  gpidStr,
-							Status:   replicaStatus,
-							Capacity: partitionStats[gpidStr],
+						replicaCapacityInfos = append(replicaCapacityInfos, ReplicaCapacityStruct{
+							Gpid:   gpidStr,
+							Status: replicaStatus,
+							Size:   int64(partitionStats[gpidStr]),
 						})
 					}
 				}
@@ -108,22 +110,27 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 			appendCapacity(diskInfo.HoldingSecondaryReplicas, "secondary")
 
 			// formats into tabularWriter
-			tabular.Print(client.Writer, replicaCapacityInfos)
-			return
+			if print {
+				tabular.Print(client.Writer, replicaCapacityInfos)
+			}
+			return replicaCapacityInfos
 		}
 
-		nodeCapacityInfos = append(nodeCapacityInfos, nodeCapacityStruct{
-			Disk:      diskInfo.Tag,
-			Capacity:  diskInfo.DiskCapacityMb,
-			Available: diskInfo.DiskAvailableMb,
-			Ratio:     diskInfo.DiskAvailableMb * 100.0 / diskInfo.DiskCapacityMb,
+		diskCapacityInfos = append(diskCapacityInfos, DiskCapacityStruct{
+			Disk:     diskInfo.Tag,
+			Capacity: diskInfo.DiskCapacityMb,
+			Usage:    diskInfo.DiskCapacityMb - diskInfo.DiskAvailableMb,
+			Ratio:    (diskInfo.DiskCapacityMb - diskInfo.DiskAvailableMb) * 100.0 / diskInfo.DiskCapacityMb,
 		})
 	}
 
-	tabular.Print(client.Writer, nodeCapacityInfos)
+	if print {
+		tabular.Print(client.Writer, diskCapacityInfos)
+	}
+	return diskCapacityInfos
 }
 
-func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse) {
+func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, print bool) []interface{} {
 	type ReplicaCountStruct struct {
 		Disk      string `json:"disk"`
 		Primary   int    `json:"primary"`
@@ -153,5 +160,8 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse) {
 		})
 	}
 
-	tabular.Print(client.Writer, replicaCountInfos)
+	if print {
+		tabular.Print(client.Writer, replicaCountInfos)
+	}
+	return replicaCountInfos
 }

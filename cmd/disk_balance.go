@@ -52,10 +52,12 @@ func init() {
 		Name: "disk-balance",
 		Help: "auto-migrate replica to let the disks space balance within the given ReplicaServer",
 		Flags: func(f *grumble.Flags) {
-			/*define the flags*/
+			f.String("n", "node", "", "target node, for example, 127.0.0.1:34801")
+			f.Int64("s", "size", 10<<10, "allow migrate min replica size, default 10GB")
+			f.Bool("a", "auto", false, "auto balance node until the the node is balanced")
 		},
 		Run: func(c *grumble.Context) error {
-			return executor.DiskBalance()
+			return executor.DiskBalance(pegasusClient, c.Flags.String("node"), c.Flags.Int64("size"), c.Flags.Bool("auto"))
 		},
 	})
 
