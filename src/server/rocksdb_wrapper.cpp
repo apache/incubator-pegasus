@@ -22,7 +22,7 @@
 #include <dsn/utility/fail_point.h>
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
-#include "base/pegasus_value_generator.h"
+#include "base/value_generator.h"
 
 namespace pegasus {
 namespace server {
@@ -37,7 +37,7 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
       _default_ttl(0)
 {
     _write_batch = dsn::make_unique<rocksdb::WriteBatch>();
-    _value_generator = dsn::make_unique<pegasus_value_generator>();
+    _value_generator = dsn::make_unique<value_generator>();
 
     _wt_opts = dsn::make_unique<rocksdb::WriteOptions>();
     // disable write ahead logging as replication handles logging instead now

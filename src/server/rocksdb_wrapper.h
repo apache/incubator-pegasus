@@ -35,7 +35,7 @@ class perf_counter_wrapper;
 } // namespace dsn
 
 namespace pegasus {
-class pegasus_value_generator;
+class value_generator;
 
 namespace server {
 struct db_get_context;
@@ -74,7 +74,7 @@ private:
 
     rocksdb::DB *_db;
     rocksdb::ReadOptions &_rd_opts;
-    std::unique_ptr<pegasus_value_generator> _value_generator;
+    std::unique_ptr<value_generator> _value_generator;
     std::unique_ptr<rocksdb::WriteBatch> _write_batch;
     std::unique_ptr<rocksdb::WriteOptions> _wt_opts;
     rocksdb::ColumnFamilyHandle *_meta_cf;

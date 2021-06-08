@@ -17,15 +17,14 @@
  * under the License.
  */
 
-#include "pegasus_value_generator.h"
+#include "value_generator.h"
 #include "value_schema_manager.h"
 #include <dsn/utility/smart_pointers.h>
 
 namespace pegasus {
 /// A higher level utility for generating value with given version.
-rocksdb::SliceParts pegasus_value_generator::generate_value(dsn::string_view user_data,
-                                                            uint32_t expire_ts,
-                                                            uint64_t timetag)
+rocksdb::SliceParts
+value_generator::generate_value(dsn::string_view user_data, uint32_t expire_ts, uint64_t timetag)
 {
     value_params params(_write_buf, _write_slices);
     params.fields[value_field_type::EXPIRE_TIMESTAMP] =

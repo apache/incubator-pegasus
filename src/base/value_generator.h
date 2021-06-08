@@ -27,18 +27,18 @@ namespace pegasus {
  * Helper class for generating value.
  *
  * NOTES:
- * 1. The instance of pegasus_value_generator must be alive while the returned SliceParts is.
+ * 1. The instance of value_generator must be alive while the returned SliceParts is.
  * The data of user_data must be alive while the returned SliceParts is, because
  * we do not copy it. And the returned SliceParts is only valid before the next invoking of
  * generate_value().
  * 2. Only the latest version of data is generated in this function, because we want to make
  * data with older version disappear gradually.
  */
-class pegasus_value_generator
+class value_generator
 {
 public:
-    pegasus_value_generator() = default;
-    ~pegasus_value_generator() = default;
+    value_generator() = default;
+    ~value_generator() = default;
 
     /// A higher level utility for generating value with latest version.
     rocksdb::SliceParts

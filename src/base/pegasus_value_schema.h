@@ -45,7 +45,7 @@ struct value_params
     }
 
     std::array<std::unique_ptr<value_field>, FIELD_COUNT> fields;
-    // write_buf and write_slices are transferred from `pegasus_value_generator`, which are used to
+    // write_buf and write_slices are transferred from `value_generator`, which are used to
     // prevent data copy
     std::string &write_buf;
     std::vector<rocksdb::Slice> &write_slices;
