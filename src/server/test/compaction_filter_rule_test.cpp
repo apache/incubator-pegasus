@@ -61,6 +61,42 @@ TEST(hashkey_pattern_rule_test, match)
     }
 }
 
+TEST(sortkey_pattern_rule_test, match)
+{
+    struct test_case
+    {
+        std::string sortkey;
+        std::string pattern;
+        string_match_type match_type;
+        bool match;
+    } tests[] = {
+        {"sortkey", "", SMT_MATCH_ANYWHERE, false},
+        {"sortkey", "sortkey", SMT_MATCH_ANYWHERE, true},
+        {"sortkey", "ort", SMT_MATCH_ANYWHERE, true},
+        {"sortkey", "sort", SMT_MATCH_ANYWHERE, true},
+        {"sortkey", "key", SMT_MATCH_ANYWHERE, true},
+        {"sortkey", "hashkey", SMT_MATCH_ANYWHERE, false},
+        {"sortkey", "sortkey", SMT_MATCH_PREFIX, true},
+        {"sortkey", "sort", SMT_MATCH_PREFIX, true},
+        {"sortkey", "key", SMT_MATCH_PREFIX, false},
+        {"sortkey", "hashkey", SMT_MATCH_PREFIX, false},
+        {"sortkey", "sortkey", SMT_MATCH_POSTFIX, true},
+        {"sortkey", "sort", SMT_MATCH_POSTFIX, false},
+        {"sortkey", "key", SMT_MATCH_POSTFIX, true},
+        {"sortkey", "hashkey", SMT_MATCH_POSTFIX, false},
+        {"sort", "sortkey", SMT_MATCH_POSTFIX, false},
+        {"sortkey", "sortkey", SMT_INVALID, false},
+    };
+
+    rocksdb::Slice slice;
+    sortkey_pattern_rule rule;
+    for (const auto &test : tests) {
+        rule.match_type = test.match_type;
+        rule.pattern = test.pattern;
+        ASSERT_EQ(rule.match("", test.sortkey, slice), test.match);
+    }
+}
+
 TEST(ttl_range_rule_test, match)
 {
     struct test_case

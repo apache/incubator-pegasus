@@ -55,7 +55,7 @@ ENUM_END(string_match_type)
 class hashkey_pattern_rule : public compaction_filter_rule
 {
 public:
-    explicit hashkey_pattern_rule() = default;
+    hashkey_pattern_rule() = default;
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,
@@ -66,6 +66,22 @@ private:
     string_match_type match_type;
 
     FRIEND_TEST(hashkey_pattern_rule_test, match);
+};
+
+class sortkey_pattern_rule : public compaction_filter_rule
+{
+public:
+    sortkey_pattern_rule() = default;
+
+    bool match(const std::string &hash_key,
+               const std::string &sort_key,
+               const rocksdb::Slice &existing_value) const;
+
+private:
+    std::string pattern;
+    string_match_type match_type;
+
+    FRIEND_TEST(sortkey_pattern_rule_test, match);
 };
 
 class ttl_range_rule : public compaction_filter_rule

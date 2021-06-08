@@ -58,6 +58,13 @@ bool hashkey_pattern_rule::match(const std::string &hash_key,
     return string_pattern_match(hash_key, match_type, pattern);
 }
 
+bool sortkey_pattern_rule::match(const std::string &hash_key,
+                                 const std::string &sort_key,
+                                 const rocksdb::Slice &existing_value) const
+{
+    return string_pattern_match(sort_key, match_type, pattern);
+}
+
 ttl_range_rule::ttl_range_rule(uint32_t pegasus_data_version)
     : pegasus_data_version(pegasus_data_version)
 {
