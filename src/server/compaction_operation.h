@@ -56,5 +56,20 @@ protected:
     filter_rules rules;
     uint32_t pegasus_data_version;
 };
+
+class delete_key : public compaction_operation
+{
+public:
+    delete_key(filter_rules &&rules, uint32_t pegasus_data_version);
+
+    bool filter(const std::string &hash_key,
+                const std::string &sort_key,
+                const rocksdb::Slice &existing_value,
+                std::string *new_value,
+                bool *value_changed) const;
+
+private:
+    FRIEND_TEST(delete_key_test, filter);
+};
 } // namespace server
 } // namespace pegasus
