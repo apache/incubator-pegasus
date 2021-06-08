@@ -22,6 +22,10 @@
 #include "value_schema_v1.h"
 #include "value_schema_v2.h"
 
+#include <dsn/utility/endians.h>
+#include <dsn/dist/fmt_logging.h>
+#include <dsn/c/api_utilities.h>
+
 namespace pegasus {
 value_schema_manager::value_schema_manager()
 {

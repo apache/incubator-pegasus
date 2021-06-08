@@ -24,6 +24,7 @@
 #include <dsn/cpp/message_utils.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/fmt_logging.h>
 #include <rrdb/rrdb.client.h>
 
 namespace dsn {

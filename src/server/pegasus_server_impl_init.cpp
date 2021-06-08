@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <dsn/utility/flags.h>
 #include <rocksdb/filter_policy.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include "capacity_unit_calculator.h"
 #include "hashkey_transform.h"

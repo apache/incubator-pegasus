@@ -21,6 +21,7 @@
 
 #include "pegasus_value_schema.h"
 #include <dsn/utility/singleton.h>
+#include <dsn/utility/smart_pointers.h>
 
 namespace pegasus {
 

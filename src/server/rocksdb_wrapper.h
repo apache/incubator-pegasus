@@ -46,6 +46,7 @@ class rocksdb_wrapper : public dsn::replication::replica_base
 {
 public:
     rocksdb_wrapper(pegasus_server_impl *server);
+    ~rocksdb_wrapper();
 
     /// Calls RocksDB Get and store the result into `db_get_context`.
     /// \returns 0 if Get succeeded. On failure, a non-zero rocksdb status code is returned.

@@ -20,6 +20,7 @@
 #include "server/pegasus_server_write.h"
 #include "server/pegasus_write_service_impl.h"
 #include "pegasus_server_test_base.h"
+#include "base/pegasus_value_generator.h"
 
 namespace pegasus {
 namespace server {

@@ -90,7 +90,6 @@ private:
     uint32_t _pegasus_data_version;
     uint32_t _default_ttl;
     bool _enabled; // only process filtering when _enabled == true
-    mutable pegasus_value_generator _gen;
     int32_t _partition_index;
     int32_t _partition_version;
     bool _validate_partition_hash;
