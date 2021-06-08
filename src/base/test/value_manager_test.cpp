@@ -83,3 +83,133 @@ TEST(pegasus_value_manager, get_value_schema)
         ASSERT_EQ(t.expect_version, schema->version());
     }
 }
+
+TEST(pegasus_value_manager, check_if_ts_expired)
+{
+    struct test_case
+    {
+        uint32_t epoch_now;
+        uint32_t expire_ts;
+        bool res_value;
+    } tests[] = {
+        {0, UINT32_MAX, false},
+        {100, 100, true},
+        {100, 99, true},
+        {100, 101, false},
+    };
+
+    for (const auto &t : tests) {
+        ASSERT_EQ(t.res_value, check_if_ts_expired(t.epoch_now, t.expire_ts));
+    }
+}
+
+TEST(pegasus_value_manager, extract_timestamp_from_timetag)
+{
+    uint64_t deadbeaf = 0xdeadbeaf;
+    uint64_t timetag = deadbeaf << 8u | 0xab;
+    auto res = extract_timestamp_from_timetag(timetag);
+    ASSERT_EQ(res, deadbeaf);
+}
+
+TEST(pegasus_value_manager, generate_timetag)
+{
+    uint64_t timestamp = 10086;
+    uint8_t cluster_id = 1;
+    bool deleted_tag = false;
+    auto res = generate_timetag(timestamp, cluster_id, deleted_tag);
+
+    ASSERT_EQ(res >> 8u, timestamp);
+    ASSERT_EQ((res & 0xFF) >> 1u, cluster_id);
+    ASSERT_EQ(res & 0x01, deleted_tag);
+}
+
+TEST(pegasus_value_manager, pegasus_extract_expire_ts)
+{
+    struct test_case
+    {
+        uint32_t version;
+        uint32_t expire_ts;
+    } tests[] = {
+        {0, 10086},
+        {1, 10086},
+        {2, 10086},
+    };
+
+    for (const auto &test : tests) {
+        // generate data for test
+        auto schema = value_schema_manager::instance().get_value_schema(test.version);
+        auto value = generate_value(schema, test.expire_ts, 0, "user_data");
+
+        auto expect_expire_ts = pegasus_extract_expire_ts(test.version, value);
+        ASSERT_EQ(expect_expire_ts, test.expire_ts);
+    }
+}
+
+TEST(pegasus_value_manager, pegasus_extract_timetag)
+{
+    struct test_case
+    {
+        uint32_t version;
+        uint32_t time_tag;
+    } tests[] = {
+        {2, 10086},
+    };
+
+    for (const auto &test : tests) {
+        // generate data for test
+        auto schema = value_schema_manager::instance().get_value_schema(test.version);
+        auto value = generate_value(schema, 0, test.time_tag, "user_data");
+
+        auto time_tag = pegasus_extract_timetag(test.version, value);
+        ASSERT_EQ(time_tag, test.time_tag);
+    }
+}
+
+TEST(pegasus_value_manager, pegasus_extract_user_data)
+{
+    struct test_case
+    {
+        uint32_t version;
+        std::string user_data;
+    } tests[] = {
+        {0, "user_data"},
+        {1, "user_data"},
+        {2, "user_data"},
+    };
+
+    for (const auto &test : tests) {
+        // generate data for test
+        auto schema = value_schema_manager::instance().get_value_schema(test.version);
+        auto value = generate_value(schema, 0, 0, test.user_data);
+
+        dsn::blob user_data;
+        pegasus_extract_user_data(test.version, std::move(value), user_data);
+        ASSERT_EQ(user_data, test.user_data);
+    }
+}
+
+TEST(pegasus_value_manager, pegasus_update_expire_ts)
+{
+    struct test_case
+    {
+        uint32_t version;
+        uint32_t expire_ts;
+        uint32_t update_expire_ts;
+    } tests[] = {
+        {0, 0, 10086},
+        {1, 0, 10086},
+        {2, 0, 10086},
+    };
+
+    for (const auto &test : tests) {
+        // generate data for test
+        auto schema = value_schema_manager::instance().get_value_schema(test.version);
+        auto value = generate_value(schema, test.expire_ts, 0, "user_data");
+
+        // update expire timestamp
+        pegasus_update_expire_ts(test.version, value, test.update_expire_ts);
+
+        auto expire_ts = pegasus_extract_expire_ts(test.version, value);
+        ASSERT_EQ(expire_ts, test.update_expire_ts);
+    }
+}

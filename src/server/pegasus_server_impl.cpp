@@ -1470,7 +1470,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _usage_scenario = _meta_store->get_usage_scenario();
         uint64_t last_manual_compact_finish_time =
             _meta_store->get_last_manual_compact_finish_time();
-        if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
+        if (_pegasus_data_version > data_version::VERSION_MAX) {
             derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
             release_db();
             return ::dsn::ERR_LOCAL_APP_FAILURE;
@@ -1480,7 +1480,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
     } else {
         // Write initial meta data to meta CF and flush when create new DB.
-        _meta_store->set_data_version(PEGASUS_DATA_VERSION_MAX);
+        _meta_store->set_data_version(data_version::VERSION_MAX);
         _meta_store->set_last_flushed_decree(0);
         _meta_store->set_last_manual_compact_finish_time(0);
         flush_all_family_columns(true);
