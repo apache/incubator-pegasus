@@ -18,6 +18,8 @@
  */
 
 #include <gtest/gtest.h>
+#include "base/pegasus_value_schema.h"
+#include "base/pegasus_utils.h"
 #include "server/compaction_filter_rule.h"
 
 namespace pegasus {
@@ -95,5 +97,39 @@ TEST(sortkey_pattern_rule_test, match)
     }
 }
 
+TEST(ttl_range_rule_test, match)
+{
+    struct test_case
+    {
+        int32_t start_ttl;
+        int32_t stop_ttl;
+        int32_t expire_ttl;
+        bool match;
+    } tests[] = {
+        {100, 1000, 1100, false},
+        {100, 1000, 500, true},
+        {100, 1000, 20, false},
+        {100, 1000, 0, false},
+        {1000, 100, 1100, false},
+        {1000, 100, 500, false},
+        {1000, 100, 20, false},
+        {1000, 100, 0, false},
+        {0, 1000, 500, true},
+        {1000, 0, 500, false},
+        {0, 0, 0, true},
+    };
+
+    const uint32_t data_version = 1;
+    ttl_range_rule rule(data_version);
+    pegasus_value_generator gen;
+    auto now_ts = utils::epoch_now();
+    for (const auto &test : tests) {
+        rule.start_ttl = test.start_ttl;
+        rule.stop_ttl = test.stop_ttl;
+        rocksdb::SliceParts svalue =
+            gen.generate_value(data_version, "", test.expire_ttl + now_ts, 0);
+        ASSERT_EQ(rule.match("", "", svalue.parts[0]), test.match);
+    }
+}
 } // namespace server
 } // namespace pegasus

@@ -85,5 +85,22 @@ private:
     FRIEND_TEST(sortkey_pattern_rule_test, match);
 };
 
+class ttl_range_rule : public compaction_filter_rule
+{
+public:
+    explicit ttl_range_rule(uint32_t pegasus_data_version);
+
+    bool match(const std::string &hash_key,
+               const std::string &sort_key,
+               const rocksdb::Slice &existing_value) const;
+
+private:
+    // = 0 means no limit
+    uint32_t start_ttl;
+    uint32_t stop_ttl;
+    uint32_t pegasus_data_version;
+
+    FRIEND_TEST(ttl_range_rule_test, match);
+};
 } // namespace server
 } // namespace pegasus
