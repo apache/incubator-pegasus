@@ -70,6 +70,33 @@ public:
 
 private:
     FRIEND_TEST(delete_key_test, filter);
+    FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
+};
+
+enum update_ttl_op_type
+{
+    UTOT_FROM_NOW,
+    UTOT_FROM_CURRENT,
+    UTOT_TIMESTAMP,
+    UTOT_INVALID,
+};
+
+class update_ttl : public compaction_operation
+{
+public:
+    update_ttl(filter_rules &&rules, uint32_t pegasus_data_version);
+
+    bool filter(const std::string &hash_key,
+                const std::string &sort_key,
+                const rocksdb::Slice &existing_value,
+                std::string *new_value,
+                bool *value_changed) const;
+
+private:
+    update_ttl_op_type type;
+    uint32_t timestamp;
+
+    FRIEND_TEST(update_ttl_test, filter);
 };
 } // namespace server
 } // namespace pegasus

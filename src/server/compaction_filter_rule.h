@@ -67,6 +67,8 @@ private:
 
     FRIEND_TEST(hashkey_pattern_rule_test, match);
     FRIEND_TEST(delete_key_test, filter);
+    FRIEND_TEST(update_ttl_test, filter);
+    FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
 };
 
 class sortkey_pattern_rule : public compaction_filter_rule
@@ -83,6 +85,7 @@ private:
     string_match_type match_type;
 
     FRIEND_TEST(sortkey_pattern_rule_test, match);
+    FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
 };
 
 class ttl_range_rule : public compaction_filter_rule
@@ -101,6 +104,7 @@ private:
     uint32_t pegasus_data_version;
 
     FRIEND_TEST(ttl_range_rule_test, match);
+    FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
 };
 } // namespace server
 } // namespace pegasus

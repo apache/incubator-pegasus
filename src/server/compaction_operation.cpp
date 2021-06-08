@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
 #include "compaction_operation.h"
 
 namespace pegasus {
@@ -55,5 +57,50 @@ bool delete_key::filter(const std::string &hash_key,
     }
     return true;
 }
+
+update_ttl::update_ttl(filter_rules &&rules, uint32_t pegasus_data_version)
+    : compaction_operation(std::move(rules), pegasus_data_version)
+{
+}
+
+bool update_ttl::filter(const std::string &hash_key,
+                        const std::string &sort_key,
+                        const rocksdb::Slice &existing_value,
+                        std::string *new_value,
+                        bool *value_changed) const
+{
+    if (!all_rules_match(hash_key, sort_key, existing_value)) {
+        return false;
+    }
+
+    uint32_t new_ts = 0;
+    switch (type) {
+    case update_ttl_op_type::UTOT_FROM_NOW:
+        new_ts = utils::epoch_now() + timestamp;
+        break;
+    case update_ttl_op_type::UTOT_FROM_CURRENT: {
+        auto ttl =
+            pegasus_extract_expire_ts(pegasus_data_version, utils::to_string_view(existing_value));
+        if (ttl == 0) {
+            return false;
+        }
+        new_ts = timestamp + ttl;
+        break;
+    }
+    case update_ttl_op_type::UTOT_TIMESTAMP:
+        // make it's seconds since 2016.01.01-00:00:00 GMT
+        new_ts = timestamp - pegasus::utils::epoch_begin;
+        break;
+    default:
+        ddebug("invalid update ttl operation type");
+        return false;
+    }
+
+    *new_value = existing_value.ToString();
+    pegasus_update_expire_ts(pegasus_data_version, *new_value, new_ts);
+    *value_changed = true;
+    return false;
+}
+
 } // namespace server
 } // namespace pegasus
