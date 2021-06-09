@@ -29,7 +29,9 @@ set(MY_PROJ_SRC "../pegasus_server_impl.cpp"
                 "../meta_store.cpp"
                 "../hotkey_collector.cpp"
                 "../rocksdb_wrapper.cpp"
-)
+                "../compaction_filter_rule.cpp"
+                "../compaction_operation.cpp"
+        )
 
 set(MY_SRC_SEARCH_MODE "GLOB")
 

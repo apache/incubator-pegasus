@@ -335,7 +335,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
         pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
-    _cu_calculator->add_get_cu(resp.error, key, resp.value);
+    _cu_calculator->add_get_cu(rpc.dsn_request(), resp.error, key, resp.value);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -346,6 +346,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     uint64_t start_time = dsn_now_ns();
 
     const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
@@ -358,7 +359,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                rpc.remote_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
+        _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
         return;
     }
@@ -443,7 +444,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
                       stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
-            _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
+            _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
             _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 
             return;
@@ -755,7 +756,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
+    _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -834,7 +835,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
         resp.count = -1;
     }
 
-    _cu_calculator->add_sortkey_count_cu(resp.error, hash_key);
+    _cu_calculator->add_sortkey_count_cu(rpc.dsn_request(), resp.error, hash_key);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -896,7 +897,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
         }
     }
 
-    _cu_calculator->add_ttl_cu(resp.error, key);
+    _cu_calculator->add_ttl_cu(rpc.dsn_request(), resp.error, key);
 }
 
 void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
@@ -906,6 +907,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     uint64_t start_time = dsn_now_ns();
 
     const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
@@ -918,7 +920,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                rpc.remote_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
         return;
@@ -930,7 +932,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                rpc.remote_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
         return;
@@ -988,7 +990,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
 
         return;
@@ -1137,7 +1139,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -1147,6 +1149,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
     const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
     auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
@@ -1279,7 +1282,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
-    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -2846,49 +2849,35 @@ std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
 {
     dsn::task_code rpc_code(request->rpc_code());
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-        auto put = put_rpc::auto_reply(request).request();
+        auto put = put_rpc(request).request();
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(put.key, hash_key, sort_key);
-        std::string request("put:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(hash_key))
-            .append(",sort_key=")
-            .append(pegasus::utils::c_escape_string(sort_key));
-        return request;
+        return fmt::format("put: hash_key={}, sort_key={}",
+                           pegasus::utils::c_escape_string(hash_key),
+                           pegasus::utils::c_escape_string(sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        auto multi_put = multi_put_rpc::auto_reply(request).request();
-        std::string request("multi_put:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string((multi_put.hash_key))
-                        .append(",multi_put_count=")
-                        .append(std::to_string(multi_put.kvs.size())));
-        return request;
+        auto multi_put = multi_put_rpc(request).request();
+        return fmt::format("multi_put: hash_key={}, multi_put_count={}",
+                           pegasus::utils::c_escape_string(multi_put.hash_key),
+                           multi_put.kvs.size());
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-        auto check_and_set = check_and_set_rpc::auto_reply(request).request();
-        std::string request("check_and_set:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.hash_key))
-            .append(",check_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.check_sort_key))
-            .append(",set_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.set_sort_key));
-        return request;
+        auto check_and_set = check_and_set_rpc(request).request();
+        return fmt::format("check_and_set: hash_key={}, check_sort_key={}, set_sort_key={}",
+                           pegasus::utils::c_escape_string(check_and_set.hash_key),
+                           pegasus::utils::c_escape_string(check_and_set.check_sort_key),
+                           pegasus::utils::c_escape_string(check_and_set.set_sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-        auto check_and_mutate = check_and_mutate_rpc::auto_reply(request).request();
-        std::string request("check_and_mutate:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(check_and_mutate.hash_key))
-            .append(",check_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_mutate.check_sort_key))
-            .append(",set_value_count=")
-            .append(std::to_string(check_and_mutate.mutate_list.size()));
-        return request;
+        auto check_and_mutate = check_and_mutate_rpc(request).request();
+        return fmt::format("check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
+                           pegasus::utils::c_escape_string(check_and_mutate.hash_key),
+                           pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
+                           check_and_mutate.mutate_list.size());
     }
 
     return "default";

@@ -5,14 +5,14 @@
 [hbase]: https://hbase.apache.org/
 [website]: https://pegasus.apache.org
 
-![pegasus-logo](docs/media-img/pegasus-logo.png)
+![pegasus-logo](https://github.com/apache/incubator-pegasus-website/blob/master/assets/images/pegasus-logo-inv.png)
 
 [![Build Status](https://travis-ci.org/apache/incubator-pegasus.svg?branch=master)](https://travis-ci.org/apache/incubator-pegasus)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 [![Releases](https://img.shields.io/github/release/apache/incubator-pegasus.svg)][github-release]
 
-**Note**: The `master` branch may be in an *unstable or even broken state* during development.
-Please use [releases][github-release] instead of the `master` branch in order to get stable binaries.
+**Note**: The `master` branch may be in an *unstable or even in a broken state* during development.
+Please use [GitHub Releases][github-release] instead of the `master` branch in order to get stable binaries.
 
 Apache Pegasus is a distributed key-value storage system which is designed to be:
 
@@ -44,11 +44,11 @@ between data centers, automatic load balancing, and online partition split.
 
 ## To start using Pegasus
 
-See our documentation on [Pegasus Website][website].
+See our documentation on the [Pegasus Website][website].
 
 ## Client drivers
 
-Pegasus has support for serveral languages:
+Pegasus has support for several languages:
 
 - [Java](https://github.com/xiaomi/pegasus-java-client)
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
@@ -59,9 +59,9 @@ Pegasus has support for serveral languages:
 
 ## Contact us
 
-- Send mails to Apache Pegasus dev mailing list: dev@pegasus.apache.org. This is the place where topics around development, community, and problems are officially discussed. Please remember to subsribe the mail list via dev-subscribe@pegasus.apache.org.
+- Send emails to the Apache Pegasus developer mailing list: `dev@pegasus.apache.org`. This is the place where topics around development, community, and problems are officially discussed. Please remember to subscribe to the mailing list via `dev-subscribe@pegasus.apache.org`.
 
-- Github Issues: submit an issue when you have any idea to improve Pegasus, and when you encountered some bugs or problems.
+- GitHub Issues: submit an issue when you have any idea to improve Pegasus, and when you encountered some bugs or problems.
 
 ## Related Projects
 
@@ -80,4 +80,4 @@ Data import/export tools:
 ## License
 
 Copyright 2020 The Apache Software Foundation. Licensed under the Apache License, Version 2.0:
-<http://www.apache.org/licenses/LICENSE-2.0>
+[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
