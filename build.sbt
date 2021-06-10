@@ -1,4 +1,4 @@
-version := "1.11.5-1-SNAPSHOT"
+version := "2.2.0-2-release"
 
 organization := "com.xiaomi.infra"
 
@@ -20,9 +20,14 @@ resolvers ++= Seq(
 
 //custom publish url
 publishTo := {
-  val nexus = "http://your-url/"
-  if (isSnapshot.value) Some("snapshots" at nexus + "snapshots")
-  else Some("releases" at nexus + "releases")
+  //releases
+  val releases = "https://"
+  //snapshots
+  val snapshots = "https://"
+  if (isSnapshot.value)
+    Some(
+      "Artifactory Realm" at snapshots + ";build.timestamp=" + new java.util.Date().getTime)
+  else Some("Artifactory Realm" at releases)
 }
 
 credentials += Credentials(
@@ -30,6 +35,6 @@ credentials += Credentials(
 
 libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "21.0",
-  "com.xiaomi.infra" % "pegasus-client" % "1.11.5-thrift-0.11.0-inlined",
+  "com.xiaomi.infra" % "pegasus-client" % "2.2.0",
   "org.scalatest" %% "scalatest" % "3.0.3" % Test
 )

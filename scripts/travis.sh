@@ -23,22 +23,28 @@ sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
 # install java-client dependency
 git clone https://github.com/XiaoMi/pegasus-java-client.git
 cd pegasus-java-client
-git checkout 1.11.5-thrift-0.11.0-inlined-release
+git checkout v2.2.0
 mvn clean package -DskipTests
 mvn clean install -DskipTests
 cd ..
 
 # start pegasus onebox environment
-wget https://github.com/XiaoMi/pegasus/releases/download/v1.11.5/pegasus-server-1.11.5-ba0661d--release.zip
-unzip pegasus-server-1.11.5-ba0661d--release.zip
-cd pegasus-server-1.11.5-ba0661d--release
+PEGASUS_PKG="pegasus-tools-2.0.0-5d969e8-glibc2.12-release"
+PEGASUS_PKG_URL="https://github.com/apache/incubator-pegasus/releases/download/v2.0.0/pegasus-tools-2.0.0-5d969e8-glibc2.12-release.tar.gz"
+
+# start pegasus onebox environment
+if [ ! -f $PEGASUS_PKG.tar.gz ]; then
+    wget $PEGASUS_PKG_URL
+    tar xvf $PEGASUS_PKG.tar.gz
+fi
+cd $PEGASUS_PKG
 
 ./run.sh start_onebox -w
 cd ../
 
 if ! sbt test
 then
-    cd pegasus-server-1.11.5-ba0661d--release
+     cd $PEGASUS_PKG
     ./run.sh list_onebox
     exit 1
 fi

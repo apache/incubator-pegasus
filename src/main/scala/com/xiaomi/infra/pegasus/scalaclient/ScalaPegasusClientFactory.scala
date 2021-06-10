@@ -1,8 +1,6 @@
 package com.xiaomi.infra.pegasus.scalaclient
 
-import java.util.Properties
-
-import com.xiaomi.infra.pegasus.client.PegasusClient
+import com.xiaomi.infra.pegasus.client.{ClientOptions, PegasusClient}
 
 /**
   * [Copyright]
@@ -15,8 +13,8 @@ object ScalaPegasusClientFactory {
     new ScalaPegasusClientImpl(new PegasusClient(configPath))
   }
 
-  def createClient(props: Properties): ScalaPegasusClient = {
-    new ScalaPegasusClientImpl(new PegasusClient(props))
+  def createClient(options: ClientOptions): ScalaPegasusClient = {
+    new ScalaPegasusClientImpl(new PegasusClient(options))
   }
 
 }
