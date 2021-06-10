@@ -513,7 +513,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     std::string cdir;
     std::string err_msg;
     if (!dsn::utils::filesystem::create_directory(_options.slog_dir, cdir, err_msg)) {
-        dassert(false, "{}", err_msg);
+        dassert_f(false, "{}", err_msg);
     }
     _options.slog_dir = cdir;
     initialize_fs_manager(_options.data_dirs, _options.data_dir_tags);
