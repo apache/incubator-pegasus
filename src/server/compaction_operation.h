@@ -75,8 +75,11 @@ private:
 
 enum update_ttl_op_type
 {
+    // update ttl to epoch_now() + timestamp
     UTOT_FROM_NOW,
+    // update ttl to {current ttl in rocksdb value} + timestamp
     UTOT_FROM_CURRENT,
+    // update ttl to timestamp
     UTOT_TIMESTAMP,
     UTOT_INVALID,
 };
