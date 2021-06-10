@@ -158,7 +158,7 @@ TEST(update_ttl_test, filter)
         string_match_type hashkey_match_type;
         // operation
         update_ttl_op_type op_type;
-        uint32_t timestamp;
+        uint32_t value;
     } tests[] = {
         {true, 1000, "hashkey", 300, "hashkey", SMT_MATCH_ANYWHERE, UTOT_FROM_NOW, 1000},
         {false, 0, "hashkey", 0, "hashkey", SMT_MATCH_ANYWHERE, UTOT_FROM_CURRENT, 1000},
@@ -190,7 +190,7 @@ TEST(update_ttl_test, filter)
         auto hash_rule = static_cast<hashkey_pattern_rule *>(update_operation.rules.begin()->get());
         hash_rule->pattern = test.hashkey_pattern;
         hash_rule->match_type = test.hashkey_match_type;
-        update_operation.timestamp = test.timestamp;
+        update_operation.value = test.value;
         update_operation.type = test.op_type;
 
         std::string new_value;

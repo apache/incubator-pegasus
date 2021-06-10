@@ -76,7 +76,7 @@ bool update_ttl::filter(const std::string &hash_key,
     uint32_t new_ts = 0;
     switch (type) {
     case update_ttl_op_type::UTOT_FROM_NOW:
-        new_ts = utils::epoch_now() + timestamp;
+        new_ts = utils::epoch_now() + value;
         break;
     case update_ttl_op_type::UTOT_FROM_CURRENT: {
         auto ttl =
@@ -84,12 +84,12 @@ bool update_ttl::filter(const std::string &hash_key,
         if (ttl == 0) {
             return false;
         }
-        new_ts = timestamp + ttl;
+        new_ts = value + ttl;
         break;
     }
     case update_ttl_op_type::UTOT_TIMESTAMP:
         // make it's seconds since 2016.01.01-00:00:00 GMT
-        new_ts = timestamp - pegasus::utils::epoch_begin;
+        new_ts = value - pegasus::utils::epoch_begin;
         break;
     default:
         ddebug("invalid update ttl operation type");

@@ -75,11 +75,12 @@ private:
 
 enum update_ttl_op_type
 {
-    // update ttl to epoch_now() + timestamp
+    // update ttl to epoch_now() + value
     UTOT_FROM_NOW,
-    // update ttl to {current ttl in rocksdb value} + timestamp
+    // update ttl to {current ttl in rocksdb value} + value
     UTOT_FROM_CURRENT,
-    // update ttl to timestamp
+    // update ttl to value - pegasus::utils::epoch_begin, which means this key will expire at the
+    // timestamp of {value}
     UTOT_TIMESTAMP,
     UTOT_INVALID,
 };
@@ -97,7 +98,7 @@ public:
 
 private:
     update_ttl_op_type type;
-    uint32_t timestamp;
+    uint32_t value;
 
     FRIEND_TEST(update_ttl_test, filter);
 };
