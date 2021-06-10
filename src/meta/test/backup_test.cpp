@@ -537,6 +537,28 @@ TEST_F(policy_context_test, test_app_dropped_during_backup)
     }
 }
 
+TEST_F(policy_context_test, test_disable_backup_policy)
+{
+    _policy = _mp.get_policy();
+    _policy.is_disable = true;
+    _mp.set_policy(_policy);
+
+    _mp._backup_history.clear();
+    _mp._cur_backup.backup_id = 0;
+    _mp._cur_backup.end_time_ms = 0;
+
+    backup_info bi;
+    bi.start_time_ms = dsn_now_ms();
+    bi.end_time_ms = 0;
+    bi.app_ids = {1};
+    bi.backup_id = bi.start_time_ms;
+    _mp.add_backup_history(bi);
+
+    // 'start_backup_app_meta_unlocked()' should not be called because policy is disabled
+    _mp.continue_current_backup_unlocked();
+    ASSERT_FALSE(_mp.notifier_start_backup_app_meta_unlocked().wait_for(5000));
+}
+
 TEST_F(policy_context_test, test_backup_failed)
 {
     fail::setup();
