@@ -79,7 +79,7 @@ enum update_ttl_op_type
     UTOT_FROM_NOW,
     // update ttl to {current ttl in rocksdb value} + value
     UTOT_FROM_CURRENT,
-    // update ttl to value - pegasus::utils::epoch_begin, which means this key will expire at the
+    // update ttl to value - time(nullptr), which means this key will expire at the
     // timestamp of {value}
     UTOT_TIMESTAMP,
     UTOT_INVALID,
