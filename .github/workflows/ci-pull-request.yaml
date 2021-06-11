@@ -26,8 +26,8 @@ jobs:
     name: Check Markdown links
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: gaurav-nelson/github-action-markdown-link-check@1.0.12
+      - uses: actions/checkout@v2
+      - uses: gaurav-nelson/github-action-markdown-link-check@1.0.12
 
   lint:
     name: Lint
