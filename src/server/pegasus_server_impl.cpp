@@ -1010,10 +1010,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.kvs.reserve(batch_count);
 
     bool return_expire_ts = request.__isset.return_expire_ts ? request.return_expire_ts : false;
-    if (return_expire_ts) {
-        resp.__isset.expire_ts_seconds_list = true;
-        resp.expire_ts_seconds_list.reserve(batch_count);
-    }
 
     std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
         batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
@@ -1039,7 +1035,6 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         auto state = append_key_value_for_scan(
             resp.kvs,
-            resp.expire_ts_seconds_list,
             it->key(),
             it->value(),
             request.hash_key_filter_type,
@@ -1200,7 +1195,6 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             limiter->add_count();
 
             auto state = append_key_value_for_scan(resp.kvs,
-                                                   resp.expire_ts_seconds_list,
                                                    it->key(),
                                                    it->value(),
                                                    hash_key_filter_type,
@@ -2093,7 +2087,6 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
 
 range_iteration_state
 pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                                               std::vector<int32_t> &expire_ts_seconds_list,
                                                const rocksdb::Slice &key,
                                                const rocksdb::Slice &value,
                                                ::dsn::apps::filter_type::type hash_key_filter_type,
@@ -2153,7 +2146,7 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
     if (request_expire_ts) {
         auto expire_ts_seconds =
             pegasus_extract_expire_ts(_pegasus_data_version, utils::to_string_view(value));
-        expire_ts_seconds_list.push_back(static_cast<int32_t>(expire_ts_seconds));
+        kv.__set_expire_ts_seconds(static_cast<int32_t>(expire_ts_seconds));
     }
 
     // extract value

@@ -162,8 +162,8 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
         std::string value(_kvs[_p].value.data(), _kvs[_p].value.length());
         int ttl_seconds = 0;
-        if (_p < static_cast<int32_t>(_expire_ts_seconds_list.size())) {
-            auto expire_ts_seconds = static_cast<uint32_t>(_expire_ts_seconds_list[_p]);
+        if (_kvs[_p].__isset.expire_ts_seconds) {
+            auto expire_ts_seconds = static_cast<uint32_t>(_kvs[_p].expire_ts_seconds);
             ttl_seconds = static_cast<int>(expire_ts_seconds - utils::epoch_now());
         }
 
@@ -256,9 +256,6 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
         if (response.error == 0) {
             _lock.lock();
             _kvs = std::move(response.kvs);
-            if (response.__isset.expire_ts_seconds_list) {
-                _expire_ts_seconds_list = std::move(response.expire_ts_seconds_list);
-            }
             _p = -1;
             _context = response.context_id;
             _async_next_internal();
@@ -296,7 +293,6 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
 void pegasus_client_impl::pegasus_scanner_impl::_split_reset()
 {
     _kvs.clear();
-    _expire_ts_seconds_list.clear();
     _p = -1;
     _context = SCAN_CONTEXT_ID_NOT_EXIST;
 }

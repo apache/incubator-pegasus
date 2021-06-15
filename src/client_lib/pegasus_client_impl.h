@@ -283,7 +283,6 @@ public:
 
         uint64_t _hash;
         std::vector<::dsn::apps::key_value> _kvs;
-        std::vector<int32_t> _expire_ts_seconds_list;
         internal_info _info;
         int32_t _p;
 

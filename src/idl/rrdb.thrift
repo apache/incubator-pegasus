@@ -111,6 +111,7 @@ struct key_value
 {
     1:dsn.blob      key;
     2:dsn.blob      value;
+    3:optional i32  expire_ts_seconds;
 }
 
 struct multi_put_request
@@ -269,7 +270,6 @@ struct scan_response
     4:i32           app_id;
     5:i32           partition_index;
     6:string        server;
-    7:optional list<i32>    expire_ts_seconds_list;
 }
 
 struct duplicate_request

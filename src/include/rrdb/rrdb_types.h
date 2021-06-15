@@ -469,9 +469,10 @@ inline std::ostream &operator<<(std::ostream &out, const count_response &obj)
 
 typedef struct _key_value__isset
 {
-    _key_value__isset() : key(false), value(false) {}
+    _key_value__isset() : key(false), value(false), expire_ts_seconds(false) {}
     bool key : 1;
     bool value : 1;
+    bool expire_ts_seconds : 1;
 } _key_value__isset;
 
 class key_value
@@ -481,11 +482,12 @@ public:
     key_value(key_value &&);
     key_value &operator=(const key_value &);
     key_value &operator=(key_value &&);
-    key_value() {}
+    key_value() : expire_ts_seconds(0) {}
 
     virtual ~key_value() throw();
     ::dsn::blob key;
     ::dsn::blob value;
+    int32_t expire_ts_seconds;
 
     _key_value__isset __isset;
 
@@ -493,11 +495,17 @@ public:
 
     void __set_value(const ::dsn::blob &val);
 
+    void __set_expire_ts_seconds(const int32_t val);
+
     bool operator==(const key_value &rhs) const
     {
         if (!(key == rhs.key))
             return false;
         if (!(value == rhs.value))
+            return false;
+        if (__isset.expire_ts_seconds != rhs.__isset.expire_ts_seconds)
+            return false;
+        else if (__isset.expire_ts_seconds && !(expire_ts_seconds == rhs.expire_ts_seconds))
             return false;
         return true;
     }
@@ -1741,8 +1749,7 @@ typedef struct _scan_response__isset
           context_id(false),
           app_id(false),
           partition_index(false),
-          server(false),
-          expire_ts_seconds_list(false)
+          server(false)
     {
     }
     bool error : 1;
@@ -1751,7 +1758,6 @@ typedef struct _scan_response__isset
     bool app_id : 1;
     bool partition_index : 1;
     bool server : 1;
-    bool expire_ts_seconds_list : 1;
 } _scan_response__isset;
 
 class scan_response
@@ -1770,7 +1776,6 @@ public:
     int32_t app_id;
     int32_t partition_index;
     std::string server;
-    std::vector<int32_t> expire_ts_seconds_list;
 
     _scan_response__isset __isset;
 
@@ -1786,8 +1791,6 @@ public:
 
     void __set_server(const std::string &val);
 
-    void __set_expire_ts_seconds_list(const std::vector<int32_t> &val);
-
     bool operator==(const scan_response &rhs) const
     {
         if (!(error == rhs.error))
@@ -1801,11 +1804,6 @@ public:
         if (!(partition_index == rhs.partition_index))
             return false;
         if (!(server == rhs.server))
-            return false;
-        if (__isset.expire_ts_seconds_list != rhs.__isset.expire_ts_seconds_list)
-            return false;
-        else if (__isset.expire_ts_seconds_list &&
-                 !(expire_ts_seconds_list == rhs.expire_ts_seconds_list))
             return false;
         return true;
     }

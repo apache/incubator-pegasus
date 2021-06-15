@@ -213,7 +213,6 @@ private:
 
     range_iteration_state
     append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                              std::vector<int32_t> &expire_ts_seconds_list,
                               const rocksdb::Slice &key,
                               const rocksdb::Slice &value,
                               ::dsn::apps::filter_type::type hash_key_filter_type,
