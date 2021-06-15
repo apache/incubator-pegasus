@@ -89,6 +89,7 @@ function usage_build()
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
+    echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
 }
 function run_build()
 {
@@ -110,6 +111,7 @@ function run_build()
     SKIP_THIRDPARTY=NO
     SANITIZER=""
     TEST_MODULE=""
+    ENABLE_ROCKSDB_PORTABLE=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -170,6 +172,9 @@ function run_build()
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
                 ;;
+            --enable_rocksdb_portable)
+                ENABLE_ROCKSDB_PORTABLE=YES
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -226,6 +231,9 @@ function run_build()
     fi
     if [ ! -z $SANITIZER ]; then
         OPT="$OPT --sanitizer $SANITIZER"
+    fi
+    if [ "$ENABLE_ROCKSDB_PORTABLE" == "YES" ]; then
+        OPT="$OPT --enable_rocksdb_portable"
     fi
     ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then

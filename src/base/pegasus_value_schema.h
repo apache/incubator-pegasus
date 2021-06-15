@@ -240,9 +240,9 @@ enum data_version
 {
     VERSION_0 = 0,
     VERSION_1 = 1,
+    VERSION_2 = 2,
     VERSION_COUNT,
-    VERSION_MAX = VERSION_1,
-    /// TBD(zlw)
+    VERSION_MAX = VERSION_2,
 };
 
 struct value_params

@@ -20,6 +20,7 @@
 #include "value_schema_manager.h"
 #include "value_schema_v0.h"
 #include "value_schema_v1.h"
+#include "value_schema_v2.h"
 
 namespace pegasus {
 value_schema_manager::value_schema_manager()
@@ -30,6 +31,7 @@ value_schema_manager::value_schema_manager()
      */
     register_schema(dsn::make_unique<value_schema_v0>());
     register_schema(dsn::make_unique<value_schema_v1>());
+    register_schema(dsn::make_unique<value_schema_v2>());
 }
 
 void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
@@ -40,8 +42,25 @@ void value_schema_manager::register_schema(std::unique_ptr<value_schema> schema)
 value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_version,
                                                      dsn::string_view value) const
 {
-    /// TBD(zlw)
-    return nullptr;
+    dsn::data_input input(value);
+    uint8_t first_byte = input.read_u8();
+    // first bit = 1 means the data version is >= VERSION_2
+    if (first_byte & 0x80) {
+        // In order to keep backward compatibility, we should return latest version if the data
+        // version in value is not found. In other words, it will work well in future version if it
+        // is compatible with latest version in current
+        auto schema = get_value_schema(first_byte & 0x7F);
+        if (nullptr == schema) {
+            return get_latest_value_schema();
+        }
+        return schema;
+    } else {
+        auto schema = get_value_schema(meta_cf_data_version);
+        if (nullptr == schema) {
+            dassert_f(false, "data version({}) in meta cf is not supported", meta_cf_data_version);
+        }
+        return schema;
+    }
 }
 
 value_schema *value_schema_manager::get_value_schema(uint32_t version) const

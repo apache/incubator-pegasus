@@ -22,15 +22,22 @@
 PID=$$
 
 if [ $# -le 3 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <type> <start_task_id> "
-       "<rebalance_cluster_after_rolling>(default false) <rebalance_only_move_primary>(default true)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <type> <start_task_id> [rebalance] [only_move_pri]"
   echo
   echo "The type may be 'one' or 'all':"
   echo "  - one: rolling update only one task of replica server."
   echo "  - all: rolling update all replica servers, meta servers and collectors."
   echo
+  echo "rebalance: default value is false"
+  echo "  - if rebalance cluster after rolling update"
+  echo
+  echo "only_move_pri: default value is true"
+  echo "  - if only move primary while rebalance"
+  echo "  - this option will only be usefule when rebalance = true"
+  echo
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 one 0"
+  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 all 1 true false"
   echo
   exit 1
 fi
