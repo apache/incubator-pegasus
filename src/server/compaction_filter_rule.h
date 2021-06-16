@@ -21,15 +21,50 @@
 
 #include <rocksdb/slice.h>
 #include <dsn/utility/enum_helper.h>
+#include <dsn/cpp/json_helper.h>
 #include <gtest/gtest.h>
+#include "base/pegasus_value_schema.h"
 
 namespace pegasus {
 namespace server {
+enum filter_rule_type
+{
+    FRT_HASHKEY_PATTERN = 0,
+    FRT_SORTKEY_PATTERN,
+    FRT_TTL_RANGE,
+    FRT_INVALID,
+};
+ENUM_BEGIN(filter_rule_type, FRT_INVALID)
+ENUM_REG(FRT_HASHKEY_PATTERN)
+ENUM_REG(FRT_SORTKEY_PATTERN)
+ENUM_REG(FRT_TTL_RANGE)
+ENUM_END(filter_rule_type)
+
+ENUM_TYPE_SERIALIZATION(filter_rule_type, FRT_INVALID)
+
 /** compaction_filter_rule represents the compaction rule to filter the keys which are stored in
  * rocksdb. */
 class compaction_filter_rule
 {
 public:
+    template <typename T>
+    static compaction_filter_rule *create(const std::string &params, uint32_t pegasus_data_version)
+    {
+        T *rule = new T(pegasus_data_version);
+        if (!dsn::json::json_forwarder<T>::decode(
+                dsn::blob::create_from_bytes(params.data(), params.size()), *rule)) {
+            delete rule;
+            return nullptr;
+        }
+        return rule;
+    }
+
+    template <typename T>
+    static void register_component(const char *name)
+    {
+        dsn::utils::factory_store<compaction_filter_rule>::register_factory(
+            name, create<T>, dsn::PROVIDER_TYPE_MAIN);
+    }
     virtual ~compaction_filter_rule() = default;
 
     // TODO(zhaoliwei): we can use `value_filed` to replace existing_value in the later,
@@ -52,14 +87,16 @@ ENUM_REG(SMT_MATCH_PREFIX)
 ENUM_REG(SMT_MATCH_POSTFIX)
 ENUM_END(string_match_type)
 
+ENUM_TYPE_SERIALIZATION(string_match_type, SMT_INVALID)
+
 class hashkey_pattern_rule : public compaction_filter_rule
 {
 public:
-    hashkey_pattern_rule() = default;
-
+    hashkey_pattern_rule(uint32_t data_version = VERSION_MAX);
     bool match(const std::string &hash_key,
                const std::string &sort_key,
                const rocksdb::Slice &existing_value) const;
+    DEFINE_JSON_SERIALIZATION(pattern, match_type)
 
 private:
     std::string pattern;
@@ -69,16 +106,18 @@ private:
     FRIEND_TEST(delete_key_test, filter);
     FRIEND_TEST(update_ttl_test, filter);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
+    FRIEND_TEST(compaction_filter_rule_test, create);
 };
 
 class sortkey_pattern_rule : public compaction_filter_rule
 {
 public:
-    sortkey_pattern_rule() = default;
+    sortkey_pattern_rule(uint32_t data_version = VERSION_MAX);
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,
                const rocksdb::Slice &existing_value) const;
+    DEFINE_JSON_SERIALIZATION(pattern, match_type)
 
 private:
     std::string pattern;
@@ -86,6 +125,7 @@ private:
 
     FRIEND_TEST(sortkey_pattern_rule_test, match);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
+    FRIEND_TEST(compaction_filter_rule_test, create);
 };
 
 class ttl_range_rule : public compaction_filter_rule
@@ -96,6 +136,7 @@ public:
     bool match(const std::string &hash_key,
                const std::string &sort_key,
                const rocksdb::Slice &existing_value) const;
+    DEFINE_JSON_SERIALIZATION(start_ttl, stop_ttl)
 
 private:
     // = 0 means no limit
@@ -105,6 +146,9 @@ private:
 
     FRIEND_TEST(ttl_range_rule_test, match);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
+    FRIEND_TEST(compaction_filter_rule_test, create);
 };
+
+void register_compaction_filter_rules();
 } // namespace server
 } // namespace pegasus

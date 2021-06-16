@@ -131,5 +131,43 @@ TEST(ttl_range_rule_test, match)
         ASSERT_EQ(rule.match("", "", svalue.parts[0]), test.match);
     }
 }
+
+TEST(compaction_filter_rule_test, create)
+{
+    const uint32_t data_version = 1;
+
+    // ttl_range_rule
+    std::string params_json = "{\"start_ttl\":1000,\"stop_ttl\":2000}";
+    compaction_filter_rule *rule =
+        compaction_filter_rule::create<ttl_range_rule>(params_json, data_version);
+    ttl_range_rule *expire_rule = static_cast<ttl_range_rule *>(rule);
+    ASSERT_EQ(expire_rule->start_ttl, 1000);
+    ASSERT_EQ(expire_rule->stop_ttl, 2000);
+    delete expire_rule;
+
+    // sortkey_pattern_rule
+    params_json = "{\"pattern\":\"sortkey\",\"match_type\":\"SMT_MATCH_PREFIX\"}";
+    rule = compaction_filter_rule::create<sortkey_pattern_rule>(params_json, data_version);
+    sortkey_pattern_rule *sortkey_rule = static_cast<sortkey_pattern_rule *>(rule);
+    ASSERT_EQ(sortkey_rule->pattern, "sortkey");
+    ASSERT_EQ(sortkey_rule->match_type, SMT_MATCH_PREFIX);
+    delete sortkey_rule;
+
+    // hashkey_pattern_rule
+    params_json = "{\"pattern\":\"hashkey\",\"match_type\":\"SMT_MATCH_PREFIX\"}";
+    rule = compaction_filter_rule::create<hashkey_pattern_rule>(params_json, data_version);
+    hashkey_pattern_rule *hashkey_rule = static_cast<hashkey_pattern_rule *>(rule);
+    ASSERT_EQ(hashkey_rule->pattern, "hashkey");
+    ASSERT_EQ(hashkey_rule->match_type, SMT_MATCH_PREFIX);
+    delete hashkey_rule;
+
+    // invalid sortkey_pattern_rule
+    params_json = "{\"_patternxxx\":\"sortkey\",\"match_type\":\"SMT_MATCH_PREFIX\"}";
+    rule = compaction_filter_rule::create<sortkey_pattern_rule>(params_json, data_version);
+    ASSERT_EQ(rule, nullptr);
+    params_json = "{\"pattern\":\"sortkey\",\"_match_typexxx\":\"SMT_MATCH_PREFIX\"}";
+    rule = compaction_filter_rule::create<sortkey_pattern_rule>(params_json, data_version);
+    ASSERT_EQ(rule, nullptr);
+}
 } // namespace server
 } // namespace pegasus
