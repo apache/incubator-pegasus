@@ -93,6 +93,7 @@ class hashkey_pattern_rule : public compaction_filter_rule
 {
 public:
     hashkey_pattern_rule(uint32_t data_version = VERSION_MAX);
+
     bool match(const std::string &hash_key,
                const std::string &sort_key,
                const rocksdb::Slice &existing_value) const;
