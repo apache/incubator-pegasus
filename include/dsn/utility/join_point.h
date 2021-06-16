@@ -52,6 +52,12 @@ class join_point_base
 public:
     explicit join_point_base(const char *name) : _name(name) {}
 
+    virtual ~join_point_base()
+    {
+        _advice_entries.clear();
+        _ret_advice_entries.clear();
+    }
+
     using ReturnedAdviceT = R(Args...);
     using AdviceT = void(Args...);
 
