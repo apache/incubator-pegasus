@@ -55,6 +55,8 @@ public:
     virtual void add_timer(task *task) override;
 
     virtual void start() override {}
+
+    virtual void stop() override {}
 };
 
 class sim_task_queue : public task_queue

@@ -52,16 +52,19 @@ class simple_timer_service : public timer_service
 public:
     simple_timer_service(service_node *node, timer_service *inner_provider);
 
-    ~simple_timer_service() override;
+    ~simple_timer_service() override { stop(); }
 
     // after milliseconds, the provider should call task->enqueue()
     virtual void add_timer(task *task) override;
 
     virtual void start() override;
 
+    virtual void stop() override;
+
 private:
     boost::asio::io_service _ios;
     std::thread _worker;
+    bool _is_running;
 };
 
 } // namespace tools

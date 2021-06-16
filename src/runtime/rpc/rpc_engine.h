@@ -137,6 +137,7 @@ public:
     //
     ::dsn::error_code start(const service_app_spec &spec);
     void start_serving() { _is_serving = true; }
+    void stop_serving() { _is_serving = false; }
 
     //
     // rpc registrations

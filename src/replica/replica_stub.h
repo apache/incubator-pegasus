@@ -400,6 +400,8 @@ private:
     // replica count exectuting bulk load downloading concurrently
     std::atomic_int _bulk_load_downloading_count;
 
+    bool _is_running;
+
     // performance counters
     perf_counter_wrapper _counter_replicas_count;
     perf_counter_wrapper _counter_replicas_opening_count;

@@ -28,6 +28,7 @@
 #include "runtime/task/task_engine.h"
 #include "runtime/rpc/rpc_engine.h"
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/smart_pointers.h>
 #include <dsn/tool-api/env_provider.h>
@@ -165,7 +166,12 @@ rpc_request_task *service_node::generate_intercepted_request_task(message_ex *re
     return t;
 }
 
-service_node::~service_node() = default;
+service_node::~service_node()
+{
+    _rpc->stop_serving();
+    stop_app(false);
+    _computation->stop();
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
@@ -188,6 +194,8 @@ service_engine::service_engine()
 
 service_engine::~service_engine()
 {
+    _nodes_by_app_id.clear();
+
     UNREGISTER_VALID_HANDLER(_get_runtime_info_cmd);
     UNREGISTER_VALID_HANDLER(_get_queue_info_cmd);
 }
@@ -218,32 +226,28 @@ void service_engine::init_after_toollets()
 
 void service_engine::start_node(service_app_spec &app_spec)
 {
+    std::unordered_map<int, std::string> app_name_by_port;
     auto it = _nodes_by_app_id.find(app_spec.id);
     if (it == _nodes_by_app_id.end()) {
         for (auto p : app_spec.ports) {
             // union to existing node if any port is shared
-            if (_nodes_by_app_port.find(p) != _nodes_by_app_port.end()) {
-                service_node *n = _nodes_by_app_port[p];
-
-                dassert(false,
-                        "network port %d usage confliction for %s vs %s, "
-                        "please reconfig",
-                        p,
-                        n->full_name(),
-                        app_spec.full_name.c_str());
+            auto it = app_name_by_port.find(p);
+            if (it != app_name_by_port.end()) {
+                dassert_f(false,
+                          "network port {} usage confliction for {} vs {}, "
+                          "please reconfig",
+                          p,
+                          it->second,
+                          app_spec.full_name);
             }
+            app_name_by_port.emplace(p, app_spec.full_name);
         }
 
         auto node = std::make_shared<service_node>(app_spec);
         error_code err = node->start();
-        dassert(err == ERR_OK, "service node start failed, err = %s", err.to_string());
+        dassert_f(err == ERR_OK, "service node start failed, err = {}", err.to_string());
 
         _nodes_by_app_id[node->id()] = node;
-        for (auto p1 : node->spec().ports) {
-            _nodes_by_app_port[p1] = node.get();
-        }
-
-        return;
     }
 }
 

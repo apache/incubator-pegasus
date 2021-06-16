@@ -30,12 +30,16 @@ namespace dsn {
 namespace tools {
 
 simple_timer_service::simple_timer_service(service_node *node, timer_service *inner_provider)
-    : timer_service(node, inner_provider)
+    : timer_service(node, inner_provider), _is_running(false)
 {
 }
 
 void simple_timer_service::start()
 {
+    if (_is_running) {
+        return;
+    }
+
     _worker = std::thread([this]() {
         task::set_tls_dsn_context(node(), nullptr);
 
@@ -53,12 +57,18 @@ void simple_timer_service::start()
                 false, "io_service in simple_timer_service run failed: %s", ec.message().data());
         }
     });
+    _is_running = true;
 }
 
-simple_timer_service::~simple_timer_service()
+void simple_timer_service::stop()
 {
+    if (!_is_running) {
+        return;
+    }
+
     _ios.stop();
     _worker.join();
+    _is_running = false;
 }
 
 void simple_timer_service::add_timer(task *task)

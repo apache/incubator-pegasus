@@ -58,6 +58,7 @@ public:
     // service management
     void create();
     void start();
+    void stop();
 
     // task procecessing
     void enqueue(task *task);
@@ -95,12 +96,14 @@ class task_engine
 {
 public:
     task_engine(service_node *node);
+    ~task_engine() { stop(); }
 
     //
     // service management routines
     //
     void create(const std::list<dsn::threadpool_code> &pools);
     void start();
+    void stop();
 
     //
     // task management routines

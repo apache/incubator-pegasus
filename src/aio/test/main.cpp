@@ -9,5 +9,9 @@ GTEST_API_ int main(int argc, char **argv)
 {
     testing::InitGoogleTest(&argc, argv);
     dsn_run_config("config.ini", false);
-    return RUN_ALL_TESTS();
+    int g_test_ret = RUN_ALL_TESTS();
+#ifndef ENABLE_GCOV
+    dsn_exit(g_test_ret);
+#endif
+    return g_test_ret;
 }

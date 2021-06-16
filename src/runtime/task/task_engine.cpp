@@ -24,6 +24,8 @@
  * THE SOFTWARE.
  */
 
+#include <dsn/dist/fmt_logging.h>
+
 #include "task_engine.h"
 
 using namespace dsn::utils;
@@ -78,21 +80,40 @@ void task_worker_pool::start()
     if (_is_running)
         return;
 
-    for (auto &tsvc : _per_queue_timer_svcs)
+    for (auto &tsvc : _per_queue_timer_svcs) {
         tsvc->start();
-    for (auto &wk : _workers)
+    }
+    for (auto &wk : _workers) {
         wk->start();
+    }
 
-    ddebug("[%s] thread pool [%s] started, pool_code = %s, worker_count = %d, worker_share_core = "
-           "%s, partitioned = %s, ...",
-           _node->full_name(),
-           _spec.name.c_str(),
-           _spec.pool_code.to_string(),
-           _spec.worker_count,
-           _spec.worker_share_core ? "true" : "false",
-           _spec.partitioned ? "true" : "false");
+    ddebug_f(
+        "[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, worker_share_core = "
+        "{}, partitioned = {}, ...",
+        _node->full_name(),
+        _spec.name,
+        _spec.pool_code.to_string(),
+        _spec.worker_count,
+        _spec.worker_share_core ? "true" : "false",
+        _spec.partitioned ? "true" : "false");
 
     _is_running = true;
+}
+
+void task_worker_pool::stop()
+{
+    if (!_is_running) {
+        return;
+    }
+
+    for (auto &tsvc : _per_queue_timer_svcs) {
+        tsvc->stop();
+    }
+    for (auto &wk : _workers) {
+        wk->stop();
+    }
+    _is_running = false;
+    ddebug_f("[{}]: thread pool {} stopped", _node->full_name(), _spec.name);
 }
 
 void task_worker_pool::add_timer(task *t)
@@ -213,8 +234,22 @@ void task_engine::start()
         if (pl)
             pl->start();
     }
-
     _is_running = true;
+    ddebug_f("[{}]: task engine started", _node->full_name());
+}
+
+void task_engine::stop()
+{
+    if (!_is_running) {
+        return;
+    }
+
+    for (auto &pl : _pools) {
+        if (pl)
+            pl->stop();
+    }
+    _is_running = false;
+    ddebug_f("[{}]: task engine stopped", _node->full_name());
 }
 
 volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn::task_code code, int hash)

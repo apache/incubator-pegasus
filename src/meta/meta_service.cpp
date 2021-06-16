@@ -81,10 +81,17 @@ meta_service::meta_service()
     _access_controller = security::create_meta_access_controller();
 }
 
-meta_service::~meta_service()
+meta_service::~meta_service() { stop(); }
+
+void meta_service::stop()
 {
+    zauto_write_lock l(_meta_lock);
+    if (!_started.load()) {
+        return;
+    }
     _tracker.cancel_outstanding_tasks();
     unregister_ctrl_commands();
+    _started = false;
 }
 
 bool meta_service::check_freeze() const
