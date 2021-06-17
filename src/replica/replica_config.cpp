@@ -79,6 +79,7 @@ void replica::on_config_proposal(configuration_update_request &proposal)
         }
     }
 
+    _app_info.__set_duplicating(proposal.info.duplicating);
     switch (proposal.type) {
     case config_type::CT_ASSIGN_PRIMARY:
     case config_type::CT_UPGRADE_TO_PRIMARY:

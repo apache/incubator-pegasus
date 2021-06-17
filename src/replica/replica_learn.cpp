@@ -1476,16 +1476,16 @@ void replica::on_learn_completion_notification_reply(error_code err,
 
 void replica::on_add_learner(const group_check_request &request)
 {
-    ddebug("%s: process add learner, primary = %s, ballot = %" PRId64
-           ", status = %s, last_committed_decree = %" PRId64,
-           name(),
-           request.config.primary.to_string(),
-           request.config.ballot,
-           enum_to_string(request.config.status),
-           request.last_committed_decree);
+    ddebug_replica("process add learner, primary = {}, ballot ={}, status ={}, "
+                   "last_committed_decree = {}, duplicating = {}",
+                   request.config.primary.to_string(),
+                   request.config.ballot,
+                   enum_to_string(request.config.status),
+                   request.last_committed_decree,
+                   request.app.duplicating);
 
     if (request.config.ballot < get_ballot()) {
-        dwarn("%s: on_add_learner ballot is old, skipped", name());
+        dwarn_replica("on_add_learner ballot is old, skipped");
         return;
     }
 
@@ -1494,9 +1494,11 @@ void replica::on_add_learner(const group_check_request &request)
         if (!update_local_configuration(request.config, true))
             return;
 
-        dassert(partition_status::PS_POTENTIAL_SECONDARY == status(),
-                "invalid partition_status, status = %s",
-                enum_to_string(status()));
+        dassert_replica(partition_status::PS_POTENTIAL_SECONDARY == status(),
+                        "invalid partition_status, status = {}",
+                        enum_to_string(status()));
+
+        _duplicating = request.app.duplicating;
         init_learn(request.config.learner_signature);
     }
 }
