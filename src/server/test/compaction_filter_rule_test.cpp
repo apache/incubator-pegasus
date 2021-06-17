@@ -137,7 +137,7 @@ TEST(compaction_filter_rule_test, create)
     const uint32_t data_version = 1;
 
     // ttl_range_rule
-    std::string params_json = "{\"start_ttl\":1000,\"stop_ttl\":2000}";
+    std::string params_json = R"({"start_ttl":1000,"stop_ttl":2000})";
     compaction_filter_rule *rule =
         compaction_filter_rule::create<ttl_range_rule>(params_json, data_version);
     ttl_range_rule *expire_rule = static_cast<ttl_range_rule *>(rule);
@@ -146,7 +146,7 @@ TEST(compaction_filter_rule_test, create)
     delete expire_rule;
 
     // sortkey_pattern_rule
-    params_json = "{\"pattern\":\"sortkey\",\"match_type\":\"SMT_MATCH_PREFIX\"}";
+    params_json = R"({"pattern":"sortkey","match_type":"SMT_MATCH_PREFIX"})";
     rule = compaction_filter_rule::create<sortkey_pattern_rule>(params_json, data_version);
     sortkey_pattern_rule *sortkey_rule = static_cast<sortkey_pattern_rule *>(rule);
     ASSERT_EQ(sortkey_rule->pattern, "sortkey");
@@ -154,7 +154,7 @@ TEST(compaction_filter_rule_test, create)
     delete sortkey_rule;
 
     // hashkey_pattern_rule
-    params_json = "{\"pattern\":\"hashkey\",\"match_type\":\"SMT_MATCH_PREFIX\"}";
+    params_json = R"({"pattern":"hashkey","match_type":"SMT_MATCH_PREFIX"})";
     rule = compaction_filter_rule::create<hashkey_pattern_rule>(params_json, data_version);
     hashkey_pattern_rule *hashkey_rule = static_cast<hashkey_pattern_rule *>(rule);
     ASSERT_EQ(hashkey_rule->pattern, "hashkey");
@@ -162,10 +162,10 @@ TEST(compaction_filter_rule_test, create)
     delete hashkey_rule;
 
     // invalid sortkey_pattern_rule
-    params_json = "{\"_patternxxx\":\"sortkey\",\"match_type\":\"SMT_MATCH_PREFIX\"}";
+    params_json = R"({"_patternxxx":"sortkey","match_type":"SMT_MATCH_PREFIX"})";
     rule = compaction_filter_rule::create<sortkey_pattern_rule>(params_json, data_version);
     ASSERT_EQ(rule, nullptr);
-    params_json = "{\"pattern\":\"sortkey\",\"_match_typexxx\":\"SMT_MATCH_PREFIX\"}";
+    params_json = R"({"pattern":"sortkey","_match_typexxx":"SMT_MATCH_PREFIX"})";
     rule = compaction_filter_rule::create<sortkey_pattern_rule>(params_json, data_version);
     ASSERT_EQ(rule, nullptr);
 }
