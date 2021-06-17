@@ -5,7 +5,7 @@
 [hbase]: https://hbase.apache.org/
 [website]: https://pegasus.apache.org
 
-![pegasus-logo](docs/media-img/pegasus-logo.png)
+![pegasus-logo](https://github.com/apache/incubator-pegasus-website/blob/master/assets/images/pegasus-logo-inv.png)
 
 [![Build Status](https://travis-ci.org/apache/incubator-pegasus.svg?branch=master)](https://travis-ci.org/apache/incubator-pegasus)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
