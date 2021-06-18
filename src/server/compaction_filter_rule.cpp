@@ -69,10 +69,7 @@ bool sortkey_pattern_rule::match(const std::string &hash_key,
     return string_pattern_match(sort_key, match_type, pattern);
 }
 
-ttl_range_rule::ttl_range_rule(uint32_t data_version)
-    : data_version(data_version)
-{
-}
+ttl_range_rule::ttl_range_rule(uint32_t data_version) : data_version(data_version) {}
 
 bool ttl_range_rule::match(const std::string &hash_key,
                            const std::string &sort_key,
