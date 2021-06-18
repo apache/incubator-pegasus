@@ -244,27 +244,16 @@ TEST(compaction_filter_operation_test, creator)
 
 TEST(compaction_filter_operation_test, create_operations)
 {
-    /**
-        std::string json =
-                "{\"ops\":[{\"type\":\"FOT_DELETE\",\"params\":\"\",\"rules\":[{\"type\":\"FRT_HASHKEY_"
-                "PATTERN\",\"params\":\"{\\\"pattern\\\":\\\"hashkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_"
-                "PREFIX\\\"}\"}]},{\"type\":\"FOT_UPDATE_TTL\",\"params\":\"{\\\"type\\\":\\\"UTOT_FROM_"
-                "NOW\\\",\\\"timestamp\\\":10000}\",\"rules\":[{\"type\":\"FRT_HASHKEY_PATTERN\","
-                "\"params\":\"{\\\"pattern\\\":\\\"hashkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_"
-                "ANYWHERE\\\"}\"},{\"type\":\"FRT_SORTKEY_PATTERN\",\"params\":\"{\\\"pattern\\\":"
-                "\\\"sortkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_POSTFIX\\\"}\"},{\"type\":\"FRT_"
-                "TTL_RANGE\",\"params\":\"{\\\"start_ttl\\\":0,\\\"stop_ttl\\\":2000}\"}]}]"
-                "}";
-                */
-    std::string json = R"({"ops":[{"type":"COT_DELETE","params":"","rules":[{"type":"FRT_HASHKEY_"
-                "PATTERN","params":"{\"pattern\":\"hashkey\",\"match_type\":\"SMT_MATCH_"
-                "PREFIX\"}"}]},{"type":"COT_UPDATE_TTL","params":"{\"type\":\"UTOT_FROM_"
-                "NOW\",\"value\":10000}","rules":[{"type":"FRT_HASHKEY_PATTERN","
-                ""params":"{\"pattern\":\"hashkey\",\"match_type\":\"SMT_MATCH_"
-                "ANYWHERE\"}"},{"type":"FRT_SORTKEY_PATTERN","params":"{\"pattern\":"
-                "\"sortkey\",\"match_type\":\"SMT_MATCH_POSTFIX\"}"},{"type":"FRT_"
-                "TTL_RANGE","params":"{\"start_ttl\":0,\"stop_ttl\":2000}"}]}]"
-                "})";
+    std::string json =
+        "{\"ops\":[{\"type\":\"COT_DELETE\",\"params\":\"\",\"rules\":[{\"type\":\"FRT_HASHKEY_"
+        "PATTERN\",\"params\":\"{\\\"pattern\\\":\\\"hashkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_"
+        "PREFIX\\\"}\"}]},{\"type\":\"COT_UPDATE_TTL\",\"params\":\"{\\\"type\\\":\\\"UTOT_FROM_"
+        "NOW\\\",\\\"value\\\":10000}\",\"rules\":[{\"type\":\"FRT_HASHKEY_PATTERN\","
+        "\"params\":\"{\\\"pattern\\\":\\\"hashkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_"
+        "ANYWHERE\\\"}\"},{\"type\":\"FRT_SORTKEY_PATTERN\",\"params\":\"{\\\"pattern\\\":"
+        "\\\"sortkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_POSTFIX\\\"}\"},{\"type\":\"FRT_"
+        "TTL_RANGE\",\"params\":\"{\\\"start_ttl\\\":0,\\\"stop_ttl\\\":2000}\"}]}]"
+        "}";
     auto operations = create_compaction_operations(json, 1);
     ASSERT_EQ(operations.size(), 2);
 
