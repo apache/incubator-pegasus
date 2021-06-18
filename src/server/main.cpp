@@ -21,7 +21,7 @@
 #include "pegasus_service_app.h"
 #include "info_collector_app.h"
 #include "brief_stat.h"
-#include "compaction_filter_rule.h"
+#include "compaction_operation.h"
 
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
@@ -88,7 +88,7 @@ void dsn_app_registration_pegasus()
         "server-stat - query selected perf counters",
         "server-stat",
         [](const std::vector<std::string> &args) { return pegasus::get_brief_stat(); });
-    pegasus::server::register_compaction_filter_rules();
+    pegasus::server::register_compaction_operations();
 }
 
 int main(int argc, char **argv)

@@ -25,6 +25,18 @@
 
 namespace pegasus {
 namespace server {
+enum compaction_operation_type
+{
+    COT_UPDATE_TTL,
+    COT_DELETE,
+    COT_INVALID,
+};
+ENUM_BEGIN(compaction_operation_type, COT_INVALID)
+ENUM_REG(COT_UPDATE_TTL)
+ENUM_REG(COT_DELETE)
+ENUM_END(compaction_operation_type)
+
+ENUM_TYPE_SERIALIZATION(compaction_operation_type, COT_INVALID)
 
 typedef std::vector<std::unique_ptr<compaction_filter_rule>> filter_rules;
 /** compaction_operation represents the compaction operation. A compaction operation will be
@@ -32,6 +44,20 @@ typedef std::vector<std::unique_ptr<compaction_filter_rule>> filter_rules;
 class compaction_operation
 {
 public:
+    template <typename T>
+    static compaction_operation *
+    create(const std::string &params, filter_rules &&rules, uint32_t pegasus_data_version)
+    {
+        return T::creator(params, std::move(rules), pegasus_data_version);
+    }
+
+    template <typename T>
+    static void register_component(const char *name)
+    {
+        dsn::utils::factory_store<compaction_operation>::register_factory(
+            name, create<T>, dsn::PROVIDER_TYPE_MAIN);
+    }
+
     compaction_operation(filter_rules &&rules, uint32_t pegasus_data_version)
         : rules(std::move(rules)), pegasus_data_version(pegasus_data_version)
     {
@@ -60,6 +86,12 @@ protected:
 class delete_key : public compaction_operation
 {
 public:
+    static compaction_operation *
+    creator(const std::string &params, filter_rules &&rules, uint32_t pegasus_data_version)
+    {
+        return new delete_key(std::move(rules), pegasus_data_version);
+    }
+
     delete_key(filter_rules &&rules, uint32_t pegasus_data_version);
 
     bool filter(const std::string &hash_key,
@@ -84,10 +116,29 @@ enum update_ttl_op_type
     UTOT_TIMESTAMP,
     UTOT_INVALID,
 };
+ENUM_BEGIN(update_ttl_op_type, UTOT_INVALID)
+ENUM_REG(UTOT_FROM_NOW)
+ENUM_REG(UTOT_FROM_CURRENT)
+ENUM_REG(UTOT_TIMESTAMP)
+ENUM_END(update_ttl_op_type)
+
+ENUM_TYPE_SERIALIZATION(update_ttl_op_type, UTOT_INVALID)
 
 class update_ttl : public compaction_operation
 {
 public:
+    static compaction_operation *
+    creator(const std::string &params, filter_rules &&rules, uint32_t pegasus_data_version)
+    {
+        update_ttl *operation = new update_ttl(std::move(rules), pegasus_data_version);
+        if (!dsn::json::json_forwarder<update_ttl>::decode(
+                dsn::blob::create_from_bytes(params.data(), params.size()), *operation)) {
+            delete operation;
+            return nullptr;
+        }
+        return operation;
+    }
+
     update_ttl(filter_rules &&rules, uint32_t pegasus_data_version);
 
     bool filter(const std::string &hash_key,
@@ -95,12 +146,16 @@ public:
                 const rocksdb::Slice &existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
+    DEFINE_JSON_SERIALIZATION(type, value)
 
 private:
     update_ttl_op_type type;
     uint32_t value;
 
     FRIEND_TEST(update_ttl_test, filter);
+    FRIEND_TEST(compaction_filter_operation_test, creator);
 };
+
+void register_compaction_operations();
 } // namespace server
 } // namespace pegasus

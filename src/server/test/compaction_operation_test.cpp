@@ -222,5 +222,24 @@ TEST(update_ttl_test, filter)
         }
     }
 }
+
+TEST(compaction_filter_operation_test, creator)
+{
+    uint32_t data_version = 1;
+    std::string params_json = R"({"type":"UTOT_FROM_CURRENT","value":2000})";
+    update_ttl *update_ttl_op =
+        static_cast<update_ttl *>(update_ttl::creator(params_json, {}, data_version));
+    ASSERT_EQ(update_ttl_op->value, 2000);
+    ASSERT_EQ(update_ttl_op->type, UTOT_FROM_CURRENT);
+    delete update_ttl_op;
+
+    // invalid operation
+    params_json = R"({"type_xxx":"UTOT_FROM_CURRENT","value":2000})";
+    compaction_operation *invalid_op = update_ttl::creator(params_json, {}, data_version);
+    ASSERT_EQ(invalid_op, nullptr);
+    params_json = R"({"type":"UTOT_FROM_CURRENT","value_xxx":2000})";
+    invalid_op = update_ttl::creator(params_json, {}, data_version);
+    ASSERT_EQ(invalid_op, nullptr);
+}
 } // namespace server
 } // namespace pegasus

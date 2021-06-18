@@ -102,5 +102,11 @@ bool update_ttl::filter(const std::string &hash_key,
     return false;
 }
 
+void register_compaction_operations()
+{
+    delete_key::register_component<delete_key>(enum_to_string(COT_DELETE));
+    update_ttl::register_component<update_ttl>(enum_to_string(COT_UPDATE_TTL));
+    register_compaction_filter_rules();
+}
 } // namespace server
 } // namespace pegasus
