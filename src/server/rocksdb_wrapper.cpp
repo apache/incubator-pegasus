@@ -22,7 +22,7 @@
 #include <dsn/utility/fail_point.h>
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
-#include "base/pegasus_value_schema.h"
+#include "base/value_generator.h"
 
 namespace pegasus {
 namespace server {
@@ -37,12 +37,14 @@ rocksdb_wrapper::rocksdb_wrapper(pegasus_server_impl *server)
       _default_ttl(0)
 {
     _write_batch = dsn::make_unique<rocksdb::WriteBatch>();
-    _value_generator = dsn::make_unique<pegasus_value_generator>();
+    _value_generator = dsn::make_unique<value_generator>();
 
     _wt_opts = dsn::make_unique<rocksdb::WriteOptions>();
     // disable write ahead logging as replication handles logging instead now
     _wt_opts->disableWAL = true;
 }
+
+rocksdb_wrapper::~rocksdb_wrapper() = default;
 
 int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
 {
@@ -119,8 +121,8 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
 
     rocksdb::Slice skey = utils::to_rocksdb_slice(raw_key);
     rocksdb::SliceParts skey_parts(&skey, 1);
-    rocksdb::SliceParts svalue = _value_generator->generate_value(
-        _pegasus_data_version, value, db_expire_ts(expire_sec), new_timetag);
+    rocksdb::SliceParts svalue =
+        _value_generator->generate_value(value, db_expire_ts(expire_sec), new_timetag);
     rocksdb::Status s = _write_batch->Put(skey_parts, svalue);
     if (dsn_unlikely(!s.ok())) {
         ::dsn::blob hash_key, sort_key;

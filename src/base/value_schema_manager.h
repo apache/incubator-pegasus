@@ -21,6 +21,7 @@
 
 #include "pegasus_value_schema.h"
 #include <dsn/utility/singleton.h>
+#include <dsn/utility/smart_pointers.h>
 
 namespace pegasus {
 
@@ -42,7 +43,6 @@ private:
 };
 
 /// Generates timetag in host endian.
-/// \see comment on pegasus_value_generator::generate_value_v1
 inline uint64_t generate_timetag(uint64_t timestamp, uint8_t cluster_id, bool deleted_tag)
 {
     return timestamp << 8u | cluster_id << 1u | deleted_tag;
