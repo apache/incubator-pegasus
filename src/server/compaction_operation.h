@@ -45,10 +45,9 @@ class compaction_operation
 {
 public:
     template <typename T>
-    static compaction_operation *
-    create(const std::string &params, filter_rules &&rules, uint32_t pegasus_data_version)
+    static compaction_operation *create(const std::string &params, uint32_t data_version)
     {
-        return T::creator(params, std::move(rules), pegasus_data_version);
+        return T::creator(params, data_version);
     }
 
     template <typename T>
@@ -58,15 +57,17 @@ public:
             name, create<T>, dsn::PROVIDER_TYPE_MAIN);
     }
 
-    compaction_operation(filter_rules &&rules, uint32_t pegasus_data_version)
-        : rules(std::move(rules)), pegasus_data_version(pegasus_data_version)
+    compaction_operation(filter_rules &&rules, uint32_t data_version)
+        : rules(std::move(rules)), data_version(data_version)
     {
     }
+    explicit compaction_operation(uint32_t data_version) : data_version(data_version) {}
     virtual ~compaction_operation() = 0;
 
     bool all_rules_match(const std::string &hash_key,
                          const std::string &sort_key,
                          const rocksdb::Slice &existing_value) const;
+    void set_rules(filter_rules &&rules);
     /**
      * @return false indicates that this key-value should be removed
      * If you want to modify the existing_value, you can pass it back through new_value and
@@ -80,19 +81,19 @@ public:
 
 protected:
     filter_rules rules;
-    uint32_t pegasus_data_version;
+    uint32_t data_version;
 };
 
 class delete_key : public compaction_operation
 {
 public:
-    static compaction_operation *
-    creator(const std::string &params, filter_rules &&rules, uint32_t pegasus_data_version)
+    static compaction_operation *creator(const std::string &params, uint32_t data_version)
     {
-        return new delete_key(std::move(rules), pegasus_data_version);
+        return new delete_key(data_version);
     }
 
-    delete_key(filter_rules &&rules, uint32_t pegasus_data_version);
+    delete_key(filter_rules &&rules, uint32_t data_version);
+    explicit delete_key(uint32_t data_version);
 
     bool filter(const std::string &hash_key,
                 const std::string &sort_key,
@@ -103,6 +104,7 @@ public:
 private:
     FRIEND_TEST(delete_key_test, filter);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
+    FRIEND_TEST(compaction_filter_operation_test, create_operations);
 };
 
 enum update_ttl_op_type
@@ -127,10 +129,9 @@ ENUM_TYPE_SERIALIZATION(update_ttl_op_type, UTOT_INVALID)
 class update_ttl : public compaction_operation
 {
 public:
-    static compaction_operation *
-    creator(const std::string &params, filter_rules &&rules, uint32_t pegasus_data_version)
+    static compaction_operation *creator(const std::string &params, uint32_t data_version)
     {
-        update_ttl *operation = new update_ttl(std::move(rules), pegasus_data_version);
+        update_ttl *operation = new update_ttl(data_version);
         if (!dsn::json::json_forwarder<update_ttl>::decode(
                 dsn::blob::create_from_bytes(params.data(), params.size()), *operation)) {
             delete operation;
@@ -139,7 +140,8 @@ public:
         return operation;
     }
 
-    update_ttl(filter_rules &&rules, uint32_t pegasus_data_version);
+    update_ttl(filter_rules &&rules, uint32_t data_version);
+    explicit update_ttl(uint32_t data_version);
 
     bool filter(const std::string &hash_key,
                 const std::string &sort_key,
@@ -154,8 +156,11 @@ private:
 
     FRIEND_TEST(update_ttl_test, filter);
     FRIEND_TEST(compaction_filter_operation_test, creator);
+    FRIEND_TEST(compaction_filter_operation_test, create_operations);
 };
 
+typedef std::vector<std::unique_ptr<compaction_operation>> compaction_operations;
+compaction_operations create_compaction_operations(const std::string &json, uint32_t data_version);
 void register_compaction_operations();
 } // namespace server
 } // namespace pegasus
