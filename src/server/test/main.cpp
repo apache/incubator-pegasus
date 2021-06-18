@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication_service_app.h>
-#include <server/compaction_operation.h>
+#include "server/compaction_operation.h"
 #include "server/pegasus_server_impl.h"
 
 std::atomic_bool gtest_done{false};
