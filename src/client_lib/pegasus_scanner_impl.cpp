@@ -66,7 +66,7 @@ int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
                         std::string &&sort,
                         std::string &&str,
                         internal_info &&ii,
-                        int ttl_seconds) {
+                        uint32_t expire_ts_seconds) {
         ret = err;
         hashkey = std::move(hash);
         sortkey = std::move(sort);
@@ -161,10 +161,9 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         std::string hash_key, sort_key;
         pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
         std::string value(_kvs[_p].value.data(), _kvs[_p].value.length());
-        int ttl_seconds = 0;
+        uint32_t expire_ts_seconds = 0;
         if (_kvs[_p].__isset.expire_ts_seconds) {
-            auto expire_ts_seconds = static_cast<uint32_t>(_kvs[_p].expire_ts_seconds);
-            ttl_seconds = static_cast<int>(expire_ts_seconds - utils::epoch_now());
+            expire_ts_seconds = static_cast<uint32_t>(_kvs[_p].expire_ts_seconds);
         }
 
         auto &callback = _queue.front();
@@ -176,7 +175,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
                      std::move(sort_key),
                      std::move(value),
                      std::move(info),
-                     ttl_seconds);
+                     expire_ts_seconds);
             _lock.lock();
             if (_queue.size() == 1) {
                 // keep the last callback until exit this function
@@ -320,13 +319,13 @@ void pegasus_client_impl::pegasus_scanner_impl_wrapper::async_next(
                                                                      std::string &&sort_key,
                                                                      std::string &&value,
                                                                      internal_info &&info,
-                                                                     int ttl_seconds) {
+                                                                     uint32_t expire_ts_seconds) {
         user_callback(error_code,
                       std::move(hash_key),
                       std::move(sort_key),
                       std::move(value),
                       std::move(info),
-                      ttl_seconds);
+                      expire_ts_seconds);
     });
 }
 

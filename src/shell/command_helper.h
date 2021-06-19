@@ -270,13 +270,24 @@ inline void scan_data_next(scan_data_context *context)
                                                std::string &&sort_key,
                                                std::string &&value,
                                                pegasus::pegasus_client::internal_info &&info,
-                                               int ttl_seconds) {
+                                               uint32_t expire_ts_seconds) {
             if (ret == pegasus::PERR_OK) {
                 if (validate_filter(context, sort_key, value)) {
+                    bool ts_expired = false;
+                    int ttl_seconds = 0;
                     switch (context->op) {
                     case SCAN_COPY:
                         context->split_request_count++;
-                        if (context->no_overwrite) {
+                        {
+                            auto epoch_now = pegasus::utils::epoch_now();
+                            ts_expired = pegasus::check_if_ts_expired(epoch_now, expire_ts_seconds);
+                            if (expire_ts_seconds > 0 && !ts_expired) {
+                                ttl_seconds = static_cast<int>(expire_ts_seconds - epoch_now);
+                            }
+                        }
+                        if (ts_expired) {
+                            scan_data_next(context);
+                        } else if (context->no_overwrite) {
                             auto callback = [context](
                                 int err,
                                 pegasus::pegasus_client::check_and_set_results &&results,

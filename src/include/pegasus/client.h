@@ -312,7 +312,7 @@ public:
                                std::string && /*sort_key*/,
                                std::string && /*value*/,
                                internal_info && /*info*/,
-                               int /*ttl*/)>
+                               uint32_t /*expire_ts_seconds*/)>
         async_scan_next_callback_t;
     typedef std::function<void(int /*error_code*/, pegasus_scanner * /*hash_scanner*/)>
         async_get_scanner_callback_t;
