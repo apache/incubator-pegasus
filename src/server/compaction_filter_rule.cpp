@@ -51,12 +51,16 @@ bool string_pattern_match(const std::string &value,
     }
 }
 
+hashkey_pattern_rule::hashkey_pattern_rule(uint32_t data_version) {}
+
 bool hashkey_pattern_rule::match(const std::string &hash_key,
                                  const std::string &sort_key,
                                  const rocksdb::Slice &existing_value) const
 {
     return string_pattern_match(hash_key, match_type, pattern);
 }
+
+sortkey_pattern_rule::sortkey_pattern_rule(uint32_t data_version) {}
 
 bool sortkey_pattern_rule::match(const std::string &hash_key,
                                  const std::string &sort_key,
@@ -86,6 +90,15 @@ bool ttl_range_rule::match(const std::string &hash_key,
         return true;
     }
     return false;
+}
+
+void register_compaction_filter_rules()
+{
+    ttl_range_rule::register_component<ttl_range_rule>(enum_to_string(FRT_TTL_RANGE));
+    sortkey_pattern_rule::register_component<sortkey_pattern_rule>(
+        enum_to_string(FRT_SORTKEY_PATTERN));
+    hashkey_pattern_rule::register_component<hashkey_pattern_rule>(
+        enum_to_string(FRT_HASHKEY_PATTERN));
 }
 } // namespace server
 } // namespace pegasus
