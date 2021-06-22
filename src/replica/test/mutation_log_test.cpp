@@ -268,7 +268,10 @@ namespace replication {
 class mutation_log_test : public replica_test_base
 {
 public:
-    mutation_log_test() = default;
+    gpid _gpid;
+
+public:
+    mutation_log_test() : _gpid(_replica->get_gpid()) {}
 
     void SetUp() override
     {
@@ -495,5 +498,98 @@ TEST_F(mutation_log_test, replay_start_decree)
     ASSERT_EQ(mlog->get_log_file_map().size(), 3);
 }
 
+TEST_F(mutation_log_test, reset_from)
+{
+    std::vector<mutation_ptr> expected;
+    { // writing logs
+        mutation_log_ptr mlog =
+            new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+
+        EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+
+        for (int i = 0; i < 10; i++) {
+            mutation_ptr mu = create_test_mutation(2 + i, "hello!");
+            expected.push_back(mu);
+            mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+        }
+        mlog->flush();
+
+        ASSERT_TRUE(utils::filesystem::rename_path(_log_dir, _log_dir + ".tmp"));
+    }
+
+    ASSERT_TRUE(utils::filesystem::directory_exists(_log_dir + ".tmp"));
+    ASSERT_FALSE(utils::filesystem::directory_exists(_log_dir));
+
+    // create another set of logs
+    mutation_log_ptr mlog =
+        new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+    EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+    for (int i = 0; i < 1000; i++) {
+        mutation_ptr mu = create_test_mutation(2000 + i, "hello!");
+        mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+    }
+    mlog->flush();
+
+    // reset from the tmp log dir.
+    std::vector<mutation_ptr> actual;
+    auto err = mlog->reset_from(_log_dir + ".tmp",
+                                [&](int, mutation_ptr &mu) -> bool {
+                                    actual.push_back(mu);
+                                    return true;
+                                },
+                                [](error_code err) { ASSERT_EQ(err, ERR_OK); });
+    ASSERT_EQ(err, ERR_OK);
+    ASSERT_EQ(actual.size(), expected.size());
+
+    // the tmp dir has been removed.
+    ASSERT_FALSE(utils::filesystem::directory_exists(_log_dir + ".tmp"));
+    ASSERT_TRUE(utils::filesystem::directory_exists(_log_dir));
+}
+
+// multi-threaded testing. ensure reset_from will wait until
+// all previous writes complete.
+TEST_F(mutation_log_test, reset_from_while_writing)
+{
+    std::vector<mutation_ptr> expected;
+    { // writing logs
+        mutation_log_ptr mlog =
+            new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+        EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+
+        for (int i = 0; i < 10; i++) {
+            mutation_ptr mu = create_test_mutation(2 + i, "hello!");
+            expected.push_back(mu);
+            mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
+        }
+        mlog->flush();
+
+        ASSERT_TRUE(utils::filesystem::rename_path(_log_dir, _log_dir + ".test"));
+    }
+
+    // create another set of logs
+    mutation_log_ptr mlog =
+        new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+    EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
+
+    // given with a large number of mutation to ensure
+    // plog::reset_from will face many uncompleted writes.
+    for (int i = 0; i < 1000 * 100; i++) {
+        mutation_ptr mu = create_test_mutation(2000 + i, "hello!");
+        mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, mlog->tracker(), nullptr, 0);
+    }
+
+    // reset from the tmp log dir.
+    std::vector<mutation_ptr> actual;
+    auto err = mlog->reset_from(_log_dir + ".test",
+                                [&](int, mutation_ptr &mu) -> bool {
+                                    actual.push_back(mu);
+                                    return true;
+                                },
+                                [](error_code err) { ASSERT_EQ(err, ERR_OK); });
+    ASSERT_EQ(err, ERR_OK);
+
+    mlog->flush();
+    ASSERT_EQ(actual.size(), expected.size());
+}
 } // namespace replication
 } // namespace dsn
