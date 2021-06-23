@@ -1540,7 +1540,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"no_overwrite", no_argument, 0, 'n'},
                                            {"no_value", no_argument, 0, 'i'},
                                            {"geo_data", no_argument, 0, 'g'},
-                                           {"preserve_ttl", no_argument, 0, 'k'},
+                                           {"no_ttl", no_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
     std::string target_cluster_name;
@@ -1566,7 +1566,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nigk", long_options, &option_index);
+            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nige", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1641,8 +1641,8 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         case 'g':
             is_geo_data = true;
             break;
-        case 'k':
-            options.return_expire_ts = true;
+        case 'e':
+            options.return_expire_ts = false;
             break;
         default:
             return false;
