@@ -2295,7 +2295,7 @@ void pegasus_server_impl::update_replica_rocksdb_amp_statistics()
     if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
         auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
         auto write_amplification = write_amplification_iter == props.end()
-                                       ? 0
+                                       ? 1
                                        : std::stod(write_amplification_iter->second);
         _pfc_rdb_write_amplification->set(write_amplification);
         dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
