@@ -26,6 +26,7 @@
 #include <rocksdb/options.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <dsn/utility/flags.h>
 #include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
 #include <rocksdb/rate_limiter.h>
@@ -39,7 +40,7 @@
 
 namespace pegasus {
 namespace server {
-
+DSN_DECLARE_int32(read_amp_bytes_per_bit);
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;

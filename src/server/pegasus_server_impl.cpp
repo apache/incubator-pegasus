@@ -2258,14 +2258,18 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     }
 
     // Update _pfc_rdb_read_amplification
-    int64_t estimate_useful_bytes =
-        _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
-    if (estimate_useful_bytes) {
-        int64_t read_amplification =
-            _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) / estimate_useful_bytes;
-        _pfc_rdb_write_amplification->set(read_amplification);
-        dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
+    if (FLAGS_read_amp_bytes_per_bit > 0) {
+        int64_t estimate_useful_bytes =
+            _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
+        if (estimate_useful_bytes) {
+            int64_t read_amplification =
+                _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
+                estimate_useful_bytes;
+            _pfc_rdb_write_amplification->set(read_amplification);
+            dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
+        }
     }
+
     // Update _pfc_rdb_bf_seek_negatives
     uint64_t bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
     _pfc_rdb_bf_seek_negatives->set(bf_seek_negatives);

@@ -44,6 +44,20 @@ DSN_DEFINE_bool("pegasus.server",
                 false,
                 "whether to enable write rate auto tune when open rocksdb write limit");
 
+// detail see
+// https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
+DSN_DEFINE_int32("pegasus.server",
+                 read_amp_bytes_per_bit,
+                 0,
+                 "config for using to calculate the "
+                 "read amplification, must be a power "
+                 "of 2, zero means disable count read "
+                 "amplification");
+
+DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per_bit) -> bool {
+    return read_amp_bytes_per_bit >= 0;
+});
+
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -260,7 +274,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "parse rocksdb_compression_type failed.");
 
     rocksdb::BlockBasedTableOptions tbl_opts;
-    tbl_opts.read_amp_bytes_per_bit = 1; // todo
+    tbl_opts.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
 
     if (dsn_config_get_value_bool("pegasus.server",
                                   "rocksdb_disable_table_block_cache",
