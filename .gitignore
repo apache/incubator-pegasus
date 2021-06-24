@@ -7,9 +7,9 @@ config-*.ini
 .kill_test.shell.*
 pegasus_kill_test.log
 kill_history.txt
-pegasus_server
-pegasus_shell
-pegasus_bench
+pegasus_server*
+pegasus_shell*
+pegasus_bench*
 pegasus_kill_test
 src/include/pegasus/git_commit.h
 src/sample/data
@@ -99,5 +99,5 @@ packages
 src/test/function_test/pegasus-bulk-load-function-test-files/
 config-shell.ini.*
 *.tar.gz
-*.release
+pegasus-server*
 *.log
