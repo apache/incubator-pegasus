@@ -99,5 +99,4 @@ packages
 src/test/function_test/pegasus-bulk-load-function-test-files/
 config-shell.ini.*
 *.tar.gz
-pegasus-server*
 *.log
