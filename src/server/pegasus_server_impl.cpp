@@ -2309,7 +2309,7 @@ void pegasus_server_impl::update_replica_rocksdb_amp_statistics()
             int64_t read_amplification =
                 _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
                 estimate_useful_bytes;
-            _pfc_rdb_write_amplification->set(read_amplification);
+            _pfc_rdb_read_amplification->set(read_amplification);
             dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
         }
     }
