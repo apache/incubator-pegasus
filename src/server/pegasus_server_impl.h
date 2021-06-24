@@ -246,6 +246,7 @@ private:
                          const ::dsn::blob &value);
 
     void update_replica_rocksdb_statistics();
+    void update_replica_rocksdb_amp_statistics();
 
     static void update_server_rocksdb_statistics();
 
@@ -405,6 +406,7 @@ private:
 
     std::chrono::seconds _update_rdb_stat_interval;
     ::dsn::task_ptr _update_replica_rdb_stat;
+    ::dsn::task_ptr _update_replica_amp_stat;
     static ::dsn::task_ptr _update_server_rdb_stat;
 
     pegasus_manual_compact_service _manual_compact_svc;
@@ -450,8 +452,8 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
-    ::dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
-    ::dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
 };
 
 } // namespace server

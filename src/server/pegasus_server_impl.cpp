@@ -72,6 +72,9 @@ std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffe
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_amplification;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_read_amplification;
+
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
@@ -1532,13 +1535,20 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                       [this]() { this->update_replica_rocksdb_statistics(); },
                                       _update_rdb_stat_interval);
 
+    dinfo_replica("start the update rocksdb amp statistics timer task");
+    _update_replica_amp_stat =
+        ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
+                                      nullptr,
+                                      [this]() { this->update_replica_rocksdb_amp_statistics(); },
+                                      kServerStatUpdateTimeSec);
+
     // These counters are singletons on this server shared by all replicas, their metrics update
     // task should be scheduled once an interval on the server view.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
-        dassert(kServerStatUpdateTimeSec.count() != 0,
-                "kServerStatUpdateTimeSec shouldn't be zero");
+        dassert_f(kServerStatUpdateTimeSec.count() != 0,
+                  "kServerStatUpdateTimeSec shouldn't be zero");
         _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
@@ -1588,6 +1598,10 @@ void pegasus_server_impl::cancel_background_work(bool wait)
     if (_update_replica_rdb_stat != nullptr) {
         _update_replica_rdb_stat->cancel(true);
         _update_replica_rdb_stat = nullptr;
+    }
+    if (_update_replica_amp_stat != nullptr) {
+        _update_replica_amp_stat->cancel(true);
+        _update_replica_amp_stat = nullptr;
     }
     _tracker.cancel_outstanding_tasks();
 
@@ -2246,30 +2260,6 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
     }
 
-    // Update _pfc_rdb_write_amplification
-    std::map<std::string, std::string> props;
-    if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
-        auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
-        auto write_amplification = write_amplification_iter == props.end()
-                                       ? 0
-                                       : std::stod(write_amplification_iter->second);
-        _pfc_rdb_write_amplification->set(write_amplification);
-        dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
-    }
-
-    // Update _pfc_rdb_read_amplification
-    if (FLAGS_read_amp_bytes_per_bit > 0) {
-        int64_t estimate_useful_bytes =
-            _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
-        if (estimate_useful_bytes) {
-            int64_t read_amplification =
-                _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
-                estimate_useful_bytes;
-            _pfc_rdb_write_amplification->set(read_amplification);
-            dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
-        }
-    }
-
     // Update _pfc_rdb_bf_seek_negatives
     uint64_t bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
     _pfc_rdb_bf_seek_negatives->set(bf_seek_negatives);
@@ -2296,6 +2286,33 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     uint64_t bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
     _pfc_rdb_bf_point_negatives->set(bf_point_negatives);
     dinfo_replica("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
+}
+
+void pegasus_server_impl::update_replica_rocksdb_amp_statistics()
+{
+    // Update _pfc_rdb_write_amplification
+    std::map<std::string, std::string> props;
+    if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
+        auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
+        auto write_amplification = write_amplification_iter == props.end()
+                                       ? 0
+                                       : std::stod(write_amplification_iter->second);
+        _pfc_rdb_write_amplification->set(write_amplification);
+        dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
+    }
+
+    // Update _pfc_rdb_read_amplification
+    if (FLAGS_read_amp_bytes_per_bit > 0) {
+        int64_t estimate_useful_bytes =
+            _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
+        if (estimate_useful_bytes) {
+            int64_t read_amplification =
+                _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
+                estimate_useful_bytes;
+            _pfc_rdb_write_amplification->set(read_amplification);
+            dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
+        }
+    }
 }
 
 void pegasus_server_impl::update_server_rocksdb_statistics()

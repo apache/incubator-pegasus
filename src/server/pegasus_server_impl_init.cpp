@@ -608,6 +608,20 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "rdb.write_limiter_rate_bytes",
             COUNTER_TYPE_NUMBER,
             "statistic the through bytes of rocksdb write rate limiter");
+
+        _pfc_rdb_write_amplification.init_global_counter(
+            "replica",
+            "app.pegasus",
+            "rdb.write_amplification",
+            COUNTER_TYPE_NUMBER,
+            "statistics the write amplification of rocksdb");
+
+        _pfc_rdb_read_amplification.init_global_counter(
+            "replica",
+            "app.pegasus",
+            "rdb.read_amplification",
+            COUNTER_TYPE_NUMBER,
+            "statistics the read amplification of rocksdb");
     });
 
     snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());
@@ -665,14 +679,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                                  "statistics the number of times bloom FullFilter "
                                                  "has not avoided the reads and data actually "
                                                  "exist");
-
-    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
-    _pfc_rdb_write_amplification.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
-
-    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
-    _pfc_rdb_read_amplification.init_app_counter(
-        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read amplification of rocksdb");
 }
 } // namespace server
 } // namespace pegasus
