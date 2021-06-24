@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -11,18 +26,28 @@
 namespace pegasus {
 namespace server {
 
+class hotkey_collector;
+
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
 public:
-    explicit capacity_unit_calculator(replica_base *r);
+    capacity_unit_calculator(replica_base *r,
+                             std::shared_ptr<hotkey_collector> read_hotkey_collector,
+                             std::shared_ptr<hotkey_collector> write_hotkey_collector);
 
-    void add_get_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
-    void add_multi_get_cu(int32_t status,
+    virtual ~capacity_unit_calculator() = default;
+
+    void
+    add_get_cu(dsn::message_ex *req, int32_t status, const dsn::blob &key, const dsn::blob &value);
+    void add_multi_get_cu(dsn::message_ex *req,
+                          int32_t status,
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
-    void add_scan_cu(int32_t status, const std::vector<::dsn::apps::key_value> &kvs);
-    void add_sortkey_count_cu(int32_t status);
-    void add_ttl_cu(int32_t status);
+    void add_scan_cu(dsn::message_ex *req,
+                     int32_t status,
+                     const std::vector<::dsn::apps::key_value> &kvs);
+    void add_sortkey_count_cu(dsn::message_ex *req, int32_t status, const dsn::blob &hash_key);
+    void add_ttl_cu(dsn::message_ex *req, int32_t status, const dsn::blob &key);
 
     void add_put_cu(int32_t status, const dsn::blob &key, const dsn::blob &value);
     void add_remove_cu(int32_t status, const dsn::blob &key);
@@ -32,7 +57,7 @@ public:
     void add_multi_remove_cu(int32_t status,
                              const dsn::blob &hash_key,
                              const std::vector<::dsn::blob> &sort_keys);
-    void add_incr_cu(int32_t status);
+    void add_incr_cu(int32_t status, const dsn::blob &key);
     void add_check_and_set_cu(int32_t status,
                               const dsn::blob &hash_key,
                               const dsn::blob &check_sort_key,
@@ -49,9 +74,11 @@ protected:
 #ifdef PEGASUS_UNIT_TEST
     virtual int64_t add_read_cu(int64_t read_data_size);
     virtual int64_t add_write_cu(int64_t write_data_size);
+    virtual void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes);
 #else
     int64_t add_read_cu(int64_t read_data_size);
     int64_t add_write_cu(int64_t write_data_size);
+    void add_backup_request_bytes(dsn::message_ex *req, int64_t bytes);
 #endif
 
 private:
@@ -70,6 +97,28 @@ private:
     ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_set_bytes;
     ::dsn::perf_counter_wrapper _pfc_check_and_mutate_bytes;
+    ::dsn::perf_counter_wrapper _pfc_backup_request_bytes;
+
+    /*
+        hotkey capturing weight rules:
+            add_get_cu: whether find the key or not, weight = 1(read_collector),
+            add_multi_get_cu: weight = returned sortkey count(read_collector),
+            add_scan_cu : not capture now,
+            add_sortkey_count_cu: weight = 1(read_collector),
+            add_ttl_cu: weight = 1(read_collector),
+            add_put_cu: weight = 1(write_collector),
+            add_remove_cu: weight = 1(write_collector),
+            add_multi_put_cu: weight = returned sortkey count(write_collector),
+            add_multi_remove_cu: weight = returned sortkey count(write_collector),
+            add_incr_cu: if find the key, weight = 1(write_collector),
+                         else weight = 1(read_collector)
+            add_check_and_set_cu: if find the key, weight = 1(write_collector),
+                         else weight = 1(read_collector)
+            add_check_and_mutate_cu: if find the key, weight = mutate_list size
+                                     else weight = 1
+    */
+    std::shared_ptr<hotkey_collector> _read_hotkey_collector;
+    std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 };
 
 } // namespace server

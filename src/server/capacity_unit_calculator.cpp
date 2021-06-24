@@ -1,16 +1,42 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "capacity_unit_calculator.h"
+
 #include <dsn/utility/config_api.h>
 #include <rocksdb/status.h>
+#include "hotkey_collector.h"
 
 namespace pegasus {
 namespace server {
 
-capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_base(r)
+capacity_unit_calculator::capacity_unit_calculator(
+    replica_base *r,
+    std::shared_ptr<hotkey_collector> read_hotkey_collector,
+    std::shared_ptr<hotkey_collector> write_hotkey_collector)
+    : replica_base(r),
+      _read_hotkey_collector(read_hotkey_collector),
+      _write_hotkey_collector(write_hotkey_collector)
 {
+    dassert(_read_hotkey_collector != nullptr, "read hotkey collector is a nullptr");
+    dassert(_write_hotkey_collector != nullptr, "write hotkey collector is a nullptr");
+
     _read_capacity_unit_size =
         dsn_config_get_value_uint64("pegasus.server",
                                     "perf_counter_read_capacity_unit_size",
@@ -68,6 +94,10 @@ capacity_unit_calculator::capacity_unit_calculator(replica_base *r) : replica_ba
     snprintf(name, 255, "check_and_mutate_bytes@%s", str_gpid.c_str());
     _pfc_check_and_mutate_bytes.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the check and mutate bytes");
+
+    snprintf(name, 255, "backup_request_bytes@%s", str_gpid.c_str());
+    _pfc_backup_request_bytes.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the backup request bytes");
 }
 
 int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
@@ -88,23 +118,29 @@ int64_t capacity_unit_calculator::add_write_cu(int64_t write_data_size)
     return write_cu;
 }
 
-void capacity_unit_calculator::add_get_cu(int32_t status,
+void capacity_unit_calculator::add_get_cu(dsn::message_ex *req,
+                                          int32_t status,
                                           const dsn::blob &key,
                                           const dsn::blob &value)
 {
-    _pfc_get_bytes->add(key.size() + value.size());
+    auto total_size = key.size() + value.size();
+    _pfc_get_bytes->add(total_size);
+    add_backup_request_bytes(req, total_size);
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
 
     if (status == rocksdb::Status::kNotFound) {
         add_read_cu(1);
+        _read_hotkey_collector->capture_raw_key(key, 1);
         return;
     }
     add_read_cu(key.size() + value.size());
+    _read_hotkey_collector->capture_raw_key(key, 1);
 }
 
-void capacity_unit_calculator::add_multi_get_cu(int32_t status,
+void capacity_unit_calculator::add_multi_get_cu(dsn::message_ex *req,
+                                                int32_t status,
                                                 const dsn::blob &hash_key,
                                                 const std::vector<::dsn::apps::key_value> &kvs)
 {
@@ -114,21 +150,27 @@ void capacity_unit_calculator::add_multi_get_cu(int32_t status,
         multi_get_bytes += kv.key.size() + kv.value.size();
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
-    _pfc_multi_get_bytes->add(hash_key.size() + multi_get_bytes);
+    auto total_size = hash_key.size() + multi_get_bytes;
+    _pfc_multi_get_bytes->add(total_size);
+    add_backup_request_bytes(req, total_size);
 
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
         status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
         return;
     }
 
+    uint64_t key_count = kvs.size();
     if (status == rocksdb::Status::kNotFound) {
         add_read_cu(1);
+        _read_hotkey_collector->capture_hash_key(hash_key, key_count);
         return;
     }
     add_read_cu(data_size);
+    _read_hotkey_collector->capture_hash_key(hash_key, key_count);
 }
 
-void capacity_unit_calculator::add_scan_cu(int32_t status,
+void capacity_unit_calculator::add_scan_cu(dsn::message_ex *req,
+                                           int32_t status,
                                            const std::vector<::dsn::apps::key_value> &kvs)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
@@ -141,28 +183,38 @@ void capacity_unit_calculator::add_scan_cu(int32_t status,
         return;
     }
 
+    // TODO: (Tangyanzhao) hotkey detect in scan
     int64_t data_size = 0;
     for (const auto &kv : kvs) {
         data_size += kv.key.size() + kv.value.size();
     }
     add_read_cu(data_size);
     _pfc_scan_bytes->add(data_size);
+    add_backup_request_bytes(req, data_size);
 }
 
-void capacity_unit_calculator::add_sortkey_count_cu(int32_t status)
+void capacity_unit_calculator::add_sortkey_count_cu(dsn::message_ex *req,
+                                                    int32_t status,
+                                                    const dsn::blob &hash_key)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
     add_read_cu(1);
+    add_backup_request_bytes(req, 1);
+    _read_hotkey_collector->capture_hash_key(hash_key, 1);
 }
 
-void capacity_unit_calculator::add_ttl_cu(int32_t status)
+void capacity_unit_calculator::add_ttl_cu(dsn::message_ex *req,
+                                          int32_t status,
+                                          const dsn::blob &key)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound) {
         return;
     }
     add_read_cu(1);
+    add_backup_request_bytes(req, 1);
+    _read_hotkey_collector->capture_raw_key(key, 1);
 }
 
 void capacity_unit_calculator::add_put_cu(int32_t status,
@@ -174,6 +226,7 @@ void capacity_unit_calculator::add_put_cu(int32_t status,
         return;
     }
     add_write_cu(key.size() + value.size());
+    _write_hotkey_collector->capture_raw_key(key, 1);
 }
 
 void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &key)
@@ -182,6 +235,7 @@ void capacity_unit_calculator::add_remove_cu(int32_t status, const dsn::blob &ke
         return;
     }
     add_write_cu(key.size());
+    _write_hotkey_collector->capture_raw_key(key, 1);
 }
 
 void capacity_unit_calculator::add_multi_put_cu(int32_t status,
@@ -195,6 +249,8 @@ void capacity_unit_calculator::add_multi_put_cu(int32_t status,
         data_size += hash_key.size() + kv.key.size() + kv.value.size();
     }
     _pfc_multi_put_bytes->add(hash_key.size() + multi_put_bytes);
+    uint64_t key_count = kvs.size();
+    _write_hotkey_collector->capture_hash_key(hash_key, key_count);
 
     if (status != rocksdb::Status::kOk) {
         return;
@@ -214,18 +270,22 @@ void capacity_unit_calculator::add_multi_remove_cu(int32_t status,
     for (const auto &sort_key : sort_keys) {
         data_size += hash_key.size() + sort_key.size();
     }
+    uint64_t key_count = sort_keys.size();
+    _write_hotkey_collector->capture_hash_key(hash_key, key_count);
     add_write_cu(data_size);
 }
 
-void capacity_unit_calculator::add_incr_cu(int32_t status)
+void capacity_unit_calculator::add_incr_cu(int32_t status, const dsn::blob &key)
 {
     if (status != rocksdb::Status::kOk && status != rocksdb::Status::kInvalidArgument) {
         return;
     }
     if (status == rocksdb::Status::kOk) {
         add_write_cu(1);
+        _write_hotkey_collector->capture_raw_key(key, 1);
     }
     add_read_cu(1);
+    _read_hotkey_collector->capture_raw_key(key, 1);
 }
 
 void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
@@ -244,8 +304,10 @@ void capacity_unit_calculator::add_check_and_set_cu(int32_t status,
 
     if (status == rocksdb::Status::kOk) {
         add_write_cu(hash_key.size() + set_sort_key.size() + value.size());
+        _write_hotkey_collector->capture_hash_key(hash_key, 1);
     }
     add_read_cu(hash_key.size() + check_sort_key.size());
+    _read_hotkey_collector->capture_hash_key(hash_key, 1);
 }
 
 void capacity_unit_calculator::add_check_and_mutate_cu(
@@ -267,11 +329,20 @@ void capacity_unit_calculator::add_check_and_mutate_cu(
         status != rocksdb::Status::kTryAgain) {
         return;
     }
-
+    uint64_t key_count = mutate_list.size();
     if (status == rocksdb::Status::kOk) {
         add_write_cu(data_size);
+        _write_hotkey_collector->capture_hash_key(hash_key, key_count);
     }
     add_read_cu(hash_key.size() + check_sort_key.size());
+    _read_hotkey_collector->capture_hash_key(hash_key, 1);
+}
+
+void capacity_unit_calculator::add_backup_request_bytes(dsn::message_ex *req, int64_t bytes)
+{
+    if (req->is_backup_request()) {
+        _pfc_backup_request_bytes->add(bytes);
+    }
 }
 
 } // namespace server

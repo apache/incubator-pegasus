@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include <pegasus/version.h>
 #include <dsn/utility/strings.h>
@@ -438,18 +453,45 @@ static command_executor commands[] = {
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
     {"pause_dup", "pause duplication", "<app_name> <dup_id>", pause_dup},
-    {"disk_capacity",
-     "query disk capacity info",
-     "[-n|--node replica_server(ip:port)][-o|--out file_name][-j|-json][-d|--detail]",
-     query_disk_capacity},
-    {"disk_replica",
-     "query disk replica count info",
-     "[-n|--node replica_server(ip:port)][-a|-app app_name][-o|--out file_name][-j|--json]",
-     query_disk_replica},
     {"set_dup_fail_mode",
      "set fail_mode of duplication",
      "<app_name> <dup_id> <slow|skip>",
      set_dup_fail_mode},
+    {
+        "start_bulk_load",
+        "start app bulk load",
+        "<-a --app_name str> <-c --cluster_name str> <-p --file_provider_type str> <-r "
+        "--root_path>",
+        start_bulk_load,
+    },
+    {
+        "query_bulk_load_status",
+        "query app bulk load status",
+        "<-a --app_name str> [-i --partition_index num] [-d --detailed]",
+        query_bulk_load_status,
+    },
+    {
+        "pause_bulk_load", "pause app bulk load", "<-a --app_name str>", pause_bulk_load,
+    },
+    {
+        "restart_bulk_load", "restart app bulk load", "<-a --app_name str>", restart_bulk_load,
+    },
+    {
+        "cancel_bulk_load",
+        "cancel app bulk load",
+        "<-a --app_name str> [-f --forced]",
+        cancel_bulk_load,
+    },
+    {
+        "detect_hotkey",
+        "start or stop hotkey detection on a replica of a replica server",
+        "<-a|--app_id num> "
+        "<-p|--partition_index num> "
+        "<-t|--hotkey_type read|write> "
+        "<-c|--detect_action start|stop|query> "
+        "<-d|--address str>",
+        detect_hotkey,
+    },
     {
         "exit", "exit shell", "", exit_shell,
     },

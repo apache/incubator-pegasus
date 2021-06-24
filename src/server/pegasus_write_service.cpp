@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"
@@ -8,10 +23,13 @@
 #include "capacity_unit_calculator.h"
 
 #include <dsn/cpp/message_utils.h>
+#include <dsn/dist/replication/replication.codes.h>
 #include <dsn/utility/defer.h>
 
 namespace pegasus {
 namespace server {
+
+DEFINE_TASK_CODE(LPC_INGESTION, TASK_PRIORITY_COMMON, THREAD_POOL_INGESTION)
 
 pegasus_write_service::pegasus_write_service(pegasus_server_impl *server)
     : replica_base(server),
@@ -170,7 +188,7 @@ int pegasus_write_service::incr(int64_t decree,
     int err = _impl->incr(decree, update, resp);
 
     if (_server->is_primary()) {
-        _cu_calculator->add_incr_cu(resp.error);
+        _cu_calculator->add_incr_cu(resp.error, update.key);
     }
 
     _pfc_incr_latency->set(dsn_now_ns() - start_time);
@@ -353,6 +371,34 @@ int pegasus_write_service::duplicate(int64_t decree,
     resp.__set_error(rocksdb::Status::kInvalidArgument);
     resp.__set_error_hint(fmt::format("unrecognized task code {}", request.task_code));
     return empty_put(ctx.decree);
+}
+
+int pegasus_write_service::ingestion_files(int64_t decree,
+                                           const dsn::replication::ingestion_request &req,
+                                           dsn::replication::ingestion_response &resp)
+{
+    // TODO(heyuchen): consider cu
+
+    resp.err = dsn::ERR_OK;
+    // write empty put to flush decree
+    resp.rocksdb_error = empty_put(decree);
+    if (resp.rocksdb_error != 0) {
+        resp.err = dsn::ERR_TRY_AGAIN;
+        return resp.rocksdb_error;
+    }
+
+    // ingest files asynchronously
+    _server->set_ingestion_status(dsn::replication::ingestion_status::IS_RUNNING);
+    dsn::tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
+        dsn::error_code err =
+            _impl->ingestion_files(decree, _server->bulk_load_dir(), req.metadata);
+        if (err == dsn::ERR_OK) {
+            _server->set_ingestion_status(dsn::replication::ingestion_status::IS_SUCCEED);
+        } else {
+            _server->set_ingestion_status(dsn::replication::ingestion_status::IS_FAILED);
+        }
+    });
+    return rocksdb::Status::kOk;
 }
 
 } // namespace server

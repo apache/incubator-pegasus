@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 file("GLOB"
     source_files
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
@@ -13,7 +30,7 @@ target_include_directories(pegasus_client_impl_objects PUBLIC $<TARGET_PROPERTY:
 set(pegasus_client_static_lib ${CMAKE_CURRENT_BINARY_DIR}/libpegasus_client_static.a)
 add_custom_target(combine_lib
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_runtime.a
-    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_client.a
+    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_client.a
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_common.a
     COMMAND ar -x ${DSN_THIRDPARTY_ROOT}/lib/libthrift.a
     COMMAND ar -x ${CMAKE_BINARY_DIR}/base/libpegasus_base.a
@@ -36,7 +53,8 @@ add_library(pegasus_client_shared SHARED $<TARGET_OBJECTS:pegasus_client_impl_ob
 target_link_libraries(pegasus_client_shared PRIVATE
     pegasus_base
     dsn_runtime
-    dsn_replication_client
+    dsn_utils
+    dsn_client
     dsn_replication_common
     thrift)
 install(TARGETS pegasus_client_shared DESTINATION "lib")

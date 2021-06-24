@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -131,22 +146,23 @@ pegasus_restore_key(const ::dsn::blob &key, std::string &hash_key, std::string &
     }
 }
 
-// calculate hash from rocksdb key.
-inline uint64_t pegasus_key_hash(const ::dsn::blob &key)
+// calculate hash from rocksdb key or rocksdb slice
+template <typename T>
+inline uint64_t pegasus_key_hash(const T &key)
 {
-    dassert(key.length() >= 2, "key length must be no less than 2");
+    dassert(key.size() >= 2, "key length must be no less than 2");
 
     // hash_key_len is in big endian
     uint16_t hash_key_len = be16toh(*(int16_t *)(key.data()));
 
     if (hash_key_len > 0) {
         // hash_key_len > 0, compute hash from hash_key
-        dassert(key.length() >= 2 + hash_key_len,
+        dassert(key.size() >= 2 + hash_key_len,
                 "key length must be no less than (2 + hash_key_len)");
-        return dsn::utils::crc64_calc(key.buffer_ptr() + 2, hash_key_len, 0);
+        return dsn::utils::crc64_calc(key.data() + 2, hash_key_len, 0);
     } else {
         // hash_key_len == 0, compute hash from sort_key
-        return dsn::utils::crc64_calc(key.buffer_ptr() + 2, key.length() - 2, 0);
+        return dsn::utils::crc64_calc(key.data() + 2, key.size() - 2, 0);
     }
 }
 
@@ -154,6 +170,18 @@ inline uint64_t pegasus_key_hash(const ::dsn::blob &key)
 inline uint64_t pegasus_hash_key_hash(const ::dsn::blob &hash_key)
 {
     return dsn::utils::crc64_calc(hash_key.data(), hash_key.length(), 0);
+}
+
+// check key should be served this partition
+// Notice: partition_version should be check if is greater than 0 before calling this function
+template <class T>
+inline bool check_pegasus_key_hash(const T &key, int32_t pidx, int32_t partition_version)
+{
+    auto target_pidx = pegasus_key_hash(key) & partition_version;
+    if (dsn_unlikely(target_pidx != pidx)) {
+        return false;
+    }
+    return true;
 }
 
 } // namespace pegasus

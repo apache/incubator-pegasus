@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -12,14 +27,15 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <rrdb/rrdb_types.h>
-#include <rrdb/rrdb.server.h>
 #include <gtest/gtest_prod.h>
+#include <rocksdb/rate_limiter.h>
 
 #include "key_ttl_compaction_filter.h"
 #include "pegasus_scan_context.h"
 #include "pegasus_manual_compact_service.h"
 #include "pegasus_write_service.h"
 #include "range_read_limiter.h"
+#include "pegasus_read_service.h"
 
 namespace pegasus {
 namespace server {
@@ -27,8 +43,17 @@ namespace server {
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;
+class hotkey_collector;
 
-class pegasus_server_impl : public ::dsn::apps::rrdb_service
+enum class range_iteration_state
+{
+    kNormal = 1,
+    kExpired,
+    kFiltered,
+    kHashInvalid
+};
+
+class pegasus_server_impl : public pegasus_read_service
 {
 public:
     static void register_service()
@@ -42,18 +67,12 @@ public:
     ~pegasus_server_impl() override;
 
     // the following methods may set physical error if internal error occurs
-    void on_get(const ::dsn::blob &key,
-                ::dsn::rpc_replier<::dsn::apps::read_response> &reply) override;
-    void on_multi_get(const ::dsn::apps::multi_get_request &args,
-                      ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply) override;
-    void on_sortkey_count(const ::dsn::blob &args,
-                          ::dsn::rpc_replier<::dsn::apps::count_response> &reply) override;
-    void on_ttl(const ::dsn::blob &key,
-                ::dsn::rpc_replier<::dsn::apps::ttl_response> &reply) override;
-    void on_get_scanner(const ::dsn::apps::get_scanner_request &args,
-                        ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
-    void on_scan(const ::dsn::apps::scan_request &args,
-                 ::dsn::rpc_replier<::dsn::apps::scan_response> &reply) override;
+    void on_get(get_rpc rpc) override;
+    void on_multi_get(multi_get_rpc rpc) override;
+    void on_sortkey_count(sortkey_count_rpc rpc) override;
+    void on_ttl(ttl_rpc rpc) override;
+    void on_get_scanner(get_scanner_rpc rpc) override;
+    void on_scan(scan_rpc rpc) override;
     void on_clear_scanner(const int64_t &args) override;
 
     // input:
@@ -113,13 +132,15 @@ public:
     // must be thread safe
     // this method will not trigger flush(), just copy even if the app is empty.
     ::dsn::error_code copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                             /*output*/ int64_t *last_decree) override;
+                                             /*output*/ int64_t *last_decree,
+                                             bool flush_memtable = false) override;
 
     //
     // help function, just copy checkpoint to specified dir and ignore _is_checkpointing.
     // if checkpoint_dir already exist, this function will delete it first.
     ::dsn::error_code copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
-                                                    /**output*/ int64_t *checkpoint_decree);
+                                                    /**output*/ int64_t *checkpoint_decree,
+                                                    bool flush_memtable = false);
 
     // get the last checkpoint
     // if succeed:
@@ -158,14 +179,27 @@ public:
 
     std::string dump_write_request(dsn::message_ex *request) override;
 
+    // Not thread-safe
+    void set_ingestion_status(dsn::replication::ingestion_status::type status) override;
+
+    dsn::replication::ingestion_status::type get_ingestion_status() override
+    {
+        return _ingestion_status;
+    }
+
 private:
     friend class manual_compact_service_test;
     friend class pegasus_compression_options_test;
     friend class pegasus_server_impl_test;
+    friend class hotkey_collector_test;
     FRIEND_TEST(pegasus_server_impl_test, default_data_version);
+    FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
+    FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_app_envs);
+    FRIEND_TEST(pegasus_server_impl_test, test_stop_db_twice);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
+    friend class rocksdb_wrapper;
 
     // parse checkpoint directories in the data dir
     // checkpoint directory format is: "checkpoint.{decree}"
@@ -177,29 +211,26 @@ private:
 
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
-    // return 1 if value is appended
-    // return 2 if value is expired
-    // return 3 if value is filtered
-    int append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                                  const rocksdb::Slice &key,
-                                  const rocksdb::Slice &value,
-                                  ::dsn::apps::filter_type::type hash_key_filter_type,
-                                  const ::dsn::blob &hash_key_filter_pattern,
-                                  ::dsn::apps::filter_type::type sort_key_filter_type,
-                                  const ::dsn::blob &sort_key_filter_pattern,
-                                  uint32_t epoch_now,
-                                  bool no_value);
+    range_iteration_state
+    append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
+                              const rocksdb::Slice &key,
+                              const rocksdb::Slice &value,
+                              ::dsn::apps::filter_type::type hash_key_filter_type,
+                              const ::dsn::blob &hash_key_filter_pattern,
+                              ::dsn::apps::filter_type::type sort_key_filter_type,
+                              const ::dsn::blob &sort_key_filter_pattern,
+                              uint32_t epoch_now,
+                              bool no_value,
+                              bool request_validate_hash);
 
-    // return 1 if value is appended
-    // return 2 if value is expired
-    // return 3 if value is filtered
-    int append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
-                                       const rocksdb::Slice &key,
-                                       const rocksdb::Slice &value,
-                                       ::dsn::apps::filter_type::type sort_key_filter_type,
-                                       const ::dsn::blob &sort_key_filter_pattern,
-                                       uint32_t epoch_now,
-                                       bool no_value);
+    range_iteration_state
+    append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
+                                   const rocksdb::Slice &key,
+                                   const rocksdb::Slice &value,
+                                   ::dsn::apps::filter_type::type sort_key_filter_type,
+                                   const ::dsn::blob &sort_key_filter_pattern,
+                                   uint32_t epoch_now,
+                                   bool no_value);
 
     // return true if the filter type is supported
     bool is_filter_type_supported(::dsn::apps::filter_type::type filter_type)
@@ -236,6 +267,8 @@ private:
 
     void update_rocksdb_iteration_threshold(const std::map<std::string, std::string> &envs);
 
+    void update_validate_partition_hash(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -256,6 +289,9 @@ private:
 
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
+
+    void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
+                                      rocksdb::ColumnFamilyOptions *target_opts);
 
     // return true if successfully set
     bool set_options(const std::unordered_map<std::string, std::string> &new_options);
@@ -302,13 +338,20 @@ private:
         return false;
     }
 
-    ::dsn::error_code check_meta_cf(const std::string &path, bool *need_create_meta_cf);
+    ::dsn::error_code
+    check_column_families(const std::string &path, bool *missing_meta_cf, bool *miss_data_cf);
 
     void release_db();
 
     ::dsn::error_code flush_all_family_columns(bool wait);
 
+    void on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
+                          dsn::replication::detect_hotkey_response &resp) override;
+
+    uint32_t query_data_version() const override;
+
 private:
+    static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
     // Column family names.
     static const std::string DATA_COLUMN_FAMILY_NAME;
@@ -338,6 +381,9 @@ private:
     rocksdb::ColumnFamilyHandle *_data_cf;
     rocksdb::ColumnFamilyHandle *_meta_cf;
     static std::shared_ptr<rocksdb::Cache> _s_block_cache;
+    static std::shared_ptr<rocksdb::WriteBufferManager> _s_write_buffer_manager;
+    static std::shared_ptr<rocksdb::RateLimiter> _s_rate_limiter;
+    static int64_t _rocksdb_limiter_last_total_through;
     volatile bool _is_open;
     uint32_t _pegasus_data_version;
     std::atomic<int64_t> _last_durable_decree;
@@ -363,8 +409,15 @@ private:
     pegasus_manual_compact_service _manual_compact_svc;
 
     std::atomic<int32_t> _partition_version;
+    bool _validate_partition_hash{false};
+
+    dsn::replication::ingestion_status::type _ingestion_status{
+        dsn::replication::ingestion_status::IS_INVALID};
 
     dsn::task_tracker _tracker;
+
+    std::shared_ptr<hotkey_collector> _read_hotkey_collector;
+    std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
@@ -381,6 +434,7 @@ private:
 
     // rocksdb internal statistics
     // server level
+    static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
     static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
     // replica level
     ::dsn::perf_counter_wrapper _pfc_rdb_sst_count;

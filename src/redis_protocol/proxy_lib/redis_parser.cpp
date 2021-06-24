@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "redis_parser.h"
 
@@ -284,12 +299,9 @@ bool redis_parser::parse_stream()
             // string content + CR + LF
             if (_total_length >= _current_str.length + 2) {
                 if (_current_str.length > 0) {
-                    char *ptr =
-                        reinterpret_cast<char *>(dsn::tls_trans_malloc(_current_str.length));
-                    std::shared_ptr<char> str_data(ptr,
-                                                   [](char *ptr) { dsn::tls_trans_free(ptr); });
-                    eat_all(str_data.get(), _current_str.length);
-                    _current_str.data.assign(std::move(str_data), 0, _current_str.length);
+                    std::string str_data(_current_str.length, '\0');
+                    eat_all(const_cast<char *>(str_data.data()), _current_str.length);
+                    _current_str.data = dsn::blob::create_from_bytes(std::move(str_data));
                 }
                 dverify(eat(CR));
                 dverify(eat(LF));

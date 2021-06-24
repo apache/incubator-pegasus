@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "info_collector_app.h"
 #include "reporter/pegasus_counter_reporter.h"
@@ -16,8 +31,9 @@ namespace pegasus {
 namespace server {
 
 info_collector_app::info_collector_app(const dsn::service_app_info *info)
-    : service_app(info), _updater_started(false), _http_server(new ::dsn::http_server())
+    : service_app(info), _updater_started(false)
 {
+    dsn::start_http_server();
 }
 
 info_collector_app::~info_collector_app() {}

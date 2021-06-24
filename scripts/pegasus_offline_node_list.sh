@@ -1,4 +1,20 @@
 #!/bin/bash
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 #
 # Offline replica servers using minos.
 #
@@ -6,17 +22,29 @@
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_copy_rate_megabytes>(default 100)>"
   echo
   echo "For example:"
-  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3"
+  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 100"
   echo
   exit 1
 fi
 
+echo "UID=$UID"
+echo "PID=$PID"
+echo "Start time: `date`"
+offline_node_start_time=$((`date +%s`))
+echo
+
 cluster=$1
 meta_list=$2
 replica_task_id_list=$3
+
+if [ -z $4 ]; then
+  nfs_copy_rate_megabytes=100
+else
+  nfs_copy_rate_megabytes=$4
+fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
@@ -28,6 +56,14 @@ source ./scripts/pegasus_check_arguments.sh offline_node_list $cluster $meta_lis
 if [ $? -ne 0 ]; then
     echo "ERROR: the argument check failed"
     exit 1
+fi
+
+echo "Set nfs_copy_rate_megabytes $nfs_copy_rate_megabytes"
+echo "remote_command -t replica-server nfs.max_copy_rate_megabytes $nfs_copy_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  exit 1
 fi
 
 echo "Set lb.assign_secondary_black_list..."
@@ -68,8 +104,16 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-all_finish_time=$((`date +%s`))
+echo "Set nfs_copy_rate_megabytes 500"
+echo "remote_command -t replica-server nfs.max_copy_rate_megabytes 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  exit 1
+fi
+
+offline_finish_time=$((`date +%s`))
 echo "Offline replica server task list done."
-echo "Elapsed time is $((all_finish_time - all_start_time)) seconds."
+echo "Elapsed time is $((offline_finish_time - offline_node_start_time)) seconds."
 
 rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

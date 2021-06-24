@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "pegasus_client_impl.h"
 #include "base/pegasus_const.h"
@@ -13,8 +28,9 @@ namespace client {
 
 pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
                                                                 std::vector<uint64_t> &&hash,
-                                                                const scan_options &options)
-    : pegasus_scanner_impl(client, std::move(hash), options, _min, _max)
+                                                                const scan_options &options,
+                                                                bool validate_partition_hash)
+    : pegasus_scanner_impl(client, std::move(hash), options, _min, _max, validate_partition_hash)
 {
     _options.start_inclusive = true;
     _options.stop_inclusive = false;
@@ -24,7 +40,8 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
                                                                 std::vector<uint64_t> &&hash,
                                                                 const scan_options &options,
                                                                 const ::dsn::blob &start_key,
-                                                                const ::dsn::blob &stop_key)
+                                                                const ::dsn::blob &stop_key,
+                                                                bool validate_partition_hash)
     : _client(client),
       _start_key(start_key),
       _stop_key(stop_key),
@@ -32,7 +49,8 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
       _splits_hash(std::move(hash)),
       _p(-1),
       _context(SCAN_CONTEXT_ID_COMPLETED),
-      _rpc_started(false)
+      _rpc_started(false),
+      _validate_partition_hash(validate_partition_hash)
 {
 }
 
@@ -196,6 +214,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
     req.sort_key_filter_pattern = ::dsn::blob(
         _options.sort_key_filter_pattern.data(), 0, _options.sort_key_filter_pattern.size());
     req.no_value = _options.no_value;
+    req.__set_validate_partition_hash(_validate_partition_hash);
 
     dassert(!_rpc_started, "");
     _rpc_started = true;

@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "pegasus_server_impl.h"
 
@@ -8,12 +23,14 @@
 #include <boost/lexical_cast.hpp>
 #include <rocksdb/convenience.h>
 #include <rocksdb/utilities/checkpoint.h>
+#include <rocksdb/utilities/options_util.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <dsn/utility/flags.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
@@ -21,6 +38,7 @@
 #include "capacity_unit_calculator.h"
 #include "pegasus_server_write.h"
 #include "meta_store.h"
+#include "hotkey_collector.h"
 
 using namespace dsn::literals::chrono_literals;
 
@@ -28,6 +46,11 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
+DSN_DEFINE_int32("pegasus.server",
+                 hotkey_analyse_time_interval_s,
+                 10,
+                 "hotkey analyse interval in seconds");
 
 static std::string chkpt_get_dir_name(int64_t decree)
 {
@@ -42,12 +65,17 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
+std::shared_ptr<rocksdb::RateLimiter> pegasus_server_impl::_s_rate_limiter;
+int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
+std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffer_manager;
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
+const std::chrono::seconds pegasus_server_impl::kServerStatUpdateTimeSec = std::chrono::seconds(10);
 
 void pegasus_server_impl::parse_checkpoints()
 {
@@ -233,14 +261,14 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
 
-void pegasus_server_impl::on_get(const ::dsn::blob &key,
-                                 ::dsn::rpc_replier<::dsn::apps::read_response> &reply)
+void pegasus_server_impl::on_get(get_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::read_response resp;
+    const auto &key = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -255,7 +283,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for get from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -268,14 +296,14 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
             derror("%s: rocksdb get failed for get from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
             derror("%s: rocksdb get failed for get from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -293,7 +321,7 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         dwarn_replica("rocksdb abnormal get from {}: "
                       "hash_key = {}, sort_key = {}, return = {}, "
                       "value_size = {}, time_used = {} ns",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       ::pegasus::utils::c_escape_string(hash_key),
                       ::pegasus::utils::c_escape_string(sort_key),
                       status.ToString(),
@@ -307,20 +335,19 @@ void pegasus_server_impl::on_get(const ::dsn::blob &key,
         pegasus_extract_user_data(_pegasus_data_version, std::move(value), resp.value);
     }
 
-    _cu_calculator->add_get_cu(resp.error, key, resp.value);
+    _cu_calculator->add_get_cu(rpc.dsn_request(), resp.error, key, resp.value);
     _pfc_get_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &request,
-                                       ::dsn::rpc_replier<::dsn::apps::multi_get_response> &reply)
+void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_multi_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::multi_get_response resp;
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -329,12 +356,11 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         derror("%s: invalid argument for multi_get from %s: "
                "sort key filter type %d not supported",
                replica_name(),
-               reply.to_address().to_string(),
+               rpc.remote_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
+        _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
         return;
     }
 
@@ -403,7 +429,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
                       "final_start = \"%s\" (%s), final_stop = \"%s\" (%s)",
                       replica_name(),
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                       ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
                       request.start_inclusive ? "inclusive" : "exclusive",
@@ -418,9 +444,9 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                       stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
-            _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
+            _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
             _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-            reply(resp);
+
             return;
         }
 
@@ -458,21 +484,30 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 limiter->add_count();
 
                 // extract value
-                int r = append_key_value_for_multi_get(resp.kvs,
-                                                       it->key(),
-                                                       it->value(),
-                                                       request.sort_key_filter_type,
-                                                       request.sort_key_filter_pattern,
-                                                       epoch_now,
-                                                       request.no_value);
-                if (r == 1) {
+                auto state = append_key_value_for_multi_get(resp.kvs,
+                                                            it->key(),
+                                                            it->value(),
+                                                            request.sort_key_filter_type,
+                                                            request.sort_key_filter_pattern,
+                                                            epoch_now,
+                                                            request.no_value);
+
+                switch (state) {
+                case range_iteration_state::kNormal: {
                     count++;
                     auto &kv = resp.kvs.back();
-                    limiter->add_size(kv.key.length() + kv.value.length());
-                } else if (r == 2) {
+                    uint64_t kv_size = kv.key.length() + kv.value.length();
+                    size += kv_size;
+                    limiter->add_size(kv_size);
+                } break;
+                case range_iteration_state::kExpired:
                     expire_count++;
-                } else { // r == 3
+                    break;
+                case range_iteration_state::kFiltered:
                     filter_count++;
+                    break;
+                default:
+                    break;
                 }
 
                 if (c == 0) {
@@ -521,21 +556,29 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 limiter->add_count();
 
                 // extract value
-                int r = append_key_value_for_multi_get(reverse_kvs,
-                                                       it->key(),
-                                                       it->value(),
-                                                       request.sort_key_filter_type,
-                                                       request.sort_key_filter_pattern,
-                                                       epoch_now,
-                                                       request.no_value);
-                if (r == 1) {
+                auto state = append_key_value_for_multi_get(reverse_kvs,
+                                                            it->key(),
+                                                            it->value(),
+                                                            request.sort_key_filter_type,
+                                                            request.sort_key_filter_pattern,
+                                                            epoch_now,
+                                                            request.no_value);
+                switch (state) {
+                case range_iteration_state::kNormal: {
                     count++;
                     auto &kv = reverse_kvs.back();
-                    limiter->add_size(kv.key.length() + kv.value.length());
-                } else if (r == 2) {
+                    uint64_t kv_size = kv.key.length() + kv.value.length();
+                    size += kv_size;
+                    limiter->add_size(kv_size);
+                } break;
+                case range_iteration_state::kExpired:
                     expire_count++;
-                } else { // r == 3
+                    break;
+                case range_iteration_state::kFiltered:
                     filter_count++;
+                    break;
+                default:
+                    break;
                 }
 
                 if (c == 0) {
@@ -564,7 +607,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 derror("%s: rocksdb scan failed for multi_get from %s: "
                        "hash_key = \"%s\", reverse = %s, error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
@@ -572,7 +615,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                 derror("%s: rocksdb scan failed for multi_get from %s: "
                        "reverse = %s, error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        request.reverse ? "true" : "false",
                        it->status().ToString().c_str());
             }
@@ -583,7 +626,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             if (limiter->exceed_limit()) {
                 dwarn_replica(
                     "rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
-                    reply.to_address().to_string(),
+                    rpc.remote_address().to_string(),
                     limiter->duration_time(),
                     limiter->max_duration_time());
             }
@@ -614,14 +657,14 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     derror("%s: rocksdb get failed for multi_get from %s: "
                            "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                            replica_name(),
-                           reply.to_address().to_string(),
+                           rpc.remote_address().to_string(),
                            ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
                            ::pegasus::utils::c_escape_string(request.sort_keys[i]).c_str(),
                            status.ToString().c_str());
                 } else if (!status.IsNotFound()) {
                     derror("%s: rocksdb get failed for multi_get from %s: error = %s",
                            replica_name(),
-                           reply.to_address().to_string(),
+                           rpc.remote_address().to_string(),
                            status.ToString().c_str());
                 }
             }
@@ -633,7 +676,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
                     if (_verbose_log) {
                         derror("%s: rocksdb data expired for multi_get from %s",
                                replica_name(),
-                               reply.to_address().to_string());
+                               rpc.remote_address().to_string());
                     }
                     status = rocksdb::Status::NotFound();
                 }
@@ -686,7 +729,7 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
             "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
             "result_count = {}, result_size = {}, iteration_count = {}, "
             "expire_count = {}, filter_count = {}, time_used = {} ns",
-            reply.to_address().to_string(),
+            rpc.remote_address().to_string(),
             ::pegasus::utils::c_escape_string(request.hash_key),
             ::pegasus::utils::c_escape_string(request.start_sortkey),
             request.start_inclusive ? "inclusive" : "exclusive",
@@ -713,21 +756,19 @@ void pegasus_server_impl::on_multi_get(const ::dsn::apps::multi_get_request &req
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_multi_get_cu(resp.error, request.hash_key, resp.kvs);
+    _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
-                                           ::dsn::rpc_replier<::dsn::apps::count_response> &reply)
+void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
     dassert(_is_open, "");
 
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::count_response resp;
+    const auto &hash_key = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -758,7 +799,7 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for sortkey_count from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
         } else {
             resp.count++;
@@ -776,36 +817,34 @@ void pegasus_server_impl::on_sortkey_count(const ::dsn::blob &hash_key,
             derror("%s: rocksdb scan failed for sortkey_count from %s: "
                    "hash_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    it->status().ToString().c_str());
         } else {
             derror("%s: rocksdb scan failed for sortkey_count from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.count = 0;
     } else if (limiter->exceed_limit()) {
         dwarn_replica("rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       limiter->duration_time(),
                       limiter->max_duration_time());
         resp.count = -1;
     }
 
-    _cu_calculator->add_sortkey_count_cu(resp.error);
+    _cu_calculator->add_sortkey_count_cu(rpc.dsn_request(), resp.error, hash_key);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
-                                 ::dsn::rpc_replier<::dsn::apps::ttl_response> &reply)
+void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 {
     dassert(_is_open, "");
 
-    ::dsn::apps::ttl_response resp;
+    const auto &key = rpc.request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -823,7 +862,7 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
             if (_verbose_log) {
                 derror("%s: rocksdb data expired for ttl from %s",
                        replica_name(),
-                       reply.to_address().to_string());
+                       rpc.remote_address().to_string());
             }
             status = rocksdb::Status::NotFound();
         }
@@ -836,14 +875,14 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
             derror("%s: rocksdb get failed for ttl from %s: "
                    "hash_key = \"%s\", sort_key = \"%s\", error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(hash_key).c_str(),
                    ::pegasus::utils::c_escape_string(sort_key).c_str(),
                    status.ToString().c_str());
         } else if (!status.IsNotFound()) {
             derror("%s: rocksdb get failed for ttl from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    status.ToString().c_str());
         }
     }
@@ -858,19 +897,18 @@ void pegasus_server_impl::on_ttl(const ::dsn::blob &key,
         }
     }
 
-    _cu_calculator->add_ttl_cu(resp.error);
-
-    reply(resp);
+    _cu_calculator->add_ttl_cu(rpc.dsn_request(), resp.error, key);
 }
 
-void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request &request,
-                                         ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
+void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
-    ::dsn::apps::scan_response resp;
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -879,24 +917,24 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         derror("%s: invalid argument for get_scanner from %s: "
                "hash key filter type %d not supported",
                replica_name(),
-               reply.to_address().to_string(),
+               rpc.remote_address().to_string(),
                request.hash_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
+
         return;
     }
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         derror("%s: invalid argument for get_scanner from %s: "
                "sort key filter type %d not supported",
                replica_name(),
-               reply.to_address().to_string(),
+               rpc.remote_address().to_string(),
                request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
+
         return;
     }
 
@@ -945,16 +983,16 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
             dwarn("%s: empty key range for get_scanner from %s: "
                   "start_key = \"%s\" (%s), stop_key = \"%s\" (%s)",
                   replica_name(),
-                  reply.to_address().to_string(),
+                  rpc.remote_address().to_string(),
                   ::pegasus::utils::c_escape_string(request.start_key).c_str(),
                   request.start_inclusive ? "inclusive" : "exclusive",
                   ::pegasus::utils::c_escape_string(request.stop_key).c_str(),
                   request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
-        _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
         _pfc_scan_latency->set(dsn_now_ns() - start_time);
-        reply(resp);
+
         return;
     }
 
@@ -993,21 +1031,29 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
 
         limiter->add_count();
 
-        int r = append_key_value_for_scan(resp.kvs,
-                                          it->key(),
-                                          it->value(),
-                                          request.hash_key_filter_type,
-                                          request.hash_key_filter_pattern,
-                                          request.sort_key_filter_type,
-                                          request.sort_key_filter_pattern,
-                                          epoch_now,
-                                          request.no_value);
-        if (r == 1) {
+        auto state = append_key_value_for_scan(
+            resp.kvs,
+            it->key(),
+            it->value(),
+            request.hash_key_filter_type,
+            request.hash_key_filter_pattern,
+            request.sort_key_filter_type,
+            request.sort_key_filter_pattern,
+            epoch_now,
+            request.no_value,
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true);
+        switch (state) {
+        case range_iteration_state::kNormal:
             count++;
-        } else if (r == 2) {
+            break;
+        case range_iteration_state::kExpired:
             expire_count++;
-        } else { // r == 3
+            break;
+        case range_iteration_state::kFiltered:
             filter_count++;
+            break;
+        default:
+            break;
         }
 
         if (c == 0) {
@@ -1032,7 +1078,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
                    "start_key = \"%s\" (%s), stop_key = \"%s\" (%s), "
                    "batch_size = %d, read_count = %d, error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    ::pegasus::utils::c_escape_string(start).c_str(),
                    request.start_inclusive ? "inclusive" : "exclusive",
                    ::pegasus::utils::c_escape_string(stop).c_str(),
@@ -1043,7 +1089,7 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         } else {
             derror("%s: rocksdb scan failed for get_scanner from %s: error = %s",
                    replica_name(),
-                   reply.to_address().to_string(),
+                   rpc.remote_address().to_string(),
                    it->status().ToString().c_str());
         }
         resp.kvs.clear();
@@ -1052,24 +1098,25 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         resp.error = rocksdb::Status::kIncomplete;
         dwarn_replica("rocksdb abnormal scan from {}: batch_count={}, time_used_ns({}) VS "
                       "time_threshold_ns({})",
-                      reply.to_address().to_string(),
+                      rpc.remote_address().to_string(),
                       batch_count,
                       limiter->duration_time(),
                       limiter->max_duration_time());
     } else if (it->Valid() && !complete) {
         // scan not completed
-        std::unique_ptr<pegasus_scan_context> context(
-            new pegasus_scan_context(std::move(it),
-                                     std::string(stop.data(), stop.size()),
-                                     request.stop_inclusive,
-                                     request.hash_key_filter_type,
-                                     std::string(request.hash_key_filter_pattern.data(),
-                                                 request.hash_key_filter_pattern.length()),
-                                     request.sort_key_filter_type,
-                                     std::string(request.sort_key_filter_pattern.data(),
-                                                 request.sort_key_filter_pattern.length()),
-                                     batch_count,
-                                     request.no_value));
+        std::unique_ptr<pegasus_scan_context> context(new pegasus_scan_context(
+            std::move(it),
+            std::string(stop.data(), stop.size()),
+            request.stop_inclusive,
+            request.hash_key_filter_type,
+            std::string(request.hash_key_filter_pattern.data(),
+                        request.hash_key_filter_pattern.length()),
+            request.sort_key_filter_type,
+            std::string(request.sort_key_filter_pattern.data(),
+                        request.sort_key_filter_pattern.length()),
+            batch_count,
+            request.no_value,
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1092,20 +1139,18 @@ void pegasus_server_impl::on_get_scanner(const ::dsn::apps::get_scanner_request 
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
-void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
-                                  ::dsn::rpc_replier<::dsn::apps::scan_response> &reply)
+void pegasus_server_impl::on_scan(scan_rpc rpc)
 {
     dassert(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
-
-    ::dsn::apps::scan_response resp;
+    const auto &request = rpc.request();
+    dsn::message_ex *req = rpc.dsn_request();
+    auto &resp = rpc.response();
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
@@ -1120,6 +1165,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         ::dsn::apps::filter_type::type sort_key_filter_type = context->sort_key_filter_type;
         const ::dsn::blob &sort_key_filter_pattern = context->sort_key_filter_pattern;
         bool no_value = context->no_value;
+        bool validate_hash = context->validate_partition_hash;
         bool complete = false;
         uint32_t epoch_now = ::pegasus::utils::epoch_now();
         uint64_t expire_count = 0;
@@ -1143,21 +1189,28 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
 
             limiter->add_count();
 
-            int r = append_key_value_for_scan(resp.kvs,
-                                              it->key(),
-                                              it->value(),
-                                              hash_key_filter_type,
-                                              hash_key_filter_pattern,
-                                              sort_key_filter_type,
-                                              sort_key_filter_pattern,
-                                              epoch_now,
-                                              no_value);
-            if (r == 1) {
+            auto state = append_key_value_for_scan(resp.kvs,
+                                                   it->key(),
+                                                   it->value(),
+                                                   hash_key_filter_type,
+                                                   hash_key_filter_pattern,
+                                                   sort_key_filter_type,
+                                                   sort_key_filter_pattern,
+                                                   epoch_now,
+                                                   no_value,
+                                                   validate_hash);
+            switch (state) {
+            case range_iteration_state::kNormal:
                 count++;
-            } else if (r == 2) {
+                break;
+            case range_iteration_state::kExpired:
                 expire_count++;
-            } else { // r == 3
+                break;
+            case range_iteration_state::kFiltered:
                 filter_count++;
+                break;
+            default:
+                break;
             }
 
             if (c == 0) {
@@ -1182,7 +1235,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
                        "context_id= %" PRId64 ", stop_key = \"%s\" (%s), "
                        "batch_size = %d, read_count = %d, error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        request.context_id,
                        ::pegasus::utils::c_escape_string(stop).c_str(),
                        stop_inclusive ? "inclusive" : "exclusive",
@@ -1192,7 +1245,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             } else {
                 derror("%s: rocksdb scan failed for scan from %s: error = %s",
                        replica_name(),
-                       reply.to_address().to_string(),
+                       rpc.remote_address().to_string(),
                        it->status().ToString().c_str());
             }
             resp.kvs.clear();
@@ -1201,7 +1254,7 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
             resp.error = rocksdb::Status::kIncomplete;
             dwarn_replica("rocksdb abnormal scan from {}: batch_count={}, time_used({}ns) VS "
                           "time_threshold({}ns)",
-                          reply.to_address().to_string(),
+                          rpc.remote_address().to_string(),
                           batch_count,
                           limiter->duration_time(),
                           limiter->max_duration_time());
@@ -1229,10 +1282,8 @@ void pegasus_server_impl::on_scan(const ::dsn::apps::scan_request &request,
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
-    _cu_calculator->add_scan_cu(resp.error, resp.kvs);
+    _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
-
-    reply(resp);
 }
 
 void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache.fetch(args); }
@@ -1336,21 +1387,71 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     ddebug("%s: start to open rocksDB's rdb(%s)", replica_name(), path.c_str());
 
-    bool need_create_meta_cf = true;
-    // Check meta CF only when db exist.
-    if (db_exist && check_meta_cf(path, &need_create_meta_cf) != ::dsn::ERR_OK) {
-        derror_replica("check meta column family failed");
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
-    if (need_create_meta_cf) {
-        // If upgrade from an old Pegasus version which has just one column family (the default
-        // column family), or create new db, we have to create a new column family to store meta
-        // data (meta column family).
+    // Here we create a `tmp_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
+    // will be used elsewhere.
+    rocksdb::ColumnFamilyOptions tmp_data_cf_opts = _data_cf_opts;
+    bool has_incompatible_db_options = false;
+    if (db_exist) {
+        // When DB exists, meta CF and data CF must be present.
+        bool missing_meta_cf = true;
+        bool missing_data_cf = true;
+        if (check_column_families(path, &missing_meta_cf, &missing_data_cf) != ::dsn::ERR_OK) {
+            derror_replica("check column families failed");
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
+        dassert_replica(!missing_data_cf, "Missing data column family");
+
+        // Load latest options from option file stored in the db directory.
+        rocksdb::DBOptions loaded_db_opt;
+        std::vector<rocksdb::ColumnFamilyDescriptor> loaded_cf_descs;
+        rocksdb::ColumnFamilyOptions loaded_data_cf_opts;
+        // Set `ignore_unknown_options` true for forward compatibility.
+        auto status = rocksdb::LoadLatestOptions(path,
+                                                 rocksdb::Env::Default(),
+                                                 &loaded_db_opt,
+                                                 &loaded_cf_descs,
+                                                 /*ignore_unknown_options=*/true);
+        if (!status.ok()) {
+            // Here we ignore an invalid argument error related to `pegasus_data_version` and
+            // `pegasus_data` options, which were used in old version rocksdbs (before 2.1.0).
+            if (status.code() != rocksdb::Status::kInvalidArgument ||
+                status.ToString().find("pegasus_data") == std::string::npos) {
+                derror_replica("load latest option file failed: {}.", status.ToString());
+                return ::dsn::ERR_LOCAL_APP_FAILURE;
+            }
+            has_incompatible_db_options = true;
+            dwarn_replica("The latest option file has incompatible db options: {}, use default "
+                          "options to open db.",
+                          status.ToString());
+        }
+
+        if (!has_incompatible_db_options) {
+            for (int i = 0; i < loaded_cf_descs.size(); ++i) {
+                if (loaded_cf_descs[i].name == DATA_COLUMN_FAMILY_NAME) {
+                    loaded_data_cf_opts = loaded_cf_descs[i].options;
+                }
+            }
+            // Reset usage scenario related options according to loaded_data_cf_opts.
+            // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
+            // only be initialized with default values when calling 'LoadLatestOptions', see
+            // 'rocksdb/utilities/options_util.h'.
+            reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
+        }
+    } else {
+        // When create new DB, we have to create a new column family to store meta data (meta column
+        // family).
         _db_opts.create_missing_column_families = true;
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-        {{DATA_COLUMN_FAMILY_NAME, _data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+        {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+    auto s = rocksdb::CheckOptionsCompatibility(
+        path, rocksdb::Env::Default(), _db_opts, column_families, /*ignore_unknown_options=*/true);
+    if (!s.ok() && !s.IsNotFound() && !has_incompatible_db_options) {
+        derror_replica("rocksdb::CheckOptionsCompatibility failed, error = {}", s.ToString());
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
     std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
     auto status = rocksdb::DB::Open(_db_opts, path, column_families, &handles_opened, &_db);
     if (!status.ok()) {
@@ -1366,28 +1467,33 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     // Create _meta_store which provide Pegasus meta data read and write.
     _meta_store = dsn::make_unique<meta_store>(this, _db, _meta_cf);
 
-    _last_committed_decree = _meta_store->get_last_flushed_decree();
-    _pegasus_data_version = _meta_store->get_data_version();
-    uint64_t last_manual_compact_finish_time = _meta_store->get_last_manual_compact_finish_time();
-    if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
-        derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
-        release_db();
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
+    if (db_exist) {
+        _last_committed_decree = _meta_store->get_last_flushed_decree();
+        _pegasus_data_version = _meta_store->get_data_version();
+        _usage_scenario = _meta_store->get_usage_scenario();
+        uint64_t last_manual_compact_finish_time =
+            _meta_store->get_last_manual_compact_finish_time();
+        if (_pegasus_data_version > PEGASUS_DATA_VERSION_MAX) {
+            derror_replica("open app failed, unsupported data version {}", _pegasus_data_version);
+            release_db();
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
 
-    if (need_create_meta_cf) {
-        // Write meta data to meta CF according to manifest.
-        _meta_store->set_data_version(_pegasus_data_version);
-        _meta_store->set_last_flushed_decree(_last_committed_decree);
-        _meta_store->set_last_manual_compact_finish_time(last_manual_compact_finish_time);
+        // update last manual compact finish timestamp
+        _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
+    } else {
+        // Write initial meta data to meta CF and flush when create new DB.
+        _meta_store->set_data_version(PEGASUS_DATA_VERSION_MAX);
+        _meta_store->set_last_flushed_decree(0);
+        _meta_store->set_last_manual_compact_finish_time(0);
+        flush_all_family_columns(true);
     }
 
     // only enable filter after correct pegasus_data_version set
     _key_ttl_compaction_filter_factory->SetPegasusDataVersion(_pegasus_data_version);
+    _key_ttl_compaction_filter_factory->SetPartitionIndex(_gpid.get_partition_index());
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(_gpid.get_partition_index() - 1);
     _key_ttl_compaction_filter_factory->EnableFilter();
-
-    // update LastManualCompactFinishTime
-    _manual_compact_svc.init_last_finish_time_ms(last_manual_compact_finish_time);
 
     parse_checkpoints();
 
@@ -1414,8 +1520,10 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     _is_open = true;
 
-    // set default usage scenario after db opened.
-    set_usage_scenario(ROCKSDB_ENV_USAGE_SCENARIO_NORMAL);
+    if (!db_exist) {
+        // When create a new db, update usage scenario according to app envs.
+        update_usage_scenario(envs);
+    }
 
     dinfo_replica("start the update rocksdb statistics timer task");
     _update_replica_rdb_stat =
@@ -1424,21 +1532,34 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                       [this]() { this->update_replica_rocksdb_statistics(); },
                                       _update_rdb_stat_interval);
 
-    // Block cache is a singleton on this server shared by all replicas, its metrics update task
-    // should be scheduled once an interval on the server view.
+    // These counters are singletons on this server shared by all replicas, their metrics update
+    // task should be scheduled once an interval on the server view.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
+        dassert(kServerStatUpdateTimeSec.count() != 0,
+                "kServerStatUpdateTimeSec shouldn't be zero");
         _update_server_rdb_stat = ::dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later
-            [this]() { update_server_rocksdb_statistics(); },
-            _update_rdb_stat_interval);
+            []() { update_server_rocksdb_statistics(); },
+            kServerStatUpdateTimeSec);
     });
 
     // initialize cu calculator and write service after server being initialized.
-    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(this);
+    _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
+        this, _read_hotkey_collector, _write_hotkey_collector);
     _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
+
+    ::dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
+                                  &_tracker,
+                                  [this]() { _read_hotkey_collector->analyse_data(); },
+                                  std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
+
+    ::dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
+                                  &_tracker,
+                                  [this]() { _write_hotkey_collector->analyse_data(); },
+                                  std::chrono::seconds(FLAGS_hotkey_analyse_time_interval_s));
 
     return ::dsn::ERR_OK;
 }
@@ -1716,19 +1837,21 @@ private:
 
 // Must be thread safe.
 ::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir(const char *checkpoint_dir,
-                                                              /*output*/ int64_t *last_decree)
+                                                              /*output*/ int64_t *last_decree,
+                                                              bool flush_memtable)
 {
     CheckpointingTokenHelper token_helper(_is_checkpointing);
     if (!token_helper.token_got()) {
         return ::dsn::ERR_WRONG_TIMING;
     }
 
-    return copy_checkpoint_to_dir_unsafe(checkpoint_dir, last_decree);
+    return copy_checkpoint_to_dir_unsafe(checkpoint_dir, last_decree, flush_memtable);
 }
 
 // not thread safe, should be protected by caller
 ::dsn::error_code pegasus_server_impl::copy_checkpoint_to_dir_unsafe(const char *checkpoint_dir,
-                                                                     int64_t *checkpoint_decree)
+                                                                     int64_t *checkpoint_decree,
+                                                                     bool flush_memtable)
 {
     rocksdb::Checkpoint *chkpt_raw = nullptr;
     auto status = rocksdb::Checkpoint::Create(_db, &chkpt_raw);
@@ -1747,8 +1870,9 @@ private:
         }
     }
 
-    uint64_t ci = 0;
-    status = chkpt->CreateCheckpointQuick(checkpoint_dir, &ci);
+    // CreateCheckpoint() will not flush memtable when log_size_for_flush = max
+    status = chkpt->CreateCheckpoint(checkpoint_dir,
+                                     flush_memtable ? 0 : std::numeric_limits<uint64_t>::max());
     if (!status.ok()) {
         derror_replica("CreateCheckpoint failed, error = {}", status.ToString());
         if (!::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
@@ -1756,10 +1880,48 @@ private:
         }
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
-    ddebug_replica("copy checkpoint to dir({}) succeed, last_decree = {}", checkpoint_dir, ci);
+    ddebug_replica("copy checkpoint to dir({}) succeed", checkpoint_dir);
 
     if (checkpoint_decree != nullptr) {
-        *checkpoint_decree = static_cast<int64_t>(ci);
+        rocksdb::DB *snapshot_db = nullptr;
+        std::vector<rocksdb::ColumnFamilyHandle *> handles_opened;
+        auto cleanup = [&](bool remove_checkpoint) {
+            if (remove_checkpoint && !::dsn::utils::filesystem::remove_path(checkpoint_dir)) {
+                derror_replica("remove checkpoint directory {} failed", checkpoint_dir);
+            }
+            if (snapshot_db) {
+                for (auto handle : handles_opened) {
+                    if (handle) {
+                        snapshot_db->DestroyColumnFamilyHandle(handle);
+                        handle = nullptr;
+                    }
+                }
+                delete snapshot_db;
+                snapshot_db = nullptr;
+            }
+        };
+
+        // Because of RocksDB's restriction, we have to to open default column family even though
+        // not use it
+        std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
+            {{DATA_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()},
+             {META_COLUMN_FAMILY_NAME, rocksdb::ColumnFamilyOptions()}});
+        status = rocksdb::DB::OpenForReadOnly(
+            rocksdb::DBOptions(), checkpoint_dir, column_families, &handles_opened, &snapshot_db);
+        if (!status.ok()) {
+            derror_replica(
+                "OpenForReadOnly from {} failed, error = {}", checkpoint_dir, status.ToString());
+            snapshot_db = nullptr;
+            cleanup(true);
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+        dcheck_eq_replica(handles_opened.size(), 2);
+        dcheck_eq_replica(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+        uint64_t last_flushed_decree =
+            _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
+        *checkpoint_decree = last_flushed_decree;
+
+        cleanup(false);
     }
 
     return ::dsn::ERR_OK;
@@ -1917,22 +2079,33 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
     return false;
 }
 
-int pegasus_server_impl::append_key_value_for_scan(
-    std::vector<::dsn::apps::key_value> &kvs,
-    const rocksdb::Slice &key,
-    const rocksdb::Slice &value,
-    ::dsn::apps::filter_type::type hash_key_filter_type,
-    const ::dsn::blob &hash_key_filter_pattern,
-    ::dsn::apps::filter_type::type sort_key_filter_type,
-    const ::dsn::blob &sort_key_filter_pattern,
-    uint32_t epoch_now,
-    bool no_value)
+range_iteration_state
+pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
+                                               const rocksdb::Slice &key,
+                                               const rocksdb::Slice &value,
+                                               ::dsn::apps::filter_type::type hash_key_filter_type,
+                                               const ::dsn::blob &hash_key_filter_pattern,
+                                               ::dsn::apps::filter_type::type sort_key_filter_type,
+                                               const ::dsn::blob &sort_key_filter_pattern,
+                                               uint32_t epoch_now,
+                                               bool no_value,
+                                               bool request_validate_hash)
 {
     if (check_if_record_expired(epoch_now, value)) {
         if (_verbose_log) {
             derror("%s: rocksdb data expired for scan", replica_name());
         }
-        return 2;
+        return range_iteration_state::kExpired;
+    }
+
+    if (request_validate_hash && _validate_partition_hash) {
+        if (_partition_version < 0 || _gpid.get_partition_index() > _partition_version ||
+            !check_pegasus_key_hash(key, _gpid.get_partition_index(), _partition_version)) {
+            if (_verbose_log) {
+                derror_replica("not serve hash key while scan");
+            }
+            return range_iteration_state::kHashInvalid;
+        }
     }
 
     ::dsn::apps::key_value kv;
@@ -1948,14 +2121,14 @@ int pegasus_server_impl::append_key_value_for_scan(
             if (_verbose_log) {
                 derror("%s: hash key filtered for scan", replica_name());
             }
-            return 3;
+            return range_iteration_state::kFiltered;
         }
         if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
             !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
             if (_verbose_log) {
                 derror("%s: sort key filtered for scan", replica_name());
             }
-            return 3;
+            return range_iteration_state::kFiltered;
         }
     }
     std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
@@ -1969,10 +2142,10 @@ int pegasus_server_impl::append_key_value_for_scan(
     }
 
     kvs.emplace_back(std::move(kv));
-    return 1;
+    return range_iteration_state::kNormal;
 }
 
-int pegasus_server_impl::append_key_value_for_multi_get(
+range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     std::vector<::dsn::apps::key_value> &kvs,
     const rocksdb::Slice &key,
     const rocksdb::Slice &value,
@@ -1985,7 +2158,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
         if (_verbose_log) {
             derror("%s: rocksdb data expired for multi get", replica_name());
         }
-        return 2;
+        return range_iteration_state::kExpired;
     }
 
     ::dsn::apps::key_value kv;
@@ -1999,7 +2172,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
         if (_verbose_log) {
             derror("%s: sort key filtered for multi get", replica_name());
         }
-        return 3;
+        return range_iteration_state::kFiltered;
     }
     std::shared_ptr<char> sort_key_buf(::dsn::utils::make_shared_array<char>(sort_key.length()));
     ::memcpy(sort_key_buf.get(), sort_key.data(), sort_key.length());
@@ -2012,7 +2185,7 @@ int pegasus_server_impl::append_key_value_for_multi_get(
     }
 
     kvs.emplace_back(std::move(kv));
-    return 1;
+    return range_iteration_state::kNormal;
 }
 
 void pegasus_server_impl::update_replica_rocksdb_statistics()
@@ -2127,9 +2300,16 @@ void pegasus_server_impl::update_server_rocksdb_statistics()
     if (_s_block_cache) {
         uint64_t val = _s_block_cache->GetUsage();
         _pfc_rdb_block_cache_mem_usage->set(val);
-        dinfo_f("_pfc_rdb_block_cache_mem_usage: {} bytes", val);
-    } else {
-        dinfo("_pfc_rdb_block_cache_mem_usage: 0 bytes because block cache is disabled");
+    }
+
+    // Update _pfc_rdb_write_limiter_rate_bytes
+    if (_s_rate_limiter) {
+        uint64_t current_total_through = _s_rate_limiter->GetTotalBytesThrough();
+        uint64_t through_bytes_per_sec =
+            (current_total_through - _rocksdb_limiter_last_total_through) /
+            kServerStatUpdateTimeSec.count();
+        _pfc_rdb_write_limiter_rate_bytes->set(through_bytes_per_sec);
+        _rocksdb_limiter_last_total_through = current_total_through;
     }
 }
 
@@ -2180,6 +2360,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
+    update_validate_partition_hash(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2196,6 +2377,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_checkpoint_reserve(envs);
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
+    update_validate_partition_hash(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2321,6 +2503,25 @@ void pegasus_server_impl::update_rocksdb_iteration_threshold(
                        _rng_rd_opts.rocksdb_iteration_threshold_time_ms,
                        threshold_ms);
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms = threshold_ms;
+    }
+}
+
+void pegasus_server_impl::update_validate_partition_hash(
+    const std::map<std::string, std::string> &envs)
+{
+    bool new_value = false;
+    auto iter = envs.find(SPLIT_VALIDATE_PARTITION_HASH);
+    if (iter != envs.end()) {
+        if (!dsn::buf2bool(iter->second, new_value)) {
+            derror_replica("{}={} is invalid.", iter->first, iter->second);
+            return;
+        }
+    }
+    if (new_value != _validate_partition_hash) {
+        ddebug_replica(
+            "update '_validate_partition_hash' from {} to {}", _validate_partition_hash, new_value);
+        _validate_partition_hash = new_value;
+        _key_ttl_compaction_filter_factory->SetValidatePartitionHash(_validate_partition_hash);
     }
 }
 
@@ -2461,6 +2662,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
         return false;
     }
     if (set_options(new_options)) {
+        _meta_store->set_usage_scenario(usage_scenario);
         _usage_scenario = usage_scenario;
         ddebug_replica(
             "set usage scenario from \"{}\" to \"{}\" succeed", old_usage_scenario, usage_scenario);
@@ -2470,6 +2672,23 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             "set usage scenario from \"{}\" to \"{}\" failed", old_usage_scenario, usage_scenario);
         return false;
     }
+}
+
+void pegasus_server_impl::reset_usage_scenario_options(
+    const rocksdb::ColumnFamilyOptions &base_opts, rocksdb::ColumnFamilyOptions *target_opts)
+{
+    // reset usage scenario related options, refer to options set in 'set_usage_scenario' function.
+    target_opts->level0_file_num_compaction_trigger = base_opts.level0_file_num_compaction_trigger;
+    target_opts->level0_slowdown_writes_trigger = base_opts.level0_slowdown_writes_trigger;
+    target_opts->level0_stop_writes_trigger = base_opts.level0_stop_writes_trigger;
+    target_opts->soft_pending_compaction_bytes_limit =
+        base_opts.soft_pending_compaction_bytes_limit;
+    target_opts->hard_pending_compaction_bytes_limit =
+        base_opts.hard_pending_compaction_bytes_limit;
+    target_opts->disable_auto_compactions = base_opts.disable_auto_compactions;
+    target_opts->max_compaction_bytes = base_opts.max_compaction_bytes;
+    target_opts->write_buffer_size = base_opts.write_buffer_size;
+    target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
 }
 
 bool pegasus_server_impl::set_options(
@@ -2502,6 +2721,32 @@ bool pegasus_server_impl::set_options(
                oss.str().c_str());
         return false;
     }
+}
+
+::dsn::error_code pegasus_server_impl::check_column_families(const std::string &path,
+                                                             bool *missing_meta_cf,
+                                                             bool *missing_data_cf)
+{
+    *missing_meta_cf = true;
+    *missing_data_cf = true;
+    std::vector<std::string> column_families;
+    auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
+    if (!s.ok()) {
+        derror_replica("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
+        return ::dsn::ERR_LOCAL_APP_FAILURE;
+    }
+
+    for (const auto &column_family : column_families) {
+        if (column_family == META_COLUMN_FAMILY_NAME) {
+            *missing_meta_cf = false;
+        } else if (column_family == DATA_COLUMN_FAMILY_NAME) {
+            *missing_data_cf = false;
+        } else {
+            derror_replica("unknown column family name: {}", column_family);
+            return ::dsn::ERR_LOCAL_APP_FAILURE;
+        }
+    }
+    return ::dsn::ERR_OK;
 }
 
 uint64_t pegasus_server_impl::do_manual_compact(const rocksdb::CompactRangeOptions &options)
@@ -2592,28 +2837,7 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
     int32_t old_partition_version = _partition_version.exchange(partition_version);
     ddebug_replica(
         "update partition version from {} to {}", old_partition_version, partition_version);
-
-    // TODO(heyuchen): set filter _partition_version in further pr
-}
-
-::dsn::error_code pegasus_server_impl::check_meta_cf(const std::string &path,
-                                                     bool *need_create_meta_cf)
-{
-    *need_create_meta_cf = true;
-    std::vector<std::string> column_families;
-    auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
-    if (!s.ok()) {
-        derror_replica("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
-        return ::dsn::ERR_LOCAL_APP_FAILURE;
-    }
-
-    for (const auto &column_family : column_families) {
-        if (column_family == META_COLUMN_FAMILY_NAME) {
-            *need_create_meta_cf = false;
-            break;
-        }
-    }
-    return ::dsn::ERR_OK;
+    _key_ttl_compaction_filter_factory->SetPartitionVersion(partition_version);
 }
 
 ::dsn::error_code pegasus_server_impl::flush_all_family_columns(bool wait)
@@ -2630,65 +2854,88 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
 
 void pegasus_server_impl::release_db()
 {
-    _db->DestroyColumnFamilyHandle(_data_cf);
-    _data_cf = nullptr;
-    _db->DestroyColumnFamilyHandle(_meta_cf);
-    _meta_cf = nullptr;
-    delete _db;
-    _db = nullptr;
+    if (_db) {
+        dassert_replica(_data_cf != nullptr && _meta_cf != nullptr, "");
+        _db->DestroyColumnFamilyHandle(_data_cf);
+        _data_cf = nullptr;
+        _db->DestroyColumnFamilyHandle(_meta_cf);
+        _meta_cf = nullptr;
+        delete _db;
+        _db = nullptr;
+    }
 }
 
 std::string pegasus_server_impl::dump_write_request(dsn::message_ex *request)
 {
     dsn::task_code rpc_code(request->rpc_code());
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_PUT) {
-        auto put = put_rpc::auto_reply(request).request();
+        auto put = put_rpc(request).request();
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(put.key, hash_key, sort_key);
-        std::string request("put:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(hash_key))
-            .append(",sort_key=")
-            .append(pegasus::utils::c_escape_string(sort_key));
-        return request;
+        return fmt::format("put: hash_key={}, sort_key={}",
+                           pegasus::utils::c_escape_string(hash_key),
+                           pegasus::utils::c_escape_string(sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_MULTI_PUT) {
-        auto multi_put = multi_put_rpc::auto_reply(request).request();
-        std::string request("multi_put:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string((multi_put.hash_key))
-                        .append(",multi_put_count=")
-                        .append(std::to_string(multi_put.kvs.size())));
-        return request;
+        auto multi_put = multi_put_rpc(request).request();
+        return fmt::format("multi_put: hash_key={}, multi_put_count={}",
+                           pegasus::utils::c_escape_string(multi_put.hash_key),
+                           multi_put.kvs.size());
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_SET) {
-        auto check_and_set = check_and_set_rpc::auto_reply(request).request();
-        std::string request("check_and_set:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.hash_key))
-            .append(",check_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.check_sort_key))
-            .append(",set_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_set.set_sort_key));
-        return request;
+        auto check_and_set = check_and_set_rpc(request).request();
+        return fmt::format("check_and_set: hash_key={}, check_sort_key={}, set_sort_key={}",
+                           pegasus::utils::c_escape_string(check_and_set.hash_key),
+                           pegasus::utils::c_escape_string(check_and_set.check_sort_key),
+                           pegasus::utils::c_escape_string(check_and_set.set_sort_key));
     }
 
     if (rpc_code == dsn::apps::RPC_RRDB_RRDB_CHECK_AND_MUTATE) {
-        auto check_and_mutate = check_and_mutate_rpc::auto_reply(request).request();
-        std::string request("check_and_mutate:");
-        request.append("hash_key=")
-            .append(pegasus::utils::c_escape_string(check_and_mutate.hash_key))
-            .append(",check_sort_key=")
-            .append(pegasus::utils::c_escape_string(check_and_mutate.check_sort_key))
-            .append(",set_value_count=")
-            .append(std::to_string(check_and_mutate.mutate_list.size()));
-        return request;
+        auto check_and_mutate = check_and_mutate_rpc(request).request();
+        return fmt::format("check_and_mutate: hash_key={}, check_sort_key={}, set_value_count={}",
+                           pegasus::utils::c_escape_string(check_and_mutate.hash_key),
+                           pegasus::utils::c_escape_string(check_and_mutate.check_sort_key),
+                           check_and_mutate.mutate_list.size());
     }
 
     return "default";
 }
+
+void pegasus_server_impl::set_ingestion_status(dsn::replication::ingestion_status::type status)
+{
+    ddebug_replica("ingestion status from {} to {}",
+                   dsn::enum_to_string(_ingestion_status),
+                   dsn::enum_to_string(status));
+    _ingestion_status = status;
+}
+
+void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey_request &req,
+                                           dsn::replication::detect_hotkey_response &resp)
+{
+
+    if (dsn_unlikely(req.action != dsn::replication::detect_action::START &&
+                     req.action != dsn::replication::detect_action::STOP &&
+                     req.action != dsn::replication::detect_action::QUERY)) {
+        resp.err = dsn::ERR_INVALID_PARAMETERS;
+        resp.__set_err_hint("invalid detect_action");
+        return;
+    }
+
+    if (dsn_unlikely(req.type != dsn::replication::hotkey_type::READ &&
+                     req.type != dsn::replication::hotkey_type::WRITE)) {
+        resp.err = dsn::ERR_INVALID_PARAMETERS;
+        resp.__set_err_hint("invalid hotkey_type");
+        return;
+    }
+
+    auto collector = req.type == dsn::replication::hotkey_type::READ ? _read_hotkey_collector
+                                                                     : _write_hotkey_collector;
+    collector->handle_rpc(req, resp);
+}
+
+uint32_t pegasus_server_impl::query_data_version() const { return _pegasus_data_version; }
 
 } // namespace server
 } // namespace pegasus

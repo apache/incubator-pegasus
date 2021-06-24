@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -10,6 +25,7 @@
 #include <rocksdb/merge_operator.h>
 
 #include "base/pegasus_utils.h"
+#include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
 
 namespace pegasus {
@@ -18,8 +34,18 @@ namespace server {
 class KeyWithTTLCompactionFilter : public rocksdb::CompactionFilter
 {
 public:
-    KeyWithTTLCompactionFilter(uint32_t pegasus_data_version, uint32_t default_ttl, bool enabled)
-        : _pegasus_data_version(pegasus_data_version), _default_ttl(default_ttl), _enabled(enabled)
+    KeyWithTTLCompactionFilter(uint32_t pegasus_data_version,
+                               uint32_t default_ttl,
+                               bool enabled,
+                               int32_t pidx,
+                               int32_t partition_version,
+                               bool validate_hash)
+        : _pegasus_data_version(pegasus_data_version),
+          _default_ttl(default_ttl),
+          _enabled(enabled),
+          _partition_index(pidx),
+          _partition_version(partition_version),
+          _validate_partition_hash(validate_hash)
     {
     }
 
@@ -43,16 +69,30 @@ public:
             *value_changed = true;
             return false;
         }
-        return check_if_ts_expired(utils::epoch_now(), expire_ts);
+        return check_if_ts_expired(utils::epoch_now(), expire_ts) || check_if_stale_split_data(key);
     }
 
     const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
+
+    // Check if the record is stale after partition split, which will split the partition into two
+    // halves. The stale record belongs to the other half.
+    bool check_if_stale_split_data(const rocksdb::Slice &key) const
+    {
+        if (!_validate_partition_hash || key.size() < 2 || _partition_version < 0 ||
+            _partition_index > _partition_version) {
+            return false;
+        }
+        return !check_pegasus_key_hash(key, _partition_index, _partition_version);
+    }
 
 private:
     uint32_t _pegasus_data_version;
     uint32_t _default_ttl;
     bool _enabled; // only process filtering when _enabled == true
     mutable pegasus_value_generator _gen;
+    int32_t _partition_index;
+    int32_t _partition_version;
+    bool _validate_partition_hash;
 };
 
 class KeyWithTTLCompactionFilterFactory : public rocksdb::CompactionFilterFactory
@@ -64,8 +104,13 @@ public:
     std::unique_ptr<rocksdb::CompactionFilter>
     CreateCompactionFilter(const rocksdb::CompactionFilter::Context & /*context*/) override
     {
-        return std::unique_ptr<KeyWithTTLCompactionFilter>(new KeyWithTTLCompactionFilter(
-            _pegasus_data_version.load(), _default_ttl.load(), _enabled.load()));
+        return std::unique_ptr<KeyWithTTLCompactionFilter>(
+            new KeyWithTTLCompactionFilter(_pegasus_data_version.load(),
+                                           _default_ttl.load(),
+                                           _enabled.load(),
+                                           _partition_index.load(),
+                                           _partition_version.load(),
+                                           _validate_partition_hash.load()));
     }
     const char *Name() const override { return "KeyWithTTLCompactionFilterFactory"; }
 
@@ -75,11 +120,26 @@ public:
     }
     void EnableFilter() { _enabled.store(true, std::memory_order_release); }
     void SetDefaultTTL(uint32_t ttl) { _default_ttl.store(ttl, std::memory_order_release); }
+    void SetValidatePartitionHash(bool validate_hash)
+    {
+        _validate_partition_hash.store(validate_hash, std::memory_order_release);
+    }
+    void SetPartitionIndex(int32_t pidx)
+    {
+        _partition_index.store(pidx, std::memory_order_release);
+    }
+    void SetPartitionVersion(int32_t partition_version)
+    {
+        _partition_version.store(partition_version, std::memory_order_release);
+    }
 
 private:
     std::atomic<uint32_t> _pegasus_data_version;
     std::atomic<uint32_t> _default_ttl;
     std::atomic_bool _enabled; // only process filtering when _enabled == true
+    std::atomic<int32_t> _partition_index{0};
+    std::atomic<int32_t> _partition_version{-1};
+    std::atomic_bool _validate_partition_hash{false};
 };
 
 } // namespace server

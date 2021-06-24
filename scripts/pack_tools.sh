@@ -1,4 +1,20 @@
 #!/bin/bash
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 source $(dirname $0)/pack_common.sh
 
@@ -7,7 +23,6 @@ function usage()
     echo "Options for subcommand 'pack_tools':"
     echo "  -h"
     echo "  -p|--update-package-template <minos-package-template-file-path>"
-    echo "  -b|--custom-boost-lib"
     echo "  -g|--custom-gcc"
     exit 0
 }
@@ -63,7 +78,6 @@ if [ -n "$MINOS_CONFIG_FILE" ]; then
     pack_template=`dirname $MINOS_CONFIG_FILE`/xiaomi-config/package/pegasus.yaml
 fi
 
-custom_boost_lib="false"
 custom_gcc="false"
 
 while [[ $# > 0 ]]; do
@@ -72,9 +86,6 @@ while [[ $# > 0 ]]; do
         -p|--update-package-template)
             pack_template="$2"
             shift
-            ;;
-        -b|--custom-boost-lib)
-            custom_boost_lib="true"
             ;;
         -g|--custom-gcc)
             custom_gcc="true"
@@ -101,16 +112,26 @@ mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
-copy_file `get_boost_lib $custom_boost_lib system` ${pack}/DSN_ROOT/lib/
-copy_file `get_boost_lib $custom_boost_lib filesystem` ${pack}/DSN_ROOT/lib/
-copy_file `get_boost_lib $custom_boost_lib regex` ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/DSN_ROOT/lib
+copy_file ./rdsn/thirdparty/output/lib/libsasl2.so.3 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libcom_err.so.3 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libgssapi_krb5.so.2 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libkrb5support.so.0 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libkrb5.so.3 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libk5crypto.so.3 ${pack}/DSN_ROOT/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
-copy_file `get_system_lib shell snappy` ${pack}/DSN_ROOT/lib/`get_system_libname shell snappy`
-copy_file `get_system_lib shell crypto` ${pack}/DSN_ROOT/lib/`get_system_libname shell crypto`
-copy_file `get_system_lib shell ssl` ${pack}/DSN_ROOT/lib/`get_system_libname shell ssl`
-copy_file `get_system_lib shell aio` ${pack}/DSN_ROOT/lib/`get_system_libname shell aio`
-copy_file `get_system_lib shell zstd` ${pack}/DSN_ROOT/lib/`get_system_libname shell zstd`
-copy_file `get_system_lib shell lz4` ${pack}/DSN_ROOT/lib/`get_system_libname shell lz4`
+
+pack_tools_lib() {
+    pack_system_lib "${pack}/DSN_ROOT/lib" shell "$1"
+}
+
+pack_tools_lib snappy
+pack_tools_lib crypto
+pack_tools_lib ssl
+pack_tools_lib zstd
+pack_tools_lib lz4
+
 chmod -x ${pack}/DSN_ROOT/lib/*
 
 mkdir -p ${pack}/scripts

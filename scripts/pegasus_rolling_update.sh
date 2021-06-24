@@ -1,4 +1,20 @@
 #!/bin/bash
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 #
 # Rolling update pegasus cluster using minos.
 #
@@ -6,14 +22,22 @@
 PID=$$
 
 if [ $# -le 3 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <type> <start_task_id>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <type> <start_task_id> [rebalance] [only_move_pri]"
   echo
   echo "The type may be 'one' or 'all':"
   echo "  - one: rolling update only one task of replica server."
   echo "  - all: rolling update all replica servers, meta servers and collectors."
   echo
+  echo "rebalance: default value is false"
+  echo "  - if rebalance cluster after rolling update"
+  echo
+  echo "only_move_pri: default value is true"
+  echo "  - if only move primary while rebalance"
+  echo "  - this option will only be usefule when rebalance = true"
+  echo
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 one 0"
+  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 all 1 true false"
   echo
   exit 1
 fi
@@ -32,6 +56,18 @@ if [ "$type" != "one" -a "$type" != "all" ]; then
   exit 1
 fi
 
+if [ -z $5 ]; then
+  rebalance_cluster_after_rolling=false
+else
+  rebalance_cluster_after_rolling=$5
+fi
+
+if [ -z $6 ]; then
+  rebalance_only_move_primary=true
+else
+  rebalance_only_move_primary=$6
+fi
+
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 shell_dir="$( cd $pwd/.. && pwd )"
 cd $shell_dir
@@ -46,7 +82,7 @@ fi
 echo "UID=$UID"
 echo "PID=$PID"
 echo "Start time: `date`"
-all_start_time=$((`date +%s`))
+rolling_start_time=$((`date +%s`))
 echo
 
 rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
@@ -206,14 +242,6 @@ do
 
   echo "remote_command -l $node flush-log" | ./run.sh shell --cluster $meta_list &>/dev/null
 
-  echo "Set lb.add_secondary_max_count_for_one_node to 100..."
-  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
-  set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
-  if [ $set_ok -ne 1 ]; then
-    echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
-    exit 1
-  fi
-
   echo "Rolling update by minos..."
   minos_rolling_update $cluster replica $task_id
   echo "Rolling update by minos done."
@@ -233,6 +261,14 @@ do
   done
   echo
   sleep 1
+
+  echo "Set lb.add_secondary_max_count_for_one_node to 100..."
+  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+  set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
+  if [ $set_ok -ne 1 ]; then
+    echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
+    exit 1
+  fi
 
   echo "Wait cluster to become healthy..."
   while true
@@ -278,47 +314,15 @@ if [ "$type" = "all" ]; then
   minos_rolling_update $cluster collector
   echo "Rolling update collectors done."
   echo
+fi
 
-  echo "Set meta level to lively..."
-  echo "set_meta_level lively" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.set_meta_level
-  set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
-  if [ $set_ok -ne 1 ]; then
-    echo "ERROR: set meta level to lively failed"
-    exit 1
-  fi
-  echo
-
-  echo "Wait cluster to become balanced..."
-  echo "Wait for 3 minutes to do load balance..."
-  sleep 180
-  while true
-  do
-    op_count=`echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2`
-    if [ -z "op_count" ]; then
-      break
-    fi
-    if [ $op_count -eq 0 ]; then
-      echo "Cluster becomes balanced."
-      break
-    else
-      echo "Still $op_count balance operations to do..."
-      sleep 10
-    fi
-  done
-  echo
-
-  echo "Set meta level to steady..."
-  echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.set_meta_level
-  set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.rolling_update.set_meta_level | wc -l`
-  if [ $set_ok -ne 1 ]; then
-    echo "ERROR: set meta level to steady failed"
-    exit 1
-  fi
-  echo
+if [ "$rebalance_cluster_after_rolling" == "true" ]; then
+  echo "Start to rebalance cluster..."
+  ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
 fi
 
 echo "Finish time: `date`"
-all_finish_time=$((`date +%s`))
-echo "Rolling update $type done, elasped time is $((all_finish_time - all_start_time)) seconds."
+rolling_finish_time=$((`date +%s`))
+echo "Rolling update $type done, elasped time is $((rolling_finish_time - rolling_start_time)) seconds."
 
 rm -f /tmp/$UID.$PID.pegasus.* &>/dev/null

@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -15,12 +30,12 @@
 #include <rocksdb/env.h>
 #include <rocksdb/statistics.h>
 #include <dsn/cpp/json_helper.h>
-#include <dsn/dist/cli/cli.client.h>
+#include <dsn/dist/remote_command.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <dsn/perf_counter/perf_counter_utils.h>
 #include <dsn/utility/string_view.h>
-#include <dsn/utility/time_utils.h>
+#include <dsn/utils/time_utils.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
@@ -464,32 +479,33 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     return true;
 }
 
-inline void call_remote_command(shell_context *sc,
-                                const std::vector<node_desc> &nodes,
-                                const ::dsn::command &cmd,
-                                std::vector<std::pair<bool, std::string>> &results)
+inline std::vector<std::pair<bool, std::string>>
+call_remote_command(shell_context *sc,
+                    const std::vector<node_desc> &nodes,
+                    const std::string &cmd,
+                    const std::vector<std::string> &arguments)
 {
-    dsn::cli_client cli;
+    std::vector<std::pair<bool, std::string>> results;
     std::vector<dsn::task_ptr> tasks;
     tasks.resize(nodes.size());
     results.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
-        auto callback = [&results,
-                         i](::dsn::error_code err, dsn::message_ex *req, dsn::message_ex *resp) {
+        auto callback = [&results, i](::dsn::error_code err, const std::string &resp) {
             if (err == ::dsn::ERR_OK) {
                 results[i].first = true;
-                ::dsn::unmarshall(resp, results[i].second);
+                results[i].second = resp;
             } else {
                 results[i].first = false;
                 results[i].second = err.to_string();
             }
         };
-        tasks[i] =
-            cli.call(cmd, callback, std::chrono::milliseconds(5000), 0, 0, 0, nodes[i].address);
+        tasks[i] = dsn::dist::cmd::async_call_remote(
+            nodes[i].address, cmd, arguments, callback, std::chrono::milliseconds(5000));
     }
     for (int i = 0; i < nodes.size(); ++i) {
         tasks[i]->wait();
     }
+    return results;
 }
 
 inline bool parse_app_pegasus_perf_counter_name(const std::string &name,
@@ -539,14 +555,70 @@ inline bool parse_app_perf_counter_name(const std::string &name,
 
 struct row_data
 {
-    double get_total_qps() const
+    row_data() = default;
+    explicit row_data(const std::string &row_name) : row_name(row_name) {}
+
+    double get_total_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
+
+    double get_total_write_qps() const
     {
-        return get_qps + multi_get_qps + scan_qps + put_qps + multi_put_qps + remove_qps +
-               multi_remove_qps + incr_qps + check_and_set_qps + check_and_mutate_qps +
-               duplicate_qps;
+        return put_qps + remove_qps + multi_put_qps + multi_remove_qps + check_and_set_qps +
+               check_and_mutate_qps + incr_qps + duplicate_qps;
     }
 
-    double get_total_cu() const { return recent_read_cu + recent_write_cu; }
+    double get_total_read_bytes() const { return get_bytes + multi_get_bytes + scan_bytes; }
+
+    double get_total_write_bytes() const
+    {
+        return put_bytes + multi_put_bytes + check_and_set_bytes + check_and_mutate_bytes;
+    }
+
+    void aggregate(const row_data &row)
+    {
+        get_qps += row.get_qps;
+        multi_get_qps += row.multi_get_qps;
+        put_qps += row.put_qps;
+        multi_put_qps += row.multi_put_qps;
+        remove_qps += row.remove_qps;
+        multi_remove_qps += row.multi_remove_qps;
+        incr_qps += row.incr_qps;
+        check_and_set_qps += row.check_and_set_qps;
+        check_and_mutate_qps += row.check_and_mutate_qps;
+        scan_qps += row.scan_qps;
+        duplicate_qps += row.duplicate_qps;
+        dup_shipped_ops += row.dup_shipped_ops;
+        dup_failed_shipping_ops += row.dup_failed_shipping_ops;
+        recent_read_cu += row.recent_read_cu;
+        recent_write_cu += row.recent_write_cu;
+        recent_expire_count += row.recent_expire_count;
+        recent_filter_count += row.recent_filter_count;
+        recent_abnormal_count += row.recent_abnormal_count;
+        recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
+        recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+        recent_read_throttling_delay_count += row.recent_read_throttling_delay_count;
+        recent_read_throttling_reject_count += row.recent_read_throttling_reject_count;
+        storage_mb += row.storage_mb;
+        storage_count += row.storage_count;
+        rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
+        rdb_block_cache_total_count += row.rdb_block_cache_total_count;
+        rdb_index_and_filter_blocks_mem_usage += row.rdb_index_and_filter_blocks_mem_usage;
+        rdb_memtable_mem_usage += row.rdb_memtable_mem_usage;
+        rdb_estimate_num_keys += row.rdb_estimate_num_keys;
+        rdb_bf_seek_negatives += row.rdb_bf_seek_negatives;
+        rdb_bf_seek_total += row.rdb_bf_seek_total;
+        rdb_bf_point_positive_true += row.rdb_bf_point_positive_true;
+        rdb_bf_point_positive_total += row.rdb_bf_point_positive_total;
+        rdb_bf_point_negatives += row.rdb_bf_point_negatives;
+        backup_request_qps += row.backup_request_qps;
+        backup_request_bytes += row.backup_request_bytes;
+        get_bytes += row.get_bytes;
+        multi_get_bytes += row.multi_get_bytes;
+        scan_bytes += row.scan_bytes;
+        put_bytes += row.put_bytes;
+        multi_put_bytes += row.multi_put_bytes;
+        check_and_set_bytes += row.check_and_set_bytes;
+        check_and_mutate_bytes += row.check_and_mutate_bytes;
+    }
 
     std::string row_name;
     int32_t app_id = 0;
@@ -571,6 +643,8 @@ struct row_data
     double recent_abnormal_count = 0;
     double recent_write_throttling_delay_count = 0;
     double recent_write_throttling_reject_count = 0;
+    double recent_read_throttling_delay_count = 0;
+    double recent_read_throttling_reject_count = 0;
     double storage_mb = 0;
     double storage_count = 0;
     double rdb_block_cache_hit_count = 0;
@@ -584,6 +658,7 @@ struct row_data
     double rdb_bf_point_positive_total = 0;
     double rdb_bf_point_negatives = 0;
     double backup_request_qps = 0;
+    double backup_request_bytes = 0;
     double get_bytes = 0;
     double multi_get_bytes = 0;
     double scan_bytes = 0;
@@ -636,6 +711,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.recent_write_throttling_delay_count += value;
     else if (counter_name == "recent.write.throttling.reject.count")
         row.recent_write_throttling_reject_count += value;
+    else if (counter_name == "recent.read.throttling.delay.count")
+        row.recent_read_throttling_delay_count += value;
+    else if (counter_name == "recent.read.throttling.reject.count")
+        row.recent_read_throttling_reject_count += value;
     else if (counter_name == "disk.storage.sst(MB)")
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")
@@ -662,6 +741,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_bf_point_negatives += value;
     else if (counter_name == "backup_request_qps")
         row.backup_request_qps += value;
+    else if (counter_name == "backup_request_bytes")
+        row.backup_request_bytes += value;
     else if (counter_name == "get_bytes")
         row.get_bytes += value;
     else if (counter_name == "multi_get_bytes")
@@ -771,13 +852,8 @@ inline bool get_app_partition_stat(shell_context *sc,
     }
 
     // get all of the perf counters with format ".*@.*"
-    ::dsn::command command;
-    command.cmd = "perf-counters";
-    char tmp[256];
-    sprintf(tmp, ".*@.*");
-    command.arguments.emplace_back(tmp);
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, nodes, "perf-counters", {".*@.*"});
 
     for (int i = 0; i < nodes.size(); ++i) {
         // decode info of perf-counters on node i
@@ -841,17 +917,16 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         }
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters";
+    std::vector<std::string> arguments;
     char tmp[256];
     if (app_name.empty()) {
         sprintf(tmp, ".*@.*");
     } else {
         sprintf(tmp, ".*@%d\\..*", app_info->app_id);
     }
-    command.arguments.emplace_back(tmp);
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    arguments.emplace_back(tmp);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, nodes, "perf-counters", arguments);
 
     if (app_name.empty()) {
         std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
@@ -964,11 +1039,8 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         return false;
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters-by-substr";
-    command.arguments.emplace_back(".cu@");
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results =
+        call_remote_command(sc, nodes, "perf-counters-by-substr", {".cu@"});
 
     nodes_stat.resize(nodes.size());
     for (int i = 0; i < nodes.size(); ++i) {
@@ -1036,11 +1108,8 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         }
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters-by-prefix";
-    command.arguments.emplace_back("replica*app.pegasus*disk.storage.sst(MB)");
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results = call_remote_command(
+        sc, nodes, "perf-counters-by-prefix", {"replica*app.pegasus*disk.storage.sst(MB)"});
 
     for (int i = 0; i < nodes.size(); ++i) {
         dsn::rpc_address node_addr = nodes[i].address;
@@ -1080,4 +1149,15 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     dsn::utils::time_ms_to_date_time(dsn_now_ms(), buf, sizeof(buf));
     st_stat.timestamp = buf;
     return true;
+}
+
+inline configuration_proposal_action new_proposal_action(const dsn::rpc_address &target,
+                                                         const dsn::rpc_address &node,
+                                                         config_type::type type)
+{
+    configuration_proposal_action act;
+    act.__set_target(target);
+    act.__set_node(node);
+    act.__set_type(type);
+    return act;
 }

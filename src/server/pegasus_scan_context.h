@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -26,7 +41,8 @@ struct pegasus_scan_context
                          ::dsn::apps::filter_type::type sort_key_filter_type_,
                          const std::string &&sort_key_filter_pattern_,
                          int32_t batch_size_,
-                         bool no_value_)
+                         bool no_value_,
+                         bool validate_partition_hash_)
         : _stop_holder(std::move(stop_)),
           _hash_key_filter_pattern_holder(std::move(hash_key_filter_pattern_)),
           _sort_key_filter_pattern_holder(std::move(sort_key_filter_pattern_)),
@@ -40,7 +56,8 @@ struct pegasus_scan_context
           sort_key_filter_pattern(
               _sort_key_filter_pattern_holder.data(), 0, _sort_key_filter_pattern_holder.length()),
           batch_size(batch_size_),
-          no_value(no_value_)
+          no_value(no_value_),
+          validate_partition_hash(validate_partition_hash_)
     {
     }
 
@@ -59,6 +76,7 @@ public:
     dsn::blob sort_key_filter_pattern;
     int32_t batch_size;
     bool no_value;
+    bool validate_partition_hash;
 };
 
 class pegasus_context_cache

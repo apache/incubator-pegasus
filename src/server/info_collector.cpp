@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "info_collector.h"
 
@@ -14,6 +29,7 @@
 
 #include "base/pegasus_const.h"
 #include "result_writer.h"
+#include "hotspot_partition_calculator.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -41,9 +57,10 @@ info_collector::info_collector()
 
     _cluster_name = dsn::replication::get_current_cluster_name();
 
-    _shell_context.current_cluster_name = _cluster_name;
-    _shell_context.meta_list = meta_servers;
-    _shell_context.ddl_client.reset(new replication_ddl_client(meta_servers));
+    _shell_context = std::make_shared<shell_context>();
+    _shell_context->current_cluster_name = _cluster_name;
+    _shell_context->meta_list = meta_servers;
+    _shell_context->ddl_client.reset(new replication_ddl_client(meta_servers));
 
     _app_stat_interval_seconds = (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
                                                                        "app_stat_interval_seconds",
@@ -78,10 +95,6 @@ info_collector::info_collector()
                                               "storage_size_fetch_interval_seconds",
                                               3600, // default value 1h
                                               "storage size fetch interval seconds");
-    _hotspot_detect_algorithm = dsn_config_get_value_string("pegasus.collector",
-                                                            "hotspot_detect_algorithm",
-                                                            "hotspot_algo_qps_variance",
-                                                            "hotspot_detect_algorithm");
     // _storage_size_retry_wait_seconds is in range of [1, 60]
     _storage_size_retry_wait_seconds =
         std::min(60u, std::max(1u, _storage_size_fetch_interval_seconds / 10));
@@ -95,9 +108,6 @@ info_collector::~info_collector()
     stop();
     for (auto kv : _app_stat_counters) {
         delete kv.second;
-    }
-    for (auto store : _hotspot_calculator_store) {
-        delete store.second;
     }
 }
 
@@ -134,38 +144,34 @@ void info_collector::on_app_stat()
 {
     ddebug("start to stat apps");
     std::map<std::string, std::vector<row_data>> all_rows;
-    if (!get_app_partition_stat(&_shell_context, all_rows)) {
+    if (!get_app_partition_stat(_shell_context.get(), all_rows)) {
         derror("call get_app_stat() failed");
         return;
     }
 
-    table_stats all_stats("_all_");
+    row_data all_stats("_all_");
     for (const auto &app_rows : all_rows) {
         // get statistics data for app
-        table_stats app_stats(app_rows.first);
+        row_data app_stats(app_rows.first);
         for (auto partition_row : app_rows.second) {
             app_stats.aggregate(partition_row);
         }
-        get_app_counters(app_stats.app_name)->set(app_stats);
+        get_app_counters(app_stats.row_name)->set(app_stats);
         // get row data statistics for all of the apps
-        all_stats.merge(app_stats);
+        all_stats.aggregate(app_stats);
 
-        // hotspot_calculator is to detect hotspots
-        hotspot_calculator *hotspot_calculator =
+        // hotspot_partition_calculator is used for detecting hotspots
+        auto hotspot_partition_calculator =
             get_hotspot_calculator(app_rows.first, app_rows.second.size());
-        if (!hotspot_calculator) {
-            continue;
-        }
-        hotspot_calculator->aggregate(app_rows.second);
-        // new policy can be designed by strategy pattern in hotspot_partition_data.h
-        hotspot_calculator->start_alg();
+        hotspot_partition_calculator->data_aggregate(app_rows.second);
+        hotspot_partition_calculator->data_analyse();
     }
-    get_app_counters(all_stats.app_name)->set(all_stats);
+    get_app_counters(all_stats.row_name)->set(all_stats);
 
-    ddebug("stat apps succeed, app_count = %d, total_read_qps = %.2f, total_write_qps = %.2f",
-           (int)(all_rows.size() - 1),
-           all_stats.get_total_read_qps(),
-           all_stats.get_total_write_qps());
+    ddebug_f("stat apps succeed, app_count = {}, total_read_qps = {}, total_write_qps = {}",
+             all_rows.size(),
+             all_stats.get_total_read_qps(),
+             all_stats.get_total_write_qps());
 }
 
 info_collector::app_stat_counters *info_collector::get_app_counters(const std::string &app_name)
@@ -207,6 +213,8 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(recent_abnormal_count);
     INIT_COUNTER(recent_write_throttling_delay_count);
     INIT_COUNTER(recent_write_throttling_reject_count);
+    INIT_COUNTER(recent_read_throttling_delay_count);
+    INIT_COUNTER(recent_read_throttling_reject_count);
     INIT_COUNTER(storage_mb);
     INIT_COUNTER(storage_count);
     INIT_COUNTER(rdb_block_cache_hit_rate);
@@ -219,6 +227,7 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(read_qps);
     INIT_COUNTER(write_qps);
     INIT_COUNTER(backup_request_qps);
+    INIT_COUNTER(backup_request_bytes);
     INIT_COUNTER(get_bytes);
     INIT_COUNTER(multi_get_bytes);
     INIT_COUNTER(scan_bytes);
@@ -236,7 +245,7 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
 {
     ddebug("start to stat capacity unit, remaining_retry_count = %d", remaining_retry_count);
     std::vector<node_capacity_unit_stat> nodes_stat;
-    if (!get_capacity_unit_stat(&_shell_context, nodes_stat)) {
+    if (!get_capacity_unit_stat(_shell_context.get(), nodes_stat)) {
         if (remaining_retry_count > 0) {
             dwarn("get capacity unit stat failed, remaining_retry_count = %d, "
                   "wait %u seconds to retry",
@@ -283,7 +292,7 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
 {
     ddebug("start to stat storage size, remaining_retry_count = %d", remaining_retry_count);
     app_storage_size_stat st_stat;
-    if (!get_storage_size_stat(&_shell_context, st_stat)) {
+    if (!get_storage_size_stat(_shell_context.get(), st_stat)) {
         if (remaining_retry_count > 0) {
             dwarn("get storage size stat failed, remaining_retry_count = %d, "
                   "wait %u seconds to retry",
@@ -302,27 +311,17 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     _result_writer->set_result(st_stat.timestamp, "ss", st_stat.dump_to_json());
 }
 
-hotspot_calculator *info_collector::get_hotspot_calculator(const std::string &app_name,
-                                                           const int partition_num)
+std::shared_ptr<hotspot_partition_calculator>
+info_collector::get_hotspot_calculator(const std::string &app_name, const int partition_count)
 {
-    // use appname+partition_num as a key can prevent the impact of dynamic partition changes
-    std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_num);
+    // use app_name+partition_count as a key can prevent the impact of dynamic partition changes
+    std::string app_name_pcount = fmt::format("{}.{}", app_name, partition_count);
     auto iter = _hotspot_calculator_store.find(app_name_pcount);
     if (iter != _hotspot_calculator_store.end()) {
         return iter->second;
     }
-    std::unique_ptr<hotspot_policy> policy;
-    if (_hotspot_detect_algorithm == "hotspot_algo_qps_variance") {
-        policy.reset(new hotspot_algo_qps_variance());
-    } else if (_hotspot_detect_algorithm == "hotspot_algo_qps_skew") {
-        policy.reset(new hotspot_algo_qps_skew());
-    } else {
-        dwarn("hotspot detection is disabled");
-        _hotspot_calculator_store[app_name_pcount] = nullptr;
-        return nullptr;
-    }
-    hotspot_calculator *calculator =
-        new hotspot_calculator(app_name_pcount, partition_num, std::move(policy));
+    auto calculator =
+        std::make_shared<hotspot_partition_calculator>(app_name, partition_count, _shell_context);
     _hotspot_calculator_store[app_name_pcount] = calculator;
     return calculator;
 }

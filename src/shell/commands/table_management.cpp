@@ -1,6 +1,21 @@
-// Copyright (c) 2019, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "shell/commands.h"
 
@@ -210,15 +225,13 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    ::dsn::command command;
-    command.cmd = "perf-counters-by-prefix";
-    char tmp[256];
-    sprintf(tmp, "replica*app.pegasus*disk.storage.sst(MB)@%d.", app_id);
-    command.arguments.push_back(tmp);
-    sprintf(tmp, "replica*app.pegasus*disk.storage.sst.count@%d.", app_id);
-    command.arguments.push_back(tmp);
-    std::vector<std::pair<bool, std::string>> results;
-    call_remote_command(sc, nodes, command, results);
+    std::vector<std::pair<bool, std::string>> results = call_remote_command(
+        sc,
+        nodes,
+        "perf-counters-by-prefix",
+        {fmt::format("replica*app.pegasus*disk.storage.sst(MB)@{}.", app_id),
+         fmt::format("replica*app.pegasus*disk.storage.sst.count@{}.", app_id)});
+
     std::map<dsn::rpc_address, std::map<int32_t, double>> disk_map;
     std::map<dsn::rpc_address, std::map<int32_t, double>> count_map;
     for (int i = 0; i < nodes.size(); ++i) {
@@ -492,6 +505,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.recent_abnormal_count += row.recent_abnormal_count;
         sum.recent_write_throttling_delay_count += row.recent_write_throttling_delay_count;
         sum.recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
+        sum.recent_read_throttling_delay_count += row.recent_read_throttling_delay_count;
+        sum.recent_read_throttling_reject_count += row.recent_read_throttling_reject_count;
         sum.storage_mb += row.storage_mb;
         sum.storage_count += row.storage_count;
         sum.rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;

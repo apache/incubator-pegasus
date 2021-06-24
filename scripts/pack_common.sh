@@ -1,15 +1,20 @@
 #!/bin/bash
-
-function get_boost_lib()
-{
-    libname=`ldd ./DSN_ROOT/bin/pegasus_server/pegasus_server 2>/dev/null | grep boost_$2`
-    libname=`echo $libname | cut -f1 -d" "`
-    if [ $1 = "true" ]; then
-        echo $BOOST_DIR/lib/$libname
-    else
-        echo `ldconfig -p|grep $libname|awk '{print $NF}'`
-    fi
-}
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 function get_stdcpp_lib()
 {
@@ -95,3 +100,27 @@ function check_bit()
     fi
 }
 
+function need_system_lib() {
+    # return if system libname is not empty, if false, it means this library is not a dependency
+    libname=$(ldd ./DSN_ROOT/bin/pegasus_"$1"/pegasus_"$1" 2>/dev/null | grep "lib${2}\.so")
+    [ -n "${libname}" ]
+}
+
+function pack_system_lib() {
+    local package_path=$1
+    local package_type=$2
+    local lib_name=$3
+
+    if ! need_system_lib "${package_type}" "${lib_name}"; then
+        echo "ERROR: ${lib_name} is not a required dependency, skip packaging this lib"
+        return;
+    fi
+
+    SYS_LIB_PATH=$(get_system_lib "${package_type}" "${lib_name}")
+    if [ -z "${SYS_LIB_PATH}" ]; then
+        echo "ERROR: library ${lib_name} is missing on your system"
+        exit 1
+    fi
+    SYS_LIB_NAME=$(get_system_libname "${package_type}" "${lib_name}")
+    copy_file "${SYS_LIB_PATH}" "${package_path}/${SYS_LIB_NAME}"
+}

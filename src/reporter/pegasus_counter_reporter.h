@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -9,11 +24,8 @@
 #include <dsn/cpp/json_helper.h>
 
 #include <boost/asio/deadline_timer.hpp>
-#include <event2/event.h>
-#include <event2/buffer.h>
 #include <event2/http.h>
 #include <event2/http_struct.h>
-#include <event2/keyvalq_struct.h>
 
 #include <prometheus/registry.h>
 #include <prometheus/exposer.h>
@@ -73,25 +85,18 @@ private:
     std::string _app_name;
     std::string _cluster_name;
 
-    uint32_t _update_interval_seconds;
     uint64_t _last_report_time_ms;
     std::shared_ptr<boost::asio::deadline_timer> _report_timer;
 
     // perf counter flags
-    bool _enable_logging;
     perf_counter_sink_t _perf_counter_sink;
 
-    // falcon relates
-    std::string _falcon_host;
-    uint16_t _falcon_port;
-    std::string _falcon_path;
     falcon_metric _falcon_metric;
 
     // prometheus relates
-    uint16_t _prometheus_port;
     std::shared_ptr<prometheus::Registry> _registry;
     std::unique_ptr<prometheus::Exposer> _exposer;
     std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
 };
-}
-} // namespace
+} // namespace server
+} // namespace pegasus

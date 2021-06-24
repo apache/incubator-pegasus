@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "pegasus_server_test_base.h"
 #include "message_utils.h"
@@ -45,14 +60,18 @@ public:
                 int put_rpc_cnt = dsn::rand::next_u32(1, 10);
                 int remove_rpc_cnt = dsn::rand::next_u32(1, 10);
                 int total_rpc_cnt = put_rpc_cnt + remove_rpc_cnt;
-                auto writes = new dsn::message_ex *[total_rpc_cnt];
+                /**
+                 * writes[0] ~ writes[total_rpc_cnt-1] will be released by their corresponding
+                 * rpc_holders, which created in on_batched_write_requests. So we don't need to
+                 * release them here
+                 **/
+                dsn::message_ex *writes[total_rpc_cnt];
                 for (int i = 0; i < put_rpc_cnt; i++) {
                     writes[i] = pegasus::create_put_request(req);
                 }
                 for (int i = put_rpc_cnt; i < total_rpc_cnt; i++) {
                     writes[i] = pegasus::create_remove_request(key);
                 }
-                auto cleanup = dsn::defer([=]() { delete[] writes; });
 
                 int err =
                     _server_write->on_batched_write_requests(writes, total_rpc_cnt, decree, 0);
@@ -72,7 +91,8 @@ public:
                 ASSERT_TRUE(_server_write->_write_svc->_batch_qps_perfcounters.empty());
                 ASSERT_TRUE(_server_write->_write_svc->_batch_latency_perfcounters.empty());
                 ASSERT_EQ(_server_write->_write_svc->_batch_start_time, 0);
-                ASSERT_EQ(_server_write->_write_svc->_impl->_batch.Count(), 0);
+                ASSERT_EQ(_server_write->_write_svc->_impl->_rocksdb_wrapper->_write_batch->Count(),
+                          0);
                 ASSERT_EQ(_server_write->_write_svc->_impl->_update_responses.size(), 0);
 
                 ASSERT_EQ(put_rpc::mail_box().size(), put_rpc_cnt);

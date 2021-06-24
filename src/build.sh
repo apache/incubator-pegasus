@@ -1,4 +1,20 @@
 #!/bin/bash
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 #
 # Shell Options:
 #    CLEAR          YES|NO
@@ -10,7 +26,6 @@
 #    RUN_VERBOSE    YES|NO
 #    WARNING_ALL    YES|NO
 #    ENABLE_GCOV    YES|NO
-#    BOOST_DIR      <dir>|""
 #    TEST_MODULE    "<module1> <module2> ..."
 #
 # CMake options:
@@ -19,7 +34,6 @@
 #    [-DCMAKE_BUILD_TYPE=Debug]
 #    [-DWARNING_ALL=TRUE]
 #    [-DENABLE_GCOV=TRUE]
-#    [-DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON]
 
 ROOT=`pwd`
 BUILD_DIR="$ROOT/builder"
@@ -97,31 +111,7 @@ else
     echo "DISABLE_GPERF=NO"
 fi
 
-# You can specify customized boost by defining BOOST_DIR.
-# Install boost like this:
-#   wget http://downloads.sourceforge.net/project/boost/boost/1.54.0/boost_1_54_0.zip?r=&ts=1442891144&use_mirror=jaist
-#   unzip -q boost_1_54_0.zip
-#   cd boost_1_54_0
-#   ./bootstrap.sh --with-libraries=system,filesystem --with-toolset=gcc
-#   ./b2 toolset=gcc cxxflags="-std=c++11 -fPIC" -j8 -d0
-#   ./b2 install --prefix=$DSN_ROOT -d0
-# And set BOOST_DIR as:
-#   export BOOST_DIR=/path/to/boost_1_54_0/output
-if [ -n "$BOOST_DIR" ]
-then
-    echo "Use customized boost: $BOOST_DIR"
-    CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=$BOOST_DIR -DBoost_NO_SYSTEM_PATHS=ON"
-    # for makefile
-    export BOOST_ROOT=$BOOST_DIR
-else
-    echo "Use system boost"
-fi
-
-echo "CMAKE_OPTIONS=$CMAKE_OPTIONS"
-
-#rocksdb enable jemalloc by default, but we use regular malloc.
-MAKE_OPTIONS="$MAKE_OPTIONS DISABLE_JEMALLOC=1"
-echo "MAKE_OPTIONS=$MAKE_OPTIONS"
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/rdsn/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
 
 echo "#############################################################################"
 
@@ -156,21 +146,16 @@ then
     cd ..
 fi
 
-cd $ROOT
-PEGASUS_GIT_COMMIT=`git log | head -n 1 | awk '{print $2}'`
-if [ $? -ne 0 ] || [ -z "$PEGASUS_GIT_COMMIT" ] 
-then
-    echo "ERROR: get PEGASUS_GIT_COMMIT failed"
-    echo "HINT: check if pegasus is a git repo"
-    exit 1
+cd "$ROOT" || exit 1
+PEGASUS_GIT_COMMIT="non-git-repo"
+if git rev-parse HEAD; then # this is a git repo
+    PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
 fi
+echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
 GIT_COMMIT_FILE=include/pegasus/git_commit.h
-if [ ! -f $GIT_COMMIT_FILE ] || ! grep $PEGASUS_GIT_COMMIT $GIT_COMMIT_FILE
-then
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
-fi
+echo "Generating $GIT_COMMIT_FILE..."
+echo "#pragma once" >$GIT_COMMIT_FILE
+echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
 
 cd $BUILD_DIR
 echo "Building..."
@@ -183,4 +168,3 @@ else
     echo "Build pegasus succeed"
 fi
 cd ..
-

@@ -1,13 +1,28 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "pegasus_server_impl.h"
 #include "pegasus_service_app.h"
 #include "info_collector_app.h"
 #include "brief_stat.h"
+#include "compaction_filter_rule.h"
 
-#include <dsn/git_commit.h>
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 
@@ -37,7 +52,6 @@ static char const rcsid[] =
 #if defined(DSN_BUILD_TYPE)
     " " STR(DSN_BUILD_TYPE)
 #endif
-        ", built with rDSN (" DSN_GIT_COMMIT ")"
         ", built by gcc " STR(__GNUC__) "." STR(__GNUC_MINOR__) "." STR(__GNUC_PATCHLEVEL__)
 #if defined(DSN_BUILD_HOSTNAME)
             ", built on " STR(DSN_BUILD_HOSTNAME)
@@ -74,6 +88,7 @@ void dsn_app_registration_pegasus()
         "server-stat - query selected perf counters",
         "server-stat",
         [](const std::vector<std::string> &args) { return pegasus::get_brief_stat(); });
+    pegasus::server::register_compaction_filter_rules();
 }
 
 int main(int argc, char **argv)

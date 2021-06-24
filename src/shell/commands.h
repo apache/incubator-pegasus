@@ -1,6 +1,21 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #pragma once
 
@@ -15,7 +30,6 @@
 #include <dsn/utility/output_utils.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/string_view.h>
-#include <dsn/dist/cli/cli.client.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/dist/replication/mutation_log_tool.h>
 
@@ -26,7 +40,6 @@
 #include <pegasus/error.h>
 
 #include "command_executor.h"
-#include "command_utils.h"
 #include "command_helper.h"
 #include "args.h"
 
@@ -246,8 +259,18 @@ bool pause_dup(command_executor *e, shell_context *sc, arguments args);
 
 bool set_dup_fail_mode(command_executor *e, shell_context *sc, arguments args);
 
-// == disk rebalance (see 'commands/disk_rebalance.cpp') == //
+// == bulk load (see 'commands/bulk_load.cpp') == //
 
-bool query_disk_capacity(command_executor *e, shell_context *sc, arguments args);
+bool start_bulk_load(command_executor *e, shell_context *sc, arguments args);
 
-bool query_disk_replica(command_executor *e, shell_context *sc, arguments args);
+bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments args);
+
+bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+bool restart_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+// == detect hotkey (see 'commands/detect_hotkey.cpp') == //
+
+bool detect_hotkey(command_executor *e, shell_context *sc, arguments args);

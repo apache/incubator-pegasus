@@ -1,9 +1,26 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include "pegasus_server_impl.h"
 
+#include <unordered_map>
+#include <dsn/utility/flags.h>
 #include <rocksdb/filter_policy.h>
 
 #include "capacity_unit_calculator.h"
@@ -11,11 +28,33 @@
 #include "meta_store.h"
 #include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
+#include "hotkey_collector.h"
 
 namespace pegasus {
 namespace server {
+
+DSN_DEFINE_int64(
+    "pegasus.server",
+    rocksdb_limiter_max_write_megabytes_per_sec,
+    500,
+    "max rate of rocksdb flush and compaction(MB/s), if less than or equal to 0 means close limit");
+
+DSN_DEFINE_bool("pegasus.server",
+                rocksdb_limiter_enable_auto_tune,
+                false,
+                "whether to enable write rate auto tune when open rocksdb write limit");
+
+static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
+    INDEX_TYPE_STRING_MAP = {
+        {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
+        {"hash_search", rocksdb::BlockBasedTableOptions::IndexType::kHashSearch},
+        {"two_level_index_search",
+         rocksdb::BlockBasedTableOptions::IndexType::kTwoLevelIndexSearch},
+        {"binary_search_with_first_key",
+         rocksdb::BlockBasedTableOptions::IndexType::kBinarySearchWithFirstKey}};
+
 pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
-    : dsn::apps::rrdb_service(r),
+    : pegasus_read_service(r),
       _db(nullptr),
       _data_cf(nullptr),
       _meta_cf(nullptr),
@@ -28,6 +67,11 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 {
     _primary_address = dsn::rpc_address(dsn_primary_address()).to_string();
     _gpid = get_gpid();
+
+    _read_hotkey_collector =
+        std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::READ, this);
+    _write_hotkey_collector =
+        std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, this);
 
     _verbose_log = dsn_config_get_value_bool("pegasus.server",
                                              "rocksdb_verbose_log",
@@ -90,8 +134,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         _rng_rd_opts.rocksdb_iteration_threshold_time_ms_in_config;
 
     // init rocksdb::DBOptions
-    _db_opts.pegasus_data = true;
-    _db_opts.pegasus_data_version = _pegasus_data_version;
     _db_opts.create_if_missing = true;
     // atomic flush data CF and meta CF, aim to keep consistency of 'last flushed decree' in meta CF
     // and data in data CF.
@@ -253,6 +295,139 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         tbl_opts.block_cache = _s_block_cache;
     }
 
+    // FLAGS_rocksdb_limiter_max_write_megabytes_per_sec <= 0 means close the rate limit.
+    // For more detail arguments see
+    // https://github.com/facebook/rocksdb/blob/v6.6.4/include/rocksdb/rate_limiter.h#L111-L137
+    if (FLAGS_rocksdb_limiter_max_write_megabytes_per_sec > 0) {
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            _s_rate_limiter = std::shared_ptr<rocksdb::RateLimiter>(rocksdb::NewGenericRateLimiter(
+                FLAGS_rocksdb_limiter_max_write_megabytes_per_sec << 20,
+                100 * 1000, // refill_period_us
+                10,         // fairness
+                rocksdb::RateLimiter::Mode::kWritesOnly,
+                FLAGS_rocksdb_limiter_enable_auto_tune));
+        });
+        _db_opts.rate_limiter = _s_rate_limiter;
+    }
+
+    bool enable_write_buffer_manager =
+        dsn_config_get_value_bool("pegasus.server",
+                                  "rocksdb_enable_write_buffer_manager",
+                                  false,
+                                  "enable write buffer manager to limit total memory "
+                                  "used by memtables and block caches across multiple replicas");
+    ddebug_replica("rocksdb_enable_write_buffer_manager = {}", enable_write_buffer_manager);
+    if (enable_write_buffer_manager) {
+        // If write buffer manager is enabled, all replicas(one DB instance for each
+        // replica) on this server will share the same write buffer manager object,
+        // thus the same block cache object. It's convenient to control the total memory
+        // of memtables and block caches used by this server.
+        //
+        // While write buffer manager is enabled, total_size_across_write_buffer = 0
+        // indicates no limit on memory, for details see:
+        // https://github.com/facebook/rocksdb/blob/v6.6.4/include/rocksdb/write_buffer_manager.h#L23-24
+        static std::once_flag flag;
+        std::call_once(flag, [&]() {
+            uint64_t total_size_across_write_buffer = dsn_config_get_value_uint64(
+                "pegasus.server",
+                "rocksdb_total_size_across_write_buffer",
+                0,
+                "total size limit used by memtables across multiple replicas");
+            ddebug_replica("rocksdb_total_size_across_write_buffer = {}",
+                           total_size_across_write_buffer);
+            _s_write_buffer_manager = std::make_shared<rocksdb::WriteBufferManager>(
+                static_cast<size_t>(total_size_across_write_buffer), tbl_opts.block_cache);
+        });
+        _db_opts.write_buffer_manager = _s_write_buffer_manager;
+    }
+
+    int64_t max_open_files = dsn_config_get_value_int64(
+        "pegasus.server",
+        "rocksdb_max_open_files",
+        -1, /* always keep files opened, default by rocksdb */
+        "number of opened files that can be used by a replica(namely a DB instance)");
+    _db_opts.max_open_files = static_cast<int>(max_open_files);
+    ddebug_replica("rocksdb_max_open_files = {}", _db_opts.max_open_files);
+
+    std::string index_type =
+        dsn_config_get_value_string("pegasus.server",
+                                    "rocksdb_index_type",
+                                    "binary_search",
+                                    "The index type that will be used for this table.");
+    auto index_type_item = INDEX_TYPE_STRING_MAP.find(index_type);
+    dassert(index_type_item != INDEX_TYPE_STRING_MAP.end(),
+            "[pegasus.server]rocksdb_index_type should be one among binary_search, "
+            "hash_search, two_level_index_search or binary_search_with_first_key.");
+    tbl_opts.index_type = index_type_item->second;
+    ddebug_replica("rocksdb_index_type = {}", index_type.c_str());
+
+    tbl_opts.partition_filters = dsn_config_get_value_bool(
+        "pegasus.server",
+        "rocksdb_partition_filters",
+        false,
+        "Note: currently this option requires two_level_index_search to be set as well. "
+        "Use partitioned full filters for each SST file. This option is "
+        "incompatibile with block-based filters.");
+    ddebug_replica("rocksdb_partition_filters = {}", tbl_opts.partition_filters);
+
+    tbl_opts.metadata_block_size = dsn_config_get_value_uint64(
+        "pegasus.server",
+        "rocksdb_metadata_block_size",
+        4096,
+        "Block size for partitioned metadata. Currently applied to indexes when "
+        "two_level_index_search is used and to filters when partition_filters is used. "
+        "Note: Since in the current implementation the filters and index partitions "
+        "are aligned, an index/filter block is created when either index or filter "
+        "block size reaches the specified limit. "
+        "Note: this limit is currently applied to only index blocks; a filter "
+        "partition is cut right after an index block is cut");
+    ddebug_replica("rocksdb_metadata_block_size = {}", tbl_opts.metadata_block_size);
+
+    tbl_opts.cache_index_and_filter_blocks = dsn_config_get_value_bool(
+        "pegasus.server",
+        "rocksdb_cache_index_and_filter_blocks",
+        false,
+        "Indicating if we'd put index/filter blocks to the block cache. "
+        "If not specified, each \"table reader\" object will pre-load index/filter "
+        "block during table initialization.");
+    ddebug_replica("rocksdb_cache_index_and_filter_blocks = {}",
+                   tbl_opts.cache_index_and_filter_blocks);
+
+    tbl_opts.pin_top_level_index_and_filter = dsn_config_get_value_bool(
+        "pegasus.server",
+        "rocksdb_pin_top_level_index_and_filter",
+        true,
+        "If cache_index_and_filter_blocks is true and the below is true, then "
+        "the top-level index of partitioned filter and index blocks are stored in "
+        "the cache, but a reference is held in the \"table reader\" object so the "
+        "blocks are pinned and only evicted from cache when the table reader is "
+        "freed. This is not limited to l0 in LSM tree.");
+    ddebug_replica("rocksdb_pin_top_level_index_and_filter = {}",
+                   tbl_opts.pin_top_level_index_and_filter);
+
+    tbl_opts.cache_index_and_filter_blocks_with_high_priority = dsn_config_get_value_bool(
+        "pegasus.server",
+        "rocksdb_cache_index_and_filter_blocks_with_high_priority",
+        true,
+        "If cache_index_and_filter_blocks is enabled, cache index and filter "
+        "blocks with high priority. If set to true, depending on implementation of "
+        "block cache, index and filter blocks may be less likely to be evicted "
+        "than data blocks.");
+    ddebug_replica("rocksdb_cache_index_and_filter_blocks_with_high_priority = {}",
+                   tbl_opts.cache_index_and_filter_blocks_with_high_priority);
+
+    tbl_opts.pin_l0_filter_and_index_blocks_in_cache = dsn_config_get_value_bool(
+        "pegasus.server",
+        "rocksdb_pin_l0_filter_and_index_blocks_in_cache",
+        false,
+        "if cache_index_and_filter_blocks is true and the below is true, then "
+        "filter and index blocks are stored in the cache, but a reference is "
+        "held in the \"table reader\" object so the blocks are pinned and only "
+        "evicted from cache when the table reader is freed.");
+    ddebug_replica("rocksdb_pin_l0_filter_and_index_blocks_in_cache = {}",
+                   tbl_opts.pin_l0_filter_and_index_blocks_in_cache);
+
     // Bloom filter configurations.
     bool disable_bloom_filter = dsn_config_get_value_bool(
         "pegasus.server", "rocksdb_disable_bloom_filter", false, "Whether to disable bloom filter");
@@ -402,8 +577,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         COUNTER_TYPE_NUMBER,
         "statistic the total count of rocksdb block cache");
 
-    // Block cache is a singleton on this server shared by all replicas, so we initialize
-    // `_pfc_rdb_block_cache_mem_usage` only once.
+    // These counters are singletons on this server shared by all replicas, so we initialize
+    // them only once.
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         _pfc_rdb_block_cache_mem_usage.init_global_counter(
@@ -412,6 +587,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "rdb.block_cache.memory_usage",
             COUNTER_TYPE_NUMBER,
             "statistic the memory usage of rocksdb block cache");
+
+        _pfc_rdb_write_limiter_rate_bytes.init_global_counter(
+            "replica",
+            "app.pegasus",
+            "rdb.write_limiter_rate_bytes",
+            COUNTER_TYPE_NUMBER,
+            "statistic the through bytes of rocksdb write rate limiter");
     });
 
     snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());

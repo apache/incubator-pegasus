@@ -1,10 +1,26 @@
-// Copyright (c) 2017, Xiaomi, Inc.  All rights reserved.
-// This source code is licensed under the Apache License Version 2.0, which
-// can be found in the LICENSE file in the root directory of this source tree.
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication_service_app.h>
+#include "server/compaction_filter_rule.h"
 #include "server/pegasus_server_impl.h"
 
 std::atomic_bool gtest_done{false};
@@ -33,6 +49,7 @@ GTEST_API_ int main(int argc, char **argv)
     dsn::replication::replication_app_base::register_storage_engine(
         "pegasus",
         dsn::replication::replication_app_base::create<pegasus::server::pegasus_server_impl>);
+    pegasus::server::register_compaction_filter_rules();
 
     dsn_run_config("config.ini", false);
     while (!gtest_done) {
