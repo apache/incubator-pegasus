@@ -26,7 +26,6 @@
 #include <rocksdb/options.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
-#include <dsn/utility/flags.h>
 #include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
 #include <rocksdb/rate_limiter.h>
