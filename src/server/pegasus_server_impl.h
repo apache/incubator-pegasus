@@ -40,7 +40,7 @@
 
 namespace pegasus {
 namespace server {
-DSN_DECLARE_int32(read_amp_bytes_per_bit);
+
 class meta_store;
 class capacity_unit_calculator;
 class pegasus_server_write;

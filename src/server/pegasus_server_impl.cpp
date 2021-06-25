@@ -46,6 +46,7 @@ namespace pegasus {
 namespace server {
 
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+DSN_DECLARE_int32(read_amp_bytes_per_bit);
 
 DSN_DEFINE_int32("pegasus.server",
                  hotkey_analyse_time_interval_s,
@@ -1538,7 +1539,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     dinfo_replica("start the update rocksdb amp statistics timer task");
     _update_replica_amp_stat =
         ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
-                                      nullptr,
+                                      &_tracker,
                                       [this]() { this->update_replica_rocksdb_amp_statistics(); },
                                       kServerStatUpdateTimeSec);
 

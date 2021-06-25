@@ -55,7 +55,9 @@ DSN_DEFINE_int32("pegasus.server",
                  "amplification");
 
 DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per_bit) -> bool {
-    return read_amp_bytes_per_bit >= 0;
+    return read_amp_bytes_per_bit == 0 ||
+           (read_amp_bytes_per_bit > 0 &&
+            (read_amp_bytes_per_bit & (read_amp_bytes_per_bit - 1)) == 0);
 });
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
