@@ -2304,10 +2304,10 @@ void pegasus_server_impl::update_replica_rocksdb_amp_statistics()
 
     // Update _pfc_rdb_read_amplification
     if (FLAGS_read_amp_bytes_per_bit > 0) {
-        int64_t estimate_useful_bytes =
+        auto estimate_useful_bytes =
             _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
         if (estimate_useful_bytes) {
-            int64_t read_amplification =
+            auto read_amplification =
                 _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
                 estimate_useful_bytes;
             _pfc_rdb_read_amplification->set(read_amplification);
