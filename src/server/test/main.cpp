@@ -20,7 +20,7 @@
 #include <gtest/gtest.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/replication/replication_service_app.h>
-#include "server/compaction_filter_rule.h"
+#include "server/compaction_operation.h"
 #include "server/pegasus_server_impl.h"
 
 std::atomic_bool gtest_done{false};
@@ -49,7 +49,7 @@ GTEST_API_ int main(int argc, char **argv)
     dsn::replication::replication_app_base::register_storage_engine(
         "pegasus",
         dsn::replication::replication_app_base::create<pegasus::server::pegasus_server_impl>);
-    pegasus::server::register_compaction_filter_rules();
+    pegasus::server::register_compaction_operations();
 
     dsn_run_config("config.ini", false);
     while (!gtest_done) {

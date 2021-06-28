@@ -69,17 +69,14 @@ bool sortkey_pattern_rule::match(const std::string &hash_key,
     return string_pattern_match(sort_key, match_type, pattern);
 }
 
-ttl_range_rule::ttl_range_rule(uint32_t pegasus_data_version)
-    : pegasus_data_version(pegasus_data_version)
-{
-}
+ttl_range_rule::ttl_range_rule(uint32_t data_version) : data_version(data_version) {}
 
 bool ttl_range_rule::match(const std::string &hash_key,
                            const std::string &sort_key,
                            const rocksdb::Slice &existing_value) const
 {
     uint32_t expire_ts =
-        pegasus_extract_expire_ts(pegasus_data_version, utils::to_string_view(existing_value));
+        pegasus_extract_expire_ts(data_version, utils::to_string_view(existing_value));
     // if start_ttl and stop_ttl = 0, it means we want to delete keys which have no ttl
     if (0 == expire_ts && 0 == start_ttl && 0 == stop_ttl) {
         return true;
