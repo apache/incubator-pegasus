@@ -32,7 +32,7 @@ if [ "$modified" ]; then
     exit 1
 fi
 
-source "${root}"/config_hdfs.sh
+source "${root}"/scripts/config_hdfs.sh
 "${root}"/run.sh build -c --skip_thirdparty --disable_gperf && ./run.sh test --on_travis
 ret=$?
 if [ $ret ]; then
