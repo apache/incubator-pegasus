@@ -276,6 +276,10 @@ TEST(compaction_filter_operation_test, create_operations)
     auto expire_ts_rule = static_cast<ttl_range_rule *>(second_operation->rules[2].get());
     ASSERT_EQ(expire_ts_rule->start_ttl, 0);
     ASSERT_EQ(expire_ts_rule->stop_ttl, 2000);
+
+    json = "";
+    operations = create_compaction_operations(json, 1);
+    ASSERT_EQ(operations.size(), 0);
 }
 } // namespace server
 } // namespace pegasus
