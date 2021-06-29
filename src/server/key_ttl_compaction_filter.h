@@ -27,6 +27,7 @@
 #include "base/pegasus_utils.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
+#include "compaction_operation.h"
 
 namespace pegasus {
 namespace server {
@@ -132,6 +133,14 @@ public:
     {
         _partition_version.store(partition_version, std::memory_order_release);
     }
+    void extract_user_specified_ops(const std::string &env)
+    {
+        auto operations = create_compaction_operations(env, _pegasus_data_version.load());
+        {
+            dsn::utils::auto_write_lock l(_lock);
+            _user_specified_operations.swap(operations);
+        }
+    }
 
 private:
     std::atomic<uint32_t> _pegasus_data_version;
@@ -140,6 +149,10 @@ private:
     std::atomic<int32_t> _partition_index{0};
     std::atomic<int32_t> _partition_version{-1};
     std::atomic_bool _validate_partition_hash{false};
+
+    dsn::utils::rw_lock_nr _lock; // [
+    compaction_operations _user_specified_operations;
+    // ]
 };
 
 } // namespace server

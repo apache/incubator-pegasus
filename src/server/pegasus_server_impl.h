@@ -269,6 +269,8 @@ private:
 
     void update_validate_partition_hash(const std::map<std::string, std::string> &envs);
 
+    void update_user_specified_compaction(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -376,6 +378,7 @@ private:
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
+    std::string _user_specified_compaction;
 
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_data_cf;
