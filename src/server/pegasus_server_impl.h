@@ -245,7 +245,7 @@ private:
                          const ::dsn::blob &value);
 
     void update_replica_rocksdb_statistics();
-    void update_replica_rocksdb_amp_statistics();
+    void update_rocksdb_statistics_on_server();
 
     static void update_server_rocksdb_statistics();
 
@@ -451,8 +451,14 @@ private:
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
     ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+
     static ::dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
     static ::dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_rate;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_memtable_hit_rate;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_l0_hit_rate;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_l1_hit_rate;
+    static ::dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_rate;
 };
 
 } // namespace server

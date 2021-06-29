@@ -66,6 +66,11 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
+static double convert_to_1M_ratio(uint64_t hit, uint64_t total)
+{
+    return total <= 0 ? 0 : (double)hit / total * 1e6;
+}
+
 std::shared_ptr<rocksdb::RateLimiter> pegasus_server_impl::_s_rate_limiter;
 int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
@@ -75,6 +80,11 @@ std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffe
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_amplification;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_read_amplification;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_hit_rate;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_memtable_hit_rate;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_l0_hit_rate;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_l1_hit_rate;
+::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_l2andup_hit_rate;
 
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
@@ -154,7 +164,7 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
                 dwarn("get last write time of file %s failed", current_file.c_str());
                 break;
             }
-            uint64_t last_write_time = (uint64_t)tm;
+            auto last_write_time = (uint64_t)tm;
             if (last_write_time + reserve_time >= current_time) {
                 // not expired
                 break;
@@ -1540,7 +1550,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     _update_replica_amp_stat =
         ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
                                       &_tracker,
-                                      [this]() { this->update_replica_rocksdb_amp_statistics(); },
+                                      [this]() { this->update_rocksdb_statistics_on_server(); },
                                       kServerStatUpdateTimeSec);
 
     // These counters are singletons on this server shared by all replicas, their metrics update
@@ -2289,7 +2299,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     dinfo_replica("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
 }
 
-void pegasus_server_impl::update_replica_rocksdb_amp_statistics()
+void pegasus_server_impl::update_rocksdb_statistics_on_server()
 {
     // Update _pfc_rdb_write_amplification
     std::map<std::string, std::string> props;
@@ -2314,6 +2324,25 @@ void pegasus_server_impl::update_replica_rocksdb_amp_statistics()
             dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
         }
     }
+
+    //
+    auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
+    auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
+    _pfc_rdb_block_cache_hit_rate->set(
+        convert_to_1M_ratio(block_cache_hit, block_cache_hit + block_cache_miss));
+
+    auto memtable_hit_count = _statistics->getTickerCount(rocksdb::MEMTABLE_HIT);
+    auto memtable_miss_count = _statistics->getTickerCount(rocksdb::MEMTABLE_MISS);
+
+    auto total_block_cache_up_hit_count = memtable_hit_count + memtable_miss_count;
+    _pfc_rdb_memtable_hit_rate->set(
+        convert_to_1M_ratio(memtable_hit_count, total_block_cache_up_hit_count));
+    _pfc_rdb_l0_hit_rate->set(convert_to_1M_ratio(_statistics->getTickerCount(rocksdb::GET_HIT_L0),
+                                                  total_block_cache_up_hit_count));
+    _pfc_rdb_l1_hit_rate->set(convert_to_1M_ratio(_statistics->getTickerCount(rocksdb::GET_HIT_L1),
+                                                  total_block_cache_up_hit_count));
+    _pfc_rdb_l2andup_hit_rate->set(convert_to_1M_ratio(
+        _statistics->getTickerCount(rocksdb::GET_HIT_L2_AND_UP), total_block_cache_up_hit_count));
 }
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
