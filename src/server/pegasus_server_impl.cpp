@@ -2327,7 +2327,7 @@ void pegasus_server_impl::update_rocksdb_statistics_on_server()
 
     //
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
-    auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
+    auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
     _pfc_rdb_block_cache_hit_rate->set(
         convert_to_1M_ratio(block_cache_hit, block_cache_hit + block_cache_miss));
 
