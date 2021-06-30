@@ -260,7 +260,7 @@ public:
               hash_key_filter_type(FT_NO_FILTER),
               sort_key_filter_type(FT_NO_FILTER),
               no_value(false),
-              return_expire_ts(true)
+              return_expire_ts(false)
         {
         }
         scan_options(const scan_options &o)

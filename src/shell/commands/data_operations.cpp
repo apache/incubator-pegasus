@@ -1560,6 +1560,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
     std::string value_filter_pattern;
     pegasus::pegasus_client::scan_options options;
+    options.return_expire_ts = true;
 
     optind = 0;
     while (true) {

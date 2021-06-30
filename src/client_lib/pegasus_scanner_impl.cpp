@@ -64,13 +64,13 @@ int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
     auto callback = [&](int err,
                         std::string &&hash,
                         std::string &&sort,
-                        std::string &&str,
+                        std::string &&val,
                         internal_info &&ii,
                         uint32_t expire_ts_seconds) {
         ret = err;
         hashkey = std::move(hash);
         sortkey = std::move(sort);
-        value = std::move(str);
+        value = std::move(val);
         if (info) {
             (*info) = std::move(ii);
         }
@@ -161,10 +161,9 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         std::string hash_key, sort_key;
         pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
         std::string value(_kvs[_p].value.data(), _kvs[_p].value.length());
-        uint32_t expire_ts_seconds = 0;
-        if (_kvs[_p].__isset.expire_ts_seconds) {
-            expire_ts_seconds = static_cast<uint32_t>(_kvs[_p].expire_ts_seconds);
-        }
+        uint32_t expire_ts_seconds = _kvs[_p].__isset.expire_ts_seconds
+                                         ? static_cast<uint32_t>(_kvs[_p].expire_ts_seconds)
+                                         : 0;
 
         auto &callback = _queue.front();
         if (callback) {
