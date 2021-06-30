@@ -29,8 +29,8 @@ using namespace pegasus;
 
 class partition_split_test : public testing::Test
 {
-protected:
-    void SetUp(const std::string &table_name)
+public:
+    void prepare(const std::string &table_name)
     {
         std::vector<rpc_address> meta_list;
         replica_helper::load_meta_servers(
@@ -41,9 +41,11 @@ protected:
 
         pg_client = pegasus_client_factory::get_client("mycluster", table_name.c_str());
         write_data_before_split();
+
+        start_partition_split(table_name);
     }
 
-    void TearDown(const std::string &table_name)
+    void cleanup(const std::string &table_name)
     {
         count_during_split = 0;
         expected.clear();
@@ -51,7 +53,6 @@ protected:
         delete pg_client;
     }
 
-public:
     void create_table(const std::string &table_name)
     {
         error_code error =
@@ -234,8 +235,8 @@ public:
 TEST_F(partition_split_test, split_with_write)
 {
     const std::string table_name = "split_table_1";
-    SetUp(table_name);
-    start_partition_split(table_name);
+    prepare(table_name);
+
     // write data during partition split
     do {
         write_data_during_split();
@@ -244,14 +245,14 @@ TEST_F(partition_split_test, split_with_write)
     std::cout << "Partition split succeed" << std::endl;
 
     verify_data_after_split();
-    TearDown(table_name);
+    cleanup(table_name);
 }
 
 TEST_F(partition_split_test, split_with_read)
 {
     const std::string table_name = "split_table_2";
-    SetUp(table_name);
-    start_partition_split(table_name);
+    prepare(table_name);
+
     // read data during partition split
     do {
         read_data_during_split();
@@ -259,14 +260,14 @@ TEST_F(partition_split_test, split_with_read)
     } while (!is_split_finished(table_name));
     std::cout << "Partition split succeed" << std::endl;
     verify_data_after_split();
-    TearDown(table_name);
+    cleanup(table_name);
 }
 
 TEST_F(partition_split_test, split_with_scan)
 {
     const std::string table_name = "split_table_3";
-    SetUp(table_name);
-    start_partition_split(table_name);
+    prepare(table_name);
+
     int32_t count = 0;
     do {
         hash_scan_during_split(count);
@@ -277,14 +278,13 @@ TEST_F(partition_split_test, split_with_scan)
     verify_data_after_split();
     std::this_thread::sleep_for(std::chrono::seconds(30));
     full_scan_after_split();
-    TearDown(table_name);
+    cleanup(table_name);
 }
 
 TEST_F(partition_split_test, pause_split)
 {
     const std::string table_name = "split_table_4";
-    SetUp(table_name);
-    start_partition_split(table_name);
+    prepare(table_name);
 
     bool already_pause = false, already_restart = false;
     int32_t target_partition = 2, count = 30;
@@ -315,14 +315,13 @@ TEST_F(partition_split_test, pause_split)
     std::cout << "Partition split succeed" << std::endl;
 
     verify_data_after_split();
-    TearDown(table_name);
+    cleanup(table_name);
 }
 
 TEST_F(partition_split_test, cancel_split)
 {
     const std::string table_name = "split_table_5";
-    SetUp(table_name);
-    start_partition_split(table_name);
+    prepare(table_name);
 
     // pause partition split
     bool already_pause = false;
@@ -352,5 +351,5 @@ TEST_F(partition_split_test, cancel_split)
     } while (!is_split_finished(table_name));
 
     verify_data_after_split();
-    TearDown(table_name);
+    cleanup(table_name);
 }
