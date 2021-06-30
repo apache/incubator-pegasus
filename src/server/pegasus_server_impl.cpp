@@ -2312,6 +2312,10 @@ void pegasus_server_impl::update_rocksdb_statistics_on_server()
         dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
     }
 
+    if (!is_primary()) {
+        return;
+    }
+
     // Update _pfc_rdb_read_amplification
     if (FLAGS_read_amp_bytes_per_bit > 0) {
         auto estimate_useful_bytes =
