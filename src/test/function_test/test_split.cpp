@@ -124,12 +124,17 @@ public:
         }
     }
 
+    bool is_valid_ret(int ret)
+    {
+        return (ret == PERR_OK || ret == PERR_TIMEOUT || ret == PERR_APP_SPLITTING);
+    }
+
     void write_data_during_split()
     {
         std::string hash = splitting_hashkey_prefix + std::to_string(count_during_split);
         std::string sort = splitting_sortkey_prefix + std::to_string(count_during_split);
         auto ret = pg_client->set(hash, sort, data_value);
-        ASSERT_TRUE((ret == PERR_OK || ret == PERR_TIMEOUT));
+        ASSERT_TRUE(is_valid_ret(ret));
         if (ret == PERR_OK) {
             expected[hash][sort] = data_value;
             count_during_split++;
@@ -143,7 +148,7 @@ public:
         std::string sort = dataset_sortkey_prefix + std::to_string(index);
         std::string expected_value;
         auto ret = pg_client->get(hash, sort, expected_value);
-        ASSERT_TRUE((ret == PERR_OK || ret == PERR_TIMEOUT));
+        ASSERT_TRUE(is_valid_ret(ret));
         if (ret == PERR_OK) {
             ASSERT_EQ(expected_value, data_value);
         }
@@ -181,7 +186,7 @@ public:
         pegasus_client::scan_options options;
         auto ret = pg_client->get_scanner(
             dataset_hashkey_prefix + std::to_string(count), "", "", options, scanner);
-        ASSERT_TRUE((ret == PERR_OK || ret == PERR_TIMEOUT));
+        ASSERT_TRUE(is_valid_ret(ret));
         if (ret == PERR_OK) {
             std::string hash_key;
             std::string sort_key;
