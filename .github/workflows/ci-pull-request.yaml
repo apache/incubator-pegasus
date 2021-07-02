@@ -60,5 +60,5 @@ jobs:
         run: ./run.sh pack_tools
       - name: Unit Testing
         run: |
-          source ./config_hdfs.sh
+          source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
