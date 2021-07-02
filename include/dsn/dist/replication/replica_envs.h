@@ -57,6 +57,7 @@ public:
     static const std::string REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS;
     static const std::string READ_QPS_THROTTLING;
     static const std::string SPLIT_VALIDATE_PARTITION_HASH;
+    static const std::string USER_SPECIFIED_COMPACTION;
 };
 
 } // namespace replication

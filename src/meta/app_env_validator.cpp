@@ -173,7 +173,8 @@ void app_env_validator::register_all_validators()
         {replica_envs::READ_QPS_THROTTLING,
          std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
-         std::bind(&check_split_validation, std::placeholders::_1, std::placeholders::_2)}};
+         std::bind(&check_split_validation, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::USER_SPECIFIED_COMPACTION, nullptr}};
 }
 
 } // namespace replication
