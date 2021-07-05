@@ -29,7 +29,6 @@
 namespace dsn {
 namespace replication {
 
-DSN_DECLARE_bool(enable_disk_available_space_check);
 DSN_DECLARE_int32(disk_min_available_space_ratio);
 
 struct dir_node
@@ -64,7 +63,7 @@ public:
     unsigned replicas_count() const;
     bool has(const dsn::gpid &pid) const;
     unsigned remove(const dsn::gpid &pid);
-    void update_disk_stat(bool &status_changed);
+    bool update_disk_stat(const bool update_disk_status);
 };
 
 class fs_manager
@@ -86,7 +85,7 @@ public:
     void add_replica(const dsn::gpid &pid, const std::string &pid_dir);
     void remove_replica(const dsn::gpid &pid);
     bool for_each_dir_node(const std::function<bool(const dir_node &)> &func) const;
-    void update_disk_stat();
+    void update_disk_stat(bool check_status_changed = true);
 
     const std::vector<std::string> &get_available_data_dirs() const
     {

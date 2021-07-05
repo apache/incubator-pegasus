@@ -678,6 +678,15 @@ error_code get_process_image_path(int pid, std::string &path)
 
 bool get_disk_space_info(const std::string &path, disk_space_info &info)
 {
+    FAIL_POINT_INJECT_F("filesystem_get_disk_space_info", [&info](string_view str) {
+        info.capacity = 100 * 1024 * 1024;
+        if (str.find("insufficient") != string_view::npos) {
+            info.available = 5 * 1024 * 1024;
+        } else {
+            info.available = 50 * 1024 * 1024;
+        }
+        return true;
+    });
 
     boost::system::error_code ec;
     boost::filesystem::space_info in = boost::filesystem::space(path, ec);

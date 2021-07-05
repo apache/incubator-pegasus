@@ -100,6 +100,8 @@ const char *manual_compaction_status_to_string(manual_compaction_status status);
         }                                                                                          \
     }
 
+DSN_DECLARE_bool(reject_write_when_disk_insufficient);
+
 class replica : public serverlet<replica>, public ref_counter, public replica_base
 {
 public:
@@ -571,7 +573,7 @@ private:
 
     std::unique_ptr<security::access_controller> _access_controller;
 
-    disk_status::type _disk_status;
+    disk_status::type _disk_status{disk_status::NORMAL};
 };
 typedef dsn::ref_ptr<replica> replica_ptr;
 } // namespace replication

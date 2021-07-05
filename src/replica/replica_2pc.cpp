@@ -38,6 +38,12 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_bool("replication",
+                reject_write_when_disk_insufficient,
+                true,
+                "reject client write requests if disk status is space insufficient");
+DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
+
 void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();
@@ -85,7 +91,8 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    if (disk_space_insufficient() || _primary_states.secondary_disk_space_insufficient()) {
+    if (FLAGS_reject_write_when_disk_insufficient &&
+        (disk_space_insufficient() || _primary_states.secondary_disk_space_insufficient())) {
         response_client_write(request, ERR_DISK_INSUFFICIENT);
         return;
     }

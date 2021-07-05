@@ -42,18 +42,13 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_bool("replication",
-                enable_disk_available_space_check,
-                true,
-                "check if disk available space ratio below disk_min_available_space_ratio");
-DSN_TAG_VARIABLE(enable_disk_available_space_check, FT_MUTABLE);
 DSN_DEFINE_int32("replication",
                  disk_min_available_space_ratio,
                  10,
                  "if disk available space ratio "
-                 "is below this value, all "
-                 "replica on this disk will "
-                 "reject client write");
+                 "is below this value, this "
+                 "disk will be considered as "
+                 "space insufficient");
 DSN_TAG_VARIABLE(disk_min_available_space_ratio, FT_MUTABLE);
 
 unsigned dir_node::replicas_count() const
@@ -89,41 +84,44 @@ unsigned dir_node::remove(const gpid &pid)
     return iter->second.erase(pid);
 }
 
-void dir_node::update_disk_stat(bool &status_changed)
+bool dir_node::update_disk_stat(const bool update_disk_status)
 {
-    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) {});
+    FAIL_POINT_INJECT_F("update_disk_stat", [](string_view) { return false; });
     dsn::utils::filesystem::disk_space_info info;
     if (!dsn::utils::filesystem::get_disk_space_info(full_dir, info)) {
         derror_f("update disk space failed: dir = {}", full_dir);
-        return;
+        return false;
     }
     // update disk space info
     disk_capacity_mb = info.capacity / 1024 / 1024;
     disk_available_mb = info.available / 1024 / 1024;
     disk_available_ratio = static_cast<int>(
         disk_capacity_mb == 0 ? 0 : std::round(disk_available_mb * 100.0 / disk_capacity_mb));
+
+    if (!update_disk_status) {
+        ddebug_f("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
+                 "available_ratio = {}%",
+                 full_dir,
+                 disk_capacity_mb,
+                 disk_available_mb,
+                 disk_available_ratio);
+        return false;
+    }
+    auto old_status = status;
+    auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
+                          ? disk_status::SPACE_INSUFFICIENT
+                          : disk_status::NORMAL;
+    if (old_status != new_status) {
+        status = new_status;
+    }
     ddebug_f("update disk space succeed: dir = {}, capacity_mb = {}, available_mb = {}, "
-             "available_ratio = {}%",
+             "available_ratio = {}%, disk_status = {}",
              full_dir,
              disk_capacity_mb,
              disk_available_mb,
-             disk_available_ratio);
-    // disk available space check
-    if (FLAGS_enable_disk_available_space_check) {
-        // update disk status
-        auto old_status = status;
-        auto new_status = disk_available_ratio < FLAGS_disk_min_available_space_ratio
-                              ? disk_status::SPACE_INSUFFICIENT
-                              : disk_status::NORMAL;
-        if (old_status != new_status) {
-            status = new_status;
-            ddebug_f("disk({}) status update from({}) to({})",
-                     full_dir,
-                     enum_to_string(old_status),
-                     enum_to_string(new_status));
-        }
-        status_changed = (old_status != new_status);
-    }
+             disk_available_ratio,
+             enum_to_string(status));
+    return (old_status != new_status);
 }
 
 fs_manager::fs_manager(bool for_test)
@@ -190,7 +188,7 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
     _available_data_dirs = data_dirs;
 
     if (!for_test) {
-        update_disk_stat();
+        update_disk_stat(false);
     }
     return dsn::ERR_OK;
 }
@@ -312,13 +310,11 @@ bool fs_manager::for_each_dir_node(const std::function<bool(const dir_node &)> &
     return true;
 }
 
-void fs_manager::update_disk_stat()
+void fs_manager::update_disk_stat(bool check_status_changed)
 {
     reset_disk_stat();
     for (auto &dir_node : _dir_nodes) {
-        bool status_changed = false;
-        dir_node->update_disk_stat(status_changed);
-        if (status_changed) {
+        if (dir_node->update_disk_stat(check_status_changed)) {
             _status_updated_dir_nodes.emplace_back(dir_node);
         }
         _total_capacity_mb += dir_node->disk_capacity_mb;
