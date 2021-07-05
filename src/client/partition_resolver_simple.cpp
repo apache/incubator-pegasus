@@ -75,20 +75,9 @@ void partition_resolver_simple::resolve(uint64_t partition_hash,
 
 void partition_resolver_simple::on_access_failure(int partition_index, error_code err)
 {
-    if (-1 == partition_index ||
-        err == ERR_CAPACITY_EXCEEDED // no need for reconfiguration on primary
-        ||
-        err == ERR_NOT_ENOUGH_MEMBER // primary won't change and we only r/w on primary in this
-                                     // provider
-        ||
-        err == ERR_OPERATION_DISABLED // operation disabled
-        ||
-        err == ERR_BUSY //  busy (rpc busy or throttling busy)
-        ||
-        err == ERR_SPLITTING // partition is splitting, reject read and write
-        ||
-        err == ERR_DISK_INSUFFICIENT // replica disk space is insufficient
-        ) {
+    // ERR_CAPACITY_EXCEEDED : no need for reconfiguration on primary
+    // ERR_NOT_ENOUGH_MEMBER : primary won't change and we only r/w on primary in this provider
+    if (-1 == partition_index || err == ERR_CAPACITY_EXCEEDED || err == ERR_NOT_ENOUGH_MEMBER) {
         return;
     }
 

@@ -32,7 +32,6 @@
 
 namespace dsn {
 namespace replication {
-
 /*static*/
 partition_resolver_ptr partition_resolver::get_resolver(const char *cluster_name,
                                                         const std::vector<rpc_address> &meta_list,
@@ -42,6 +41,14 @@ partition_resolver_ptr partition_resolver::get_resolver(const char *cluster_name
 }
 
 DEFINE_TASK_CODE(LPC_RPC_DELAY_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
+static inline bool error_retry(error_code err)
+{
+    return (err != ERR_HANDLER_NOT_FOUND && err != ERR_APP_NOT_EXIST &&
+            err != ERR_OPERATION_DISABLED && err != ERR_BUSY && err != ERR_SPLITTING &&
+            err != ERR_DISK_INSUFFICIENT);
+}
+
 void partition_resolver::call_task(const rpc_response_task_ptr &t)
 {
     auto &hdr = *(t->get_request()->header);
@@ -52,8 +59,7 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
     auto new_callback = [ this, deadline_ms, oc = std::move(old_callback) ](
         dsn::error_code err, dsn::message_ex * req, dsn::message_ex * resp)
     {
-        if (req->header->gpid.value() != 0 && err != ERR_OK && err != ERR_HANDLER_NOT_FOUND &&
-            err != ERR_APP_NOT_EXIST && err != ERR_OPERATION_DISABLED && err != ERR_BUSY) {
+        if (req->header->gpid.value() != 0 && err != ERR_OK && error_retry(err)) {
             on_access_failure(req->header->gpid.get_partition_index(), err);
             // still got time, retry
             uint64_t nms = dsn_now_ms();
