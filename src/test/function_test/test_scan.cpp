@@ -28,6 +28,7 @@
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
 #include "base/pegasus_const.h"
+#include "base/pegasus_utils.h"
 
 using namespace ::pegasus;
 
@@ -37,6 +38,8 @@ static const char CCH[] = "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 static char buffer[256];
 static std::map<std::string, std::map<std::string, std::string>> base;
 static std::string expected_hash_key;
+static constexpr int ttl_seconds = 24 * 60 * 60;
+static std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>> ttl_base;
 
 // REQUIRED: 'buffer' has been filled with random chars.
 static const std::string random_string()
@@ -50,6 +53,25 @@ static const std::string random_string()
         return std::string(buffer + pos, sizeof(buffer) - pos) +
                std::string(buffer, length + pos - sizeof(buffer));
     }
+}
+
+static void
+check_and_put(std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>> &data,
+              const std::string &hash_key,
+              const std::string &sort_key,
+              const std::string &value,
+              uint32_t expire_ts_seconds)
+{
+    auto it1 = data.find(hash_key);
+    if (it1 != data.end()) {
+        auto it2 = it1->second.find(sort_key);
+        ASSERT_EQ(it1->second.end(), it2)
+            << "Duplicate: hash_key=" << hash_key << ", sort_key=" << sort_key
+            << ", old_value=" << it2->second.first << ", new_value=" << value
+            << ", old_expire_ts_seconds=" << it2->second.second
+            << ", new_expire_ts_seconds=" << expire_ts_seconds;
+    }
+    data[hash_key][sort_key] = std::pair<std::string, uint32_t>(value, expire_ts_seconds);
 }
 
 static void check_and_put(std::map<std::string, std::map<std::string, std::string>> &data,
@@ -78,6 +100,48 @@ static void check_and_put(std::map<std::string, std::string> &data,
     data[sort_key] = value;
 }
 
+static void compare(const std::pair<std::string, uint32_t> &data,
+                    const std::pair<std::string, uint32_t> &base,
+                    const std::string &hash_key,
+                    const std::string sort_key)
+{
+    ASSERT_EQ(base.first, data.first)
+        << "Diff value: hash_key=" << hash_key << ", sort_key=" << sort_key
+        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
+        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+
+    ASSERT_TRUE(data.second >= base.second && data.second - base.second <= 1)
+        << "Diff expire_ts_seconds: hash_key=" << hash_key << ", sort_key=" << sort_key
+        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
+        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+}
+
+static void compare(const std::map<std::string, std::pair<std::string, uint32_t>> &data,
+                    const std::map<std::string, std::pair<std::string, uint32_t>> &base,
+                    const std::string &hash_key)
+{
+    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
+        if (it1 == data.end()) {
+            ASSERT_EQ(base.end(), it2)
+                << "Only in base: hash_key=" << hash_key << ", sort_key=" << it2->first
+                << ", value=" << it2->second.first << ", expire_ts_seconds=" << it2->second.second;
+            break;
+        }
+        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << hash_key
+                                   << ", sort_key=" << it1->first << ", value=" << it1->second.first
+                                   << ", expire_ts_seconds=" << it1->second.second;
+        ASSERT_EQ(it2->first, it1->first)
+            << "Diff sort_key: hash_key=" << hash_key << ", data_sort_key=" << it1->first
+            << ", data_value=" << it1->second.first
+            << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
+            << ", base_value=" << it2->second.first
+            << ", base_expire_ts_seconds=" << it2->second.second;
+        compare(it1->second, it2->second, hash_key, it1->first);
+    }
+
+    dinfo("Data and base are the same.");
+}
+
 static void compare(const std::map<std::string, std::string> &data,
                     const std::map<std::string, std::string> &base,
                     const std::string &hash_key)
@@ -98,8 +162,8 @@ static void compare(const std::map<std::string, std::string> &data,
     dinfo("Data and base are the same.");
 }
 
-static void compare(std::map<std::string, std::map<std::string, std::string>> &data,
-                    std::map<std::string, std::map<std::string, std::string>> &base)
+template <typename T, typename U>
+static void compare(const T &data, const U &base)
 {
     for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
         if (it1 == data.end()) {
@@ -179,7 +243,7 @@ static void fill_database()
         base[expected_hash_key][sort_key] = value;
     }
 
-    while (base.size() < 1000) {
+    while (base.size() < 500) {
         hash_key = random_string();
         while (base[hash_key].size() < 10) {
             sort_key = random_string();
@@ -189,6 +253,22 @@ static void fill_database()
                                     << ", sort_key=" << sort_key
                                     << ", error=" << client->get_error_string(ret);
             base[hash_key][sort_key] = value;
+        }
+    }
+
+    while (base.size() < 1000) {
+        hash_key = random_string();
+        while (base[hash_key].size() < 10) {
+            sort_key = random_string();
+            value = random_string();
+            auto expire_ts_seconds = static_cast<uint32_t>(ttl_seconds) + utils::epoch_now();
+            int ret = client->set(hash_key, sort_key, value, 5000, ttl_seconds, nullptr);
+            ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
+                                    << ", sort_key=" << sort_key
+                                    << ", error=" << client->get_error_string(ret);
+            base[hash_key][sort_key] = value;
+            ttl_base[hash_key][sort_key] =
+                std::pair<std::string, uint32_t>(value, expire_ts_seconds);
         }
     }
 
@@ -414,6 +494,58 @@ TEST_F(scan, OVERALL)
         delete scanner;
     }
     compare(data, base);
+}
+
+TEST_F(scan, REQUEST_EXPIRE_TS)
+{
+    ddebug("TEST REQUEST_EXPIRE_TS...");
+
+    pegasus_client::scan_options options;
+    options.return_expire_ts = true;
+    std::vector<pegasus_client::pegasus_scanner *> raw_scanners;
+    int ret = client->get_unordered_scanners(3, options, raw_scanners);
+    ASSERT_EQ(pegasus::PERR_OK, ret) << "Error occurred when getting scanner. error="
+                                     << client->get_error_string(ret);
+
+    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    for (auto raw_scanner : raw_scanners) {
+        ASSERT_NE(nullptr, raw_scanner);
+        scanners.push_back(raw_scanner->get_smart_wrapper());
+    }
+    raw_scanners.clear();
+    ASSERT_LE(scanners.size(), 3);
+
+    std::map<std::string, std::map<std::string, std::string>> data;
+    std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>> ttl_data;
+    for (auto scanner : scanners) {
+        std::atomic_bool split_completed(false);
+        while (!split_completed.load()) {
+            dsn::utils::notify_event op_completed;
+            scanner->async_next([&](int err,
+                                    std::string &&hash_key,
+                                    std::string &&sort_key,
+                                    std::string &&value,
+                                    pegasus::pegasus_client::internal_info &&info,
+                                    uint32_t expire_ts_seconds) {
+                if (err == pegasus::PERR_OK) {
+                    check_and_put(data, hash_key, sort_key, value);
+                    if (expire_ts_seconds > 0) {
+                        check_and_put(ttl_data, hash_key, sort_key, value, expire_ts_seconds);
+                    }
+                } else if (err == pegasus::PERR_SCAN_COMPLETE) {
+                    split_completed.store(true);
+                } else {
+                    ASSERT_TRUE(false) << "Error occurred when scan. error="
+                                       << client->get_error_string(err);
+                }
+                op_completed.notify();
+            });
+            op_completed.wait();
+        }
+    }
+
+    compare(data, base);
+    compare(ttl_data, ttl_base);
 }
 
 TEST_F(scan, ITERATION_TIME_LIMIT)

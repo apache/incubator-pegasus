@@ -1540,6 +1540,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"no_overwrite", no_argument, 0, 'n'},
                                            {"no_value", no_argument, 0, 'i'},
                                            {"geo_data", no_argument, 0, 'g'},
+                                           {"no_ttl", no_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
     std::string target_cluster_name;
@@ -1559,13 +1560,14 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     pegasus::pegasus_client::filter_type value_filter_type = pegasus::pegasus_client::FT_NO_FILTER;
     std::string value_filter_pattern;
     pegasus::pegasus_client::scan_options options;
+    options.return_expire_ts = true;
 
     optind = 0;
     while (true) {
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nig", long_options, &option_index);
+            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nige", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1639,6 +1641,9 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'g':
             is_geo_data = true;
+            break;
+        case 'e':
+            options.return_expire_ts = false;
             break;
         default:
             return false;

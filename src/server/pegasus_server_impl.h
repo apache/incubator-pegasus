@@ -222,7 +222,8 @@ private:
                               const ::dsn::blob &sort_key_filter_pattern,
                               uint32_t epoch_now,
                               bool no_value,
-                              bool request_validate_hash);
+                              bool request_validate_hash,
+                              bool request_expire_ts);
 
     range_iteration_state
     append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,

@@ -251,6 +251,7 @@ public:
         filter_type sort_key_filter_type;
         std::string sort_key_filter_pattern;
         bool no_value; // only fetch hash_key and sort_key, but not fetch value
+        bool return_expire_ts;
         scan_options()
             : timeout_ms(5000),
               batch_size(100),
@@ -258,7 +259,8 @@ public:
               stop_inclusive(false),
               hash_key_filter_type(FT_NO_FILTER),
               sort_key_filter_type(FT_NO_FILTER),
-              no_value(false)
+              no_value(false),
+              return_expire_ts(false)
         {
         }
         scan_options(const scan_options &o)
@@ -270,7 +272,8 @@ public:
               hash_key_filter_pattern(o.hash_key_filter_pattern),
               sort_key_filter_type(o.sort_key_filter_type),
               sort_key_filter_pattern(o.sort_key_filter_pattern),
-              no_value(o.no_value)
+              no_value(o.no_value),
+              return_expire_ts(o.return_expire_ts)
         {
         }
     };
@@ -308,7 +311,8 @@ public:
                                std::string && /*hash_key*/,
                                std::string && /*sort_key*/,
                                std::string && /*value*/,
-                               internal_info && /*info*/)>
+                               internal_info && /*info*/,
+                               uint32_t /*expire_ts_seconds*/)>
         async_scan_next_callback_t;
     typedef std::function<void(int /*error_code*/, pegasus_scanner * /*hash_scanner*/)>
         async_get_scanner_callback_t;
