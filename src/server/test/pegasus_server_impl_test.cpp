@@ -130,5 +130,18 @@ TEST_F(pegasus_server_impl_test, test_stop_db_twice)
     ASSERT_TRUE(_server->_db == nullptr);
 }
 
+TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
+{
+    _server->_user_specified_compaction = "";
+    std::map<std::string, std::string> envs;
+
+    _server->update_user_specified_compaction(envs);
+    ASSERT_EQ("", _server->_user_specified_compaction);
+
+    std::string user_specified_compaction = "test";
+    envs[USER_SPECIFIED_COMPACTION] = user_specified_compaction;
+    _server->update_user_specified_compaction(envs);
+    ASSERT_EQ(user_specified_compaction, _server->_user_specified_compaction);
+}
 } // namespace server
 } // namespace pegasus
