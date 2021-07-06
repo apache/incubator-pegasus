@@ -2355,6 +2355,7 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
     update_validate_partition_hash(envs);
+    update_user_specified_compaction(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2372,6 +2373,7 @@ void pegasus_server_impl::update_app_envs_before_open_db(
     update_slow_query_threshold(envs);
     update_rocksdb_iteration_threshold(envs);
     update_validate_partition_hash(envs);
+    update_user_specified_compaction(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
 }
 
@@ -2516,6 +2518,16 @@ void pegasus_server_impl::update_validate_partition_hash(
             "update '_validate_partition_hash' from {} to {}", _validate_partition_hash, new_value);
         _validate_partition_hash = new_value;
         _key_ttl_compaction_filter_factory->SetValidatePartitionHash(_validate_partition_hash);
+    }
+}
+
+void pegasus_server_impl::update_user_specified_compaction(
+    const std::map<std::string, std::string> &envs)
+{
+    auto iter = envs.find(USER_SPECIFIED_COMPACTION);
+    if (dsn_unlikely(iter != envs.end() && iter->second != _user_specified_compaction)) {
+        _key_ttl_compaction_filter_factory->extract_user_specified_ops(iter->second);
+        _user_specified_compaction = iter->second;
     }
 }
 
