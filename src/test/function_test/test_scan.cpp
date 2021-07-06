@@ -100,6 +100,22 @@ static void check_and_put(std::map<std::string, std::string> &data,
     data[sort_key] = value;
 }
 
+static void compare(const std::pair<std::string, uint32_t> &data,
+                    const std::pair<std::string, uint32_t> &base,
+                    const std::string &hash_key,
+                    const std::string sort_key)
+{
+    ASSERT_EQ(base.first, data.first)
+        << "Diff value: hash_key=" << hash_key << ", sort_key=" << sort_key
+        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
+        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+
+    ASSERT_TRUE(data.second >= base.second && data.second - base.second <= 1)
+        << "Diff expire_ts_seconds: hash_key=" << hash_key << ", sort_key=" << sort_key
+        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
+        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+}
+
 static void compare(const std::map<std::string, std::pair<std::string, uint32_t>> &data,
                     const std::map<std::string, std::pair<std::string, uint32_t>> &base,
                     const std::string &hash_key)
@@ -115,24 +131,12 @@ static void compare(const std::map<std::string, std::pair<std::string, uint32_t>
                                    << ", sort_key=" << it1->first << ", value=" << it1->second.first
                                    << ", expire_ts_seconds=" << it1->second.second;
         ASSERT_EQ(it2->first, it1->first)
-            << "Diff: hash_key=" << hash_key << ", data_sort_key=" << it1->first
+            << "Diff sort_key: hash_key=" << hash_key << ", data_sort_key=" << it1->first
             << ", data_value=" << it1->second.first
             << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
             << ", base_value=" << it2->second.first
             << ", base_expire_ts_seconds=" << it2->second.second;
-        ASSERT_EQ(it2->second.first, it1->second.first)
-            << "Diff: hash_key=" << hash_key << ", data_sort_key=" << it1->first
-            << ", data_value=" << it1->second.first
-            << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
-            << ", base_value=" << it2->second.first
-            << ", base_expire_ts_seconds=" << it2->second.second;
-        ASSERT_TRUE(it1->second.second >= it2->second.second &&
-                    it1->second.second - it2->second.second <= 1)
-            << "Diff: hash_key=" << hash_key << ", data_sort_key=" << it1->first
-            << ", data_value=" << it1->second.first
-            << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
-            << ", base_value=" << it2->second.first
-            << ", base_expire_ts_seconds=" << it2->second.second;
+        compare(it1->second, it2->second, hash_key, it1->first);
     }
 
     dinfo("Data and base are the same.");
