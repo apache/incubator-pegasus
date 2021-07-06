@@ -405,7 +405,7 @@ private:
 
     std::chrono::seconds _update_rdb_stat_interval;
     ::dsn::task_ptr _update_replica_rdb_stat;
-    ::dsn::task_ptr _update_replica_amp_stat;
+    ::dsn::task_ptr _update_replica_server_stat;
     static ::dsn::task_ptr _update_server_rdb_stat;
 
     pegasus_manual_compact_service _manual_compact_svc;

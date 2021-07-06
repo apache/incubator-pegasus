@@ -625,31 +625,32 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             COUNTER_TYPE_NUMBER,
             "statistics the read amplification of rocksdb");
 
-        _pfc_rdb_block_cache_hit_rate.init_global_counter("replica",
-                                                          "app.pegasus",
-                                                          "rdb.read_block_cache_hit_rate",
-                                                          COUNTER_TYPE_NUMBER,
-                                                          "statistics the read XXXXXX");
+        _pfc_rdb_block_cache_hit_rate.init_global_counter(
+            "replica",
+            "app.pegasus",
+            "rdb.read_block_cache_hit_rate",
+            COUNTER_TYPE_NUMBER,
+            "statistics the read block cache hit rate");
         _pfc_rdb_memtable_hit_rate.init_global_counter("replica",
                                                        "app.pegasus",
                                                        "rdb.read_memtable_hit_rate",
                                                        COUNTER_TYPE_NUMBER,
-                                                       "statistics the read XXXXXX");
+                                                       "statistics the read memtable hit rate");
         _pfc_rdb_l0_hit_rate.init_global_counter("replica",
                                                  "app.pegasus",
                                                  "rdb.read_l0_hit_rate",
                                                  COUNTER_TYPE_NUMBER,
-                                                 "statistics the read XXXXXX");
+                                                 "statistics the read l0 hit rate");
         _pfc_rdb_l1_hit_rate.init_global_counter("replica",
                                                  "app.pegasus",
                                                  "rdb.read_l1_hit_rate",
                                                  COUNTER_TYPE_NUMBER,
-                                                 "statistics the read XXXXXX");
+                                                 "statistics the read l1 hit rate");
         _pfc_rdb_l2andup_hit_rate.init_global_counter("replica",
                                                       "app.pegasus",
                                                       "rdb.read_l2andup_hit_rate",
                                                       COUNTER_TYPE_NUMBER,
-                                                      "statistics the read XXXXXX");
+                                                      "statistics the read l2andup hit rate");
     });
 
     snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());

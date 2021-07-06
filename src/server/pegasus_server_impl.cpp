@@ -1539,15 +1539,15 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         update_usage_scenario(envs);
     }
 
-    dinfo_replica("start the update rocksdb statistics timer task");
+    dinfo_replica("start the update replica-level rocksdb statistics timer task");
     _update_replica_rdb_stat =
         ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
                                       &_tracker,
                                       [this]() { this->update_replica_rocksdb_statistics(); },
                                       _update_rdb_stat_interval);
 
-    dinfo_replica("start the update rocksdb amp statistics timer task");
-    _update_replica_amp_stat =
+    dinfo_replica("start the update server-level rocksdb statistics timer task");
+    _update_replica_server_stat =
         ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
                                       &_tracker,
                                       [this]() { this->update_rocksdb_statistics_on_server(); },
@@ -1610,9 +1610,9 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _update_replica_rdb_stat->cancel(true);
         _update_replica_rdb_stat = nullptr;
     }
-    if (_update_replica_amp_stat != nullptr) {
-        _update_replica_amp_stat->cancel(true);
-        _update_replica_amp_stat = nullptr;
+    if (_update_replica_server_stat != nullptr) {
+        _update_replica_server_stat->cancel(true);
+        _update_replica_server_stat = nullptr;
     }
     _tracker.cancel_outstanding_tasks();
 
@@ -2312,6 +2312,7 @@ void pegasus_server_impl::update_rocksdb_statistics_on_server()
         dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
     }
 
+    // the follow stats is related to `read`, so only primary need update it
     if (!is_primary()) {
         return;
     }
@@ -2329,12 +2330,13 @@ void pegasus_server_impl::update_rocksdb_statistics_on_server()
         }
     }
 
-    //
+    // update block cache hit rate under all request
     auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
     auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
     _pfc_rdb_block_cache_hit_rate->set(
         convert_to_1M_ratio(block_cache_hit, block_cache_hit + block_cache_miss));
 
+    // update block memtable/l0/l1/l2andup hit rate under block cache up level
     auto memtable_hit_count = _statistics->getTickerCount(rocksdb::MEMTABLE_HIT);
     auto memtable_miss_count = _statistics->getTickerCount(rocksdb::MEMTABLE_MISS);
 
