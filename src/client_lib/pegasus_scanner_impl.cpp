@@ -61,12 +61,16 @@ int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
 {
     ::dsn::utils::notify_event op_completed;
     int ret = -1;
-    auto callback = [&](
-        int err, std::string &&hash, std::string &&sort, std::string &&str, internal_info &&ii) {
+    auto callback = [&](int err,
+                        std::string &&hash,
+                        std::string &&sort,
+                        std::string &&val,
+                        internal_info &&ii,
+                        uint32_t expire_ts_seconds) {
         ret = err;
         hashkey = std::move(hash);
         sortkey = std::move(sort);
-        value = std::move(str);
+        value = std::move(val);
         if (info) {
             (*info) = std::move(ii);
         }
@@ -130,7 +134,8 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
                                      std::string(),
                                      std::string(),
                                      std::string(),
-                                     std::move(info));
+                                     std::move(info),
+                                     0);
                         }
                     }
                     return;
@@ -156,6 +161,9 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         std::string hash_key, sort_key;
         pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
         std::string value(_kvs[_p].value.data(), _kvs[_p].value.length());
+        uint32_t expire_ts_seconds = _kvs[_p].__isset.expire_ts_seconds
+                                         ? static_cast<uint32_t>(_kvs[_p].expire_ts_seconds)
+                                         : 0;
 
         auto &callback = _queue.front();
         if (callback) {
@@ -165,7 +173,8 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
                      std::move(hash_key),
                      std::move(sort_key),
                      std::move(value),
-                     std::move(info));
+                     std::move(info),
+                     expire_ts_seconds);
             _lock.lock();
             if (_queue.size() == 1) {
                 // keep the last callback until exit this function
@@ -215,6 +224,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
         _options.sort_key_filter_pattern.data(), 0, _options.sort_key_filter_pattern.size());
     req.no_value = _options.no_value;
     req.__set_validate_partition_hash(_validate_partition_hash);
+    req.__set_return_expire_ts(_options.return_expire_ts);
 
     dassert(!_rpc_started, "");
     _rpc_started = true;
@@ -273,7 +283,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
 
     for (auto &callback : temp) {
         if (callback) {
-            callback(ret, std::string(), std::string(), std::string(), internal_info(info));
+            callback(ret, std::string(), std::string(), std::string(), internal_info(info), 0);
         }
     }
 }
@@ -307,12 +317,14 @@ void pegasus_client_impl::pegasus_scanner_impl_wrapper::async_next(
                                                                      std::string &&hash_key,
                                                                      std::string &&sort_key,
                                                                      std::string &&value,
-                                                                     internal_info &&info) {
+                                                                     internal_info &&info,
+                                                                     uint32_t expire_ts_seconds) {
         user_callback(error_code,
                       std::move(hash_key),
                       std::move(sort_key),
                       std::move(value),
-                      std::move(info));
+                      std::move(info),
+                      expire_ts_seconds);
     });
 }
 

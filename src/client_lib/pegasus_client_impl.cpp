@@ -1295,6 +1295,8 @@ const char *pegasus_client_impl::get_error_string(int error_code) const
     _server_error_to_client[::dsn::ERR_APP_NOT_EXIST] = PERR_APP_NOT_EXIST;
     _server_error_to_client[::dsn::ERR_APP_EXIST] = PERR_APP_EXIST;
     _server_error_to_client[::dsn::ERR_BUSY] = PERR_APP_BUSY;
+    _server_error_to_client[::dsn::ERR_SPLITTING] = PERR_APP_SPLITTING;
+    _server_error_to_client[::dsn::ERR_DISK_INSUFFICIENT] = PERR_DISK_INSUFFICIENT;
 
     // rocksdb error;
     for (int i = 1001; i < 1013; i++) {

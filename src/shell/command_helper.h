@@ -260,6 +260,17 @@ validate_filter(scan_data_context *context, const std::string &sort_key, const s
         return false;
     return validate_filter(context->value_filter_type, context->value_filter_pattern, value);
 }
+
+inline int compute_ttl_seconds(uint32_t expire_ts_seconds, bool &ts_expired)
+{
+    auto epoch_now = pegasus::utils::epoch_now();
+    ts_expired = pegasus::check_if_ts_expired(epoch_now, expire_ts_seconds);
+    if (expire_ts_seconds > 0 && !ts_expired) {
+        return static_cast<int>(expire_ts_seconds - epoch_now);
+    }
+    return 0;
+}
+
 inline void scan_data_next(scan_data_context *context)
 {
     while (!context->split_completed.load() && !context->error_occurred->load() &&
@@ -269,13 +280,19 @@ inline void scan_data_next(scan_data_context *context)
                                                std::string &&hash_key,
                                                std::string &&sort_key,
                                                std::string &&value,
-                                               pegasus::pegasus_client::internal_info &&info) {
+                                               pegasus::pegasus_client::internal_info &&info,
+                                               uint32_t expire_ts_seconds) {
             if (ret == pegasus::PERR_OK) {
                 if (validate_filter(context, sort_key, value)) {
+                    bool ts_expired = false;
+                    int ttl_seconds = 0;
                     switch (context->op) {
                     case SCAN_COPY:
                         context->split_request_count++;
-                        if (context->no_overwrite) {
+                        ttl_seconds = compute_ttl_seconds(expire_ts_seconds, ts_expired);
+                        if (ts_expired) {
+                            scan_data_next(context);
+                        } else if (context->no_overwrite) {
                             auto callback = [context](
                                 int err,
                                 pegasus::pegasus_client::check_and_set_results &&results,
@@ -299,6 +316,7 @@ inline void scan_data_next(scan_data_context *context)
                                 context->split_request_count--;
                             };
                             pegasus::pegasus_client::check_and_set_options options;
+                            options.set_value_ttl_seconds = ttl_seconds;
                             context->client->async_check_and_set(
                                 hash_key,
                                 sort_key,
@@ -332,7 +350,8 @@ inline void scan_data_next(scan_data_context *context)
                                                        sort_key,
                                                        value,
                                                        std::move(callback),
-                                                       context->timeout_ms);
+                                                       context->timeout_ms,
+                                                       ttl_seconds);
                         }
                         break;
                     case SCAN_CLEAR:
@@ -395,28 +414,34 @@ inline void scan_data_next(scan_data_context *context)
                         break;
                     case SCAN_GEN_GEO:
                         context->split_request_count++;
-                        context->geoclient->async_set(
-                            hash_key,
-                            sort_key,
-                            value,
-                            [context](int err, pegasus::pegasus_client::internal_info &&info) {
-                                if (err != pegasus::PERR_OK) {
-                                    if (!context->split_completed.exchange(true)) {
-                                        fprintf(stderr,
-                                                "ERROR: split[%d] async set failed: %s\n",
-                                                context->split_id,
-                                                context->client->get_error_string(err));
-                                        context->error_occurred->store(true);
+                        ttl_seconds = compute_ttl_seconds(expire_ts_seconds, ts_expired);
+                        if (ts_expired) {
+                            scan_data_next(context);
+                        } else {
+                            context->geoclient->async_set(
+                                hash_key,
+                                sort_key,
+                                value,
+                                [context](int err, pegasus::pegasus_client::internal_info &&info) {
+                                    if (err != pegasus::PERR_OK) {
+                                        if (!context->split_completed.exchange(true)) {
+                                            fprintf(stderr,
+                                                    "ERROR: split[%d] async set failed: %s\n",
+                                                    context->split_id,
+                                                    context->client->get_error_string(err));
+                                            context->error_occurred->store(true);
+                                        }
+                                    } else {
+                                        context->split_rows++;
+                                        scan_data_next(context);
                                     }
-                                } else {
-                                    context->split_rows++;
-                                    scan_data_next(context);
-                                }
-                                // should put "split_request_count--" at end of the scope,
-                                // to prevent that split_request_count becomes 0 in the middle.
-                                context->split_request_count--;
-                            },
-                            context->timeout_ms);
+                                    // should put "split_request_count--" at end of the scope,
+                                    // to prevent that split_request_count becomes 0 in the middle.
+                                    context->split_request_count--;
+                                },
+                                context->timeout_ms,
+                                ttl_seconds);
+                        }
                         break;
                     default:
                         dassert(false, "op = %d", context->op);
