@@ -519,7 +519,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _checkpoint_reserve_time_seconds = _checkpoint_reserve_time_seconds_in_config;
 
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
-        "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
+        "pegasus.server", "update_rdb_stat_interval", 60, "update_rdb_stat_interval, in seconds"));
 
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     std::string str_gpid = _gpid.to_string();
@@ -593,6 +593,34 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         COUNTER_TYPE_NUMBER,
         "statistic the total count of rocksdb block cache");
 
+    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
+    _pfc_rdb_write_amplification.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
+
+    snprintf(name, 255, "rdb.read_amplification@%s", str_gpid.c_str());
+    _pfc_rdb_read_amplification.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read amplification of rocksdb");
+
+    snprintf(name, 255, "rdb.read_memtable_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_memtable_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable hit count");
+
+    snprintf(name, 255, "rdb.read_memtable_total_count@%s", str_gpid.c_str());
+    _pfc_rdb_memtable_total_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable total count");
+
+    snprintf(name, 255, "rdb.read_l0_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_l0_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l0 hit count");
+
+    snprintf(name, 255, "rdb.read_l1_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_l1_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l1 hit count");
+
+    snprintf(name, 255, "rdb.read_l2andup_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_l2andup_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l2andup hit count");
+
     // These counters are singletons on this server shared by all replicas, so we initialize
     // them only once.
     static std::once_flag flag;
@@ -610,47 +638,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "rdb.write_limiter_rate_bytes",
             COUNTER_TYPE_NUMBER,
             "statistic the through bytes of rocksdb write rate limiter");
-
-        _pfc_rdb_write_amplification.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.write_amplification",
-            COUNTER_TYPE_NUMBER,
-            "statistics the write amplification of rocksdb");
-
-        _pfc_rdb_read_amplification.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.read_amplification",
-            COUNTER_TYPE_NUMBER,
-            "statistics the read amplification of rocksdb");
-
-        _pfc_rdb_block_cache_hit_rate.init_global_counter(
-            "replica",
-            "app.pegasus",
-            "rdb.read_block_cache_hit_rate",
-            COUNTER_TYPE_NUMBER,
-            "statistics the read block cache hit rate");
-        _pfc_rdb_memtable_hit_rate.init_global_counter("replica",
-                                                       "app.pegasus",
-                                                       "rdb.read_memtable_hit_rate",
-                                                       COUNTER_TYPE_NUMBER,
-                                                       "statistics the read memtable hit rate");
-        _pfc_rdb_l0_hit_rate.init_global_counter("replica",
-                                                 "app.pegasus",
-                                                 "rdb.read_l0_hit_rate",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "statistics the read l0 hit rate");
-        _pfc_rdb_l1_hit_rate.init_global_counter("replica",
-                                                 "app.pegasus",
-                                                 "rdb.read_l1_hit_rate",
-                                                 COUNTER_TYPE_NUMBER,
-                                                 "statistics the read l1 hit rate");
-        _pfc_rdb_l2andup_hit_rate.init_global_counter("replica",
-                                                      "app.pegasus",
-                                                      "rdb.read_l2andup_hit_rate",
-                                                      COUNTER_TYPE_NUMBER,
-                                                      "statistics the read l2andup hit rate");
     });
 
     snprintf(name, 255, "rdb.index_and_filter_blocks.memory_usage@%s", str_gpid.c_str());

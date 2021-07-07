@@ -66,11 +66,6 @@ static bool chkpt_init_from_dir(const char *name, int64_t &decree)
            std::string(name) == chkpt_get_dir_name(decree);
 }
 
-static double convert_to_1M_ratio(uint64_t hit, uint64_t total)
-{
-    return total <= 0 ? 0 : (double)hit / total * 1e6;
-}
-
 std::shared_ptr<rocksdb::RateLimiter> pegasus_server_impl::_s_rate_limiter;
 int64_t pegasus_server_impl::_rocksdb_limiter_last_total_through;
 std::shared_ptr<rocksdb::Cache> pegasus_server_impl::_s_block_cache;
@@ -78,13 +73,6 @@ std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffe
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_amplification;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_read_amplification;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_hit_rate;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_memtable_hit_rate;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_l0_hit_rate;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_l1_hit_rate;
-::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_l2andup_hit_rate;
 
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
@@ -1546,13 +1534,6 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                                       [this]() { this->update_replica_rocksdb_statistics(); },
                                       _update_rdb_stat_interval);
 
-    dinfo_replica("start the update server-level rocksdb statistics timer task");
-    _update_replica_server_stat =
-        ::dsn::tasking::enqueue_timer(LPC_REPLICATION_LONG_COMMON,
-                                      &_tracker,
-                                      [this]() { this->update_rocksdb_statistics_on_server(); },
-                                      kServerStatUpdateTimeSec);
-
     // These counters are singletons on this server shared by all replicas, their metrics update
     // task should be scheduled once an interval on the server view.
     static std::once_flag flag;
@@ -2238,15 +2219,16 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dinfo_replica("_pfc_rdb_sst_size: {} bytes", val);
     }
 
-    // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
-    uint64_t block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
-    _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
-    dinfo_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
-
-    uint64_t block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
-    uint64_t block_cache_total = block_cache_hit + block_cache_miss;
-    _pfc_rdb_block_cache_total_count->set(block_cache_total);
-    dinfo_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
+    // Update _pfc_rdb_write_amplification
+    std::map<std::string, std::string> props;
+    if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
+        auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
+        auto write_amplification = write_amplification_iter == props.end()
+                                       ? 1
+                                       : std::stod(write_amplification_iter->second);
+        _pfc_rdb_write_amplification->set(write_amplification);
+        dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
+    }
 
     // Update _pfc_rdb_index_and_filter_blocks_mem_usage
     if (_db->GetProperty(_data_cf, rocksdb::DB::Properties::kEstimateTableReadersMem, &str_val) &&
@@ -2269,6 +2251,24 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dsn::buf2uint64(str_val, val)) {
         _pfc_rdb_estimate_num_keys->set(val);
         dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
+    }
+
+    // the follow stats is related to `read`, so only primary need update it
+    if (!is_primary()) {
+        return;
+    }
+
+    // Update _pfc_rdb_read_amplification
+    if (FLAGS_read_amp_bytes_per_bit > 0) {
+        auto estimate_useful_bytes =
+            _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
+        if (estimate_useful_bytes) {
+            auto read_amplification =
+                _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
+                estimate_useful_bytes;
+            _pfc_rdb_read_amplification->set(read_amplification);
+            dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
+        }
     }
 
     // Update _pfc_rdb_bf_seek_negatives
@@ -2297,58 +2297,38 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     uint64_t bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
     _pfc_rdb_bf_point_negatives->set(bf_point_negatives);
     dinfo_replica("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
-}
 
-void pegasus_server_impl::update_rocksdb_statistics_on_server()
-{
-    // Update _pfc_rdb_write_amplification
-    std::map<std::string, std::string> props;
-    if (_db->GetMapProperty(_data_cf, "rocksdb.cfstats", &props)) {
-        auto write_amplification_iter = props.find("compaction.Sum.WriteAmp");
-        auto write_amplification = write_amplification_iter == props.end()
-                                       ? 1
-                                       : std::stod(write_amplification_iter->second);
-        _pfc_rdb_write_amplification->set(write_amplification);
-        dinfo_replica("_pfc_rdb_write_amplification: {}", write_amplification);
-    }
+    // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
+    uint64_t block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
+    _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
+    dinfo_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
 
-    // the follow stats is related to `read`, so only primary need update it
-    if (!is_primary()) {
-        return;
-    }
-
-    // Update _pfc_rdb_read_amplification
-    if (FLAGS_read_amp_bytes_per_bit > 0) {
-        auto estimate_useful_bytes =
-            _statistics->getTickerCount(rocksdb::READ_AMP_ESTIMATE_USEFUL_BYTES);
-        if (estimate_useful_bytes) {
-            auto read_amplification =
-                _statistics->getTickerCount(rocksdb::READ_AMP_TOTAL_READ_BYTES) /
-                estimate_useful_bytes;
-            _pfc_rdb_read_amplification->set(read_amplification);
-            dinfo_replica("_pfc_rdb_read_amplification: {}", read_amplification);
-        }
-    }
-
-    // update block cache hit rate under all request
-    auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
-    auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
-    _pfc_rdb_block_cache_hit_rate->set(
-        convert_to_1M_ratio(block_cache_hit, block_cache_hit + block_cache_miss));
+    uint64_t block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
+    uint64_t block_cache_total = block_cache_hit + block_cache_miss;
+    _pfc_rdb_block_cache_total_count->set(block_cache_total);
+    dinfo_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
 
     // update block memtable/l0/l1/l2andup hit rate under block cache up level
     auto memtable_hit_count = _statistics->getTickerCount(rocksdb::MEMTABLE_HIT);
-    auto memtable_miss_count = _statistics->getTickerCount(rocksdb::MEMTABLE_MISS);
+    _pfc_rdb_memtable_hit_count->set(memtable_hit_count);
+    dinfo_replica("_pfc_rdb_memtable_hit_count: {}", memtable_hit_count);
 
-    auto total_block_cache_up_hit_count = memtable_hit_count + memtable_miss_count;
-    _pfc_rdb_memtable_hit_rate->set(
-        convert_to_1M_ratio(memtable_hit_count, total_block_cache_up_hit_count));
-    _pfc_rdb_l0_hit_rate->set(convert_to_1M_ratio(_statistics->getTickerCount(rocksdb::GET_HIT_L0),
-                                                  total_block_cache_up_hit_count));
-    _pfc_rdb_l1_hit_rate->set(convert_to_1M_ratio(_statistics->getTickerCount(rocksdb::GET_HIT_L1),
-                                                  total_block_cache_up_hit_count));
-    _pfc_rdb_l2andup_hit_rate->set(convert_to_1M_ratio(
-        _statistics->getTickerCount(rocksdb::GET_HIT_L2_AND_UP), total_block_cache_up_hit_count));
+    auto memtable_miss_count = _statistics->getTickerCount(rocksdb::MEMTABLE_MISS);
+    auto memtable_total = memtable_hit_count + memtable_miss_count;
+    _pfc_rdb_memtable_total_count->set(memtable_total);
+    dinfo_replica("_pfc_rdb_memtable_total_count: {}", memtable_total);
+
+    auto l0_hit_count = _statistics->getTickerCount(rocksdb::GET_HIT_L0);
+    _pfc_rdb_l0_hit_count->set(l0_hit_count);
+    dinfo_replica("_pfc_rdb_l0_hit_count: {}", l0_hit_count);
+
+    auto l1_hit_count = _statistics->getTickerCount(rocksdb::GET_HIT_L1);
+    _pfc_rdb_l1_hit_count->set(l1_hit_count);
+    dinfo_replica("_pfc_rdb_l1_hit_count: {}", l1_hit_count);
+
+    auto l2andup_hit_count = _statistics->getTickerCount(rocksdb::GET_HIT_L2_AND_UP);
+    _pfc_rdb_l2andup_hit_count->set(l2andup_hit_count);
+    dinfo_replica("_pfc_rdb_l2andup_hit_count: {}", l2andup_hit_count);
 }
 
 void pegasus_server_impl::update_server_rocksdb_statistics()
