@@ -2287,8 +2287,7 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     dinfo_replica("_pfc_rdb_bf_point_positive_true: {}", bf_point_positive_true);
 
     // Update _pfc_rdb_bf_point_positive_total
-    auto bf_point_positive_total =
-        _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_POSITIVE);
+    auto bf_point_positive_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_POSITIVE);
     _pfc_rdb_bf_point_positive_total->set(bf_point_positive_total);
     dinfo_replica("_pfc_rdb_bf_point_positive_total: {}", bf_point_positive_total);
 
