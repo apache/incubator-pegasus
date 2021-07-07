@@ -115,7 +115,7 @@ copy_file ./rdsn/thirdparty/output/lib/sasl2 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin
-copy_file ./config_hdfs.sh ${pack}/bin
+copy_file ./scripts/config_hdfs.sh ${pack}/bin
 
 copy_file "$(get_stdcpp_lib $custom_gcc)" "${pack}/bin"
 

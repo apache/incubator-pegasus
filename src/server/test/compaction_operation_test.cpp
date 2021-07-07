@@ -92,13 +92,13 @@ TEST(compaction_filter_operation_test, all_rules_match)
     rules.push_back(dsn::make_unique<hashkey_pattern_rule>());
     rules.push_back(dsn::make_unique<sortkey_pattern_rule>());
     rules.push_back(dsn::make_unique<ttl_range_rule>(data_version));
-    delete_key update_operation(std::move(rules), data_version);
+    delete_key delete_operation(std::move(rules), data_version);
     pegasus_value_generator gen;
     auto now_ts = utils::epoch_now();
     for (const auto &test : tests) {
-        auto hash_rule = static_cast<hashkey_pattern_rule *>(update_operation.rules[0].get());
-        auto sort_rule = static_cast<sortkey_pattern_rule *>(update_operation.rules[1].get());
-        auto ttl_rule = static_cast<ttl_range_rule *>(update_operation.rules[2].get());
+        auto hash_rule = static_cast<hashkey_pattern_rule *>(delete_operation.rules[0].get());
+        auto sort_rule = static_cast<sortkey_pattern_rule *>(delete_operation.rules[1].get());
+        auto ttl_rule = static_cast<ttl_range_rule *>(delete_operation.rules[2].get());
 
         hash_rule->pattern = test.hashkey_pattern;
         hash_rule->match_type = test.hashkey_match_type;
@@ -109,7 +109,7 @@ TEST(compaction_filter_operation_test, all_rules_match)
 
         rocksdb::SliceParts svalue =
             gen.generate_value(data_version, "", test.expire_ttl + now_ts, 0);
-        ASSERT_EQ(update_operation.all_rules_match(test.hashkey, test.sortkey, svalue.parts[0]),
+        ASSERT_EQ(delete_operation.all_rules_match(test.hashkey, test.sortkey, svalue.parts[0]),
                   test.all_match);
     }
 
@@ -221,6 +221,65 @@ TEST(update_ttl_test, filter)
             }
         }
     }
+}
+
+TEST(compaction_filter_operation_test, creator)
+{
+    uint32_t data_version = 1;
+    std::string params_json = R"({"type":"UTOT_FROM_CURRENT","value":2000})";
+    update_ttl *update_ttl_op =
+        static_cast<update_ttl *>(update_ttl::creator(params_json, data_version));
+    ASSERT_EQ(update_ttl_op->value, 2000);
+    ASSERT_EQ(update_ttl_op->type, UTOT_FROM_CURRENT);
+    delete update_ttl_op;
+
+    // invalid operation
+    params_json = R"({"type_xxx":"UTOT_FROM_CURRENT","value":2000})";
+    compaction_operation *invalid_op = update_ttl::creator(params_json, data_version);
+    ASSERT_EQ(invalid_op, nullptr);
+    params_json = R"({"type":"UTOT_FROM_CURRENT","value_xxx":2000})";
+    invalid_op = update_ttl::creator(params_json, data_version);
+    ASSERT_EQ(invalid_op, nullptr);
+}
+
+TEST(compaction_filter_operation_test, create_operations)
+{
+    std::string json =
+        "{\"ops\":[{\"type\":\"COT_DELETE\",\"params\":\"\",\"rules\":[{\"type\":\"FRT_HASHKEY_"
+        "PATTERN\",\"params\":\"{\\\"pattern\\\":\\\"hashkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_"
+        "PREFIX\\\"}\"}]},{\"type\":\"COT_UPDATE_TTL\",\"params\":\"{\\\"type\\\":\\\"UTOT_FROM_"
+        "NOW\\\",\\\"value\\\":10000}\",\"rules\":[{\"type\":\"FRT_HASHKEY_PATTERN\","
+        "\"params\":\"{\\\"pattern\\\":\\\"hashkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_"
+        "ANYWHERE\\\"}\"},{\"type\":\"FRT_SORTKEY_PATTERN\",\"params\":\"{\\\"pattern\\\":"
+        "\\\"sortkey\\\",\\\"match_type\\\":\\\"SMT_MATCH_POSTFIX\\\"}\"},{\"type\":\"FRT_"
+        "TTL_RANGE\",\"params\":\"{\\\"start_ttl\\\":0,\\\"stop_ttl\\\":2000}\"}]}]"
+        "}";
+    auto operations = create_compaction_operations(json, 1);
+    ASSERT_EQ(operations.size(), 2);
+
+    auto first_operation = static_cast<delete_key *>(operations.begin()->get());
+    ASSERT_EQ(first_operation->rules.size(), 1);
+    auto hash_rule = static_cast<hashkey_pattern_rule *>(first_operation->rules[0].get());
+    ASSERT_EQ(hash_rule->pattern, "hashkey");
+    ASSERT_EQ(hash_rule->match_type, SMT_MATCH_PREFIX);
+
+    auto second_operation = static_cast<update_ttl *>(operations.rbegin()->get());
+    ASSERT_EQ(second_operation->type, UTOT_FROM_NOW);
+    ASSERT_EQ(second_operation->value, 10000);
+    ASSERT_EQ(second_operation->rules.size(), 3);
+    hash_rule = static_cast<hashkey_pattern_rule *>(second_operation->rules[0].get());
+    ASSERT_EQ(hash_rule->pattern, "hashkey");
+    ASSERT_EQ(hash_rule->match_type, SMT_MATCH_ANYWHERE);
+    auto sort_rule = static_cast<sortkey_pattern_rule *>(second_operation->rules[1].get());
+    ASSERT_EQ(sort_rule->pattern, "sortkey");
+    ASSERT_EQ(sort_rule->match_type, SMT_MATCH_POSTFIX);
+    auto expire_ts_rule = static_cast<ttl_range_rule *>(second_operation->rules[2].get());
+    ASSERT_EQ(expire_ts_rule->start_ttl, 0);
+    ASSERT_EQ(expire_ts_rule->stop_ttl, 2000);
+
+    json = "";
+    operations = create_compaction_operations(json, 1);
+    ASSERT_EQ(operations.size(), 0);
 }
 } // namespace server
 } // namespace pegasus
