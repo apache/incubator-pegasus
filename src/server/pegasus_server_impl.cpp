@@ -2266,7 +2266,8 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
         dinfo_replica("_pfc_rdb_estimate_num_keys: {}", val);
     }
 
-    // the follow stats is related to `read`, so only primary need update it
+    // the follow stats is related to `read`, so only primary need update it，ignore
+    // `backup-request` case
     if (!is_primary()) {
         return;
     }

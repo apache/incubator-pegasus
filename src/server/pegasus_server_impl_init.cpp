@@ -44,8 +44,28 @@ DSN_DEFINE_bool("pegasus.server",
                 false,
                 "whether to enable write rate auto tune when open rocksdb write limit");
 
-// detail see
-// https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
+// If used, For every data block we load into memory, we will create a bitmap
+// of size ((block_size / `read_amp_bytes_per_bit`) / 8) bytes. This bitmap
+// will be used to figure out the percentage we actually read of the blocks.
+//
+// When this feature is used Tickers::READ_AMP_ESTIMATE_USEFUL_BYTES and
+// Tickers::READ_AMP_TOTAL_READ_BYTES can be used to calculate the
+// read amplification using this formula
+// (READ_AMP_TOTAL_READ_BYTES / READ_AMP_ESTIMATE_USEFUL_BYTES)
+//
+// value  =>  memory usage (percentage of loaded blocks memory)
+// 1      =>  12.50 %
+// 2      =>  06.25 %
+// 4      =>  03.12 %
+// 8      =>  01.56 %
+// 16     =>  00.78 %
+//
+// Note: This number must be a power of 2, if not it will be sanitized
+// to be the next lowest power of 2, for example a value of 7 will be
+// treated as 4, a value of 19 will be treated as 16.
+//
+// Default: 0 (disabled)
+// see https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
 DSN_DEFINE_int32("pegasus.server",
                  read_amp_bytes_per_bit,
                  0,
