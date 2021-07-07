@@ -73,7 +73,6 @@ std::shared_ptr<rocksdb::WriteBufferManager> pegasus_server_impl::_s_write_buffe
 ::dsn::task_ptr pegasus_server_impl::_update_server_rdb_stat;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_block_cache_mem_usage;
 ::dsn::perf_counter_wrapper pegasus_server_impl::_pfc_rdb_write_limiter_rate_bytes;
-
 const std::string pegasus_server_impl::COMPRESSION_HEADER = "per_level:";
 const std::string pegasus_server_impl::DATA_COLUMN_FAMILY_NAME = "default";
 const std::string pegasus_server_impl::META_COLUMN_FAMILY_NAME = "pegasus_meta_cf";
@@ -1591,9 +1590,9 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _update_replica_rdb_stat->cancel(true);
         _update_replica_rdb_stat = nullptr;
     }
-    if (_update_replica_server_stat != nullptr) {
-        _update_replica_server_stat->cancel(true);
-        _update_replica_server_stat = nullptr;
+    if (_update_server_rdb_stat != nullptr) {
+        _update_server_rdb_stat->cancel(true);
+        _update_server_rdb_stat = nullptr;
     }
     _tracker.cancel_outstanding_tasks();
 
@@ -2272,39 +2271,39 @@ void pegasus_server_impl::update_replica_rocksdb_statistics()
     }
 
     // Update _pfc_rdb_bf_seek_negatives
-    uint64_t bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
+    auto bf_seek_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_USEFUL);
     _pfc_rdb_bf_seek_negatives->set(bf_seek_negatives);
     dinfo_replica("_pfc_rdb_bf_seek_negatives: {}", bf_seek_negatives);
 
     // Update _pfc_rdb_bf_seek_total
-    uint64_t bf_seek_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_CHECKED);
+    auto bf_seek_total = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_PREFIX_CHECKED);
     _pfc_rdb_bf_seek_total->set(bf_seek_total);
     dinfo_replica("_pfc_rdb_bf_seek_total: {}", bf_seek_total);
 
     // Update _pfc_rdb_bf_point_positive_true
-    uint64_t bf_point_positive_true =
+    auto bf_point_positive_true =
         _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_TRUE_POSITIVE);
     _pfc_rdb_bf_point_positive_true->set(bf_point_positive_true);
     dinfo_replica("_pfc_rdb_bf_point_positive_true: {}", bf_point_positive_true);
 
     // Update _pfc_rdb_bf_point_positive_total
-    uint64_t bf_point_positive_total =
+    auto bf_point_positive_total =
         _statistics->getTickerCount(rocksdb::BLOOM_FILTER_FULL_POSITIVE);
     _pfc_rdb_bf_point_positive_total->set(bf_point_positive_total);
     dinfo_replica("_pfc_rdb_bf_point_positive_total: {}", bf_point_positive_total);
 
     // Update _pfc_rdb_bf_point_negatives
-    uint64_t bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
+    auto bf_point_negatives = _statistics->getTickerCount(rocksdb::BLOOM_FILTER_USEFUL);
     _pfc_rdb_bf_point_negatives->set(bf_point_negatives);
     dinfo_replica("_pfc_rdb_bf_point_negatives: {}", bf_point_negatives);
 
     // Update _pfc_rdb_block_cache_hit_count and _pfc_rdb_block_cache_total_count
-    uint64_t block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
+    auto block_cache_hit = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_HIT);
     _pfc_rdb_block_cache_hit_count->set(block_cache_hit);
     dinfo_replica("_pfc_rdb_block_cache_hit_count: {}", block_cache_hit);
 
-    uint64_t block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
-    uint64_t block_cache_total = block_cache_hit + block_cache_miss;
+    auto block_cache_miss = _statistics->getTickerCount(rocksdb::BLOCK_CACHE_MISS);
+    auto block_cache_total = block_cache_hit + block_cache_miss;
     _pfc_rdb_block_cache_total_count->set(block_cache_total);
     dinfo_replica("_pfc_rdb_block_cache_total_count: {}", block_cache_total);
 
