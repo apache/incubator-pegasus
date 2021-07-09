@@ -623,9 +623,9 @@ struct row_data
         recent_read_throttling_delay_count += row.recent_read_throttling_delay_count;
         recent_read_throttling_reject_count += row.recent_read_throttling_reject_count;
         recent_backup_request_throttling_delay_count +=
-                row.recent_backup_request_throttling_delay_count;
+            row.recent_backup_request_throttling_delay_count;
         recent_backup_request_throttling_reject_count +=
-                row.recent_backup_request_throttling_reject_count;
+            row.recent_backup_request_throttling_reject_count;
         storage_mb += row.storage_mb;
         storage_count += row.storage_count;
         rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
