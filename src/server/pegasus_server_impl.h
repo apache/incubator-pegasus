@@ -442,18 +442,26 @@ private:
     static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
     static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
     // replica level
-    ::dsn::perf_counter_wrapper _pfc_rdb_sst_count;
-    ::dsn::perf_counter_wrapper _pfc_rdb_sst_size;
-    ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
-    ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
-    ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
-    ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
-    ::dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    dsn::perf_counter_wrapper _pfc_rdb_sst_count;
+    dsn::perf_counter_wrapper _pfc_rdb_sst_size;
+    dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
+    dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
+    dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
+
+    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
+    dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
+    dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
+    dsn::perf_counter_wrapper _pfc_rdb_memtable_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_memtable_total_count;
+    dsn::perf_counter_wrapper _pfc_rdb_l0_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_l1_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
 };
 
 } // namespace server
