@@ -44,6 +44,42 @@ DSN_DEFINE_bool("pegasus.server",
                 false,
                 "whether to enable write rate auto tune when open rocksdb write limit");
 
+// If used, For every data block we load into memory, we will create a bitmap
+// of size ((block_size / `read_amp_bytes_per_bit`) / 8) bytes. This bitmap
+// will be used to figure out the percentage we actually read of the blocks.
+//
+// When this feature is used Tickers::READ_AMP_ESTIMATE_USEFUL_BYTES and
+// Tickers::READ_AMP_TOTAL_READ_BYTES can be used to calculate the
+// read amplification using this formula
+// (READ_AMP_TOTAL_READ_BYTES / READ_AMP_ESTIMATE_USEFUL_BYTES)
+//
+// value  =>  memory usage (percentage of loaded blocks memory)
+// 1      =>  12.50 %
+// 2      =>  06.25 %
+// 4      =>  03.12 %
+// 8      =>  01.56 %
+// 16     =>  00.78 %
+//
+// Note: This number must be a power of 2, if not it will be sanitized
+// to be the next lowest power of 2, for example a value of 7 will be
+// treated as 4, a value of 19 will be treated as 16.
+//
+// Default: 0 (disabled)
+// see https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
+DSN_DEFINE_int32("pegasus.server",
+                 read_amp_bytes_per_bit,
+                 0,
+                 "config for using to calculate the "
+                 "read amplification, must be a power "
+                 "of 2, zero means disable count read "
+                 "amplification");
+
+DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per_bit) -> bool {
+    return read_amp_bytes_per_bit == 0 ||
+           (read_amp_bytes_per_bit > 0 &&
+            (read_amp_bytes_per_bit & (read_amp_bytes_per_bit - 1)) == 0);
+});
+
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -260,6 +296,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
             "parse rocksdb_compression_type failed.");
 
     rocksdb::BlockBasedTableOptions tbl_opts;
+    tbl_opts.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
+
     if (dsn_config_get_value_bool("pegasus.server",
                                   "rocksdb_disable_table_block_cache",
                                   false,
@@ -501,7 +539,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _checkpoint_reserve_time_seconds = _checkpoint_reserve_time_seconds_in_config;
 
     _update_rdb_stat_interval = std::chrono::seconds(dsn_config_get_value_uint64(
-        "pegasus.server", "update_rdb_stat_interval", 600, "update_rdb_stat_interval, in seconds"));
+        "pegasus.server", "update_rdb_stat_interval", 60, "update_rdb_stat_interval, in seconds"));
 
     // TODO: move the qps/latency counters and it's statistics to replication_app_base layer
     std::string str_gpid = _gpid.to_string();
@@ -574,6 +612,34 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         name,
         COUNTER_TYPE_NUMBER,
         "statistic the total count of rocksdb block cache");
+
+    snprintf(name, 255, "rdb.write_amplification@%s", str_gpid.c_str());
+    _pfc_rdb_write_amplification.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the write amplification of rocksdb");
+
+    snprintf(name, 255, "rdb.read_amplification@%s", str_gpid.c_str());
+    _pfc_rdb_read_amplification.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read amplification of rocksdb");
+
+    snprintf(name, 255, "rdb.read_memtable_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_memtable_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable hit count");
+
+    snprintf(name, 255, "rdb.read_memtable_total_count@%s", str_gpid.c_str());
+    _pfc_rdb_memtable_total_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read memtable total count");
+
+    snprintf(name, 255, "rdb.read_l0_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_l0_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l0 hit count");
+
+    snprintf(name, 255, "rdb.read_l1_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_l1_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l1 hit count");
+
+    snprintf(name, 255, "rdb.read_l2andup_hit_count@%s", str_gpid.c_str());
+    _pfc_rdb_l2andup_hit_count.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_NUMBER, "statistics the read l2andup hit count");
 
     // These counters are singletons on this server shared by all replicas, so we initialize
     // them only once.
