@@ -41,7 +41,7 @@ public:
                                int32_t pidx,
                                int32_t partition_version,
                                bool validate_hash,
-                               compaction_operations compaction_ops)
+                               compaction_operations &&compaction_ops)
         : _pegasus_data_version(pegasus_data_version),
           _default_ttl(default_ttl),
           _enabled(enabled),
