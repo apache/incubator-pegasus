@@ -72,8 +72,26 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
 
 pc_status partition_guardian::on_redundant_secondary(meta_view &view, const dsn::gpid &gpid)
 {
-    // TBD(zlw)
-    return pc_status::invalid;
+    const node_mapper &nodes = *(view.nodes);
+    const partition_configuration &pc = *get_config(*(view.apps), gpid);
+    int target = 0;
+    int load = nodes.find(pc.secondaries.front())->second.partition_count();
+    for (int i = 0; i != pc.secondaries.size(); ++i) {
+        int l = nodes.find(pc.secondaries[i])->second.partition_count();
+        if (l > load) {
+            load = l;
+            target = i;
+        }
+    }
+
+    configuration_proposal_action action;
+    action.type = config_type::CT_REMOVE;
+    action.node = pc.secondaries[target];
+    action.target = pc.primary;
+
+    // TODO: treat remove as cure proposals too
+    get_config_context(*view.apps, gpid)->lb_actions.assign_balancer_proposals({action});
+    return pc_status::ill;
 }
 } // namespace replication
 } // namespace dsn
