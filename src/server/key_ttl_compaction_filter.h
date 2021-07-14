@@ -62,7 +62,8 @@ public:
             return false;
         }
 
-        // ignore empty write
+        // ignore empty write. Empty writes will deleted by the compaction of rocksdb. We don't need
+        // deal with it here.
         if (key.size() < 2) {
             return false;
         }
