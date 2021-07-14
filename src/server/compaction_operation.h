@@ -159,7 +159,7 @@ private:
     FRIEND_TEST(compaction_filter_operation_test, create_operations);
 };
 
-typedef std::vector<std::unique_ptr<compaction_operation>> compaction_operations;
+typedef std::vector<std::shared_ptr<compaction_operation>> compaction_operations;
 compaction_operations create_compaction_operations(const std::string &json, uint32_t data_version);
 void register_compaction_operations();
 } // namespace server
