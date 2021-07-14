@@ -433,6 +433,7 @@ private:
     /// return true if request is throttled.
     bool throttle_write_request(message_ex *request);
     bool throttle_read_request(message_ex *request);
+    bool throttle_backup_request(message_ex *request);
     /// update throttling controllers
     /// \see replica::update_app_envs
     void update_throttle_envs(const std::map<std::string, std::string> &envs);
@@ -536,6 +537,7 @@ private:
     throttling_controller _write_qps_throttling_controller;  // throttling by requests-per-second
     throttling_controller _write_size_throttling_controller; // throttling by bytes-per-second
     throttling_controller _read_qps_throttling_controller;
+    throttling_controller _backup_request_qps_throttling_controller;
 
     // duplication
     std::unique_ptr<replica_duplicator_manager> _duplication_mgr;
@@ -563,6 +565,8 @@ private:
     perf_counter_wrapper _counter_recent_write_throttling_reject_count;
     perf_counter_wrapper _counter_recent_read_throttling_delay_count;
     perf_counter_wrapper _counter_recent_read_throttling_reject_count;
+    perf_counter_wrapper _counter_recent_backup_request_throttling_delay_count;
+    perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
     std::vector<perf_counter *> _counters_table_level_latency;
     perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
     perf_counter_wrapper _counter_backup_request_qps;
