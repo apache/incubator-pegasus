@@ -215,6 +215,8 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(recent_write_throttling_reject_count);
     INIT_COUNTER(recent_read_throttling_delay_count);
     INIT_COUNTER(recent_read_throttling_reject_count);
+    INIT_COUNTER(recent_backup_request_throttling_delay_count);
+    INIT_COUNTER(recent_backup_request_throttling_reject_count);
     INIT_COUNTER(storage_mb);
     INIT_COUNTER(storage_count);
     INIT_COUNTER(rdb_block_cache_hit_rate);
