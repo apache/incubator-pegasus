@@ -67,16 +67,9 @@ public:
             return false;
         }
 
-        // user specified compaction operations
-        if (!_user_specified_operations.empty()) {
-            std::string hash_key, sort_key;
-            pegasus_restore_key(dsn::blob(key.data(), 0, key.size()), hash_key, sort_key);
-            for (const auto &op : _user_specified_operations) {
-                if (op->filter(hash_key, sort_key, existing_value, new_value, value_changed)) {
-                    // return true if this data need to be deleted
-                    return true;
-                }
-            }
+        if (!_user_specified_operations.empty() &&
+            user_specified_operation_filter(key, existing_value, new_value, value_changed)) {
+            return true;
         }
 
         uint32_t expire_ts =
@@ -90,6 +83,22 @@ public:
             return false;
         }
         return check_if_ts_expired(utils::epoch_now(), expire_ts) || check_if_stale_split_data(key);
+    }
+
+    bool user_specified_operation_filter(const rocksdb::Slice &key,
+                                         const rocksdb::Slice &existing_value,
+                                         std::string *new_value,
+                                         bool *value_changed) const
+    {
+        std::string hash_key, sort_key;
+        pegasus_restore_key(dsn::blob(key.data(), 0, key.size()), hash_key, sort_key);
+        for (const auto &op : _user_specified_operations) {
+            if (op->filter(hash_key, sort_key, existing_value, new_value, value_changed)) {
+                // return true if this data need to be deleted
+                return true;
+            }
+        }
+        return false;
     }
 
     const char *Name() const override { return "KeyWithTTLCompactionFilter"; }
