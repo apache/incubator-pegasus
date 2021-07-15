@@ -58,7 +58,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             return iter->second(requests[0]);
         }
     } catch (TTransportException ex) {
-        derror_f("pegasus on_batched_write_requests failed, from = {}, exception = {}",
+        derror_f("pegasus not batch write handler failed, from = {}, exception = {}",
                  requests[0]->header->from_address.to_string(),
                  ex.what());
         return -1;
@@ -102,7 +102,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     local_err = -1;
                 }
             } catch (TTransportException ex) {
-                derror_f("pegasus on_batched_write_requests failed, from = {}, exception = {}",
+                derror_f("pegasus batch writes handler failed, from = {}, exception = {}",
                          requests[i]->header->from_address.to_string(),
                          ex.what());
                 local_err = -1;
