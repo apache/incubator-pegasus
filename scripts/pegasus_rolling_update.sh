@@ -123,6 +123,14 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
+echo "Set lb.assign_delay_ms to 60min..."
+echo "remote_command -l $pmeta meta.lb.assign_delay_ms 3600000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
+set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set lb.assign_delay_ms to 60min failed"
+  exit 1
+fi
+
 echo
 while read line
 do
@@ -320,6 +328,15 @@ if [ "$rebalance_cluster_after_rolling" == "true" ]; then
   echo "Start to rebalance cluster..."
   ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
 fi
+
+echo "Set lb.assign_delay_ms to DEFAULT..."
+echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
+set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set lb.assign_delay_ms to DEFAULT failed"
+  exit 1
+fi
+echo
 
 echo "Finish time: `date`"
 rolling_finish_time=$((`date +%s`))
