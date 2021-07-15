@@ -90,6 +90,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 } else {
                     dfatal_f("rpc code not handled: {}", rpc_code.to_string());
                 }
+                local_err = -1;
             }
 
             if (!err && local_err) {
