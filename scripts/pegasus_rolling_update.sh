@@ -338,7 +338,6 @@ if [ "$rebalance_cluster_after_rolling" == "true" ]; then
   ./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list $rebalance_only_move_primary
 fi
 
-
 echo "Finish time: `date`"
 rolling_finish_time=$((`date +%s`))
 echo "Rolling update $type done, elasped time is $((rolling_finish_time - rolling_start_time)) seconds."
