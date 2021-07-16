@@ -123,7 +123,7 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-echo "Set lb.assign_delay_ms to 60min..."
+echo "Set lb.assign_delay_ms to 30min..."
 echo "remote_command -l $pmeta meta.lb.assign_delay_ms 1800000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
