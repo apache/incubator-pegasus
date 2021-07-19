@@ -36,9 +36,12 @@
 
 namespace dsn {
 namespace replication {
+DSN_DEFINE_bool("meta_server", balance_cluster, false, "whether to enable cluster balancer");
+DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
 
 greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
     : simple_load_balancer(_svc),
+      _ctrl_balancer_ignored_apps(nullptr),
       _ctrl_balancer_in_turn(nullptr),
       _ctrl_only_primary_balancer(nullptr),
       _ctrl_only_move_primary(nullptr),
@@ -84,6 +87,7 @@ greedy_load_balancer::~greedy_load_balancer()
     UNREGISTER_VALID_HANDLER(_ctrl_only_primary_balancer);
     UNREGISTER_VALID_HANDLER(_ctrl_only_move_primary);
     UNREGISTER_VALID_HANDLER(_get_balance_operation_count);
+    UNREGISTER_VALID_HANDLER(_ctrl_balancer_ignored_apps);
 }
 
 void greedy_load_balancer::register_ctrl_commands()
@@ -815,8 +819,6 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 
 void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 {
-    const app_mapper &apps = *t_global_view->apps;
-
     dassert(t_alive_nodes > 2, "too few nodes will be freezed");
     number_nodes(*t_global_view->nodes);
 
@@ -826,6 +828,20 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
             return;
         }
     }
+
+    if (!FLAGS_balance_cluster) {
+        app_balancer(balance_checker);
+        return;
+    }
+
+    if (!balance_checker) {
+        cluster_balancer();
+    }
+}
+
+void greedy_load_balancer::app_balancer(bool balance_checker)
+{
+    const app_mapper &apps = *t_global_view->apps;
 
     for (const auto &kv : apps) {
         const std::shared_ptr<app_state> &app = kv.second;
@@ -900,6 +916,11 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
             }
         }
     }
+}
+
+void greedy_load_balancer::cluster_balancer()
+{
+    /// TBD(zlw)
 }
 
 bool greedy_load_balancer::balance(meta_view view, migration_list &list)
