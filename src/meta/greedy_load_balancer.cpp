@@ -724,7 +724,8 @@ void greedy_load_balancer::shortest_path(std::vector<bool> &visit,
 }
 
 // load balancer based on ford-fulkerson
-bool greedy_load_balancer::primary_balancer_per_app(const std::shared_ptr<app_state> &app)
+bool greedy_load_balancer::primary_balancer_per_app(const std::shared_ptr<app_state> &app,
+                                                    bool only_move_primary)
 {
     dassert(t_alive_nodes > 2, "too few alive nodes will lead to freeze");
     ddebug("primary balancer for app(%s:%d)", app->app_name.c_str(), app->app_id);
@@ -789,7 +790,7 @@ bool greedy_load_balancer::primary_balancer_per_app(const std::shared_ptr<app_st
     // we can't make the server load more balanced
     // by moving primaries to secondaries
     if (!visit[graph_nodes - 1] || flow[graph_nodes - 1] == 0) {
-        if (!_only_move_primary) {
+        if (!only_move_primary) {
             return copy_primary_per_app(app, lower_count != 0, replicas_low);
         } else {
             ddebug("stop to move primary for app(%s) coz it is disabled", app->get_logname());
@@ -852,7 +853,7 @@ void greedy_load_balancer::app_balancer(bool balance_checker)
         if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
             continue;
 
-        bool enough_information = primary_balancer_per_app(app);
+        bool enough_information = primary_balancer_per_app(app, _only_move_primary);
         if (!enough_information) {
             // Even if we don't have enough info for current app,
             // the decisions made by previous apps are kept.
@@ -920,7 +921,27 @@ void greedy_load_balancer::app_balancer(bool balance_checker)
 
 void greedy_load_balancer::cluster_balancer()
 {
-    /// TBD(zlw)
+    const app_mapper &apps = *t_global_view->apps;
+    for (const auto &kv : apps) {
+        const std::shared_ptr<app_state> &app = kv.second;
+        if (is_ignored_app(kv.first)) {
+            ddebug_f("skip to do primary balance for the ignored app[{}]", app->get_logname());
+            continue;
+        }
+        if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
+            continue;
+
+        bool enough_information = primary_balancer_per_app(app, true);
+        if (!enough_information) {
+            return;
+        }
+        if (!t_migration_result->empty()) {
+            ddebug("migration count of move primary = {}", t_migration_result->size());
+            return;
+        }
+    }
+
+    // TODO(zlw): copy secondary
 }
 
 bool greedy_load_balancer::balance(meta_view view, migration_list &list)
