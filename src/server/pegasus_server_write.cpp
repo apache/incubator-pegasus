@@ -61,7 +61,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         derror_f("pegasus not batch write handler failed, from = {}, exception = {}",
                  requests[0]->header->from_address.to_string(),
                  ex.what());
-        return -1;
+        return 0;
     }
 
     return on_batched_writes(requests, count);
@@ -99,13 +99,11 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     } else {
                         dfatal_f("rpc code not handled: {}", rpc_code.to_string());
                     }
-                    local_err = -1;
                 }
             } catch (TTransportException ex) {
                 derror_f("pegasus batch writes handler failed, from = {}, exception = {}",
                          requests[i]->header->from_address.to_string(),
                          ex.what());
-                local_err = -1;
             }
 
             if (!err && local_err) {
