@@ -111,10 +111,12 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
             }
         }
 
-        if (err == 0) {
-            err = _write_svc->batch_commit(_decree);
-        } else {
-            _write_svc->batch_abort(_decree, err);
+        if (dsn_likely(_put_rpc_batch.size() + _remove_rpc_batch.size() != 0)) {
+            if (err == 0) {
+                err = _write_svc->batch_commit(_decree);
+            } else {
+                _write_svc->batch_abort(_decree, err);
+            }
         }
     }
 
