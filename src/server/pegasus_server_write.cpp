@@ -33,6 +33,11 @@ namespace server {
 pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool verbose_log)
     : replica_base(server), _write_svc(new pegasus_write_service(server)), _verbose_log(verbose_log)
 {
+    char name[256];
+    snprintf(name, 255, "recent_corrupt_write_count@%s", get_gpid().to_string());
+    _pfc_recent_corrupt_write_count.init_app_counter("app.pegasus",
+            name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent corrupt write count");
+
     init_non_batch_write_handlers();
 }
 
@@ -58,6 +63,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
             return iter->second(requests[0]);
         }
     } catch (TTransportException ex) {
+        _pfc_recent_corrupt_write_count->increment();
         derror_f("pegasus not batch write handler failed, from = {}, exception = {}",
                  requests[0]->header->from_address.to_string(),
                  ex.what());
@@ -101,6 +107,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                     }
                 }
             } catch (TTransportException ex) {
+                _pfc_recent_corrupt_write_count->increment();
                 derror_f("pegasus batch writes handler failed, from = {}, exception = {}",
                          requests[i]->header->from_address.to_string(),
                          ex.what());
@@ -111,12 +118,10 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
             }
         }
 
-        if (dsn_likely(_put_rpc_batch.size() + _remove_rpc_batch.size() != 0)) {
-            if (err == 0) {
-                err = _write_svc->batch_commit(_decree);
-            } else {
-                _write_svc->batch_abort(_decree, err);
-            }
+        if (dsn_unlikely(err != 0 || _put_rpc_batch.size() + _remove_rpc_batch.size() == 0)) {
+            _write_svc->batch_abort(_decree, err == 0 ? -1 : err);
+        } else {
+            err = _write_svc->batch_commit(_decree);
         }
     }
 

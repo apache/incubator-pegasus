@@ -43,13 +43,7 @@ public:
     virtual ~pegasus_read_service() {}
     virtual int on_request(dsn::message_ex *request) override
     {
-        try {
-            handle_request(request);
-        } catch (TTransportException ex) {
-            derror_f("pegasus handle_request failed, from = {}, exception = {}",
-                     request->header->from_address.to_string(),
-                     ex.what());
-        }
+        handle_request(request);
         return 0;
     }
 
