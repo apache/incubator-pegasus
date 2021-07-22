@@ -439,6 +439,7 @@ public:
                   spec().name.c_str(),
                   _request->header->from_address.to_string(),
                   _request->header->client.timeout_ms);
+            spec().on_rpc_task_dropped.execute(this);
         }
     }
 

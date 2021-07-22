@@ -106,7 +106,12 @@ counter_info *counter_info_ptr[] = {
                      "TIMEOUT(#/s)",
                      "#/s"),
     new counter_info(
-        {"task.inqueue", "tiq"}, TASK_IN_QUEUE, COUNTER_TYPE_NUMBER, "InQueue(#)", "#")};
+        {"task.inqueue", "tiq"}, TASK_IN_QUEUE, COUNTER_TYPE_NUMBER, "InQueue(#)", "#"),
+    new counter_info({"rpc.dropped", "rdit"},
+                     RPC_DROPPED_IF_TIMEOUT,
+                     COUNTER_TYPE_NUMBER,
+                     "RPC.DROPPED(#)",
+                     "#")};
 
 // call normal task
 static void profiler_on_task_create(task *caller, task *callee)
@@ -266,6 +271,15 @@ static void profiler_on_rpc_request_enqueue(rpc_request_task *callee)
     ptr = s_spec_profilers[callee_code].ptr[RPC_SERVER_SIZE_PER_REQUEST_IN_BYTES].get();
     if (ptr != nullptr) {
         ptr->set(callee->get_request()->header->body_length);
+    }
+}
+
+static void profile_on_rpc_task_dropped(rpc_request_task *callee)
+{
+    auto code = callee->spec().code;
+    auto ptr = s_spec_profilers[code].ptr[RPC_DROPPED_IF_TIMEOUT].get();
+    if (ptr != nullptr) {
+        ptr->increment();
     }
 }
 
@@ -461,6 +475,17 @@ void profiler::install(service_spec &)
                     COUNTER_TYPE_NUMBER_PERCENTILES,
                     "");
             }
+            if (dsn_config_get_value_bool(
+                    section_name.c_str(),
+                    "rpc_request_dropped_before_execution_when_timeout",
+                    false,
+                    "whether to profile the number of rpc dropped for timeout"))
+                s_spec_profilers[i].ptr[RPC_DROPPED_IF_TIMEOUT].init_global_counter(
+                    "zion",
+                    "profiler",
+                    (name + std::string(".rpc.dropped")).c_str(),
+                    COUNTER_TYPE_NUMBER,
+                    "rpc dropped if queue time exceed client timeout");
         } else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE) {
             if (dsn_config_get_value_bool(section_name.c_str(),
                                           "profiler::latency.client",
@@ -519,6 +544,7 @@ void profiler::install(service_spec &)
         spec->on_aio_enqueue.put_back(profiler_on_aio_enqueue, "profiler");
         spec->on_rpc_call.put_back(profiler_on_rpc_call, "profiler");
         spec->on_rpc_request_enqueue.put_back(profiler_on_rpc_request_enqueue, "profiler");
+        spec->on_rpc_task_dropped.put_back(profile_on_rpc_task_dropped, "profiler");
         spec->on_rpc_create_response.put_back(profiler_on_rpc_create_response, "profiler");
         spec->on_rpc_reply.put_back(profiler_on_rpc_reply, "profiler");
         spec->on_rpc_response_enqueue.put_back(profiler_on_rpc_response_enqueue, "profiler");

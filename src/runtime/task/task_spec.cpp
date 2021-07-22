@@ -162,6 +162,7 @@ task_spec::task_spec(int code,
 
       on_rpc_call((std::string(name) + std::string(".rpc.call")).c_str()),
       on_rpc_request_enqueue((std::string(name) + std::string(".rpc.request.enqueue")).c_str()),
+      on_rpc_task_dropped((std::string(name) + std::string(".dropped")).c_str()),
       on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()),
       on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
       on_rpc_create_response((std::string(name) + std::string("rpc.create.response")).c_str())
