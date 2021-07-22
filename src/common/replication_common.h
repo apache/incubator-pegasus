@@ -135,11 +135,12 @@ public:
     ~replication_options();
 
     void initialize();
-    static void get_data_dir_and_tag(const std::string &config_dirs_str,
+    static bool get_data_dir_and_tag(const std::string &config_dirs_str,
                                      const std::string &default_dir,
                                      const std::string &app_name,
                                      /*out*/ std::vector<std::string> &data_dirs,
-                                     /*out*/ std::vector<std::string> &data_dir_tags);
+                                     /*out*/ std::vector<std::string> &data_dir_tags,
+                                     /*out*/ std::string &err_msg);
     static void get_data_dirs_in_black_list(const std::string &fname,
                                             /*out*/ std::vector<std::string> &dirs);
     static bool check_if_in_black_list(const std::vector<std::string> &black_list_dir,

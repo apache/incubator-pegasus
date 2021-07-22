@@ -83,6 +83,7 @@ public:
         dir_node *node_disk = new dir_node(tag, full_dir);
         node_disk->holding_replicas[app.app_id].emplace(pid);
         stub->_fs_manager._dir_nodes.emplace_back(node_disk);
+        stub->_fs_manager._available_data_dirs.emplace_back(full_dir);
     }
 
     void remove_mock_dir_node(const std::string &tag)
@@ -136,6 +137,24 @@ public:
         int32_t dir_size = test_stub->_fs_manager.get_available_data_dirs().size();
         test_stub.reset();
         return dir_size;
+    }
+
+    void prepare_before_add_new_disk_test(const std::string &create_dir,
+                                          const std::string &check_rw)
+    {
+        stub->_fs_manager.add_new_dir_node("add_new_exist_disk/replica/reps", "add_new_exist_tag");
+        std::string dir_name = "add_new_not_empty_disk/replica/reps";
+        utils::filesystem::create_directory(dir_name);
+        utils::filesystem::create_file(dir_name + "/test_file");
+        fail::cfg("filesystem_create_directory", "return(" + create_dir + ")");
+        fail::cfg("filesystem_check_dir_rw", "return(" + check_rw + ")");
+    }
+
+    void reset_after_add_new_disk_test()
+    {
+        stub->_fs_manager._dir_nodes.clear();
+        stub->_fs_manager._available_data_dirs.clear();
+        dsn::utils::filesystem::remove_path("add_new_not_empty_disk");
     }
 
 public:
@@ -203,7 +222,7 @@ private:
                                                disk_available_mb,
                                                disk_available_ratio);
 
-            stub->_fs_manager._available_data_dirs.emplace_back(
+            stub->_options.data_dirs.push_back(
                 node_disk->full_dir); // open replica need the options
             utils::filesystem::create_directory(node_disk->full_dir);
 
@@ -220,6 +239,7 @@ private:
             }
 
             stub->_fs_manager._dir_nodes.emplace_back(node_disk);
+            stub->_fs_manager._available_data_dirs.emplace_back(node_disk->full_dir);
         }
     }
 

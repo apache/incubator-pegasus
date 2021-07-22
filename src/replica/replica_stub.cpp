@@ -68,7 +68,6 @@ DSN_DEFINE_bool("replication",
                 ignore_broken_disk,
                 true,
                 "true means ignore broken data disk when initialize");
-DSN_TAG_VARIABLE(ignore_broken_disk, FT_MUTABLE);
 
 bool replica_stub::s_not_exit_on_log_failure = false;
 
@@ -1143,6 +1142,53 @@ void replica_stub::on_query_app_info(query_app_info_rpc rpc)
     }
 }
 
+// ThreadPool: THREAD_POOL_DEFAULT
+void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
+{
+    const auto &disk_str = rpc.request().disk_str;
+    auto &resp = rpc.response();
+    resp.err = ERR_OK;
+
+    std::vector<std::string> data_dirs;
+    std::vector<std::string> data_dir_tags;
+    std::string err_msg = "";
+    if (disk_str.empty() ||
+        !replication_options::get_data_dir_and_tag(
+            disk_str, "", "replica", data_dirs, data_dir_tags, err_msg)) {
+        resp.err = ERR_INVALID_PARAMETERS;
+        resp.__set_err_hint(fmt::format("invalid str({}), err_msg: {}", disk_str, err_msg));
+        return;
+    }
+
+    for (auto i = 0; i < data_dir_tags.size(); ++i) {
+        auto dir = data_dirs[i];
+        if (_fs_manager.is_dir_node_available(dir, data_dir_tags[i])) {
+            resp.err = ERR_NODE_ALREADY_EXIST;
+            resp.__set_err_hint(
+                fmt::format("data_dir({}) tag({}) already available", dir, data_dir_tags[i]));
+            return;
+        }
+
+        if (dsn_unlikely(utils::filesystem::directory_exists(dir) &&
+                         !utils::filesystem::is_directory_empty(dir).second)) {
+            resp.err = ERR_DIR_NOT_EMPTY;
+            resp.__set_err_hint(fmt::format("Disk({}) directory is not empty", dir));
+            return;
+        }
+
+        std::string cdir;
+        if (dsn_unlikely(!utils::filesystem::create_directory(dir, cdir, err_msg) ||
+                         !utils::filesystem::check_dir_rw(dir, err_msg))) {
+            resp.err = ERR_FILE_OPERATION_FAILED;
+            resp.__set_err_hint(err_msg);
+            return;
+        }
+
+        ddebug_f("Add a new disk in fs_manager, data_dir={}, tag={}", cdir, data_dir_tags[i]);
+        _fs_manager.add_new_dir_node(cdir, data_dir_tags[i]);
+    }
+}
+
 void replica_stub::on_prepare(dsn::message_ex *request)
 {
     gpid id;
@@ -2200,6 +2246,8 @@ void replica_stub::open_service()
         RPC_GROUP_BULK_LOAD, "group_bulk_load", &replica_stub::on_group_bulk_load);
     register_rpc_handler_with_rpc_holder(
         RPC_DETECT_HOTKEY, "detect_hotkey", &replica_stub::on_detect_hotkey);
+    register_rpc_handler_with_rpc_holder(
+        RPC_ADD_NEW_DISK, "add_new_disk", &replica_stub::on_add_new_disk);
 
     register_ctrl_command();
 }

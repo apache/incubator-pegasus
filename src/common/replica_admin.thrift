@@ -157,3 +157,19 @@ struct detect_hotkey_response {
     2: optional string err_hint;
     3: optional string hotkey_result;
 }
+
+struct add_new_disk_request {
+    // format is "disk_tag:disk_dir,tag2:dir2"
+    // for example: "ssd1:/home/work/ssd1"
+    1: string disk_str;
+}
+
+struct add_new_disk_response {
+    // Possible error:
+    // - ERR_INVALID_PARAMETERS: invalid disk_str in request
+    // - ERR_NODE_ALREADY_EXIST: data_dir is already available
+    // - ERR_DIR_NOT_EMPTY: data_dir is not empty
+    // - ERR_FILE_OPERATION_FAILED: can't create data_dir or directory can't read/write
+    1: dsn.error_code err;
+    2: optional string err_hint;
+}

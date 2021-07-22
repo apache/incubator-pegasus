@@ -340,5 +340,30 @@ void fs_manager::update_disk_stat(bool check_status_changed)
     _counter_min_available_ratio->set(_min_available_ratio);
     _counter_max_available_ratio->set(_max_available_ratio);
 }
+
+void fs_manager::add_new_dir_node(const std::string &data_dir, const std::string &tag)
+{
+    zauto_write_lock l(_lock);
+    std::string norm_path;
+    utils::filesystem::get_normalized_path(data_dir, norm_path);
+    dir_node *n = new dir_node(tag, norm_path);
+    _dir_nodes.emplace_back(n);
+    _available_data_dirs.emplace_back(data_dir);
+    ddebug_f("{}: mark data dir({}) as tag({})", dsn_primary_address().to_string(), norm_path, tag);
+}
+
+bool fs_manager::is_dir_node_available(const std::string &data_dir, const std::string &tag) const
+{
+    zauto_read_lock l(_lock);
+    for (const auto &dir_node : _dir_nodes) {
+        std::string norm_path;
+        utils::filesystem::get_normalized_path(data_dir, norm_path);
+        if (dir_node->full_dir == norm_path || dir_node->tag == tag) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace replication
 } // namespace dsn

@@ -62,6 +62,7 @@ typedef rpc_holder<update_child_group_partition_count_request,
     update_child_group_partition_count_rpc;
 typedef rpc_holder<group_bulk_load_request, group_bulk_load_response> group_bulk_load_rpc;
 typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
+typedef rpc_holder<add_new_disk_request, add_new_disk_response> add_new_disk_rpc;
 
 class mutation_log;
 namespace test {
@@ -223,6 +224,8 @@ public:
     // query partitions compact status by app_id
     void query_app_manual_compact_status(
         int32_t app_id, /*out*/ std::unordered_map<gpid, manual_compaction_status> &status);
+
+    void on_add_new_disk(add_new_disk_rpc rpc);
 
 private:
     enum replica_node_state

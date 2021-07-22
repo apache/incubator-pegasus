@@ -1670,5 +1670,19 @@ replication_ddl_client::query_partition_split(const std::string &app_name)
     return call_rpc_sync(query_split_rpc(std::move(req), RPC_CM_QUERY_PARTITION_SPLIT));
 }
 
+error_with<add_new_disk_response>
+replication_ddl_client::add_new_disk(const rpc_address &target_node, const std::string &disk_str)
+{
+    auto req = make_unique<add_new_disk_request>();
+    req->disk_str = disk_str;
+
+    std::map<rpc_address, add_new_disk_rpc> add_new_disk_rpcs;
+    add_new_disk_rpcs.emplace(target_node, add_new_disk_rpc(std::move(req), RPC_ADD_NEW_DISK));
+
+    std::map<rpc_address, error_with<add_new_disk_response>> resps;
+    call_rpcs_sync(add_new_disk_rpcs, resps);
+    return resps.begin()->second.get_value();
+}
+
 } // namespace replication
 } // namespace dsn

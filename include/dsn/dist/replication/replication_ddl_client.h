@@ -215,6 +215,9 @@ public:
 
     error_with<query_split_response> query_partition_split(const std::string &app_name);
 
+    error_with<add_new_disk_response> add_new_disk(const rpc_address &target_node,
+                                                   const std::string &disk_str);
+
 private:
     bool static valid_app_char(int c);
 
@@ -308,6 +311,7 @@ private:
 
     typedef rpc_holder<detect_hotkey_request, detect_hotkey_response> detect_hotkey_rpc;
     typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
+    typedef rpc_holder<add_new_disk_request, add_new_disk_response> add_new_disk_rpc;
 };
 } // namespace replication
 } // namespace dsn

@@ -35,10 +35,6 @@ public:
     replica_disk_migrate_rpc fake_migrate_rpc;
 
 public:
-    replica_disk_migrate_test() { fail::setup(); }
-
-    ~replica_disk_migrate_test() { fail::teardown(); }
-
     void SetUp() override { generate_fake_rpc(); }
 
     replica_ptr get_replica(const dsn::gpid &pid) const
