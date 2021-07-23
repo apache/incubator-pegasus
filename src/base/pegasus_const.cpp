@@ -85,6 +85,9 @@ const std::string PEGASUS_CLUSTER_SECTION_NAME("pegasus.clusters");
 /// table level slow query
 const std::string ROCKSDB_ENV_SLOW_QUERY_THRESHOLD("replica.slow_query_threshold");
 
+/// enable or disable block cache of app
+const std::string ROCKSDB_BLOCK_CACHE_ENABLED("replica.rocksdb_block_cache_enabled");
+
 /// time threshold of each rocksdb iteration
 const std::string
     ROCKSDB_ITERATION_THRESHOLD_TIME_MS("replica.rocksdb_iteration_threshold_time_ms");
