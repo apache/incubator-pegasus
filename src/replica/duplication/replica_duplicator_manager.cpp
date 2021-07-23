@@ -127,11 +127,13 @@ void replica_duplicator_manager::update_confirmed_decree_if_secondary(decree con
 
     zauto_lock l(_lock);
     remove_all_duplications();
-    if (confirmed >= 0) {
+    if (confirmed >= 0) { // duplication ongoing
         // confirmed decree never decreases
         if (_primary_confirmed_decree < confirmed) {
             _primary_confirmed_decree = confirmed;
         }
+    } else { // duplication add with freeze but no start or no duplication(include removed)
+        _primary_confirmed_decree = confirmed;
     }
 }
 

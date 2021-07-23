@@ -80,6 +80,10 @@ public:
         ASSERT_EQ(d._primary_confirmed_decree, 101);
         d.update_confirmed_decree_if_secondary(1);
         ASSERT_EQ(d._primary_confirmed_decree, 101);
+
+        // duplication removed and the confimed_decree = -1
+        d.update_confirmed_decree_if_secondary(-1);
+        ASSERT_EQ(d._primary_confirmed_decree, -1);
     }
 
     void test_get_duplication_confirms()
