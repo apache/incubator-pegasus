@@ -173,6 +173,7 @@ public:
 
     void set_default_ttl(uint32_t ttl);
 
+private:
     void clear_up_batch_states();
 
 private:
