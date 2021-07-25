@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <dsn/utility/blob.h>
+#include <gtest/gtest_prod.h>
 
 namespace dsn {
 class binary_reader
@@ -39,9 +40,9 @@ public:
     int read(/*out*/ bool &val) { return read_pod(val); }
 
     int read(/*out*/ std::string &s);
-    int read(char *buffer, int sz);
+    virtual int read(char *buffer, int sz);
     int read(blob &blob);
-    int read(blob &blob, int len);
+    virtual int read(blob &blob, int len);
 
     blob get_buffer() const { return _blob; }
     blob get_remaining_buffer() const { return _blob.range(static_cast<int>(_ptr - _blob.data())); }
@@ -49,11 +50,17 @@ public:
     int total_size() const { return _size; }
     int get_remaining_size() const { return _remaining_size; }
 
+protected:
+    int inner_read(blob &blob, int len);
+    int inner_read(char *buffer, int sz);
+
 private:
     blob _blob;
     int _size;
     const char *_ptr;
     int _remaining_size;
+
+    FRIEND_TEST(binary_reader_test, inner_read);
 };
 
 template <typename T>
@@ -70,4 +77,4 @@ inline int binary_reader::read_pod(/*out*/ T &val)
         return 0;
     }
 }
-}
+} // namespace dsn

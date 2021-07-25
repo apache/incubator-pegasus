@@ -50,6 +50,24 @@ int binary_reader::read(blob &blob)
 
 int binary_reader::read(blob &blob, int len)
 {
+    auto res = inner_read(blob, len);
+    if (dsn_unlikely(res < 0)) {
+        assert(false);
+    }
+    return res;
+}
+
+int binary_reader::read(char *buffer, int sz)
+{
+    auto res = inner_read(buffer, sz);
+    if (dsn_unlikely(res < 0)) {
+        assert(false);
+    }
+    return res;
+}
+
+int binary_reader::inner_read(blob &blob, int len)
+{
     if (len <= get_remaining_size()) {
         blob = _blob.range(static_cast<int>(_ptr - _blob.data()), len);
 
@@ -64,12 +82,11 @@ int binary_reader::read(blob &blob, int len)
         _remaining_size -= len;
         return len + sizeof(len);
     } else {
-        assert(false);
-        return 0;
+        return -1;
     }
 }
 
-int binary_reader::read(char *buffer, int sz)
+int binary_reader::inner_read(char *buffer, int sz)
 {
     if (sz <= get_remaining_size()) {
         memcpy((void *)buffer, _ptr, sz);
@@ -77,9 +94,7 @@ int binary_reader::read(char *buffer, int sz)
         _remaining_size -= sz;
         return sz;
     } else {
-        assert(false);
-        return 0;
+        return -1;
     }
 }
-
 } // namespace dsn

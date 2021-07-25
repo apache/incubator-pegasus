@@ -57,6 +57,10 @@ public:
         }
     }
 
+    int read(char *buffer, int sz) { return inner_read(buffer, sz); }
+
+    int read(blob &blob, int len) { return inner_read(blob, len); }
+
     ~rpc_read_stream()
     {
         if (_msg) {
