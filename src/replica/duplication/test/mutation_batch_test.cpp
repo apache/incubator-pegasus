@@ -24,6 +24,18 @@ namespace replication {
 class mutation_batch_test : public duplication_test_base
 {
 public:
+    void
+    reset_buffer(const mutation_batch &batcher, const decree last_commit, decree start, decree end)
+    {
+        batcher._mutation_buffer->reset(last_commit);
+        batcher._mutation_buffer->_start_decree = start;
+        batcher._mutation_buffer->_end_decree = end;
+    }
+
+    void commit_buffer(const mutation_batch &batcher, const decree current_decree)
+    {
+        batcher._mutation_buffer->commit(current_decree, COMMIT_TO_DECREE_HARD);
+    }
 };
 
 TEST_F(mutation_batch_test, add_mutation_if_valid)
@@ -60,6 +72,17 @@ TEST_F(mutation_batch_test, ignore_non_idempotent_write)
     mu->data.updates[0].code = RPC_DUPLICATION_NON_IDEMPOTENT_WRITE;
     add_mutation_if_valid(mu, result, 0);
     ASSERT_EQ(result.size(), 0);
+}
+
+TEST_F(mutation_batch_test, mutation_buffer_commit)
+{
+    auto duplicator = create_test_duplicator(0);
+    mutation_batch batcher(duplicator.get());
+    // mock mutation_buffer[last=10, start=15, end=20], last + 1(next commit decree) is out of
+    // [start~end]
+    reset_buffer(batcher, 10, 15, 20);
+    commit_buffer(batcher, 15);
+    ASSERT_EQ(batcher.last_decree(), 14);
 }
 
 } // namespace replication

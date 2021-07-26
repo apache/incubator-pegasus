@@ -68,9 +68,12 @@ public:
     error_code prepare(mutation_ptr &mu,
                        partition_status::type status,
                        bool pop_all_committed_mutations = false); // unordered prepare
-    void commit(decree decree, commit_type ct);                   // ordered commit
+    virtual void commit(decree decree, commit_type ct);           // ordered commit
+
+    virtual ~prepare_list() = default;
 
 private:
+    friend class mutation_buffer;
     decree _last_committed_decree;
     mutation_committer _committer;
 };

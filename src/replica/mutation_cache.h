@@ -57,6 +57,8 @@ public:
     int capacity() const { return _max_count; }
 
 private:
+    friend class mutation_batch_test;
+
     std::vector<mutation_ptr> _array;
     int _max_count;
 

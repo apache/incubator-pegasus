@@ -20,12 +20,69 @@
 
 #include "replica_duplicator.h"
 #include "mutation_batch.h"
-#include "replica/prepare_list.h"
 
 namespace dsn {
 namespace replication {
 
 /*static*/ constexpr int64_t mutation_batch::PREPARE_LIST_NUM_ENTRIES;
+
+mutation_buffer::mutation_buffer(replica_base *r,
+                                 decree init_decree,
+                                 int max_count,
+                                 mutation_committer committer)
+    : prepare_list(r, init_decree, max_count, committer)
+{
+    auto counter_str = fmt::format("dup_recent_mutation_loss_count@{}", r->get_gpid());
+    _counter_dulication_mutation_loss_count.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
+}
+
+void mutation_buffer::commit(decree d, commit_type ct)
+{
+    if (d <= last_committed_decree())
+        return;
+
+    if (ct != COMMIT_TO_DECREE_HARD) {
+        dassert_replica(false, "invalid commit type {}", (int)ct);
+    }
+
+    ballot last_bt = 0;
+    for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
+        mutation_ptr next_committed_mutation = get_mutation_by_decree(d0);
+        // The unexpected case as follow: next_committed_decree is out of prepare_list[start~end]
+        //
+        // last_committed_decree - next_committed_decree
+        //                         |                                                  |
+        //                        n                                              n+1
+        //
+        //  [min_decree------max_decree]
+        //                |                                |
+        //             n+m(m>1)            n+k(k>=m)
+        //
+        // just derror but not dassert if mutation loss or other problem, it's different from base
+        // class implement. And from the error and perf-counter, we can choose restart duplication
+        // or ignore the loss.
+        if (next_committed_mutation == nullptr || !next_committed_mutation->is_logged()) {
+            derror_replica("mutation[{}] is lost in prepare_list: "
+                           "prepare_last_committed_decree={}, prepare_min_decree={}, "
+                           "prepare_max_decree={}",
+                           d0,
+                           last_committed_decree(),
+                           min_decree(),
+                           max_decree());
+            _counter_dulication_mutation_loss_count->set(min_decree() - last_committed_decree());
+            // if next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
+            // the next loop will commit from min_decree
+            _last_committed_decree = min_decree() - 1;
+            return;
+        }
+
+        dcheck_ge_replica(next_committed_mutation->data.header.ballot, last_bt);
+        _last_committed_decree++;
+        last_bt = next_committed_mutation->data.header.ballot;
+        _committer(next_committed_mutation);
+    }
+}
 
 error_s mutation_batch::add(mutation_ptr mu)
 {
@@ -76,7 +133,7 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r)
     replica_base base(
         r->get_gpid(), std::string("mutation_batch@") + r->replica_name(), r->app_name());
     _mutation_buffer =
-        make_unique<prepare_list>(&base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
+        make_unique<mutation_buffer>(&base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
             // committer
             add_mutation_if_valid(mu, _loaded_mutations, _start_decree);
         });
