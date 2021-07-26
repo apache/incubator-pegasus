@@ -103,50 +103,57 @@ public:
 
     void test_start_duplication(int num_entries, int private_log_size_mb)
     {
-        std::vector<std::string> mutations;
         mutation_log_ptr mlog = create_private_log(private_log_size_mb, _replica->get_gpid());
 
+        int last_commit_decree_start = 5;
+        int decree_start = 10;
         {
-            for (int i = 1; i <= num_entries; i++) {
+            for (int i = decree_start; i <= num_entries + decree_start; i++) {
                 std::string msg = "hello!";
-                mutations.push_back(msg);
+                //  decree - last_commit_decree  = 1 by default
                 mutation_ptr mu = create_test_mutation(i, msg);
+                // mock the last_commit_decree of first mu equal with `last_commit_decree_start`
+                if (i == decree_start) {
+                    mu->data.header.last_committed_decree = last_commit_decree_start;
+                }
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
 
             // commit the last entry
-            mutation_ptr mu = create_test_mutation(1 + num_entries, "hello!");
+            mutation_ptr mu = create_test_mutation(decree_start + num_entries + 1, "hello!");
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
 
             mlog->close();
         }
 
-        load_and_wait_all_entries_loaded(num_entries, num_entries, 1);
+        load_and_wait_all_entries_loaded(num_entries, num_entries, decree_start);
     }
 
     mutation_tuple_set
     load_and_wait_all_entries_loaded(int total, int last_decree, decree start_decree)
     {
         return load_and_wait_all_entries_loaded(
-            total, last_decree, _replica->get_gpid(), start_decree);
+            total, last_decree, _replica->get_gpid(), start_decree, -1);
     }
+
     mutation_tuple_set load_and_wait_all_entries_loaded(int total, int last_decree)
     {
-        return load_and_wait_all_entries_loaded(total, last_decree, _replica->get_gpid(), 1);
+        return load_and_wait_all_entries_loaded(total, last_decree, _replica->get_gpid(), 0, -1);
     }
-    mutation_tuple_set
-    load_and_wait_all_entries_loaded(int total, int last_decree, gpid id, decree start_decree)
+
+    mutation_tuple_set load_and_wait_all_entries_loaded(
+        int total, int last_decree, gpid id, decree start_decree, decree confirmed_decree)
     {
         mutation_log_ptr mlog = create_private_log(id);
         for (const auto &pr : mlog->get_log_file_map()) {
             EXPECT_TRUE(pr.second->file_handle() == nullptr);
         }
         _replica->init_private_log(mlog);
-        duplicator = create_test_duplicator(start_decree - 1);
+        duplicator = create_test_duplicator(confirmed_decree);
 
         load_from_private_log load(_replica.get(), duplicator.get());
         const_cast<std::chrono::milliseconds &>(load._repeat_delay) = 1_s;
-        load.set_start_decree(duplicator->progress().last_decree + 1);
+        load.set_start_decree(start_decree);
 
         mutation_tuple_set loaded_mutations;
         pipeline::do_when<decree, mutation_tuple_set> end_stage(
@@ -169,6 +176,7 @@ public:
         fail::setup();
         fail::cfg("open_read", "25%1*return()");
         fail::cfg("mutation_log_read_log_block", "25%1*return()");
+        fail::cfg("duplication_sync_complete", "off()");
         duplicator->run_pipeline();
         duplicator->wait_all();
         fail::teardown();
@@ -281,7 +289,7 @@ TEST_F(load_from_private_log_test, handle_real_private_log)
         _replica = create_mock_replica(
             stub.get(), tt.id.get_app_id(), tt.id.get_partition_index(), _log_dir.c_str());
 
-        load_and_wait_all_entries_loaded(tt.puts, tt.total, tt.id, 1);
+        load_and_wait_all_entries_loaded(tt.puts, tt.total, tt.id, 1, 0);
     }
 }
 
@@ -306,18 +314,19 @@ TEST_F(load_from_private_log_test, ignore_useless)
     mlog->close();
 
     // starts from 51
-    mutation_tuple_set result = load_and_wait_all_entries_loaded(50, 100, 51);
+    mutation_tuple_set result =
+        load_and_wait_all_entries_loaded(50, 100, _replica->get_gpid(), 51, 0);
     ASSERT_EQ(result.size(), 50);
 
     // starts from 100
-    result = load_and_wait_all_entries_loaded(1, 100, 100);
+    result = load_and_wait_all_entries_loaded(1, 100, _replica->get_gpid(), 100, 0);
     ASSERT_EQ(result.size(), 1);
 
     // a new duplication's confirmed_decree is invalid_decree,
     // so start_decree is 0.
-    // In this case duplication will starts from last_commit(100),
+    // In this case duplication will starts from last_commit(100) + 1,
     // no mutation will be loaded.
-    result = load_and_wait_all_entries_loaded(0, 100, 0);
+    result = load_and_wait_all_entries_loaded(0, 100, _replica->get_gpid(), 101, -1);
     ASSERT_EQ(result.size(), 0);
 }
 

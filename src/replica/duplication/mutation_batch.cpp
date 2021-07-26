@@ -59,6 +59,8 @@ decree mutation_batch::last_decree() const { return _mutation_buffer->last_commi
 
 void mutation_batch::set_start_decree(decree d) { _start_decree = d; }
 
+void mutation_batch::reset_mutation_buffer(decree d) { _mutation_buffer->reset(d); }
+
 mutation_tuple_set mutation_batch::move_all_mutations()
 {
     // free the internal space
