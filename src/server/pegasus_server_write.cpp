@@ -36,7 +36,9 @@ pegasus_server_write::pegasus_server_write(pegasus_server_impl *server, bool ver
     char name[256];
     snprintf(name, 255, "recent_corrupt_write_count@%s", get_gpid().to_string());
     _pfc_recent_corrupt_write_count.init_app_counter("app.pegasus",
-            name, COUNTER_TYPE_VOLATILE_NUMBER, "statistic the recent corrupt write count");
+                                                     name,
+                                                     COUNTER_TYPE_VOLATILE_NUMBER,
+                                                     "statistic the recent corrupt write count");
 
     init_non_batch_write_handlers();
 }
