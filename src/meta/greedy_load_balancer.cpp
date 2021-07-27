@@ -836,7 +836,7 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
     }
 
     if (!balance_checker) {
-        cluster_balancer();
+        balance_cluster();
     }
 }
 
@@ -919,7 +919,7 @@ void greedy_load_balancer::app_balancer(bool balance_checker)
     }
 }
 
-void greedy_load_balancer::cluster_balancer()
+void greedy_load_balancer::balance_cluster()
 {
     const app_mapper &apps = *t_global_view->apps;
     for (const auto &kv : apps) {
@@ -936,12 +936,37 @@ void greedy_load_balancer::cluster_balancer()
             return;
         }
         if (!t_migration_result->empty()) {
-            ddebug("migration count of move primary = {}", t_migration_result->size());
+            ddebug_f("migration count of move primary = {}", t_migration_result->size());
             return;
         }
     }
 
-    // TODO(zlw): copy secondary
+    bool need_continue = cluster_replica_balance(cluster_balance_type::Secondary);
+    if (!need_continue) {
+        return;
+    }
+
+    // TODO(zlw): copy primary
+}
+
+bool greedy_load_balancer::cluster_replica_balance(const cluster_balance_type type)
+{
+    bool enough_information = do_cluster_replica_balance(type);
+    if (!enough_information) {
+        return false;
+    }
+    if (!t_migration_result->empty()) {
+        ddebug_f(
+            "migration count of copy {} = {}", enum_to_string(type), t_migration_result->size());
+        return false;
+    }
+    return true;
+}
+
+bool greedy_load_balancer::do_cluster_replica_balance(const cluster_balance_type type)
+{
+    return true;
+    /// TBD(zlw)
 }
 
 bool greedy_load_balancer::balance(meta_view view, migration_list &list)

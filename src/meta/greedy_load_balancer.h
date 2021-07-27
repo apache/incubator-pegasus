@@ -39,6 +39,16 @@
 
 namespace dsn {
 namespace replication {
+enum class cluster_balance_type
+{
+    Primary = 0,
+    Secondary,
+    Invalid,
+};
+ENUM_BEGIN(cluster_balance_type, cluster_balance_type::Invalid)
+ENUM_REG(cluster_balance_type::Primary)
+ENUM_REG(cluster_balance_type::Secondary)
+ENUM_END(cluster_balance_type)
 
 class greedy_load_balancer : public simple_load_balancer
 {
@@ -138,7 +148,11 @@ private:
 
     void app_balancer(bool balance_checker);
 
-    void cluster_balancer();
+    void balance_cluster();
+
+    bool cluster_replica_balance(const cluster_balance_type type);
+
+    bool do_cluster_replica_balance(const cluster_balance_type type);
 
     bool all_replica_infos_collected(const node_state &ns);
     // using t_global_view to get disk_tag of node's pid
