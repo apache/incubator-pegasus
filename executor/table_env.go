@@ -41,6 +41,24 @@ func ListAppEnvs(c *Client, useTable string) error {
 	return nil
 }
 
+func GetAppEnv(c *Client, useTable string, envName string) (string, error) {
+	tables, err := c.Meta.ListAvailableApps()
+	if err != nil {
+		return "", err
+	}
+
+	for _, table := range tables {
+		if table.AppName == useTable {
+			for k, v := range table.Envs {
+				if k == envName {
+					return v, nil
+				}
+			}
+		}
+	}
+	return "", nil
+}
+
 // SetAppEnv command
 func SetAppEnv(c *Client, useTable string, key, value string) error {
 	return wrapUpdateAppEnvError(c.Meta.UpdateAppEnvs(useTable, map[string]string{key: value}))
