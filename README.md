@@ -72,7 +72,7 @@ For each type of request(get, set, multiset, etc.), we collect 8 metrics:
 
 We use io.dropwizard.metrics library to calculate the request count.
 
-Currently, metrics are integrated with open-falcon(http://open-falcon.com/), 
-which push counters to local http agent http://127.0.0.1:1988/push/v1. 
+Currently, metrics are integrated with open-falcon(http://open-falcon.com/),
+which push counters to local http agent http://127.0.0.1:1988/push/v1.
 
 If you'd like to integrate pegasus client with other monitor system, please let us know ASAP.

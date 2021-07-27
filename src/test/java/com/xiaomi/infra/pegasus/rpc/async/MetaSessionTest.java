@@ -327,7 +327,7 @@ public class MetaSessionTest {
                 .build());
     MetaSession metaMock = Mockito.spy(manager.getMetaSession());
     List<ReplicaSession> metaList = metaMock.getMetaList();
-    metaList.remove(0); // del the "localhost:34601"
+    metaList.clear(); // del the "localhost:34601" resolve right results
     metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34602")));
     metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34603")));
     metaList.add(manager.getReplicaSession(rpc_address.fromIpPort("172.0.0.1:34601")));
