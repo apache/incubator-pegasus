@@ -48,6 +48,8 @@ public class ClientOptions {
   public static final String PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY = "push_counter_interval_secs";
   public static final String PEGASUS_META_QUERY_TIMEOUT_KEY = "meta_query_timeout";
   public static final String PEGASUS_AUTH_PROTOCOL_KEY = "auth_protocol";
+  public static final String PEGASUS_SESSION_RESET_TIME_WINDOW_SECS_KEY =
+      "session_reset_time_window_secs";
 
   public static final String DEFAULT_META_SERVERS =
       "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
@@ -59,6 +61,7 @@ public class ClientOptions {
   public static final boolean DEFAULT_ENABLE_WRITE_LIMIT = true;
   public static final Duration DEFAULT_META_QUERY_TIMEOUT = Duration.ofMillis(5000);
   public static final String DEFAULT_AUTH_PROTOCOL = "";
+  public static final long DEFAULT_SESSION_RESET_SECS_WINDOW = 30;
 
   private final String metaServers;
   private final Duration operationTimeout;
@@ -70,6 +73,7 @@ public class ClientOptions {
   private final Duration metaQueryTimeout;
   private final String authProtocol;
   private final Credential credential;
+  private final long sessionResetTimeWindowSecs;
 
   protected ClientOptions(Builder builder) {
     this.metaServers = builder.metaServers;
@@ -82,6 +86,7 @@ public class ClientOptions {
     this.metaQueryTimeout = builder.metaQueryTimeout;
     this.authProtocol = builder.authProtocol;
     this.credential = builder.credential;
+    this.sessionResetTimeWindowSecs = builder.sessionResetTimeWindowSecs;
   }
 
   protected ClientOptions(ClientOptions original) {
@@ -95,6 +100,7 @@ public class ClientOptions {
     this.metaQueryTimeout = original.getMetaQueryTimeout();
     this.authProtocol = original.getAuthProtocol();
     this.credential = original.getCredential();
+    this.sessionResetTimeWindowSecs = original.getSessionResetTimeWindowSecs();
   }
 
   /**
@@ -156,6 +162,9 @@ public class ClientOptions {
             config.getLong(PEGASUS_META_QUERY_TIMEOUT_KEY, DEFAULT_META_QUERY_TIMEOUT.toMillis()));
     String authProtocol = config.getString(PEGASUS_AUTH_PROTOCOL_KEY, DEFAULT_AUTH_PROTOCOL);
     Credential credential = Credential.create(authProtocol, config);
+    long sessionResetTimeWindowSecs =
+        config.getLong(
+            PEGASUS_SESSION_RESET_TIME_WINDOW_SECS_KEY, DEFAULT_SESSION_RESET_SECS_WINDOW);
 
     return ClientOptions.builder()
         .metaServers(metaList)
@@ -167,6 +176,7 @@ public class ClientOptions {
         .metaQueryTimeout(metaQueryTimeout)
         .authProtocol(authProtocol)
         .credential(credential)
+        .sessionResetTimeWindowSecs(sessionResetTimeWindowSecs)
         .build();
   }
 
@@ -185,8 +195,9 @@ public class ClientOptions {
           && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis()
           && this.enableWriteLimit == clientOptions.enableWriteLimit
           && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis()
-          && this.authProtocol == clientOptions.authProtocol
-          && this.credential == clientOptions.credential;
+          && this.authProtocol.equals(clientOptions.authProtocol)
+          && this.credential == clientOptions.credential
+          && this.sessionResetTimeWindowSecs == clientOptions.sessionResetTimeWindowSecs;
     }
     return false;
   }
@@ -214,7 +225,9 @@ public class ClientOptions {
             + ", metaQueryTimeout(ms)="
             + metaQueryTimeout.toMillis()
             + ", authProtocol="
-            + authProtocol;
+            + authProtocol
+            + ", sessionResetTimeWindowSecs="
+            + sessionResetTimeWindowSecs;
     if (credential != null) {
       res += ", credential=" + credential.toString();
     }
@@ -233,6 +246,7 @@ public class ClientOptions {
     private Duration metaQueryTimeout = DEFAULT_META_QUERY_TIMEOUT;
     private String authProtocol = DEFAULT_AUTH_PROTOCOL;
     private Credential credential = null;
+    private long sessionResetTimeWindowSecs = DEFAULT_SESSION_RESET_SECS_WINDOW;
 
     protected Builder() {}
 
@@ -362,6 +376,20 @@ public class ClientOptions {
      */
     public Builder credential(Credential credential) {
       this.credential = credential;
+      return this;
+    }
+
+    /**
+     * session reset time window, If the timeout duration exceeds this value, the connection will be
+     * reset
+     *
+     * @param sessionResetTimeWindowSecs sessionResetTimeWindowSecs must >= 10s, Defaults to
+     *     {@linkplain #DEFAULT_SESSION_RESET_SECS_WINDOW}
+     * @return {@code this}
+     */
+    public Builder sessionResetTimeWindowSecs(long sessionResetTimeWindowSecs) {
+      assert sessionResetTimeWindowSecs >= 10 : "sessionResetTimeWindowSecs must be >= 10s";
+      this.sessionResetTimeWindowSecs = sessionResetTimeWindowSecs;
       return this;
     }
 
@@ -499,5 +527,15 @@ public class ClientOptions {
    */
   public Credential getCredential() {
     return credential;
+  }
+
+  /**
+   * session reset time window, If the timeout duration exceeds this value, the connection will be
+   * reset
+   *
+   * @return sessionResetTimeWindowSecs
+   */
+  public long getSessionResetTimeWindowSecs() {
+    return sessionResetTimeWindowSecs;
   }
 }

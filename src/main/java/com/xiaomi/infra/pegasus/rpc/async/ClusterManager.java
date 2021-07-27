@@ -41,6 +41,7 @@ public class ClusterManager extends Cluster {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ClusterManager.class);
 
   private int operationTimeout;
+  private long sessionResetTimeWindowSecs;
   private int retryDelay;
   private boolean enableCounter;
 
@@ -63,6 +64,7 @@ public class ClusterManager extends Cluster {
   public ClusterManager(ClientOptions opts) throws IllegalArgumentException {
     setTimeout((int) opts.getOperationTimeout().toMillis());
     this.enableCounter = opts.isEnablePerfCounter();
+    this.sessionResetTimeWindowSecs = opts.getSessionResetTimeWindowSecs();
     if (enableCounter) {
       MetricsManager.detectHostAndInit(
           opts.getFalconPerfCounterTags(), (int) opts.getFalconPushInterval().getSeconds());
@@ -103,6 +105,7 @@ public class ClusterManager extends Cluster {
               address,
               replicaGroup,
               max(operationTimeout, ClientOptions.MIN_SOCK_CONNECT_TIMEOUT),
+              sessionResetTimeWindowSecs,
               sessionInterceptorManager);
       replicaSessions.put(address, ss);
       return ss;

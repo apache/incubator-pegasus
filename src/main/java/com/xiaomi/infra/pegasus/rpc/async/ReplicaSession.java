@@ -58,10 +58,12 @@ public class ReplicaSession {
       rpc_address address,
       EventLoopGroup rpcGroup,
       int socketTimeout,
+      long sessionResetTimeWindowSec,
       ReplicaSessionInterceptorManager interceptorManager) {
     this.address = address;
     this.rpcGroup = rpcGroup;
     this.interceptorManager = interceptorManager;
+    this.sessionResetTimeWindowMs = sessionResetTimeWindowSec * 1000;
 
     final ReplicaSession this_ = this;
     boot = new Bootstrap();
@@ -481,7 +483,7 @@ public class ReplicaSession {
 
   // Timestamp of the first timed out rpc.
   private AtomicLong firstRecentTimedOutMs;
-  private static final long sessionResetTimeWindowMs = 10 * 1000; // 10s
+  private final long sessionResetTimeWindowMs;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ReplicaSession.class);
 }
