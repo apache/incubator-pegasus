@@ -94,9 +94,11 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _is_running(false)
 {
 #ifdef DSN_ENABLE_GPERF
+    _is_releasing_memory = false;
     _release_tcmalloc_memory_command = nullptr;
     _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
+    _release_all_reserved_memory_command = nullptr;
 #endif
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -831,7 +833,7 @@ void replica_stub::initialize_start()
     _mem_release_timer_task =
         tasking::enqueue_timer(LPC_MEM_RELEASE,
                                &_tracker,
-                               std::bind(&replica_stub::gc_tcmalloc_memory, this),
+                               std::bind(&replica_stub::gc_tcmalloc_memory, this, false),
                                std::chrono::milliseconds(_options.mem_release_check_interval_ms),
                                0,
                                std::chrono::milliseconds(_options.mem_release_check_interval_ms));
@@ -2359,8 +2361,8 @@ void replica_stub::register_ctrl_command()
 
         _get_tcmalloc_status_command = ::dsn::command_manager::instance().register_command(
             {"replica.get-tcmalloc-status"},
-            "replica.get-tcmalloc-status",
             "replica.get-tcmalloc-status - get status of tcmalloc",
+            "get status of tcmalloc",
             [](const std::vector<std::string> &args) {
                 char buf[4096];
                 MallocExtension::instance()->GetStats(buf, 4096);
@@ -2392,6 +2394,15 @@ void replica_stub::register_ctrl_command()
                     _mem_release_max_reserved_mem_percentage = percentage;
                 }
                 return result;
+            });
+
+        _release_all_reserved_memory_command = ::dsn::command_manager::instance().register_command(
+            {"replica.release-all-reserved-memory"},
+            "replica.release-all-reserved-memory - release tcmalloc all reserved-not-used memory",
+            "release tcmalloc all reserverd not-used memory back to operating system",
+            [this](const std::vector<std::string> &args) {
+                auto release_bytes = gc_tcmalloc_memory(true);
+                return "OK, release_bytes=" + std::to_string(release_bytes);
             });
 #endif
         _max_concurrent_bulk_load_downloading_count_command =
@@ -2554,6 +2565,7 @@ void replica_stub::close()
     UNREGISTER_VALID_HANDLER(_release_tcmalloc_memory_command);
     UNREGISTER_VALID_HANDLER(_get_tcmalloc_status_command);
     UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
+    UNREGISTER_VALID_HANDLER(_release_all_reserved_memory_command);
 #endif
     UNREGISTER_VALID_HANDLER(_max_concurrent_bulk_load_downloading_count_command);
 
@@ -2568,6 +2580,7 @@ void replica_stub::close()
     _release_tcmalloc_memory_command = nullptr;
     _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
+    _release_all_reserved_memory_command = nullptr;
 #endif
     _max_concurrent_bulk_load_downloading_count_command = nullptr;
 
@@ -2696,23 +2709,31 @@ static int64_t get_tcmalloc_numeric_property(const char *prop)
     return value;
 }
 
-void replica_stub::gc_tcmalloc_memory()
+uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
 {
-    int64_t tcmalloc_released_bytes = 0;
+    auto tcmalloc_released_bytes = 0;
     if (!_release_tcmalloc_memory) {
+        _is_releasing_memory.store(false);
         _counter_tcmalloc_release_memory_size->set(tcmalloc_released_bytes);
-        return;
+        return tcmalloc_released_bytes;
     }
 
+    if (_is_releasing_memory.load()) {
+        dwarn_f("This node is releasing memory...");
+        return tcmalloc_released_bytes;
+    }
+
+    _is_releasing_memory.store(true);
     int64_t total_allocated_bytes =
         get_tcmalloc_numeric_property("generic.current_allocated_bytes");
     int64_t reserved_bytes = get_tcmalloc_numeric_property("tcmalloc.pageheap_free_bytes");
     if (total_allocated_bytes == -1 || reserved_bytes == -1) {
-        return;
+        return tcmalloc_released_bytes;
     }
 
     int64_t max_reserved_bytes =
-        total_allocated_bytes * _mem_release_max_reserved_mem_percentage / 100.0;
+        release_all ? 0
+                    : (total_allocated_bytes * _mem_release_max_reserved_mem_percentage / 100.0);
     if (reserved_bytes > max_reserved_bytes) {
         int64_t release_bytes = reserved_bytes - max_reserved_bytes;
         tcmalloc_released_bytes = release_bytes;
@@ -2725,6 +2746,8 @@ void replica_stub::gc_tcmalloc_memory()
         }
     }
     _counter_tcmalloc_release_memory_size->set(tcmalloc_released_bytes);
+    _is_releasing_memory.store(false);
+    return tcmalloc_released_bytes;
 }
 #endif
 

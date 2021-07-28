@@ -302,7 +302,8 @@ private:
 
 #ifdef DSN_ENABLE_GPERF
     // Try to release tcmalloc memory back to operating system
-    void gc_tcmalloc_memory();
+    // If release_all = true, it will release all reserved-not-used memory
+    uint64_t gc_tcmalloc_memory(bool release_all);
 #endif
 
 private:
@@ -373,6 +374,7 @@ private:
     dsn_handle_t _release_tcmalloc_memory_command;
     dsn_handle_t _get_tcmalloc_status_command;
     dsn_handle_t _max_reserved_memory_percentage_command;
+    dsn_handle_t _release_all_reserved_memory_command;
 #endif
     dsn_handle_t _max_concurrent_bulk_load_downloading_count_command;
 
@@ -404,6 +406,10 @@ private:
     std::atomic_int _bulk_load_downloading_count;
 
     bool _is_running;
+
+#ifdef DSN_ENABLE_GPERF
+    std::atomic_bool _is_releasing_memory{false};
+#endif
 
     // performance counters
     perf_counter_wrapper _counter_replicas_count;
