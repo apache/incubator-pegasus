@@ -94,4 +94,7 @@ const std::string
 
 /// true means compaction and scan will validate partition_hash, otherwise false
 const std::string SPLIT_VALIDATE_PARTITION_HASH("replica.split.validate_partition_hash");
+
+/// json string which represents user specified compaction
+const std::string USER_SPECIFIED_COMPACTION("user_specified_compaction");
 } // namespace pegasus

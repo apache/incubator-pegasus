@@ -48,9 +48,9 @@ class compaction_filter_rule
 {
 public:
     template <typename T>
-    static compaction_filter_rule *create(const std::string &params, uint32_t pegasus_data_version)
+    static compaction_filter_rule *create(const std::string &params, uint32_t data_version)
     {
-        T *rule = new T(pegasus_data_version);
+        T *rule = new T(data_version);
         if (!dsn::json::json_forwarder<T>::decode(
                 dsn::blob::create_from_bytes(params.data(), params.size()), *rule)) {
             delete rule;
@@ -108,6 +108,7 @@ private:
     FRIEND_TEST(update_ttl_test, filter);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
     FRIEND_TEST(compaction_filter_rule_test, create);
+    FRIEND_TEST(compaction_filter_operation_test, create_operations);
 };
 
 class sortkey_pattern_rule : public compaction_filter_rule
@@ -127,12 +128,13 @@ private:
     FRIEND_TEST(sortkey_pattern_rule_test, match);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
     FRIEND_TEST(compaction_filter_rule_test, create);
+    FRIEND_TEST(compaction_filter_operation_test, create_operations);
 };
 
 class ttl_range_rule : public compaction_filter_rule
 {
 public:
-    explicit ttl_range_rule(uint32_t pegasus_data_version);
+    explicit ttl_range_rule(uint32_t data_version);
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,
@@ -143,11 +145,12 @@ private:
     // = 0 means no limit
     uint32_t start_ttl;
     uint32_t stop_ttl;
-    uint32_t pegasus_data_version;
+    uint32_t data_version;
 
     FRIEND_TEST(ttl_range_rule_test, match);
     FRIEND_TEST(compaction_filter_operation_test, all_rules_match);
     FRIEND_TEST(compaction_filter_rule_test, create);
+    FRIEND_TEST(compaction_filter_operation_test, create_operations);
 };
 
 void register_compaction_filter_rules();

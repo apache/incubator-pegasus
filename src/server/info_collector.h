@@ -65,6 +65,7 @@ public:
             duplicate_qps->set(row_stats.duplicate_qps);
             dup_shipped_ops->set(row_stats.dup_shipped_ops);
             dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
+            dup_recent_mutation_loss_count->set(row_stats.dup_recent_mutation_loss_count);
             recent_read_cu->set(row_stats.recent_read_cu);
             recent_write_cu->set(row_stats.recent_write_cu);
             recent_expire_count->set(row_stats.recent_expire_count);
@@ -75,6 +76,10 @@ public:
                 row_stats.recent_write_throttling_reject_count);
             recent_read_throttling_delay_count->set(row_stats.recent_read_throttling_delay_count);
             recent_read_throttling_reject_count->set(row_stats.recent_read_throttling_reject_count);
+            recent_backup_request_throttling_delay_count->set(
+                row_stats.recent_backup_request_throttling_delay_count);
+            recent_backup_request_throttling_reject_count->set(
+                row_stats.recent_backup_request_throttling_reject_count);
             storage_mb->set(row_stats.storage_mb);
             storage_count->set(row_stats.storage_count);
             rdb_block_cache_hit_rate->set(convert_to_1M_ratio(
@@ -120,6 +125,7 @@ public:
         ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper dup_shipped_ops;
         ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
+        ::dsn::perf_counter_wrapper dup_recent_mutation_loss_count;
         ::dsn::perf_counter_wrapper recent_read_cu;
         ::dsn::perf_counter_wrapper recent_write_cu;
         ::dsn::perf_counter_wrapper recent_expire_count;
@@ -129,6 +135,8 @@ public:
         ::dsn::perf_counter_wrapper recent_write_throttling_reject_count;
         ::dsn::perf_counter_wrapper recent_read_throttling_delay_count;
         ::dsn::perf_counter_wrapper recent_read_throttling_reject_count;
+        ::dsn::perf_counter_wrapper recent_backup_request_throttling_delay_count;
+        ::dsn::perf_counter_wrapper recent_backup_request_throttling_reject_count;
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;

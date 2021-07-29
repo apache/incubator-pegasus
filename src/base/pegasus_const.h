@@ -66,4 +66,6 @@ extern const std::string ROCKSDB_ITERATION_THRESHOLD_TIME_MS;
 extern const std::string ROCKSDB_BLOCK_CACHE_ENABLED;
 
 extern const std::string SPLIT_VALIDATE_PARTITION_HASH;
+
+extern const std::string USER_SPECIFIED_COMPACTION;
 } // namespace pegasus

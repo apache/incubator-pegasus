@@ -196,6 +196,7 @@ private:
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_latest_options);
     FRIEND_TEST(pegasus_server_impl_test, test_open_db_with_app_envs);
     FRIEND_TEST(pegasus_server_impl_test, test_stop_db_twice);
+    FRIEND_TEST(pegasus_server_impl_test, test_update_user_specified_compaction);
 
     friend class pegasus_manual_compact_service;
     friend class pegasus_write_service;
@@ -221,7 +222,8 @@ private:
                               const ::dsn::blob &sort_key_filter_pattern,
                               uint32_t epoch_now,
                               bool no_value,
-                              bool request_validate_hash);
+                              bool request_validate_hash,
+                              bool request_expire_ts);
 
     range_iteration_state
     append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
@@ -270,6 +272,8 @@ private:
     void update_rocksdb_block_cache_enabled(const std::map<std::string, std::string> &envs);
 
     void update_validate_partition_hash(const std::map<std::string, std::string> &envs);
+
+    void update_user_specified_compaction(const std::map<std::string, std::string> &envs);
 
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
@@ -378,6 +382,7 @@ private:
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
+    std::string _user_specified_compaction;
 
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_data_cf;
@@ -439,18 +444,26 @@ private:
     static ::dsn::perf_counter_wrapper _pfc_rdb_write_limiter_rate_bytes;
     static ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_mem_usage;
     // replica level
-    ::dsn::perf_counter_wrapper _pfc_rdb_sst_count;
-    ::dsn::perf_counter_wrapper _pfc_rdb_sst_size;
-    ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
-    ::dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
-    ::dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
-    ::dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
-    ::dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
-    ::dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    dsn::perf_counter_wrapper _pfc_rdb_sst_count;
+    dsn::perf_counter_wrapper _pfc_rdb_sst_size;
+    dsn::perf_counter_wrapper _pfc_rdb_index_and_filter_blocks_mem_usage;
+    dsn::perf_counter_wrapper _pfc_rdb_memtable_mem_usage;
+    dsn::perf_counter_wrapper _pfc_rdb_estimate_num_keys;
+
+    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_negatives;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_seek_total;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_true;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_point_positive_total;
+    dsn::perf_counter_wrapper _pfc_rdb_bf_point_negatives;
+    dsn::perf_counter_wrapper _pfc_rdb_block_cache_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_block_cache_total_count;
+    dsn::perf_counter_wrapper _pfc_rdb_write_amplification;
+    dsn::perf_counter_wrapper _pfc_rdb_read_amplification;
+    dsn::perf_counter_wrapper _pfc_rdb_memtable_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_memtable_total_count;
+    dsn::perf_counter_wrapper _pfc_rdb_l0_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_l1_hit_count;
+    dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
 };
 
 } // namespace server
