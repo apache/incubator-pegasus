@@ -651,6 +651,7 @@ const std::string replica_envs::ROCKSDB_CHECKPOINT_RESERVE_TIME_SECONDS(
     "rocksdb.checkpoint.reserve_time_seconds");
 const std::string replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS(
     "replica.rocksdb_iteration_threshold_time_ms");
+const std::string replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED("replica.rocksdb_block_cache_enabled");
 const std::string replica_envs::BUSINESS_INFO("business.info");
 const std::string replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS(
     "replica_access_controller.allowed_users");

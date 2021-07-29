@@ -124,6 +124,16 @@ bool check_split_validation(const std::string &env_value, std::string &hint_mess
     return true;
 }
 
+bool check_rocksdb_block_cache_enabled(const std::string &env_value, std::string &hint_message)
+{
+    bool result = false;
+    if (!dsn::buf2bool(env_value, result)) {
+        hint_message = fmt::format("invalid string {}, should be \"true\" or \"false\"", env_value);
+        return false;
+    }
+    return true;
+}
+
 bool app_env_validator::validate_app_env(const std::string &env_name,
                                          const std::string &env_value,
                                          std::string &hint_message)
@@ -154,6 +164,9 @@ void app_env_validator::register_all_validators()
          std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
          std::bind(&check_rocksdb_iteration, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED,
+         std::bind(
+             &check_rocksdb_block_cache_enabled, std::placeholders::_1, std::placeholders::_2)},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, nullptr},
         {replica_envs::DENY_CLIENT_WRITE, nullptr},
