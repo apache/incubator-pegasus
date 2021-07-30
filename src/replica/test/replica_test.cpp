@@ -19,6 +19,7 @@
 #include <dsn/utility/defer.h>
 #include <dsn/utility/fail_point.h>
 #include <gtest/gtest.h>
+#include "runtime/rpc/network.sim.h"
 
 #include "common/backup_utils.h"
 #include "replica_test_base.h"
@@ -157,6 +158,9 @@ TEST_F(replica_test, write_size_limited)
     auto write_request = dsn::message_ex::create_request(default_code);
     auto cleanup = dsn::defer([=]() { delete write_request; });
     write_request->header = &header;
+    std::unique_ptr<tools::sim_network_provider> sim_net(
+        new tools::sim_network_provider(nullptr, nullptr));
+    write_request->io_session = sim_net->create_client_session(rpc_address());
 
     for (int i = 0; i < count; i++) {
         stub->on_client_write(pid, write_request);
@@ -172,6 +176,9 @@ TEST_F(replica_test, backup_request_qps)
     header.context.u.is_backup_request = true;
     message_ptr backup_request = dsn::message_ex::create_request(task_code());
     backup_request->header = &header;
+    std::unique_ptr<tools::sim_network_provider> sim_net(
+        new tools::sim_network_provider(nullptr, nullptr));
+    backup_request->io_session = sim_net->create_client_session(rpc_address());
 
     _mock_replica->on_client_read(backup_request);
 
