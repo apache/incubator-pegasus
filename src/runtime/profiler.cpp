@@ -109,7 +109,7 @@ counter_info *counter_info_ptr[] = {
         {"task.inqueue", "tiq"}, TASK_IN_QUEUE, COUNTER_TYPE_NUMBER, "InQueue(#)", "#"),
     new counter_info({"rpc.dropped", "rdit"},
                      RPC_DROPPED_IF_TIMEOUT,
-                     COUNTER_TYPE_NUMBER,
+                     COUNTER_TYPE_VOLATILE_NUMBER,
                      "RPC.DROPPED(#)",
                      "#")};
 
@@ -484,7 +484,7 @@ void profiler::install(service_spec &)
                     "zion",
                     "profiler",
                     (name + std::string(".rpc.dropped")).c_str(),
-                    COUNTER_TYPE_NUMBER,
+                    COUNTER_TYPE_VOLATILE_NUMBER,
                     "rpc dropped if queue time exceed client timeout");
         } else if (spec->type == dsn_task_type_t::TASK_TYPE_RPC_RESPONSE) {
             if (dsn_config_get_value_bool(section_name.c_str(),
