@@ -47,6 +47,7 @@ TEST(cold_backup_context, write_current_chkpt_file) { app->write_current_chkpt_f
 
 error_code replication_service_test_app::start(const std::vector<std::string> &args)
 {
+    app = this;
     gtest_ret = RUN_ALL_TESTS();
     gtest_flags = 1;
     return dsn::ERR_OK;
