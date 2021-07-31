@@ -269,6 +269,8 @@ private:
 
     void update_rocksdb_iteration_threshold(const std::map<std::string, std::string> &envs);
 
+    void update_rocksdb_block_cache_enabled(const std::map<std::string, std::string> &envs);
+
     void update_validate_partition_hash(const std::map<std::string, std::string> &envs);
 
     void update_user_specified_compaction(const std::map<std::string, std::string> &envs);

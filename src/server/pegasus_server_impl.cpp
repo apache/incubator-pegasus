@@ -2558,6 +2558,28 @@ void pegasus_server_impl::update_rocksdb_iteration_threshold(
     }
 }
 
+void pegasus_server_impl::update_rocksdb_block_cache_enabled(
+    const std::map<std::string, std::string> &envs)
+{
+    // default of ReadOptions:fill_cache is true
+    bool cache_enabled = true;
+    auto find = envs.find(ROCKSDB_BLOCK_CACHE_ENABLED);
+    if (find != envs.end()) {
+        if (!dsn::buf2bool(find->second, cache_enabled)) {
+            derror_replica("{}={} is invalid.", find->first, find->second);
+            return;
+        }
+    }
+
+    if (_data_cf_rd_opts.fill_cache != cache_enabled) {
+        ddebug_replica("update app env[{}] from \"{}\" to \"{}\" succeed",
+                       ROCKSDB_BLOCK_CACHE_ENABLED,
+                       _data_cf_rd_opts.fill_cache,
+                       cache_enabled);
+        _data_cf_rd_opts.fill_cache = cache_enabled;
+    }
+}
+
 void pegasus_server_impl::update_validate_partition_hash(
     const std::map<std::string, std::string> &envs)
 {
