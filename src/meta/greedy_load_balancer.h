@@ -50,6 +50,9 @@ ENUM_REG(cluster_balance_type::Primary)
 ENUM_REG(cluster_balance_type::Secondary)
 ENUM_END(cluster_balance_type)
 
+uint32_t get_count(const node_state &ns, cluster_balance_type type, int32_t app_id);
+uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map);
+
 class greedy_load_balancer : public simple_load_balancer
 {
 public:
@@ -150,9 +153,75 @@ private:
 
     void balance_cluster();
 
-    bool cluster_replica_balance(const cluster_balance_type type);
+    bool cluster_replica_balance(const meta_view *global_view, const cluster_balance_type type);
 
-    bool do_cluster_replica_balance(const cluster_balance_type type);
+    bool do_cluster_replica_balance(const meta_view *global_view, const cluster_balance_type type);
+
+    struct app_migration_info
+    {
+        int32_t app_id;
+        std::string app_name;
+        std::vector<std::map<rpc_address, partition_status::type>> partitions;
+        std::map<rpc_address, uint32_t> replicas_count;
+        bool operator<(const app_migration_info &another) const
+        {
+            if (app_id < another.app_id)
+                return true;
+            return false;
+        }
+        bool operator==(const app_migration_info &another) const
+        {
+            return app_id == another.app_id;
+        }
+        partition_status::type get_partition_status(int32_t pidx, rpc_address addr)
+        {
+            for (const auto &kv : partitions[pidx]) {
+                if (kv.first == addr) {
+                    return kv.second;
+                }
+            }
+            return partition_status::PS_INACTIVE;
+        }
+    };
+
+    struct node_migration_info
+    {
+        rpc_address address;
+        std::map<std::string, partition_set> partitions;
+        partition_set future_partitions;
+        bool operator<(const node_migration_info &another) const
+        {
+            if (address < another.address)
+                return true;
+            return false;
+        }
+        bool operator==(const node_migration_info &another) const
+        {
+            return address == another.address;
+        }
+    };
+
+    struct cluster_migration_info
+    {
+        cluster_balance_type type;
+        std::map<int32_t, uint32_t> apps_skew;
+        std::map<int32_t, app_migration_info> apps_info;
+        std::map<rpc_address, node_migration_info> nodes_info;
+        std::map<rpc_address, uint32_t> replicas_count;
+    };
+
+    bool get_cluster_migration_info(const meta_view *global_view,
+                                    const cluster_balance_type type,
+                                    /*out*/ cluster_migration_info &cluster_info);
+
+    bool get_app_migration_info(std::shared_ptr<app_state> app,
+                                const node_mapper &nodes,
+                                const cluster_balance_type type,
+                                /*out*/ app_migration_info &info);
+
+    void get_node_migration_info(const node_state &ns,
+                                 const app_mapper &all_apps,
+                                 /*out*/ node_migration_info &info);
 
     bool all_replica_infos_collected(const node_state &ns);
     // using t_global_view to get disk_tag of node's pid
@@ -178,6 +247,13 @@ private:
     std::string clear_balancer_ignored_app_ids();
 
     bool is_ignored_app(app_id app_id);
+
+    FRIEND_TEST(greedy_load_balancer, app_migration_info);
+    FRIEND_TEST(greedy_load_balancer, node_migration_info);
+    FRIEND_TEST(greedy_load_balancer, get_skew);
+    FRIEND_TEST(greedy_load_balancer, get_count);
+    FRIEND_TEST(greedy_load_balancer, get_app_migration_info);
+    FRIEND_TEST(greedy_load_balancer, get_node_migration_info);
 };
 
 inline configuration_proposal_action

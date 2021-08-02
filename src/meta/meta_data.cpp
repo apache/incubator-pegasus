@@ -357,6 +357,16 @@ void config_context::adjust_proposal(const rpc_address &node, const replica_info
     lb_actions.track_current_learner(node, info);
 }
 
+bool config_context::get_disk_tag(const rpc_address &node, /*out*/ std::string &disk_tag) const
+{
+    auto iter = find_from_serving(node);
+    if (iter == serving.end()) {
+        return false;
+    }
+    disk_tag = iter->disk_tag;
+    return true;
+}
+
 void app_state_helper::on_init_partitions()
 {
     config_context context;
@@ -546,5 +556,5 @@ partition_status::type node_state::served_as(const gpid &pid) const
         return partition_status::PS_SECONDARY;
     return partition_status::PS_INACTIVE;
 }
-}
-}
+} // namespace replication
+} // namespace dsn

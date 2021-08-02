@@ -245,6 +245,8 @@ public:
 
     void adjust_proposal(const dsn::rpc_address &node, const replica_info &info);
 
+    bool get_disk_tag(const rpc_address &node, /*out*/ std::string &disk_tag) const;
+
 public:
     // intialize to 4 statically.
     // and will be set by load-balancer module
