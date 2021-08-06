@@ -77,7 +77,7 @@ TEST(greedy_load_balancer, get_skew)
     ASSERT_EQ(get_skew(count_map), count_map.rbegin()->second - count_map.begin()->second);
 }
 
-TEST(greedy_load_balancer, get_count)
+TEST(greedy_load_balancer, get_partition_count)
 {
     node_state ns;
     int apid = 1;
@@ -86,8 +86,8 @@ TEST(greedy_load_balancer, get_count)
     ns.put_partition(gpid(apid, 2), false);
     ns.put_partition(gpid(apid, 3), false);
 
-    ASSERT_EQ(get_count(ns, cluster_balance_type::Primary, apid), 1);
-    ASSERT_EQ(get_count(ns, cluster_balance_type::Secondary, apid), 3);
+    ASSERT_EQ(get_partition_count(ns, cluster_balance_type::COPY_PRIMARY, apid), 1);
+    ASSERT_EQ(get_partition_count(ns, cluster_balance_type::COPY_SECONDARY, apid), 3);
 }
 
 TEST(greedy_load_balancer, get_app_migration_info)
@@ -114,14 +114,14 @@ TEST(greedy_load_balancer, get_app_migration_info)
     {
         app->partitions[0].max_replica_count = 100;
         auto res = balancer.get_app_migration_info(
-            app, nodes, cluster_balance_type::Primary, migration_info);
+            app, nodes, cluster_balance_type::COPY_PRIMARY, migration_info);
         ASSERT_FALSE(res);
     }
 
     {
         app->partitions[0].max_replica_count = 1;
         auto res = balancer.get_app_migration_info(
-            app, nodes, cluster_balance_type::Primary, migration_info);
+            app, nodes, cluster_balance_type::COPY_PRIMARY, migration_info);
         ASSERT_TRUE(res);
         ASSERT_EQ(migration_info.app_id, appid);
         ASSERT_EQ(migration_info.app_name, appname);
@@ -171,6 +171,25 @@ TEST(greedy_load_balancer, get_node_migration_info)
     ASSERT_NE(migration_info.partitions.find(disk_tag), migration_info.partitions.end());
     ASSERT_EQ(migration_info.partitions.at(disk_tag).size(), 1);
     ASSERT_EQ(*migration_info.partitions.at(disk_tag).begin(), pid);
+}
+
+TEST(greedy_load_balancer, get_min_max_set)
+{
+
+    std::map<rpc_address, uint32_t> node_count_map;
+    node_count_map.emplace(rpc_address(1, 10086), 1);
+    node_count_map.emplace(rpc_address(2, 10086), 3);
+    node_count_map.emplace(rpc_address(3, 10086), 5);
+    node_count_map.emplace(rpc_address(4, 10086), 5);
+
+    std::set<rpc_address> min_set, max_set;
+    get_min_max_set(node_count_map, min_set, max_set);
+
+    ASSERT_EQ(min_set.size(), 1);
+    ASSERT_EQ(*min_set.begin(), rpc_address(1, 10086));
+    ASSERT_EQ(max_set.size(), 2);
+    ASSERT_EQ(*max_set.begin(), rpc_address(3, 10086));
+    ASSERT_EQ(*max_set.rbegin(), rpc_address(4, 10086));
 }
 } // namespace replication
 } // namespace dsn

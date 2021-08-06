@@ -108,5 +108,28 @@ bool hostname(const dsn::rpc_address &address, std::string *hostname_result);
 // valid_ip_network_order -> return TRUE && hostname_result=hostname	|
 // invalid_ip_network_order -> return FALSE
 bool hostname_from_ip(uint32_t ip, std::string *hostname_result);
+
+template <typename A, typename B>
+std::multimap<B, A> flip_map(const std::map<A, B> &source)
+{
+    std::multimap<B, A> target;
+    std::transform(source.begin(),
+                   source.end(),
+                   std::inserter(target, target.begin()),
+                   [](const std::pair<A, B> &p) { return std::pair<B, A>(p.second, p.first); });
+    return target;
+}
+
+template <typename T>
+std::set<T> get_intersection(const std::set<T> &set1, const std::set<T> &set2)
+{
+    std::set<T> intersection;
+    std::set_intersection(set1.begin(),
+                          set1.end(),
+                          set2.begin(),
+                          set2.end(),
+                          std::inserter(intersection, intersection.begin()));
+    return intersection;
+}
 } // namespace utils
 } // namespace dsn

@@ -41,17 +41,20 @@ namespace dsn {
 namespace replication {
 enum class cluster_balance_type
 {
-    Primary = 0,
-    Secondary,
-    Invalid,
+    COPY_PRIMARY = 0,
+    COPY_SECONDARY,
+    INVALID,
 };
-ENUM_BEGIN(cluster_balance_type, cluster_balance_type::Invalid)
-ENUM_REG(cluster_balance_type::Primary)
-ENUM_REG(cluster_balance_type::Secondary)
+ENUM_BEGIN(cluster_balance_type, cluster_balance_type::INVALID)
+ENUM_REG(cluster_balance_type::COPY_PRIMARY)
+ENUM_REG(cluster_balance_type::COPY_SECONDARY)
 ENUM_END(cluster_balance_type)
 
-uint32_t get_count(const node_state &ns, cluster_balance_type type, int32_t app_id);
+uint32_t get_partition_count(const node_state &ns, cluster_balance_type type, int32_t app_id);
 uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map);
+void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
+                     /*out*/ std::set<rpc_address> &min_set,
+                     /*out*/ std::set<rpc_address> &max_set);
 
 class greedy_load_balancer : public simple_load_balancer
 {
@@ -153,9 +156,13 @@ private:
 
     void balance_cluster();
 
-    bool cluster_replica_balance(const meta_view *global_view, const cluster_balance_type type);
+    bool cluster_replica_balance(const meta_view *global_view,
+                                 const cluster_balance_type type,
+                                 /*out*/ migration_list &list);
 
-    bool do_cluster_replica_balance(const meta_view *global_view, const cluster_balance_type type);
+    bool do_cluster_replica_balance(const meta_view *global_view,
+                                    const cluster_balance_type type,
+                                    /*out*/ migration_list &list);
 
     struct app_migration_info
     {
@@ -187,13 +194,12 @@ private:
     struct node_migration_info
     {
         rpc_address address;
+        // key-disk tag, value-partition set
         std::map<std::string, partition_set> partitions;
         partition_set future_partitions;
         bool operator<(const node_migration_info &another) const
         {
-            if (address < another.address)
-                return true;
-            return false;
+            return address < another.address;
         }
         bool operator==(const node_migration_info &another) const
         {
@@ -210,6 +216,15 @@ private:
         std::map<rpc_address, uint32_t> replicas_count;
     };
 
+    struct move_info
+    {
+        gpid pid;
+        rpc_address source_node;
+        std::string source_disk_tag;
+        rpc_address target_node;
+        balance_type type;
+    };
+
     bool get_cluster_migration_info(const meta_view *global_view,
                                     const cluster_balance_type type,
                                     /*out*/ cluster_migration_info &cluster_info);
@@ -222,6 +237,22 @@ private:
     void get_node_migration_info(const node_state &ns,
                                  const app_mapper &all_apps,
                                  /*out*/ node_migration_info &info);
+
+    bool get_next_move(const cluster_migration_info &cluster_info,
+                       const partition_set &selected_pid,
+                       /*out*/ move_info &next_move);
+
+    bool pick_up_move(const cluster_migration_info &cluster_info,
+                      const std::set<rpc_address> &max_nodes,
+                      const std::set<rpc_address> &min_nodes,
+                      const int32_t app_id,
+                      const partition_set &selected_pid,
+                      /*out*/ move_info &move_info);
+
+    bool apply_move(const move_info &move,
+                    /*out*/ partition_set &selected_pids,
+                    /*out*/ migration_list &list,
+                    /*out*/ cluster_migration_info &cluster_info);
 
     bool all_replica_infos_collected(const node_state &ns);
     // using t_global_view to get disk_tag of node's pid
@@ -251,7 +282,7 @@ private:
     FRIEND_TEST(greedy_load_balancer, app_migration_info);
     FRIEND_TEST(greedy_load_balancer, node_migration_info);
     FRIEND_TEST(greedy_load_balancer, get_skew);
-    FRIEND_TEST(greedy_load_balancer, get_count);
+    FRIEND_TEST(greedy_load_balancer, get_partition_count);
     FRIEND_TEST(greedy_load_balancer, get_app_migration_info);
     FRIEND_TEST(greedy_load_balancer, get_node_migration_info);
 };

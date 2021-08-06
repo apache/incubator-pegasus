@@ -281,3 +281,39 @@ TEST(core, ref_ptr)
     z = foo_ptr();
     EXPECT_TRUE(count == 0);
 }
+
+TEST(core, flip_map)
+{
+    std::map<int, int> source;
+    source.emplace(3, 1);
+    source.emplace(2, 1);
+    source.emplace(1, 1);
+
+    auto target = flip_map(source);
+    ASSERT_EQ(target.size(), 3);
+    ASSERT_EQ(target.count(1), 3);
+    ASSERT_EQ(target.count(2), 0);
+    ASSERT_EQ(target.count(3), 0);
+    std::string values;
+    for (auto it = target.equal_range(1); it.first != it.second; it.first++) {
+        values += std::to_string(it.first->second);
+    }
+    ASSERT_EQ(values, "123");
+}
+
+TEST(core, get_intersection)
+{
+    std::set<int> set1;
+    set1.insert(1);
+    set1.insert(2);
+    set1.insert(3);
+
+    std::set<int> set2;
+    set2.insert(3);
+    set2.insert(4);
+    set2.insert(5);
+
+    auto intersection = utils::get_intersection(set1, set2);
+    ASSERT_EQ(intersection.size(), 1);
+    ASSERT_EQ(*intersection.begin(), 3);
+}
