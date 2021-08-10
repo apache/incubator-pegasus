@@ -65,6 +65,7 @@ public:
             duplicate_qps->set(row_stats.duplicate_qps);
             dup_shipped_ops->set(row_stats.dup_shipped_ops);
             dup_failed_shipping_ops->set(row_stats.dup_failed_shipping_ops);
+            dup_recent_mutation_loss_count->set(row_stats.dup_recent_mutation_loss_count);
             recent_read_cu->set(row_stats.recent_read_cu);
             recent_write_cu->set(row_stats.recent_write_cu);
             recent_expire_count->set(row_stats.recent_expire_count);
@@ -132,6 +133,7 @@ public:
         ::dsn::perf_counter_wrapper duplicate_qps;
         ::dsn::perf_counter_wrapper dup_shipped_ops;
         ::dsn::perf_counter_wrapper dup_failed_shipping_ops;
+        ::dsn::perf_counter_wrapper dup_recent_mutation_loss_count;
         ::dsn::perf_counter_wrapper recent_read_cu;
         ::dsn::perf_counter_wrapper recent_write_cu;
         ::dsn::perf_counter_wrapper recent_expire_count;
