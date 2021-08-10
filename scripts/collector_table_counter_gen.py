@@ -63,7 +63,7 @@ def append_line(filePath, appends):
     for append in appends:
         if not append.seek_match:
             fatal_error(
-                "can't match the seek line(%s), please check the file" %
+                "can't match the seek_line(%s), please check the file" %
                 append.seek_line)
     with open(filePath, 'w+') as fp:
         fp.write("".join(lines))
@@ -105,6 +105,7 @@ def generate_code_in_command_helper_header(counter):
 
 
 # python3 ./collector_table_counter_gen.py counter1,counter2
+# please use `./scripts/format_files.sh` to format after generate code
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("python3 ./collector_table_counter_gen.py {counter1,counter2..}")
