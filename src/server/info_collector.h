@@ -109,6 +109,13 @@ public:
             check_and_mutate_bytes->set(row_stats.check_and_mutate_bytes);
             read_bytes->set(row_stats.get_total_read_bytes());
             write_bytes->set(row_stats.get_total_write_bytes());
+            rdb_read_l2andup_hit_count->set(row_stats.rdb_read_l2andup_hit_count);
+            rdb_read_l1_hit_count->set(row_stats.rdb_read_l1_hit_count);
+            rdb_read_l0_hit_count->set(row_stats.rdb_read_l0_hit_count);
+            rdb_read_memtable_hit_count->set(row_stats.rdb_read_memtable_hit_count);
+            rdb_read_memtable_total_count->set(row_stats.rdb_read_memtable_total_count);
+            rdb_write_amplification->set(row_stats.rdb_write_amplification);
+            rdb_read_amplification->set(row_stats.rdb_read_amplification);
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -159,6 +166,13 @@ public:
         ::dsn::perf_counter_wrapper check_and_mutate_bytes;
         ::dsn::perf_counter_wrapper read_bytes;
         ::dsn::perf_counter_wrapper write_bytes;
+        ::dsn::perf_counter_wrapper rdb_read_l2andup_hit_count;
+        ::dsn::perf_counter_wrapper rdb_read_l1_hit_count;
+        ::dsn::perf_counter_wrapper rdb_read_l0_hit_count;
+        ::dsn::perf_counter_wrapper rdb_read_memtable_hit_count;
+        ::dsn::perf_counter_wrapper rdb_read_memtable_total_count;
+        ::dsn::perf_counter_wrapper rdb_write_amplification;
+        ::dsn::perf_counter_wrapper rdb_read_amplification;
     };
 
     info_collector();
