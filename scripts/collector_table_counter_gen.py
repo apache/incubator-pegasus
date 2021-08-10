@@ -1,9 +1,28 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import os
 import sys
 
-info_collector_header_path = "./src/server/info_collector.h"
-info_collector_cpp_path = "./src/server/info_collector.cpp"
-command_helper_header_path = "./src/shell/command_helper.h"
+root = os.path.split(os.path.realpath(__file__))[0].split("scripts")[0]
+
+info_collector_header_path = root + "/src/server/info_collector.h"
+info_collector_cpp_path = root + "./src/server/info_collector.cpp"
+command_helper_header_path = root + "./src/shell/command_helper.h"
 
 
 class Appender(object):
@@ -26,30 +45,28 @@ def append_line(filePath, appends):
     if not os.path.exists(filePath):
         fatal_error("no such file: %s" % filePath)
 
-    fp = open(filePath, 'r+')
     lines = []
-    for line in fp.readlines():
-        lines.append(line)
-        for append in appends:
-            if append.new_line in line:
-                fatal_error(
-                    "has added the counter for table, new_line = %s" %
-                    append.new_line)
-            if append.seek_match:
-                continue
-            if append.seek_line in line:
-                lines.append(append.new_line)
-                append.seek_match = True
+    with open(filePath, 'r+') as fp:
+        for line in fp.readlines():
+            lines.append(line)
+            for append in appends:
+                if append.new_line in line:
+                    fatal_error(
+                        "has added the counter for table, new_line = %s" %
+                        append.new_line)
+                if append.seek_match:
+                    continue
+                if append.seek_line in line:
+                    lines.append(append.new_line)
+                    append.seek_match = True
 
-    fp.close()
     for append in appends:
         if not append.seek_match:
             fatal_error(
-                "can't match the seek line(%s), please check the file if update" %
+                "can't match the seek line(%s), please check the file" %
                 append.seek_line)
-    fp = open(filePath, 'w+')
-    fp.write("".join(lines))
-    fp.close()
+    with open(filePath, 'w+') as fp:
+        fp.write("".join(lines))
 
 
 def generate_code_in_info_collector_header(counter):
@@ -87,7 +104,7 @@ def generate_code_in_command_helper_header(counter):
     append_line(command_helper_header_path, appends)
 
 
-# ./collector_table_counter_gen.py {counters_file}
+# python ./collector_table_counter_gen.py counter1,counter2
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("./collector_table_counter_gen.py {counter1,counter2..}")
