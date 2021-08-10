@@ -104,10 +104,10 @@ def generate_code_in_command_helper_header(counter):
     append_line(command_helper_header_path, appends)
 
 
-# python ./collector_table_counter_gen.py counter1,counter2
+# python3 ./collector_table_counter_gen.py counter1,counter2
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print("python ./collector_table_counter_gen.py {counter1,counter2..}")
+        print("python3 ./collector_table_counter_gen.py {counter1,counter2..}")
 
     counter_list = sys.argv[1].split(",")
     for counter in counter_list:
