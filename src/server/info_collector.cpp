@@ -239,11 +239,10 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(check_and_mutate_bytes);
     INIT_COUNTER(read_bytes);
     INIT_COUNTER(write_bytes);
-    INIT_COUNTER(rdb_read_l2andup_hit_count);
-    INIT_COUNTER(rdb_read_l1_hit_count);
-    INIT_COUNTER(rdb_read_l0_hit_count);
-    INIT_COUNTER(rdb_read_memtable_hit_count);
-    INIT_COUNTER(rdb_read_memtable_total_count);
+    INIT_COUNTER(rdb_read_l2andup_hit_rate);
+    INIT_COUNTER(rdb_read_l1_hit_rate);
+    INIT_COUNTER(rdb_read_l0_hit_rate);
+    INIT_COUNTER(rdb_read_memtable_hit_rate);
     INIT_COUNTER(rdb_write_amplification);
     INIT_COUNTER(rdb_read_amplification);
     _app_stat_counters[app_name] = counters;

@@ -651,7 +651,6 @@ struct row_data
         rdb_read_l1_hit_count += row.rdb_read_l1_hit_count;
         rdb_read_l0_hit_count += row.rdb_read_l0_hit_count;
         rdb_read_memtable_hit_count += row.rdb_read_memtable_hit_count;
-        rdb_read_memtable_total_count += row.rdb_read_memtable_total_count;
         rdb_write_amplification += row.rdb_write_amplification;
         rdb_read_amplification += row.rdb_read_amplification;
     }
