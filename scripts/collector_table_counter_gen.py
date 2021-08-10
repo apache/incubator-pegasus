@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -69,38 +69,41 @@ def append_line(filePath, appends):
         fp.write("".join(lines))
 
 
-def generate_code_in_info_collector_header(counter):
+def generate_code_in_info_collector_header(replica_counter):
+    table_counter = replica_counter.replace(".", "_")
     appends = [
         Appender(
             "write_bytes->set(row_stats.get_total_write_bytes());",
             "%s->set(row_stats.%s);" %
-            (counter, counter)),
+            (table_counter, table_counter)),
         Appender(
             "::dsn::perf_counter_wrapper write_bytes;",
             "::dsn::perf_counter_wrapper %s;" %
-            counter)]
+            table_counter)]
     append_line(info_collector_header_path, appends)
 
 
-def generate_code_in_info_collector_cpp(counter):
+def generate_code_in_info_collector_cpp(replica_counter):
+    table_counter = replica_counter.replace(".", "_")
     appends = [Appender(
         "INIT_COUNTER(write_bytes);",
         "INIT_COUNTER(%s);" %
-        counter)]
+        table_counter)]
     append_line(info_collector_cpp_path, appends)
 
 
-def generate_code_in_command_helper_header(counter):
+def generate_code_in_command_helper_header(replica_counter):
+    table_counter = replica_counter.replace(".", "_")
     appends = [Appender(
         "check_and_mutate_bytes += row.check_and_mutate_bytes;",
-        "%s += row.%s;" % (counter, counter)), Appender(
+        "%s += row.%s;" % (table_counter, table_counter)), Appender(
         "double check_and_mutate_bytes = 0;",
         "double %s = 0;" %
-        counter),
+        table_counter),
         Appender(
             "row.check_and_mutate_bytes += value;",
-            " else if (counter_name == rdb.\"%s\")  row.%s += value;" %
-            (counter, counter))]
+            " else if (counter_name == \"%s\")  row.%s += value;" %
+            (replica_counter, table_counter))]
     append_line(command_helper_header_path, appends)
 
 
