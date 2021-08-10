@@ -707,7 +707,6 @@ struct row_data
     double rdb_read_l1_hit_count = 0;
     double rdb_read_l0_hit_count = 0;
     double rdb_read_memtable_hit_count = 0;
-    double rdb_read_memtable_total_count = 0;
     double rdb_write_amplification = 0;
     double rdb_read_amplification = 0;
 };
@@ -813,8 +812,6 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.rdb_read_l0_hit_count += value;
     else if (counter_name == "rdb.read_memtable_hit_count")
         row.rdb_read_memtable_hit_count += value;
-    else if (counter_name == "rdb.read_memtable_total_count")
-        row.rdb_read_memtable_total_count += value;
     else if (counter_name == "rdb.write_amplification")
         row.rdb_write_amplification += value;
     else if (counter_name == "rdb.read_amplification")

@@ -114,7 +114,7 @@ public:
             rdb_read_l2andup_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l2andup_hit_count, total_rocksdb_block_cache_miss_hit_count));
             rdb_read_l1_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l1_hit_count, total_rocksdb_block_cache_miss_hit_count));
             rdb_read_l0_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l0_hit_count,total_rocksdb_block_cache_miss_hit_count));
-            rdb_read_memtable_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_memtable_total_count, total_rocksdb_block_cache_miss_hit_count));
+            rdb_read_memtable_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_memtable_hit_count, total_rocksdb_block_cache_miss_hit_count));
             rdb_write_amplification->set(row_stats.rdb_write_amplification);
             rdb_read_amplification->set(row_stats.rdb_read_amplification);
         }
@@ -167,12 +167,12 @@ public:
         ::dsn::perf_counter_wrapper check_and_mutate_bytes;
         ::dsn::perf_counter_wrapper read_bytes;
         ::dsn::perf_counter_wrapper write_bytes;
-        ::dsn::perf_counter_wrapper read_l2andup_hit_rate;
-        ::dsn::perf_counter_wrapper read_l1_hit_rate;
-        ::dsn::perf_counter_wrapper read_l0_hit_rate;
-        ::dsn::perf_counter_wrapper read_memtable_hit_rate;
-        ::dsn::perf_counter_wrapper write_amplification;
-        ::dsn::perf_counter_wrapper read_amplification;
+        ::dsn::perf_counter_wrapper rdb_read_l2andup_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_read_l1_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_read_l0_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_read_memtable_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_write_amplification;
+        ::dsn::perf_counter_wrapper rdb_read_amplification;
     };
 
     info_collector();
