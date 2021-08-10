@@ -99,7 +99,7 @@ def generate_code_in_command_helper_header(counter):
         counter),
         Appender(
             "row.check_and_mutate_bytes += value;",
-            " else if (counter_name == \"%s\")  row.%s += value;" %
+            " else if (counter_name == rdb.\"%s\")  row.%s += value;" %
             (counter, counter))]
     append_line(command_helper_header_path, appends)
 
