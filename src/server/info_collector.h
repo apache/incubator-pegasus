@@ -110,17 +110,14 @@ public:
             check_and_mutate_bytes->set(row_stats.check_and_mutate_bytes);
             read_bytes->set(row_stats.get_total_read_bytes());
             write_bytes->set(row_stats.get_total_write_bytes());
-
-            int64_t total_rocksdb_block_cache_miss_hit_count =
-                row_stats.rdb_block_cache_total_count - row_stats.rdb_block_cache_hit_count;
             rdb_read_l2andup_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_read_l2andup_hit_count, total_rocksdb_block_cache_miss_hit_count));
-            rdb_read_l1_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_read_l1_hit_count, total_rocksdb_block_cache_miss_hit_count));
-            rdb_read_l0_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_read_l0_hit_count, total_rocksdb_block_cache_miss_hit_count));
+                row_stats.rdb_read_l2andup_hit_count, row_stats.rdb_block_cache_total_count));
+            rdb_read_l1_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l1_hit_count,
+                                                          row_stats.rdb_block_cache_total_count));
+            rdb_read_l0_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l0_hit_count,
+                                                          row_stats.rdb_block_cache_total_count));
             rdb_read_memtable_hit_rate->set(convert_to_1M_ratio(
-                row_stats.rdb_read_memtable_hit_count, total_rocksdb_block_cache_miss_hit_count));
+                row_stats.rdb_read_memtable_hit_count, row_stats.rdb_block_cache_total_count));
             rdb_write_amplification->set(row_stats.rdb_write_amplification);
             rdb_read_amplification->set(row_stats.rdb_read_amplification);
         }
