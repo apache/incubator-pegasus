@@ -940,6 +940,7 @@ inline bool get_app_partition_stat(shell_context *sc,
                     row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
                     row.row_name = std::to_string(partition_index_x);
                     row.app_id = app_id_x;
+                    row.partition_count = app_partitions.size() / 3;
                     update_app_pegasus_perf_counter(row, counter_name, m.value);
                 }
             } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
