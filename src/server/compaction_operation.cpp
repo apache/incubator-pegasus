@@ -174,7 +174,7 @@ compaction_operations create_compaction_operations(const std::string &json, uint
             enum_to_string(op.type), dsn::PROVIDER_TYPE_MAIN, op.params, data_version);
         if (operation != nullptr) {
             operation->set_rules(std::move(rules));
-            res.emplace_back(std::unique_ptr<compaction_operation>(operation));
+            res.emplace_back(std::shared_ptr<compaction_operation>(operation));
         }
     }
     return res;
