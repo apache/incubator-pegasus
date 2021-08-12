@@ -37,12 +37,15 @@ DEFINE_THREAD_POOL_CODE(THREAD_POOL_COMPACT)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_INGESTION)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_SLOG)
 DEFINE_THREAD_POOL_CODE(THREAD_POOL_PLOG)
+DEFINE_THREAD_POOL_CODE(THREAD_POOL_SCAN)
 
 #define DEFINE_STORAGE_WRITE_RPC_CODE(x, allow_batch, is_idempotent)                               \
     DEFINE_STORAGE_RPC_CODE(                                                                       \
         x, TASK_PRIORITY_LOW, THREAD_POOL_REPLICATION, true, allow_batch, is_idempotent)
 #define DEFINE_STORAGE_READ_RPC_CODE(x)                                                            \
     DEFINE_STORAGE_RPC_CODE(x, TASK_PRIORITY_COMMON, THREAD_POOL_LOCAL_APP, false, true, true)
+#define DEFINE_STORAGE_SCAN_RPC_CODE(x)                                                            \
+    DEFINE_STORAGE_RPC_CODE(x, TASK_PRIORITY_COMMON, THREAD_POOL_SCAN, false, true, true)
 
 #define MAKE_EVENT_CODE(x, pri) DEFINE_TASK_CODE(x, pri, CURRENT_THREAD_POOL)
 #define MAKE_EVENT_CODE_AIO(x, pri) DEFINE_TASK_CODE_AIO(x, pri, CURRENT_THREAD_POOL)
