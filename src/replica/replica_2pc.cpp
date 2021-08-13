@@ -180,6 +180,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         mu->set_id(get_ballot(), mu->data.header.decree);
     }
 
+    mu->tracer->set_name(fmt::format("mutation[{}]", mu->name()));
     dlog(level,
          "%s: mutation %s init_prepare, mutation_tid=%" PRIu64,
          name(),
@@ -386,6 +387,7 @@ void replica::on_prepare(dsn::message_ex *request)
     decree decree = mu->data.header.decree;
 
     dinfo("%s: mutation %s on_prepare", name(), mu->name());
+    mu->tracer->set_name(fmt::format("mutation[{}]", mu->name()));
 
     dassert(mu->data.header.pid == rconfig.pid,
             "(%d.%d) VS (%d.%d)",
