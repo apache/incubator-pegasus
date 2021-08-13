@@ -940,7 +940,6 @@ inline bool get_app_partition_stat(shell_context *sc,
                     row_data &row = rows[app_id_name[app_id_x]][partition_index_x];
                     row.row_name = std::to_string(partition_index_x);
                     row.app_id = app_id_x;
-                    row.partition_count = app_partitions[app_id_x].size();
                     update_app_pegasus_perf_counter(row, counter_name, m.value);
                 }
             } else if (parse_app_perf_counter_name(m.name, app_name, counter_name)) {
@@ -952,7 +951,6 @@ inline bool get_app_partition_stat(shell_context *sc,
                 // perf-counter value will be set into partition index 0.
                 row_data &row = rows[app_name][0];
                 row.app_id = app_name_id[app_name];
-                row.partition_count = app_partitions[app_name_id[app_name]].size();
                 update_app_pegasus_perf_counter(row, counter_name, m.value);
             }
         }

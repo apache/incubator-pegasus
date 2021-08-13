@@ -153,6 +153,8 @@ void info_collector::on_app_stat()
     for (const auto &app_rows : all_rows) {
         // get statistics data for app
         row_data app_stats(app_rows.first);
+        app_stats.partition_count = app_rows.second.size();
+        all_stats.partition_count += app_rows.second.size();
         for (auto partition_row : app_rows.second) {
             app_stats.aggregate(partition_row);
         }

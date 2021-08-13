@@ -120,6 +120,7 @@ public:
                 row_stats.rdb_read_memtable_hit_count, row_stats.rdb_block_cache_total_count));
             rdb_write_amplification->set(row_stats.rdb_write_amplification /
                                          row_stats.partition_count);
+                                         printf("result:%d", row_stats.partition_count);
             rdb_read_amplification->set(row_stats.rdb_read_amplification /
                                         row_stats.partition_count);
         }
