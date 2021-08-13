@@ -34,6 +34,9 @@ if(ENABLE_GCOV)
     add_definitions(-DENABLE_GCOV=1)
 endif()
 
+if(SANITIZER)
+    add_definitions(-DSANITIZER=1)
+endif()
 # Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
 # the destination.
 set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
