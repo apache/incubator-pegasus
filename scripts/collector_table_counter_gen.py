@@ -15,6 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# This script tool is for generate table-level rocksdb perfcounter based on replica-level perfcounter.
+# Since many rocksdb perfcounter need be aggregate into total value, and the `code`  usually is 
+# repeated, for example, `put_qps`,`get_qps`, this tool just generate these code. you need:
+# ```
+#python3 ./collector_table_counter_gen.py replica-level-counter1, replica-level-counter2
+# ```
+#
+# Notice:  The tool only for generate `total-aggregate` type  code,  if you want get `average-aggregate` 
+#  or other type code, please modify the generated code
+
 import os
 import sys
 
