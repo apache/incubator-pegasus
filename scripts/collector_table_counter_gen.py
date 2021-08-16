@@ -19,7 +19,7 @@
 # Since many rocksdb perf counters need to be aggregated into total value, the code is usually repeated,
 # for example, `put_qps` and `get_qps`, this tool generates these codes. you need:
 # ```
-#python3 ./collector_table_counter_gen.py replica-level-counter1, replica-level-counter2
+#python3 ./collector_table_counter_gen.py put_qps, get_qps
 # ```
 #
 # Notice:  The tool only for generate `total-aggregate` type  code,  if you want get `average-aggregate` 
