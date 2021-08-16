@@ -22,8 +22,8 @@
 #python3 ./collector_table_counter_gen.py put_qps, get_qps
 # ```
 #
-# Notice:  The tool only for generate `total-aggregate` type  code,  if you want get `average-aggregate` 
-#  or other type code, please modify the generated code
+# Notice:  The tool is only for generating `total-aggregate` type code. If you won't get `average-aggregate`
+# or other type code, please modify the generated code
 
 import os
 import sys
