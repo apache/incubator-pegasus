@@ -89,6 +89,8 @@ private:
 
     typedef std::map<dsn::task_code, std::function<int(dsn::message_ex *)>> non_batch_writes_map;
     non_batch_writes_map _non_batch_write_handlers;
+
+    ::dsn::perf_counter_wrapper _pfc_recent_corrupt_write_count;
 };
 
 } // namespace server
