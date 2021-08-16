@@ -178,10 +178,11 @@ message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
     }
 
     msg->header->body_length = msg->buffers[1].length();
+    msg->header->context.u.serialize_format = old_msg.header->context.u.serialize_format;
     msg->_is_read = true;
     msg->_rw_index = 1;
+    msg->_rw_offset = old_msg._rw_offset;
     msg->local_rpc_code = old_msg.local_rpc_code;
-    msg->header->context.u.serialize_format = old_msg.header->context.u.serialize_format;
     msg->add_ref();
 
     return msg;
