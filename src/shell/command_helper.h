@@ -648,6 +648,12 @@ struct row_data
         multi_put_bytes += row.multi_put_bytes;
         check_and_set_bytes += row.check_and_set_bytes;
         check_and_mutate_bytes += row.check_and_mutate_bytes;
+        rdb_read_l2andup_hit_count += row.rdb_read_l2andup_hit_count;
+        rdb_read_l1_hit_count += row.rdb_read_l1_hit_count;
+        rdb_read_l0_hit_count += row.rdb_read_l0_hit_count;
+        rdb_read_memtable_hit_count += row.rdb_read_memtable_hit_count;
+        rdb_write_amplification += row.rdb_write_amplification;
+        rdb_read_amplification += row.rdb_read_amplification;
     }
 
     std::string row_name;
@@ -699,6 +705,12 @@ struct row_data
     double multi_put_bytes = 0;
     double check_and_set_bytes = 0;
     double check_and_mutate_bytes = 0;
+    double rdb_read_l2andup_hit_count = 0;
+    double rdb_read_l1_hit_count = 0;
+    double rdb_read_l0_hit_count = 0;
+    double rdb_read_memtable_hit_count = 0;
+    double rdb_write_amplification = 0;
+    double rdb_read_amplification = 0;
 };
 
 inline bool
@@ -796,6 +808,18 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_set_bytes += value;
     else if (counter_name == "check_and_mutate_bytes")
         row.check_and_mutate_bytes += value;
+    else if (counter_name == "rdb.read_l2andup_hit_count")
+        row.rdb_read_l2andup_hit_count += value;
+    else if (counter_name == "rdb.read_l1_hit_count")
+        row.rdb_read_l1_hit_count += value;
+    else if (counter_name == "rdb.read_l0_hit_count")
+        row.rdb_read_l0_hit_count += value;
+    else if (counter_name == "rdb.read_memtable_hit_count")
+        row.rdb_read_memtable_hit_count += value;
+    else if (counter_name == "rdb.write_amplification")
+        row.rdb_write_amplification += value;
+    else if (counter_name == "rdb.read_amplification")
+        row.rdb_read_amplification += value;
     else
         return false;
     return true;
