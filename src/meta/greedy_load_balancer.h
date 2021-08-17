@@ -249,6 +249,22 @@ private:
                       const partition_set &selected_pid,
                       /*out*/ move_info &move_info);
 
+    void get_max_load_disk(const cluster_migration_info &cluster_info,
+                           const std::set<rpc_address> &max_nodes,
+                           const int32_t app_id,
+                           /*out*/ rpc_address &picked_node,
+                           /*out*/ std::string &picked_disk,
+                           /*out*/ partition_set &target_partitions);
+
+    std::map<std::string, partition_set> get_disk_partitions_map(
+        const cluster_migration_info &cluster_info, const rpc_address &addr, const int32_t app_id);
+
+    bool pick_up_partition(const cluster_migration_info &cluster_info,
+                           const rpc_address &min_node_addr,
+                           const partition_set &max_load_partitions,
+                           const partition_set &selected_pid,
+                           /*out*/ gpid &picked_pid);
+
     bool apply_move(const move_info &move,
                     /*out*/ partition_set &selected_pids,
                     /*out*/ migration_list &list,
@@ -285,6 +301,8 @@ private:
     FRIEND_TEST(greedy_load_balancer, get_partition_count);
     FRIEND_TEST(greedy_load_balancer, get_app_migration_info);
     FRIEND_TEST(greedy_load_balancer, get_node_migration_info);
+    FRIEND_TEST(greedy_load_balancer, get_disk_partitions_map);
+    FRIEND_TEST(greedy_load_balancer, get_max_load_disk);
 };
 
 inline configuration_proposal_action

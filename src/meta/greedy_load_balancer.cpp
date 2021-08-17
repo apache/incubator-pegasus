@@ -1246,6 +1246,98 @@ bool greedy_load_balancer::pick_up_move(const cluster_migration_info &cluster_in
                                         const partition_set &selected_pid,
                                         /*out*/ move_info &move_info)
 {
+    rpc_address max_load_node;
+    std::string max_load_disk;
+    partition_set max_load_partitions;
+    get_max_load_disk(
+        cluster_info, max_nodes, app_id, max_load_node, max_load_disk, max_load_partitions);
+
+    for (const auto &node_addr : min_nodes) {
+        gpid picked_pid;
+        if (pick_up_partition(
+                cluster_info, node_addr, max_load_partitions, selected_pid, picked_pid)) {
+            move_info.pid = picked_pid;
+            move_info.source_node = max_load_node;
+            move_info.source_disk_tag = max_load_disk;
+            move_info.target_node = node_addr;
+            move_info.type = cluster_info.type == cluster_balance_type::COPY_SECONDARY
+                                 ? balance_type::copy_secondary
+                                 : balance_type::copy_primary;
+            ddebug_f("partition[{}] will migrate from {} to {}",
+                     picked_pid,
+                     max_load_node.to_string(),
+                     node_addr.to_string());
+            return true;
+        }
+    }
+    return false;
+}
+
+void greedy_load_balancer::get_max_load_disk(const cluster_migration_info &cluster_info,
+                                             const std::set<rpc_address> &max_nodes,
+                                             const int32_t app_id,
+                                             /*out*/ rpc_address &picked_node,
+                                             /*out*/ std::string &picked_disk,
+                                             /*out*/ partition_set &target_partitions)
+{
+    int32_t max_load_size = 0;
+    for (const auto &node_addr : max_nodes) {
+        // key: disk_tag
+        // value: partition set for app(app id=app_id) in node(addr=node_addr)
+        std::map<std::string, partition_set> disk_partitions =
+            get_disk_partitions_map(cluster_info, node_addr, app_id);
+        for (const auto &kv : disk_partitions) {
+            if (kv.second.size() > max_load_size) {
+                picked_node = node_addr;
+                picked_disk = kv.first;
+                target_partitions = kv.second;
+                max_load_size = kv.second.size();
+            }
+        }
+    }
+    ddebug_f("most load is node({}), disk_tag({}), target partition count = {}",
+             picked_node.to_string(),
+             picked_disk,
+             target_partitions.size());
+}
+
+std::map<std::string, partition_set> greedy_load_balancer::get_disk_partitions_map(
+    const cluster_migration_info &cluster_info, const rpc_address &addr, const int32_t app_id)
+{
+    std::map<std::string, partition_set> disk_partitions;
+    auto app_iter = cluster_info.apps_info.find(app_id);
+    auto node_iter = cluster_info.nodes_info.find(addr);
+    if (app_iter == cluster_info.apps_info.end() || node_iter == cluster_info.nodes_info.end()) {
+        return disk_partitions;
+    }
+
+    auto status = cluster_info.type == cluster_balance_type::COPY_SECONDARY
+                      ? partition_status::PS_SECONDARY
+                      : partition_status::PS_PRIMARY;
+    auto app_partition = app_iter->second.partitions;
+    auto disk_partition = node_iter->second.partitions;
+    for (const auto &kv : disk_partition) {
+        auto disk_tag = kv.first;
+        for (const auto &pid : kv.second) {
+            if (pid.get_app_id() != app_id) {
+                continue;
+            }
+            auto status_map = app_partition[pid.get_partition_index()];
+            auto iter = status_map.find(addr);
+            if (iter != status_map.end() && iter->second == status) {
+                disk_partitions[disk_tag].insert(pid);
+            }
+        }
+    }
+    return disk_partitions;
+}
+
+bool greedy_load_balancer::pick_up_partition(const cluster_migration_info &cluster_info,
+                                             const rpc_address &min_node_addr,
+                                             const partition_set &max_load_partitions,
+                                             const partition_set &selected_pid,
+                                             /*out*/ gpid &picked_pid)
+{
     // TBD(zlw)
     return false;
 }

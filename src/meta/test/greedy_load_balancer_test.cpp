@@ -175,7 +175,6 @@ TEST(greedy_load_balancer, get_node_migration_info)
 
 TEST(greedy_load_balancer, get_min_max_set)
 {
-
     std::map<rpc_address, uint32_t> node_count_map;
     node_count_map.emplace(rpc_address(1, 10086), 1);
     node_count_map.emplace(rpc_address(2, 10086), 3);
@@ -190,6 +189,75 @@ TEST(greedy_load_balancer, get_min_max_set)
     ASSERT_EQ(max_set.size(), 2);
     ASSERT_EQ(*max_set.begin(), rpc_address(3, 10086));
     ASSERT_EQ(*max_set.rbegin(), rpc_address(4, 10086));
+}
+
+TEST(greedy_load_balancer, get_disk_partitions_map)
+{
+    greedy_load_balancer balancer(nullptr);
+    greedy_load_balancer::cluster_migration_info cluster_info;
+    rpc_address addr(1, 10086);
+    int32_t app_id = 1;
+
+    auto disk_partitions = balancer.get_disk_partitions_map(cluster_info, addr, app_id);
+    ASSERT_TRUE(disk_partitions.empty());
+
+    std::map<rpc_address, partition_status::type> partition;
+    partition[addr] = partition_status::PS_SECONDARY;
+    greedy_load_balancer::app_migration_info app_info;
+    app_info.partitions.push_back(partition);
+    cluster_info.apps_info[app_id] = app_info;
+
+    partition_set partitions;
+    gpid pid(app_id, 0);
+    partitions.insert(pid);
+    greedy_load_balancer::node_migration_info node_info;
+    std::string disk_tag = "disk1";
+    node_info.partitions[disk_tag] = partitions;
+    cluster_info.nodes_info[addr] = node_info;
+
+    cluster_info.type = cluster_balance_type::COPY_SECONDARY;
+    disk_partitions = balancer.get_disk_partitions_map(cluster_info, addr, app_id);
+    ASSERT_EQ(disk_partitions.size(), 1);
+    ASSERT_EQ(disk_partitions.count(disk_tag), 1);
+    ASSERT_EQ(disk_partitions[disk_tag].size(), 1);
+    ASSERT_EQ(disk_partitions[disk_tag].count(pid), 1);
+}
+
+TEST(greedy_load_balancer, get_max_load_disk)
+{
+    greedy_load_balancer::cluster_migration_info cluster_info;
+    cluster_info.type = cluster_balance_type::COPY_SECONDARY;
+
+    rpc_address addr(1, 10086);
+    int32_t app_id = 1;
+    std::map<rpc_address, partition_status::type> partition;
+    partition[addr] = partition_status::PS_SECONDARY;
+    greedy_load_balancer::app_migration_info app_info;
+    app_info.partitions.push_back(partition);
+    cluster_info.apps_info[app_id] = app_info;
+
+    partition_set partitions;
+    gpid pid(app_id, 0);
+    partitions.insert(pid);
+    greedy_load_balancer::node_migration_info node_info;
+    std::string disk_tag = "disk1";
+    node_info.partitions[disk_tag] = partitions;
+    cluster_info.nodes_info[addr] = node_info;
+
+    std::set<rpc_address> max_nodes;
+    max_nodes.insert(addr);
+
+    greedy_load_balancer balancer(nullptr);
+    rpc_address picked_node;
+    std::string picked_disk;
+    partition_set target_partitions;
+    balancer.get_max_load_disk(
+        cluster_info, max_nodes, app_id, picked_node, picked_disk, target_partitions);
+
+    ASSERT_EQ(picked_node, addr);
+    ASSERT_EQ(picked_disk, disk_tag);
+    ASSERT_EQ(target_partitions.size(), 1);
+    ASSERT_EQ(target_partitions.count(pid), 1);
 }
 } // namespace replication
 } // namespace dsn
