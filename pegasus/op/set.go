@@ -49,6 +49,9 @@ func (r *Set) Validate() error {
 	if err := validateValue(r.Value); err != nil {
 		return err
 	}
+	if err := validateTTL(r.TTL); err != nil {
+		return err
+	}
 
 	key := encodeHashKeySortKey(r.HashKey, r.SortKey)
 	val := &base.Blob{Data: r.Value}

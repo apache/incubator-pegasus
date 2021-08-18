@@ -7,7 +7,6 @@ package pegasus
 import (
 	"encoding/binary"
 	"hash/crc64"
-	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 )
@@ -51,12 +50,4 @@ var crc64Table = crc64.MakeTable(0x9a6c9329ac4bc9b5)
 
 func crc64Hash(data []byte) uint64 {
 	return crc64.Checksum(data, crc64Table)
-}
-
-func expireTsSeconds(ttl time.Duration) int32 {
-	if ttl == 0 {
-		return 0
-	}
-	// 1451606400 means seconds since 2016.01.01-00:00:00 GMT
-	return int32(ttl.Seconds()) + int32(time.Now().Unix()-1451606400)
 }

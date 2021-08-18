@@ -66,6 +66,8 @@ func testSingleKeyOperations(t *testing.T, tb TableConnector, hashKey []byte, so
 		// from the value we set.
 		return ttl <= 11 && ttl >= 9
 	})
+	// test with invalid ttl
+	assert.Error(t, tb.SetTTL(context.Background(), hashKey, sortKey, value, -10))
 
 	assert.Nil(t, tb.Del(context.Background(), hashKey, sortKey))
 }
@@ -471,6 +473,9 @@ func testMultiKeyOperations(t *testing.T, tb TableConnector) {
 			return ttl <= 11 && ttl >= 9
 		})
 	}
+
+	// test with invalid ttl
+	assert.Error(t, tb.MultiSetOpt(context.Background(), hashKey, sortKeys, values, -1*time.Second))
 }
 
 func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
@@ -574,6 +579,13 @@ func TestPegasusTableConnector_CheckAndSet(t *testing.T) {
 		value, err = tb.Get(context.Background(), []byte("h1"), []byte("s2"))
 		assert.Nil(t, err)
 		assert.Equal(t, value, []byte("v2"))
+	}
+
+	// test with invalid ttl
+	{
+		_, err := tb.CheckAndSet(context.Background(), []byte("h1"), []byte("s1"), CheckTypeValueExist, []byte(""), []byte("s2"), []byte("v2"),
+			&CheckAndSetOptions{SetValueTTLSeconds: -1})
+		assert.Error(t, err)
 	}
 
 	// TODO(wutao1): add tests for other check type

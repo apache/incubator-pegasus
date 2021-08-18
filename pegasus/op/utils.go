@@ -85,6 +85,13 @@ func validateSortKeys(sortKeys [][]byte) error {
 	return nil
 }
 
+func validateTTL(TTL time.Duration) error {
+	if TTL < 0 {
+		return fmt.Errorf("InvalidParameter: TTL[%d] must be greater than 0", TTL)
+	}
+	return nil
+}
+
 func encodeHashKeySortKey(hashKey []byte, sortKey []byte) *base.Blob {
 	hashKeyLen := len(hashKey)
 	sortKeyLen := len(sortKey)

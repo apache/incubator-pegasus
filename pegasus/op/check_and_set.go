@@ -21,6 +21,7 @@ package op
 
 import (
 	"context"
+	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
@@ -45,6 +46,11 @@ func (r *CheckAndSet) Validate() error {
 	if err := validateHashKey(r.Req.HashKey.Data); err != nil {
 		return err
 	}
+	if err := validateTTL(time.Second * time.Duration(r.Req.SetExpireTsSeconds)); err != nil {
+		return err
+	}
+
+	r.Req.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(r.Req.SetExpireTsSeconds))
 	return nil
 }
 

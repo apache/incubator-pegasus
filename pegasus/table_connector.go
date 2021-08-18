@@ -538,10 +538,7 @@ func (p *pegasusTableConnector) CheckAndSet(ctx context.Context, hashKey []byte,
 	request.CheckOperand = &base.Blob{Data: checkOperand}
 	request.CheckSortKey = &base.Blob{Data: checkSortKey}
 	request.HashKey = &base.Blob{Data: hashKey}
-	request.SetExpireTsSeconds = 0
-	if options.SetValueTTLSeconds != 0 {
-		request.SetExpireTsSeconds = expireTsSeconds(time.Second * time.Duration(options.SetValueTTLSeconds))
-	}
+	request.SetExpireTsSeconds = int32(options.SetValueTTLSeconds)
 	request.SetSortKey = &base.Blob{Data: setSortKey}
 	request.SetValue = &base.Blob{Data: setValue}
 	request.ReturnCheckValue = options.ReturnCheckValue

@@ -50,6 +50,9 @@ func (r *MultiSet) Validate() error {
 	if err := validateValues(r.Values); err != nil {
 		return err
 	}
+	if err := validateTTL(r.TTL); err != nil {
+		return err
+	}
 	if len(r.SortKeys) != len(r.Values) {
 		return fmt.Errorf("InvalidParameter: unmatched key-value pairs: len(sortKeys)=%d len(values)=%d",
 			len(r.SortKeys), len(r.Values))
