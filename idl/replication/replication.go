@@ -7,10 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
-
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/pegasus-kv/thrift/lib/go/thrift"
+	"reflect"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -870,4 +869,267 @@ func (p *QueryCfgResponse) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("QueryCfgResponse(%+v)", *p)
+}
+
+// Attributes:
+//  - AppID
+//  - PartitionIndex
+//  - ClientTimeout
+//  - PartitionHash
+//  - IsBackupRequest
+type RequestMeta struct {
+	AppID           int32 `thrift:"app_id,1" db:"app_id" json:"app_id"`
+	PartitionIndex  int32 `thrift:"partition_index,2" db:"partition_index" json:"partition_index"`
+	ClientTimeout   int32 `thrift:"client_timeout,3" db:"client_timeout" json:"client_timeout"`
+	PartitionHash   int64 `thrift:"partition_hash,4" db:"partition_hash" json:"partition_hash"`
+	IsBackupRequest bool  `thrift:"is_backup_request,5" db:"is_backup_request" json:"is_backup_request"`
+}
+
+func NewRequestMeta() *RequestMeta {
+	return &RequestMeta{}
+}
+
+func (p *RequestMeta) GetAppID() int32 {
+	return p.AppID
+}
+
+func (p *RequestMeta) GetPartitionIndex() int32 {
+	return p.PartitionIndex
+}
+
+func (p *RequestMeta) GetClientTimeout() int32 {
+	return p.ClientTimeout
+}
+
+func (p *RequestMeta) GetPartitionHash() int64 {
+	return p.PartitionHash
+}
+
+func (p *RequestMeta) GetIsBackupRequest() bool {
+	return p.IsBackupRequest
+}
+func (p *RequestMeta) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RequestMeta) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppID = v
+	}
+	return nil
+}
+
+func (p *RequestMeta) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.PartitionIndex = v
+	}
+	return nil
+}
+
+func (p *RequestMeta) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.ClientTimeout = v
+	}
+	return nil
+}
+
+func (p *RequestMeta) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.PartitionHash = v
+	}
+	return nil
+}
+
+func (p *RequestMeta) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.IsBackupRequest = v
+	}
+	return nil
+}
+
+func (p *RequestMeta) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("request_meta"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RequestMeta) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_id: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_id: ", p), err)
+	}
+	return err
+}
+
+func (p *RequestMeta) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("partition_index", thrift.I32, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:partition_index: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.PartitionIndex)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.partition_index (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:partition_index: ", p), err)
+	}
+	return err
+}
+
+func (p *RequestMeta) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("client_timeout", thrift.I32, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:client_timeout: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.ClientTimeout)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.client_timeout (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:client_timeout: ", p), err)
+	}
+	return err
+}
+
+func (p *RequestMeta) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("partition_hash", thrift.I64, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:partition_hash: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.PartitionHash)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.partition_hash (4) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:partition_hash: ", p), err)
+	}
+	return err
+}
+
+func (p *RequestMeta) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("is_backup_request", thrift.BOOL, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:is_backup_request: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.IsBackupRequest)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.is_backup_request (5) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:is_backup_request: ", p), err)
+	}
+	return err
+}
+
+func (p *RequestMeta) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RequestMeta(%+v)", *p)
 }

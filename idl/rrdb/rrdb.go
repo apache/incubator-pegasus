@@ -9,11 +9,10 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"reflect"
-
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/idl/replication"
 	"github.com/pegasus-kv/thrift/lib/go/thrift"
+	"reflect"
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -226,6 +225,64 @@ func (p *CasCheckType) Scan(value interface{}) error {
 }
 
 func (p *CasCheckType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type MutateOperation int64
+
+const (
+	MutateOperation_MO_PUT    MutateOperation = 0
+	MutateOperation_MO_DELETE MutateOperation = 1
+)
+
+func (p MutateOperation) String() string {
+	switch p {
+	case MutateOperation_MO_PUT:
+		return "MO_PUT"
+	case MutateOperation_MO_DELETE:
+		return "MO_DELETE"
+	}
+	return "<UNSET>"
+}
+
+func MutateOperationFromString(s string) (MutateOperation, error) {
+	switch s {
+	case "MO_PUT":
+		return MutateOperation_MO_PUT, nil
+	case "MO_DELETE":
+		return MutateOperation_MO_DELETE, nil
+	}
+	return MutateOperation(0), fmt.Errorf("not a valid MutateOperation string")
+}
+
+func MutateOperationPtr(v MutateOperation) *MutateOperation { return &v }
+
+func (p MutateOperation) MarshalText() ([]byte, error) {
+	return []byte(p.String()), nil
+}
+
+func (p *MutateOperation) UnmarshalText(text []byte) error {
+	q, err := MutateOperationFromString(string(text))
+	if err != nil {
+		return err
+	}
+	*p = q
+	return nil
+}
+
+func (p *MutateOperation) Scan(value interface{}) error {
+	v, ok := value.(int64)
+	if !ok {
+		return errors.New("Scan value is not int64")
+	}
+	*p = MutateOperation(v)
+	return nil
+}
+
+func (p *MutateOperation) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -3256,9 +3313,11 @@ func (p *MultiGetResponse) String() string {
 // Attributes:
 //  - Key
 //  - Increment
+//  - ExpireTsSeconds
 type IncrRequest struct {
-	Key       *base.Blob `thrift:"key,1" db:"key" json:"key"`
-	Increment int64      `thrift:"increment,2" db:"increment" json:"increment"`
+	Key             *base.Blob `thrift:"key,1" db:"key" json:"key"`
+	Increment       int64      `thrift:"increment,2" db:"increment" json:"increment"`
+	ExpireTsSeconds int32      `thrift:"expire_ts_seconds,3" db:"expire_ts_seconds" json:"expire_ts_seconds"`
 }
 
 func NewIncrRequest() *IncrRequest {
@@ -3276,6 +3335,10 @@ func (p *IncrRequest) GetKey() *base.Blob {
 
 func (p *IncrRequest) GetIncrement() int64 {
 	return p.Increment
+}
+
+func (p *IncrRequest) GetExpireTsSeconds() int32 {
+	return p.ExpireTsSeconds
 }
 func (p *IncrRequest) IsSetKey() bool {
 	return p.Key != nil
@@ -3315,6 +3378,16 @@ func (p *IncrRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -3347,6 +3420,15 @@ func (p *IncrRequest) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *IncrRequest) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.ExpireTsSeconds = v
+	}
+	return nil
+}
+
 func (p *IncrRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("incr_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -3356,6 +3438,9 @@ func (p *IncrRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
 			return err
 		}
 	}
@@ -3390,6 +3475,19 @@ func (p *IncrRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:increment: ", p), err)
+	}
+	return err
+}
+
+func (p *IncrRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("expire_ts_seconds", thrift.I32, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:expire_ts_seconds: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.ExpireTsSeconds)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.expire_ts_seconds (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:expire_ts_seconds: ", p), err)
 	}
 	return err
 }
@@ -4568,6 +4666,987 @@ func (p *CheckAndSetResponse) String() string {
 }
 
 // Attributes:
+//  - Operation
+//  - SortKey
+//  - Value
+//  - SetExpireTsSeconds
+type Mutate struct {
+	Operation          MutateOperation `thrift:"operation,1" db:"operation" json:"operation"`
+	SortKey            *base.Blob      `thrift:"sort_key,2" db:"sort_key" json:"sort_key"`
+	Value              *base.Blob      `thrift:"value,3" db:"value" json:"value"`
+	SetExpireTsSeconds int32           `thrift:"set_expire_ts_seconds,4" db:"set_expire_ts_seconds" json:"set_expire_ts_seconds"`
+}
+
+func NewMutate() *Mutate {
+	return &Mutate{}
+}
+
+func (p *Mutate) GetOperation() MutateOperation {
+	return p.Operation
+}
+
+var Mutate_SortKey_DEFAULT *base.Blob
+
+func (p *Mutate) GetSortKey() *base.Blob {
+	if !p.IsSetSortKey() {
+		return Mutate_SortKey_DEFAULT
+	}
+	return p.SortKey
+}
+
+var Mutate_Value_DEFAULT *base.Blob
+
+func (p *Mutate) GetValue() *base.Blob {
+	if !p.IsSetValue() {
+		return Mutate_Value_DEFAULT
+	}
+	return p.Value
+}
+
+func (p *Mutate) GetSetExpireTsSeconds() int32 {
+	return p.SetExpireTsSeconds
+}
+func (p *Mutate) IsSetSortKey() bool {
+	return p.SortKey != nil
+}
+
+func (p *Mutate) IsSetValue() bool {
+	return p.Value != nil
+}
+
+func (p *Mutate) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *Mutate) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		temp := MutateOperation(v)
+		p.Operation = temp
+	}
+	return nil
+}
+
+func (p *Mutate) ReadField2(iprot thrift.TProtocol) error {
+	p.SortKey = &base.Blob{}
+	if err := p.SortKey.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.SortKey), err)
+	}
+	return nil
+}
+
+func (p *Mutate) ReadField3(iprot thrift.TProtocol) error {
+	p.Value = &base.Blob{}
+	if err := p.Value.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Value), err)
+	}
+	return nil
+}
+
+func (p *Mutate) ReadField4(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 4: ", err)
+	} else {
+		p.SetExpireTsSeconds = v
+	}
+	return nil
+}
+
+func (p *Mutate) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("mutate"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *Mutate) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("operation", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:operation: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Operation)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.operation (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:operation: ", p), err)
+	}
+	return err
+}
+
+func (p *Mutate) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("sort_key", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:sort_key: ", p), err)
+	}
+	if err := p.SortKey.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.SortKey), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:sort_key: ", p), err)
+	}
+	return err
+}
+
+func (p *Mutate) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("value", thrift.STRUCT, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:value: ", p), err)
+	}
+	if err := p.Value.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Value), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:value: ", p), err)
+	}
+	return err
+}
+
+func (p *Mutate) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("set_expire_ts_seconds", thrift.I32, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:set_expire_ts_seconds: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.SetExpireTsSeconds)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.set_expire_ts_seconds (4) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:set_expire_ts_seconds: ", p), err)
+	}
+	return err
+}
+
+func (p *Mutate) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("Mutate(%+v)", *p)
+}
+
+// Attributes:
+//  - HashKey
+//  - CheckSortKey
+//  - CheckType
+//  - CheckOperand
+//  - MutateList
+//  - ReturnCheckValue
+type CheckAndMutateRequest struct {
+	HashKey          *base.Blob   `thrift:"hash_key,1" db:"hash_key" json:"hash_key"`
+	CheckSortKey     *base.Blob   `thrift:"check_sort_key,2" db:"check_sort_key" json:"check_sort_key"`
+	CheckType        CasCheckType `thrift:"check_type,3" db:"check_type" json:"check_type"`
+	CheckOperand     *base.Blob   `thrift:"check_operand,4" db:"check_operand" json:"check_operand"`
+	MutateList       []*Mutate    `thrift:"mutate_list,5" db:"mutate_list" json:"mutate_list"`
+	ReturnCheckValue bool         `thrift:"return_check_value,6" db:"return_check_value" json:"return_check_value"`
+}
+
+func NewCheckAndMutateRequest() *CheckAndMutateRequest {
+	return &CheckAndMutateRequest{}
+}
+
+var CheckAndMutateRequest_HashKey_DEFAULT *base.Blob
+
+func (p *CheckAndMutateRequest) GetHashKey() *base.Blob {
+	if !p.IsSetHashKey() {
+		return CheckAndMutateRequest_HashKey_DEFAULT
+	}
+	return p.HashKey
+}
+
+var CheckAndMutateRequest_CheckSortKey_DEFAULT *base.Blob
+
+func (p *CheckAndMutateRequest) GetCheckSortKey() *base.Blob {
+	if !p.IsSetCheckSortKey() {
+		return CheckAndMutateRequest_CheckSortKey_DEFAULT
+	}
+	return p.CheckSortKey
+}
+
+func (p *CheckAndMutateRequest) GetCheckType() CasCheckType {
+	return p.CheckType
+}
+
+var CheckAndMutateRequest_CheckOperand_DEFAULT *base.Blob
+
+func (p *CheckAndMutateRequest) GetCheckOperand() *base.Blob {
+	if !p.IsSetCheckOperand() {
+		return CheckAndMutateRequest_CheckOperand_DEFAULT
+	}
+	return p.CheckOperand
+}
+
+func (p *CheckAndMutateRequest) GetMutateList() []*Mutate {
+	return p.MutateList
+}
+
+func (p *CheckAndMutateRequest) GetReturnCheckValue() bool {
+	return p.ReturnCheckValue
+}
+func (p *CheckAndMutateRequest) IsSetHashKey() bool {
+	return p.HashKey != nil
+}
+
+func (p *CheckAndMutateRequest) IsSetCheckSortKey() bool {
+	return p.CheckSortKey != nil
+}
+
+func (p *CheckAndMutateRequest) IsSetCheckOperand() bool {
+	return p.CheckOperand != nil
+}
+
+func (p *CheckAndMutateRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) ReadField1(iprot thrift.TProtocol) error {
+	p.HashKey = &base.Blob{}
+	if err := p.HashKey.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.HashKey), err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) ReadField2(iprot thrift.TProtocol) error {
+	p.CheckSortKey = &base.Blob{}
+	if err := p.CheckSortKey.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckSortKey), err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		temp := CasCheckType(v)
+		p.CheckType = temp
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) ReadField4(iprot thrift.TProtocol) error {
+	p.CheckOperand = &base.Blob{}
+	if err := p.CheckOperand.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckOperand), err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return thrift.PrependError("error reading list begin: ", err)
+	}
+	tSlice := make([]*Mutate, 0, size)
+	p.MutateList = tSlice
+	for i := 0; i < size; i++ {
+		_elem4 := &Mutate{}
+		if err := _elem4.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem4), err)
+		}
+		p.MutateList = append(p.MutateList, _elem4)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return thrift.PrependError("error reading list end: ", err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.ReturnCheckValue = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_mutate_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hash_key", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:hash_key: ", p), err)
+	}
+	if err := p.HashKey.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.HashKey), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:hash_key: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_sort_key", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:check_sort_key: ", p), err)
+	}
+	if err := p.CheckSortKey.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckSortKey), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:check_sort_key: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_type", thrift.I32, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:check_type: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.CheckType)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.check_type (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:check_type: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_operand", thrift.STRUCT, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:check_operand: ", p), err)
+	}
+	if err := p.CheckOperand.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckOperand), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:check_operand: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("mutate_list", thrift.LIST, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:mutate_list: ", p), err)
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MutateList)); err != nil {
+		return thrift.PrependError("error writing list begin: ", err)
+	}
+	for _, v := range p.MutateList {
+		if err := v.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", v), err)
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return thrift.PrependError("error writing list end: ", err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:mutate_list: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("return_check_value", thrift.BOOL, 6); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:return_check_value: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.ReturnCheckValue)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.return_check_value (6) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:return_check_value: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckAndMutateRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Error
+//  - CheckValueReturned
+//  - CheckValueExist
+//  - CheckValue
+//  - AppID
+//  - PartitionIndex
+//  - Decree
+//  - Server
+type CheckAndMutateResponse struct {
+	Error              int32      `thrift:"error,1" db:"error" json:"error"`
+	CheckValueReturned bool       `thrift:"check_value_returned,2" db:"check_value_returned" json:"check_value_returned"`
+	CheckValueExist    bool       `thrift:"check_value_exist,3" db:"check_value_exist" json:"check_value_exist"`
+	CheckValue         *base.Blob `thrift:"check_value,4" db:"check_value" json:"check_value"`
+	AppID              int32      `thrift:"app_id,5" db:"app_id" json:"app_id"`
+	PartitionIndex     int32      `thrift:"partition_index,6" db:"partition_index" json:"partition_index"`
+	Decree             int64      `thrift:"decree,7" db:"decree" json:"decree"`
+	Server             string     `thrift:"server,8" db:"server" json:"server"`
+}
+
+func NewCheckAndMutateResponse() *CheckAndMutateResponse {
+	return &CheckAndMutateResponse{}
+}
+
+func (p *CheckAndMutateResponse) GetError() int32 {
+	return p.Error
+}
+
+func (p *CheckAndMutateResponse) GetCheckValueReturned() bool {
+	return p.CheckValueReturned
+}
+
+func (p *CheckAndMutateResponse) GetCheckValueExist() bool {
+	return p.CheckValueExist
+}
+
+var CheckAndMutateResponse_CheckValue_DEFAULT *base.Blob
+
+func (p *CheckAndMutateResponse) GetCheckValue() *base.Blob {
+	if !p.IsSetCheckValue() {
+		return CheckAndMutateResponse_CheckValue_DEFAULT
+	}
+	return p.CheckValue
+}
+
+func (p *CheckAndMutateResponse) GetAppID() int32 {
+	return p.AppID
+}
+
+func (p *CheckAndMutateResponse) GetPartitionIndex() int32 {
+	return p.PartitionIndex
+}
+
+func (p *CheckAndMutateResponse) GetDecree() int64 {
+	return p.Decree
+}
+
+func (p *CheckAndMutateResponse) GetServer() string {
+	return p.Server
+}
+func (p *CheckAndMutateResponse) IsSetCheckValue() bool {
+	return p.CheckValue != nil
+}
+
+func (p *CheckAndMutateResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField3(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField4(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField5(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField6(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err := p.ReadField7(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField8(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.Error = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.CheckValueReturned = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField3(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 3: ", err)
+	} else {
+		p.CheckValueExist = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField4(iprot thrift.TProtocol) error {
+	p.CheckValue = &base.Blob{}
+	if err := p.CheckValue.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.CheckValue), err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField5(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 5: ", err)
+	} else {
+		p.AppID = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField6(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 6: ", err)
+	} else {
+		p.PartitionIndex = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField7(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI64(); err != nil {
+		return thrift.PrependError("error reading field 7: ", err)
+	} else {
+		p.Decree = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) ReadField8(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 8: ", err)
+	} else {
+		p.Server = v
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_mutate_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField3(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField4(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField5(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField6(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField7(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField8(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *CheckAndMutateResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("error", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:error: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.Error)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.error (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:error: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_value_returned", thrift.BOOL, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:check_value_returned: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.CheckValueReturned)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.check_value_returned (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:check_value_returned: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_value_exist", thrift.BOOL, 3); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:check_value_exist: ", p), err)
+	}
+	if err := oprot.WriteBool(bool(p.CheckValueExist)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.check_value_exist (3) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:check_value_exist: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField4(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("check_value", thrift.STRUCT, 4); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 4:check_value: ", p), err)
+	}
+	if err := p.CheckValue.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.CheckValue), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 4:check_value: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 5); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 5:app_id: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_id (5) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 5:app_id: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField6(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("partition_index", thrift.I32, 6); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 6:partition_index: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.PartitionIndex)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.partition_index (6) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 6:partition_index: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField7(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("decree", thrift.I64, 7); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 7:decree: ", p), err)
+	}
+	if err := oprot.WriteI64(int64(p.Decree)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.decree (7) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 7:decree: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) writeField8(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("server", thrift.STRING, 8); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 8:server: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.Server)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.server (8) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 8:server: ", p), err)
+	}
+	return err
+}
+
+func (p *CheckAndMutateResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CheckAndMutateResponse(%+v)", *p)
+}
+
+// Attributes:
 //  - StartKey
 //  - StopKey
 //  - StartInclusive
@@ -4578,6 +5657,7 @@ func (p *CheckAndSetResponse) String() string {
 //  - HashKeyFilterPattern
 //  - SortKeyFilterType
 //  - SortKeyFilterPattern
+//  - NeedCheckHash
 type GetScannerRequest struct {
 	StartKey             *base.Blob `thrift:"start_key,1" db:"start_key" json:"start_key"`
 	StopKey              *base.Blob `thrift:"stop_key,2" db:"stop_key" json:"stop_key"`
@@ -4589,6 +5669,7 @@ type GetScannerRequest struct {
 	HashKeyFilterPattern *base.Blob `thrift:"hash_key_filter_pattern,8" db:"hash_key_filter_pattern" json:"hash_key_filter_pattern"`
 	SortKeyFilterType    FilterType `thrift:"sort_key_filter_type,9" db:"sort_key_filter_type" json:"sort_key_filter_type"`
 	SortKeyFilterPattern *base.Blob `thrift:"sort_key_filter_pattern,10" db:"sort_key_filter_pattern" json:"sort_key_filter_pattern"`
+	NeedCheckHash        *bool      `thrift:"need_check_hash,11" db:"need_check_hash" json:"need_check_hash,omitempty"`
 }
 
 func NewGetScannerRequest() *GetScannerRequest {
@@ -4654,6 +5735,15 @@ func (p *GetScannerRequest) GetSortKeyFilterPattern() *base.Blob {
 	}
 	return p.SortKeyFilterPattern
 }
+
+var GetScannerRequest_NeedCheckHash_DEFAULT bool
+
+func (p *GetScannerRequest) GetNeedCheckHash() bool {
+	if !p.IsSetNeedCheckHash() {
+		return GetScannerRequest_NeedCheckHash_DEFAULT
+	}
+	return *p.NeedCheckHash
+}
 func (p *GetScannerRequest) IsSetStartKey() bool {
 	return p.StartKey != nil
 }
@@ -4668,6 +5758,10 @@ func (p *GetScannerRequest) IsSetHashKeyFilterPattern() bool {
 
 func (p *GetScannerRequest) IsSetSortKeyFilterPattern() bool {
 	return p.SortKeyFilterPattern != nil
+}
+
+func (p *GetScannerRequest) IsSetNeedCheckHash() bool {
+	return p.NeedCheckHash != nil
 }
 
 func (p *GetScannerRequest) Read(iprot thrift.TProtocol) error {
@@ -4784,6 +5878,16 @@ func (p *GetScannerRequest) Read(iprot thrift.TProtocol) error {
 					return err
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.BOOL {
+				if err := p.ReadField11(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
 		default:
 			if err := iprot.Skip(fieldTypeId); err != nil {
 				return err
@@ -4887,6 +5991,15 @@ func (p *GetScannerRequest) ReadField10(iprot thrift.TProtocol) error {
 	return nil
 }
 
+func (p *GetScannerRequest) ReadField11(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadBool(); err != nil {
+		return thrift.PrependError("error reading field 11: ", err)
+	} else {
+		p.NeedCheckHash = &v
+	}
+	return nil
+}
+
 func (p *GetScannerRequest) Write(oprot thrift.TProtocol) error {
 	if err := oprot.WriteStructBegin("get_scanner_request"); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
@@ -4920,6 +6033,9 @@ func (p *GetScannerRequest) Write(oprot thrift.TProtocol) error {
 			return err
 		}
 		if err := p.writeField10(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField11(oprot); err != nil {
 			return err
 		}
 	}
@@ -5058,6 +6174,21 @@ func (p *GetScannerRequest) writeField10(oprot thrift.TProtocol) (err error) {
 	}
 	if err := oprot.WriteFieldEnd(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T write field end error 10:sort_key_filter_pattern: ", p), err)
+	}
+	return err
+}
+
+func (p *GetScannerRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNeedCheckHash() {
+		if err := oprot.WriteFieldBegin("need_check_hash", thrift.BOOL, 11); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 11:need_check_hash: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(*p.NeedCheckHash)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.need_check_hash (11) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 11:need_check_hash: ", p), err)
+		}
 	}
 	return err
 }
@@ -5317,11 +6448,11 @@ func (p *ScanResponse) ReadField2(iprot thrift.TProtocol) error {
 	tSlice := make([]*KeyValue, 0, size)
 	p.Kvs = tSlice
 	for i := 0; i < size; i++ {
-		_elem4 := &KeyValue{}
-		if err := _elem4.Read(iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem4), err)
+		_elem5 := &KeyValue{}
+		if err := _elem5.Read(iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _elem5), err)
 		}
-		p.Kvs = append(p.Kvs, _elem4)
+		p.Kvs = append(p.Kvs, _elem5)
 	}
 	if err := iprot.ReadListEnd(); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -5511,6 +6642,9 @@ type Rrdb interface {
 	//  - Request
 	CheckAndSet(ctx context.Context, request *CheckAndSetRequest) (r *CheckAndSetResponse, err error)
 	// Parameters:
+	//  - Request
+	CheckAndMutate(ctx context.Context, request *CheckAndMutateRequest) (r *CheckAndMutateResponse, err error)
+	// Parameters:
 	//  - Key
 	Get(ctx context.Context, key *base.Blob) (r *ReadResponse, err error)
 	// Parameters:
@@ -5562,153 +6696,165 @@ func (p *RrdbClient) Client_() thrift.TClient {
 // Parameters:
 //  - Update
 func (p *RrdbClient) Put(ctx context.Context, update *UpdateRequest) (r *UpdateResponse, err error) {
-	var _args5 RrdbPutArgs
-	_args5.Update = update
-	var _result6 RrdbPutResult
-	if err = p.Client_().Call(ctx, "put", &_args5, &_result6); err != nil {
+	var _args6 RrdbPutArgs
+	_args6.Update = update
+	var _result7 RrdbPutResult
+	if err = p.Client_().Call(ctx, "put", &_args6, &_result7); err != nil {
 		return
 	}
-	return _result6.GetSuccess(), nil
+	return _result7.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) MultiPut(ctx context.Context, request *MultiPutRequest) (r *UpdateResponse, err error) {
-	var _args7 RrdbMultiPutArgs
-	_args7.Request = request
-	var _result8 RrdbMultiPutResult
-	if err = p.Client_().Call(ctx, "multi_put", &_args7, &_result8); err != nil {
+	var _args8 RrdbMultiPutArgs
+	_args8.Request = request
+	var _result9 RrdbMultiPutResult
+	if err = p.Client_().Call(ctx, "multi_put", &_args8, &_result9); err != nil {
 		return
 	}
-	return _result8.GetSuccess(), nil
+	return _result9.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Key
 func (p *RrdbClient) Remove(ctx context.Context, key *base.Blob) (r *UpdateResponse, err error) {
-	var _args9 RrdbRemoveArgs
-	_args9.Key = key
-	var _result10 RrdbRemoveResult
-	if err = p.Client_().Call(ctx, "remove", &_args9, &_result10); err != nil {
+	var _args10 RrdbRemoveArgs
+	_args10.Key = key
+	var _result11 RrdbRemoveResult
+	if err = p.Client_().Call(ctx, "remove", &_args10, &_result11); err != nil {
 		return
 	}
-	return _result10.GetSuccess(), nil
+	return _result11.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) MultiRemove(ctx context.Context, request *MultiRemoveRequest) (r *MultiRemoveResponse, err error) {
-	var _args11 RrdbMultiRemoveArgs
-	_args11.Request = request
-	var _result12 RrdbMultiRemoveResult
-	if err = p.Client_().Call(ctx, "multi_remove", &_args11, &_result12); err != nil {
+	var _args12 RrdbMultiRemoveArgs
+	_args12.Request = request
+	var _result13 RrdbMultiRemoveResult
+	if err = p.Client_().Call(ctx, "multi_remove", &_args12, &_result13); err != nil {
 		return
 	}
-	return _result12.GetSuccess(), nil
+	return _result13.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) Incr(ctx context.Context, request *IncrRequest) (r *IncrResponse, err error) {
-	var _args13 RrdbIncrArgs
-	_args13.Request = request
-	var _result14 RrdbIncrResult
-	if err = p.Client_().Call(ctx, "incr", &_args13, &_result14); err != nil {
+	var _args14 RrdbIncrArgs
+	_args14.Request = request
+	var _result15 RrdbIncrResult
+	if err = p.Client_().Call(ctx, "incr", &_args14, &_result15); err != nil {
 		return
 	}
-	return _result14.GetSuccess(), nil
+	return _result15.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) CheckAndSet(ctx context.Context, request *CheckAndSetRequest) (r *CheckAndSetResponse, err error) {
-	var _args15 RrdbCheckAndSetArgs
-	_args15.Request = request
-	var _result16 RrdbCheckAndSetResult
-	if err = p.Client_().Call(ctx, "check_and_set", &_args15, &_result16); err != nil {
+	var _args16 RrdbCheckAndSetArgs
+	_args16.Request = request
+	var _result17 RrdbCheckAndSetResult
+	if err = p.Client_().Call(ctx, "check_and_set", &_args16, &_result17); err != nil {
 		return
 	}
-	return _result16.GetSuccess(), nil
+	return _result17.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Request
+func (p *RrdbClient) CheckAndMutate(ctx context.Context, request *CheckAndMutateRequest) (r *CheckAndMutateResponse, err error) {
+	var _args18 RrdbCheckAndMutateArgs
+	_args18.Request = request
+	var _result19 RrdbCheckAndMutateResult
+	if err = p.Client_().Call(ctx, "check_and_mutate", &_args18, &_result19); err != nil {
+		return
+	}
+	return _result19.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Key
 func (p *RrdbClient) Get(ctx context.Context, key *base.Blob) (r *ReadResponse, err error) {
-	var _args17 RrdbGetArgs
-	_args17.Key = key
-	var _result18 RrdbGetResult
-	if err = p.Client_().Call(ctx, "get", &_args17, &_result18); err != nil {
+	var _args20 RrdbGetArgs
+	_args20.Key = key
+	var _result21 RrdbGetResult
+	if err = p.Client_().Call(ctx, "get", &_args20, &_result21); err != nil {
 		return
 	}
-	return _result18.GetSuccess(), nil
+	return _result21.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) MultiGet(ctx context.Context, request *MultiGetRequest) (r *MultiGetResponse, err error) {
-	var _args19 RrdbMultiGetArgs
-	_args19.Request = request
-	var _result20 RrdbMultiGetResult
-	if err = p.Client_().Call(ctx, "multi_get", &_args19, &_result20); err != nil {
+	var _args22 RrdbMultiGetArgs
+	_args22.Request = request
+	var _result23 RrdbMultiGetResult
+	if err = p.Client_().Call(ctx, "multi_get", &_args22, &_result23); err != nil {
 		return
 	}
-	return _result20.GetSuccess(), nil
+	return _result23.GetSuccess(), nil
 }
 
 // Parameters:
 //  - HashKey
 func (p *RrdbClient) SortkeyCount(ctx context.Context, hash_key *base.Blob) (r *CountResponse, err error) {
-	var _args21 RrdbSortkeyCountArgs
-	_args21.HashKey = hash_key
-	var _result22 RrdbSortkeyCountResult
-	if err = p.Client_().Call(ctx, "sortkey_count", &_args21, &_result22); err != nil {
+	var _args24 RrdbSortkeyCountArgs
+	_args24.HashKey = hash_key
+	var _result25 RrdbSortkeyCountResult
+	if err = p.Client_().Call(ctx, "sortkey_count", &_args24, &_result25); err != nil {
 		return
 	}
-	return _result22.GetSuccess(), nil
+	return _result25.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Key
 func (p *RrdbClient) TTL(ctx context.Context, key *base.Blob) (r *TTLResponse, err error) {
-	var _args23 RrdbTTLArgs
-	_args23.Key = key
-	var _result24 RrdbTTLResult
-	if err = p.Client_().Call(ctx, "ttl", &_args23, &_result24); err != nil {
+	var _args26 RrdbTTLArgs
+	_args26.Key = key
+	var _result27 RrdbTTLResult
+	if err = p.Client_().Call(ctx, "ttl", &_args26, &_result27); err != nil {
 		return
 	}
-	return _result24.GetSuccess(), nil
+	return _result27.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) GetScanner(ctx context.Context, request *GetScannerRequest) (r *ScanResponse, err error) {
-	var _args25 RrdbGetScannerArgs
-	_args25.Request = request
-	var _result26 RrdbGetScannerResult
-	if err = p.Client_().Call(ctx, "get_scanner", &_args25, &_result26); err != nil {
+	var _args28 RrdbGetScannerArgs
+	_args28.Request = request
+	var _result29 RrdbGetScannerResult
+	if err = p.Client_().Call(ctx, "get_scanner", &_args28, &_result29); err != nil {
 		return
 	}
-	return _result26.GetSuccess(), nil
+	return _result29.GetSuccess(), nil
 }
 
 // Parameters:
 //  - Request
 func (p *RrdbClient) Scan(ctx context.Context, request *ScanRequest) (r *ScanResponse, err error) {
-	var _args27 RrdbScanArgs
-	_args27.Request = request
-	var _result28 RrdbScanResult
-	if err = p.Client_().Call(ctx, "scan", &_args27, &_result28); err != nil {
+	var _args30 RrdbScanArgs
+	_args30.Request = request
+	var _result31 RrdbScanResult
+	if err = p.Client_().Call(ctx, "scan", &_args30, &_result31); err != nil {
 		return
 	}
-	return _result28.GetSuccess(), nil
+	return _result31.GetSuccess(), nil
 }
 
 // Parameters:
 //  - ContextID
 func (p *RrdbClient) ClearScanner(ctx context.Context, context_id int64) (err error) {
-	var _args29 RrdbClearScannerArgs
-	_args29.ContextID = context_id
-	if err := p.Client_().Call(ctx, "clear_scanner", &_args29, nil); err != nil {
+	var _args32 RrdbClearScannerArgs
+	_args32.ContextID = context_id
+	if err := p.Client_().Call(ctx, "clear_scanner", &_args32, nil); err != nil {
 		return err
 	}
 	return nil
@@ -5734,21 +6880,22 @@ func (p *RrdbProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewRrdbProcessor(handler Rrdb) *RrdbProcessor {
 
-	self30 := &RrdbProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self30.processorMap["put"] = &rrdbProcessorPut{handler: handler}
-	self30.processorMap["multi_put"] = &rrdbProcessorMultiPut{handler: handler}
-	self30.processorMap["remove"] = &rrdbProcessorRemove{handler: handler}
-	self30.processorMap["multi_remove"] = &rrdbProcessorMultiRemove{handler: handler}
-	self30.processorMap["incr"] = &rrdbProcessorIncr{handler: handler}
-	self30.processorMap["check_and_set"] = &rrdbProcessorCheckAndSet{handler: handler}
-	self30.processorMap["get"] = &rrdbProcessorGet{handler: handler}
-	self30.processorMap["multi_get"] = &rrdbProcessorMultiGet{handler: handler}
-	self30.processorMap["sortkey_count"] = &rrdbProcessorSortkeyCount{handler: handler}
-	self30.processorMap["ttl"] = &rrdbProcessorTTL{handler: handler}
-	self30.processorMap["get_scanner"] = &rrdbProcessorGetScanner{handler: handler}
-	self30.processorMap["scan"] = &rrdbProcessorScan{handler: handler}
-	self30.processorMap["clear_scanner"] = &rrdbProcessorClearScanner{handler: handler}
-	return self30
+	self33 := &RrdbProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self33.processorMap["put"] = &rrdbProcessorPut{handler: handler}
+	self33.processorMap["multi_put"] = &rrdbProcessorMultiPut{handler: handler}
+	self33.processorMap["remove"] = &rrdbProcessorRemove{handler: handler}
+	self33.processorMap["multi_remove"] = &rrdbProcessorMultiRemove{handler: handler}
+	self33.processorMap["incr"] = &rrdbProcessorIncr{handler: handler}
+	self33.processorMap["check_and_set"] = &rrdbProcessorCheckAndSet{handler: handler}
+	self33.processorMap["check_and_mutate"] = &rrdbProcessorCheckAndMutate{handler: handler}
+	self33.processorMap["get"] = &rrdbProcessorGet{handler: handler}
+	self33.processorMap["multi_get"] = &rrdbProcessorMultiGet{handler: handler}
+	self33.processorMap["sortkey_count"] = &rrdbProcessorSortkeyCount{handler: handler}
+	self33.processorMap["ttl"] = &rrdbProcessorTTL{handler: handler}
+	self33.processorMap["get_scanner"] = &rrdbProcessorGetScanner{handler: handler}
+	self33.processorMap["scan"] = &rrdbProcessorScan{handler: handler}
+	self33.processorMap["clear_scanner"] = &rrdbProcessorClearScanner{handler: handler}
+	return self33
 }
 
 func (p *RrdbProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -5761,12 +6908,12 @@ func (p *RrdbProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtoc
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x31 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x34 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x31.Write(oprot)
+	x34.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x31
+	return false, x34
 
 }
 
@@ -6041,6 +7188,54 @@ func (p *rrdbProcessorCheckAndSet) Process(ctx context.Context, seqId int32, ipr
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("check_and_set", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type rrdbProcessorCheckAndMutate struct {
+	handler Rrdb
+}
+
+func (p *rrdbProcessorCheckAndMutate) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := RrdbCheckAndMutateArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("check_and_mutate", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := RrdbCheckAndMutateResult{}
+	var retval *CheckAndMutateResponse
+	var err2 error
+	if retval, err2 = p.handler.CheckAndMutate(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing check_and_mutate: "+err2.Error())
+		oprot.WriteMessageBegin("check_and_mutate", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("check_and_mutate", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -7664,6 +8859,222 @@ func (p *RrdbCheckAndSetResult) String() string {
 }
 
 // Attributes:
+//  - Request
+type RrdbCheckAndMutateArgs struct {
+	Request *CheckAndMutateRequest `thrift:"request,1" db:"request" json:"request"`
+}
+
+func NewRrdbCheckAndMutateArgs() *RrdbCheckAndMutateArgs {
+	return &RrdbCheckAndMutateArgs{}
+}
+
+var RrdbCheckAndMutateArgs_Request_DEFAULT *CheckAndMutateRequest
+
+func (p *RrdbCheckAndMutateArgs) GetRequest() *CheckAndMutateRequest {
+	if !p.IsSetRequest() {
+		return RrdbCheckAndMutateArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *RrdbCheckAndMutateArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *RrdbCheckAndMutateArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndMutateArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Request = &CheckAndMutateRequest{}
+	if err := p.Request.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Request), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndMutateArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_mutate_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndMutateArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:request: ", p), err)
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Request), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:request: ", p), err)
+	}
+	return err
+}
+
+func (p *RrdbCheckAndMutateArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RrdbCheckAndMutateArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type RrdbCheckAndMutateResult struct {
+	Success *CheckAndMutateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewRrdbCheckAndMutateResult() *RrdbCheckAndMutateResult {
+	return &RrdbCheckAndMutateResult{}
+}
+
+var RrdbCheckAndMutateResult_Success_DEFAULT *CheckAndMutateResponse
+
+func (p *RrdbCheckAndMutateResult) GetSuccess() *CheckAndMutateResponse {
+	if !p.IsSetSuccess() {
+		return RrdbCheckAndMutateResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *RrdbCheckAndMutateResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *RrdbCheckAndMutateResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndMutateResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &CheckAndMutateResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndMutateResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("check_and_mutate_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RrdbCheckAndMutateResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *RrdbCheckAndMutateResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RrdbCheckAndMutateResult(%+v)", *p)
+}
+
+// Attributes:
 //  - Key
 type RrdbGetArgs struct {
 	Key *base.Blob `thrift:"key,1" db:"key" json:"key"`
@@ -9093,13 +10504,13 @@ func (p *MetaClient) Client_() thrift.TClient {
 // Parameters:
 //  - Query
 func (p *MetaClient) QueryCfg(ctx context.Context, query *replication.QueryCfgRequest) (r *replication.QueryCfgResponse, err error) {
-	var _args105 MetaQueryCfgArgs
-	_args105.Query = query
-	var _result106 MetaQueryCfgResult
-	if err = p.Client_().Call(ctx, "query_cfg", &_args105, &_result106); err != nil {
+	var _args114 MetaQueryCfgArgs
+	_args114.Query = query
+	var _result115 MetaQueryCfgResult
+	if err = p.Client_().Call(ctx, "query_cfg", &_args114, &_result115); err != nil {
 		return
 	}
-	return _result106.GetSuccess(), nil
+	return _result115.GetSuccess(), nil
 }
 
 type MetaProcessor struct {
@@ -9122,9 +10533,9 @@ func (p *MetaProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
 
 func NewMetaProcessor(handler Meta) *MetaProcessor {
 
-	self107 := &MetaProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self107.processorMap["query_cfg"] = &metaProcessorQueryCfg{handler: handler}
-	return self107
+	self116 := &MetaProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self116.processorMap["query_cfg"] = &metaProcessorQueryCfg{handler: handler}
+	return self116
 }
 
 func (p *MetaProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -9137,12 +10548,12 @@ func (p *MetaProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtoc
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x108 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x117 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x108.Write(oprot)
+	x117.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x108
+	return false, x117
 
 }
 
