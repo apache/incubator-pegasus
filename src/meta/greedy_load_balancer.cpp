@@ -1338,8 +1338,30 @@ bool greedy_load_balancer::pick_up_partition(const cluster_migration_info &clust
                                              const partition_set &selected_pid,
                                              /*out*/ gpid &picked_pid)
 {
-    // TBD(zlw)
-    return false;
+    bool found = false;
+    for (const auto &pid : max_load_partitions) {
+        auto iter = cluster_info.apps_info.find(pid.get_app_id());
+        if (iter == cluster_info.apps_info.end()) {
+            continue;
+        }
+
+        // partition has already in mirgration list
+        if (selected_pid.find(pid) != selected_pid.end()) {
+            continue;
+        }
+
+        // partition has already been primary or secondary on min_node
+        app_migration_info info = iter->second;
+        if (info.get_partition_status(pid.get_partition_index(), min_node_addr) !=
+            partition_status::PS_INACTIVE) {
+            continue;
+        }
+
+        picked_pid = pid;
+        found = true;
+        break;
+    }
+    return found;
 }
 
 bool greedy_load_balancer::apply_move(const move_info &move,

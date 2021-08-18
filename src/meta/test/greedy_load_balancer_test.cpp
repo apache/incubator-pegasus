@@ -259,5 +259,70 @@ TEST(greedy_load_balancer, get_max_load_disk)
     ASSERT_EQ(target_partitions.size(), 1);
     ASSERT_EQ(target_partitions.count(pid), 1);
 }
+
+TEST(greedy_load_balancer, pick_up_partition)
+{
+    greedy_load_balancer::cluster_migration_info cluster_info;
+    rpc_address addr(1, 10086);
+    int32_t app_id = 1;
+    std::map<rpc_address, partition_status::type> partition;
+    partition[addr] = partition_status::PS_SECONDARY;
+    greedy_load_balancer::app_migration_info app_info;
+    app_info.partitions.push_back(partition);
+    cluster_info.apps_info[app_id] = app_info;
+
+    greedy_load_balancer balancer(nullptr);
+    {
+        // all of the partitions in max_load_partitions are not found in cluster_info
+        partition_set max_load_partitions;
+        int32_t not_exist_app_id = 2;
+        max_load_partitions.insert(gpid(not_exist_app_id, 10086));
+
+        partition_set selected_pid;
+        gpid picked_pid;
+        auto found = balancer.pick_up_partition(
+            cluster_info, addr, max_load_partitions, selected_pid, picked_pid);
+        ASSERT_FALSE(found);
+    }
+
+    {
+        // all of the partitions in max_load_partitions are found in selected_pid
+        partition_set max_load_partitions;
+        max_load_partitions.insert(gpid(app_id, 10086));
+        partition_set selected_pid;
+        selected_pid.insert(gpid(app_id, 10086));
+
+        gpid picked_pid;
+        auto found = balancer.pick_up_partition(
+            cluster_info, addr, max_load_partitions, selected_pid, picked_pid);
+        ASSERT_FALSE(found);
+    }
+
+    {
+        // partition has already been primary or secondary on min_node
+        partition_set max_load_partitions;
+        max_load_partitions.insert(gpid(app_id, 0));
+        partition_set selected_pid;
+
+        gpid picked_pid;
+        auto found = balancer.pick_up_partition(
+            cluster_info, addr, max_load_partitions, selected_pid, picked_pid);
+        ASSERT_FALSE(found);
+    }
+
+    {
+        partition_set max_load_partitions;
+        gpid pid(app_id, 0);
+        max_load_partitions.insert(pid);
+        partition_set selected_pid;
+        rpc_address not_exist_addr(3, 12345);
+
+        gpid picked_pid;
+        auto found = balancer.pick_up_partition(
+            cluster_info, not_exist_addr, max_load_partitions, selected_pid, picked_pid);
+        ASSERT_TRUE(found);
+        ASSERT_EQ(pid, picked_pid);
+    }
+}
 } // namespace replication
 } // namespace dsn

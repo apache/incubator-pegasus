@@ -303,6 +303,7 @@ private:
     FRIEND_TEST(greedy_load_balancer, get_node_migration_info);
     FRIEND_TEST(greedy_load_balancer, get_disk_partitions_map);
     FRIEND_TEST(greedy_load_balancer, get_max_load_disk);
+    FRIEND_TEST(greedy_load_balancer, pick_up_partition);
 };
 
 inline configuration_proposal_action
