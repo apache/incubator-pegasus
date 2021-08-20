@@ -19,9 +19,9 @@ type ReplicaSession struct {
 	NodeSession
 }
 
-func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, key *base.Blob) (*rrdb.ReadResponse, error) {
+func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, partitionHash uint64, key *base.Blob) (*rrdb.ReadResponse, error) {
 	args := &rrdb.RrdbGetArgs{Key: key}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_GET")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_GET")
 	if err != nil {
 		return nil, err
 	}
@@ -30,10 +30,10 @@ func (rs *ReplicaSession) Get(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, update *rrdb.UpdateRequest) (*rrdb.UpdateResponse, error) {
+func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, partitionHash uint64, update *rrdb.UpdateRequest) (*rrdb.UpdateResponse, error) {
 	args := &rrdb.RrdbPutArgs{Update: update}
 
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_PUT")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_PUT")
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +42,9 @@ func (rs *ReplicaSession) Put(ctx context.Context, gpid *base.Gpid, update *rrdb
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Del(ctx context.Context, gpid *base.Gpid, key *base.Blob) (*rrdb.UpdateResponse, error) {
+func (rs *ReplicaSession) Del(ctx context.Context, gpid *base.Gpid, partitionHash uint64, key *base.Blob) (*rrdb.UpdateResponse, error) {
 	args := &rrdb.RrdbRemoveArgs{Key: key}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_REMOVE")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_REMOVE")
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +53,9 @@ func (rs *ReplicaSession) Del(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) MultiGet(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiGetRequest) (*rrdb.MultiGetResponse, error) {
+func (rs *ReplicaSession) MultiGet(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.MultiGetRequest) (*rrdb.MultiGetResponse, error) {
 	args := &rrdb.RrdbMultiGetArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_GET")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_MULTI_GET")
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func (rs *ReplicaSession) MultiGet(ctx context.Context, gpid *base.Gpid, request
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) MultiSet(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiPutRequest) (*rrdb.UpdateResponse, error) {
+func (rs *ReplicaSession) MultiSet(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.MultiPutRequest) (*rrdb.UpdateResponse, error) {
 	args := &rrdb.RrdbMultiPutArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_PUT")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_MULTI_PUT")
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +75,9 @@ func (rs *ReplicaSession) MultiSet(ctx context.Context, gpid *base.Gpid, request
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) MultiDelete(ctx context.Context, gpid *base.Gpid, request *rrdb.MultiRemoveRequest) (*rrdb.MultiRemoveResponse, error) {
+func (rs *ReplicaSession) MultiDelete(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.MultiRemoveRequest) (*rrdb.MultiRemoveResponse, error) {
 	args := &rrdb.RrdbMultiRemoveArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_MULTI_REMOVE")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_MULTI_REMOVE")
 	if err != nil {
 		return nil, err
 	}
@@ -86,9 +86,9 @@ func (rs *ReplicaSession) MultiDelete(ctx context.Context, gpid *base.Gpid, requ
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) TTL(ctx context.Context, gpid *base.Gpid, key *base.Blob) (*rrdb.TTLResponse, error) {
+func (rs *ReplicaSession) TTL(ctx context.Context, gpid *base.Gpid, partitionHash uint64, key *base.Blob) (*rrdb.TTLResponse, error) {
 	args := &rrdb.RrdbTTLArgs{Key: key}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_TTL")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_TTL")
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +97,9 @@ func (rs *ReplicaSession) TTL(ctx context.Context, gpid *base.Gpid, key *base.Bl
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) GetScanner(ctx context.Context, gpid *base.Gpid, request *rrdb.GetScannerRequest) (*rrdb.ScanResponse, error) {
+func (rs *ReplicaSession) GetScanner(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.GetScannerRequest) (*rrdb.ScanResponse, error) {
 	args := &rrdb.RrdbGetScannerArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_GET_SCANNER")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_GET_SCANNER")
 	if err != nil {
 		return nil, err
 	}
@@ -108,9 +108,9 @@ func (rs *ReplicaSession) GetScanner(ctx context.Context, gpid *base.Gpid, reque
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Scan(ctx context.Context, gpid *base.Gpid, request *rrdb.ScanRequest) (*rrdb.ScanResponse, error) {
+func (rs *ReplicaSession) Scan(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.ScanRequest) (*rrdb.ScanResponse, error) {
 	args := &rrdb.RrdbScanArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_SCAN")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_SCAN")
 	if err != nil {
 		return nil, err
 	}
@@ -119,9 +119,9 @@ func (rs *ReplicaSession) Scan(ctx context.Context, gpid *base.Gpid, request *rr
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, contextId int64) error {
+func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, partitionHash uint64, contextId int64) error {
 	args := &rrdb.RrdbClearScannerArgs{ContextID: contextId}
-	_, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_CLEAR_SCANNER")
+	_, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_CLEAR_SCANNER")
 	if err != nil {
 		return err
 	}
@@ -129,9 +129,9 @@ func (rs *ReplicaSession) ClearScanner(ctx context.Context, gpid *base.Gpid, con
 	return nil
 }
 
-func (rs *ReplicaSession) CheckAndSet(ctx context.Context, gpid *base.Gpid, request *rrdb.CheckAndSetRequest) (*rrdb.CheckAndSetResponse, error) {
+func (rs *ReplicaSession) CheckAndSet(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.CheckAndSetRequest) (*rrdb.CheckAndSetResponse, error) {
 	args := &rrdb.RrdbCheckAndSetArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_CHECK_AND_SET")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_CHECK_AND_SET")
 	if err != nil {
 		return nil, err
 	}
@@ -140,9 +140,9 @@ func (rs *ReplicaSession) CheckAndSet(ctx context.Context, gpid *base.Gpid, requ
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) SortKeyCount(ctx context.Context, gpid *base.Gpid, hashKey *base.Blob) (*rrdb.CountResponse, error) {
+func (rs *ReplicaSession) SortKeyCount(ctx context.Context, gpid *base.Gpid, partitionHash uint64, hashKey *base.Blob) (*rrdb.CountResponse, error) {
 	args := &rrdb.RrdbSortkeyCountArgs{HashKey: hashKey}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_SORTKEY_COUNT")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_SORTKEY_COUNT")
 	if err != nil {
 		return nil, err
 	}
@@ -151,9 +151,9 @@ func (rs *ReplicaSession) SortKeyCount(ctx context.Context, gpid *base.Gpid, has
 	return ret.GetSuccess(), nil
 }
 
-func (rs *ReplicaSession) Incr(ctx context.Context, gpid *base.Gpid, request *rrdb.IncrRequest) (*rrdb.IncrResponse, error) {
+func (rs *ReplicaSession) Incr(ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.IncrRequest) (*rrdb.IncrResponse, error) {
 	args := &rrdb.RrdbIncrArgs{Request: request}
-	result, err := rs.CallWithGpid(ctx, gpid, args, "RPC_RRDB_RRDB_INCR")
+	result, err := rs.CallWithGpid(ctx, gpid, partitionHash, args, "RPC_RRDB_RRDB_INCR")
 	if err != nil {
 		return nil, err
 	}

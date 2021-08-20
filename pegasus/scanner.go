@@ -49,8 +49,10 @@ type pegasusScanner struct {
 	options  *ScannerOptions
 
 	gpidSlice []*base.Gpid
-	gpidIndex int        // index of gpidSlice[]
+	hashSlice []uint64
+	gpidIndex int        // index of gpidSlice[] and hashSlice[]
 	curGpid   *base.Gpid // current gpid
+	curHash   uint64     // current partitionHash
 
 	batchEntries []*KeyValue
 	batchIndex   int
@@ -74,11 +76,12 @@ func NewScanOptions() *ScannerOptions {
 	}
 }
 
-func newPegasusScannerImpl(table *pegasusTableConnector, gpidSlice []*base.Gpid, options *ScannerOptions,
+func newPegasusScannerImpl(table *pegasusTableConnector, gpidSlice []*base.Gpid, hashSlice []uint64, options *ScannerOptions,
 	startKey *base.Blob, stopKey *base.Blob) Scanner {
 	scanner := &pegasusScanner{
 		table:        table,
 		gpidSlice:    gpidSlice,
+		hashSlice:    hashSlice,
 		options:      options,
 		startKey:     startKey,
 		stopKey:      stopKey,
@@ -93,17 +96,18 @@ func newPegasusScannerImpl(table *pegasusTableConnector, gpidSlice []*base.Gpid,
 	return scanner
 }
 
-func newPegasusScanner(table *pegasusTableConnector, gpid *base.Gpid, options *ScannerOptions,
+func newPegasusScanner(table *pegasusTableConnector, gpid *base.Gpid, partitionHash uint64, options *ScannerOptions,
 	startKey *base.Blob, stopKey *base.Blob) Scanner {
 	gpidSlice := []*base.Gpid{gpid}
-	return newPegasusScannerImpl(table, gpidSlice, options, startKey, stopKey)
+	hashSlice := []uint64{partitionHash}
+	return newPegasusScannerImpl(table, gpidSlice, hashSlice, options, startKey, stopKey)
 }
 
-func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSlice []*base.Gpid,
+func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSlice []*base.Gpid, hashSlice []uint64,
 	options *ScannerOptions) Scanner {
 	options.StartInclusive = true
 	options.StopInclusive = false
-	return newPegasusScannerImpl(table, gpidSlice, options, &base.Blob{Data: []byte{0x00, 0x00}},
+	return newPegasusScannerImpl(table, gpidSlice, hashSlice, options, &base.Blob{Data: []byte{0x00, 0x00}},
 		&base.Blob{Data: []byte{0xFF, 0xFF}})
 }
 
@@ -151,6 +155,7 @@ func (p *pegasusScanner) doNext(ctx context.Context) (completed bool, hashKey []
 			}
 			p.gpidIndex--
 			p.curGpid = p.gpidSlice[p.gpidIndex]
+			p.curHash = p.hashSlice[p.gpidIndex]
 			p.batchClear()
 		} else if p.batchStatus == batchEmpty {
 			return p.startScanPartition(ctx)
@@ -199,7 +204,7 @@ func (p *pegasusScanner) startScanPartition(ctx context.Context) (completed bool
 	}
 
 	part := p.table.getPartitionByGpid(p.curGpid)
-	response, err := part.GetScanner(ctx, p.curGpid, request)
+	response, err := part.GetScanner(ctx, p.curGpid, p.curHash, request)
 
 	err = p.onRecvScanResponse(response, err)
 	if err == nil {
@@ -213,7 +218,7 @@ func (p *pegasusScanner) nextBatch(ctx context.Context) (completed bool, hashKey
 	sortKey []byte, value []byte, err error) {
 	request := &rrdb.ScanRequest{ContextID: p.batchStatus}
 	part := p.table.getPartitionByGpid(p.curGpid)
-	response, err := part.Scan(ctx, p.curGpid, request)
+	response, err := part.Scan(ctx, p.curGpid, p.curHash, request)
 	if err != nil {
 		p.batchStatus = batchRpcError
 		if updateConfig, errHandler := p.table.handleReplicaError(err, part); errHandler != nil {
@@ -267,7 +272,7 @@ func (p *pegasusScanner) Close() error {
 	// if not, clear scanner manually
 	if p.batchStatus >= batchScanning {
 		part := p.table.getPartitionByGpid(p.curGpid)
-		err = part.ClearScanner(ctx, p.curGpid, p.batchStatus)
+		err = part.ClearScanner(ctx, p.curGpid, p.curHash, p.batchStatus)
 		if err == nil {
 			p.batchStatus = batchScanFinished
 		}

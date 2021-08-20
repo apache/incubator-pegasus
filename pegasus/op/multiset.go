@@ -75,8 +75,8 @@ func (r *MultiSet) Validate() error {
 }
 
 // Run operation.
-func (r *MultiSet) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
-	resp, err := rs.MultiSet(ctx, gpid, r.req)
+func (r *MultiSet) Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error) {
+	resp, err := rs.MultiSet(ctx, gpid, partitionHash, r.req)
 	if err := wrapRPCFailure(resp, err); err != nil {
 		return nil, err
 	}

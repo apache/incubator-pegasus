@@ -13,7 +13,7 @@ import (
 func (rs *ReplicaSession) QueryDiskInfo(ctx context.Context, req *radmin.QueryDiskInfoRequest) (*radmin.QueryDiskInfoResponse, error) {
 	arg := radmin.NewReplicaClientQueryDiskInfoArgs()
 	arg.Req = req
-	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, arg, "RPC_QUERY_DISK_INFO")
+	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, arg, "RPC_QUERY_DISK_INFO")
 	if err == nil {
 		ret, _ := result.(*radmin.ReplicaClientQueryDiskInfoResult)
 		resp := ret.GetSuccess()
@@ -29,7 +29,7 @@ func (rs *ReplicaSession) QueryDiskInfo(ctx context.Context, req *radmin.QueryDi
 func (rs *ReplicaSession) DiskMigrate(ctx context.Context, req *radmin.ReplicaDiskMigrateRequest) (*radmin.ReplicaDiskMigrateResponse, error) {
 	arg := radmin.NewReplicaClientDiskMigrateArgs()
 	arg.Req = req
-	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, arg, "RPC_REPLICA_DISK_MIGRATE")
+	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, arg, "RPC_REPLICA_DISK_MIGRATE")
 	if err == nil {
 		ret, _ := result.(*radmin.ReplicaClientDiskMigrateResult)
 		resp := ret.GetSuccess()

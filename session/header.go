@@ -25,7 +25,7 @@ type thriftHeader struct {
 	partitionIndex int32
 	clientTimeout  uint32
 	threadHash     int32
-	partitionHash  uint32
+	partitionHash  uint64
 }
 
 // Serialized this struct as the message header in pegasus messaging protocol.
@@ -45,7 +45,7 @@ func (t *thriftHeader) marshall(buf []byte) {
 	binary.BigEndian.PutUint32(buf[28:32], uint32(t.partitionIndex))
 	binary.BigEndian.PutUint32(buf[32:36], t.clientTimeout)
 	binary.BigEndian.PutUint32(buf[36:40], uint32(t.threadHash))
-	binary.BigEndian.PutUint32(buf[40:48], t.partitionHash)
+	binary.BigEndian.PutUint64(buf[40:48], t.partitionHash)
 }
 
 // Thread hash is a rDSN required header field. We copied the algorithm

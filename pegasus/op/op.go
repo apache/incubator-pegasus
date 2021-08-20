@@ -30,5 +30,5 @@ import (
 type Request interface {
 	Validate() error
 
-	Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error)
+	Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error)
 }

@@ -42,7 +42,7 @@ type NodeSession interface {
 	String() string
 
 	// Invoke an rpc call.
-	CallWithGpid(ctx context.Context, gpid *base.Gpid, args RpcRequestArgs, name string) (result RpcResponseResult, err error)
+	CallWithGpid(ctx context.Context, gpid *base.Gpid, partitionHash uint64, args RpcRequestArgs, name string) (result RpcResponseResult, err error)
 
 	// Get connection state.
 	ConnState() rpc.ConnState
@@ -326,7 +326,7 @@ func (n *nodeSession) waitUntilSessionReady(ctx context.Context) error {
 	return nil
 }
 
-func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args RpcRequestArgs, name string) (result RpcResponseResult, err error) {
+func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, partitionHash uint64, args RpcRequestArgs, name string) (result RpcResponseResult, err error) {
 	// either the ctx cancelled or the tomb killed will stop this rpc call.
 	ctxWithTomb := n.tom.Context(ctx)
 	if err := n.waitUntilSessionReady(ctxWithTomb); err != nil {
@@ -334,7 +334,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, args Rp
 	}
 
 	seqId := atomic.AddInt32(&n.seqId, 1) // increment sequence id
-	rcall, err := MarshallPegasusRpc(n.codec, seqId, gpid, args, name)
+	rcall, err := MarshallPegasusRpc(n.codec, seqId, gpid, partitionHash, args, name)
 	if err != nil {
 		return nil, err
 	}

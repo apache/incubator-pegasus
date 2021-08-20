@@ -23,7 +23,7 @@ type metaSession struct {
 }
 
 func (ms *metaSession) call(ctx context.Context, args RpcRequestArgs, rpcName string) (RpcResponseResult, error) {
-	return ms.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, args, rpcName)
+	return ms.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, args, rpcName)
 }
 
 func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {

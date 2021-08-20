@@ -38,7 +38,7 @@ func (p *PegasusCodec) Marshal(v interface{}) ([]byte, error) {
 		appId:          r.Gpid.Appid,
 		partitionIndex: r.Gpid.PartitionIndex,
 		threadHash:     gpidToThreadHash(r.Gpid),
-		partitionHash:  0,
+		partitionHash:  r.partitionHash,
 	}
 
 	// skip the first ThriftHeaderBytesLen bytes
@@ -358,13 +358,14 @@ type RpcResponseResult interface {
 }
 
 type PegasusRpcCall struct {
-	Args   RpcRequestArgs
-	Result RpcResponseResult
-	Name   string // the rpc's name
-	SeqId  int32
-	Gpid   *base.Gpid
-	RawReq []byte // the marshalled request in bytes
-	Err    error
+	Args          RpcRequestArgs
+	Result        RpcResponseResult
+	Name          string // the rpc's name
+	SeqId         int32
+	Gpid          *base.Gpid
+	partitionHash uint64
+	RawReq        []byte // the marshalled request in bytes
+	Err           error
 
 	// hooks on each stage during rpc processing
 	OnRpcCall time.Time
@@ -383,12 +384,13 @@ func (call *PegasusRpcCall) TilNow() time.Duration {
 	return time.Since(call.OnRpcCall)
 }
 
-func MarshallPegasusRpc(codec rpc.Codec, seqId int32, gpid *base.Gpid, args RpcRequestArgs, name string) (*PegasusRpcCall, error) {
+func MarshallPegasusRpc(codec rpc.Codec, seqId int32, gpid *base.Gpid, partitionHash uint64, args RpcRequestArgs, name string) (*PegasusRpcCall, error) {
 	rcall := &PegasusRpcCall{}
 	rcall.Args = args
 	rcall.Name = name
 	rcall.SeqId = seqId
 	rcall.Gpid = gpid
+	rcall.partitionHash = partitionHash
 
 	var err error
 	rcall.RawReq, err = codec.Marshal(rcall)

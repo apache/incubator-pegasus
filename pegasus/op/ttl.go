@@ -48,8 +48,8 @@ func (r *TTL) Validate() error {
 
 // Run operation.
 // Returns -2 if entry doesn't exist.
-func (r *TTL) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
-	resp, err := rs.TTL(ctx, gpid, r.req)
+func (r *TTL) Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error) {
+	resp, err := rs.TTL(ctx, gpid, partitionHash, r.req)
 	err = wrapRPCFailure(resp, err)
 	if err == base.NotFound {
 		// Success for non-existed entry.

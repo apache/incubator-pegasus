@@ -63,7 +63,7 @@ func TestNodeSession_LoopForRequest(t *testing.T) {
 	n.tom.Go(n.loopForRequest)
 
 	go func() {
-		n.CallWithGpid(context.Background(), nil, nil, "")
+		n.CallWithGpid(context.Background(), nil, 0, nil, "")
 	}()
 
 	time.Sleep(time.Second)
@@ -145,7 +145,7 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	})
 	n.codec = mockCodec
 
-	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, arg, "RPC_NAME")
+	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, 0, arg, "RPC_NAME")
 	assert.NotNil(t, err)
 	assert.Equal(t, n.conn.GetState(), rpc.ConnStateTransientFailure)
 }
@@ -328,7 +328,7 @@ func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 		return nil
 	})
 
-	result, err := n.CallWithGpid(context.Background(), &base.Gpid{}, arg, "RPC_NAME")
+	result, err := n.CallWithGpid(context.Background(), &base.Gpid{}, 0, arg, "RPC_NAME")
 	assert.Equal(t, result, nil)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)
 }
@@ -368,7 +368,7 @@ func TestNodeSession_Redial(t *testing.T) {
 
 	arg := rrdb.NewMetaQueryCfgArgs()
 	arg.Query = replication.NewQueryCfgRequest()
-	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, arg, "RPC_NAME")
+	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, 0, arg, "RPC_NAME")
 
 	assert.Equal(t, n.ConnState(), rpc.ConnStateReady)
 	assert.Equal(t, err, base.ERR_INVALID_STATE)

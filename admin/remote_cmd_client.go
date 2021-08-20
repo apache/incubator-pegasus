@@ -57,7 +57,7 @@ func (c *RemoteCommand) Call(ctx context.Context, session session.NodeSession) (
 	thriftArgs := &cmd.RemoteCmdServiceCallCommandArgs{
 		Cmd: &cmd.Command{Cmd: c.Command, Arguments: c.Arguments},
 	}
-	res, err := session.CallWithGpid(ctx, &base.Gpid{}, thriftArgs, "RPC_CLI_CLI_CALL")
+	res, err := session.CallWithGpid(ctx, &base.Gpid{}, 0, thriftArgs, "RPC_CLI_CLI_CALL")
 	if err != nil {
 		return "", err
 	}

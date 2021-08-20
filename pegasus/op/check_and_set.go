@@ -55,8 +55,8 @@ func (r *CheckAndSet) Validate() error {
 }
 
 // Run operation.
-func (r *CheckAndSet) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
-	resp, err := rs.CheckAndSet(ctx, gpid, r.Req)
+func (r *CheckAndSet) Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error) {
+	resp, err := rs.CheckAndSet(ctx, gpid, partitionHash, r.Req)
 	err = wrapRPCFailure(resp, err)
 	if err == base.TryAgain {
 		err = nil

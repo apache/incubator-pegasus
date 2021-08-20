@@ -47,8 +47,8 @@ func (r *Get) Validate() error {
 }
 
 // Run operation.
-func (r *Get) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
-	resp, err := rs.Get(ctx, gpid, r.req)
+func (r *Get) Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error) {
+	resp, err := rs.Get(ctx, gpid, partitionHash, r.req)
 	err = wrapRPCFailure(resp, err)
 	if err == base.NotFound {
 		// Success for non-existed entry.

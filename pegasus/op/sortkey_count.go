@@ -43,8 +43,8 @@ func (r *SortKeyCount) Validate() error {
 }
 
 // Run operation.
-func (r *SortKeyCount) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
-	resp, err := rs.SortKeyCount(ctx, gpid, r.req)
+func (r *SortKeyCount) Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error) {
+	resp, err := rs.SortKeyCount(ctx, gpid, partitionHash, r.req)
 	if err = wrapRPCFailure(resp, err); err != nil {
 		return nil, err
 	}

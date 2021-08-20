@@ -73,8 +73,8 @@ func (r *MultiGet) Validate() error {
 }
 
 // Run operation.
-func (r *MultiGet) Run(ctx context.Context, gpid *base.Gpid, rs *session.ReplicaSession) (interface{}, error) {
-	resp, err := rs.MultiGet(ctx, gpid, r.Req)
+func (r *MultiGet) Run(ctx context.Context, gpid *base.Gpid, partitionHash uint64, rs *session.ReplicaSession) (interface{}, error) {
+	resp, err := rs.MultiGet(ctx, gpid, partitionHash, r.Req)
 	err = wrapRPCFailure(resp, err)
 	allFetched := true
 	if err == base.Incomplete {

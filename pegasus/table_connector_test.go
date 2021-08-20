@@ -333,7 +333,7 @@ func TestPegasusTableConnector_Close(t *testing.T) {
 	assert.Nil(t, err)
 
 	ptb.Close()
-	_, r := ptb.getPartition([]byte("a"))
+	_, r := ptb.getPartition(crc64Hash([]byte("a")))
 	assert.Equal(t, r.ConnState(), rpc.ConnStateReady)
 }
 

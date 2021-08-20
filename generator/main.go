@@ -86,7 +86,7 @@ func generateRAdminRPC(rpcCode, rpcName, reqName, respName string) string {
 	s += fmt.Sprintf("func (rs *ReplicaSession) %s(ctx context.Context, req *radmin.%s) (*radmin.%s, error) {\n", rpcName, reqName, respName)
 	s += fmt.Sprintf("	arg := radmin.NewReplicaClient%sArgs()\n", rpcName)
 	s += fmt.Sprintf("	arg.Req = req\n")
-	s += fmt.Sprintf("	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, arg, \"%s\")\n", rpcCode)
+	s += fmt.Sprintf("	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, arg, \"%s\")\n", rpcCode)
 	s += fmt.Sprintf("	if err == nil {\n")
 	s += fmt.Sprintf("		ret, _ := result.(*radmin.ReplicaClient%sResult)\n", rpcName)
 	s += fmt.Sprintf("		resp := ret.GetSuccess()\n")
