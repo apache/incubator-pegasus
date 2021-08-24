@@ -668,6 +668,8 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 
 		case base.ERR_BUSY:
 			// throttled by server, skip confUpdate
+		case base.ERR_SPLITTING:
+			// table is executing partition split, skip confUpdate
 
 		default:
 			confUpdate = true
@@ -680,6 +682,10 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 			err = errors.New(err.Error() + " The target replica is not primary")
 		case base.ERR_OBJECT_NOT_FOUND:
 			err = errors.New(err.Error() + " The replica server doesn't serve this partition")
+		case base.ERR_SPLITTING:
+			err = errors.New(err.Error() + " The table is executing partition split")
+		case base.ERR_PARENT_PARTITION_MISUSED:
+			err = errors.New(err.Error() + " The table finish partition split, will update config")
 		}
 
 		if confUpdate {
