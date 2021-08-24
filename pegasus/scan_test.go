@@ -28,6 +28,8 @@ func simpleFullScanOpts(t *testing.T, tb TableConnector, handler func(hashKey, s
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(scanners))
 	assert.NotNil(t, scanners[0])
+	pScanner, _ := scanners[0].(*pegasusScanner)
+	assert.True(t, pScanner.checkHash)
 
 	for {
 		completed, h, s, v, err := scanners[0].Next(context.Background())
@@ -136,6 +138,8 @@ func listSortKeysFrom(t *testing.T, tb TableConnector, hashKey []byte, startSort
 	}
 	assert.Nil(t, err)
 	assert.NotNil(t, scanner)
+	pScanner, _ := scanner.(*pegasusScanner)
+	assert.False(t, pScanner.checkHash)
 	defer scanner.Close()
 
 	var sortKeys []string

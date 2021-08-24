@@ -53,6 +53,7 @@ type pegasusScanner struct {
 	gpidIndex int        // index of gpidSlice[] and hashSlice[]
 	curGpid   *base.Gpid // current gpid
 	curHash   uint64     // current partitionHash
+	checkHash bool
 
 	batchEntries []*KeyValue
 	batchIndex   int
@@ -77,11 +78,12 @@ func NewScanOptions() *ScannerOptions {
 }
 
 func newPegasusScannerImpl(table *pegasusTableConnector, gpidSlice []*base.Gpid, hashSlice []uint64, options *ScannerOptions,
-	startKey *base.Blob, stopKey *base.Blob) Scanner {
+	startKey *base.Blob, stopKey *base.Blob, checkHash bool) Scanner {
 	scanner := &pegasusScanner{
 		table:        table,
 		gpidSlice:    gpidSlice,
 		hashSlice:    hashSlice,
+		checkHash:    checkHash,
 		options:      options,
 		startKey:     startKey,
 		stopKey:      stopKey,
@@ -100,7 +102,7 @@ func newPegasusScanner(table *pegasusTableConnector, gpid *base.Gpid, partitionH
 	startKey *base.Blob, stopKey *base.Blob) Scanner {
 	gpidSlice := []*base.Gpid{gpid}
 	hashSlice := []uint64{partitionHash}
-	return newPegasusScannerImpl(table, gpidSlice, hashSlice, options, startKey, stopKey)
+	return newPegasusScannerImpl(table, gpidSlice, hashSlice, options, startKey, stopKey, false)
 }
 
 func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSlice []*base.Gpid, hashSlice []uint64,
@@ -108,7 +110,7 @@ func newPegasusScannerForUnorderedScanners(table *pegasusTableConnector, gpidSli
 	options.StartInclusive = true
 	options.StopInclusive = false
 	return newPegasusScannerImpl(table, gpidSlice, hashSlice, options, &base.Blob{Data: []byte{0x00, 0x00}},
-		&base.Blob{Data: []byte{0xFF, 0xFF}})
+		&base.Blob{Data: []byte{0xFF, 0xFF}}, true)
 }
 
 func (p *pegasusScanner) Next(ctx context.Context) (completed bool, hashKey []byte,
@@ -202,6 +204,7 @@ func (p *pegasusScanner) startScanPartition(ctx context.Context) (completed bool
 	if p.options.SortKeyFilter.Pattern != nil {
 		request.SortKeyFilterPattern.Data = p.options.SortKeyFilter.Pattern
 	}
+	request.NeedCheckHash = &p.checkHash
 
 	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.GetScanner(ctx, p.curGpid, p.curHash, request)
