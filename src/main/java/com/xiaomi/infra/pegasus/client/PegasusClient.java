@@ -9,6 +9,7 @@ import com.xiaomi.infra.pegasus.tools.Tools;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -65,6 +66,10 @@ public class PegasusClient implements PegasusClientInterface {
       }
     }
     return table;
+  }
+
+  public PegasusClient(Properties properties) throws PException {
+    this(ClientOptions.create(properties));
   }
 
   // configPath could be:

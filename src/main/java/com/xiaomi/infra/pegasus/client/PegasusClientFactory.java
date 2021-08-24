@@ -3,6 +3,7 @@
 // can be found in the LICENSE file in the root directory of this source tree.
 package com.xiaomi.infra.pegasus.client;
 
+import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,17 @@ public class PegasusClientFactory {
    */
   public static PegasusClientInterface createClient(String configPath) throws PException {
     return new PegasusClient(configPath);
+  }
+
+  /**
+   * Create a client instance. After used, should call client.close() to release resource.
+   *
+   * @param properties properties
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
+  public static PegasusClientInterface createClient(Properties properties) throws PException {
+    return new PegasusClient(properties);
   }
 
   /**
@@ -92,6 +104,18 @@ public class PegasusClientFactory {
       }
       return singletonClient;
     }
+  }
+
+  /**
+   * Get the singleton client instance with properties. After used, should call
+   * PegasusClientFactory.closeSingletonClient() to release resource.
+   *
+   * @param properties properties
+   * @return PegasusClientInterface {@link PegasusClientInterface}
+   * @throws PException throws exception if any error occurs.
+   */
+  public static PegasusClientInterface getSingletonClient(Properties properties) throws PException {
+    return getSingletonClient(ClientOptions.create(properties));
   }
 
   /**

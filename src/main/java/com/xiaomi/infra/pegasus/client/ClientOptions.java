@@ -7,6 +7,7 @@ import static com.xiaomi.infra.pegasus.client.PConfigUtil.loadConfiguration;
 
 import com.xiaomi.infra.pegasus.security.Credential;
 import java.time.Duration;
+import java.util.Properties;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ConfigurationConverter;
 
@@ -131,9 +132,17 @@ public class ClientOptions {
     return builder().build();
   }
 
+  public static ClientOptions create(Properties properties) throws PException {
+    Configuration config = ConfigurationConverter.getConfiguration(properties);
+    return create(config);
+  }
+
   public static ClientOptions create(String configPath) throws PException {
     Configuration config = ConfigurationConverter.getConfiguration(loadConfiguration(configPath));
+    return create(config);
+  }
 
+  private static ClientOptions create(Configuration config) throws PException {
     String metaList = config.getString(PEGASUS_META_SERVERS_KEY);
     if (metaList == null) {
       throw new IllegalArgumentException("no property set: " + PEGASUS_META_SERVERS_KEY);
