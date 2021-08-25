@@ -26,7 +26,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 )
 
-type tableRPCOp func() (confUpdated bool, result interface{}, err error)
+type tableRPCOp func() (confUpdated bool, result interface{}, retry bool, err error)
 
 // retryFailOver retries the operation when it encounters replica fail-over, until context reaches deadline.
 func retryFailOver(ctx context.Context, op tableRPCOp) (interface{}, error) {
@@ -34,7 +34,10 @@ func retryFailOver(ctx context.Context, op tableRPCOp) (interface{}, error) {
 	bf.InitialInterval = time.Second
 	bf.Multiplier = 2
 	for {
-		confUpdated, res, err := op()
+		confUpdated, res, retry, err := op()
+		if confUpdated && !retry {
+			return res, err
+		}
 		backoffCh := time.After(bf.NextBackOff())
 		if confUpdated { // must fail
 			select {

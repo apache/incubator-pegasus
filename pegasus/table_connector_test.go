@@ -225,40 +225,41 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 		logger:       pegalog.GetLogger(),
 	}
 
-	confUpdate, err := ptb.handleReplicaError(nil, nil) // no error
+	confUpdate, retry, err := ptb.handleReplicaError(nil, nil) // no error
 	assert.NoError(t, err)
 	assert.False(t, confUpdate)
+	assert.False(t, retry)
 
-	confUpdate, err = ptb.handleReplicaError(errors.New("not nil"), nil) // unknown error
-	<-ptb.confUpdateCh                                                   // must trigger confUpdate
+	confUpdate, retry, err = ptb.handleReplicaError(errors.New("not nil"), nil) // unknown error
+	<-ptb.confUpdateCh                                                          // must trigger confUpdate
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
+	assert.True(t, retry)
 
-	confUpdate, err = ptb.handleReplicaError(base.ERR_OBJECT_NOT_FOUND, nil)
+	confUpdate, retry, err = ptb.handleReplicaError(base.ERR_OBJECT_NOT_FOUND, nil)
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
+	assert.True(t, retry)
 
-	confUpdate, err = ptb.handleReplicaError(base.ERR_INVALID_STATE, nil)
+	confUpdate, retry, err = ptb.handleReplicaError(base.ERR_INVALID_STATE, nil)
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
+	assert.True(t, retry)
 
-	confUpdate, err = ptb.handleReplicaError(base.ERR_PARENT_PARTITION_MISUSED, nil)
+	confUpdate, retry, err = ptb.handleReplicaError(base.ERR_PARENT_PARTITION_MISUSED, nil)
 	<-ptb.confUpdateCh
 	assert.Error(t, err)
 	assert.True(t, confUpdate)
-
-	confUpdate, err = ptb.handleReplicaError(base.ERR_SPLITTING, nil)
-	assert.Error(t, err)
-	assert.False(t, confUpdate)
+	assert.False(t, retry)
 
 	{ // Ensure: The following errors should not trigger configuration update
-		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY}
+		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING}
 
 		for _, err := range errorTypes {
 			channelEmpty := false
-			confUpdate, err = ptb.handleReplicaError(err, nil)
+			confUpdate, retry, err = ptb.handleReplicaError(err, nil)
 			select {
 			case <-ptb.confUpdateCh:
 			default:
@@ -268,6 +269,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 
 			assert.Error(t, err)
 			assert.False(t, confUpdate)
+			assert.False(t, retry)
 		}
 	}
 }
@@ -286,8 +288,10 @@ func TestPegasusTableConnector_ValidateHashKey(t *testing.T) {
 func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 	defer leaktest.Check(t)()
 
+	partitionCount := 8
 	p := &pegasusTableConnector{
 		tableName: "temp",
+		parts:     make([]*replicaNode, partitionCount),
 	}
 
 	{
@@ -310,19 +314,110 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 		resp.PartitionCount = 5
 		err = p.handleQueryConfigResp(resp)
 		assert.NotNil(t, err)
+		assert.Equal(t, partitionCount, len(p.parts))
 	}
 
 	{
 		resp := replication.NewQueryCfgResponse()
 		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
 
-		resp.Partitions = make([]*replication.PartitionConfiguration, 4)
-		resp.PartitionCount = 4
+		resp.Partitions = make([]*replication.PartitionConfiguration, 6)
+		resp.PartitionCount = 6
 
 		err := p.handleQueryConfigResp(resp)
 		assert.NotNil(t, err)
-		assert.Equal(t, len(p.parts), 4)
+		assert.Equal(t, partitionCount, len(p.parts))
 	}
+
+	{
+		resp := replication.NewQueryCfgResponse()
+		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+
+		resp.Partitions = make([]*replication.PartitionConfiguration, 2)
+		resp.PartitionCount = 2
+
+		err := p.handleQueryConfigResp(resp)
+		assert.NotNil(t, err)
+		assert.Equal(t, partitionCount, len(p.parts))
+	}
+}
+
+func TestPegasusTableConnector_QueryConfigRespWhileStartSplit(t *testing.T) {
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	partitionCount := len(ptb.parts)
+	resp := replication.NewQueryCfgResponse()
+	resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+	resp.AppID = ptb.appID
+	resp.PartitionCount = int32(partitionCount * 2)
+	resp.Partitions = make([]*replication.PartitionConfiguration, partitionCount*2)
+	for i := 0; i < partitionCount*2; i++ {
+		if i < partitionCount {
+			resp.Partitions[i] = ptb.parts[i].pconf
+		} else {
+			conf := replication.NewPartitionConfiguration()
+			conf.Ballot = -1
+			conf.Pid = &base.Gpid{ptb.appID, int32(i)}
+			resp.Partitions[i] = conf
+		}
+	}
+
+	err = ptb.handleQueryConfigResp(resp)
+	assert.Nil(t, err)
+	assert.Equal(t, partitionCount*2, len(ptb.parts))
+	ptb.Close()
+}
+
+func TestPegasusTableConnector_QueryConfigRespWhileCancelSplit(t *testing.T) {
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	partitionCount := len(ptb.parts)
+	nodes := make([]*replicaNode, partitionCount*2)
+	for i := 0; i < partitionCount*2; i++ {
+		if i < partitionCount {
+			nodes[i] = ptb.parts[i]
+		} else {
+			conf := replication.NewPartitionConfiguration()
+			conf.Ballot = -1
+			conf.Pid = &base.Gpid{ptb.appID, int32(i)}
+			nodes[i] = &replicaNode{nil, conf}
+		}
+	}
+
+	resp := replication.NewQueryCfgResponse()
+	resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
+	resp.AppID = ptb.appID
+	resp.PartitionCount = int32(partitionCount)
+	resp.Partitions = make([]*replication.PartitionConfiguration, partitionCount)
+	for i := 0; i < partitionCount; i++ {
+		resp.Partitions[i] = ptb.parts[i].pconf
+	}
+
+	ptb.parts = make([]*replicaNode, partitionCount*2)
+	ptb.parts = nodes
+
+	err = ptb.handleQueryConfigResp(resp)
+	assert.Nil(t, err)
+	assert.Equal(t, partitionCount, len(ptb.parts))
+	ptb.Close()
 }
 
 func TestPegasusTableConnector_Close(t *testing.T) {
@@ -344,6 +439,60 @@ func TestPegasusTableConnector_Close(t *testing.T) {
 	ptb.Close()
 	_, r := ptb.getPartition(crc64Hash([]byte("a")))
 	assert.Equal(t, r.ConnState(), rpc.ConnStateReady)
+}
+
+func TestPegasusTableConnector_GetPartitionIndex(t *testing.T) {
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	// hashKey = 'a', partitionCount = 8, target index is 4
+	targetIndex := 4
+	partitionHash := crc64Hash([]byte("a"))
+	gpid, _ := ptb.getPartition(partitionHash)
+	assert.Equal(t, gpid.PartitionIndex, int32(targetIndex))
+}
+
+func TestPegasusTableConnector_GetPartitionIndexRedirct(t *testing.T) {
+	// Ensure loopForAutoUpdate will be closed.
+	defer leaktest.Check(t)()
+
+	client := NewClient(testingCfg)
+	defer client.Close()
+
+	tb, err := client.OpenTable(context.Background(), "temp")
+	assert.Nil(t, err)
+	defer tb.Close()
+	ptb, _ := tb.(*pegasusTableConnector)
+
+	partitionCount := len(ptb.parts)
+	nodes := make([]*replicaNode, partitionCount*2)
+	for i := 0; i < partitionCount*2; i++ {
+		if i < partitionCount {
+			nodes[i] = ptb.parts[i]
+		} else {
+			conf := replication.NewPartitionConfiguration()
+			conf.Ballot = -1
+			conf.Pid = &base.Gpid{ptb.appID, int32(i)}
+			nodes[i] = &replicaNode{nil, conf}
+		}
+	}
+	ptb.parts = make([]*replicaNode, partitionCount*2)
+	ptb.parts = nodes
+
+	// hashKey = 'a', partitionCount = 16, target index is 12
+	// But partition is invalid, it should redirect to parent partition, index is 4
+	targetIndex := 4
+	partitionHash := crc64Hash([]byte("a"))
+	gpid, _ := ptb.getPartition(partitionHash)
+	assert.Equal(t, gpid.PartitionIndex, int32(targetIndex))
 }
 
 func TestPegasusTableConnector_MultiKeyOperations(t *testing.T) {

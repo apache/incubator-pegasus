@@ -30,9 +30,9 @@ import (
 func TestRetryFailOver_Success(t *testing.T) {
 	// success, no retry
 	times := 0
-	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, err error) {
+	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, retry bool, err error) {
 		times++
-		return false, nil, nil
+		return false, nil, false, nil
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, times, 1)
@@ -41,9 +41,9 @@ func TestRetryFailOver_Success(t *testing.T) {
 func TestRetryFailOver_FailureNoRetry(t *testing.T) {
 	// first try fails, but it shouldn't retry
 	times := 0
-	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, err error) {
+	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, retry bool, err error) {
 		times++
-		return false, nil, context.DeadlineExceeded
+		return false, nil, false, context.DeadlineExceeded
 	})
 	assert.Error(t, err)
 	assert.Equal(t, times, 1)
@@ -53,13 +53,13 @@ func TestRetryFailOver_FailureRetryWithIncreasingInterval(t *testing.T) {
 	// fail n times, success at the (n+1)th attempt
 	start := time.Now()
 	var elapses []time.Duration
-	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, err error) {
+	_, err := retryFailOver(context.Background(), func() (confUpdated bool, result interface{}, retry bool, err error) {
 		elapses = append(elapses, time.Since(start))
 		start = time.Now()
 		if len(elapses) > 5 {
-			return false, nil, nil
+			return false, nil, false, nil
 		}
-		return true, nil, base.ERR_OBJECT_NOT_FOUND
+		return true, nil, true, base.ERR_OBJECT_NOT_FOUND
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, len(elapses), 6)
@@ -73,8 +73,8 @@ func TestRetryFailOver_FailureRetryUntilTimeout(t *testing.T) {
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	res, err := retryFailOver(ctx, func() (confUpdated bool, result interface{}, err error) {
-		return true, nil, base.ERR_OBJECT_NOT_FOUND
+	res, err := retryFailOver(ctx, func() (confUpdated bool, result interface{}, retry bool, err error) {
+		return true, nil, true, base.ERR_OBJECT_NOT_FOUND
 	})
 	elapsed := time.Since(start)
 
