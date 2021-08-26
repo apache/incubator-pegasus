@@ -28,7 +28,7 @@
  * Description:
  *     base interface of the server load balancer which defines the scheduling
  *     policy of how to place the partition replica to the nodes
-  *
+ *
  * Revision history:
  *     2015-12-29, @imzhenyu (Zhenyu Guo), first draft
  *     xxxx-xx-xx, author, fix bug about xxx
@@ -50,6 +50,46 @@
 
 namespace dsn {
 namespace replication {
+/// server load balancer extensions for node_state
+/// record the newly assigned but not finished replicas for each node, to make the assigning
+/// process more balanced.
+class newly_partitions
+{
+public:
+    newly_partitions();
+    newly_partitions(node_state *ns);
+    node_state *owner;
+    int total_primaries;
+    int total_partitions;
+    std::map<int32_t, int32_t> primaries;
+    std::map<int32_t, int32_t> partitions;
+
+    int32_t primary_count(int32_t app_id)
+    {
+        return owner->primary_count(app_id) + primaries[app_id];
+    }
+    int32_t partition_count(int32_t app_id)
+    {
+        return owner->partition_count(app_id) + partitions[app_id];
+    }
+
+    int32_t primary_count() { return total_primaries + owner->primary_count(); }
+    int32_t partition_count() { return total_partitions + owner->partition_count(); }
+
+    bool less_primaries(newly_partitions &another, int32_t app_id);
+    bool less_partitions(newly_partitions &another, int32_t app_id);
+    void newly_add_primary(int32_t app_id, bool only_primary);
+    void newly_add_partition(int32_t app_id);
+
+    void newly_remove_primary(int32_t app_id, bool only_primary);
+    void newly_remove_partition(int32_t app_id);
+
+public:
+    static void *s_create(void *related_ns);
+    static void s_delete(void *_this);
+};
+typedef dsn::object_extension_helper<newly_partitions, node_state> newly_partitions_ext;
+newly_partitions *get_newly_partitions(node_mapper &mapper, const dsn::rpc_address &addr);
 
 class server_load_balancer
 {
@@ -316,5 +356,5 @@ protected:
     dsn::zrwlock_nr _black_list_lock;
     std::set<dsn::rpc_address> _assign_secondary_black_list;
 };
-}
-}
+} // namespace replication
+} // namespace dsn
