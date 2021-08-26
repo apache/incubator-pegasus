@@ -31,6 +31,7 @@
 #include <dsn/utility/math.h>
 #include <dsn/utility/utils.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 #include "greedy_load_balancer.h"
 #include "meta_data.h"
 #include "meta_admin_types.h"
@@ -278,6 +279,8 @@ greedy_load_balancer::generate_balancer_request(const partition_configuration &p
                                                 const rpc_address &from,
                                                 const rpc_address &to)
 {
+    FAIL_POINT_INJECT_F("generate_balancer_request", [](string_view name) { return nullptr; });
+
     configuration_balancer_request result;
     result.gpid = pc.pid;
 
@@ -1369,8 +1372,70 @@ bool greedy_load_balancer::apply_move(const move_info &move,
                                       /*out*/ migration_list &list,
                                       /*out*/ cluster_migration_info &cluster_info)
 {
-    // TBD(zlw)
-    return false;
+    int32_t app_id = move.pid.get_app_id();
+    rpc_address source = move.source_node, target = move.target_node;
+    if (cluster_info.apps_skew.find(app_id) == cluster_info.apps_skew.end() ||
+        cluster_info.replicas_count.find(source) == cluster_info.replicas_count.end() ||
+        cluster_info.replicas_count.find(target) == cluster_info.replicas_count.end() ||
+        cluster_info.apps_info.find(app_id) == cluster_info.apps_info.end()) {
+        return false;
+    }
+
+    app_migration_info app_info = cluster_info.apps_info[app_id];
+    if (app_info.partitions.size() <= move.pid.get_partition_index() ||
+        app_info.replicas_count.find(source) == app_info.replicas_count.end() ||
+        app_info.replicas_count.find(target) == app_info.replicas_count.end()) {
+        return false;
+    }
+    app_info.replicas_count[source]--;
+    app_info.replicas_count[target]++;
+
+    auto &pmap = app_info.partitions[move.pid.get_partition_index()];
+    rpc_address primary_addr;
+    for (const auto &kv : pmap) {
+        if (kv.second == partition_status::PS_PRIMARY) {
+            primary_addr = kv.first;
+        }
+    }
+    auto status = cluster_info.type == cluster_balance_type::COPY_SECONDARY
+                      ? partition_status::PS_SECONDARY
+                      : partition_status::PS_PRIMARY;
+    auto iter = pmap.find(source);
+    if (iter == pmap.end() || iter->second != status) {
+        return false;
+    }
+    pmap.erase(source);
+    pmap[target] = status;
+
+    auto iters = cluster_info.nodes_info.find(source);
+    auto itert = cluster_info.nodes_info.find(target);
+    if (iters == cluster_info.nodes_info.end() || itert == cluster_info.nodes_info.end()) {
+        return false;
+    }
+    node_migration_info node_source = iters->second;
+    node_migration_info node_target = itert->second;
+    auto it = node_source.partitions.find(move.source_disk_tag);
+    if (it == node_source.partitions.end()) {
+        return false;
+    }
+    it->second.erase(move.pid);
+    node_target.future_partitions.insert(move.pid);
+
+    // add into migration list and selected_pid
+    partition_configuration pc;
+    pc.pid = move.pid;
+    pc.primary = primary_addr;
+    list[move.pid] = generate_balancer_request(pc, move.type, source, target);
+    t_migration_result->emplace(move.pid, generate_balancer_request(pc, move.type, source, target));
+    selected_pids.insert(move.pid);
+
+    cluster_info.apps_skew[app_id] = get_skew(app_info.replicas_count);
+    cluster_info.apps_info[app_id] = app_info;
+    cluster_info.nodes_info[source] = node_source;
+    cluster_info.nodes_info[target] = node_target;
+    cluster_info.replicas_count[source]--;
+    cluster_info.replicas_count[target]++;
+    return true;
 }
 
 bool greedy_load_balancer::balance(meta_view view, migration_list &list)

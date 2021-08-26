@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/utility/defer.h>
+#include <dsn/utility/fail_point.h>
 #include "meta/greedy_load_balancer.h"
 
 namespace dsn {
@@ -258,6 +259,92 @@ TEST(greedy_load_balancer, get_max_load_disk)
     ASSERT_EQ(picked_disk, disk_tag);
     ASSERT_EQ(target_partitions.size(), 1);
     ASSERT_EQ(target_partitions.count(pid), 1);
+}
+
+TEST(greedy_load_balancer, apply_move)
+{
+    struct greedy_load_balancer::move_info minfo;
+    int32_t app_id = 1;
+    int32_t partition_index = 1;
+    minfo.pid = gpid(app_id, partition_index);
+    rpc_address source_node(1, 10086);
+    minfo.source_node = source_node;
+    std::string disk_tag = "disk1";
+    minfo.source_disk_tag = disk_tag;
+    rpc_address target_node(2, 10086);
+    minfo.target_node = target_node;
+    minfo.type = greedy_load_balancer::balance_type::move_primary;
+
+    greedy_load_balancer balancer(nullptr);
+    greedy_load_balancer::cluster_migration_info cluster_info;
+    cluster_info.type = cluster_balance_type::COPY_SECONDARY;
+    partition_set selected_pids;
+    migration_list list;
+    balancer.t_migration_result = &list;
+
+    // target_node is not found in cluster_info.replicas_count
+    auto res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // source_node is not found in cluster_info.replicas_count
+    cluster_info.apps_skew[app_id] = 1;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // target_node is not found in cluster_info.replicas_count
+    cluster_info.replicas_count[source_node] = 1;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // app_id is not found in cluster_info.app_skew
+    cluster_info.replicas_count[target_node] = 1;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // source_node and target_node are not found in app_info
+    greedy_load_balancer::app_migration_info app_info;
+    cluster_info.apps_info[app_id] = app_info;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // app_info.partitions.size() < partition_index
+    app_info.replicas_count[target_node] = 1;
+    app_info.replicas_count[source_node] = 1;
+    cluster_info.apps_info[app_id] = app_info;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // all of the partition status are not PS_SECONDARY
+    std::map<rpc_address, partition_status::type> partition_status;
+    partition_status[source_node] = partition_status::type::PS_PRIMARY;
+    cluster_info.apps_info[app_id].partitions.push_back(partition_status);
+    cluster_info.apps_info[app_id].partitions.push_back(partition_status);
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // target_node and source_node are not found in cluster_info.nodes_info
+    partition_status[source_node] = partition_status::type::PS_SECONDARY;
+    cluster_info.apps_info[app_id].partitions.clear();
+    cluster_info.apps_info[app_id].partitions.push_back(partition_status);
+    cluster_info.apps_info[app_id].partitions.push_back(partition_status);
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    // disk_tag is not found in node_info
+    greedy_load_balancer::node_migration_info target_info;
+    greedy_load_balancer::node_migration_info source_info;
+    cluster_info.nodes_info[target_node] = target_info;
+    cluster_info.nodes_info[source_node] = source_info;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    ASSERT_FALSE(res);
+
+    fail::setup();
+    fail::cfg("generate_balancer_request", "return()");
+    partition_set source_partition_set;
+    cluster_info.nodes_info[source_node].partitions[disk_tag] = source_partition_set;
+    res = balancer.apply_move(minfo, selected_pids, list, cluster_info);
+    fail::teardown();
+    ASSERT_TRUE(res);
 }
 
 TEST(greedy_load_balancer, pick_up_partition)
