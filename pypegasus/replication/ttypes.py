@@ -397,3 +397,120 @@ class query_cfg_response:
 
   def __ne__(self, other):
     return not (self == other)
+
+class request_meta:
+  """
+  Attributes:
+   - app_id
+   - partition_index
+   - client_timeout
+   - partition_hash
+   - is_backup_request
+  """
+
+  thrift_spec = (
+    None, # 0
+    (1, TType.I32, 'app_id', None, None, ), # 1
+    (2, TType.I32, 'partition_index', None, None, ), # 2
+    (3, TType.I32, 'client_timeout', None, None, ), # 3
+    (4, TType.I64, 'partition_hash', None, None, ), # 4
+    (5, TType.BOOL, 'is_backup_request', None, None, ), # 5
+  )
+
+  def __init__(self, app_id=None, partition_index=None, client_timeout=None, partition_hash=None, is_backup_request=None,):
+    self.app_id = app_id
+    self.partition_index = partition_index
+    self.client_timeout = client_timeout
+    self.partition_hash = partition_hash
+    self.is_backup_request = is_backup_request
+
+  def read(self, iprot):
+    if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None and fastbinary is not None:
+      fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))
+      return
+    iprot.readStructBegin()
+    while True:
+      (fname, ftype, fid) = iprot.readFieldBegin()
+      if ftype == TType.STOP:
+        break
+      if fid == 1:
+        if ftype == TType.I32:
+          self.app_id = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 2:
+        if ftype == TType.I32:
+          self.partition_index = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 3:
+        if ftype == TType.I32:
+          self.client_timeout = iprot.readI32()
+        else:
+          iprot.skip(ftype)
+      elif fid == 4:
+        if ftype == TType.I64:
+          self.partition_hash = iprot.readI64()
+        else:
+          iprot.skip(ftype)
+      elif fid == 5:
+        if ftype == TType.BOOL:
+          self.is_backup_request = iprot.readBool()
+        else:
+          iprot.skip(ftype)
+      else:
+        iprot.skip(ftype)
+      iprot.readFieldEnd()
+    iprot.readStructEnd()
+
+  def write(self, oprot):
+    if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated and self.thrift_spec is not None and fastbinary is not None:
+      oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))
+      return
+    oprot.writeStructBegin('request_meta')
+    if self.app_id is not None:
+      oprot.writeFieldBegin('app_id', TType.I32, 1)
+      oprot.writeI32(self.app_id)
+      oprot.writeFieldEnd()
+    if self.partition_index is not None:
+      oprot.writeFieldBegin('partition_index', TType.I32, 2)
+      oprot.writeI32(self.partition_index)
+      oprot.writeFieldEnd()
+    if self.client_timeout is not None:
+      oprot.writeFieldBegin('client_timeout', TType.I32, 3)
+      oprot.writeI32(self.client_timeout)
+      oprot.writeFieldEnd()
+    if self.partition_hash is not None:
+      oprot.writeFieldBegin('partition_hash', TType.I64, 4)
+      oprot.writeI64(self.partition_hash)
+      oprot.writeFieldEnd()
+    if self.is_backup_request is not None:
+      oprot.writeFieldBegin('is_backup_request', TType.BOOL, 5)
+      oprot.writeBool(self.is_backup_request)
+      oprot.writeFieldEnd()
+    oprot.writeFieldStop()
+    oprot.writeStructEnd()
+
+  def validate(self):
+    return
+
+
+  def __hash__(self):
+    value = 17
+    value = (value * 31) ^ hash(self.app_id)
+    value = (value * 31) ^ hash(self.partition_index)
+    value = (value * 31) ^ hash(self.client_timeout)
+    value = (value * 31) ^ hash(self.partition_hash)
+    value = (value * 31) ^ hash(self.is_backup_request)
+    return value
+
+  def __repr__(self):
+    L = ['%s=%r' % (key, value)
+      for key, value in self.__dict__.items()]
+    return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+  def __eq__(self, other):
+    return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+  def __ne__(self, other):
+    return not (self == other)
