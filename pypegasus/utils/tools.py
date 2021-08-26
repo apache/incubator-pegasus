@@ -81,8 +81,8 @@ def restore_key(merge_key):
     sort_key = merge_key[2+hash_key_len:]
 
     if six.PY3:
-        hash_key = hash_key.decode("utf8")
-        sort_key = sort_key.decode("utf8")
+        hash_key = hash_key.decode("utf8", "ignore")
+        sort_key = sort_key.decode("utf8", "ignore")
     
     return hash_key, sort_key
 

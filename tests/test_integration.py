@@ -230,14 +230,15 @@ class TestIntegration(unittest.TestCase):
                 break
 
     @inlineCallbacks
-    def test_2of5_replica_stop(self):
-        yield self.init(3, 5)
+    def test_2of6_replica_stop(self):
+        yield self.init(3, 6)
         for i in range(self.DATA_COUNT):
             (ret, ign) = yield self.c.set(self.TEST_HKEY + str(i), self.TEST_SKEY, self.TEST_VALUE)
             self.assertEqual(ret, error_types.ERR_OK.value)
 
         for i in range(1, 3):
             ServerOperator.stop_1_replica(i)
+            time.sleep(5)
 
             yield self.check_data()
 
@@ -252,7 +253,7 @@ class TestIntegration(unittest.TestCase):
         for i in range(2):
             ServerOperator.stop_1_replica(1)
             ServerOperator.stop_1_meta(i + 1)
-            time.sleep(3)
+            time.sleep(30)
 
             yield self.check_data()
 

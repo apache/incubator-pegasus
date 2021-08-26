@@ -32,8 +32,6 @@ Before testing, you should firstly start an onebox cluster, referring to [`how t
 
 ATTENTION: you should firstly set proper pegasus shell path in [`test_integration.py`](test_integration.py#L10).
 
-Can't pass test_integration.test_2of5_replica_stop in this preview version
-
 ## Benchmark test:
 
 `cd tests && python -m unittest test_benchmark.TestBasics`

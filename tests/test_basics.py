@@ -172,7 +172,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    self.TEST_SKEY + rand_key + '_0',
                                                    self.TEST_SKEY + rand_key + '_' + '9' * len(str(count)),
-                                                   opt)
+                                                   opt,
+                                                   500)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
@@ -196,7 +197,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    '',
                                                    '',
-                                                   opt)
+                                                   opt,
+                                                   500)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
@@ -221,8 +223,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(rand_hkey,
                                                    '',
                                                    '',
-                                                   opt)
-
+                                                   opt,
+                                                   500)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         self.assertEqual(bytesmap_to_strmap(get_kvs), kvs)
@@ -248,7 +250,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(rand_hkey,
                                                    '',
                                                    '',
-                                                   opt)
+                                                   opt,
+                                                   500)
         get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
@@ -276,7 +279,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    start_key,
                                                    stop_key,
-                                                   opt)
+                                                   opt,
+                                                   500)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 0)
 
@@ -286,7 +290,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    start_key,
                                                    stop_key,
-                                                   opt)
+                                                   opt,
+                                                   500)
         get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 1)
@@ -299,7 +304,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    start_key,
                                                    stop_key,
-                                                   opt)
+                                                   opt,
+                                                   500)
         get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 1)
@@ -312,7 +318,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    start_key,
                                                    stop_key,
-                                                   opt)
+                                                   opt,
+                                                   500)
         get_kvs = bytesmap_to_strmap(get_kvs)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), 2)
@@ -335,7 +342,8 @@ class TestBasics(unittest.TestCase):
         (rc, get_kvs) = yield self.c.multi_get_opt(self.TEST_HKEY,
                                                    self.TEST_SKEY + rand_key + '_0',
                                                    self.TEST_SKEY + rand_key + '_' + '9' * len(str(count)),
-                                                   opt)
+                                                   opt,
+                                                   500)
         self.assertEqual(rc, error_types.ERR_OK.value)
         self.assertEqual(len(get_kvs), len(kvs))
         for k in kvs.keys():
