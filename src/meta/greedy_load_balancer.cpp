@@ -1012,7 +1012,8 @@ void greedy_load_balancer::balance_cluster()
         return;
     }
 
-    // TBD(zlw): copy primary
+    cluster_replica_balance(
+        t_global_view, cluster_balance_type::COPY_SECONDARY, *t_migration_result);
 }
 
 bool greedy_load_balancer::cluster_replica_balance(const meta_view *global_view,
