@@ -51,10 +51,30 @@ private:
         _ddd_partitions[partition.config.pid] = std::move(partition);
     }
 
-    perf_counter_wrapper _recent_choose_primary_fail_count;
+    bool in_black_list(dsn::rpc_address addr)
+    {
+        dsn::zauto_read_lock l(_black_list_lock);
+        return _assign_secondary_black_list.count(addr) != 0;
+    }
+
     meta_service *_svc;
-    mutable zlock _ddd_partitions_lock;
+    perf_counter_wrapper _recent_choose_primary_fail_count;
+
+    mutable zlock _ddd_partitions_lock; // [
     std::map<gpid, ddd_partition_info> _ddd_partitions;
+    // ]
+
+    // NOTICE: the command handler is called in THREADPOOL_DEFAULT
+    // but when adding secondary, the black list is accessed in THREADPOOL_META_STATE
+    // so we need a lock to protect it
+    dsn::zrwlock_nr _black_list_lock; // [
+    std::set<dsn::rpc_address> _assign_secondary_black_list;
+    // ]
+    dsn_handle_t _ctrl_assign_secondary_black_list;
+
+    int32_t _mutation_2pc_min_replica_count;
+    dsn_handle_t _ctrl_assign_delay_ms;
+    uint64_t _replica_assign_delay_ms_for_dropouts;
 };
 
 } // namespace replication
