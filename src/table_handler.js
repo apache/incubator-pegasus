@@ -39,6 +39,7 @@ function TableHandler(cluster, tableName, callback) {
     this.app_id = 0;
     this.partition_count = 0;
     this.partitions = {};       //partition pid -> primary rpc_address
+    this.ballots = {};          //partition pid -> ballot
 
     if (this.cluster.metaSession.connectionError) {
         //Failed to get meta sessions
@@ -119,6 +120,7 @@ TableHandler.prototype.updateResponse = function (oldResp, newResp) {
 
     let current_sessions = this.cluster.replicaSessions;
     this.partitions = [];
+    this.ballots = [];
     this.cluster.ReplicaSessions = [];
     let connected_rpc = [];
 
@@ -127,7 +129,14 @@ TableHandler.prototype.updateResponse = function (oldResp, newResp) {
         let partition = newResp.partitions[i];
         let primary_addr = partition.primary;
         this.partitions[partition.pid.get_pidx()] = primary_addr;
+        this.ballots[partition.pid.get_pidx()] = partition.ballot;
 
+        // table is partition split, and child partition is not ready
+        // child requests should be redirected to its parent partition
+        // this will be happened when query meta is called during partition split
+        if (partition.ballot < 0) {
+            continue;
+        }
         if (tools.isAddrExist(connected_rpc, primary_addr) === true) {
             continue;
         }
@@ -194,6 +203,16 @@ TableInfo.prototype.getGpidByHash = function(hash_value) {
     while (pidx < 0 && pidx < this.tableHandler.partition_count) {
         pidx += this.tableHandler.partition_count;
     }
+    // table is partition split, and child partition is not ready
+    // child requests should be redirected to its parent partition
+    if(this.tableHandler.ballots[pidx] < 0) {
+        log.info('table[%s] is executing partition split, partition[%d] is not ready, requests will send to parent partition[%d]', 
+            this.tableHandler.tableName,
+            pidx,
+            pidx - this.tableHandler.partition_count / 2);
+        pidx -= this.tableHandler.partition_count / 2;
+    }
+
     return new Gpid({
         'app_id': app_id,
         'pidx': pidx,

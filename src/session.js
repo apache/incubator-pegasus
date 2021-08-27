@@ -349,6 +349,7 @@ ReplicaSession.prototype.onRpcReply = function (err, round) {
     case ErrorType.ERR_SESSION_RESET:
     case ErrorType.ERR_OBJECT_NOT_FOUND: // replica server doesn't serve this gpid
     case ErrorType.ERR_INVALID_STATE:    // replica server is not primary
+    case ErrorType.ERR_PARENT_PARTITION_MISUSED: // partition finish split, need query meta
         log.warn('Table %s: replica server not serve for gpid(%d, %d), err_code is %s',
             round.tableHandler.tableName,
             op.pid.get_app_id(),
