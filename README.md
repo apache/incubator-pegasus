@@ -208,7 +208,9 @@ Each exception has an error type to indicate reason of failure, here are some co
 ## Test
 Tests rely on pegasus onebox cluster, referring to [Using pegasus onebox](https://github.com/XiaoMi/pegasus/wiki/%E4%BD%93%E9%AA%8Conebox%E9%9B%86%E7%BE%A4)  
 Before test, you should start onebox cluster.
-
+```
+npm test
+```
 
 ## TODO
 * [x] supplement README doc
