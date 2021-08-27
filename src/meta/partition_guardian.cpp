@@ -601,7 +601,20 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
                                               const dsn::gpid &gpid,
                                               const configuration_proposal_action &act)
 {
-    // TBD(zlw):
+    newly_partitions *np = get_newly_partitions(*(view.nodes), act.node);
+    if (np == nullptr) {
+        ddebug("can't get the newly_partitions extension structure for node(%s), "
+               "the node may be dead and removed",
+               act.node.to_string());
+    } else {
+        if (act.type == config_type::CT_ASSIGN_PRIMARY) {
+            np->newly_remove_primary(gpid.get_app_id(), false);
+        } else if (act.type == config_type::CT_UPGRADE_TO_PRIMARY) {
+            np->newly_remove_primary(gpid.get_app_id(), true);
+        } else if (act.type == config_type::CT_UPGRADE_TO_SECONDARY) {
+            np->newly_remove_partition(gpid.get_app_id());
+        }
+    }
 }
 } // namespace replication
 } // namespace dsn
