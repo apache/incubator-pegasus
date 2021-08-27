@@ -18,7 +18,7 @@ class ThriftHeader(object):
     HEADER_LENGTH = 48
     HEADER_TYPE = b'THFT'
 
-    def __init__(self, gpid):
+    def __init__(self, gpid, partition_hash=0):
         self.hdr_version = 0
         self.header_length = self.HEADER_LENGTH
         self.header_crc32 = 0
@@ -28,7 +28,7 @@ class ThriftHeader(object):
         self.partition_index = gpid.get_pidx()
         self.client_timeout = 0
         self.thread_hash = 0
-        self.partition_hash = 0
+        self.partition_hash = partition_hash
 
     def to_bytes(self):
         v = (self.HEADER_TYPE,
@@ -50,9 +50,9 @@ class ThriftHeader(object):
 
 
 class ClientOperator(object):
-    def __init__(self, gpid=gpid(), request=None):
+    def __init__(self, gpid=gpid(), request=None, partition_hash=0):
         self.pid = gpid
-        self.header = ThriftHeader(gpid)
+        self.header = ThriftHeader(gpid, partition_hash)
         self.error_code = error_code()
         self.request = request
         self.response = None
@@ -68,8 +68,8 @@ class ClientOperator(object):
 
 
 class QueryCfgOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX", TMessageType.CALL, seqid)
@@ -83,8 +83,8 @@ class QueryCfgOperator(ClientOperator):
 
 
 class RrdbTtlOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_TTL", TMessageType.CALL, seqid)
@@ -99,8 +99,8 @@ class RrdbTtlOperator(ClientOperator):
 
 
 class RrdbGetOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_GET", TMessageType.CALL, seqid)
@@ -115,8 +115,8 @@ class RrdbGetOperator(ClientOperator):
 
 
 class RrdbMultiGetOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_MULTI_GET", TMessageType.CALL, seqid)
@@ -138,8 +138,8 @@ class RrdbMultiGetOperator(ClientOperator):
 
 
 class RrdbPutOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_PUT", TMessageType.CALL, seqid)
@@ -153,8 +153,8 @@ class RrdbPutOperator(ClientOperator):
 
 
 class RrdbMultiPutOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_MULTI_PUT", TMessageType.CALL, seqid)
@@ -168,8 +168,8 @@ class RrdbMultiPutOperator(ClientOperator):
 
 
 class RrdbRemoveOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_REMOVE", TMessageType.CALL, seqid)
@@ -183,8 +183,8 @@ class RrdbRemoveOperator(ClientOperator):
 
 
 class RrdbMultiRemoveOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_MULTI_REMOVE", TMessageType.CALL, seqid)
@@ -198,8 +198,8 @@ class RrdbMultiRemoveOperator(ClientOperator):
 
 
 class RrdbSortkeyCountOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_SORTKEY_COUNT", TMessageType.CALL, seqid)
@@ -213,8 +213,8 @@ class RrdbSortkeyCountOperator(ClientOperator):
 
 
 class RrdbGetScannerOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_GET_SCANNER", TMessageType.CALL, seqid)
@@ -230,8 +230,8 @@ class RrdbGetScannerOperator(ClientOperator):
 
 
 class RrdbScanOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_SCAN", TMessageType.CALL, seqid)
@@ -247,8 +247,8 @@ class RrdbScanOperator(ClientOperator):
 
 
 class RrdbClearScannerOperator(ClientOperator):
-    def __init__(self, gpid, request):
-        ClientOperator.__init__(self, gpid, request)
+    def __init__(self, gpid, request, partition_hash):
+        ClientOperator.__init__(self, gpid, request, partition_hash)
 
     def send_data(self, oprot, seqid):
         oprot.writeMessageBegin("RPC_RRDB_RRDB_CLEAR_SCANNER", TMessageType.CALL, seqid)
