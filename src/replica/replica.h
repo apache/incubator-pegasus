@@ -91,6 +91,7 @@ const char *manual_compaction_status_to_string(manual_compaction_status status);
     if (_validate_partition_hash) {                                                                \
         if (_split_mgr->should_reject_request()) {                                                 \
             response_client_##op_type(request, ERR_SPLITTING);                                     \
+            _counter_recent_##op_type##_splitting_reject_count->increment();                       \
             return;                                                                                \
         }                                                                                          \
         if (!_split_mgr->check_partition_hash(                                                     \
@@ -567,6 +568,8 @@ private:
     perf_counter_wrapper _counter_recent_read_throttling_reject_count;
     perf_counter_wrapper _counter_recent_backup_request_throttling_delay_count;
     perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
+    perf_counter_wrapper _counter_recent_write_splitting_reject_count;
+    perf_counter_wrapper _counter_recent_read_splitting_reject_count;
     std::vector<perf_counter *> _counters_table_level_latency;
     perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
     perf_counter_wrapper _counter_backup_request_qps;

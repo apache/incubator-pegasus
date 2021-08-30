@@ -112,6 +112,14 @@ replica::replica(
     _counter_dup_disabled_non_idempotent_write_count.init_app_counter(
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 
+    counter_str = fmt::format("recent.read.splitting.reject.count@{}", gpid);
+    _counter_recent_read_splitting_reject_count.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
+
+    counter_str = fmt::format("recent.write.splitting.reject.count@{}", gpid);
+    _counter_recent_write_splitting_reject_count.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
+
     // init table level latency perf counters
     init_table_level_latency_counters();
 
