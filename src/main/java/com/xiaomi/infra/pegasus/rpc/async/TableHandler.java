@@ -131,15 +131,32 @@ public class TableHandler extends Table {
     return tableConfig_.get().replicas.get(index);
   }
 
+  public gpid getGpidByHash(long hashValue) {
+    int index = (int) remainder_unsigned(hashValue, getPartitionCount());
+    final ReplicaConfiguration replicaConfiguration = tableConfig_.get().replicas.get(index);
+    // table is partition split, and child partition is not ready
+    // child requests should be redirected to its parent partition
+    if (tableConfig_.get().replicas.get(index).ballot < 0) {
+      logger.info(
+          "Table[{}] is executing partition split, partition[{}] is not ready, requests will send to parent partition[{}]",
+          tableName_,
+          index,
+          index - getPartitionCount() / 2);
+      index -= getPartitionCount() / 2;
+    }
+    return new gpid(appID_, index);
+  }
+
   // update the table configuration & appID_ according to to queried response
   // there should only be one thread to do the table config update
   void initTableConfiguration(query_cfg_response resp) {
+    int partitionCount = resp.getPartition_count();
     TableConfiguration oldConfig = tableConfig_.get();
 
     TableConfiguration newConfig = new TableConfiguration();
     newConfig.updateVersion = (oldConfig == null) ? 1 : (oldConfig.updateVersion + 1);
-    newConfig.replicas = new ArrayList<>(resp.getPartition_count());
-    for (int i = 0; i != resp.getPartition_count(); ++i) {
+    newConfig.replicas = new ArrayList<>(partitionCount);
+    for (int i = 0; i != partitionCount; ++i) {
       ReplicaConfiguration newReplicaConfig = new ReplicaConfiguration();
       newReplicaConfig.pid.set_app_id(resp.getApp_id());
       newReplicaConfig.pid.set_pidx(i);
@@ -147,29 +164,38 @@ public class TableHandler extends Table {
     }
 
     // create sessions for primary and secondaries
-    FutureGroup<Void> futureGroup = new FutureGroup<>(resp.getPartition_count());
+    FutureGroup<Void> futureGroup = new FutureGroup<>(partitionCount);
     for (partition_configuration pc : resp.getPartitions()) {
-      ReplicaConfiguration s = newConfig.replicas.get(pc.getPid().get_pidx());
-      s.ballot = pc.ballot;
+      int index = pc.getPid().get_pidx();
+      ReplicaConfiguration replicaConfig = newConfig.replicas.get(index);
+      replicaConfig.ballot = pc.ballot;
 
+      // table is partition split, and child partition is not ready
+      // child requests should be redirected to its parent partition
+      // this will be happened when query meta is called during partition split
+      if (replicaConfig.ballot < 0) {
+        continue;
+      }
+
+      replicaConfig.primaryAddress = pc.getPrimary();
       // If the primary address is invalid, we don't create secondary session either.
       // Because all of these sessions will be recreated later.
-      s.primaryAddress = pc.primary;
-      if (!pc.primary.isInvalid()) {
-        s.primarySession = tryConnect(pc.primary, futureGroup);
+      if (replicaConfig.primaryAddress.isInvalid()) {
+        continue;
+      }
+      replicaConfig.primarySession = tryConnect(replicaConfig.primaryAddress, futureGroup);
 
-        // backup request is enabled, get all secondary sessions
-        s.secondarySessions.clear();
-        if (isBackupRequestEnabled()) {
-          // secondary sessions
-          pc.secondaries.forEach(
-              secondary -> {
-                ReplicaSession session = tryConnect(secondary, futureGroup);
-                if (session != null) {
-                  s.secondarySessions.add(session);
-                }
-              });
-        }
+      replicaConfig.secondarySessions.clear();
+      // backup request is enabled, get all secondary sessions
+      if (isBackupRequestEnabled()) {
+        // secondary sessions
+        pc.secondaries.forEach(
+            secondary -> {
+              ReplicaSession session = tryConnect(secondary, futureGroup);
+              if (session != null) {
+                replicaConfig.secondarySessions.add(session);
+              }
+            });
       }
     }
 
@@ -200,6 +226,13 @@ public class TableHandler extends Table {
     return session;
   }
 
+  boolean isPartitionCountValid(int old_count, int resp_count) {
+    return ((old_count == resp_count) // normal case
+        || (old_count * 2 == resp_count) // table start partition split
+        || (old_count == resp_count * 2) // table partition split cancel
+    );
+  }
+
   void onUpdateConfiguration(final query_cfg_operator op) {
     error_types err = MetaSession.getMetaServiceError(op);
     if (err != error_types.ERR_OK) {
@@ -207,7 +240,8 @@ public class TableHandler extends Table {
     } else {
       logger.info("query meta for table({}) received response", tableName_);
       query_cfg_response resp = op.get_response();
-      if (resp.app_id != appID_ || resp.partition_count != tableConfig_.get().replicas.size()) {
+      if (resp.app_id != appID_
+          || !isPartitionCountValid(tableConfig_.get().replicas.size(), resp.partition_count)) {
         logger.warn(
             "table({}) meta reset, app_id({}->{}), partition_count({}->{})",
             tableName_,
@@ -293,6 +327,8 @@ public class TableHandler extends Table {
       case ERR_SESSION_RESET: // <- connection with the server failed
       case ERR_OBJECT_NOT_FOUND: // <- replica server doesn't serve this gpid
       case ERR_INVALID_STATE: // <- replica server is not primary
+      case ERR_PARENT_PARTITION_MISUSED: // <- send request to wrong partition because of partition
+        // split
         logger.warn(
             "{}: replica server({}) doesn't serve gpid({}), operator({}), try({}), error_code({}), need query meta",
             tableName_,

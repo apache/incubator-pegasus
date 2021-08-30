@@ -36,12 +36,6 @@ public abstract class Table {
     return KeyHasher.DEFAULT.hash(data);
   }
 
-  public final gpid getGpidByHash(long hash_value) {
-    com.xiaomi.infra.pegasus.base.gpid result = new com.xiaomi.infra.pegasus.base.gpid(appID_, -1);
-    result.set_pidx((int) remainder_unsigned(hash_value, getPartitionCount()));
-    return result;
-  }
-
   public final gpid[] getAllGpid() {
     int count = getPartitionCount();
     com.xiaomi.infra.pegasus.base.gpid[] ret = new com.xiaomi.infra.pegasus.base.gpid[count];
@@ -70,6 +64,8 @@ public abstract class Table {
   public abstract void operate(client_operator op, int timeoutMs) throws ReplicationException;
 
   public abstract void asyncOperate(client_operator op, ClientOPCallback callback, int timeoutMs);
+
+  public abstract gpid getGpidByHash(long hashValue);
 
   public abstract EventExecutor getExecutor();
 

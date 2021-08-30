@@ -70,7 +70,6 @@ public interface PegasusTableInterface {
     @Override
     public void operationComplete(Future<Boolean> future) throws Exception;
   }
-
   /**
    * Check value existence for a specific (hashKey, sortKey) pair of current table, async version
    *

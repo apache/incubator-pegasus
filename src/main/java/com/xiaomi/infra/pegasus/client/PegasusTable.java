@@ -1925,6 +1925,13 @@ public class PegasusTable implements PegasusTableInterface {
         break;
       case ERR_INVALID_DATA:
         message = " The request maybe too large!";
+        break;
+      case ERR_SPLITTING:
+        message = " The table is executing partition split!";
+        break;
+      case ERR_PARENT_PARTITION_MISUSED:
+        message = " The partition split finished, is updating config!";
+        break;
     }
     promise.setFailure(
         new PException(new ReplicationException(op.rpc_error.errno, header + message)));
