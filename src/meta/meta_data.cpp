@@ -78,6 +78,29 @@ void maintain_drops(std::vector<rpc_address> &drops, const rpc_address &node, co
     when_update_replicas(t, action);
 }
 
+bool collect_replica(meta_view view, const rpc_address &node, const replica_info &info)
+{
+    partition_configuration &pc = *get_config(*view.apps, info.pid);
+    // current partition is during partition split
+    if (pc.ballot == invalid_ballot)
+        return false;
+    config_context &cc = *get_config_context(*view.apps, info.pid);
+    if (is_member(pc, node)) {
+        cc.collect_serving_replica(node, info);
+        return true;
+    }
+
+    // compare current node's replica information with current proposal,
+    // and try to find abnormal situations in send proposal
+    cc.adjust_proposal(node, info);
+
+    // adjust the drop list
+    int ans = cc.collect_drop_replica(node, info);
+    dassert(cc.check_order(), "");
+
+    return info.status == partition_status::PS_POTENTIAL_SECONDARY || ans != -1;
+}
+
 proposal_actions::proposal_actions() : from_balancer(false) { reset_tracked_current_learner(); }
 
 void proposal_actions::reset_tracked_current_learner()

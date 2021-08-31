@@ -538,6 +538,17 @@ void maintain_drops(/*inout*/ std::vector<dsn::rpc_address> &drops,
                     const dsn::rpc_address &node,
                     config_type::type t);
 
+//
+// When replica infos are collected from replica servers, meta-server
+// will use this to check if a replica on a server is useful
+// params:
+//   node: the owner of the replica info
+//   info: the replica info on node
+// ret:
+//   return true if the replica is accepted as an useful replica. Or-else false.
+//   WARNING: if false is returned, the replica on node may be garbage-collected
+bool collect_replica(meta_view view, const rpc_address &node, const replica_info &info);
+
 inline bool has_seconds_expired(uint64_t second_ts) { return second_ts * 1000 < dsn_now_ms(); }
 
 inline bool has_milliseconds_expired(uint64_t milliseconds_ts)

@@ -108,11 +108,6 @@ public:
         return std::string("unknown");
     }
     virtual void score(meta_view view, double &primary_stddev, double &total_stddev) {}
-    virtual bool
-    collect_replica(meta_view view, const dsn::rpc_address &node, const replica_info &info)
-    {
-        return false;
-    }
     virtual bool construct_replica(meta_view view, const dsn::gpid &pid, int max_replica_count)
     {
         return false;

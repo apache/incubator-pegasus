@@ -890,8 +890,8 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                         }
                     }
                 } else if (app->status == app_status::AS_AVAILABLE) {
-                    bool is_useful_replica = _meta_svc->get_balancer()->collect_replica(
-                        {&_all_apps, &_nodes}, request.node, rep);
+                    bool is_useful_replica =
+                        collect_replica({&_all_apps, &_nodes}, request.node, rep);
                     if (!is_useful_replica) {
                         if (level <= meta_function_level::fl_steady) {
                             ddebug("gpid(%d.%d) on node(%s) is useless, but current function level "
@@ -2063,8 +2063,7 @@ error_code server_state::construct_partitions(
 
         for (replica_info &r : query_resp.replicas) {
             dassert(_all_apps.find(r.pid.get_app_id()) != _all_apps.end(), "");
-            bool is_accepted = _meta_svc->get_balancer()->collect_replica(
-                {&_all_apps, &_nodes}, replica_nodes[i], r);
+            bool is_accepted = collect_replica({&_all_apps, &_nodes}, replica_nodes[i], r);
             if (is_accepted) {
                 ddebug("accept replica(%s) from node(%s)",
                        boost::lexical_cast<std::string>(r).c_str(),

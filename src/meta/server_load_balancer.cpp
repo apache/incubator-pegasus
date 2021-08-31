@@ -932,31 +932,6 @@ pc_status simple_load_balancer::cure(meta_view view,
     return status;
 }
 
-bool simple_load_balancer::collect_replica(meta_view view,
-                                           const rpc_address &node,
-                                           const replica_info &info)
-{
-    partition_configuration &pc = *get_config(*view.apps, info.pid);
-    // current partition is during partition split
-    if (pc.ballot == invalid_ballot)
-        return false;
-    config_context &cc = *get_config_context(*view.apps, info.pid);
-    if (is_member(pc, node)) {
-        cc.collect_serving_replica(node, info);
-        return true;
-    }
-
-    // compare current node's replica information with current proposal,
-    // and try to find abnormal situations in send proposal
-    cc.adjust_proposal(node, info);
-
-    // adjust the drop list
-    int ans = cc.collect_drop_replica(node, info);
-    dassert(cc.check_order(), "");
-
-    return info.status == partition_status::PS_POTENTIAL_SECONDARY || ans != -1;
-}
-
 bool simple_load_balancer::construct_replica(meta_view view, const gpid &pid, int max_replica_count)
 {
     partition_configuration &pc = *get_config(*view.apps, pid);
