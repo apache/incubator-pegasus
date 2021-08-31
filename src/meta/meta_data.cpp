@@ -78,6 +78,73 @@ void maintain_drops(std::vector<rpc_address> &drops, const rpc_address &node, co
     when_update_replicas(t, action);
 }
 
+bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
+{
+    partition_configuration &pc = *get_config(*view.apps, pid);
+    config_context &cc = *get_config_context(*view.apps, pid);
+
+    dassert(replica_count(pc) == 0,
+            "replica count of gpid(%d.%d) must be 0",
+            pid.get_app_id(),
+            pid.get_partition_index());
+    dassert(
+        max_replica_count > 0, "max replica count is %d, should be at lease 1", max_replica_count);
+
+    std::vector<dropped_replica> &drop_list = cc.dropped;
+    if (drop_list.empty()) {
+        dwarn("construct for (%d.%d) failed, coz no replicas collected",
+              pid.get_app_id(),
+              pid.get_partition_index());
+        return false;
+    }
+
+    // treat last server in drop_list as the primary
+    const dropped_replica &server = drop_list.back();
+    dassert(server.ballot != invalid_ballot,
+            "the ballot of server must not be invalid_ballot, node = %s",
+            server.node.to_string());
+    pc.primary = server.node;
+    pc.ballot = server.ballot;
+    pc.partition_flags = 0;
+    pc.max_replica_count = max_replica_count;
+
+    ddebug("construct for (%d.%d), select %s as primary, ballot(%" PRId64
+           "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+           pid.get_app_id(),
+           pid.get_partition_index(),
+           server.node.to_string(),
+           server.ballot,
+           server.last_committed_decree,
+           server.last_prepared_decree);
+
+    drop_list.pop_back();
+
+    // we put max_replica_count-1 recent replicas to last_drops, in case of the DDD-state when the
+    // only primary dead
+    // when add node to pc.last_drops, we don't remove it from our cc.drop_list
+    dassert(pc.last_drops.empty(),
+            "last_drops of partition(%d.%d) must be empty",
+            pid.get_app_id(),
+            pid.get_partition_index());
+    for (auto iter = drop_list.rbegin(); iter != drop_list.rend(); ++iter) {
+        if (pc.last_drops.size() + 1 >= max_replica_count)
+            break;
+        // similar to cc.drop_list, pc.last_drop is also a stack structure
+        pc.last_drops.insert(pc.last_drops.begin(), iter->node);
+        ddebug("construct for (%d.%d), select %s into last_drops, ballot(%" PRId64
+               "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+               pid.get_app_id(),
+               pid.get_partition_index(),
+               iter->node.to_string(),
+               iter->ballot,
+               iter->last_committed_decree,
+               iter->last_prepared_decree);
+    }
+
+    cc.prefered_dropped = (int)drop_list.size() - 1;
+    return true;
+}
+
 bool collect_replica(meta_view view, const rpc_address &node, const replica_info &info)
 {
     partition_configuration &pc = *get_config(*view.apps, info.pid);

@@ -148,15 +148,6 @@ public:
     virtual void
     score(meta_view view, double &primary_stddev /*out*/, double &total_stddev /*out*/) = 0;
 
-    //
-    // Try to construct a replica-group by current replica-infos of a gpid
-    // ret:
-    //   if construct the replica successfully, return true.
-    //   Notice: as long as we can construct something from current infos, we treat it as a
-    //   success
-    //
-    virtual bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) = 0;
-
     void register_proposals(meta_view view,
                             const configuration_balancer_request &req,
                             configuration_balancer_response &resp);
@@ -291,8 +282,6 @@ public:
 
     pc_status
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action) override;
-
-    bool construct_replica(meta_view view, const gpid &pid, int max_replica_count) override;
 
     void register_ctrl_commands() override;
 

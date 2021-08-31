@@ -538,7 +538,13 @@ void maintain_drops(/*inout*/ std::vector<dsn::rpc_address> &drops,
                     const dsn::rpc_address &node,
                     config_type::type t);
 
-//
+// Try to construct a replica-group by current replica-infos of a gpid
+// ret:
+//   if construct the replica successfully, return true.
+//   Notice: as long as we can construct something from current infos, we treat it as a
+//   success
+bool construct_replica(meta_view view, const gpid &pid, int max_replica_count);
+
 // When replica infos are collected from replica servers, meta-server
 // will use this to check if a replica on a server is useful
 // params:

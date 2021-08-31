@@ -108,10 +108,6 @@ public:
         return std::string("unknown");
     }
     virtual void score(meta_view view, double &primary_stddev, double &total_stddev) {}
-    virtual bool construct_replica(meta_view view, const dsn::gpid &pid, int max_replica_count)
-    {
-        return false;
-    }
 };
 
 void meta_service_test_app::call_update_configuration(

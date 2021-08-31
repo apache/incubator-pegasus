@@ -2087,8 +2087,8 @@ error_code server_state::construct_partitions(
             ddebug("ignore constructing partitions for dropping app(%d)", app->app_id);
         } else {
             for (partition_configuration &pc : app->partitions) {
-                bool is_succeed = _meta_svc->get_balancer()->construct_replica(
-                    {&_all_apps, &_nodes}, pc.pid, app->max_replica_count);
+                bool is_succeed =
+                    construct_replica({&_all_apps, &_nodes}, pc.pid, app->max_replica_count);
                 if (is_succeed) {
                     ddebug("construct partition(%d.%d) succeed: %s",
                            app->app_id,
