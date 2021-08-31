@@ -570,6 +570,7 @@ private:
     perf_counter_wrapper _counter_recent_backup_request_throttling_reject_count;
     perf_counter_wrapper _counter_recent_write_splitting_reject_count;
     perf_counter_wrapper _counter_recent_read_splitting_reject_count;
+    perf_counter_wrapper _counter_recent_write_bulk_load_ingestion_reject_count;
     std::vector<perf_counter *> _counters_table_level_latency;
     perf_counter_wrapper _counter_dup_disabled_non_idempotent_write_count;
     perf_counter_wrapper _counter_backup_request_qps;

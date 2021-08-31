@@ -109,7 +109,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     if (_is_bulk_load_ingestion) {
         if (request->rpc_code() != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
             // reject write requests during ingestion
-            _stub->_counter_bulk_load_ingestion_reject_write_count->increment();
+            _counter_recent_write_bulk_load_ingestion_reject_count->increment();
             response_client_write(request, ERR_OPERATION_DISABLED);
         } else {
             response_client_write(request, ERR_NO_NEED_OPERATE);

@@ -120,6 +120,10 @@ replica::replica(
     _counter_recent_write_splitting_reject_count.init_app_counter(
         "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
 
+    counter_str = fmt::format("recent.write.bulk.load.ingestion.reject.count@{}", gpid);
+    _counter_recent_write_bulk_load_ingestion_reject_count.init_app_counter(
+        "eon.replica", counter_str.c_str(), COUNTER_TYPE_VOLATILE_NUMBER, counter_str.c_str());
+
     // init table level latency perf counters
     init_table_level_latency_counters();
 

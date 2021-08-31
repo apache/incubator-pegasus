@@ -379,11 +379,6 @@ void replica_stub::install_perf_counters()
                                                      "bulk.load.failed.count",
                                                      COUNTER_TYPE_VOLATILE_NUMBER,
                                                      "current bulk load failed count");
-    _counter_bulk_load_ingestion_reject_write_count.init_app_counter(
-        "eon.replica_stub",
-        "bulk.load.ingestion.reject.write.count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "bulk load ingestion reject write requests count");
     _counter_bulk_load_download_file_succ_count.init_app_counter(
         "eon.replica_stub",
         "bulk.load.download.file.success.count",

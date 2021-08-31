@@ -482,7 +482,6 @@ private:
     perf_counter_wrapper _counter_bulk_load_ingestion_count;
     perf_counter_wrapper _counter_bulk_load_succeed_count;
     perf_counter_wrapper _counter_bulk_load_failed_count;
-    perf_counter_wrapper _counter_bulk_load_ingestion_reject_write_count;
     perf_counter_wrapper _counter_bulk_load_download_file_succ_count;
     perf_counter_wrapper _counter_bulk_load_download_file_fail_count;
     perf_counter_wrapper _counter_bulk_load_download_file_size;
