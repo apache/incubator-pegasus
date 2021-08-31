@@ -71,6 +71,53 @@ pc_status partition_guardian::cure(meta_view view,
     return status;
 }
 
+void partition_guardian::reconfig(meta_view view, const configuration_update_request &request)
+{
+    const dsn::gpid &gpid = request.config.pid;
+    if (!((*view.apps)[gpid.get_app_id()]->is_stateful)) {
+        return;
+    }
+
+    config_context *cc = get_config_context(*(view.apps), gpid);
+    if (!cc->lb_actions.empty()) {
+        const configuration_proposal_action *current = cc->lb_actions.front();
+        dassert(current != nullptr && current->type != config_type::CT_INVALID,
+                "invalid proposal for gpid(%d.%d)",
+                gpid.get_app_id(),
+                gpid.get_partition_index());
+        // if the valid proposal is from cure
+        if (!cc->lb_actions.is_from_balancer()) {
+            finish_cure_proposal(view, gpid, *current);
+        }
+        cc->lb_actions.pop_front();
+    }
+
+    // handle the dropped out servers
+    if (request.type == config_type::CT_DROP_PARTITION) {
+        cc->serving.clear();
+
+        const std::vector<rpc_address> &config_dropped = request.config.last_drops;
+        for (const rpc_address &drop_node : config_dropped) {
+            cc->record_drop_history(drop_node);
+        }
+    } else {
+        when_update_replicas(request.type, [cc, &request](bool is_adding) {
+            if (is_adding) {
+                cc->remove_from_dropped(request.node);
+                // when some replicas are added to partition_config
+                // we should try to adjust the size of drop_list
+                cc->check_size();
+            } else {
+                cc->remove_from_serving(request.node);
+
+                dassert(cc->record_drop_history(request.node),
+                        "node(%s) has been in the dropped",
+                        request.node.to_string());
+            }
+        });
+    }
+}
+
 bool partition_guardian::from_proposals(meta_view &view,
                                         const dsn::gpid &gpid,
                                         configuration_proposal_action &action)
