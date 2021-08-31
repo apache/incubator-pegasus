@@ -648,6 +648,8 @@ struct row_data
         multi_put_bytes += row.multi_put_bytes;
         check_and_set_bytes += row.check_and_set_bytes;
         check_and_mutate_bytes += row.check_and_mutate_bytes;
+        recent_rdb_compaction_input_bytes += row.recent_rdb_compaction_input_bytes;
+        recent_rdb_compaction_output_bytes += row.recent_rdb_compaction_output_bytes;
         rdb_read_l2andup_hit_count += row.rdb_read_l2andup_hit_count;
         rdb_read_l1_hit_count += row.rdb_read_l1_hit_count;
         rdb_read_l0_hit_count += row.rdb_read_l0_hit_count;
@@ -705,6 +707,8 @@ struct row_data
     double multi_put_bytes = 0;
     double check_and_set_bytes = 0;
     double check_and_mutate_bytes = 0;
+    double recent_rdb_compaction_input_bytes = 0;
+    double recent_rdb_compaction_output_bytes = 0;
     double rdb_read_l2andup_hit_count = 0;
     double rdb_read_l1_hit_count = 0;
     double rdb_read_l0_hit_count = 0;
@@ -808,6 +812,10 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_set_bytes += value;
     else if (counter_name == "check_and_mutate_bytes")
         row.check_and_mutate_bytes += value;
+    else if (counter_name == "recent_rdb_compaction_input_bytes")
+        row.recent_rdb_compaction_input_bytes += value;
+    else if (counter_name == "recent_rdb_compaction_output_bytes")
+        row.recent_rdb_compaction_output_bytes += value;
     else if (counter_name == "rdb.read_l2andup_hit_count")
         row.rdb_read_l2andup_hit_count += value;
     else if (counter_name == "rdb.read_l1_hit_count")
