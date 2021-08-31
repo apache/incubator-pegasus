@@ -511,6 +511,8 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
             row.recent_backup_request_throttling_delay_count;
         sum.recent_backup_request_throttling_reject_count +=
             row.recent_backup_request_throttling_reject_count;
+        sum.recent_write_splitting_reject_count += row.recent_write_splitting_reject_count;
+        sum.recent_read_splitting_reject_count += row.recent_read_splitting_reject_count;
         sum.recent_write_bulk_load_ingestion_reject_count +=
             row.recent_write_bulk_load_ingestion_reject_count;
         sum.storage_mb += row.storage_mb;
