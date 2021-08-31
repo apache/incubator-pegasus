@@ -616,5 +616,95 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
         }
     }
 }
+
+void partition_guardian::register_ctrl_commands()
+{
+    _ctrl_assign_delay_ms = dsn::command_manager::instance().register_command(
+        {"meta.lb.assign_delay_ms"},
+        "lb.assign_delay_ms [num | DEFAULT]",
+        "control the replica_assign_delay_ms_for_dropouts config",
+        [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); });
+
+    _ctrl_assign_secondary_black_list = dsn::command_manager::instance().register_command(
+        {"meta.lb.assign_secondary_black_list"},
+        "lb.assign_secondary_black_list [<ip:port,ip:port,ip:port>|clear]",
+        "control the assign secondary black list",
+        [this](const std::vector<std::string> &args) {
+            return ctrl_assign_secondary_black_list(args);
+        });
+}
+
+void partition_guardian::unregister_ctrl_commands()
+{
+    UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms);
+    UNREGISTER_VALID_HANDLER(_ctrl_assign_secondary_black_list);
+}
+
+std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::string> &args)
+{
+    std::string result("OK");
+    if (args.empty()) {
+        result = std::to_string(_replica_assign_delay_ms_for_dropouts);
+    } else {
+        if (args[0] == "DEFAULT") {
+            _replica_assign_delay_ms_for_dropouts =
+                _svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
+        } else {
+            int32_t v = 0;
+            if (!dsn::buf2int32(args[0], v) || v <= 0) {
+                result = std::string("ERR: invalid arguments");
+            } else {
+                _replica_assign_delay_ms_for_dropouts = v;
+            }
+        }
+    }
+    return result;
+}
+
+std::string
+partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::string> &args)
+{
+    std::string invalid_arguments("invalid arguments");
+    std::stringstream oss;
+    if (args.empty()) {
+        dsn::zauto_read_lock l(_black_list_lock);
+        oss << "get ok: ";
+        for (auto iter = _assign_secondary_black_list.begin();
+             iter != _assign_secondary_black_list.end();
+             ++iter) {
+            if (iter != _assign_secondary_black_list.begin())
+                oss << ",";
+            oss << iter->to_string();
+        }
+        return oss.str();
+    }
+
+    if (args.size() != 1) {
+        return invalid_arguments;
+    }
+
+    dsn::zauto_write_lock l(_black_list_lock);
+    if (args[0] == "clear") {
+        _assign_secondary_black_list.clear();
+        return "clear ok";
+    }
+
+    std::vector<std::string> ip_ports;
+    dsn::utils::split_args(args[0].c_str(), ip_ports, ',');
+    if (args.size() == 0) {
+        return invalid_arguments;
+    }
+
+    std::set<dsn::rpc_address> addr_list;
+    for (const std::string &s : ip_ports) {
+        dsn::rpc_address addr;
+        if (!addr.from_string_ipv4(s.c_str())) {
+            return invalid_arguments;
+        }
+        addr_list.insert(addr);
+    }
+    _assign_secondary_black_list = std::move(addr_list);
+    return "set ok";
+}
 } // namespace replication
 } // namespace dsn

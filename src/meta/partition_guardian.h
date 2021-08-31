@@ -30,6 +30,8 @@ public:
     ~partition_guardian() = default;
 
     pc_status cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action);
+    void register_ctrl_commands();
+    void unregister_ctrl_commands();
 
 private:
     bool
@@ -44,6 +46,8 @@ private:
     void finish_cure_proposal(meta_view &view,
                               const dsn::gpid &gpid,
                               const configuration_proposal_action &action);
+    std::string ctrl_assign_delay_ms(const std::vector<std::string> &args);
+    std::string ctrl_assign_secondary_black_list(const std::vector<std::string> &args);
 
     void set_ddd_partition(ddd_partition_info &&partition)
     {
