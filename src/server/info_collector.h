@@ -80,6 +80,8 @@ public:
                 row_stats.recent_backup_request_throttling_delay_count);
             recent_backup_request_throttling_reject_count->set(
                 row_stats.recent_backup_request_throttling_reject_count);
+            recent_write_bulk_load_ingestion_reject_count->set(
+                row_stats.recent_write_bulk_load_ingestion_reject_count);
             storage_mb->set(row_stats.storage_mb);
             storage_count->set(row_stats.storage_count);
             rdb_block_cache_hit_rate->set(convert_to_1M_ratio(
@@ -149,6 +151,7 @@ public:
         ::dsn::perf_counter_wrapper recent_read_throttling_reject_count;
         ::dsn::perf_counter_wrapper recent_backup_request_throttling_delay_count;
         ::dsn::perf_counter_wrapper recent_backup_request_throttling_reject_count;
+        ::dsn::perf_counter_wrapper recent_write_bulk_load_ingestion_reject_count;
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;
