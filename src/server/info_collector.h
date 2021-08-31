@@ -114,6 +114,8 @@ public:
             check_and_mutate_bytes->set(row_stats.check_and_mutate_bytes);
             read_bytes->set(row_stats.get_total_read_bytes());
             write_bytes->set(row_stats.get_total_write_bytes());
+            recent_rdb_compaction_input_bytes->set(row_stats.recent_rdb_compaction_input_bytes);
+            recent_rdb_compaction_output_bytes->set(row_stats.recent_rdb_compaction_output_bytes);
             rdb_read_l2andup_hit_rate->set(convert_to_1M_ratio(
                 row_stats.rdb_read_l2andup_hit_count, row_stats.rdb_block_cache_total_count));
             rdb_read_l1_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l1_hit_count,
@@ -180,6 +182,8 @@ public:
         ::dsn::perf_counter_wrapper check_and_mutate_bytes;
         ::dsn::perf_counter_wrapper read_bytes;
         ::dsn::perf_counter_wrapper write_bytes;
+        ::dsn::perf_counter_wrapper recent_rdb_compaction_input_bytes;
+        ::dsn::perf_counter_wrapper recent_rdb_compaction_output_bytes;
         ::dsn::perf_counter_wrapper rdb_read_l2andup_hit_rate;
         ::dsn::perf_counter_wrapper rdb_read_l1_hit_rate;
         ::dsn::perf_counter_wrapper rdb_read_l0_hit_rate;
