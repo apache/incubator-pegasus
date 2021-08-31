@@ -88,6 +88,9 @@ void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
     _pfc_recent_compaction_completed_count->increment();
     _pfc_recent_compaction_input_bytes->add(ci.stats.total_input_bytes);
     _pfc_recent_compaction_output_bytes->add(ci.stats.total_output_bytes);
+
+    _pfc_recent_rdb_compaction_input_bytes->add(ci.stats.total_input_bytes);
+    _pfc_recent_rdb_compaction_output_bytes->add(ci.stats.total_output_bytes);
 }
 
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)
