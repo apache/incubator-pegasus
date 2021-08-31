@@ -753,5 +753,28 @@ partition_guardian::ctrl_assign_secondary_black_list(const std::vector<std::stri
     _assign_secondary_black_list = std::move(addr_list);
     return "set ok";
 }
+
+void partition_guardian::get_ddd_partitions(const gpid &pid,
+                                            std::vector<ddd_partition_info> &partitions)
+{
+    zauto_lock l(_ddd_partitions_lock);
+    if (pid.get_app_id() == -1) {
+        partitions.reserve(_ddd_partitions.size());
+        for (const auto &kv : _ddd_partitions) {
+            partitions.push_back(kv.second);
+        }
+    } else if (pid.get_partition_index() == -1) {
+        for (const auto &kv : _ddd_partitions) {
+            if (kv.first.get_app_id() == pid.get_app_id()) {
+                partitions.push_back(kv.second);
+            }
+        }
+    } else {
+        auto find = _ddd_partitions.find(pid);
+        if (find != _ddd_partitions.end()) {
+            partitions.push_back(find->second);
+        }
+    }
+}
 } // namespace replication
 } // namespace dsn
