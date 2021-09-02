@@ -58,6 +58,21 @@ pegasus_event_listener::pegasus_event_listener(replica_base *r) : replica_base(r
         "recent.write.change.stopped.count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "rocksdb recent write change stopped count");
+
+    // replica-level perfcounter
+    std::string counter_str = fmt::format("recent_rdb_compaction_input_bytes@{}", r->get_gpid());
+    _pfc_recent_rdb_compaction_input_bytes.init_app_counter(
+        "app.pegasus",
+        counter_str.c_str(),
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "rocksdb recent compaction input bytes");
+
+    counter_str = fmt::format("recent_rdb_compaction_output_bytes@{}", r->get_gpid());
+    _pfc_recent_rdb_compaction_output_bytes.init_app_counter(
+        "app.pegasus",
+        counter_str.c_str(),
+        COUNTER_TYPE_VOLATILE_NUMBER,
+        "rocksdb recent compaction output bytes");
 }
 
 void pegasus_event_listener::OnFlushCompleted(rocksdb::DB *db,
@@ -73,6 +88,9 @@ void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
     _pfc_recent_compaction_completed_count->increment();
     _pfc_recent_compaction_input_bytes->add(ci.stats.total_input_bytes);
     _pfc_recent_compaction_output_bytes->add(ci.stats.total_output_bytes);
+
+    _pfc_recent_rdb_compaction_input_bytes->add(ci.stats.total_input_bytes);
+    _pfc_recent_rdb_compaction_output_bytes->add(ci.stats.total_output_bytes);
 }
 
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)

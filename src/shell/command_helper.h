@@ -613,6 +613,7 @@ struct row_data
         duplicate_qps += row.duplicate_qps;
         dup_shipped_ops += row.dup_shipped_ops;
         dup_failed_shipping_ops += row.dup_failed_shipping_ops;
+        dup_recent_mutation_loss_count += row.dup_recent_mutation_loss_count;
         recent_read_cu += row.recent_read_cu;
         recent_write_cu += row.recent_write_cu;
         recent_expire_count += row.recent_expire_count;
@@ -622,6 +623,14 @@ struct row_data
         recent_write_throttling_reject_count += row.recent_write_throttling_reject_count;
         recent_read_throttling_delay_count += row.recent_read_throttling_delay_count;
         recent_read_throttling_reject_count += row.recent_read_throttling_reject_count;
+        recent_backup_request_throttling_delay_count +=
+            row.recent_backup_request_throttling_delay_count;
+        recent_backup_request_throttling_reject_count +=
+            row.recent_backup_request_throttling_reject_count;
+        recent_write_splitting_reject_count += row.recent_write_splitting_reject_count;
+        recent_read_splitting_reject_count += row.recent_read_splitting_reject_count;
+        recent_write_bulk_load_ingestion_reject_count +=
+            row.recent_write_bulk_load_ingestion_reject_count;
         storage_mb += row.storage_mb;
         storage_count += row.storage_count;
         rdb_block_cache_hit_count += row.rdb_block_cache_hit_count;
@@ -643,6 +652,14 @@ struct row_data
         multi_put_bytes += row.multi_put_bytes;
         check_and_set_bytes += row.check_and_set_bytes;
         check_and_mutate_bytes += row.check_and_mutate_bytes;
+        recent_rdb_compaction_input_bytes += row.recent_rdb_compaction_input_bytes;
+        recent_rdb_compaction_output_bytes += row.recent_rdb_compaction_output_bytes;
+        rdb_read_l2andup_hit_count += row.rdb_read_l2andup_hit_count;
+        rdb_read_l1_hit_count += row.rdb_read_l1_hit_count;
+        rdb_read_l0_hit_count += row.rdb_read_l0_hit_count;
+        rdb_read_memtable_hit_count += row.rdb_read_memtable_hit_count;
+        rdb_write_amplification += row.rdb_write_amplification;
+        rdb_read_amplification += row.rdb_read_amplification;
     }
 
     std::string row_name;
@@ -661,6 +678,7 @@ struct row_data
     double duplicate_qps = 0;
     double dup_shipped_ops = 0;
     double dup_failed_shipping_ops = 0;
+    double dup_recent_mutation_loss_count = 0;
     double recent_read_cu = 0;
     double recent_write_cu = 0;
     double recent_expire_count = 0;
@@ -670,6 +688,11 @@ struct row_data
     double recent_write_throttling_reject_count = 0;
     double recent_read_throttling_delay_count = 0;
     double recent_read_throttling_reject_count = 0;
+    double recent_backup_request_throttling_delay_count = 0;
+    double recent_backup_request_throttling_reject_count = 0;
+    double recent_write_splitting_reject_count = 0;
+    double recent_read_splitting_reject_count = 0;
+    double recent_write_bulk_load_ingestion_reject_count = 0;
     double storage_mb = 0;
     double storage_count = 0;
     double rdb_block_cache_hit_count = 0;
@@ -691,6 +714,14 @@ struct row_data
     double multi_put_bytes = 0;
     double check_and_set_bytes = 0;
     double check_and_mutate_bytes = 0;
+    double recent_rdb_compaction_input_bytes = 0;
+    double recent_rdb_compaction_output_bytes = 0;
+    double rdb_read_l2andup_hit_count = 0;
+    double rdb_read_l1_hit_count = 0;
+    double rdb_read_l0_hit_count = 0;
+    double rdb_read_memtable_hit_count = 0;
+    double rdb_write_amplification = 0;
+    double rdb_read_amplification = 0;
 };
 
 inline bool
@@ -722,6 +753,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.dup_shipped_ops += value;
     else if (counter_name == "dup_failed_shipping_ops")
         row.dup_failed_shipping_ops += value;
+    else if (counter_name == "dup_recent_mutation_loss_count")
+        row.dup_recent_mutation_loss_count += value;
     else if (counter_name == "recent.read.cu")
         row.recent_read_cu += value;
     else if (counter_name == "recent.write.cu")
@@ -740,6 +773,16 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.recent_read_throttling_delay_count += value;
     else if (counter_name == "recent.read.throttling.reject.count")
         row.recent_read_throttling_reject_count += value;
+    else if (counter_name == "recent.backup.request.throttling.delay.count")
+        row.recent_backup_request_throttling_delay_count += value;
+    else if (counter_name == "recent.backup.request.throttling.reject.count")
+        row.recent_backup_request_throttling_reject_count += value;
+    else if (counter_name == "recent.write.splitting.reject.count")
+        row.recent_write_splitting_reject_count += value;
+    else if (counter_name == "recent.read.splitting.reject.count")
+        row.recent_read_splitting_reject_count += value;
+    else if (counter_name == "recent.write.bulk.load.ingestion.reject.count")
+        row.recent_write_bulk_load_ingestion_reject_count += value;
     else if (counter_name == "disk.storage.sst(MB)")
         row.storage_mb += value;
     else if (counter_name == "disk.storage.sst.count")
@@ -782,6 +825,22 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.check_and_set_bytes += value;
     else if (counter_name == "check_and_mutate_bytes")
         row.check_and_mutate_bytes += value;
+    else if (counter_name == "recent_rdb_compaction_input_bytes")
+        row.recent_rdb_compaction_input_bytes += value;
+    else if (counter_name == "recent_rdb_compaction_output_bytes")
+        row.recent_rdb_compaction_output_bytes += value;
+    else if (counter_name == "rdb.read_l2andup_hit_count")
+        row.rdb_read_l2andup_hit_count += value;
+    else if (counter_name == "rdb.read_l1_hit_count")
+        row.rdb_read_l1_hit_count += value;
+    else if (counter_name == "rdb.read_l0_hit_count")
+        row.rdb_read_l0_hit_count += value;
+    else if (counter_name == "rdb.read_memtable_hit_count")
+        row.rdb_read_memtable_hit_count += value;
+    else if (counter_name == "rdb.write_amplification")
+        row.rdb_write_amplification += value;
+    else if (counter_name == "rdb.read_amplification")
+        row.rdb_read_amplification += value;
     else
         return false;
     return true;
