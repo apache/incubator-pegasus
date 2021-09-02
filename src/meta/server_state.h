@@ -298,7 +298,7 @@ private:
     friend class meta_app_operation_test;
     friend class meta_duplication_service;
     friend class meta_duplication_service_test;
-    friend class meta_load_balance_test;
+    friend class meta_partition_guardian_test;
     friend class meta_split_service;
     friend class meta_split_service_test;
     friend class meta_service_test_app;

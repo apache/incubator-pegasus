@@ -56,7 +56,7 @@ void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
                      /*out*/ std::set<rpc_address> &min_set,
                      /*out*/ std::set<rpc_address> &max_set);
 
-class greedy_load_balancer : public simple_load_balancer
+class greedy_load_balancer : public server_load_balancer
 {
 public:
     explicit greedy_load_balancer(meta_service *svc);

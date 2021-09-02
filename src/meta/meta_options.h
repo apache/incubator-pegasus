@@ -80,6 +80,7 @@ public:
 
     fd_suboptions _fd_opts;
     lb_suboptions _lb_opts;
+    std::string partition_guardian_type;
 
     bool cold_backup_disabled;
 
@@ -93,5 +94,5 @@ public:
     static std::string concat_path_unix_style(const std::string &prefix,
                                               const std::string &postfix);
 };
-}
-}
+} // namespace replication
+} // namespace dsn

@@ -1599,12 +1599,12 @@ void server_state::on_update_configuration_on_remote_reply(
             cc.msg = nullptr;
         }
 
-        _meta_svc->get_balancer()->reconfig({&_all_apps, &_nodes}, *config_request);
+        _meta_svc->get_partition_guardian()->reconfig({&_all_apps, &_nodes}, *config_request);
         if (config_request->type == config_type::CT_DROP_PARTITION) {
             process_one_partition(app);
         } else {
             configuration_proposal_action action;
-            _meta_svc->get_balancer()->cure({&_all_apps, &_nodes}, gpid, action);
+            _meta_svc->get_partition_guardian()->cure({&_all_apps, &_nodes}, gpid, action);
             if (action.type != config_type::CT_INVALID) {
                 if (_add_secondary_enable_flow_control &&
                     (action.type == config_type::CT_ADD_SECONDARY ||
@@ -2363,7 +2363,7 @@ bool server_state::check_all_partitions()
            "add_secondary_max_count_for_one_node = %d",
            _add_secondary_enable_flow_control ? "true" : "false",
            _add_secondary_max_count_for_one_node);
-    _meta_svc->get_balancer()->clear_ddd_partitions();
+    _meta_svc->get_partition_guardian()->clear_ddd_partitions();
     int send_proposal_count = 0;
     std::vector<configuration_proposal_action> add_secondary_actions;
     std::vector<gpid> add_secondary_gpids;
@@ -2384,8 +2384,8 @@ bool server_state::check_all_partitions()
             // partition is under re-configuration or is child partition
             if (cc.stage != config_status::pending_remote_sync && pc.ballot != invalid_ballot) {
                 configuration_proposal_action action;
-                pc_status s =
-                    _meta_svc->get_balancer()->cure({&_all_apps, &_nodes}, pc.pid, action);
+                pc_status s = _meta_svc->get_partition_guardian()->cure(
+                    {&_all_apps, &_nodes}, pc.pid, action);
                 dinfo("gpid(%d.%d) is in status(%s)",
                       pc.pid.get_app_id(),
                       pc.pid.get_partition_index(),

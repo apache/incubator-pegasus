@@ -204,7 +204,7 @@ public:
     // An index value to the vector "dropped".
     // Used in load-balancer's cure to avoid select the same learner as
     // previous unsuccessful proposal.
-    // Please refer to simple_load_balancer::on_missing_secondary.
+    // Please refer to partition_guardian::on_missing_secondary.
     //
     // This should always be less than the dropped.size()
     //

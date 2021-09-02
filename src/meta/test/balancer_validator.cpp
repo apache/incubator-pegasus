@@ -35,17 +35,16 @@ namespace replication {
 #endif
 #define ASSERT_FALSE(exp) dassert(!(exp), "")
 
-static void check_cure(server_load_balancer *lb,
-                       app_mapper &apps,
-                       node_mapper &nodes,
-                       ::dsn::partition_configuration &pc)
+static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_configuration &pc)
 {
+    meta_service svc;
+    partition_guardian guardian(&svc);
     pc_status ps = pc_status::invalid;
     node_state *ns;
 
     configuration_proposal_action act;
     while (ps != pc_status::healthy) {
-        ps = lb->cure({&apps, &nodes}, pc.pid, act);
+        ps = guardian.cure({&apps, &nodes}, pc.pid, act);
         if (act.type == config_type::CT_INVALID)
             break;
         switch (act.type) {
@@ -80,7 +79,7 @@ static void check_cure(server_load_balancer *lb,
     nodes[pc.primary].remove_partition(pc.pid, true);
     pc.primary.set_invalid();
 
-    ps = lb->cure({&apps, &nodes}, pc.pid, act);
+    ps = guardian.cure({&apps, &nodes}, pc.pid, act);
     ASSERT_EQ(act.type, config_type::CT_UPGRADE_TO_PRIMARY);
     ASSERT_TRUE(pc.primary.is_invalid());
     ASSERT_EQ(act.node, act.target);
@@ -206,59 +205,52 @@ void meta_service_test_app::balancer_validator()
     int disk_on_node = 9;
 
     meta_service svc;
-    simple_load_balancer slb(&svc);
     greedy_load_balancer glb(&svc);
-    std::vector<server_load_balancer *> lbs = {&slb, &glb};
 
-    for (int i = 0; i < lbs.size(); ++i) {
-        std::cerr << "the " << i << "th balancer" << std::endl;
-        server_load_balancer *lb = lbs[i];
+    generate_apps(
+        apps, node_list, 5, disk_on_node, std::pair<uint32_t, uint32_t>(1000, 2000), true);
+    generate_node_mapper(nodes, apps, node_list);
+    generate_node_fs_manager(apps, nodes, manager, disk_on_node);
+    migration_list ml;
 
-        generate_apps(
-            apps, node_list, 5, disk_on_node, std::pair<uint32_t, uint32_t>(1000, 2000), true);
-        generate_node_mapper(nodes, apps, node_list);
-        generate_node_fs_manager(apps, nodes, manager, disk_on_node);
-        migration_list ml;
-
-        for (auto &iter : nodes) {
-            dinfo("node(%s) have %d primaries, %d partitions",
-                  iter.first.to_string(),
-                  iter.second.primary_count(),
-                  iter.second.partition_count());
-        }
-
-        // iterate 1000000 times
-        for (int i = 0; i < 1000000 && lb->balance({&apps, &nodes}, ml); ++i) {
-            dinfo("the %dth round of balancer", i);
-            migration_check_and_apply(apps, nodes, ml, &manager);
-            lb->check({&apps, &nodes}, ml);
-            dinfo("balance checker operation count = %d", ml.size());
-        }
-
-        for (auto &iter : nodes) {
-            dinfo("node(%s) have %d primaries, %d partitions",
-                  iter.first.to_string(),
-                  iter.second.primary_count(),
-                  iter.second.partition_count());
-        }
-
-        std::shared_ptr<app_state> &the_app = apps[1];
-        for (::dsn::partition_configuration &pc : the_app->partitions) {
-            ASSERT_FALSE(pc.primary.is_invalid());
-            ASSERT_TRUE(pc.secondaries.size() >= pc.max_replica_count - 1);
-        }
-
-        // now test the cure
-        ::dsn::partition_configuration &pc = the_app->partitions[0];
-        nodes[pc.primary].remove_partition(pc.pid, false);
-        for (const dsn::rpc_address &addr : pc.secondaries)
-            nodes[addr].remove_partition(pc.pid, false);
-        pc.primary.set_invalid();
-        pc.secondaries.clear();
-
-        // cure test
-        check_cure(lb, apps, nodes, pc);
+    for (auto &iter : nodes) {
+        dinfo("node(%s) have %d primaries, %d partitions",
+              iter.first.to_string(),
+              iter.second.primary_count(),
+              iter.second.partition_count());
     }
+
+    // iterate 1000000 times
+    for (int i = 0; i < 1000000 && glb.balance({&apps, &nodes}, ml); ++i) {
+        dinfo("the %dth round of balancer", i);
+        migration_check_and_apply(apps, nodes, ml, &manager);
+        glb.check({&apps, &nodes}, ml);
+        dinfo("balance checker operation count = %d", ml.size());
+    }
+
+    for (auto &iter : nodes) {
+        dinfo("node(%s) have %d primaries, %d partitions",
+              iter.first.to_string(),
+              iter.second.primary_count(),
+              iter.second.partition_count());
+    }
+
+    std::shared_ptr<app_state> &the_app = apps[1];
+    for (::dsn::partition_configuration &pc : the_app->partitions) {
+        ASSERT_FALSE(pc.primary.is_invalid());
+        ASSERT_TRUE(pc.secondaries.size() >= pc.max_replica_count - 1);
+    }
+
+    // now test the cure
+    ::dsn::partition_configuration &pc = the_app->partitions[0];
+    nodes[pc.primary].remove_partition(pc.pid, false);
+    for (const dsn::rpc_address &addr : pc.secondaries)
+        nodes[addr].remove_partition(pc.pid, false);
+    pc.primary.set_invalid();
+    pc.secondaries.clear();
+
+    // cure test
+    check_cure(apps, nodes, pc);
 }
 
 dsn::rpc_address get_rpc_address(const std::string &ip_port)

@@ -11,6 +11,7 @@
 #include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
+#include "dummy_balancer.h"
 
 namespace dsn {
 namespace replication {
@@ -86,12 +87,12 @@ public:
     }
 };
 
-class dummy_balancer : public dsn::replication::server_load_balancer
+class dummy_partition_guardian : public partition_guardian
 {
 public:
-    dummy_balancer(meta_service *s) : server_load_balancer(s) {}
-    virtual pc_status
-    cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action)
+    explicit dummy_partition_guardian(meta_service *s) : partition_guardian(s) {}
+
+    pc_status cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action)
     {
         action.type = config_type::CT_INVALID;
         const dsn::partition_configuration &pc = *get_config(*view.apps, gpid);
@@ -99,15 +100,6 @@ public:
             return pc_status::healthy;
         return pc_status::ill;
     }
-    virtual void reconfig(meta_view view, const configuration_update_request &request) {}
-    virtual bool balance(meta_view view, migration_list &list) { return false; }
-    virtual bool check(meta_view view, migration_list &list) { return false; }
-    virtual void report(const migration_list &list, bool balance_checker) {}
-    virtual std::string get_balance_operation_count(const std::vector<std::string> &args)
-    {
-        return std::string("unknown");
-    }
-    virtual void score(meta_view view, double &primary_stddev, double &total_stddev) {}
 };
 
 void meta_service_test_app::call_update_configuration(
@@ -170,7 +162,8 @@ void meta_service_test_app::update_configuration_test()
     svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
     ec = svc->remote_storage_initialize();
     ASSERT_EQ(ec, dsn::ERR_OK);
-    svc->_balancer.reset(new simple_load_balancer(svc.get()));
+    svc->_partition_guardian.reset(new partition_guardian(svc.get()));
+    svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
     ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
@@ -236,7 +229,8 @@ void meta_service_test_app::update_configuration_test()
     // the default delay for add node is 5 miniutes
     ASSERT_FALSE(wait_state(ss, validator3, 10));
     svc->_meta_opts._lb_opts.replica_assign_delay_ms_for_dropouts = 0;
-    svc->_balancer.reset(new simple_load_balancer(svc.get()));
+    svc->_partition_guardian.reset(new partition_guardian(svc.get()));
+    svc->_balancer.reset(new dummy_balancer(svc.get()));
     ASSERT_TRUE(wait_state(ss, validator3, 10));
 }
 
@@ -247,7 +241,8 @@ void meta_service_test_app::adjust_dropped_size()
     svc->_failure_detector.reset(new dsn::replication::meta_server_failure_detector(svc.get()));
     ec = svc->remote_storage_initialize();
     ASSERT_EQ(ec, dsn::ERR_OK);
-    svc->_balancer.reset(new simple_load_balancer(svc.get()));
+    svc->_partition_guardian.reset(new partition_guardian(svc.get()));
+    svc->_balancer.reset(new dummy_balancer(svc.get()));
 
     server_state *ss = svc->_state.get();
     ss->initialize(svc.get(), meta_options::concat_path_unix_style(svc->_cluster_root, "apps"));
@@ -349,6 +344,7 @@ void meta_service_test_app::apply_balancer_test()
 
     meta_svc->_failure_detector.reset(
         new dsn::replication::meta_server_failure_detector(meta_svc.get()));
+    meta_svc->_partition_guardian.reset(new partition_guardian(meta_svc.get()));
     meta_svc->_balancer.reset(new greedy_load_balancer(meta_svc.get()));
 
     // initialize data structure
@@ -416,6 +412,7 @@ void meta_service_test_app::cannot_run_balancer_test()
     svc->_state->initialize(svc.get(), "/");
     svc->_failure_detector.reset(new meta_server_failure_detector(svc.get()));
     svc->_balancer.reset(new dummy_balancer(svc.get()));
+    svc->_partition_guardian.reset(new dummy_partition_guardian(svc.get()));
 
     std::vector<dsn::rpc_address> nodes;
     generate_node_list(nodes, 10, 10);

@@ -36,6 +36,8 @@ void meta_test_base::SetUp()
     _ms->_failure_detector.reset(new meta_server_failure_detector(_ms.get()));
     _ms->_balancer.reset(utils::factory_store<server_load_balancer>::create(
         _ms->_meta_opts._lb_opts.server_load_balancer_type.c_str(), PROVIDER_TYPE_MAIN, _ms.get()));
+    _ms->_partition_guardian.reset(utils::factory_store<partition_guardian>::create(
+        _ms->_meta_opts.partition_guardian_type.c_str(), PROVIDER_TYPE_MAIN, _ms.get()));
     ASSERT_EQ(_ms->remote_storage_initialize(), ERR_OK);
     _ms->initialize_duplication_service();
     ASSERT_TRUE(_ms->_dup_svc);
