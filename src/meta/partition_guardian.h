@@ -34,7 +34,7 @@ public:
     typedef partition_guardian *(*factory)(meta_service *svc);
 
     explicit partition_guardian(meta_service *svc);
-    ~partition_guardian() = default;
+    virtual ~partition_guardian() = default;
 
     virtual pc_status
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action);
