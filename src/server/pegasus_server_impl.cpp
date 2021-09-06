@@ -367,8 +367,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 
     uint32_t max_kv_count = _rng_rd_opts.multi_get_max_iteration_count;
     uint32_t max_iteration_count = _rng_rd_opts.multi_get_max_iteration_count;
-    if (request.max_kv_count > 0 &&
-        request.max_kv_count < _rng_rd_opts.multi_get_max_iteration_count) {
+    if (request.max_kv_count > 0 && request.max_kv_count < max_kv_count) {
         max_kv_count = request.max_kv_count;
     }
 
@@ -1010,7 +1009,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     int32_t count = 0;
 
     uint32_t batch_count = _rng_rd_opts.rocksdb_max_iteration_count;
-    if (request.batch_size > 0 && request.batch_size < _rng_rd_opts.rocksdb_max_iteration_count) {
+    if (request.batch_size > 0 && request.batch_size < batch_count) {
         batch_count = request.batch_size;
     }
     resp.kvs.reserve(batch_count);
@@ -1186,8 +1185,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         int32_t count = 0;
 
         uint32_t batch_count = _rng_rd_opts.rocksdb_max_iteration_count;
-        if (context->batch_size > 0 &&
-            context->batch_size < _rng_rd_opts.rocksdb_max_iteration_count) {
+        if (context->batch_size > 0 && context->batch_size < batch_count) {
             batch_count = context->batch_size;
         }
 
