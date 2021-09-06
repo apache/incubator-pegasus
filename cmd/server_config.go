@@ -68,6 +68,12 @@ func commandArgsFunc(a *grumble.Args) {
 }
 
 func executeCommand(c *grumble.Context, ntype session.NodeType) error {
+	defer func() {
+		if err := recover(); err != nil {
+			println(errMsg().Error())
+		}
+	}()
+
 	cmd := c.Args.StringList("command")
 	if len(cmd) == 0 {
 		return errMsg()

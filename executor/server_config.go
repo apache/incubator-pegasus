@@ -51,7 +51,7 @@ var actionsMap = map[string]action{
 
 var sectionsMap = map[session.NodeType]string{
 	session.NodeTypeMeta:    "meta_server,security",
-	session.NodeTypeReplica: "pegasus.server,security,replication,block_service,nfs",
+	session.NodeTypeReplica: "pegasus.server,security,replication,block_service,nfs,task",
 	// TODO(jiashuo1) support collector
 }
 
