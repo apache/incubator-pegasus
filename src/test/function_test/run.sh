@@ -58,6 +58,8 @@ GTEST_OUTPUT="xml:$REPORT_DIR/check_and_mutate.xml" GTEST_FILTER="check_and_muta
 exit_if_fail $? "run test check_and_mutate failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/scan.xml" GTEST_FILTER="scan.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test scan failed: $test_case $config_file $table_name"
+GTEST_OUTPUT="xml:$REPORT_DIR/range_read.xml" GTEST_FILTER="range_read_test.*" ./$test_case $config_file $table_name
+exit_if_fail $? "run test range_read failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/ttl.xml" GTEST_FILTER="ttl.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test ttl failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/slog_log.xml" GTEST_FILTER="lost_log.*" ./$test_case $config_file $table_name
