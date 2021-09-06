@@ -42,6 +42,9 @@
 namespace dsn {
 namespace service {
 
+DSN_DEFINE_int32("nfs", max_send_rate_megabytes, 100, "max rate of send to remote node(MB/s)");
+DSN_TAG_VARIABLE(max_send_rate_megabytes, FT_MUTABLE);
+
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
 DSN_DECLARE_int32(file_close_expire_time_ms);
 
@@ -62,6 +65,9 @@ nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
         "recent_copy_fail_count",
         COUNTER_TYPE_VOLATILE_NUMBER,
         "nfs server copy fail count count in the recent period");
+
+    _send_token_bucket = std::make_unique<folly::DynamicTokenBucket>();
+    register_cli_commands();
 }
 
 void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
@@ -131,6 +137,8 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
 void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callback_para &cp)
 {
+    _send_token_bucket->consumeWithBorrowAndWait(
+        sz, FLAGS_max_send_rate_megabytes << 20, 1.5 * (FLAGS_max_send_rate_megabytes << 20));
     {
         zauto_lock l(_handles_map_lock);
         auto it = _handles_map.find(cp.file_path);
@@ -241,5 +249,34 @@ void nfs_service_impl::close_file() // release out-of-date file handle
             it++;
     }
 }
+
+// TODO(jiashuo1): just for compatibility, ready to delete it later
+void nfs_service_impl::register_cli_commands()
+{
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _nfs_max_send_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
+            {"nfs.max_send_rate_megabytes"},
+            "nfs.max_send_rate_megabytes [num]",
+            "control the max rate(MB/s) to send file to remote node",
+            [](const std::vector<std::string> &args) {
+                std::string result("OK");
+
+                if (args.empty()) {
+                    return std::to_string(FLAGS_max_send_rate_megabytes);
+                }
+
+                int32_t max_send_rate_megabytes = 0;
+                if (!dsn::buf2int32(args[0], max_send_rate_megabytes) ||
+                    max_send_rate_megabytes <= 0) {
+                    return std::string("ERR: invalid arguments");
+                }
+
+                FLAGS_max_send_rate_megabytes = max_send_rate_megabytes;
+                return result;
+            });
+    });
+}
+
 } // namespace service
 } // namespace dsn

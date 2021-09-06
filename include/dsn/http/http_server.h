@@ -28,8 +28,7 @@ namespace dsn {
 DSN_DECLARE_bool(enable_http_server);
 
 /// The rpc code for all the HTTP RPCs.
-/// Since http is used only for system monitoring, it is restricted to lowest priority.
-DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_LOW, THREAD_POOL_DEFAULT);
+DEFINE_TASK_CODE_RPC(RPC_HTTP_SERVICE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT);
 
 enum http_method
 {
