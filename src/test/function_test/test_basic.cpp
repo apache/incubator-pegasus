@@ -568,7 +568,7 @@ TEST(basic, multi_get)
     new_values.clear();
     ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 2);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(1, (int)new_values.size());
+    ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
 
     // multi_del
