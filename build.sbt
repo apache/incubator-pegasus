@@ -1,4 +1,4 @@
-version := "2.2.0-2-release"
+version := "2.2.0-3-release"
 
 organization := "com.xiaomi.infra"
 
