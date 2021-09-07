@@ -32,6 +32,7 @@
 #include <dsn/tool-api/rpc_address.h>
 #include <dsn/utility/exp_delay.h>
 #include <dsn/utility/dlib.h>
+#include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <atomic>
 
 namespace dsn {
@@ -40,6 +41,7 @@ class rpc_engine;
 class service_node;
 class task_worker_pool;
 class task_queue;
+
 /*!
 @addtogroup tool-api-providers
 @{
@@ -186,6 +188,7 @@ protected:
     utils::rw_lock_nr _servers_lock;
 
     uint32_t _cfg_conn_threshold_per_ip;
+    perf_counter_wrapper _client_session_count;
 };
 
 /*!
