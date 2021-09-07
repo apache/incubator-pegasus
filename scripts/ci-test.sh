@@ -15,7 +15,7 @@ function shellcheck_must_pass()
         exit 1
     fi
 }
-shellcheck_must_pass ./scripts/travis.sh
+shellcheck_must_pass ./scripts/ci-test.sh
 
 # check format
 sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck

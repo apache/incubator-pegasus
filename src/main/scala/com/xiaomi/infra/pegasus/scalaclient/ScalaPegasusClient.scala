@@ -1,9 +1,9 @@
 package com.xiaomi.infra.pegasus.scalaclient
 
 import java.util.Properties
-
 import com.xiaomi.infra.pegasus.client.{
   PException,
+  TableOptions,
   PegasusClientInterface => IClient
 }
 import com.xiaomi.infra.pegasus.scalaclient.{Serializer => SER}
@@ -29,8 +29,16 @@ trait ScalaPegasusClient extends PegasusUtil {
     new ScalaPegasusTableImpl(client.openTable(table))
 
   @throws[PException]
+  def openTable(table: String, options: TableOptions) =
+    new ScalaPegasusTableImpl(client.openTable(table, options))
+
+  @throws[PException]
   def openAsyncTable(table: String) =
     new ScalaPegasusAsyncTableImpl(client.openTable(table))
+
+  @throws[PException]
+  def openAsyncTable(table: String, options: TableOptions) =
+    new ScalaPegasusAsyncTableImpl(client.openTable(table, options))
 
   private def getTable(table: String) = openTable(table)
 
