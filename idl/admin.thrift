@@ -453,6 +453,87 @@ struct restore_app_request
     9:optional string   restore_path;
 }
 
+/////////////////// split-related structs ////////////////////
+
+enum split_status
+{
+    // idle state
+    NOT_SPLIT,
+    // A replica is splitting into two replicas, original one called parent, new one called child
+    SPLITTING,
+    PAUSING,
+    PAUSED,
+    // After split is successfully cancelled, the state turns into NOT_SPLIT
+    CANCELING
+}
+
+struct start_partition_split_request
+{
+    1:string    app_name;
+    2:i32       new_partition_count;
+}
+
+struct start_partition_split_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_PARAMETERS: if the given new_partition_count != old_partition_count * 2
+    // - ERR_BUSY - if app is already executing partition split
+    1:base.error_code    err;
+    2:string            hint_msg;
+}
+
+enum split_control_type
+{
+    PAUSE,
+    RESTART,
+    CANCEL
+}
+
+// support three control type: pause, restart, cancel
+struct control_split_request
+{
+    1:string                app_name;
+    2:split_control_type    control_type
+    // for pause, parent_pidx >= 0, pause specific partition, parent_pidx = -1, pause all splitting partition
+    // for restart, parent_pidx >= 0, restart specific partition, parent_pidx = -1, restart all paused partition
+    // for cancel, parent_pidx will always be -1
+    3:i32                   parent_pidx;
+    // only used for cancel
+    4:optional i32          old_partition_count;
+}
+
+struct control_split_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: wrong partition split_status
+    // - ERR_INVALID_PARAMETERS: invalid parent_pidx or old_partition_count
+    // - ERR_CHILD_REGISTERED: child partition has been registered, pause partition split or cancel split failed
+    1:base.error_code    err;
+    2:optional string   hint_msg;
+}
+
+// client->meta server to query partition split status
+struct query_split_request
+{
+    1:string    app_name;
+}
+
+struct query_split_response
+{
+    // Possible errors:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: app is not splitting
+    1:base.error_code            err;
+    2:i32                       new_partition_count;
+    3:map<i32,split_status>     status;
+    4:optional string           hint_msg;
+}
+
 // A client to MetaServer's administration API.
 service admin_client 
 {
@@ -489,4 +570,14 @@ service admin_client
     query_backup_status_response query_backup_status(1: query_backup_status_request req);
 
     create_app_response restore_app(1: restore_app_request req);
+
+    start_partition_split_response start_partition_split(1: start_partition_split_request req);
+
+    query_split_response query_split_status(1: query_split_request req);
+
+    control_split_response pause_partition_split(1: control_split_request req);
+
+    control_split_response restart_partition_split(1: control_split_request req);
+
+    control_split_response cancel_partition_split(1: control_split_request req);
 }

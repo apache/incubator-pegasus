@@ -433,3 +433,128 @@ func (m *MetaManager) RestoreApp(ctx context.Context, req *admin.RestoreAppReque
 	}
 	return nil, err
 }
+
+func (ms *metaSession) startPartitionSplit(ctx context.Context, req *admin.StartPartitionSplitRequest) (*admin.StartPartitionSplitResponse, error) {
+	arg := admin.NewAdminClientStartPartitionSplitArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_START_PARTITION_SPLIT")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientStartPartitionSplitResult)
+	return ret.GetSuccess(), nil
+}
+
+// StartPartitionSplit is auto-generated
+func (m *MetaManager) StartPartitionSplit(ctx context.Context, req *admin.StartPartitionSplitRequest) (*admin.StartPartitionSplitResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.startPartitionSplit(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.StartPartitionSplitResponse), fmt.Errorf("StartPartitionSplit failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.StartPartitionSplitResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) querySplitStatus(ctx context.Context, req *admin.QuerySplitRequest) (*admin.QuerySplitResponse, error) {
+	arg := admin.NewAdminClientQuerySplitStatusArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_PARTITION_SPLIT")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQuerySplitStatusResult)
+	return ret.GetSuccess(), nil
+}
+
+// QuerySplitStatus is auto-generated
+func (m *MetaManager) QuerySplitStatus(ctx context.Context, req *admin.QuerySplitRequest) (*admin.QuerySplitResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.querySplitStatus(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.QuerySplitResponse), fmt.Errorf("QuerySplitStatus failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.QuerySplitResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) pausePartitionSplit(ctx context.Context, req *admin.ControlSplitRequest) (*admin.ControlSplitResponse, error) {
+	arg := admin.NewAdminClientPausePartitionSplitArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_PARTITION_SPLIT")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientPausePartitionSplitResult)
+	return ret.GetSuccess(), nil
+}
+
+// PausePartitionSplit is auto-generated
+func (m *MetaManager) PausePartitionSplit(ctx context.Context, req *admin.ControlSplitRequest) (*admin.ControlSplitResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.pausePartitionSplit(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.ControlSplitResponse), fmt.Errorf("PausePartitionSplit failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ControlSplitResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) restartPartitionSplit(ctx context.Context, req *admin.ControlSplitRequest) (*admin.ControlSplitResponse, error) {
+	arg := admin.NewAdminClientRestartPartitionSplitArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_PARTITION_SPLIT")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientRestartPartitionSplitResult)
+	return ret.GetSuccess(), nil
+}
+
+// RestartPartitionSplit is auto-generated
+func (m *MetaManager) RestartPartitionSplit(ctx context.Context, req *admin.ControlSplitRequest) (*admin.ControlSplitResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.restartPartitionSplit(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.ControlSplitResponse), fmt.Errorf("RestartPartitionSplit failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ControlSplitResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) cancelPartitionSplit(ctx context.Context, req *admin.ControlSplitRequest) (*admin.ControlSplitResponse, error) {
+	arg := admin.NewAdminClientCancelPartitionSplitArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_PARTITION_SPLIT")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientCancelPartitionSplitResult)
+	return ret.GetSuccess(), nil
+}
+
+// CancelPartitionSplit is auto-generated
+func (m *MetaManager) CancelPartitionSplit(ctx context.Context, req *admin.ControlSplitRequest) (*admin.ControlSplitResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.cancelPartitionSplit(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.ControlSplitResponse), fmt.Errorf("CancelPartitionSplit failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ControlSplitResponse), nil
+	}
+	return nil, err
+}
