@@ -575,9 +575,5 @@ service admin_client
 
     query_split_response query_split_status(1: query_split_request req);
 
-    control_split_response pause_partition_split(1: control_split_request req);
-
-    control_split_response restart_partition_split(1: control_split_request req);
-
-    control_split_response cancel_partition_split(1: control_split_request req);
+    control_split_response control_partition_split(1: control_split_request req);
 }

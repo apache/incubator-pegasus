@@ -240,6 +240,21 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: radmin.NewReplicaDiskMigrateResponse(),
 		}
 	},
+	"RPC_CM_START_PARTITION_SPLIT_ACK": func() RpcResponseResult {
+		return &admin.AdminClientStartPartitionSplitResult{
+			Success: admin.NewStartPartitionSplitResponse(),
+		}
+	},
+	"RPC_CM_QUERY_PARTITION_SPLIT_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQuerySplitStatusResult{
+			Success: admin.NewQuerySplitResponse(),
+		}
+	},
+	"RPC_CM_CONTROL_PARTITION_SPLIT_ACK": func() RpcResponseResult {
+		return &admin.AdminClientControlPartitionSplitResult{
+			Success: admin.NewControlSplitResponse(),
+		}
+	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetResult{
 			Success: rrdb.NewReadResponse(),
