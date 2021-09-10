@@ -205,3 +205,23 @@ func (m *fakeMeta) RestoreApp(oldClusterName string, oldTableName string, oldTab
 	newTableName string, restorePath string, skipBadPartition bool, policyName string) (*admin.CreateAppResponse, error) {
 	panic("unimplemented")
 }
+
+func (m *fakeMeta) StartPartitionSplit(tableName string, newPartitionCount int) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) QuerySplitStatus(tableName string) (*admin.QuerySplitResponse, error) {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) PausePartitionSplit(tableName string, parentPidx int) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) RestartPartitionSplit(tableName string, parentPidx int) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) CancelPartitionSplit(tableName string, oldPartitionCount int) error {
+	panic("unimplemented")
+}

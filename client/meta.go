@@ -100,6 +100,16 @@ type Meta interface {
 
 	RestoreApp(oldClusterName string, oldTableName string, oldTableID int, backupID int64, providerType string,
 		newTableName string, restorePath string, skipBadPartition bool, policyName string) (*admin.CreateAppResponse, error)
+
+	StartPartitionSplit(tableName string, newPartitionCount int) error
+
+	QuerySplitStatus(tableName string) (*admin.QuerySplitResponse, error)
+
+	PausePartitionSplit(tableName string, parentPidx int) error
+
+	RestartPartitionSplit(tableName string, parentPidx int) error
+
+	CancelPartitionSplit(tableName string, oldPartitionCount int) error
 }
 
 type rpcBasedMeta struct {
@@ -442,4 +452,68 @@ func (m *rpcBasedMeta) RestoreApp(oldClusterName string, oldTableName string, ol
 		result = resp.(*admin.CreateAppResponse)
 	})
 	return result, err
+}
+
+func (m *rpcBasedMeta) StartPartitionSplit(tableName string, newPartitionCount int) error {
+	req := &admin.StartPartitionSplitRequest{
+		AppName:            tableName,
+		NewPartitionCount_: int32(newPartitionCount),
+	}
+	var result *admin.StartPartitionSplitResponse
+	err := m.callMeta("StartPartitionSplit", req, func(resp interface{}) {
+		result = resp.(*admin.StartPartitionSplitResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) QuerySplitStatus(tableName string) (*admin.QuerySplitResponse, error) {
+	req := &admin.QuerySplitRequest{
+		AppName: tableName,
+	}
+	var result *admin.QuerySplitResponse
+	err := m.callMeta("QuerySplitStatus", req, func(resp interface{}) {
+		result = resp.(*admin.QuerySplitResponse)
+	})
+	return result, wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) PausePartitionSplit(tableName string, parentPidx int) error {
+	req := &admin.ControlSplitRequest{
+		AppName:     tableName,
+		ControlType: admin.SplitControlType_PAUSE,
+		ParentPidx:  int32(parentPidx),
+	}
+	var result *admin.ControlSplitResponse
+	err := m.callMeta("ControlPartitionSplit", req, func(resp interface{}) {
+		result = resp.(*admin.ControlSplitResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) RestartPartitionSplit(tableName string, parentPidx int) error {
+	req := &admin.ControlSplitRequest{
+		AppName:     tableName,
+		ControlType: admin.SplitControlType_RESTART,
+		ParentPidx:  int32(parentPidx),
+	}
+	var result *admin.ControlSplitResponse
+	err := m.callMeta("ControlPartitionSplit", req, func(resp interface{}) {
+		result = resp.(*admin.ControlSplitResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) CancelPartitionSplit(tableName string, oldPartitionCount int) error {
+	var partitionCount int32 = int32(oldPartitionCount)
+	req := &admin.ControlSplitRequest{
+		AppName:           tableName,
+		ControlType:       admin.SplitControlType_CANCEL,
+		ParentPidx:        -1,
+		OldPartitionCount: &partitionCount,
+	}
+	var result *admin.ControlSplitResponse
+	err := m.callMeta("ControlPartitionSplit", req, func(resp interface{}) {
+		result = resp.(*admin.ControlSplitResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
 }
