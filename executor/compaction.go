@@ -93,8 +93,8 @@ func generateCompactionEnv(client *Client, tableName string, params *CompactionP
 }
 
 var updateTTLTypeMapping = map[string]string{
-	"from_now":     "UTOT_FROM_NOW",
-	"from_current": "UTOT_FROM_CURRENT",
+	"from-now":     "UTOT_FROM_NOW",
+	"from-current": "UTOT_FROM_CURRENT",
 	"timestamp":    "UTOT_TIMESTAMP",
 }
 
@@ -138,7 +138,7 @@ func generateRules(params *CompactionParams) ([]compactionRule, error) {
 	return res, nil
 }
 
-var ruleTypeMapping = map[string]string{
+var matchTypeMapping = map[string]string{
 	"anywhere": "SMT_MATCH_ANYWHERE",
 	"prefix":   "SMT_MATCH_PREFIX",
 	"postfix":  "SMT_MATCH_POSTFIX",
@@ -148,7 +148,7 @@ func generateKeyRule(ruleType string, pattern string, match string) (*compaction
 	var params keyRuleParams
 	params.Pattern = pattern
 	ok := false
-	if params.MatchType, ok = ruleTypeMapping[ruleType]; !ok {
+	if params.MatchType, ok = matchTypeMapping[match]; !ok {
 		return nil, fmt.Errorf("invalid match type {%s}", match)
 	}
 

@@ -16,7 +16,7 @@ func init() {
 			 **/
 			f.String("o", "operation-type", "", "operation type, for example: delete/update-ttl")
 			// update ttl operation
-			f.String("u", "ttl-type", "", "update ttl operation type, for example: from_now/from_current/timestamp")
+			f.String("u", "ttl-type", "", "update ttl operation type, for example: from-now/from-current/timestamp")
 			f.Uint("v", "time-value", 0, "time value")
 			/**
 			 *  rules
