@@ -80,11 +80,11 @@ const (
 // -7. recover disk cleaner internal if balance complete
 // -8. set meta status to `lively` to balance primary and secondary // TODO(jiashuo1)
 func DiskBalance(client *Client, replicaServer string, minSize int64, auto bool) error {
-	if err := changeDiskCleanerInterval(client, replicaServer, 1); err != nil {
+	if err := changeDiskCleanerInterval(client, replicaServer, "1"); err != nil {
 		return err
 	}
 	defer func() {
-		if err := changeDiskCleanerInterval(client, replicaServer, 86400); err != nil {
+		if err := changeDiskCleanerInterval(client, replicaServer, "86400"); err != nil {
 			fmt.Println("revert disk cleaner failed")
 		}
 	}()
@@ -161,8 +161,8 @@ func (m *MigrateAction) toString() string {
 	return fmt.Sprintf("node=%s, replica=%s, %s=>%s", m.node, m.replica.Gpid, m.from, m.to)
 }
 
-func changeDiskCleanerInterval(client *Client, replicaServer string, cleanInterval int64) error {
-	fmt.Printf("set gc_disk_migration_origin_replica_interval_seconds = %ds ", cleanInterval)
+func changeDiskCleanerInterval(client *Client, replicaServer string, cleanInterval string) error {
+	fmt.Printf("set gc_disk_migration_origin_replica_interval_seconds = %ss ", cleanInterval)
 	err := ConfigCommand(client, session.NodeTypeReplica, replicaServer,
 		"gc_disk_migration_origin_replica_interval_seconds", "set", cleanInterval)
 	return err

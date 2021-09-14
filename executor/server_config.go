@@ -57,7 +57,7 @@ var sectionsMap = map[session.NodeType]string{
 
 type command struct {
 	name  string
-	value int64
+	value string
 }
 
 type response struct {
@@ -73,7 +73,7 @@ type cmdResult struct {
 }
 
 //TODO(jiashuo1) not support update collector config
-func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, name string, actionType string, value int64) error {
+func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, name string, actionType string, value string) error {
 	var nodes []*util.PegasusNode
 	if len(nodeAddr) == 0 {
 		// send http-commands to all nodeType nodes
@@ -209,7 +209,7 @@ func printConfigValue(nodeType session.NodeType, sortedNodeList []string, result
 }
 
 func updateConfig(addr string, cmd command) (string, error) {
-	url := fmt.Sprintf("http://%s/updateConfig?%s=%d", addr, cmd.name, cmd.value)
+	url := fmt.Sprintf("http://%s/updateConfig?%s=%s", addr, cmd.name, cmd.value)
 	return callHTTP(url)
 }
 

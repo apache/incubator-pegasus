@@ -21,7 +21,6 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/desertbit/grumble"
@@ -79,17 +78,13 @@ func executeCommand(c *grumble.Context, ntype session.NodeType) error {
 		return errMsg()
 	}
 	if len(cmd) == 1 && cmd[0] == "list" {
-		return executor.ConfigCommand(pegasusClient, ntype, c.Flags.String("node"), "", "list", 0)
+		return executor.ConfigCommand(pegasusClient, ntype, c.Flags.String("node"), "", "list", "0")
 	}
 	if len(cmd) == 2 && cmd[1] == "get" {
-		return executor.ConfigCommand(pegasusClient, ntype, c.Flags.String("node"), cmd[0], "get", 0)
+		return executor.ConfigCommand(pegasusClient, ntype, c.Flags.String("node"), cmd[0], "get", "0")
 	}
 	if len(cmd) == 3 && cmd[1] == "set" {
-		valueInt, err := strconv.ParseInt(cmd[2], 10, 64)
-		if err != nil {
-			return err
-		}
-		return executor.ConfigCommand(pegasusClient, ntype, c.Flags.String("node"), cmd[0], "set", valueInt)
+		return executor.ConfigCommand(pegasusClient, ntype, c.Flags.String("node"), cmd[0], "set", cmd[2])
 	}
 
 	return errMsg()
