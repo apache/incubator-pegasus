@@ -79,15 +79,11 @@ public:
         }
 
         if (!_user_specified_operations.empty()) {
-            bool need_delete = false;
+            dsn::string_view value_view = utils::to_string_view(existing_value);
             if (*value_changed) {
-                need_delete =
-                    user_specified_operation_filter(key, *new_value, new_value, value_changed);
-            } else {
-                need_delete = user_specified_operation_filter(
-                    key, existing_value.ToString(), new_value, value_changed);
+                value_view = *new_value;
             }
-            if (need_delete) {
+            if (user_specified_operation_filter(key, value_view, new_value, value_changed)) {
                 return true;
             }
         }
@@ -96,7 +92,7 @@ public:
     }
 
     bool user_specified_operation_filter(const rocksdb::Slice &key,
-                                         const std::string &existing_value,
+                                         dsn::string_view existing_value,
                                          std::string *new_value,
                                          bool *value_changed) const
     {
