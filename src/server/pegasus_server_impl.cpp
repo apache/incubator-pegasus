@@ -2611,7 +2611,13 @@ void pegasus_server_impl::update_user_specified_compaction(
     const std::map<std::string, std::string> &envs)
 {
     auto iter = envs.find(USER_SPECIFIED_COMPACTION);
+    if (dsn_unlikely(iter == envs.end() && _user_specified_compaction != "")) {
+        ddebug_replica("clear user specified compaction coz it was deleted");
+        _key_ttl_compaction_filter_factory->clear_user_specified_ops();
+        _user_specified_compaction = "";
+    }
     if (dsn_unlikely(iter != envs.end() && iter->second != _user_specified_compaction)) {
+        ddebug_replica("update user specified compaction coz it was changed");
         _key_ttl_compaction_filter_factory->extract_user_specified_ops(iter->second);
         _user_specified_compaction = iter->second;
     }
