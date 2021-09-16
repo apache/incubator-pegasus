@@ -74,21 +74,29 @@ public:
             // should update ttl
             expire_ts = utils::epoch_now() + _default_ttl;
             *new_value = existing_value.ToString();
-            pegasus_update_expire_ts(
-                _pegasus_data_version, *new_value, expire_ts);
+            pegasus_update_expire_ts(_pegasus_data_version, *new_value, expire_ts);
             *value_changed = true;
         }
 
-        if (!_user_specified_operations.empty() &&
-            user_specified_operation_filter(key, existing_value, new_value, value_changed)) {
-            return true;
+        if (!_user_specified_operations.empty()) {
+            bool need_delete = false;
+            if (*value_changed) {
+                need_delete =
+                    user_specified_operation_filter(key, *new_value, new_value, value_changed);
+            } else {
+                need_delete = user_specified_operation_filter(
+                    key, existing_value.ToString(), new_value, value_changed);
+            }
+            if (need_delete) {
+                return true;
+            }
         }
 
         return check_if_ts_expired(utils::epoch_now(), expire_ts) || check_if_stale_split_data(key);
     }
 
     bool user_specified_operation_filter(const rocksdb::Slice &key,
-                                         const rocksdb::Slice &existing_value,
+                                         const std::string &existing_value,
                                          std::string *new_value,
                                          bool *value_changed) const
     {
@@ -179,7 +187,8 @@ public:
             _user_specified_operations.swap(operations);
         }
     }
-    void clear_user_specified_ops() {
+    void clear_user_specified_ops()
+    {
         dsn::utils::auto_write_lock l(_lock);
         _user_specified_operations.clear();
     }

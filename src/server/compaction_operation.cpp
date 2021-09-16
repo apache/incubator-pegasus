@@ -27,7 +27,7 @@ compaction_operation::~compaction_operation() = default;
 
 bool compaction_operation::all_rules_match(const std::string &hash_key,
                                            const std::string &sort_key,
-                                           const rocksdb::Slice &existing_value) const
+                                           const std::string &existing_value) const
 {
     if (rules.empty()) {
         return false;
@@ -52,7 +52,7 @@ delete_key::delete_key(uint32_t data_version) : compaction_operation(data_versio
 
 bool delete_key::filter(const std::string &hash_key,
                         const std::string &sort_key,
-                        const rocksdb::Slice &existing_value,
+                        const std::string &existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -71,7 +71,7 @@ update_ttl::update_ttl(uint32_t data_version) : compaction_operation(data_versio
 
 bool update_ttl::filter(const std::string &hash_key,
                         const std::string &sort_key,
-                        const rocksdb::Slice &existing_value,
+                        const std::string &existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -85,7 +85,7 @@ bool update_ttl::filter(const std::string &hash_key,
         new_ts = utils::epoch_now() + value;
         break;
     case update_ttl_op_type::UTOT_FROM_CURRENT: {
-        auto ttl = pegasus_extract_expire_ts(data_version, utils::to_string_view(existing_value));
+        auto ttl = pegasus_extract_expire_ts(data_version, existing_value);
         if (ttl == 0) {
             return false;
         }
@@ -101,7 +101,7 @@ bool update_ttl::filter(const std::string &hash_key,
         return false;
     }
 
-    *new_value = existing_value.ToString();
+    *new_value = existing_value;
     pegasus_update_expire_ts(data_version, *new_value, new_ts);
     *value_changed = true;
     return false;

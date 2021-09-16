@@ -66,7 +66,7 @@ public:
 
     bool all_rules_match(const std::string &hash_key,
                          const std::string &sort_key,
-                         const rocksdb::Slice &existing_value) const;
+                         const std::string &existing_value) const;
     void set_rules(filter_rules &&rules);
     /**
      * @return false indicates that this key-value should be removed
@@ -75,7 +75,7 @@ public:
      */
     virtual bool filter(const std::string &hash_key,
                         const std::string &sort_key,
-                        const rocksdb::Slice &existing_value,
+                        const std::string &existing_value,
                         std::string *new_value,
                         bool *value_changed) const = 0;
 
@@ -97,7 +97,7 @@ public:
 
     bool filter(const std::string &hash_key,
                 const std::string &sort_key,
-                const rocksdb::Slice &existing_value,
+                const std::string &existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
 
@@ -145,7 +145,7 @@ public:
 
     bool filter(const std::string &hash_key,
                 const std::string &sort_key,
-                const rocksdb::Slice &existing_value,
+                const std::string &existing_value,
                 std::string *new_value,
                 bool *value_changed) const;
     DEFINE_JSON_SERIALIZATION(type, value)

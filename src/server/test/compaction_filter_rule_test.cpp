@@ -52,12 +52,11 @@ TEST(hashkey_pattern_rule_test, match)
         {"hashkey", "hashkey", SMT_INVALID, false},
     };
 
-    rocksdb::Slice slice;
     hashkey_pattern_rule rule;
     for (const auto &test : tests) {
         rule.match_type = test.match_type;
         rule.pattern = test.pattern;
-        ASSERT_EQ(rule.match(test.hashkey, "", slice), test.match);
+        ASSERT_EQ(rule.match(test.hashkey, "", ""), test.match);
     }
 }
 
@@ -88,12 +87,11 @@ TEST(sortkey_pattern_rule_test, match)
         {"sortkey", "sortkey", SMT_INVALID, false},
     };
 
-    rocksdb::Slice slice;
     sortkey_pattern_rule rule;
     for (const auto &test : tests) {
         rule.match_type = test.match_type;
         rule.pattern = test.pattern;
-        ASSERT_EQ(rule.match("", test.sortkey, slice), test.match);
+        ASSERT_EQ(rule.match("", test.sortkey, ""), test.match);
     }
 }
 
@@ -128,7 +126,7 @@ TEST(ttl_range_rule_test, match)
         rule.stop_ttl = test.stop_ttl;
         rocksdb::SliceParts svalue =
             gen.generate_value(data_version, "", test.expire_ttl + now_ts, 0);
-        ASSERT_EQ(rule.match("", "", svalue.parts[0]), test.match);
+        ASSERT_EQ(rule.match("", "", svalue.parts[0].ToString()), test.match);
     }
 }
 

@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <rocksdb/slice.h>
 #include <dsn/utility/enum_helper.h>
 #include <dsn/cpp/json_helper.h>
 #include <gtest/gtest.h>
@@ -71,7 +70,7 @@ public:
     // after the refactor of value schema
     virtual bool match(const std::string &hash_key,
                        const std::string &sort_key,
-                       const rocksdb::Slice &existing_value) const = 0;
+                       const std::string &existing_value) const = 0;
 };
 
 enum string_match_type
@@ -96,7 +95,7 @@ public:
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,
-               const rocksdb::Slice &existing_value) const;
+               const std::string &existing_value) const;
     DEFINE_JSON_SERIALIZATION(pattern, match_type)
 
 private:
@@ -118,7 +117,7 @@ public:
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,
-               const rocksdb::Slice &existing_value) const;
+               const std::string &existing_value) const;
     DEFINE_JSON_SERIALIZATION(pattern, match_type)
 
 private:
@@ -138,7 +137,7 @@ public:
 
     bool match(const std::string &hash_key,
                const std::string &sort_key,
-               const rocksdb::Slice &existing_value) const;
+               const std::string &existing_value) const;
     DEFINE_JSON_SERIALIZATION(start_ttl, stop_ttl)
 
 private:
