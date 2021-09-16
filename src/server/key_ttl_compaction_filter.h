@@ -68,26 +68,31 @@ public:
             return false;
         }
 
-        if (!_user_specified_operations.empty() &&
-            user_specified_operation_filter(key, existing_value, new_value, value_changed)) {
-            return true;
-        }
-
         uint32_t expire_ts =
             pegasus_extract_expire_ts(_pegasus_data_version, utils::to_string_view(existing_value));
         if (_default_ttl != 0 && expire_ts == 0) {
             // should update ttl
+            expire_ts = utils::epoch_now() + _default_ttl;
             *new_value = existing_value.ToString();
-            pegasus_update_expire_ts(
-                _pegasus_data_version, *new_value, utils::epoch_now() + _default_ttl);
+            pegasus_update_expire_ts(_pegasus_data_version, *new_value, expire_ts);
             *value_changed = true;
-            return false;
         }
+
+        if (!_user_specified_operations.empty()) {
+            dsn::string_view value_view = utils::to_string_view(existing_value);
+            if (*value_changed) {
+                value_view = *new_value;
+            }
+            if (user_specified_operation_filter(key, value_view, new_value, value_changed)) {
+                return true;
+            }
+        }
+
         return check_if_ts_expired(utils::epoch_now(), expire_ts) || check_if_stale_split_data(key);
     }
 
     bool user_specified_operation_filter(const rocksdb::Slice &key,
-                                         const rocksdb::Slice &existing_value,
+                                         dsn::string_view existing_value,
                                          std::string *new_value,
                                          bool *value_changed) const
     {
@@ -177,6 +182,11 @@ public:
             dsn::utils::auto_write_lock l(_lock);
             _user_specified_operations.swap(operations);
         }
+    }
+    void clear_user_specified_ops()
+    {
+        dsn::utils::auto_write_lock l(_lock);
+        _user_specified_operations.clear();
     }
 
 private:
