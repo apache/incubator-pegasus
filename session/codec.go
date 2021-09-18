@@ -255,6 +255,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewControlSplitResponse(),
 		}
 	},
+	"RPC_ADD_NEW_DISK_ACK": func() RpcResponseResult {
+		return &radmin.ReplicaClientAddDiskResult{
+			Success: radmin.NewAddNewDiskResponse(),
+		}
+	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetResult{
 			Success: rrdb.NewReadResponse(),

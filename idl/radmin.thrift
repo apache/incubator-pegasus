@@ -53,10 +53,28 @@ struct replica_disk_migrate_response
    2:optional string hint;
 }
 
+struct add_new_disk_request {
+    // format is "disk_tag:disk_dir,tag2:dir2"
+    // for example: "ssd1:/home/work/ssd1"
+    1: string disk_str;
+}
+
+struct add_new_disk_response {
+    // Possible error:
+    // - ERR_INVALID_PARAMETERS: invalid disk_str in request
+    // - ERR_NODE_ALREADY_EXIST: data_dir is already available
+    // - ERR_DIR_NOT_EMPTY: data_dir is not empty
+    // - ERR_FILE_OPERATION_FAILED: can't create data_dir or directory can't read/write
+    1: base.error_code err;
+    2: optional string err_hint;
+}
+
 // A client to ReplicaServer's administration API.
 service replica_client 
 {
     query_disk_info_response query_disk_info(1:query_disk_info_request req);
     
     replica_disk_migrate_response disk_migrate(1:replica_disk_migrate_request req);
+
+    add_new_disk_response add_disk(1:add_new_disk_request req);
 }

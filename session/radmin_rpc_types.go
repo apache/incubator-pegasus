@@ -40,3 +40,19 @@ func (rs *ReplicaSession) DiskMigrate(ctx context.Context, req *radmin.ReplicaDi
 	}
 	return nil, err
 }
+
+// AddDisk is auto-generated
+func (rs *ReplicaSession) AddDisk(ctx context.Context, req *radmin.AddNewDiskRequest) (*radmin.AddNewDiskResponse, error) {
+	arg := radmin.NewReplicaClientAddDiskArgs()
+	arg.Req = req
+	result, err := rs.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, arg, "RPC_ADD_NEW_DISK")
+	if err == nil {
+		ret, _ := result.(*radmin.ReplicaClientAddDiskResult)
+		resp := ret.GetSuccess()
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp, fmt.Errorf("AddDisk to session %s failed: %s", rs, resp.GetErr().String())
+		}
+		return resp, nil
+	}
+	return nil, err
+}
