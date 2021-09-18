@@ -165,3 +165,26 @@ func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, p
 	}
 	return replicaCountInfos
 }
+
+func AddDisk(client *Client, replicaServer string, diskStr string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	n, err := client.Nodes.GetNode(replicaServer, session.NodeTypeReplica)
+	if err != nil {
+		return err
+	}
+	replica := n.Replica()
+
+	resp, err := replica.AddDisk(ctx, &radmin.AddNewDiskRequest{
+		DiskStr: diskStr,
+	})
+	if err != nil {
+		if resp.GetErrHint() != "" {
+			return fmt.Errorf("%s [hint: %s]", err, resp.GetErrHint())
+		}
+		return err
+	}
+	fmt.Printf("Node[%s] add new disk succeed\n", replicaServer)
+	return nil
+}
