@@ -224,41 +224,54 @@ TEST(greedy_load_balancer, get_disk_partitions_map)
     ASSERT_EQ(disk_partitions[disk_tag].count(pid), 1);
 }
 
-TEST(greedy_load_balancer, get_max_load_disk)
+TEST(greedy_load_balancer, get_max_load_disk_set)
 {
     greedy_load_balancer::cluster_migration_info cluster_info;
     cluster_info.type = cluster_balance_type::COPY_SECONDARY;
 
-    rpc_address addr(1, 10086);
     int32_t app_id = 1;
+    rpc_address addr(1, 10086);
+    rpc_address addr2(2, 10086);
     std::map<rpc_address, partition_status::type> partition;
     partition[addr] = partition_status::PS_SECONDARY;
+    std::map<rpc_address, partition_status::type> partition2;
+    partition2[addr] = partition_status::PS_SECONDARY;
+    partition2[addr2] = partition_status::PS_SECONDARY;
     greedy_load_balancer::app_migration_info app_info;
     app_info.partitions.push_back(partition);
+    app_info.partitions.push_back(partition2);
     cluster_info.apps_info[app_id] = app_info;
 
+    greedy_load_balancer::node_migration_info node_info;
     partition_set partitions;
     gpid pid(app_id, 0);
     partitions.insert(pid);
-    greedy_load_balancer::node_migration_info node_info;
     std::string disk_tag = "disk1";
     node_info.partitions[disk_tag] = partitions;
+    partition_set partitions2;
+    gpid pid2(app_id, 1);
+    partitions2.insert(pid2);
+    std::string disk_tag2 = "disk2";
+    node_info.partitions[disk_tag2] = partitions2;
     cluster_info.nodes_info[addr] = node_info;
 
-    std::set<rpc_address> max_nodes;
-    max_nodes.insert(addr);
+    greedy_load_balancer::node_migration_info node_info2;
+    partition_set partitions3;
+    gpid pid3(app_id, 1);
+    partitions3.insert(pid3);
+    std::string disk_tag3 = "disk3";
+    node_info2.partitions[disk_tag3] = partitions3;
+    cluster_info.nodes_info[addr2] = node_info2;
 
     greedy_load_balancer balancer(nullptr);
-    rpc_address picked_node;
-    std::string picked_disk;
-    partition_set target_partitions;
-    balancer.get_max_load_disk(
-        cluster_info, max_nodes, app_id, picked_node, picked_disk, target_partitions);
+    std::set<rpc_address> max_nodes;
+    max_nodes.insert(addr);
+    max_nodes.insert(addr2);
 
-    ASSERT_EQ(picked_node, addr);
-    ASSERT_EQ(picked_disk, disk_tag);
-    ASSERT_EQ(target_partitions.size(), 1);
-    ASSERT_EQ(target_partitions.count(pid), 1);
+    std::set<greedy_load_balancer::app_disk_info> max_load_disk_set;
+    balancer.get_max_load_disk_set(cluster_info, max_nodes, app_id, max_load_disk_set);
+
+    ASSERT_EQ(max_load_disk_set.size(), 3);
 }
 
 TEST(greedy_load_balancer, apply_move)

@@ -102,6 +102,14 @@ void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
     }
 }
 
+template <typename S>
+auto select_random(const S &s, size_t n)
+{
+    auto it = std::begin(s);
+    std::advance(it, n);
+    return it;
+}
+
 greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
     : server_load_balancer(_svc),
       _ctrl_balancer_ignored_apps(nullptr),
@@ -1217,9 +1225,10 @@ bool greedy_load_balancer::get_next_move(const cluster_migration_info &cluster_i
         std::multimap<uint32_t, rpc_address> app_count_multimap = utils::flip_map(app_map);
         if (app_count_multimap.rbegin()->first <= app_count_multimap.begin()->first + 1 &&
             (app_cluster_min_set.empty() || app_cluster_max_set.empty())) {
-            ddebug_f(
-                "do not move replicas of a balanced app if the least (most) loaded servers overall "
-                "do not intersect the servers hosting the least (most) replicas of the app");
+            ddebug_f("do not move replicas of a balanced app({}) if the least (most) loaded "
+                     "servers overall do not intersect the servers hosting the least (most) "
+                     "replicas of the app",
+                     app_id);
             continue;
         }
 
@@ -1244,59 +1253,69 @@ bool greedy_load_balancer::pick_up_move(const cluster_migration_info &cluster_in
                                         const partition_set &selected_pid,
                                         /*out*/ move_info &move_info)
 {
-    rpc_address max_load_node;
-    std::string max_load_disk;
-    partition_set max_load_partitions;
-    get_max_load_disk(
-        cluster_info, max_nodes, app_id, max_load_node, max_load_disk, max_load_partitions);
-
+    std::set<app_disk_info> max_load_disk_set;
+    get_max_load_disk_set(cluster_info, max_nodes, app_id, max_load_disk_set);
+    if (max_load_disk_set.empty()) {
+        return false;
+    }
+    auto index = rand() % max_load_disk_set.size();
+    auto max_load_disk = *select_random(max_load_disk_set, index);
+    ddebug_f("most load disk({}) on node({}) is picked, has {} partition",
+             max_load_disk.node.to_string(),
+             max_load_disk.disk_tag,
+             max_load_disk.partitions.size());
     for (const auto &node_addr : min_nodes) {
         gpid picked_pid;
         if (pick_up_partition(
-                cluster_info, node_addr, max_load_partitions, selected_pid, picked_pid)) {
+                cluster_info, node_addr, max_load_disk.partitions, selected_pid, picked_pid)) {
             move_info.pid = picked_pid;
-            move_info.source_node = max_load_node;
-            move_info.source_disk_tag = max_load_disk;
+            move_info.source_node = max_load_disk.node;
+            move_info.source_disk_tag = max_load_disk.disk_tag;
             move_info.target_node = node_addr;
             move_info.type = cluster_info.type == cluster_balance_type::COPY_SECONDARY
                                  ? balance_type::copy_secondary
                                  : balance_type::copy_primary;
             ddebug_f("partition[{}] will migrate from {} to {}",
                      picked_pid,
-                     max_load_node.to_string(),
+                     max_load_disk.node.to_string(),
                      node_addr.to_string());
             return true;
         }
     }
+    ddebug_f("can not find a partition(app_id={}) from random max load disk(node={}, disk={})",
+             app_id,
+             max_load_disk.node.to_string(),
+             max_load_disk.disk_tag);
     return false;
 }
 
-void greedy_load_balancer::get_max_load_disk(const cluster_migration_info &cluster_info,
-                                             const std::set<rpc_address> &max_nodes,
-                                             const int32_t app_id,
-                                             /*out*/ rpc_address &picked_node,
-                                             /*out*/ std::string &picked_disk,
-                                             /*out*/ partition_set &target_partitions)
+void greedy_load_balancer::get_max_load_disk_set(const cluster_migration_info &cluster_info,
+                                                 const std::set<rpc_address> &max_nodes,
+                                                 const int32_t app_id,
+                                                 /*out*/ std::set<app_disk_info> &max_load_disk_set)
 {
-    int32_t max_load_size = 0;
+    // key: partition count (app_disk_info.partitions.size())
+    // value: app_disk_info structure
+    std::multimap<uint32_t, app_disk_info> app_disk_info_multimap;
     for (const auto &node_addr : max_nodes) {
         // key: disk_tag
         // value: partition set for app(app id=app_id) in node(addr=node_addr)
         std::map<std::string, partition_set> disk_partitions =
             get_disk_partitions_map(cluster_info, node_addr, app_id);
         for (const auto &kv : disk_partitions) {
-            if (kv.second.size() > max_load_size) {
-                picked_node = node_addr;
-                picked_disk = kv.first;
-                target_partitions = kv.second;
-                max_load_size = kv.second.size();
-            }
+            app_disk_info info;
+            info.app_id = app_id;
+            info.node = node_addr;
+            info.disk_tag = kv.first;
+            info.partitions = kv.second;
+            app_disk_info_multimap.insert(
+                std::pair<uint32_t, app_disk_info>(kv.second.size(), info));
         }
     }
-    ddebug_f("most load is node({}), disk_tag({}), target partition count = {}",
-             picked_node.to_string(),
-             picked_disk,
-             target_partitions.size());
+    auto range = app_disk_info_multimap.equal_range(app_disk_info_multimap.rbegin()->first);
+    for (auto iter = range.first; iter != range.second; ++iter) {
+        max_load_disk_set.insert(iter->second);
+    }
 }
 
 std::map<std::string, partition_set> greedy_load_balancer::get_disk_partitions_map(
