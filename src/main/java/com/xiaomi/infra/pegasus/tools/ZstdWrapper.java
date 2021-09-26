@@ -22,7 +22,7 @@ public class ZstdWrapper {
     byte[] decompressedValue;
     try {
       decompressedValue = decompress(src);
-    } catch (PException e) {
+    } catch (Exception e) {
       // decompress fail
       decompressedValue = src;
     }

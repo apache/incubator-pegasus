@@ -53,5 +53,9 @@ public class InterceptorTest {
         new String(commonTable.get(hashKey, sortKey, 10000)), new String(compressionValue));
     Assertions.assertEquals(
         new String(compressTable.get(hashKey, sortKey, 10000)), new String(compressionValue));
+
+    // if origin value is null, return null
+    byte[] ret = compressTable.get("not-exist".getBytes(), sortKey, 10000);
+    Assertions.assertNull(ret);
   }
 }
