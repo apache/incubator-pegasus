@@ -2,6 +2,6 @@ bin/
 .admin-cli-history
 pegasus.log
 .idea
-shell.log
+*.log
 golangci-*
 *.tar.gz

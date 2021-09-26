@@ -377,7 +377,9 @@ func (m *rpcBasedMeta) Balance(gpid *base.Gpid, opType BalanceType, from *util.P
 		actions = append(actions, newProposalAction(to, to, admin.ConfigType_CT_UPGRADE_TO_PRIMARY))
 	case BalanceCopyPri:
 		actions = append(actions, newProposalAction(from, to, admin.ConfigType_CT_ADD_SECONDARY_FOR_LB))
+		actions = append(actions, newProposalAction(from, from, admin.ConfigType_CT_DOWNGRADE_TO_SECONDARY))
 		actions = append(actions, newProposalAction(to, to, admin.ConfigType_CT_UPGRADE_TO_PRIMARY))
+		actions = append(actions, newProposalAction(to, from, admin.ConfigType_CT_REMOVE))
 	case BalanceCopySec:
 		actions = append(actions, newProposalAction(nil, to, admin.ConfigType_CT_ADD_SECONDARY_FOR_LB))
 		actions = append(actions, newProposalAction(nil, from, admin.ConfigType_CT_DOWNGRADE_TO_INACTIVE))
