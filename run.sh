@@ -52,6 +52,7 @@ function usage_build()
     echo "   --notest              build without building unit tests, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --use_jemalloc        build with jemalloc"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --check               whether to perform code check before building"
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
@@ -80,6 +81,7 @@ function run_build()
     RUN_VERBOSE=NO
     NO_TEST=NO
     DISABLE_GPERF=NO
+    USE_JEMALLOC=NO
     SKIP_THIRDPARTY=NO
     CHECK=NO
     SANITIZER=""
@@ -129,6 +131,10 @@ function run_build()
                 ;;
             --disable_gperf)
                 DISABLE_GPERF=YES
+                ;;
+            --use_jemalloc)
+                DISABLE_GPERF=YES
+                USE_JEMALLOC=YES
                 ;;
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
@@ -187,7 +193,7 @@ function run_build()
         mkdir -p build
         pushd build
         cmake .. -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER -DCMAKE_BUILD_TYPE=Release \
-        -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}
+        -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE} -DUSE_JEMALLOC=${USE_JEMALLOC}
         make -j$JOB_NUM
         exit_if_fail $?
         popd
@@ -211,7 +217,7 @@ function run_build()
         ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
-        DISABLE_GPERF="$DISABLE_GPERF" $scripts_dir/build.sh
+        DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" $scripts_dir/build.sh
 }
 
 #####################

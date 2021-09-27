@@ -28,6 +28,17 @@ message(STATUS "ENABLE_GCOV = ${ENABLE_GCOV}")
 option(ENABLE_GPERF "Enable gperftools (for tcmalloc)" ON)
 message(STATUS "ENABLE_GPERF = ${ENABLE_GPERF}")
 
+option(USE_JEMALLOC "Use jemalloc" OFF)
+message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
+
+if(ENABLE_GPERF AND USE_JEMALLOC)
+    message(FATAL_ERROR "cannot enable both gperftools and jemalloc simultaneously")
+endif()
+
+if(USE_JEMALLOC)
+    set(JEMALLOC_LIB_TYPE "SHARED")
+endif()
+
 # ================================================================== #
 
 
@@ -271,6 +282,13 @@ function(dsn_setup_system_libs)
         add_definitions(-DDSN_ENABLE_GPERF)
     endif()
 
+    if(USE_JEMALLOC)
+        find_package(Jemalloc REQUIRED)
+        # also use cpu profiler provided by gperftools
+        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} JeMalloc::JeMalloc profiler)
+        add_definitions(-DDSN_USE_JEMALLOC)
+    endif()
+
     set(DSN_SYSTEM_LIBS
         ${DSN_SYSTEM_LIBS}
         ${CMAKE_THREAD_LIBS_INIT} # the thread library found by FindThreads
@@ -310,6 +328,9 @@ function(dsn_setup_thirdparty_libs)
     find_package(snappy)
     find_package(zstd)
     find_package(lz4)
+    if(USE_JEMALLOC)
+        find_package(Jemalloc REQUIRED)
+    endif()
     find_package(RocksDB REQUIRED)
 
     # libhdfs

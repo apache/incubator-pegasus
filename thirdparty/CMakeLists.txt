@@ -316,12 +316,25 @@ ExternalProject_Add(s2geometry
         DEPENDS googletest
         )
 
+option(USE_JEMALLOC "use jemalloc" OFF)
+message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
+
+ExternalProject_Add(jemalloc
+        URL https://github.com/jemalloc/jemalloc/releases/download/5.2.1/jemalloc-5.2.1.tar.bz2
+        URL_MD5 3d41fbf006e6ebffd489bdb304d009ae
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-cxx --enable-stats --enable-prof
+        BUILD_COMMAND make
+        INSTALL_COMMAND make install
+        BUILD_IN_SOURCE 1
+        )
+
 option(ROCKSDB_PORTABLE "build a portable binary" OFF)
 
 ExternalProject_Add(rocksdb
         URL ${OSS_URL_PREFIX}/pegasus-rocksdb-6.6.4-compatible.zip
         https://github.com/XiaoMi/pegasus-rocksdb/archive/v6.6.4-compatible.zip
         URL_MD5 595b21fbe681dcf126c4cccda46f1cbb
+        DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DWITH_LZ4=ON
         -DWITH_ZSTD=ON
@@ -330,6 +343,8 @@ ExternalProject_Add(rocksdb
         -DWITH_TESTS=OFF
         -DWITH_GFLAGS=OFF
         -DUSE_RTTI=ON
+        -DWITH_JEMALLOC=${USE_JEMALLOC}
+        -DJEMALLOC_ROOT_DIR=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         -DPORTABLE=${ROCKSDB_PORTABLE}
