@@ -490,7 +490,8 @@ void replica::on_prepare(dsn::message_ex *request)
     error_code err = _prepare_list->prepare(mu, status());
     dassert(err == ERR_OK, "prepare mutation failed, err = %s", err.to_string());
 
-    if (partition_status::PS_POTENTIAL_SECONDARY == status()) {
+    if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
+        partition_status::PS_SECONDARY == status()) {
         dassert(mu->data.header.decree <=
                     last_committed_decree() + _options->max_mutation_count_in_prepare_list,
                 "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
@@ -498,13 +499,6 @@ void replica::on_prepare(dsn::message_ex *request)
                 last_committed_decree() + _options->max_mutation_count_in_prepare_list,
                 last_committed_decree(),
                 _options->max_mutation_count_in_prepare_list);
-    } else if (partition_status::PS_SECONDARY == status()) {
-        dassert(mu->data.header.decree <= last_committed_decree() + _options->staleness_for_commit,
-                "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
-                mu->data.header.decree,
-                last_committed_decree() + _options->staleness_for_commit,
-                last_committed_decree(),
-                _options->staleness_for_commit);
     } else {
         derror("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
                name(),
@@ -569,6 +563,8 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
             }
             // always ack
             ack_prepare_message(err, mu);
+            // all mutations with lower decree must be ready
+            _prepare_list->commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
             break;
         case partition_status::PS_PARTITION_SPLIT:
             if (err != ERR_OK) {

@@ -79,25 +79,14 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     error_code err;
     switch (status) {
     case partition_status::PS_PRIMARY:
+    case partition_status::PS_SECONDARY:
+    case partition_status::PS_POTENTIAL_SECONDARY:
         // pop committed mutations if buffer is full or pop_all_committed_mutations = true
         while ((d - min_decree() >= capacity() || pop_all_committed_mutations) &&
                last_committed_decree() > min_decree()) {
             pop_min();
         }
         return mutation_cache::put(mu);
-
-    case partition_status::PS_SECONDARY:
-    case partition_status::PS_POTENTIAL_SECONDARY:
-        // all mutations with lower decree must be ready
-        commit(mu->data.header.last_committed_decree, COMMIT_TO_DECREE_HARD);
-        // pop committed mutations if buffer is full or pop_all_committed_mutations = true
-        while ((d - min_decree() >= capacity() || pop_all_committed_mutations) &&
-               last_committed_decree() > min_decree()) {
-            pop_min();
-        }
-        err = mutation_cache::put(mu);
-        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
-        return err;
 
     //// delayed commit - only when capacity is an issue
     // case partition_status::PS_POTENTIAL_SECONDARY:
