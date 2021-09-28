@@ -365,9 +365,11 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         return;
     }
 
-    uint32_t max_kv_count = request.max_kv_count > 0 ? request.max_kv_count : INT_MAX;
-    uint32_t max_iteration_count =
-        std::min(max_kv_count, _rng_rd_opts.multi_get_max_iteration_count);
+    uint32_t max_kv_count = _rng_rd_opts.multi_get_max_iteration_count;
+    uint32_t max_iteration_count = _rng_rd_opts.multi_get_max_iteration_count;
+    if (request.max_kv_count > 0 && request.max_kv_count < max_kv_count) {
+        max_kv_count = request.max_kv_count;
+    }
 
     int32_t max_kv_size = request.max_kv_size > 0 ? request.max_kv_size : INT_MAX;
     int32_t max_iteration_size_config = _rng_rd_opts.multi_get_max_iteration_size > 0
@@ -463,7 +465,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             it.reset(_db->NewIterator(_data_cf_rd_opts, _data_cf));
             it->Seek(start);
             bool first_exclusive = !start_inclusive;
-            while (limiter->valid() && it->Valid()) {
+            while (count < max_kv_count && limiter->valid() && it->Valid()) {
                 // check stop sort key
                 int c = it->key().compare(stop);
                 if (c > 0 || (c == 0 && !stop_inclusive)) {
@@ -535,7 +537,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             it->SeekForPrev(stop);
             bool first_exclusive = !stop_inclusive;
             std::vector<::dsn::apps::key_value> reverse_kvs;
-            while (limiter->valid() && it->Valid()) {
+            while (count < max_kv_count && limiter->valid() && it->Valid()) {
                 // check start sort key
                 int c = it->key().compare(start);
                 if (c < 0 || (c == 0 && !start_inclusive)) {
@@ -1006,16 +1008,20 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     uint64_t filter_count = 0;
     int32_t count = 0;
 
-    uint32_t request_batch_size = request.batch_size > 0 ? request.batch_size : INT_MAX;
-    uint32_t batch_count = std::min(request_batch_size, _rng_rd_opts.rocksdb_max_iteration_count);
+    uint32_t batch_count = _rng_rd_opts.rocksdb_max_iteration_count;
+    if (request.batch_size > 0 && request.batch_size < batch_count) {
+        batch_count = request.batch_size;
+    }
     resp.kvs.reserve(batch_count);
 
     bool return_expire_ts = request.__isset.return_expire_ts ? request.return_expire_ts : false;
 
-    std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
-        batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
+    std::unique_ptr<range_read_limiter> limiter =
+        dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
+                                             0,
+                                             _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
 
-    while (limiter->valid() && it->Valid()) {
+    while (count < batch_count && limiter->valid() && it->Valid()) {
         int c = it->key().compare(stop);
         if (c > 0 || (c == 0 && !stop_inclusive)) {
             // out of range
@@ -1178,14 +1184,15 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         uint64_t filter_count = 0;
         int32_t count = 0;
 
-        uint32_t context_batch_size = context->batch_size > 0 ? context->batch_size : INT_MAX;
-        uint32_t batch_count =
-            std::min(context_batch_size, _rng_rd_opts.rocksdb_max_iteration_count);
+        uint32_t batch_count = _rng_rd_opts.rocksdb_max_iteration_count;
+        if (context->batch_size > 0 && context->batch_size < batch_count) {
+            batch_count = context->batch_size;
+        }
 
         std::unique_ptr<range_read_limiter> limiter = dsn::make_unique<range_read_limiter>(
             batch_count, 0, _rng_rd_opts.rocksdb_iteration_threshold_time_ms);
 
-        while (limiter->valid() && it->Valid()) {
+        while (count < batch_count && limiter->valid() && it->Valid()) {
             int c = it->key().compare(stop);
             if (c > 0 || (c == 0 && !stop_inclusive)) {
                 // out of range
@@ -2186,6 +2193,7 @@ range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
     ::dsn::blob raw_key(key.data(), 0, key.size());
     ::dsn::blob hash_key, sort_key;
     pegasus_restore_key(raw_key, hash_key, sort_key);
+
     if (sort_key_filter_type != ::dsn::apps::filter_type::FT_NO_FILTER &&
         !validate_filter(sort_key_filter_type, sort_key_filter_pattern, sort_key)) {
         if (_verbose_log) {
@@ -2603,9 +2611,17 @@ void pegasus_server_impl::update_user_specified_compaction(
     const std::map<std::string, std::string> &envs)
 {
     auto iter = envs.find(USER_SPECIFIED_COMPACTION);
+    if (dsn_unlikely(iter == envs.end() && _user_specified_compaction != "")) {
+        ddebug_replica("clear user specified compaction coz it was deleted");
+        _key_ttl_compaction_filter_factory->clear_user_specified_ops();
+        _user_specified_compaction = "";
+        return;
+    }
     if (dsn_unlikely(iter != envs.end() && iter->second != _user_specified_compaction)) {
+        ddebug_replica("update user specified compaction coz it was changed");
         _key_ttl_compaction_filter_factory->extract_user_specified_ops(iter->second);
         _user_specified_compaction = iter->second;
+        return;
     }
 }
 

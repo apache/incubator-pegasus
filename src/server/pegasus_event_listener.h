@@ -47,6 +47,10 @@ private:
     ::dsn::perf_counter_wrapper _pfc_recent_compaction_output_bytes;
     ::dsn::perf_counter_wrapper _pfc_recent_write_change_delayed_count;
     ::dsn::perf_counter_wrapper _pfc_recent_write_change_stopped_count;
+
+    // replica-level perfcounter
+    ::dsn::perf_counter_wrapper _pfc_recent_rdb_compaction_input_bytes;
+    ::dsn::perf_counter_wrapper _pfc_recent_rdb_compaction_output_bytes;
 };
 
 } // namespace server

@@ -25,9 +25,9 @@ namespace pegasus {
 namespace server {
 compaction_operation::~compaction_operation() = default;
 
-bool compaction_operation::all_rules_match(const std::string &hash_key,
-                                           const std::string &sort_key,
-                                           const rocksdb::Slice &existing_value) const
+bool compaction_operation::all_rules_match(dsn::string_view hash_key,
+                                           dsn::string_view sort_key,
+                                           dsn::string_view existing_value) const
 {
     if (rules.empty()) {
         return false;
@@ -50,9 +50,9 @@ delete_key::delete_key(filter_rules &&rules, uint32_t data_version)
 
 delete_key::delete_key(uint32_t data_version) : compaction_operation(data_version) {}
 
-bool delete_key::filter(const std::string &hash_key,
-                        const std::string &sort_key,
-                        const rocksdb::Slice &existing_value,
+bool delete_key::filter(dsn::string_view hash_key,
+                        dsn::string_view sort_key,
+                        dsn::string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -69,9 +69,9 @@ update_ttl::update_ttl(filter_rules &&rules, uint32_t data_version)
 
 update_ttl::update_ttl(uint32_t data_version) : compaction_operation(data_version) {}
 
-bool update_ttl::filter(const std::string &hash_key,
-                        const std::string &sort_key,
-                        const rocksdb::Slice &existing_value,
+bool update_ttl::filter(dsn::string_view hash_key,
+                        dsn::string_view sort_key,
+                        dsn::string_view existing_value,
                         std::string *new_value,
                         bool *value_changed) const
 {
@@ -85,7 +85,7 @@ bool update_ttl::filter(const std::string &hash_key,
         new_ts = utils::epoch_now() + value;
         break;
     case update_ttl_op_type::UTOT_FROM_CURRENT: {
-        auto ttl = pegasus_extract_expire_ts(data_version, utils::to_string_view(existing_value));
+        auto ttl = pegasus_extract_expire_ts(data_version, existing_value);
         if (ttl == 0) {
             return false;
         }
@@ -101,7 +101,7 @@ bool update_ttl::filter(const std::string &hash_key,
         return false;
     }
 
-    *new_value = existing_value.ToString();
+    *new_value = std::string(existing_value.data(), existing_value.size());
     pegasus_update_expire_ts(data_version, *new_value, new_ts);
     *value_changed = true;
     return false;

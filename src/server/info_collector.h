@@ -80,6 +80,10 @@ public:
                 row_stats.recent_backup_request_throttling_delay_count);
             recent_backup_request_throttling_reject_count->set(
                 row_stats.recent_backup_request_throttling_reject_count);
+            recent_write_splitting_reject_count->set(row_stats.recent_write_splitting_reject_count);
+            recent_read_splitting_reject_count->set(row_stats.recent_read_splitting_reject_count);
+            recent_write_bulk_load_ingestion_reject_count->set(
+                row_stats.recent_write_bulk_load_ingestion_reject_count);
             storage_mb->set(row_stats.storage_mb);
             storage_count->set(row_stats.storage_count);
             rdb_block_cache_hit_rate->set(convert_to_1M_ratio(
@@ -110,6 +114,20 @@ public:
             check_and_mutate_bytes->set(row_stats.check_and_mutate_bytes);
             read_bytes->set(row_stats.get_total_read_bytes());
             write_bytes->set(row_stats.get_total_write_bytes());
+            recent_rdb_compaction_input_bytes->set(row_stats.recent_rdb_compaction_input_bytes);
+            recent_rdb_compaction_output_bytes->set(row_stats.recent_rdb_compaction_output_bytes);
+            rdb_read_l2andup_hit_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_read_l2andup_hit_count, row_stats.rdb_block_cache_total_count));
+            rdb_read_l1_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l1_hit_count,
+                                                          row_stats.rdb_block_cache_total_count));
+            rdb_read_l0_hit_rate->set(convert_to_1M_ratio(row_stats.rdb_read_l0_hit_count,
+                                                          row_stats.rdb_block_cache_total_count));
+            rdb_read_memtable_hit_rate->set(convert_to_1M_ratio(
+                row_stats.rdb_read_memtable_hit_count, row_stats.rdb_block_cache_total_count));
+            rdb_write_amplification->set(row_stats.rdb_write_amplification /
+                                         row_stats.partition_count);
+            rdb_read_amplification->set(row_stats.rdb_read_amplification /
+                                        row_stats.partition_count);
         }
 
         ::dsn::perf_counter_wrapper get_qps;
@@ -137,6 +155,9 @@ public:
         ::dsn::perf_counter_wrapper recent_read_throttling_reject_count;
         ::dsn::perf_counter_wrapper recent_backup_request_throttling_delay_count;
         ::dsn::perf_counter_wrapper recent_backup_request_throttling_reject_count;
+        ::dsn::perf_counter_wrapper recent_write_splitting_reject_count;
+        ::dsn::perf_counter_wrapper recent_read_splitting_reject_count;
+        ::dsn::perf_counter_wrapper recent_write_bulk_load_ingestion_reject_count;
         ::dsn::perf_counter_wrapper storage_mb;
         ::dsn::perf_counter_wrapper storage_count;
         ::dsn::perf_counter_wrapper rdb_block_cache_hit_rate;
@@ -161,6 +182,14 @@ public:
         ::dsn::perf_counter_wrapper check_and_mutate_bytes;
         ::dsn::perf_counter_wrapper read_bytes;
         ::dsn::perf_counter_wrapper write_bytes;
+        ::dsn::perf_counter_wrapper recent_rdb_compaction_input_bytes;
+        ::dsn::perf_counter_wrapper recent_rdb_compaction_output_bytes;
+        ::dsn::perf_counter_wrapper rdb_read_l2andup_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_read_l1_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_read_l0_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_read_memtable_hit_rate;
+        ::dsn::perf_counter_wrapper rdb_write_amplification;
+        ::dsn::perf_counter_wrapper rdb_read_amplification;
     };
 
     info_collector();

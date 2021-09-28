@@ -27,9 +27,9 @@
 
 namespace pegasus {
 namespace server {
-bool string_pattern_match(const std::string &value,
+bool string_pattern_match(dsn::string_view value,
                           string_match_type type,
-                          const std::string &filter_pattern)
+                          dsn::string_view filter_pattern)
 {
     if (filter_pattern.empty())
         return false;
@@ -38,7 +38,7 @@ bool string_pattern_match(const std::string &value,
 
     switch (type) {
     case string_match_type::SMT_MATCH_ANYWHERE:
-        return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
+        return value.find(filter_pattern) != dsn::string_view::npos;
     case string_match_type::SMT_MATCH_PREFIX:
         return memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
     case string_match_type::SMT_MATCH_POSTFIX:
@@ -53,30 +53,29 @@ bool string_pattern_match(const std::string &value,
 
 hashkey_pattern_rule::hashkey_pattern_rule(uint32_t data_version) {}
 
-bool hashkey_pattern_rule::match(const std::string &hash_key,
-                                 const std::string &sort_key,
-                                 const rocksdb::Slice &existing_value) const
+bool hashkey_pattern_rule::match(dsn::string_view hash_key,
+                                 dsn::string_view sort_key,
+                                 dsn::string_view existing_value) const
 {
     return string_pattern_match(hash_key, match_type, pattern);
 }
 
 sortkey_pattern_rule::sortkey_pattern_rule(uint32_t data_version) {}
 
-bool sortkey_pattern_rule::match(const std::string &hash_key,
-                                 const std::string &sort_key,
-                                 const rocksdb::Slice &existing_value) const
+bool sortkey_pattern_rule::match(dsn::string_view hash_key,
+                                 dsn::string_view sort_key,
+                                 dsn::string_view existing_value) const
 {
     return string_pattern_match(sort_key, match_type, pattern);
 }
 
 ttl_range_rule::ttl_range_rule(uint32_t data_version) : data_version(data_version) {}
 
-bool ttl_range_rule::match(const std::string &hash_key,
-                           const std::string &sort_key,
-                           const rocksdb::Slice &existing_value) const
+bool ttl_range_rule::match(dsn::string_view hash_key,
+                           dsn::string_view sort_key,
+                           dsn::string_view existing_value) const
 {
-    uint32_t expire_ts =
-        pegasus_extract_expire_ts(data_version, utils::to_string_view(existing_value));
+    uint32_t expire_ts = pegasus_extract_expire_ts(data_version, existing_value);
     // if start_ttl and stop_ttl = 0, it means we want to delete keys which have no ttl
     if (0 == expire_ts && 0 == start_ttl && 0 == stop_ttl) {
         return true;

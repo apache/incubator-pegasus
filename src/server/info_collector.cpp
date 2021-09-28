@@ -153,6 +153,8 @@ void info_collector::on_app_stat()
     for (const auto &app_rows : all_rows) {
         // get statistics data for app
         row_data app_stats(app_rows.first);
+        app_stats.partition_count = app_rows.second.size();
+        all_stats.partition_count += app_rows.second.size();
         for (auto partition_row : app_rows.second) {
             app_stats.aggregate(partition_row);
         }
@@ -218,6 +220,9 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(recent_read_throttling_reject_count);
     INIT_COUNTER(recent_backup_request_throttling_delay_count);
     INIT_COUNTER(recent_backup_request_throttling_reject_count);
+    INIT_COUNTER(recent_write_splitting_reject_count);
+    INIT_COUNTER(recent_read_splitting_reject_count);
+    INIT_COUNTER(recent_write_bulk_load_ingestion_reject_count);
     INIT_COUNTER(storage_mb);
     INIT_COUNTER(storage_count);
     INIT_COUNTER(rdb_block_cache_hit_rate);
@@ -240,6 +245,14 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
     INIT_COUNTER(check_and_mutate_bytes);
     INIT_COUNTER(read_bytes);
     INIT_COUNTER(write_bytes);
+    INIT_COUNTER(recent_rdb_compaction_input_bytes);
+    INIT_COUNTER(recent_rdb_compaction_output_bytes);
+    INIT_COUNTER(rdb_read_l2andup_hit_rate);
+    INIT_COUNTER(rdb_read_l1_hit_rate);
+    INIT_COUNTER(rdb_read_l0_hit_rate);
+    INIT_COUNTER(rdb_read_memtable_hit_rate);
+    INIT_COUNTER(rdb_write_amplification);
+    INIT_COUNTER(rdb_read_amplification);
     _app_stat_counters[app_name] = counters;
     return counters;
 }

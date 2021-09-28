@@ -109,13 +109,14 @@ TEST(compaction_filter_operation_test, all_rules_match)
 
         rocksdb::SliceParts svalue =
             gen.generate_value(data_version, "", test.expire_ttl + now_ts, 0);
-        ASSERT_EQ(delete_operation.all_rules_match(test.hashkey, test.sortkey, svalue.parts[0]),
+        ASSERT_EQ(delete_operation.all_rules_match(
+                      test.hashkey, test.sortkey, svalue.parts[0].ToString()),
                   test.all_match);
     }
 
     // all_rules_match will return false if there is no rule in this operation
     update_ttl no_rule_operation({}, data_version);
-    ASSERT_EQ(no_rule_operation.all_rules_match("hash", "sort", rocksdb::Slice()), false);
+    ASSERT_EQ(no_rule_operation.all_rules_match("hash", "sort", ""), false);
 }
 
 TEST(delete_key_test, filter)
@@ -140,8 +141,7 @@ TEST(delete_key_test, filter)
         auto hash_rule = static_cast<hashkey_pattern_rule *>(delete_operation.rules.begin()->get());
         hash_rule->pattern = test.hashkey_pattern;
         hash_rule->match_type = test.hashkey_match_type;
-        ASSERT_EQ(test.filter,
-                  delete_operation.filter(test.hashkey, "", rocksdb::Slice(), nullptr, nullptr));
+        ASSERT_EQ(test.filter, delete_operation.filter(test.hashkey, "", "", nullptr, nullptr));
     }
 }
 
@@ -197,9 +197,9 @@ TEST(update_ttl_test, filter)
         bool value_changed = false;
         rocksdb::SliceParts svalue = gen.generate_value(data_version, "", test.expire_ts, 0);
         uint32_t before_ts = utils::epoch_now();
-        ASSERT_EQ(
-            false,
-            update_operation.filter(test.hashkey, "", svalue.parts[0], &new_value, &value_changed));
+        ASSERT_EQ(false,
+                  update_operation.filter(
+                      test.hashkey, "", svalue.parts[0].ToString(), &new_value, &value_changed));
         ASSERT_EQ(test.value_changed, value_changed);
         if (value_changed) {
             uint32_t new_ts = pegasus_extract_expire_ts(data_version, new_value);
