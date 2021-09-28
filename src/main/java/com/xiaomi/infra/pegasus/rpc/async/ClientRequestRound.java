@@ -22,6 +22,7 @@ import com.xiaomi.infra.pegasus.metrics.MetricsManager;
 import com.xiaomi.infra.pegasus.operator.client_operator;
 import com.xiaomi.infra.pegasus.rpc.Table;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 
 /** Created by weijiesun on 16-11-25. */
@@ -56,7 +57,7 @@ public final class ClientRequestRound {
 
     this.enableCounter = enableCounter;
     this.createNanoTime = System.nanoTime();
-    this.expireNanoTime = createNanoTime + timeoutInMilliseconds;
+    this.expireNanoTime = createNanoTime + TimeUnit.MILLISECONDS.toNanos(timeoutInMilliseconds);
     this.isCompleted = false;
     this.tryId = 1;
     this.backupRequestTask = null;
