@@ -27,6 +27,7 @@
 #include <dsn/tool-api/task_queue.h>
 #include "task_engine.h"
 #include <dsn/tool-api/network.h>
+#include <dsn/dist/fmt_logging.h>
 #include "runtime/rpc/rpc_engine.h"
 
 namespace dsn {
@@ -44,12 +45,26 @@ task_queue::task_queue(task_worker_pool *pool, int index, task_queue *inner_prov
                                               (_name + ".queue.length").c_str(),
                                               COUNTER_TYPE_NUMBER,
                                               "task queue length");
+    _delay_task_counter.init_global_counter(_pool->node()->full_name(),
+                                            "engine",
+                                            (_name + ".queue.delay_task").c_str(),
+                                            COUNTER_TYPE_VOLATILE_NUMBER,
+                                            "delay count of tasks before enqueue");
+    _reject_task_counter.init_global_counter(_pool->node()->full_name(),
+                                             "engine",
+                                             (_name + ".queue.reject_task").c_str(),
+                                             COUNTER_TYPE_VOLATILE_NUMBER,
+                                             "reject count of tasks before enqueue");
     _virtual_queue_length = 0;
     _spec = (threadpool_spec *)&pool->spec();
 }
 
 task_queue::~task_queue() = default;
 
+// This function is used to throttle tasks before they enter the queue
+// `queue_length_throttling_threshold` is configured by task pool
+// `throttling_mode` is configured by the specific task
+// Because not all tasks in the queue can handle the `ERR_BUSY` exception
 void task_queue::enqueue_internal(task *task)
 {
     auto &sp = task->spec();
@@ -68,10 +83,7 @@ void task_queue::enqueue_internal(task *task)
             if (delay_ms > 0) {
                 auto rtask = static_cast<rpc_request_task *>(task);
                 if (rtask->get_request()->io_session->delay_recv(delay_ms)) {
-                    dwarn("too many pending tasks (%d), delay traffic from %s for %d milliseconds",
-                          ac_value,
-                          rtask->get_request()->header->from_address.to_string(),
-                          delay_ms);
+                    _delay_task_counter->increment();
                 }
             }
         } else {
@@ -81,13 +93,7 @@ void task_queue::enqueue_internal(task *task)
                 auto rtask = static_cast<rpc_request_task *>(task);
                 auto resp = rtask->get_request()->create_response();
                 task::get_current_rpc()->reply(resp, ERR_BUSY);
-
-                dwarn("too many pending tasks (%d), reject message from %s with trace_id = "
-                      "%016" PRIx64,
-                      ac_value,
-                      rtask->get_request()->header->from_address.to_string(),
-                      rtask->get_request()->header->trace_id);
-
+                _reject_task_counter->increment();
                 task->release_ref(); // added in task::enqueue(pool)
                 return;
             }

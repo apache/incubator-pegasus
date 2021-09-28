@@ -39,6 +39,7 @@
 #include <dsn/tool-api/task_queue.h>
 #include <dsn/tool-api/task_worker.h>
 #include <dsn/tool-api/timer_service.h>
+#include <dsn/tool-api/command_manager.h>
 
 namespace dsn {
 
@@ -80,6 +81,8 @@ public:
     std::vector<task_worker *> &workers() { return _workers; }
 
 private:
+    friend class task_engine;
+
     threadpool_spec _spec;
     task_engine *_owner;
     service_node *_node;
@@ -96,7 +99,11 @@ class task_engine
 {
 public:
     task_engine(service_node *node);
-    ~task_engine() { stop(); }
+    ~task_engine()
+    {
+        stop();
+        UNREGISTER_VALID_HANDLER(_task_queue_max_length_cmd);
+    }
 
     //
     // service management routines
@@ -122,11 +129,14 @@ public:
     void get_queue_info(/*out*/ std::stringstream &ss);
 
 private:
+    void register_cli_commands();
+
     std::vector<task_worker_pool *> _pools;
     volatile bool _is_running;
     service_node *_node;
+    dsn_handle_t _task_queue_max_length_cmd;
 };
 
 // -------------------- inline implementation ----------------------------
 
-} // end namespace
+} // namespace dsn
