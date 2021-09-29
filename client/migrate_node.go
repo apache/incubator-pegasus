@@ -62,7 +62,7 @@ func listReplicasOnNode(meta Meta, node *util.PegasusNode, tableName string) ([]
 	return result, nil
 }
 
-func listPrimariesOnNode(meta Meta, node *util.PegasusNode, tableName string) ([]*replication.PartitionConfiguration, error) {
+func ListPrimariesOnNode(meta Meta, node *util.PegasusNode, tableName string) ([]*replication.PartitionConfiguration, error) {
 	resp, err := meta.QueryConfig(tableName)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func MigratePrimariesOut(meta Meta, node *util.PegasusNode) error {
 		tbCmd := cmd + fmt.Sprintf(" table=%s", tb.AppName)
 		log.Debug(tbCmd)
 
-		partitions, err := listPrimariesOnNode(meta, node, tb.AppName)
+		partitions, err := ListPrimariesOnNode(meta, node, tb.AppName)
 		if err != nil {
 			return fmt.Errorf("%s failed: %s", tbCmd, err)
 		}

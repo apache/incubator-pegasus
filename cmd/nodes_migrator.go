@@ -20,11 +20,11 @@
 package cmd
 
 import (
-	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/admin-cli/executor"
-	"github.com/pegasus-kv/admin-cli/shell"
-
 	"strings"
+
+	"github.com/desertbit/grumble"
+	"github.com/pegasus-kv/admin-cli/executor/toolkits/nodesmigrator"
+	"github.com/pegasus-kv/admin-cli/shell"
 )
 
 func init() {
@@ -39,8 +39,8 @@ func init() {
 		Run: func(c *grumble.Context) error {
 			from := strings.Split(c.Flags.String("from"), ",")
 			to := strings.Split(c.Flags.String("to"), ",")
-			period := c.Flags.Int64("period")
-			return executor.MigrateAllReplicaToNodes(pegasusClient, period, from, to)
+			period := c.Flags.Int("period")
+			return nodesmigrator.MigrateAllReplicaToNodes(pegasusClient, period, from, to)
 		},
 	})
 }
