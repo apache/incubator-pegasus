@@ -268,10 +268,7 @@ namespace replication {
 class mutation_log_test : public replica_test_base
 {
 public:
-    gpid _gpid;
-
-public:
-    mutation_log_test() : _gpid(_replica->get_gpid()) {}
+    mutation_log_test() {}
 
     void SetUp() override
     {
@@ -503,7 +500,7 @@ TEST_F(mutation_log_test, reset_from)
     std::vector<mutation_ptr> expected;
     { // writing logs
         mutation_log_ptr mlog =
-            new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+            new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
 
         EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
@@ -522,7 +519,7 @@ TEST_F(mutation_log_test, reset_from)
 
     // create another set of logs
     mutation_log_ptr mlog =
-        new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+        new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
     EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
     for (int i = 0; i < 1000; i++) {
         mutation_ptr mu = create_test_mutation(2000 + i, "hello!");
@@ -553,7 +550,7 @@ TEST_F(mutation_log_test, reset_from_while_writing)
     std::vector<mutation_ptr> expected;
     { // writing logs
         mutation_log_ptr mlog =
-            new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+            new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
         EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
         for (int i = 0; i < 10; i++) {
@@ -568,7 +565,7 @@ TEST_F(mutation_log_test, reset_from_while_writing)
 
     // create another set of logs
     mutation_log_ptr mlog =
-        new mutation_log_private(_log_dir, 4, _gpid, _replica.get(), 1024, 512, 10000);
+        new mutation_log_private(_log_dir, 4, get_gpid(), _replica.get(), 1024, 512, 10000);
     EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
     // given with a large number of mutation to ensure
