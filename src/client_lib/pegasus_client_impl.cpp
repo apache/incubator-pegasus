@@ -1223,7 +1223,8 @@ void pegasus_client_impl::async_get_unordered_scanners(
                     std::vector<uint64_t> hash(s);
                     for (int j = 0; j < s; j++)
                         hash[j] = --count;
-                    scanners[i] = new pegasus_scanner_impl(_client, std::move(hash), options, true, true);
+                    scanners[i] =
+                        new pegasus_scanner_impl(_client, std::move(hash), options, true, true);
                 }
             }
         }

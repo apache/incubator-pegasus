@@ -31,7 +31,8 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
                                                                 const scan_options &options,
                                                                 bool validate_partition_hash,
                                                                 bool full_scan)
-    : pegasus_scanner_impl(client, std::move(hash), options, _min, _max, validate_partition_hash, full_scan)
+    : pegasus_scanner_impl(
+          client, std::move(hash), options, _min, _max, validate_partition_hash, full_scan)
 {
     _options.start_inclusive = true;
     _options.stop_inclusive = false;
