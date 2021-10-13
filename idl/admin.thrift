@@ -534,6 +534,108 @@ struct query_split_response
     4:optional string           hint_msg;
 }
 
+/////////////////// bulk-load-related structs ////////////////////
+
+struct start_bulk_load_request
+{
+    1:string    app_name;
+    2:string    cluster_name;
+    3:string    file_provider_type;
+    4:string    remote_root_path;
+}
+
+struct start_bulk_load_response
+{
+    // Possible error:
+    // - ERR_OK: start bulk load succeed
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_BUSY: app is already executing bulk load
+    // - ERR_INVALID_PARAMETERS: wrong file_provider type
+    // - ERR_FILE_OPERATION_FAILED: remote file_provider error
+    // - ERR_OBJECT_NOT_FOUND: bulk_load_info not exist on file_provider
+    // - ERR_CORRUPTION: bulk_load_info is damaged on file_provider
+    // - ERR_INCONSISTENT_STATE: app_id or partition_count inconsistent
+    1:base.error_code   err;
+    2:string            hint_msg;
+}
+
+enum bulk_load_control_type
+{
+    BLC_PAUSE,
+    BLC_RESTART,
+    BLC_CANCEL,
+    BLC_FORCE_CANCEL
+}
+
+struct control_bulk_load_request
+{
+    1:string                    app_name;
+    2:bulk_load_control_type    type;
+}
+
+struct control_bulk_load_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INACTIVE_STATE: app is not executing bulk load
+    // - ERR_INVALID_STATE: current bulk load process can not be paused/restarted/canceled
+    1:base.error_code   err;
+    2:optional string   hint_msg;
+}
+
+enum bulk_load_status
+{
+    BLS_INVALID,
+    BLS_DOWNLOADING,
+    BLS_DOWNLOADED,
+    BLS_INGESTING,
+    BLS_SUCCEED,
+    BLS_FAILED,
+    BLS_PAUSING,
+    BLS_PAUSED,
+    BLS_CANCELED
+}
+
+enum ingestion_status
+{
+    IS_INVALID,
+    IS_RUNNING,
+    IS_SUCCEED,
+    IS_FAILED
+}
+
+struct partition_bulk_load_state
+{
+    1:optional i32              download_progress = 0;
+    2:optional base.error_code  download_status;
+    3:optional ingestion_status ingest_status = ingestion_status.IS_INVALID;
+    4:optional bool             is_cleaned_up = false;
+    5:optional bool             is_paused = false;
+}
+
+struct query_bulk_load_request
+{
+    1:string   app_name;
+}
+
+struct query_bulk_load_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: app is not executing bulk load
+    1:base.error_code                                           err;
+    2:string                                                    app_name;
+    3:bulk_load_status                                          app_status;
+    4:list<bulk_load_status>                                    partitions_status;
+    5:i32                                                       max_replica_count;
+    // detailed bulk load state for each replica
+    6:list<map<base.rpc_address, partition_bulk_load_state>>    bulk_load_states;
+    7:optional string                                           hint_msg;
+}
+
 // A client to MetaServer's administration API.
 service admin_client 
 {
@@ -576,4 +678,10 @@ service admin_client
     query_split_response query_split_status(1: query_split_request req);
 
     control_split_response control_partition_split(1: control_split_request req);
+
+    start_bulk_load_response start_bulk_load(1: start_bulk_load_request req);
+
+    query_bulk_load_response query_bulk_load_status(1: query_bulk_load_request req);
+
+    control_bulk_load_response control_bulk_load(1: control_bulk_load_request req);
 }

@@ -260,6 +260,21 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: radmin.NewAddNewDiskResponse(),
 		}
 	},
+	"RPC_CM_START_BULK_LOAD_ACK": func() RpcResponseResult {
+		return &admin.AdminClientStartBulkLoadResult{
+			Success: admin.NewStartBulkLoadResponse(),
+		}
+	},
+	"RPC_CM_QUERY_BULK_LOAD_STATUS_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryBulkLoadStatusResult{
+			Success: admin.NewQueryBulkLoadResponse(),
+		}
+	},
+	"RPC_CM_CONTROL_BULK_LOAD_ACK": func() RpcResponseResult {
+		return &admin.AdminClientControlBulkLoadResult{
+			Success: admin.NewControlBulkLoadResponse(),
+		}
+	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetResult{
 			Success: rrdb.NewReadResponse(),

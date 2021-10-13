@@ -508,3 +508,78 @@ func (m *MetaManager) ControlPartitionSplit(ctx context.Context, req *admin.Cont
 	}
 	return nil, err
 }
+
+func (ms *metaSession) startBulkLoad(ctx context.Context, req *admin.StartBulkLoadRequest) (*admin.StartBulkLoadResponse, error) {
+	arg := admin.NewAdminClientStartBulkLoadArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_START_BULK_LOAD")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientStartBulkLoadResult)
+	return ret.GetSuccess(), nil
+}
+
+// StartBulkLoad is auto-generated
+func (m *MetaManager) StartBulkLoad(ctx context.Context, req *admin.StartBulkLoadRequest) (*admin.StartBulkLoadResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.startBulkLoad(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.StartBulkLoadResponse), fmt.Errorf("StartBulkLoad failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.StartBulkLoadResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) queryBulkLoadStatus(ctx context.Context, req *admin.QueryBulkLoadRequest) (*admin.QueryBulkLoadResponse, error) {
+	arg := admin.NewAdminClientQueryBulkLoadStatusArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_BULK_LOAD_STATUS")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQueryBulkLoadStatusResult)
+	return ret.GetSuccess(), nil
+}
+
+// QueryBulkLoadStatus is auto-generated
+func (m *MetaManager) QueryBulkLoadStatus(ctx context.Context, req *admin.QueryBulkLoadRequest) (*admin.QueryBulkLoadResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.queryBulkLoadStatus(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.QueryBulkLoadResponse), fmt.Errorf("QueryBulkLoadStatus failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.QueryBulkLoadResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) controlBulkLoad(ctx context.Context, req *admin.ControlBulkLoadRequest) (*admin.ControlBulkLoadResponse, error) {
+	arg := admin.NewAdminClientControlBulkLoadArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CONTROL_BULK_LOAD")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientControlBulkLoadResult)
+	return ret.GetSuccess(), nil
+}
+
+// ControlBulkLoad is auto-generated
+func (m *MetaManager) ControlBulkLoad(ctx context.Context, req *admin.ControlBulkLoadRequest) (*admin.ControlBulkLoadResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.controlBulkLoad(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.ControlBulkLoadResponse), fmt.Errorf("ControlBulkLoad failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ControlBulkLoadResponse), nil
+	}
+	return nil, err
+}
