@@ -29,8 +29,9 @@ namespace client {
 pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrdb_client *client,
                                                                 std::vector<uint64_t> &&hash,
                                                                 const scan_options &options,
-                                                                bool validate_partition_hash)
-    : pegasus_scanner_impl(client, std::move(hash), options, _min, _max, validate_partition_hash)
+                                                                bool validate_partition_hash,
+                                                                bool full_scan)
+    : pegasus_scanner_impl(client, std::move(hash), options, _min, _max, validate_partition_hash, full_scan)
 {
     _options.start_inclusive = true;
     _options.stop_inclusive = false;
@@ -41,7 +42,8 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
                                                                 const scan_options &options,
                                                                 const ::dsn::blob &start_key,
                                                                 const ::dsn::blob &stop_key,
-                                                                bool validate_partition_hash)
+                                                                bool validate_partition_hash,
+                                                                bool full_scan)
     : _client(client),
       _start_key(start_key),
       _stop_key(stop_key),
@@ -50,7 +52,8 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
       _p(-1),
       _context(SCAN_CONTEXT_ID_COMPLETED),
       _rpc_started(false),
-      _validate_partition_hash(validate_partition_hash)
+      _validate_partition_hash(validate_partition_hash),
+      _full_scan(full_scan)
 {
 }
 
@@ -225,6 +228,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_start_scan()
     req.no_value = _options.no_value;
     req.__set_validate_partition_hash(_validate_partition_hash);
     req.__set_return_expire_ts(_options.return_expire_ts);
+    req.__set_full_scan(_full_scan);
 
     dassert(!_rpc_started, "");
     _rpc_started = true;

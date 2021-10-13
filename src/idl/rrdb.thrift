@@ -255,6 +255,7 @@ struct get_scanner_request
     10:dsn.blob    sort_key_filter_pattern;
     11:optional bool    validate_partition_hash;
     12:optional bool    return_expire_ts;
+    13:optional bool full_scan; // true means client want to build 'full scan' context with the server side, false otherwise
 }
 
 struct scan_request
