@@ -945,7 +945,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     if (_data_cf_opts.prefix_extractor) {
         ::dsn::blob start_hash_key, tmp;
         pegasus_restore_key(request.start_key, start_hash_key, tmp);
-        if (start_hash_key.size() == 0) {
+        if (start_hash_key.size() == 0 || request.full_scan) {
             // hash_key is not passed, only happened when do full scan (scanners got by
             // get_unordered_scanners) on a partition, we have to do total order seek on rocksDB.
             rd_opts.total_order_seek = true;
