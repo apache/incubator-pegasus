@@ -234,22 +234,18 @@ void pegasus_counter_reporter::update()
             const dsn::perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 
-            // prometheus metric_name don't support characters like .*()@, it only support ":"
-            // and "_"
-            // so change the name to make it all right
-            format_metrics_name(metrics_name);
-
-            // split metric_name like "collector_app_pegasus_app_stat_multi_put_qps:1_0_p999" or
-            // "collector_app_pegasus_app_stat_multi_put_qps:1_0"
+            // split metric_name like "collector*app.pegasus*app_stat_multi_put_qps@1.0.p999" or
+            // "collector*app.pegasus*app_stat_multi_put_qps@1.0"
             // app[0] = "1" which is the app(app name or app id)
             // app[1] = "0" which is the partition_index
             // app[2] = "p999" or "" which represent the percent
             std::string app[3] = {"", "", ""};
             std::list<std::string> lv;
-            ::dsn::utils::split_args(metrics_name.c_str(), lv, ':');
+            ::dsn::utils::split_args(metrics_name.c_str(), lv, '@');
             if (lv.size() > 1) {
                 std::list<std::string> lv1;
-                ::dsn::utils::split_args(lv.back().c_str(), lv1, '_');
+                ::dsn::utils::split_args(lv.back().c_str(), lv1, '.');
+                dcheck_le(lv1.size(), 3);
                 int i = 0;
                 for (auto &v : lv1) {
                     app[i] = v;
@@ -268,6 +264,13 @@ void pegasus_counter_reporter::update()
 
             // create metrics that prometheus support to report data
             metrics_name = lv.front() + app[2];
+
+            // prometheus metric_name don't support characters like .*()@, it only support ":"
+            // and "_"
+            // so change the name to make it all right
+            format_metrics_name(metrics_name);
+
+
             std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
                 _gauge_family_map.find(metrics_name);
             if (it == _gauge_family_map.end()) {
