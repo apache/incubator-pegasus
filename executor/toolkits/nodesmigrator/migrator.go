@@ -17,51 +17,76 @@ import (
 type Migrator struct {
 	nodes          map[string]*MigratorNode
 	ongoingActions *MigrateActions
+	totalActions   *MigrateActions
 
 	origins []*util.PegasusNode
 	targets []*util.PegasusNode
 }
 
-func (m *Migrator) run(client *executor.Client, table string, round int, target *MigratorNode, concurrent int) int {
+func (m *Migrator) run(client *executor.Client, table string, round int, origin *MigratorNode, maxConcurrent int) int {
+	balanceTargets := make(map[string]int)
+	invalidTargets := make(map[string]int)
 	for {
+		target := m.selectNextTargetNode()
 		m.updateNodesReplicaInfo(client, table)
-		m.updateOngoingActionList(client, table)
-		remainingCount := m.getRemainingReplicaCount()
-		if remainingCount <= 0 {
-			fmt.Printf("INFO: [%s]completed for no replicas can be migrated\n", table)
-			return remainingCount
-		}
-
-		validOriginNodes := m.getValidOriginNodes(target)
-		if len(validOriginNodes) == 0 {
-			fmt.Printf("INFO: [%s]no valid replicas can be migratede\n", table)
-			return remainingCount
+		m.updateOngoingActionList()
+		remainingCount := m.getRemainingReplicaCount(origin)
+		if remainingCount <= 0 || len(balanceTargets) == len(m.targets) || len(invalidTargets) == len(m.targets) {
+			logInfo(fmt.Sprintf("INFO: [%s]completed(remaining=%d, balance=%v, invalid=%v) for no replicas can be migrated",
+				table, remainingCount, len(balanceTargets) == len(m.targets), len(invalidTargets) == len(m.targets)), true)
+			return m.getTotalRemainingReplicaCount()
 		}
 
 		expectCount := m.getExpectReplicaCount(round)
 		currentCount := m.getCurrentReplicaCount(target)
 		if currentCount >= expectCount {
-			fmt.Printf("INFO: [%s]balance: no need migrate replicas to %s, current=%d, expect=max(%d)\n",
-				table, target.String(), currentCount, expectCount)
-			return remainingCount
+			balanceTargets[target.String()] = 1
+			logInfo(fmt.Sprintf("INFO: [%s]balance: no need migrate replicas to %s, current=%d, expect=max(%d)",
+				table, target.String(), currentCount, expectCount), false)
+			time.Sleep(10 * time.Second)
+			continue
 		}
 
-		maxConcurrentCount := int(math.Min(float64(concurrent-len(m.ongoingActions.actionList)), float64(expectCount-currentCount)))
-		m.submitMigrateTask(client, table, validOriginNodes, target, maxConcurrentCount)
+		if !m.existValidReplica(origin, target) {
+			invalidTargets[target.String()] = 1
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		currentConcurrentCount := target.concurrent(m.ongoingActions)
+		if currentConcurrentCount == maxConcurrent {
+			logWarn(fmt.Sprintf("WARN: [%s] %s has excceed the max concurrent = %d", table, target.String(),
+				currentConcurrentCount), true)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		concurrent := int(math.Min(float64(maxConcurrent-target.concurrent(m.ongoingActions)), float64(expectCount-currentCount)))
+		m.submitMigrateTask(client, table, origin, target, concurrent)
+		logInfo(fmt.Sprintf("INFO: [%s]send %s migrate task, ongiong task = %d", table, target.String(),
+			target.concurrent(m.ongoingActions)), true)
 		time.Sleep(10 * time.Second)
 	}
 }
 
-func (m *Migrator) getCurrentTargetNode(index int) (int, *MigratorNode) {
-	round := index/len(m.targets) + 1
-	currentTargetNode := m.targets[index%len(m.targets)]
-	return round, &MigratorNode{node: currentTargetNode}
+var originIndex int32 = -1
+
+func (m *Migrator) selectNextOriginNode() *MigratorNode {
+	currentOriginNode := m.origins[int(atomic.AddInt32(&originIndex, 1))%len(m.origins)]
+	return &MigratorNode{node: currentOriginNode}
+}
+
+var targetIndex int32 = -1
+
+func (m *Migrator) selectNextTargetNode() *MigratorNode {
+	currentTargetNode := m.targets[int(atomic.AddInt32(&targetIndex, 1))%len(m.targets)]
+	return &MigratorNode{node: currentTargetNode}
 }
 
 func (m *Migrator) updateNodesReplicaInfo(client *executor.Client, table string) {
 	for {
 		if err := m.syncNodesReplicaInfo(client, table); err != nil {
-			fmt.Printf("WARN: [%s]wait, table may be unhealthy: %s\n", table, err.Error())
+			logWarn(fmt.Sprintf("WARN: [%s]table may be unhealthy: %s", table, err.Error()), true)
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -134,7 +159,11 @@ func (m *Migrator) getCurrentReplicaCount(node *MigratorNode) int {
 	return len(m.nodes[node.String()].replicas)
 }
 
-func (m *Migrator) getRemainingReplicaCount() int {
+func (m *Migrator) getRemainingReplicaCount(node *MigratorNode) int {
+	return len(m.nodes[node.String()].replicas)
+}
+
+func (m *Migrator) getTotalRemainingReplicaCount() int {
 	var remainingCount = 0
 	for _, node := range m.origins {
 		remainingCount = remainingCount + len(m.nodes[node.String()].replicas)
@@ -150,41 +179,41 @@ func (m *Migrator) getExpectReplicaCount(round int) int {
 	return (totalReplicaCount / len(m.targets)) + round
 }
 
-func (m *Migrator) getValidOriginNodes(target *MigratorNode) []*MigratorNode {
+func (m *Migrator) existValidReplica(origin *MigratorNode, target *MigratorNode) bool {
+	originMigrateNode := m.nodes[origin.String()]
 	targetMigrateNode := m.nodes[target.String()]
-	var validOriginNodes []*MigratorNode
-	for _, origin := range m.origins {
-		originMigrateNode := m.nodes[origin.String()]
-		for _, replica := range originMigrateNode.replicas {
-			if !targetMigrateNode.contain(replica.gpid) {
-				validOriginNodes = append(validOriginNodes, originMigrateNode)
-				break
-			}
+	for _, replica := range originMigrateNode.replicas {
+		if !targetMigrateNode.contain(replica.gpid) {
+			return true
 		}
 	}
-	return validOriginNodes
+
+	return false
 }
 
-func (m *Migrator) submitMigrateTask(client *executor.Client, table string, origins []*MigratorNode, target *MigratorNode, concurrentCount int) {
+func (m *Migrator) submitMigrateTask(client *executor.Client, table string, origin *MigratorNode, target *MigratorNode, concurrentCount int) {
 	var wg sync.WaitGroup
 	wg.Add(concurrentCount)
 	for concurrentCount > 0 {
 		go func(to *MigratorNode) {
-			m.sendMigrateRequest(client, table, origins, target)
+			m.sendMigrateRequest(client, table, origin, target)
 			wg.Done()
 		}(target)
 		concurrentCount--
 	}
 	wg.Wait()
-	fmt.Printf("INFO: [%s]async migrate task send completed, wait all works successfully\n", table)
 }
 
-func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, origins []*MigratorNode, target *MigratorNode) {
-	from := m.nodes[origins[getFromNodeIndex(int32(len(origins)))].String()]
+func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, origin *MigratorNode, target *MigratorNode) {
+	from := m.nodes[origin.String()]
 	to := m.nodes[target.String()]
 	if len(from.replicas) == 0 {
-		fmt.Printf("WARN: the node[%s] has no replica to migrate\n", target.node.String())
+		logWarn(fmt.Sprintf("WARN: the node[%s] has no replica to migrate", target.node.String()), false)
 		return
+	}
+
+	if from.primaryCount() != 0 {
+		logPanic(fmt.Sprintf("FATAL: the origin[%s] should not exist primary replica", target.node.String()))
 	}
 
 	var action *Action
@@ -196,43 +225,45 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 		}
 
 		if to.contain(replica.gpid) {
-			fmt.Printf("WARN: actions[%s] target has existed the replica, will retry next replica\n", action.toString())
+			logWarn(fmt.Sprintf("WARN: actions[%s] target has existed the replica", action.toString()), false)
 			continue
 		}
 
-		if m.ongoingActions.exist(action) {
-			fmt.Printf("WARN: action[%s] has assgin other task, will retry next replica\n", action.toString())
+		if m.totalActions.exist(action) {
+			logWarn(fmt.Sprintf("WARN: action[%s] has assgin other task", action.toString()), false)
 			continue
 		}
 
+		m.totalActions.put(action)
 		m.ongoingActions.put(action)
-		m.executeMigrateAction(client, action, table)
-		fmt.Printf("INFO: send migrate action completed, action: %s\n", action.toString())
-		return
-	}
-}
-
-func (m *Migrator) executeMigrateAction(client *executor.Client, action *Action, table string) {
-	for {
-		err := client.Meta.Balance(action.replica.gpid, action.replica.operation, action.from.node, action.to.node)
+		err := m.executeMigrateAction(client, action)
 		if err != nil {
-			fmt.Printf("WARN: migrate action[%s] now is invalid: %s\n", action.toString(), err.Error())
-			time.Sleep(10 * time.Second)
+			m.totalActions.delete(action)
+			m.ongoingActions.delete(action)
+			logWarn(fmt.Sprintf("WARN: send failed: %s", err.Error()), false)
 			continue
 		}
+		logInfo(fmt.Sprintf("INFO: send action: %s", action.toString()), true)
 		return
 	}
 }
 
-func (m *Migrator) updateOngoingActionList(client *executor.Client, table string) {
+func (m *Migrator) executeMigrateAction(client *executor.Client, action *Action) error {
+	err := client.Meta.Balance(action.replica.gpid, action.replica.operation, action.from.node, action.to.node)
+	if err != nil {
+		return fmt.Errorf("migrate action[%s] now is invalid: %s", action.toString(), err.Error())
+	}
+	return nil
+}
+
+func (m *Migrator) updateOngoingActionList() {
 	for name, act := range m.ongoingActions.actionList {
 		node := m.nodes[act.to.String()]
 		if node.contain(act.replica.gpid) {
-			fmt.Printf("INFO: %s has completed, delete it and assign to secondary\n", name)
+			logInfo(fmt.Sprintf("INFO: %s has completed", name), true)
 			m.ongoingActions.delete(act)
-			node.downgradeOneReplicaToSecondary(client, table, act.replica.gpid)
 		} else {
-			fmt.Printf("INFO: %s is running, please wait\n", name)
+			logWarn(fmt.Sprintf("INFO: %s is running", name), true)
 		}
 	}
 }
@@ -245,6 +276,9 @@ func createNewMigrator(client *executor.Client, from []string, to []string) (*Mi
 
 	return &Migrator{
 		nodes: map[string]*MigratorNode{},
+		totalActions: &MigrateActions{
+			actionList: map[string]*Action{},
+		},
 		ongoingActions: &MigrateActions{
 			actionList: map[string]*Action{},
 		},
@@ -279,10 +313,4 @@ func convert(client *executor.Client, nodes []string) ([]*util.PegasusNode, erro
 		return nil, fmt.Errorf("invalid nodes list")
 	}
 	return pegasusNodes, nil
-}
-
-var hash int32
-
-func getFromNodeIndex(count int32) int32 {
-	return atomic.AddInt32(&hash, 1) % count
 }

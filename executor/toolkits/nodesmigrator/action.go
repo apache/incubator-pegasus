@@ -34,7 +34,8 @@ func (acts *MigrateActions) exist(currentAction *Action) bool {
 
 	for _, action := range acts.actionList {
 		if action.replica.gpid.String() == currentAction.replica.gpid.String() {
-			if action.to.node.String() == currentAction.to.node.String() {
+			if action.to.node.String() == currentAction.to.node.String() ||
+				action.from.node.String() == currentAction.from.node.String() {
 				return true
 			}
 		}
@@ -49,6 +50,21 @@ func (acts *MigrateActions) delete(currentAction *Action) {
 	}()
 
 	delete(acts.actionList, currentAction.toString())
+}
+
+func (acts *MigrateActions) getConcurrent(node *MigratorNode) int {
+	migrateActionsMu.Lock()
+	defer func() {
+		migrateActionsMu.Unlock()
+	}()
+
+	var count = 0
+	for _, act := range acts.actionList {
+		if act.to.node.String() == node.String() {
+			count++
+		}
+	}
+	return count
 }
 
 func (act *Action) toString() string {

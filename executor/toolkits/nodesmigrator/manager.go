@@ -9,34 +9,48 @@ import (
 	"github.com/pegasus-kv/admin-cli/executor"
 )
 
-func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []string, concurrent int) error {
+func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []string, tables []string, concurrent int) error {
 	nodesMigrator, err := createNewMigrator(client, from, to)
 	if err != nil {
 		return err
 	}
-	tables, err := client.Meta.ListApps(admin.AppStatus_AS_AVAILABLE)
-	if err != nil {
-		return fmt.Errorf("list app failed: %s", err.Error())
+
+	var tableList []string
+	if len(tables) != 0 && tables[0] != "" {
+		tableList = tables
+	} else {
+		tbs, err := client.Meta.ListApps(admin.AppStatus_AS_AVAILABLE)
+		if err != nil {
+			return fmt.Errorf("list app failed: %s", err.Error())
+		}
+		for _, tb := range tbs {
+			tableList = append(tableList, tb.AppName)
+		}
 	}
 
-	var targetIndex = -1
-	var totalRemainingReplica = math.MaxInt16
+	currentOriginNode := nodesMigrator.selectNextOriginNode()
+	firstOrigin := currentOriginNode
+	totalRemainingReplica := math.MaxInt16
+	round := -1
 	for {
 		if totalRemainingReplica <= 0 {
-			fmt.Printf("INFO: completed for all the targets has migrate\n")
+			logInfo("\n\n==============completed for all origin nodes has been migrated================", true)
 			return executor.ListNodes(client)
 		}
-		targetIndex++
-		round, currentTargetNode := nodesMigrator.getCurrentTargetNode(targetIndex)
-		fmt.Printf("\n\n********[%d]start migrate replicas to %s******\n", round, currentTargetNode.String())
-		fmt.Printf("INFO: migrate out all primary from current node %s\n", currentTargetNode.String())
-		currentTargetNode.downgradeAllReplicaToSecondary(client)
+
+		if currentOriginNode.String() == firstOrigin.String() {
+			round++
+		}
+		logInfo(fmt.Sprintf("\n\n*******************[%d|%s]start migrate replicas, remainingReplica=%d*****************",
+			round, currentOriginNode.String(), totalRemainingReplica), true)
+		currentOriginNode.downgradeAllReplicaToSecondary(client)
 
 		totalRemainingReplica = 0
-		for _, tb := range tables {
-			remainingCount := nodesMigrator.run(client, tb.AppName, round, currentTargetNode, concurrent)
+		for _, tb := range tableList {
+			remainingCount := nodesMigrator.run(client, tb, round, currentOriginNode, concurrent)
 			totalRemainingReplica = totalRemainingReplica + remainingCount
 		}
+		currentOriginNode = nodesMigrator.selectNextOriginNode()
 		time.Sleep(10 * time.Second)
 	}
 }
