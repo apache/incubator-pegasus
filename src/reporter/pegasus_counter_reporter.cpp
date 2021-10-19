@@ -234,8 +234,9 @@ void pegasus_counter_reporter::update()
             const dsn::perf_counters::counter_snapshot &cs) {
             std::string metrics_name = cs.name;
 
-            // split metric_name like "collector*app.pegasus*app_stat_multi_put_qps@1.0.p999" or
-            // "collector*app.pegasus*app_stat_multi_put_qps@1.0"
+            // Splits metric_name like:
+            //   "collector*app.pegasus*app_stat_multi_put_qps@1.0.p999"
+            //   "collector*app.pegasus*app_stat_multi_put_qps@1.0"
             // app[0] = "1" which is the app(app name or app id)
             // app[1] = "0" which is the partition_index
             // app[2] = "p999" or "" which represent the percent
