@@ -266,8 +266,7 @@ void pegasus_counter_reporter::update()
             metrics_name = lv.front() + app[2];
 
             // prometheus metric_name don't support characters like .*()@, it only support ":"
-            // and "_"
-            // so change the name to make it all right
+            // and "_" so change the name to make it all right.
             format_metrics_name(metrics_name);
 
 
