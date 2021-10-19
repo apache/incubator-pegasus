@@ -110,6 +110,16 @@ type Meta interface {
 	RestartPartitionSplit(tableName string, parentPidx int) error
 
 	CancelPartitionSplit(tableName string, oldPartitionCount int) error
+
+	StartBulkLoad(tableName string, clusterName string, providerType string, rootPath string) error
+
+	QueryBulkLoad(tableName string) (*admin.QueryBulkLoadResponse, error)
+
+	PauseBulkLoad(tableName string) error
+
+	RestartBulkLoad(tableName string) error
+
+	CancelBulkLoad(tableName string, forced bool) error
 }
 
 type rpcBasedMeta struct {
@@ -516,6 +526,71 @@ func (m *rpcBasedMeta) CancelPartitionSplit(tableName string, oldPartitionCount 
 	var result *admin.ControlSplitResponse
 	err := m.callMeta("ControlPartitionSplit", req, func(resp interface{}) {
 		result = resp.(*admin.ControlSplitResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) StartBulkLoad(tableName string, clusterName string, providerType string, rootPath string) error {
+	req := &admin.StartBulkLoadRequest{
+		AppName:          tableName,
+		ClusterName:      clusterName,
+		FileProviderType: providerType,
+		RemoteRootPath:   rootPath,
+	}
+	var result *admin.StartBulkLoadResponse
+	err := m.callMeta("StartBulkLoad", req, func(resp interface{}) {
+		result = resp.(*admin.StartBulkLoadResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) QueryBulkLoad(tableName string) (*admin.QueryBulkLoadResponse, error) {
+	req := &admin.QueryBulkLoadRequest{
+		AppName: tableName,
+	}
+	var result *admin.QueryBulkLoadResponse
+	err := m.callMeta("QueryBulkLoadStatus", req, func(resp interface{}) {
+		result = resp.(*admin.QueryBulkLoadResponse)
+	})
+	return result, wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) PauseBulkLoad(tableName string) error {
+	req := &admin.ControlBulkLoadRequest{
+		AppName: tableName,
+		Type:    admin.BulkLoadControlType_BLC_PAUSE,
+	}
+	var result *admin.ControlBulkLoadResponse
+	err := m.callMeta("ControlBulkLoad", req, func(resp interface{}) {
+		result = resp.(*admin.ControlBulkLoadResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) RestartBulkLoad(tableName string) error {
+	req := &admin.ControlBulkLoadRequest{
+		AppName: tableName,
+		Type:    admin.BulkLoadControlType_BLC_RESTART,
+	}
+	var result *admin.ControlBulkLoadResponse
+	err := m.callMeta("ControlBulkLoad", req, func(resp interface{}) {
+		result = resp.(*admin.ControlBulkLoadResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) CancelBulkLoad(tableName string, forced bool) error {
+	cancelType := admin.BulkLoadControlType_BLC_CANCEL
+	if forced {
+		cancelType = admin.BulkLoadControlType_BLC_FORCE_CANCEL
+	}
+	req := &admin.ControlBulkLoadRequest{
+		AppName: tableName,
+		Type:    cancelType,
+	}
+	var result *admin.ControlBulkLoadResponse
+	err := m.callMeta("ControlBulkLoad", req, func(resp interface{}) {
+		result = resp.(*admin.ControlBulkLoadResponse)
 	})
 	return wrapHintIntoError(result.GetHintMsg(), err)
 }

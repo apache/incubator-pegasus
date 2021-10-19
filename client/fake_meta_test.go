@@ -225,3 +225,23 @@ func (m *fakeMeta) RestartPartitionSplit(tableName string, parentPidx int) error
 func (m *fakeMeta) CancelPartitionSplit(tableName string, oldPartitionCount int) error {
 	panic("unimplemented")
 }
+
+func (m *fakeMeta) StartBulkLoad(tableName string, clusterName string, providerType string, rootPath string) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) QueryBulkLoad(tableName string) (*admin.QueryBulkLoadResponse, error) {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) PauseBulkLoad(tableName string) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) RestartBulkLoad(tableName string) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) CancelBulkLoad(tableName string, forced bool) error {
+	panic("unimplemented")
+}
