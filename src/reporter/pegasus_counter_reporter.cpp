@@ -269,7 +269,6 @@ void pegasus_counter_reporter::update()
             // and "_" so change the name to make it all right.
             format_metrics_name(metrics_name);
 
-
             std::map<std::string, prometheus::Family<prometheus::Gauge> *>::iterator it =
                 _gauge_family_map.find(metrics_name);
             if (it == _gauge_family_map.end()) {
