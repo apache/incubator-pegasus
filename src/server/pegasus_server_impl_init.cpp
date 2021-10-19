@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <dsn/utility/flags.h>
 #include <rocksdb/filter_policy.h>
+#include <dsn/utils/token_bucket_throttling_controller.h>
 
 #include "capacity_unit_calculator.h"
 #include "hashkey_transform.h"
@@ -108,6 +109,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::READ, this);
     _write_hotkey_collector =
         std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, this);
+
+    _read_size_throttling_controller =
+        std::make_unique<dsn::utils::token_bucket_throttling_controller>(
+            get_counter_recent_read_throttling_reject_count());
 
     _verbose_log = dsn_config_get_value_bool("pegasus.server",
                                              "rocksdb_verbose_log",

@@ -23,6 +23,13 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <rrdb/rrdb_types.h>
 
+namespace dsn {
+namespace utils {
+class token_bucket_throttling_controller;
+}
+}
+typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
+
 namespace pegasus {
 namespace server {
 
@@ -31,9 +38,11 @@ class hotkey_collector;
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
 public:
-    capacity_unit_calculator(replica_base *r,
-                             std::shared_ptr<hotkey_collector> read_hotkey_collector,
-                             std::shared_ptr<hotkey_collector> write_hotkey_collector);
+    capacity_unit_calculator(
+        replica_base *r,
+        std::shared_ptr<hotkey_collector> read_hotkey_collector,
+        std::shared_ptr<hotkey_collector> write_hotkey_collector,
+        std::shared_ptr<throttling_controller> _read_size_throttling_controller);
 
     virtual ~capacity_unit_calculator() = default;
 
@@ -119,6 +128,8 @@ private:
     */
     std::shared_ptr<hotkey_collector> _read_hotkey_collector;
     std::shared_ptr<hotkey_collector> _write_hotkey_collector;
+
+    std::shared_ptr<throttling_controller> _read_size_throttling_controller;
 };
 
 } // namespace server

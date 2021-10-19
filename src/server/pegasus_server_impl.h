@@ -37,6 +37,13 @@
 #include "range_read_limiter.h"
 #include "pegasus_read_service.h"
 
+namespace dsn {
+namespace utils {
+class token_bucket_throttling_controller;
+}
+}
+typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
+
 namespace pegasus {
 namespace server {
 
@@ -275,6 +282,8 @@ private:
 
     void update_user_specified_compaction(const std::map<std::string, std::string> &envs);
 
+    void update_throttling_controller(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -425,6 +434,8 @@ private:
 
     std::shared_ptr<hotkey_collector> _read_hotkey_collector;
     std::shared_ptr<hotkey_collector> _write_hotkey_collector;
+
+    std::shared_ptr<throttling_controller> _read_size_throttling_controller;
 
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
