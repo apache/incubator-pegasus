@@ -28,13 +28,14 @@ import (
 )
 
 func init() {
-
-	shell.AddCommand(&grumble.Command{
-		Name: "start-partition-split",
-		Help: "start partition split for a specific table",
-		Usage: `start-partition-split 
-		<-a|--tableName TABLE_NAME> 
-		<-p|--newPartitionCount NEW_PARTITION_COUNT>`,
+	rootCmd := &grumble.Command{
+		Name: "partition-split",
+		Help: "partition split related commands",
+	}
+	rootCmd.AddCommand(&grumble.Command{
+		Name:  "start",
+		Help:  "start partition split for a specific table",
+		Usage: `start <-a|--tableName TABLE_NAME> <-p|--newPartitionCount NEW_PARTITION_COUNT>`,
 		Run: func(c *grumble.Context) error {
 			if c.Flags.String("tableName") == "" {
 				return fmt.Errorf("tableName cannot be empty")
@@ -53,11 +54,10 @@ func init() {
 			f.Int("p", "newPartitionCount", 0, "new_partition_count, should be double of current partition_count")
 		},
 	})
-
-	shell.AddCommand(&grumble.Command{
-		Name:  "query-split-status",
+	rootCmd.AddCommand(&grumble.Command{
+		Name:  "query",
 		Help:  "query partition split status for a specific table",
-		Usage: "query-split-status <-a|--tableName TABLE_NAME>",
+		Usage: "query <-a|--tableName TABLE_NAME>",
 		Run: func(c *grumble.Context) error {
 			if c.Flags.String("tableName") == "" {
 				return fmt.Errorf("tableName cannot be empty")
@@ -70,11 +70,10 @@ func init() {
 			f.String("a", "tableName", "", "table name")
 		},
 	})
-
-	shell.AddCommand(&grumble.Command{
-		Name:  "pause-partition-split",
+	rootCmd.AddCommand(&grumble.Command{
+		Name:  "pause",
 		Help:  "pause partition split for specific partition or all partitions of a table",
-		Usage: "pause-partition-split <-a|--tableName TABLE_NAME> [-i|--parentPidx PARENT_PIDX]",
+		Usage: "pause <-a|--tableName TABLE_NAME> [-i|--parentPidx PARENT_PIDX]",
 		Run: func(c *grumble.Context) error {
 			if c.Flags.String("tableName") == "" {
 				return fmt.Errorf("tableName cannot be empty")
@@ -89,11 +88,10 @@ func init() {
 			f.Int("i", "parentPidx", -1, "parent partition index")
 		},
 	})
-
-	shell.AddCommand(&grumble.Command{
-		Name:  "restart-partition-split",
+	rootCmd.AddCommand(&grumble.Command{
+		Name:  "restart",
 		Help:  "restart partition split for specific partition or all partitions of a table",
-		Usage: "restart-partition-split <-a|--tableName TABLE_NAME> [-i|--parentPidx PARENT_PIDX]",
+		Usage: "restart <-a|--tableName TABLE_NAME> [-i|--parentPidx PARENT_PIDX]",
 		Run: func(c *grumble.Context) error {
 			if c.Flags.String("tableName") == "" {
 				return fmt.Errorf("tableName cannot be empty")
@@ -108,11 +106,10 @@ func init() {
 			f.Int("i", "parentPidx", -1, "parent partition index")
 		},
 	})
-
-	shell.AddCommand(&grumble.Command{
-		Name:  "cancel-partition-split",
+	rootCmd.AddCommand(&grumble.Command{
+		Name:  "cancel",
 		Help:  "cancel partition split for a specific table",
-		Usage: "cancel-partition-split <-a|--tableName TABLE_NAME> [-p|--oldPartitionCount OLD_PARTITION_COUNT]",
+		Usage: "cancel <-a|--tableName TABLE_NAME> <-p|--oldPartitionCount OLD_PARTITION_COUNT>",
 		Run: func(c *grumble.Context) error {
 			if c.Flags.String("tableName") == "" {
 				return fmt.Errorf("tableName cannot be empty")
@@ -130,4 +127,5 @@ func init() {
 			f.Int("p", "oldPartitionCount", 0, "table partition count before split")
 		},
 	})
+	shell.AddCommand(rootCmd)
 }
