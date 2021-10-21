@@ -70,6 +70,19 @@ TEST(rpc_holder, construct)
         ASSERT_TRUE(rpc.is_initialized());
         ASSERT_EQ(rpc.request().app_name, "test");
     }
+
+    {
+        auto request = make_unique<configuration_query_by_index_request>();
+        t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+        ASSERT_EQ(rpc.error(), ERR_OK);
+        ASSERT_TRUE(rpc.is_initialized());
+
+        rpc.error() = ERR_BUSY;
+        ASSERT_EQ(rpc.error(), ERR_BUSY);
+
+        rpc.error() = ERR_ADDRESS_ALREADY_USED;
+        ASSERT_EQ(rpc.error(), ERR_ADDRESS_ALREADY_USED);
+    }
 }
 
 TEST(rpc_holder, mock_rpc_call)
@@ -85,6 +98,25 @@ TEST(rpc_holder, mock_rpc_call)
         }
 
         ASSERT_EQ(mail_box.size(), 10);
+    }
+
+    // test in error cases
+    RPC_MOCKING(t_rpc)
+    {
+        auto &mail_box = t_rpc::mail_box();
+
+        for (int i = 0; i < 10; i++) {
+            auto request = make_unique<configuration_query_by_index_request>();
+            t_rpc rpc(std::move(request), RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
+            rpc.error() = ERR_BUSY;
+            rpc.call(rpc_address("127.0.0.1", 12321), nullptr, [](error_code) {});
+        }
+
+        ASSERT_EQ(mail_box.size(), 10);
+
+        for (const auto &iter : mail_box) {
+            ASSERT_EQ(iter.error(), ERR_BUSY);
+        }
     }
 
     // instances of rpc mocking are independent

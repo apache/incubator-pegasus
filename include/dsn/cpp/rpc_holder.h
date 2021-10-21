@@ -114,6 +114,12 @@ public:
         return _i->thrift_response;
     }
 
+    dsn::error_code &error() const
+    {
+        dassert(_i, "rpc_holder is uninitialized");
+        return _i->rpc_error;
+    }
+
     message_ex *dsn_request() const
     {
         dassert(_i, "rpc_holder is uninitialized");
@@ -291,7 +297,7 @@ private:
 
             message_ex *dsn_response = dsn_request->create_response();
             marshall(dsn_response, thrift_response);
-            dsn_rpc_reply(dsn_response);
+            dsn_rpc_reply(dsn_response, rpc_error);
         }
 
         ~internal()
@@ -305,6 +311,7 @@ private:
         message_ex *dsn_request;
         std::unique_ptr<TRequest> thrift_request;
         TResponse thrift_response;
+        dsn::error_code rpc_error = dsn::ERR_OK;
 
         bool auto_reply;
     };
