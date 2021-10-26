@@ -37,7 +37,7 @@ public class TestPingZK {
     System.out.println("write config to " + configPath);
     zkClient.writeData(zkPath, configData.getBytes());
 
-    PegasusClientInterface client = PegasusClientFactory.getSingletonClient(configPath);
+    PegasusClientInterface client = PegasusClientFactory.createClient(configPath);
     String tableName = "temp";
 
     byte[] hashKey = "hello".getBytes();

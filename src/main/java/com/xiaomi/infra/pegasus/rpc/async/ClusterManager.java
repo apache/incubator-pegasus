@@ -48,6 +48,7 @@ public class ClusterManager extends Cluster {
   private ConcurrentHashMap<rpc_address, ReplicaSession> replicaSessions;
   private EventLoopGroup metaGroup; // group used for handle meta logic
   private EventLoopGroup replicaGroup; // group used for handle io with replica servers
+  private EventLoopGroup timeoutTaskGroup; // group used for handle timeout task in replica servers
   private EventLoopGroup tableGroup; // group used for handle table logic
   private String[] metaList;
   private MetaSession metaSession;
@@ -72,6 +73,7 @@ public class ClusterManager extends Cluster {
 
     replicaSessions = new ConcurrentHashMap<rpc_address, ReplicaSession>();
     replicaGroup = getEventLoopGroupInstance(opts.getAsyncWorkers());
+    timeoutTaskGroup = getEventLoopGroupInstance(opts.getAsyncWorkers());
     metaGroup = getEventLoopGroupInstance(1);
     tableGroup = getEventLoopGroupInstance(1);
     sessionInterceptorManager = new ReplicaSessionInterceptorManager(opts);
@@ -104,6 +106,7 @@ public class ClusterManager extends Cluster {
           new ReplicaSession(
               address,
               replicaGroup,
+              timeoutTaskGroup,
               max(operationTimeout, ClientOptions.MIN_SOCK_CONNECT_TIMEOUT),
               sessionResetTimeWindowSecs,
               sessionInterceptorManager);
@@ -169,6 +172,7 @@ public class ClusterManager extends Cluster {
     Future metaGroupFuture = metaGroup.shutdownGracefully();
     Future replicaGroupFuture = replicaGroup.shutdownGracefully();
     Future tableGroupFuture = tableGroup.shutdownGracefully();
+    Future timeoutTaskGroupFuture = timeoutTaskGroup.shutdownGracefully();
 
     try {
       metaGroupFuture.sync();
@@ -189,6 +193,13 @@ public class ClusterManager extends Cluster {
       logger.info("table group has closed");
     } catch (Exception ex) {
       logger.warn("close table group failed: ", ex);
+    }
+
+    try {
+      timeoutTaskGroupFuture.sync();
+      logger.info("timeout task group has closed");
+    } catch (Exception ex) {
+      logger.warn("close timeout task group failed: ", ex);
     }
 
     logger.info("cluster manager has closed");

@@ -295,8 +295,10 @@ public class ReplicaSessionTest {
 
     long start = System.currentTimeMillis();
     EventLoopGroup rpcGroup = new NioEventLoopGroup(4);
+    EventLoopGroup timeoutTaskGroup = new NioEventLoopGroup(4);
     ReplicaSession rs =
-        new ReplicaSession(addr, rpcGroup, 1000, 30, (ReplicaSessionInterceptorManager) null);
+        new ReplicaSession(
+            addr, rpcGroup, timeoutTaskGroup, 1000, 30, (ReplicaSessionInterceptorManager) null);
     rs.tryConnect().awaitUninterruptibly();
     long end = System.currentTimeMillis();
     Assert.assertEquals((end - start) / 1000, 1); // ensure connect failed within 1sec

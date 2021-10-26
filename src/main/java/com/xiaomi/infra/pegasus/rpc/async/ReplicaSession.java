@@ -57,11 +57,12 @@ public class ReplicaSession {
   public ReplicaSession(
       rpc_address address,
       EventLoopGroup rpcGroup,
+      EventLoopGroup timeoutTaskGroup,
       int socketTimeout,
       long sessionResetTimeWindowSec,
       ReplicaSessionInterceptorManager interceptorManager) {
     this.address = address;
-    this.rpcGroup = rpcGroup;
+    this.timeoutTaskGroup = timeoutTaskGroup;
     this.interceptorManager = interceptorManager;
     this.sessionResetTimeWindowMs = sessionResetTimeWindowSec * 1000;
 
@@ -358,7 +359,7 @@ public class ReplicaSession {
   // this task will be cancelled.
   // TODO(wutao1): call it addTimeoutTicker
   private ScheduledFuture<?> addTimer(final int seqID, long timeoutInMillseconds) {
-    return rpcGroup.schedule(
+    return this.timeoutTaskGroup.schedule(
         new Runnable() {
           @Override
           public void run() {
@@ -473,7 +474,7 @@ public class ReplicaSession {
 
   private final rpc_address address;
   private Bootstrap boot;
-  private EventLoopGroup rpcGroup;
+  private EventLoopGroup timeoutTaskGroup;
   private ReplicaSessionInterceptorManager interceptorManager;
   private boolean authSucceed;
   final Queue<RequestEntry> authPendingSend = new LinkedList<>();
