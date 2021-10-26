@@ -1932,6 +1932,9 @@ public class PegasusTable implements PegasusTableInterface {
       case ERR_PARENT_PARTITION_MISUSED:
         message = " The partition split finished, is updating config!";
         break;
+      case ERR_DISK_INSUFFICIENT:
+        message = " The replica server disk space is insufficient";
+        break;
     }
     promise.setFailure(
         new PException(new ReplicationException(op.rpc_error.errno, header + message)));
