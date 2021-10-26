@@ -696,6 +696,8 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 			// throttled by server, skip confUpdate
 		case base.ERR_SPLITTING:
 			// table is executing partition split, skip confUpdate
+		case base.ERR_DISK_INSUFFICIENT:
+			// server disk space is insufficient, skip confUpdate
 
 		default:
 			confUpdate = true
@@ -714,6 +716,8 @@ func (p *pegasusTableConnector) handleReplicaError(err error, replica *session.R
 		case base.ERR_PARENT_PARTITION_MISUSED:
 			err = errors.New(err.Error() + " The table finish partition split, will update config")
 			retry = false
+		case base.ERR_DISK_INSUFFICIENT:
+			err = errors.New(err.Error() + " The server disk space is insufficient")
 		}
 
 		if confUpdate {

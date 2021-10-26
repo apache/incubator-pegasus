@@ -255,7 +255,7 @@ func TestPegasusTableConnector_TriggerSelfUpdate(t *testing.T) {
 	assert.False(t, retry)
 
 	{ // Ensure: The following errors should not trigger configuration update
-		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING}
+		errorTypes := []error{base.ERR_TIMEOUT, context.DeadlineExceeded, base.ERR_CAPACITY_EXCEEDED, base.ERR_NOT_ENOUGH_MEMBER, base.ERR_BUSY, base.ERR_SPLITTING, base.ERR_DISK_INSUFFICIENT}
 
 		for _, err := range errorTypes {
 			channelEmpty := false
