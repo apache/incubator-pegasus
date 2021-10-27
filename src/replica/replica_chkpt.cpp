@@ -226,22 +226,24 @@ void replica::on_copy_checkpoint_ack(error_code err,
         return;
     }
 
-    std::string ldir = utils::filesystem::path_combine(_app->learn_dir(), "checkpoint.copy");
+    std::string dest_dir = utils::filesystem::path_combine(_app->learn_dir(), "checkpoint.copy");
 
-    if (utils::filesystem::path_exists(ldir))
-        utils::filesystem::remove_path(ldir);
+    if (utils::filesystem::path_exists(dest_dir))
+        utils::filesystem::remove_path(dest_dir);
 
     _primary_states.checkpoint_task = _stub->_nfs->copy_remote_files(
         resp->address,
+        resp->replica_disk_tag,
         resp->base_local_dir,
         resp->state.files,
-        ldir,
+        get_replica_disk_tag(),
+        dest_dir,
         false,
         false,
         LPC_REPLICA_COPY_LAST_CHECKPOINT_DONE,
         &_tracker,
-        [this, resp, ldir](error_code err, size_t sz) {
-            this->on_copy_checkpoint_file_completed(err, sz, resp, ldir);
+        [this, resp, dest_dir](error_code err, size_t sz) {
+            this->on_copy_checkpoint_file_completed(err, sz, resp, dest_dir);
         },
         get_gpid().thread_hash());
 }

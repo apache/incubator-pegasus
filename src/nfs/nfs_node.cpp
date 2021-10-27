@@ -11,8 +11,10 @@ std::unique_ptr<nfs_node> nfs_node::create()
     return dsn::make_unique<dsn::service::nfs_node_simple>();
 }
 
-aio_task_ptr nfs_node::copy_remote_directory(rpc_address remote,
+aio_task_ptr nfs_node::copy_remote_directory(const rpc_address &remote,
+                                             const std::string &source_disk_tag,
                                              const std::string &source_dir,
+                                             const std::string &dest_disk_tag,
                                              const std::string &dest_dir,
                                              bool overwrite,
                                              bool high_priority,
@@ -22,8 +24,10 @@ aio_task_ptr nfs_node::copy_remote_directory(rpc_address remote,
                                              int hash)
 {
     return copy_remote_files(remote,
+                             source_disk_tag,
                              source_dir,
                              {},
+                             dest_disk_tag,
                              dest_dir,
                              overwrite,
                              high_priority,
@@ -33,9 +37,11 @@ aio_task_ptr nfs_node::copy_remote_directory(rpc_address remote,
                              hash);
 }
 
-aio_task_ptr nfs_node::copy_remote_files(rpc_address remote,
+aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
+                                         const std::string &source_disk_tag,
                                          const std::string &source_dir,
                                          const std::vector<std::string> &files,
+                                         const std::string &dest_disk_tag,
                                          const std::string &dest_dir,
                                          bool overwrite,
                                          bool high_priority,
@@ -48,8 +54,10 @@ aio_task_ptr nfs_node::copy_remote_files(rpc_address remote,
 
     std::shared_ptr<remote_copy_request> rci = std::make_shared<remote_copy_request>();
     rci->source = remote;
+    rci->source_disk_tag = source_disk_tag;
     rci->source_dir = source_dir;
     rci->files = files;
+    rci->dest_disk_tag = dest_disk_tag;
     rci->dest_dir = dest_dir;
     rci->overwrite = overwrite;
     rci->high_priority = high_priority;

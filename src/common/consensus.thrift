@@ -170,6 +170,7 @@ struct learn_response
     6:learn_state           state; // learning data, including memory data and files
     7:dsn.rpc_address       address; // learnee's address
     8:string                base_local_dir; // base dir of files on learnee
+    9:optional string replica_disk_tag; // the disk tag of learnee located
 }
 
 struct learn_notify_response

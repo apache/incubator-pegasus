@@ -238,6 +238,7 @@ public:
     void set_disk_status(disk_status::type status) { _disk_status = status; }
     bool disk_space_insufficient() { return _disk_status == disk_status::SPACE_INSUFFICIENT; }
     disk_status::type get_disk_status() { return _disk_status; }
+    std::string get_replica_disk_tag() const { return _disk_tag; }
 
 protected:
     // this method is marked protected to enable us to mock it in unit tests.
@@ -450,6 +451,8 @@ private:
                           const std::string &name,
                           /*out*/ bool &value);
 
+    void init_disk_tag();
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;
@@ -490,6 +493,7 @@ private:
     // constants
     replica_stub *_stub;
     std::string _dir;
+    std::string _disk_tag;
     replication_options *_options;
     app_info _app_info;
     std::map<std::string, std::string> _extra_envs;

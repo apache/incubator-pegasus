@@ -37,6 +37,7 @@
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/utility/flags.h>
 #include <dsn/tool-api/async_calls.h>
+#include <dsn/utils/token_buckets.h>
 
 #include "nfs_types.h"
 #include "nfs_code_definition.h"
@@ -275,7 +276,8 @@ private:
     void register_cli_commands();
 
 private:
-    std::unique_ptr<folly::TokenBucket> _copy_token_bucket; // rate limiter of copy from remote
+    std::unique_ptr<dsn::utils::token_buckets>
+        _copy_token_buckets; // rate limiter of copy from remote
 
     std::atomic<int> _concurrent_copy_request_count; // record concurrent request count, limited
                                                      // by max_concurrent_remote_copy_requests.

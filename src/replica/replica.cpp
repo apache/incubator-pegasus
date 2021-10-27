@@ -178,6 +178,7 @@ void replica::init_state()
     _last_config_change_time_ms = _create_time_ms;
     update_last_checkpoint_generate_time();
     _private_log = nullptr;
+    init_disk_tag();
 }
 
 replica::~replica(void)
@@ -577,6 +578,14 @@ uint32_t replica::query_data_version() const
 {
     dassert_replica(_app != nullptr, "");
     return _app->query_data_version();
+}
+
+void replica::init_disk_tag()
+{
+    dsn::error_code err = _stub->_fs_manager.get_disk_tag(dir(), _disk_tag);
+    if (dsn::ERR_OK != err) {
+        derror_replica("get disk tag of %s failed: %s, init it to empty ", dir(), err);
+    }
 }
 
 } // namespace replication

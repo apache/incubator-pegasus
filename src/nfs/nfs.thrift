@@ -12,6 +12,7 @@ struct copy_request
     6: i32 size;
     7: bool is_last;
     8: bool overwrite;
+    9: optional string source_disk_tag;
 }
 
 struct copy_response
@@ -29,6 +30,8 @@ struct get_file_size_request
     3: list<string> file_list;
     4: string source_dir;
     5: bool overwrite;
+    6: optional string source_disk_tag;
+    7: optional string dest_disk_tag;
 }
 
 struct get_file_size_response
