@@ -41,8 +41,9 @@ public class PegasusScanner implements PegasusScannerInterface {
       gpid[] partitions,
       ScanOptions options,
       long[] partitionHashes,
-      boolean needCheckHash) {
-    this(table, partitions, options, min, max, partitionHashes, needCheckHash);
+      boolean needCheckHash,
+      boolean fullScan) {
+    this(table, partitions, options, min, max, partitionHashes, needCheckHash, fullScan);
     options.startInclusive = true;
     options.stopInclusive = false;
   }
@@ -54,7 +55,8 @@ public class PegasusScanner implements PegasusScannerInterface {
       blob startKey,
       blob stopKey,
       long[] partitionHashes,
-      boolean needCheckHash) {
+      boolean needCheckHash,
+      boolean fullScan) {
     _table = table;
     _partitionHashes = partitionHashes;
     _partitions = partitions == null ? new gpid[0] : partitions;
@@ -70,6 +72,7 @@ public class PegasusScanner implements PegasusScannerInterface {
     _encounterError = false;
     _needCheckHash = needCheckHash;
     _incomplete = false;
+    _fullScan = fullScan;
   }
 
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException {
@@ -144,6 +147,7 @@ public class PegasusScanner implements PegasusScannerInterface {
     request.sort_key_filter_pattern =
         (_options.sortKeyFilterPattern == null ? null : new blob(_options.sortKeyFilterPattern));
     request.need_check_hash = _needCheckHash;
+    request.full_scan = _fullScan;
 
     rrdb_get_scanner_operator op =
         new rrdb_get_scanner_operator(_gpid, _table.getTableName(), request, _hash);
@@ -337,6 +341,8 @@ public class PegasusScanner implements PegasusScannerInterface {
   private boolean _needCheckHash;
   // whether scan operation got incomplete error
   private boolean _incomplete;
+
+  private boolean _fullScan;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(PegasusScanner.class);
 }

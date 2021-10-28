@@ -1771,7 +1771,14 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     return new PegasusScanner(
-        table, partitions, scanOptions, new blob(start), new blob(stop), partitionHashes, false);
+        table,
+        partitions,
+        scanOptions,
+        new blob(start),
+        new blob(stop),
+        partitionHashes,
+        false,
+        false);
   }
 
   @Override
@@ -1812,7 +1819,8 @@ public class PegasusTable implements PegasusTableInterface {
         gpidArray[j] = allPartitions[partitionCount];
         hashArray[j] = partitionCount;
       }
-      PegasusScanner scanner = new PegasusScanner(table, gpidArray, scanOption, hashArray, true);
+      PegasusScanner scanner =
+          new PegasusScanner(table, gpidArray, scanOption, hashArray, true, true);
       ret.add(scanner);
     }
     return ret;
