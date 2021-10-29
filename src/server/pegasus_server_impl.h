@@ -475,6 +475,8 @@ private:
     dsn::perf_counter_wrapper _pfc_rdb_l0_hit_count;
     dsn::perf_counter_wrapper _pfc_rdb_l1_hit_count;
     dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
+
+    dsn::perf_counter_wrapper _counter_recent_read_throttling_reject_count;
 };
 
 } // namespace server

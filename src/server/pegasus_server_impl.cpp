@@ -281,8 +281,9 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->control(FLAGS_read_throttling_by_size_request_count)) {
+    if (!_read_size_throttling_controller->get_token(FLAGS_read_throttling_by_size_request_count)) {
         rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
         return;
     }
 
@@ -365,8 +366,9 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->control(FLAGS_read_throttling_by_size_request_count)) {
+    if (!_read_size_throttling_controller->get_token(FLAGS_read_throttling_by_size_request_count)) {
         rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
         return;
     }
 
@@ -792,8 +794,9 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
-    if (!_read_size_throttling_controller->control(FLAGS_read_throttling_by_size_request_count)) {
+    if (!_read_size_throttling_controller->get_token(FLAGS_read_throttling_by_size_request_count)) {
         rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
         return;
     }
 
@@ -873,8 +876,9 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->control(FLAGS_read_throttling_by_size_request_count)) {
+    if (!_read_size_throttling_controller->get_token(FLAGS_read_throttling_by_size_request_count)) {
         rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
         return;
     }
 
@@ -942,8 +946,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->control(FLAGS_read_throttling_by_size_request_count)) {
+    if (!_read_size_throttling_controller->get_token(FLAGS_read_throttling_by_size_request_count)) {
         rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
         return;
     }
 
@@ -1197,8 +1202,9 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
-    if (!_read_size_throttling_controller->control(FLAGS_read_throttling_by_size_request_count)) {
+    if (!_read_size_throttling_controller->get_token(FLAGS_read_throttling_by_size_request_count)) {
         rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
         return;
     }
 
