@@ -45,6 +45,22 @@ func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 }
 
 func queryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, print bool) ([]interface{}, error) {
+	resp, err := sendQueryDiskInfoRequest(client, replicaServer, tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	switch infoType {
+	case CapacitySize:
+		return queryDiskCapacity(client, replicaServer, resp, diskTag, print), nil
+	case ReplicaCount:
+		return queryDiskReplicaCount(client, resp, print), nil
+	default:
+		return nil, fmt.Errorf("not support query this disk info: %s", infoType)
+	}
+}
+
+func sendQueryDiskInfoRequest(client *Client, replicaServer string, tableName string) (*radmin.QueryDiskInfoResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -61,15 +77,24 @@ func queryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 	if err != nil {
 		return nil, err
 	}
+	return resp, err
+}
 
-	switch infoType {
-	case CapacitySize:
-		return queryDiskCapacity(client, n.TCPAddr(), resp, diskTag, print), nil
-	case ReplicaCount:
-		return queryDiskReplicaCount(client, resp, print), nil
-	default:
-		return nil, fmt.Errorf("not support query this disk info: %s", infoType)
+func QueryAllNodesDiskInfo(client *Client, tableName string) (map[string]*radmin.QueryDiskInfoResponse, error) {
+	respMap := make(map[string]*radmin.QueryDiskInfoResponse)
+	nodeInfos, err := client.Meta.ListNodes()
+	if err != nil {
+		return respMap, err
 	}
+	for _, nodeInfo := range nodeInfos {
+		address := nodeInfo.GetAddress().GetAddress()
+		resp, err := sendQueryDiskInfoRequest(client, address, tableName)
+		if err != nil {
+			return respMap, err
+		}
+		respMap[address] = resp
+	}
+	return respMap, nil
 }
 
 type DiskCapacityStruct struct {
