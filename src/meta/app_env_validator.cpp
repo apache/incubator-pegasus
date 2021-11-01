@@ -20,6 +20,7 @@
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replica_envs.h>
+#include <dsn/utils/token_bucket_throttling_controller.h>
 #include "app_env_validator.h"
 
 namespace dsn {
@@ -185,6 +186,10 @@ void app_env_validator::register_all_validators()
         {replica_envs::REPLICA_ACCESS_CONTROLLER_ALLOWED_USERS, nullptr},
         {replica_envs::READ_QPS_THROTTLING,
          std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::READ_SIZE_THROTTLING,
+         std::bind(&utils::token_bucket_throttling_controller::validate,
+                   std::placeholders::_1,
+                   std::placeholders::_2)},
         {replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
          std::bind(&check_split_validation, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::USER_SPECIFIED_COMPACTION, nullptr},
