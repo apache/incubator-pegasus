@@ -26,8 +26,8 @@
 namespace dsn {
 namespace utils {
 class token_bucket_throttling_controller;
-}
-}
+} // namespace utils
+} // namespace dsn
 typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
 
 namespace pegasus {
