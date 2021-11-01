@@ -30,6 +30,8 @@ public:
 
     std::shared_ptr<latency_tracer> _tracer1;
     std::shared_ptr<latency_tracer> _tracer2;
+    std::shared_ptr<latency_tracer> _tracer3;
+    std::shared_ptr<latency_tracer> _tracer4;
     std::shared_ptr<latency_tracer> _sub_tracer;
 
 public:
@@ -41,54 +43,71 @@ public:
 
     void init_trace_points()
     {
-        _tracer1 = std::make_shared<latency_tracer>("name1");
+        _tracer1 = std::make_shared<latency_tracer>(false, "name1", 0);
         for (int i = 0; i < _tracer1_stage_count; i++) {
             ADD_CUSTOM_POINT(_tracer1, fmt::format("stage{}", i));
         }
 
-        _tracer2 = std::make_shared<latency_tracer>("name2");
+        _tracer2 = std::make_shared<latency_tracer>(false, "name2", 0);
 
         for (int i = 0; i < _tracer2_stage_count; i++) {
             ADD_CUSTOM_POINT(_tracer2, fmt::format("stage{}", i));
         }
 
-        _sub_tracer = std::make_shared<latency_tracer>("sub", true);
+        _sub_tracer = std::make_shared<latency_tracer>(true, "sub", 0);
+        _sub_tracer->set_parent_point_name("test");
 
-        _tracer1->set_sub_tracer(_sub_tracer);
-        _tracer2->set_sub_tracer(_sub_tracer);
+        _tracer1->add_sub_tracer(_sub_tracer);
+        _tracer2->add_sub_tracer(_sub_tracer);
 
         for (int i = 0; i < _sub_tracer_stage_count; i++) {
             ADD_CUSTOM_POINT(_sub_tracer, fmt::format("stage{}", i));
         }
+
+        _tracer3 = std::make_shared<latency_tracer>(false, "name3", 0);
+        APPEND_EXTERN_POINT(_tracer3, 123, "test");
+
+        _tracer4 = std::make_shared<latency_tracer>(false, "name4", 0, RPC_TEST);
     }
 
-    std::map<int64_t, std::string> get_points(std::shared_ptr<latency_tracer> tracer)
+    std::map<int64_t, std::string> get_points(const std::shared_ptr<latency_tracer> &tracer)
     {
         return tracer->_points;
     }
 
-    std::shared_ptr<latency_tracer> get_sub_tracer(std::shared_ptr<latency_tracer> tracer)
+    std::shared_ptr<latency_tracer> get_sub_tracer(const std::shared_ptr<latency_tracer> &tracer)
     {
-        return tracer->_sub_tracer;
+        return tracer->sub_tracer("sub");
     }
 };
 
 TEST_F(latency_tracer_test, add_point)
 {
     auto tracer1_points = get_points(_tracer1);
-    ASSERT_EQ(tracer1_points.size(), _tracer1_stage_count);
+    // tracer constructor will auto push one point, so the total count is stage_count + 1
+    ASSERT_EQ(tracer1_points.size(), _tracer1_stage_count + 1);
     int count1 = 0;
-    for (auto point : tracer1_points) {
+    bool tracer1_first = true;
+    for (const auto &point : tracer1_points) {
+        if (tracer1_first) {
+            tracer1_first = false;
+            continue;
+        }
         ASSERT_EQ(point.second,
-                  fmt::format("latency_tracer_test.cpp:46:init_trace_points[stage{}]", count1++));
+                  fmt::format("latency_tracer_test.cpp:48:init_trace_points_stage{}", count1++));
     }
 
     auto tracer2_points = get_points(_tracer2);
-    ASSERT_EQ(tracer2_points.size(), _tracer2_stage_count);
+    ASSERT_EQ(tracer2_points.size(), _tracer2_stage_count + 1);
     int count2 = 0;
-    for (auto point : tracer2_points) {
+    bool tracer2_first = true;
+    for (const auto &point : tracer2_points) {
+        if (tracer2_first) {
+            tracer2_first = false;
+            continue;
+        }
         ASSERT_EQ(point.second,
-                  fmt::format("latency_tracer_test.cpp:52:init_trace_points[stage{}]", count2++));
+                  fmt::format("latency_tracer_test.cpp:54:init_trace_points_stage{}", count2++));
     }
 
     auto tracer1_sub_tracer = get_sub_tracer(_tracer1);
@@ -97,12 +116,27 @@ TEST_F(latency_tracer_test, add_point)
 
     auto points = get_points(tracer1_sub_tracer);
     ASSERT_TRUE(get_sub_tracer(tracer1_sub_tracer) == nullptr);
-    ASSERT_EQ(points.size(), _sub_tracer_stage_count);
+    ASSERT_EQ(points.size(), _sub_tracer_stage_count + 1);
     int count3 = 0;
-    for (auto point : points) {
+    bool sub_tracer_first = true;
+    for (const auto &point : points) {
+        if (sub_tracer_first) {
+            sub_tracer_first = false;
+            continue;
+        }
         ASSERT_EQ(point.second,
-                  fmt::format("latency_tracer_test.cpp:61:init_trace_points[stage{}]", count3++));
+                  fmt::format("latency_tracer_test.cpp:64:init_trace_points_stage{}", count3++));
     }
+
+    // tracer3 append one invalid point, it will reset the last position and update the
+    // timestamp=previous+1
+    auto tracer3_points = get_points(_tracer3);
+    ASSERT_EQ(tracer3_points.size(), 2);
+    ASSERT_EQ(tracer3_points.rbegin()->first - tracer3_points.begin()->first, 1);
+
+    // tracer4 init with disable trace task code, the points size will be 0
+    auto tracer4_points = get_points(_tracer4);
+    ASSERT_EQ(tracer4_points.size(), 0);
 }
 } // namespace utils
 } // namespace dsn

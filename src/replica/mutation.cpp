@@ -60,10 +60,8 @@ mutation::mutation()
     _create_ts_ns = dsn_now_ns();
     _tid = ++s_tid;
     _is_sync_to_child = false;
-    tracer =
-        std::make_shared<dsn::utils::latency_tracer>(fmt::format("{}[{}]", "mutation", _tid),
-                                                     false,
-                                                     FLAGS_abnormal_write_trace_latency_threshold);
+    tracer = std::make_shared<dsn::utils::latency_tracer>(
+        false, "mutation", FLAGS_abnormal_write_trace_latency_threshold);
 }
 
 mutation_ptr mutation::copy_no_reply(const mutation_ptr &old_mu)
