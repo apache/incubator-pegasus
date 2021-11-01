@@ -389,7 +389,7 @@ error_code replication_app_base::open_new_internal(replica *r,
 
 ::dsn::error_code replication_app_base::open()
 {
-    const dsn::app_info *info = _replica->get_app_info();
+    const dsn::app_info *info = get_app_info();
     int argc = 1;
     argc += (2 * info->envs.size());
     // check whether replica have some extra envs that meta don't known
@@ -603,5 +603,8 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
                             _info.init_offset_in_private_log,
                             r->last_durable_decree());
 }
+
+const app_info *replication_app_base::get_app_info() const { return _replica->get_app_info(); }
+
 } // namespace replication
 } // namespace dsn
