@@ -22,7 +22,6 @@
 #include <dsn/utility/config_api.h>
 #include <dsn/utils/token_bucket_throttling_controller.h>
 #include <rocksdb/status.h>
-#include <fmt/format.h>
 #include "hotkey_collector.h"
 
 namespace pegasus {
