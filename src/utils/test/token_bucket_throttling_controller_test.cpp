@@ -73,6 +73,7 @@ public:
 
         // invalid argument]
         std::string old_env = "20000*reject*100";
+        INVALIDATE_SITUATION_CHECK("0");
         INVALIDATE_SITUATION_CHECK("*deldday*100");
         INVALIDATE_SITUATION_CHECK("");
         INVALIDATE_SITUATION_CHECK("*reject");
@@ -109,7 +110,8 @@ public:
         for (int i = 0; i < 100000; i++) {
             token_bucket->consumeWithBorrowAndWait(
                 1, throttle_limit / partition_count * 0.8, throttle_limit / partition_count * 1.0);
-            if (!cntl->get_token(1)) {
+            cntl->consume_token(1);
+            if (!cntl->available()) {
                 fail_count++;
             }
         }
@@ -121,7 +123,8 @@ public:
         for (int i = 0; i < 100000; i++) {
             token_bucket->consumeWithBorrowAndWait(
                 1, throttle_limit / partition_count * 1.2, throttle_limit / partition_count * 1.5);
-            if (!cntl->get_token(1)) {
+            cntl->consume_token(1);
+            if (!cntl->available()) {
                 fail_count++;
             }
         }
@@ -142,7 +145,7 @@ public:
                                                        throttle_limit / partition_count * 0.2,
                                                        throttle_limit / partition_count * 0.3);
             }
-            if (!cntl->get_token(1)) {
+            if (!cntl->consume_token(1)) {
                 fail_count++;
             }
         }

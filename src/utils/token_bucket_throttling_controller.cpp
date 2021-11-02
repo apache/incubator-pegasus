@@ -29,7 +29,7 @@ token_bucket_throttling_controller::token_bucket_throttling_controller()
     _token_bucket = std::make_unique<DynamicTokenBucket>();
 }
 
-bool token_bucket_throttling_controller::get_token(int32_t request_units = 1)
+bool token_bucket_throttling_controller::consume_token(int32_t request_units)
 {
     if (!_enabled) {
         return true;
@@ -38,6 +38,15 @@ bool token_bucket_throttling_controller::get_token(int32_t request_units = 1)
         _token_bucket->consumeWithBorrowNonBlocking((double)request_units, _rate, _burstsize);
 
     return (res.get_value_or(0) == 0);
+}
+
+bool token_bucket_throttling_controller::available() const
+{
+    if (!_enabled) {
+        return true;
+    }
+
+    return _token_bucket->available(_rate, _burstsize) > 0;
 }
 
 void token_bucket_throttling_controller::reset(bool &changed, std::string &old_env_value)
@@ -121,18 +130,19 @@ bool token_bucket_throttling_controller::transform_env_string(const std::string 
 {
     enabled = true;
 
-    if (buf2int64(env, reject_size_value) && reject_size_value >= 0) {
+    if (buf2int64(env, reject_size_value) && reject_size_value > 0) {
         return true;
     }
 
     // format like "200K"
-    if (string_to_value(env, reject_size_value)) {
+    if (string_to_value(env, reject_size_value) && reject_size_value > 0) {
         return true;
     }
 
     // format like "20000*delay*100"
     if (env.find("delay") != -1 && env.find("reject") == -1) {
-        reject_size_value = 0;
+        // rate must > 0 in TokenBucket.h
+        reject_size_value = 1;
         enabled = false;
 
         dinfo("token_bucket_throttling_controller doesn't support delay method, so throttling "
@@ -149,7 +159,7 @@ bool token_bucket_throttling_controller::transform_env_string(const std::string 
     }
     auto reject_size = env.substr(comma_index + 1, star_index - comma_index - 1);
 
-    if (string_to_value(reject_size, reject_size_value)) {
+    if (string_to_value(reject_size, reject_size_value) && reject_size_value > 0) {
         return true;
     }
 
