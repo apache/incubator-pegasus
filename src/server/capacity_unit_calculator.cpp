@@ -111,7 +111,7 @@ int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
                           ? (read_data_size + _read_capacity_unit_size - 1) >> _log_read_cu_size
                           : 1;
     _pfc_recent_read_cu->add(read_cu);
-    _read_size_throttling_controller->get_token(read_data_size);
+    _read_size_throttling_controller->consume_token(read_data_size);
     return read_cu;
 }
 
