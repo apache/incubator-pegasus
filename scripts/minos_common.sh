@@ -149,8 +149,14 @@ function minos_bootstrap()
     options="$options --task $3"
   fi
   cd $minos_client_dir
-  echo "./deploy bootstrap pegasus $1 $options"
-  ./deploy bootstrap pegasus $1 $options
+  if [ $minos_type -eq 2 ]; then
+    # minos2 have no "bootstrap" function,use "start" function
+    echo "./deploy start pegasus $1 $options"
+    ./deploy start pegasus $1 $options
+  else
+    echo "./deploy bootstrap pegasus $1 $options"
+    ./deploy bootstrap pegasus $1 $options
+  fi
   if [ $? -ne 0 ]; then
     echo "ERROR: minos bootstrap failed"
     exit 1
