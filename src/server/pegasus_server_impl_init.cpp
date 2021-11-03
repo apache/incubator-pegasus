@@ -111,7 +111,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, this);
 
     _read_size_throttling_controller =
-        std::make_unique<dsn::utils::token_bucket_throttling_controller>();
+        std::make_shared<dsn::utils::token_bucket_throttling_controller>();
 
     _verbose_log = dsn_config_get_value_bool("pegasus.server",
                                              "rocksdb_verbose_log",
