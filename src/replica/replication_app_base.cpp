@@ -474,7 +474,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
     dassert(mu->data.updates.size() > 0, "");
 
     if (_replica->status() == partition_status::PS_PRIMARY) {
-        ADD_POINT(mu->tracer);
+        ADD_POINT(mu->_tracer);
     }
 
     bool has_ingestion_request = false;

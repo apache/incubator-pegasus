@@ -134,6 +134,8 @@ public:
     //                                     |-->stageC2[rpc]-->....
     void add_sub_tracer(const std::shared_ptr<latency_tracer> &tracer);
 
+    void add_sub_tracer(const std::string &name);
+
     std::shared_ptr<latency_tracer> sub_tracer(const std::string &name);
 
     void set_name(const std::string &name) { _name = name; }
@@ -152,6 +154,8 @@ public:
 
     uint64_t last_time() const { return _last_time; }
 
+    const std::string &last_stage_name() const { return _last_stage; }
+
 private:
     // report the trace point duration to monitor system
     static void report_trace_point(const std::string &name, uint64_t span);
@@ -165,6 +169,7 @@ private:
     uint64_t _threshold;
     uint64_t _start_time;
     uint64_t _last_time;
+    std::string _last_stage;
 
     dsn::task_code _task_code;
     bool _enable_trace;

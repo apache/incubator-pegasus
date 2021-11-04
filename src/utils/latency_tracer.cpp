@@ -149,6 +149,7 @@ void latency_tracer::add_point(const std::string &stage_name)
     utils::auto_write_lock write(_point_lock);
     _points.emplace(ts, stage_name);
     _last_time = ts;
+    _last_stage = stage_name;
 }
 
 void latency_tracer::append_point(const std::string &stage_name, uint64_t timestamp)
@@ -161,6 +162,20 @@ void latency_tracer::append_point(const std::string &stage_name, uint64_t timest
     uint64_t cur_ts = timestamp > _last_time ? timestamp : _last_time + 1;
     _points.emplace(cur_ts, stage_name);
     _last_time = cur_ts;
+    _last_stage = stage_name;
+}
+
+void latency_tracer::add_sub_tracer(const std::string &name)
+{
+    if (!_enable_trace) {
+        return;
+    }
+
+    auto sub_tracer = std::make_shared<dsn::utils::latency_tracer>(true, name, 0);
+    sub_tracer->set_parent_point_name(_last_stage);
+    sub_tracer->set_description(_description);
+    utils::auto_write_lock write(_sub_lock);
+    _sub_tracers.emplace(name, sub_tracer);
 }
 
 void latency_tracer::add_sub_tracer(const std::shared_ptr<latency_tracer> &tracer)
@@ -229,7 +244,7 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
                     _is_sub ? fmt::format("{}.{}", _parent_point_name, cur_point_name)
                             : cur_point_name;
                 std::string trace_log =
-                    fmt::format("\t{}TRACE:name={:<70}, span={:>20}, total={:>20}, "
+                    fmt::format("\t{}TRACE:name={:<110}, span={:>20}, total={:>20}, "
                                 "ts={:<20}\n",
                                 trace_format,
                                 trace_name,

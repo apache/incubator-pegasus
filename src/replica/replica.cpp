@@ -293,7 +293,7 @@ void replica::execute_mutation(mutation_ptr &mu)
         }
         break;
     case partition_status::PS_PRIMARY: {
-        ADD_POINT(mu->tracer);
+        ADD_POINT(mu->_tracer);
         check_state_completeness();
         dassert(_app->last_committed_decree() + 1 == d,
                 "app commit: %" PRId64 ", mutation decree: %" PRId64 "",
@@ -364,7 +364,7 @@ void replica::execute_mutation(mutation_ptr &mu)
     }
 
     if (status() == partition_status::PS_PRIMARY) {
-        ADD_CUSTOM_POINT(mu->tracer, "completed");
+        ADD_CUSTOM_POINT(mu->_tracer, "completed");
         mutation_ptr next = _primary_states.write_queue.check_possible_work(
             static_cast<int>(_prepare_list->max_decree() - d));
 
