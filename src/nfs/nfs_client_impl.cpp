@@ -572,7 +572,7 @@ void nfs_client_impl::register_cli_commands()
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         _nfs_max_copy_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
-            {"nfs.max_copy_rate_megabytes"},
+            {"nfs.max_copy_rate_megabytes_per_disk"},
             "nfs.max_copy_rate_megabytes_per_disk [num]",
             "control the max rate(MB/s) for one disk to copy file from remote node",
             [](const std::vector<std::string> &args) {

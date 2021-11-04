@@ -263,9 +263,9 @@ void nfs_service_impl::register_cli_commands()
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         _nfs_max_send_rate_megabytes_cmd = dsn::command_manager::instance().register_command(
-            {"nfs.max_send_rate_megabytes"},
-            "nfs.max_send_rate_megabytes [num]",
-            "control the max rate(MB/s) to send file to remote node",
+            {"nfs.max_send_rate_megabytes_per_disk"},
+            "nfs.max_send_rate_megabytes_per_disk [num]",
+            "control the max rate(MB/s) for one disk to send file to remote node",
             [](const std::vector<std::string> &args) {
                 std::string result("OK");
 
