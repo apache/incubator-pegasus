@@ -84,6 +84,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
         _write_svc->batch_prepare(_decree);
 
         for (int i = 0; i < count; ++i) {
+            //todo(jiashuo1)  filter timeout request
             dassert(requests[i] != nullptr, "request[%d] is null", i);
 
             // Make sure all writes are batched even if they are failed,
