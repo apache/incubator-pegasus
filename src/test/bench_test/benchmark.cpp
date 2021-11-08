@@ -20,6 +20,7 @@
 #include <sstream>
 #include <pegasus/client.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/c/app_model.h>
 
 #include "benchmark.h"
 #include "rand.h"
@@ -116,7 +117,7 @@ void benchmark::write_random(thread_arg *thread)
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Set returned an error: {}\n", _client->get_error_string(ret));
-                exit(1);
+                dsn_exit(1);
             } else {
                 fmt::print(stderr, "Set timeout, retry({})\n", try_count);
             }
@@ -153,7 +154,7 @@ void benchmark::read_random(thread_arg *thread)
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Get returned an error: {}\n", _client->get_error_string(ret));
-                exit(1);
+                dsn_exit(1);
             } else {
                 fmt::print(stderr, "Get timeout, retry({})\n", try_count);
             }
@@ -186,7 +187,7 @@ void benchmark::delete_random(thread_arg *thread)
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
                 fmt::print(stderr, "Del returned an error: {}\n", _client->get_error_string(ret));
-                exit(1);
+                dsn_exit(1);
             } else {
                 fmt::print(stderr, "Get timeout, retry({})\n", try_count);
             }
@@ -215,7 +216,7 @@ operation_type benchmark::get_operation_type(const std::string &name)
         op_type = kDelete;
     } else if (!name.empty()) { // No error message for empty name
         fmt::print(stderr, "unknown benchmark '{}'\n", name);
-        exit(1);
+        dsn_exit(1);
     }
 
     return op_type;

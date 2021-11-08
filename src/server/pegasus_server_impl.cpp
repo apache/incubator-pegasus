@@ -31,6 +31,7 @@
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication.codes.h>
 #include <dsn/utility/flags.h>
+#include <dsn/utils/token_bucket_throttling_controller.h>
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"
@@ -274,6 +275,12 @@ void pegasus_server_impl::on_get(get_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
     rocksdb::Status status = _db->Get(_data_cf_rd_opts, _data_cf, skey, &value);
@@ -352,6 +359,12 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
+
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
 
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
         derror("%s: invalid argument for multi_get from %s: "
@@ -775,6 +788,11 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
 
     // scan
     ::dsn::blob start_key, stop_key;
@@ -852,6 +870,12 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
 
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
     rocksdb::Slice skey(key.data(), key.length());
     std::string value;
     rocksdb::Status status = _db->Get(_data_cf_rd_opts, _data_cf, skey, &value);
@@ -915,6 +939,12 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
+
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
 
     if (!is_filter_type_supported(request.hash_key_filter_type)) {
         derror("%s: invalid argument for get_scanner from %s: "
@@ -1165,6 +1195,12 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
+
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
 
     std::unique_ptr<pegasus_scan_context> context = _context_cache.fetch(request.context_id);
     if (context) {
@@ -1562,7 +1598,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
     // initialize cu calculator and write service after server being initialized.
     _cu_calculator = dsn::make_unique<capacity_unit_calculator>(
-        this, _read_hotkey_collector, _write_hotkey_collector);
+        this, _read_hotkey_collector, _write_hotkey_collector, _read_size_throttling_controller);
     _server_write = dsn::make_unique<pegasus_server_write>(this, _verbose_log);
 
     ::dsn::tasking::enqueue_timer(LPC_ANALYZE_HOTKEY,
@@ -2421,6 +2457,8 @@ void pegasus_server_impl::update_app_envs(const std::map<std::string, std::strin
     update_validate_partition_hash(envs);
     update_user_specified_compaction(envs);
     _manual_compact_svc.start_manual_compact_if_needed(envs);
+
+    update_throttling_controller(envs);
 }
 
 int64_t pegasus_server_impl::last_flushed_decree() const
@@ -2516,6 +2554,38 @@ void pegasus_server_impl::update_checkpoint_reserve(const std::map<std::string, 
                        _checkpoint_reserve_time_seconds,
                        time);
         _checkpoint_reserve_time_seconds = time;
+    }
+}
+
+void pegasus_server_impl::update_throttling_controller(
+    const std::map<std::string, std::string> &envs)
+{
+    bool throttling_changed = false;
+    std::string old_throttling;
+    std::string parse_error;
+    auto find = envs.find(READ_SIZE_THROTTLING);
+    if (find != envs.end()) {
+        if (!_read_size_throttling_controller->parse_from_env(find->second,
+                                                              get_app_info()->partition_count,
+                                                              parse_error,
+                                                              throttling_changed,
+                                                              old_throttling)) {
+            dwarn_replica("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
+                          READ_SIZE_THROTTLING,
+                          find->second,
+                          parse_error);
+            // reset if parse failed
+            _read_size_throttling_controller->reset(throttling_changed, old_throttling);
+        }
+    } else {
+        // reset if env not found
+        _read_size_throttling_controller->reset(throttling_changed, old_throttling);
+    }
+    if (throttling_changed) {
+        ddebug_replica("switch {} from \"{}\" to \"{}\"",
+                       READ_SIZE_THROTTLING,
+                       old_throttling,
+                       _read_size_throttling_controller->env_value());
     }
 }
 
