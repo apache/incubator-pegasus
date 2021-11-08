@@ -20,6 +20,7 @@
 
 #include <fstream>
 
+#include <dsn/tool-api/zlocks.h>
 #include <dsn/utility/fail_point.h>
 #include <gtest/gtest.h>
 
@@ -59,7 +60,9 @@ public:
     {
         const std::string remote_dir = _bulk_loader->get_remote_bulk_load_dir(
             APP_NAME, CLUSTER, ROOT_PATH, PID.get_partition_index());
-        return _bulk_loader->start_download(remote_dir, PROVIDER);
+        auto err = _bulk_loader->start_download(remote_dir, PROVIDER);
+        _bulk_loader->tracker()->wait_outstanding_tasks();
+        return err;
     }
 
     void test_rollback_to_downloading(bulk_load_status::type cur_status)
@@ -485,23 +488,15 @@ TEST_F(replica_bulk_loader_test, start_downloading_test)
     // - downloading succeed
     struct test_struct
     {
-        bool mock_function;
         int32_t downloading_count;
         error_code expected_err;
         bulk_load_status::type expected_status;
         int32_t expected_downloading_count;
-    } tests[]{{false,
-               MAX_DOWNLOADING_COUNT,
-               ERR_BUSY,
-               bulk_load_status::BLS_INVALID,
-               MAX_DOWNLOADING_COUNT},
-              {false, 1, ERR_CORRUPTION, bulk_load_status::BLS_DOWNLOADING, 1},
-              {true, 1, ERR_OK, bulk_load_status::BLS_DOWNLOADING, 2}};
-
+    } tests[]{
+        {MAX_DOWNLOADING_COUNT, ERR_BUSY, bulk_load_status::BLS_INVALID, MAX_DOWNLOADING_COUNT},
+        {1, ERR_OK, bulk_load_status::BLS_DOWNLOADING, 2}};
+    fail::cfg("replica_bulk_loader_download_files", "return()");
     for (auto test : tests) {
-        if (test.mock_function) {
-            fail::cfg("replica_bulk_loader_download_sst_files", "return()");
-        }
         mock_group_progress(bulk_load_status::BLS_INVALID);
         create_bulk_load_request(bulk_load_status::BLS_DOWNLOADING, test.downloading_count);
 
@@ -514,7 +509,7 @@ TEST_F(replica_bulk_loader_test, start_downloading_test)
 // start_downloading unit tests
 TEST_F(replica_bulk_loader_test, rollback_to_downloading_test)
 {
-    fail::cfg("replica_bulk_loader_download_sst_files", "return()");
+    fail::cfg("replica_bulk_loader_download_files", "return()");
     struct test_struct
     {
         bulk_load_status::type status;

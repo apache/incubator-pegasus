@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <dsn/tool-api/zlocks.h>
+
 #include "replica/replica.h"
 #include "replica/replica_context.h"
 #include "replica/replica_stub.h"
@@ -56,23 +58,30 @@ private:
 
     // replica start or restart download sst files from remote provider
     // \return ERR_BUSY if node has already had enough replica executing downloading
-    // \return download errors by function `download_sst_files`
+    // \return ERR_FILE_OPERATION_FAILED: create local bulk load dir failed
     error_code start_download(const std::string &remote_dir, const std::string &provider_name);
 
-    // download metadata and sst files from remote provider
+    // download metadata file and create sst download tasks
     // metadata and sst files will be downloaded in {_dir}/.bulk_load directory
-    // \return ERR_FILE_OPERATION_FAILED: create local bulk load dir failed
-    // \return download metadata file error, see function `do_download`
-    // \return parse metadata file error, see function `parse_bulk_load_metadata`
-    error_code download_sst_files(const std::string &remote_dir, const std::string &provider_name);
+    void download_files(const std::string &provider_name,
+                        const std::string &remote_dir,
+                        const std::string &local_dir);
+
+    // download sst files from remote provider
+    void download_sst_file(const std::string &remote_dir,
+                           const std::string &local_dir,
+                           const file_meta &f_meta,
+                           dist::block_service::block_filesystem *fs);
 
     // \return ERR_FILE_OPERATION_FAILED: file not exist, get size failed, open file failed
     // \return ERR_CORRUPTION: parse failed
+    // need to acquire write lock while calling it
     error_code parse_bulk_load_metadata(const std::string &fname);
 
     // update download progress after downloading sst files succeed
     void update_bulk_load_download_progress(uint64_t file_size, const std::string &file_name);
 
+    // need to acquire write lock while calling it
     void try_decrease_bulk_load_download_count();
     void check_download_finish();
     void start_ingestion();
@@ -83,7 +92,9 @@ private:
     void pause_bulk_load();
 
     void remove_local_bulk_load_dir(const std::string &bulk_load_dir);
-    void cleanup_download_task();
+    // need to acquire write lock while calling it
+    void cleanup_download_tasks();
+    bool cleanup_download_task(task_ptr task_);
     void clear_bulk_load_states();
     bool is_cleaned_up();
 
@@ -150,15 +161,19 @@ private:
     friend class replica_stub;
     friend class replica_bulk_loader_test;
 
+    // bulk load states lock
+    zrwlock_nr _lock; // {
     bulk_load_status::type _status{bulk_load_status::BLS_INVALID};
     bulk_load_metadata _metadata;
     std::atomic<bool> _is_downloading{false};
     std::atomic<uint64_t> _cur_downloaded_size{0};
     std::atomic<int32_t> _download_progress{0};
     std::atomic<error_code> _download_status{ERR_OK};
+    // }
     // file_name -> downloading task
-    std::map<std::string, task_ptr> _download_task;
-
+    std::map<std::string, task_ptr> _download_files_task;
+    // download metadata and create download file tasks
+    task_ptr _download_task;
     // Used for perf-counter
     uint64_t _bulk_load_start_time_ms{0};
 };
