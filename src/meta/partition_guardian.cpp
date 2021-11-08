@@ -658,7 +658,8 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
             np->newly_remove_primary(gpid.get_app_id(), false);
         } else if (act.type == config_type::CT_UPGRADE_TO_PRIMARY) {
             np->newly_remove_primary(gpid.get_app_id(), true);
-        } else if (act.type == config_type::CT_UPGRADE_TO_SECONDARY) {
+        } else if (act.type == config_type::CT_UPGRADE_TO_SECONDARY ||
+                   act.type == config_type::CT_ADD_SECONDARY) {
             np->newly_remove_partition(gpid.get_app_id());
         }
     }
