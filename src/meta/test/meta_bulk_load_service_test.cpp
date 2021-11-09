@@ -727,7 +727,7 @@ TEST_F(bulk_load_process_test, rpc_error)
 TEST_F(bulk_load_process_test, response_invalid_state)
 {
     test_on_partition_bulk_load_reply(
-        _partition_count, bulk_load_status::BLS_SUCCEED, ERR_INVALID_STATE);
+        _partition_count, bulk_load_status::BLS_INGESTING, ERR_INVALID_STATE);
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_DOWNLOADING);
     ASSERT_EQ(get_app_in_process_count(_app_id), _partition_count);
 }

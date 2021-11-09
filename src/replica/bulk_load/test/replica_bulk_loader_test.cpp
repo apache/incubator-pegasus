@@ -581,6 +581,7 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
     // Test cases
     // - bulk load succeed
     // - double bulk load finish
+    // - invalid with directory not removed
     // - cancel during downloaded
     // - cancel during ingestion
     // - cancel during succeed
@@ -608,6 +609,12 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
                false,
                bulk_load_status::BLS_SUCCEED,
                false},
+              {bulk_load_status::BLS_INVALID,
+               0,
+               ingestion_status::IS_INVALID,
+               false,
+               bulk_load_status::BLS_SUCCEED,
+               true},
               {bulk_load_status::BLS_DOWNLOADED,
                100,
                ingestion_status::IS_INVALID,
@@ -648,7 +655,6 @@ TEST_F(replica_bulk_loader_test, bulk_load_finish_test)
         ASSERT_EQ(_replica->get_ingestion_status(), ingestion_status::IS_INVALID);
         ASSERT_FALSE(_replica->is_ingestion());
         ASSERT_TRUE(is_cleaned_up());
-        ASSERT_FALSE(utils::filesystem::directory_exists(LOCAL_DIR));
     }
 }
 
@@ -883,7 +889,7 @@ TEST_F(replica_bulk_loader_test, validate_status_test)
                  {bulk_load_status::BLS_CANCELED, bulk_load_status::BLS_SUCCEED, true},
                  {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_INVALID, true},
                  {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_INGESTING, true},
-                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_SUCCEED, true},
+                 {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_SUCCEED, false},
                  {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_FAILED, false},
                  {bulk_load_status::BLS_DOWNLOADING, bulk_load_status::BLS_CANCELED, false},
                  {bulk_load_status::BLS_DOWNLOADED, bulk_load_status::BLS_INVALID, false},

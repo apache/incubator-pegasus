@@ -81,15 +81,16 @@ struct bulk_load_info
 ///                  |
 ///         Err      v
 ///     ---------Downloading <---------|
-///     |            |                 |
+///     |  Too many  |                 |
+///     |  rollback  |                 |
 ///     |            v         Err     |
 ///     |        Downloaded  --------->|
 ///     |            |                 |
 ///     | IngestErr  v         Err     |
 ///     |<------- Ingesting  --------->|
-///     |            |                 |
-///     v            v         Err     |
-///   Failed       Succeed   --------->|
+///     |            |
+///     v            v
+///   Failed       Succeed
 ///     |            |
 ///     v            v
 ///    remove bulk load info on remote storage

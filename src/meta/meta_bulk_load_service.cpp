@@ -752,8 +752,7 @@ void bulk_load_service::try_rollback_to_downloading(const std::string &app_name,
     const auto app_status = get_app_bulk_load_status_unlocked(pid.get_app_id());
     if (app_status != bulk_load_status::BLS_DOWNLOADING &&
         app_status != bulk_load_status::BLS_DOWNLOADED &&
-        app_status != bulk_load_status::BLS_INGESTING &&
-        app_status != bulk_load_status::BLS_SUCCEED) {
+        app_status != bulk_load_status::BLS_INGESTING) {
         ddebug_f("app({}) status={}, no need to rollback to downloading, wait for next round",
                  app_name,
                  dsn::enum_to_string(app_status));

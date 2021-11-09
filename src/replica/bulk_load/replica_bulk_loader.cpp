@@ -273,7 +273,8 @@ error_code replica_bulk_loader::do_bulk_load(const std::string &app_name,
     case bulk_load_status::BLS_SUCCEED:
         if (local_status == bulk_load_status::BLS_INGESTING) {
             handle_bulk_load_succeed();
-        } else if (local_status == bulk_load_status::BLS_SUCCEED) {
+        } else if (local_status == bulk_load_status::BLS_SUCCEED ||
+                   local_status == bulk_load_status::BLS_INVALID) {
             handle_bulk_load_finish(meta_status);
         }
         break;
@@ -302,7 +303,8 @@ replica_bulk_loader::validate_status(const bulk_load_status::type meta_status,
     case bulk_load_status::BLS_DOWNLOADING:
         if (local_status == bulk_load_status::BLS_FAILED ||
             local_status == bulk_load_status::BLS_PAUSING ||
-            local_status == bulk_load_status::BLS_CANCELED) {
+            local_status == bulk_load_status::BLS_CANCELED ||
+            local_status == bulk_load_status::BLS_SUCCEED) {
             err = ERR_INVALID_STATE;
         }
         break;
@@ -655,7 +657,7 @@ void replica_bulk_loader::remove_local_bulk_load_dir(const std::string &bulk_loa
     // Rename bulk_load_dir to ${replica_dir}.bulk_load.timestamp.gar before remove it.
     // Because we download sst files asynchronously and couldn't remove a directory while writing
     // files in it.
-    std::string garbage_dir = fmt::format("{}.{}.{}.{}",
+    std::string garbage_dir = fmt::format("{}.{}.{}{}",
                                           _replica->_dir,
                                           bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR,
                                           std::to_string(dsn_now_ms()),
@@ -669,6 +671,7 @@ void replica_bulk_loader::remove_local_bulk_load_dir(const std::string &bulk_loa
             "remove bulk_load gar dir({}) failed, disk cleaner would retry to remove it.",
             garbage_dir);
     }
+    ddebug_replica("remove bulk_load dir({}) succeed.", garbage_dir);
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -737,7 +740,10 @@ bool replica_bulk_loader::is_cleaned_up()
         _replica->_app->get_ingestion_status() != ingestion_status::IS_INVALID) {
         return false;
     }
-    return true;
+    // local dir exists
+    std::string bulk_load_dir = utils::filesystem::path_combine(
+        _replica->_dir, bulk_load_constant::BULK_LOAD_LOCAL_ROOT_DIR);
+    return !utils::filesystem::directory_exists(bulk_load_dir);
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -999,6 +1005,12 @@ void replica_bulk_loader::clear_bulk_load_states_if_needed(partition_status::typ
     if ((new_status == partition_status::PS_PRIMARY ||
          new_status == partition_status::PS_SECONDARY) &&
         new_status != old_status) {
+        if (_status == bulk_load_status::BLS_SUCCEED || _status == bulk_load_status::BLS_CANCELED ||
+            _status == bulk_load_status::BLS_FAILED || _status == bulk_load_status::BLS_INVALID) {
+            return;
+        }
+        ddebug_replica("prepare to clear bulk load states, current status = {}",
+                       enum_to_string(_status));
         clear_bulk_load_states();
     }
 }
