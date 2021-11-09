@@ -22,7 +22,7 @@
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_copy_rate_megabytes>(default 100)>"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_rate_megabytes_per_disk>(default 50)>"
   echo
   echo "For example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 100"
@@ -41,9 +41,9 @@ meta_list=$2
 replica_task_id_list=$3
 
 if [ -z $4 ]; then
-  nfs_copy_rate_megabytes=100
+  nfs_rate_megabytes_per_disk=50
 else
-  nfs_copy_rate_megabytes=$4
+  nfs_rate_megabytes_per_disk=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -58,11 +58,17 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "Set nfs_copy_rate_megabytes $nfs_copy_rate_megabytes"
-echo "remote_command -t replica-server nfs.max_copy_rate_megabytes $nfs_copy_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+echo "Set nfs_copy/send_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk"
+echo "remote_command -t replica-server nfs.max_copy_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes_per_disk
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  echo "ERROR: set nfs_copy_rate_megabytes_per_disk failed"
+  exit 1
+fi
+echo "remote_command -t replica-server nfs.max_send_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes_per_disk
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes_per_disk | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_send_rate_megabytes_per_disk failed"
   exit 1
 fi
 
@@ -104,11 +110,17 @@ if [ $set_ok -ne 1 ]; then
   exit 1
 fi
 
-echo "Set nfs_copy_rate_megabytes 500"
-echo "remote_command -t replica-server nfs.max_copy_rate_megabytes 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+echo "Set nfs_copy/send_rate_megabytes_per_disk 500"
+echo "remote_command -t replica-server nfs.max_copy_rate_megabytes_per_disk 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes_per_disk
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  echo "ERROR: set nfs_copy_rate_megabytes_per_disk failed"
+  exit 1
+fi
+echo "remote_command -t replica-server nfs.max_send_rate_megabytes_per_disk 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes_per_disk
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes_per_disk | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_send_rate_megabytes_per_disk failed"
   exit 1
 fi
 
