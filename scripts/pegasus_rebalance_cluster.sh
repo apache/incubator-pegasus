@@ -22,7 +22,7 @@
 PID=$$
 
 if [ $# -le 1 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false) <nfs_rate_megabytes>(default 100)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false) <nfs_rate_megabytes_per_disk>(default 100)"
   echo 
   echo "for example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true 100"
@@ -40,9 +40,9 @@ else
 fi
 
 if [ -z $4 ]; then
-  nfs_rate_megabytes=100
+  nfs_rate_megabytes_per_disk=100
 else
-  nfs_rate_megabytes=$4
+  nfs_rate_megabytes_per_disk=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
