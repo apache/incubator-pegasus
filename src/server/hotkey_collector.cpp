@@ -94,6 +94,9 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
         }
     }
     standard_deviation = sqrt(standard_deviation / (data_size - 2));
+    if (0 == standard_deviation) {
+        return false;
+    }
     double hot_point = (hot_value - captured_keys_avg_count) / standard_deviation;
     if (hot_point >= threshold) {
         return true;
