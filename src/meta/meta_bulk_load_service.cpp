@@ -101,10 +101,11 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
         return;
     }
 
-    ddebug_f("app({}) start bulk load, cluster_name = {}, provider = {}",
+    ddebug_f("app({}) start bulk load, cluster_name = {}, provider = {}, remote root path = {}",
              request.app_name,
              request.cluster_name,
-             request.file_provider_type);
+             request.file_provider_type,
+             request.remote_root_path);
 
     // avoid possible load balancing
     _meta_svc->set_function_level(meta_function_level::fl_steady);
@@ -169,8 +170,8 @@ error_code bulk_load_service::check_bulk_load_request_params(const std::string &
         ->wait();
     if (r_resp.err != ERR_OK) {
         derror_f("failed to read file({}) on remote provider({}), error = {}",
-                 file_provider,
                  remote_path,
+                 file_provider,
                  r_resp.err.to_string());
         hint_msg = "read bulk_load_info failed";
         return r_resp.err;
@@ -358,10 +359,12 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
     int32_t interval = bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL;
 
     if (err != ERR_OK) {
-        derror_f("app({}), partition({}) failed to receive bulk load response, error = {}",
-                 app_name,
-                 pid,
-                 err.to_string());
+        derror_f(
+            "app({}), partition({}) failed to receive bulk load response from node({}), error = {}",
+            app_name,
+            pid,
+            primary_addr.to_string(),
+            err.to_string());
         try_rollback_to_downloading(app_name, pid);
         try_resend_bulk_load_request(app_name, pid, interval);
         return;
@@ -390,10 +393,11 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
     }
 
     if (response.err != ERR_OK) {
-        derror_f("app({}), partition({}) handle bulk load response failed, error = {}, primary "
-                 "status = {}",
+        derror_f("app({}), partition({}) from node({}) handle bulk load response failed, error = "
+                 "{}, primary status = {}",
                  app_name,
                  pid,
+                 primary_addr.to_string(),
                  response.err.to_string(),
                  dsn::enum_to_string(response.primary_bulk_load_status));
         handle_bulk_load_failed(pid.get_app_id());
@@ -416,8 +420,9 @@ void bulk_load_service::on_partition_bulk_load_reply(error_code err,
         current_ballot = app->partitions[pid.get_partition_index()].ballot;
     }
     if (request.ballot < current_ballot) {
-        dwarn_f("receive out-date response, app({}), partition({}), request ballot = {}, "
-                "current ballot= {}",
+        dwarn_f("receive out-date response from node({}), app({}), partition({}), request ballot = "
+                "{}, current ballot= {}",
+                primary_addr.to_string(),
                 app_name,
                 pid,
                 request.ballot,
@@ -1137,8 +1142,8 @@ void bulk_load_service::send_ingestion_request(const std::string &app_name,
     dsn::rpc_response_task_ptr rpc_callback = rpc::create_rpc_response_task(
         msg,
         _meta_svc->tracker(),
-        [this, app_name, pid](error_code err, ingestion_response &&resp) {
-            on_partition_ingestion_reply(err, std::move(resp), app_name, pid);
+        [this, app_name, pid, primary_addr](error_code err, ingestion_response &&resp) {
+            on_partition_ingestion_reply(err, std::move(resp), app_name, pid, primary_addr);
         });
     _meta_svc->send_request(msg, primary_addr, rpc_callback);
 }
@@ -1147,23 +1152,29 @@ void bulk_load_service::send_ingestion_request(const std::string &app_name,
 void bulk_load_service::on_partition_ingestion_reply(error_code err,
                                                      const ingestion_response &&resp,
                                                      const std::string &app_name,
-                                                     const gpid &pid)
+                                                     const gpid &pid,
+                                                     const rpc_address &primary_addr)
 {
     if (err != ERR_OK || resp.err != ERR_OK || resp.rocksdb_error != ERR_OK) {
         decrease_app_ingestion_count(pid);
     }
 
     if (err == ERR_NO_NEED_OPERATE) {
-        dwarn_f(
-            "app({}) partition({}) has already executing ingestion, ignore this repeated request",
-            app_name,
-            pid);
+        dwarn_f("app({}) partition({}) on node({}) has already executing ingestion, ignore this "
+                "repeated request",
+                app_name,
+                pid,
+                primary_addr.to_string());
         return;
     }
 
     // if meet 2pc error, ingesting will rollback to downloading, no need to retry here
     if (err != ERR_OK) {
-        derror_f("app({}) partition({}) ingestion files failed, error = {}", app_name, pid, err);
+        derror_f("app({}) partition({}) on node({}) ingestion files failed, error = {}",
+                 app_name,
+                 pid,
+                 primary_addr.to_string(),
+                 err);
         tasking::enqueue(
             LPC_META_STATE_NORMAL,
             _meta_svc->tracker(),
@@ -1172,10 +1183,12 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
     }
 
     if (resp.err == ERR_TRY_AGAIN && resp.rocksdb_error != 0) {
-        derror_f("app({}) partition({}) ingestion files failed while empty write, rocksdb error = "
+        derror_f("app({}) partition({}) on node({}) ingestion files failed while empty write, "
+                 "rocksdb error = "
                  "{}, retry it later",
                  app_name,
                  pid,
+                 primary_addr.to_string(),
                  resp.rocksdb_error);
         tasking::enqueue(LPC_BULK_LOAD_INGESTION,
                          _meta_svc->tracker(),
@@ -1188,9 +1201,11 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
     // some unexpected errors happened, such as write empty write failed but rocksdb_error is ok
     // stop bulk load process with failed
     if (resp.err != ERR_OK || resp.rocksdb_error != 0) {
-        derror_f("app({}) partition({}) failed to ingestion files, error = {}, rocksdb error = {}",
+        derror_f("app({}) partition({}) on node({}) failed to ingestion files, error = {}, rocksdb "
+                 "error = {}",
                  app_name,
                  pid,
+                 primary_addr.to_string(),
                  resp.err,
                  resp.rocksdb_error);
         tasking::enqueue(
@@ -1200,7 +1215,10 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
         return;
     }
 
-    ddebug_f("app({}) partition({}) receive ingestion response succeed", app_name, pid);
+    ddebug_f("app({}) partition({}) receive ingestion response from node({}) succeed",
+             app_name,
+             pid,
+             primary_addr.to_string());
 }
 
 // ThreadPool: THREAD_POOL_META_STATE

@@ -181,7 +181,8 @@ private:
     void on_partition_ingestion_reply(error_code err,
                                       const ingestion_response &&resp,
                                       const std::string &app_name,
-                                      const gpid &pid);
+                                      const gpid &pid,
+                                      const rpc_address &primary_addr);
 
     void reset_local_bulk_load_states(int32_t app_id, const std::string &app_name);
 

@@ -127,7 +127,7 @@ public:
                                            const gpid &pid,
                                            error_code rpc_err = ERR_OK)
     {
-        bulk_svc().on_partition_ingestion_reply(rpc_err, std::move(resp), APP_NAME, pid);
+        bulk_svc().on_partition_ingestion_reply(rpc_err, std::move(resp), APP_NAME, pid, ADDRESS);
         wait_all();
     }
 
@@ -328,6 +328,7 @@ public:
     std::string PROVIDER = "local_service";
     std::string ROOT_PATH = "bulk_load_root";
     int64_t BALLOT = 4;
+    rpc_address ADDRESS = rpc_address("127.0.0.1", 10086);
 };
 
 /// start bulk load unit tests
