@@ -171,7 +171,6 @@ class bulk_load_constant
 public:
     static const std::string BULK_LOAD_INFO;
     static const int32_t BULK_LOAD_REQUEST_INTERVAL;
-    static const int32_t BULK_LOAD_REQUEST_SHORT_INTERVAL;
     static const std::string BULK_LOAD_METADATA;
     static const std::string BULK_LOAD_LOCAL_ROOT_DIR;
     static const int32_t PROGRESS_FINISHED;
