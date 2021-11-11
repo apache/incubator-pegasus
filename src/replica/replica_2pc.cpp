@@ -489,7 +489,7 @@ void replica::on_prepare(dsn::message_ex *request)
         return;
     }
 
-    error_code err = _prepare_list->prepare(mu, status());
+    error_code err = _prepare_list->prepare(mu, status(), false, false);
     dassert(err == ERR_OK, "prepare mutation failed, err = %s", err.to_string());
 
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||

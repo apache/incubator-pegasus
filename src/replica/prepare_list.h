@@ -65,10 +65,13 @@ public:
     //
     // if pop_all_committed_mutations = true, pop all committed mutations, will only used during
     // bulk load ingestion
+    // if secondary_commit = true, and status is secondary or protential secondary, previous logs
+    // will be committed
     error_code prepare(mutation_ptr &mu,
                        partition_status::type status,
-                       bool pop_all_committed_mutations = false); // unordered prepare
-    virtual void commit(decree decree, commit_type ct);           // ordered commit
+                       bool pop_all_committed_mutations = false,
+                       bool secondary_commit = true);
+    virtual void commit(decree decree, commit_type ct); // ordered commit
 
     virtual ~prepare_list() = default;
 
