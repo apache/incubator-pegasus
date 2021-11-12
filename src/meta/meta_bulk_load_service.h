@@ -290,6 +290,18 @@ private:
     ///
     /// helper functions
     ///
+    inline std::shared_ptr<app_state> get_app(const std::string &name)
+    {
+        zauto_read_lock l(app_lock());
+        return _state->get_app(name);
+    }
+
+    inline std::shared_ptr<app_state> get_app(int32_t app_id)
+    {
+        zauto_read_lock l(app_lock());
+        return _state->get_app(app_id);
+    }
+
     // get bulk_load_info path on file provider
     // <remote_root_path>/<cluster_name>/<app_name>/bulk_load_info
     inline std::string get_bulk_load_info_path(const std::string &app_name,
