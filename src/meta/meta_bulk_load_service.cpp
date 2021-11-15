@@ -283,41 +283,92 @@ void bulk_load_service::create_partition_bulk_load_dir(const std::string &app_na
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
-void bulk_load_service::partition_bulk_load(const std::string &app_name, const gpid &pid)
+bool bulk_load_service::check_partition_status(
+    const std::string &app_name,
+    const gpid &pid,
+    bool always_unhealthy_check,
+    const std::function<void(const std::string &, const gpid &)> &retry_function,
+    /*out*/ partition_configuration &pconfig)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_partition_bulk_load", [](dsn::string_view) {});
-
     std::shared_ptr<app_state> app = get_app(pid.get_app_id());
     if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
         dwarn_f(
             "app(name={}, id={}) is not existed, set bulk load failed", app_name, pid.get_app_id());
         handle_app_unavailable(pid.get_app_id(), app_name);
-        return;
+        return false;
     }
 
-    rpc_address primary_addr = app->partitions[pid.get_partition_index()].primary;
-    if (primary_addr.is_invalid()) {
+    pconfig = app->partitions[pid.get_partition_index()];
+    if (pconfig.primary.is_invalid()) {
         dwarn_f("app({}) partition({}) primary is invalid, try it later", app_name, pid);
         tasking::enqueue(LPC_META_STATE_NORMAL,
                          _meta_svc->tracker(),
-                         std::bind(&bulk_load_service::partition_bulk_load, this, app_name, pid),
+                         [this, retry_function, app_name, pid]() { retry_function(app_name, pid); },
                          0,
                          std::chrono::seconds(1));
+        return false;
+    }
+
+    if (pconfig.secondaries.size() < pconfig.max_replica_count - 1) {
+        bulk_load_status::type p_status;
+        {
+            zauto_read_lock l(_lock);
+            p_status = get_partition_bulk_load_status_unlocked(pid);
+        }
+        // rollback to downloading, pause,cancel,failed bulk load should always send to replica
+        // server
+        if (!always_unhealthy_check && (p_status == bulk_load_status::BLS_DOWNLOADING ||
+                                        p_status == bulk_load_status::BLS_PAUSING ||
+                                        p_status == bulk_load_status::BLS_CANCELED ||
+                                        p_status == bulk_load_status::BLS_FAILED)) {
+            return true;
+        }
+        dwarn_f("app({}) partition({}) is unhealthy, status({}), try it later",
+                app_name,
+                pid,
+                dsn::enum_to_string(p_status));
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         _meta_svc->tracker(),
+                         [this, retry_function, app_name, pid]() { retry_function(app_name, pid); },
+                         0,
+                         std::chrono::seconds(1));
+        return false;
+    }
+    return true;
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void bulk_load_service::partition_bulk_load(const std::string &app_name, const gpid &pid)
+{
+    FAIL_POINT_INJECT_F("meta_bulk_load_partition_bulk_load", [](dsn::string_view) {});
+
+    partition_configuration pconfig;
+    if (!check_partition_status(app_name,
+                                pid,
+                                false,
+                                std::bind(&bulk_load_service::partition_bulk_load,
+                                          this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2),
+                                pconfig)) {
         return;
     }
 
-    zauto_read_lock l(_lock);
-    const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];
+    rpc_address primary_addr = pconfig.primary;
     auto req = make_unique<bulk_load_request>();
-    req->pid = pid;
-    req->app_name = app_name;
-    req->primary_addr = primary_addr;
-    req->remote_provider_name = ainfo.file_provider_type;
-    req->cluster_name = ainfo.cluster_name;
-    req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
-    req->ballot = app->partitions[pid.get_partition_index()].ballot;
-    req->query_bulk_load_metadata = is_partition_metadata_not_updated_unlocked(pid);
-    req->remote_root_path = ainfo.remote_root_path;
+    {
+        zauto_read_lock l(_lock);
+        const app_bulk_load_info &ainfo = _app_bulk_load_info[pid.get_app_id()];
+        req->pid = pid;
+        req->app_name = app_name;
+        req->primary_addr = primary_addr;
+        req->remote_provider_name = ainfo.file_provider_type;
+        req->cluster_name = ainfo.cluster_name;
+        req->meta_bulk_load_status = get_partition_bulk_load_status_unlocked(pid);
+        req->ballot = pconfig.ballot;
+        req->query_bulk_load_metadata = is_partition_metadata_not_updated_unlocked(pid);
+        req->remote_root_path = ainfo.remote_root_path;
+    }
 
     ddebug_f("send bulk load request to node({}), app({}), partition({}), partition "
              "status = {}, remote provider = {}, cluster_name = {}, remote_root_path = {}",
@@ -1046,22 +1097,15 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-    if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-        dwarn_f(
-            "app(name={}, id={}) is not existed, set bulk load failed", app_name, pid.get_app_id());
-        handle_app_unavailable(pid.get_app_id(), app_name);
-        return;
-    }
-
-    rpc_address primary_addr = app->partitions[pid.get_partition_index()].primary;
-    if (primary_addr.is_invalid()) {
-        dwarn_f("app({}) partition({}) primary is invalid, try it later", app_name, pid);
-        tasking::enqueue(LPC_META_STATE_NORMAL,
-                         _meta_svc->tracker(),
-                         std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
-                         pid.thread_hash(),
-                         std::chrono::seconds(1));
+    partition_configuration pconfig;
+    if (!check_partition_status(app_name,
+                                pid,
+                                true,
+                                std::bind(&bulk_load_service::partition_ingestion,
+                                          this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2),
+                                pconfig)) {
         return;
     }
 
@@ -1073,6 +1117,7 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
+    rpc_address primary_addr = pconfig.primary;
     tasking::enqueue(
         LPC_BULK_LOAD_INGESTION,
         _meta_svc->tracker(),

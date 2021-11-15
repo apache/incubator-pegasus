@@ -101,6 +101,51 @@ public:
         }
     }
 
+    void mock_partition_bulk_load(const std::string &app_name, const gpid &pid)
+    {
+        ddebug_f("mock function, app({}), pid({})", app_name, pid);
+    }
+
+    gpid before_check_partition_status(bulk_load_status::type status)
+    {
+        std::shared_ptr<app_state> app = find_app(APP_NAME);
+        partition_configuration config;
+        config.pid = gpid(app->app_id, 0);
+        config.max_replica_count = 3;
+        config.ballot = BALLOT;
+        config.primary = rpc_address("127.0.0.1", 10086);
+        config.secondaries.emplace_back(rpc_address("127.0.0.1", 10085));
+        config.secondaries.emplace_back(rpc_address("127.0.0.1", 10087));
+        app->partitions.clear();
+        app->partitions.emplace_back(config);
+        mock_meta_bulk_load_context(app->app_id, app->partition_count, status);
+        return config.pid;
+    }
+
+    bool check_partition_status(const std::string name,
+                                bool mock_primary_invalid,
+                                bool mock_lack_secondary,
+                                gpid pid,
+                                bool always_unhealthy_check)
+    {
+        std::shared_ptr<app_state> app = find_app(name);
+        if (mock_primary_invalid) {
+            app->partitions[pid.get_partition_index()].primary.set_invalid();
+        }
+        if (mock_lack_secondary) {
+            app->partitions[pid.get_partition_index()].secondaries.clear();
+        }
+        partition_configuration pconfig;
+        bool flag = bulk_svc().check_partition_status(
+            name,
+            pid,
+            always_unhealthy_check,
+            std::bind(&bulk_load_service_test::mock_partition_bulk_load, this, name, pid),
+            pconfig);
+        wait_all();
+        return flag;
+    }
+
     void on_partition_bulk_load_reply(error_code err,
                                       const bulk_load_request &request,
                                       const bulk_load_response &response)
@@ -357,6 +402,63 @@ TEST_F(bulk_load_service_test, start_bulk_load_succeed)
     ASSERT_TRUE(app_is_bulk_loading(APP_NAME));
 
     fail::teardown();
+}
+
+/// check partition status unit tests
+TEST_F(bulk_load_service_test, check_partition_status_app_wrong_test)
+{
+    std::string table_name = "dropped_table";
+    create_app(table_name);
+    fail::setup();
+    fail::cfg("meta_check_bulk_load_request_params", "return()");
+    fail::cfg("meta_bulk_load_partition_bulk_load", "return()");
+    fail::cfg("meta_bulk_load_resend_request", "return()");
+    auto resp = start_bulk_load(table_name);
+    ASSERT_EQ(resp.err, ERR_OK);
+    std::shared_ptr<app_state> app = find_app(table_name);
+    app->status = app_status::AS_DROPPED;
+    ASSERT_FALSE(check_partition_status(table_name, false, false, gpid(app->app_id, 0), false));
+    ASSERT_TRUE(is_app_bulk_load_states_reset(app->app_id));
+}
+
+TEST_F(bulk_load_service_test, check_partition_status_test)
+{
+    create_app(APP_NAME);
+    struct status_test
+    {
+        bulk_load_status::type status;
+        bool always_check;
+        bool mock_primary_invalid;
+        bool mock_lack_secondary;
+        bool expected_val;
+    } tests[] = {
+        // mock primary invalid
+        {bulk_load_status::BLS_DOWNLOADING, false, true, false, false},
+        // mock secondary invalid with always_check=false
+        {bulk_load_status::BLS_DOWNLOADING, false, false, true, true},
+        {bulk_load_status::BLS_DOWNLOADED, false, false, true, false},
+        {bulk_load_status::BLS_INGESTING, false, false, true, false},
+        {bulk_load_status::BLS_SUCCEED, false, false, true, false},
+        {bulk_load_status::BLS_PAUSING, false, false, true, true},
+        {bulk_load_status::BLS_PAUSED, false, false, true, false},
+        {bulk_load_status::BLS_CANCELED, false, false, true, true},
+        {bulk_load_status::BLS_FAILED, false, false, true, true},
+        {bulk_load_status::BLS_INVALID, false, false, true, false},
+        // mock secondary invalid with always_check=true
+        {bulk_load_status::BLS_INGESTING, true, false, true, false},
+        // normal case
+        {bulk_load_status::BLS_INGESTING, false, false, false, true},
+    };
+    for (auto test : tests) {
+        auto pid = before_check_partition_status(test.status);
+        ASSERT_EQ(check_partition_status(APP_NAME,
+                                         test.mock_primary_invalid,
+                                         test.mock_lack_secondary,
+                                         pid,
+                                         test.always_check),
+                  test.expected_val);
+    }
+    drop_app(APP_NAME);
 }
 
 /// control bulk load unit tests

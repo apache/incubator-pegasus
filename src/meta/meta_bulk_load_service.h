@@ -140,6 +140,16 @@ private:
 
     void do_start_app_bulk_load(std::shared_ptr<app_state> app, start_bulk_load_rpc rpc);
 
+    // Called by `partition_bulk_load` and `partition_ingestion`
+    // check partition status before sending partition_bulk_load_request and
+    // partition_ingestion_request
+    bool check_partition_status(
+        const std::string &app_name,
+        const gpid &pid,
+        bool always_unhealthy_check,
+        const std::function<void(const std::string &, const gpid &)> &retry_function,
+        /*out*/ partition_configuration &pconfig);
+
     void partition_bulk_load(const std::string &app_name, const gpid &pid);
 
     void on_partition_bulk_load_reply(error_code err,
