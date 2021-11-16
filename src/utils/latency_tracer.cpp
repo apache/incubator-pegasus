@@ -131,7 +131,7 @@ latency_tracer::latency_tracer(bool is_sub,
 
 latency_tracer::~latency_tracer()
 {
-    if (_is_sub) {
+    if (!_enable_trace || _is_sub) {
         return;
     }
 
@@ -190,6 +190,10 @@ void latency_tracer::add_sub_tracer(const std::shared_ptr<latency_tracer> &trace
 
 std::shared_ptr<latency_tracer> latency_tracer::sub_tracer(const std::string &name)
 {
+    if (!_enable_trace) {
+        return nullptr;
+    }
+
     utils::auto_read_lock read(_sub_lock);
     auto iter = _sub_tracers.find(name);
     if (iter != _sub_tracers.end()) {
