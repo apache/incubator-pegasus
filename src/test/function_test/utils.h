@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <dsn/utility/rand.h>
+
 #define RETRY_OPERATION(CLIENT_FUNCTION, RESULT)                                                   \
     do {                                                                                           \
         for (int i = 0; i < 60; ++i) {                                                             \
@@ -30,3 +32,32 @@
             }                                                                                      \
         }                                                                                          \
     } while (0)
+
+inline std::string
+generate_hash_key_by_random(bool is_hotkey, int probability = 100, uint32_t str_len = 20)
+{
+    if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
+        return "ThisisahotkeyThisisahotkey";
+    }
+    static const std::string chars("abcdefghijklmnopqrstuvwxyz"
+                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                   "1234567890"
+                                   "!@#$%^&*()"
+                                   "`~-_=+[{]{\\|;:'\",<.>/? ");
+    std::string result;
+    for (int i = 0; i < str_len; i++) {
+        result += chars[dsn::rand::next_u32(chars.size())];
+    }
+    return result;
+}
+
+inline std::vector<std::string>
+generate_str_vector_by_random(uint32_t length, uint32_t arr_len, uint32_t single_str_len)
+{
+    std::vector<std::string> result;
+    result.reserve(arr_len);
+    for (int i = 0; i < arr_len; i++) {
+        result.emplace_back(generate_hash_key_by_random(false,100,single_str_len));
+    }
+    return result;
+}
