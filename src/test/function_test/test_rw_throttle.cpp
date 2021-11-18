@@ -21,7 +21,9 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
-#include <dsn/utility/rand.h>
+#include <dsn/utility/TokenBucket.h>
+#include <dsn/service_api_cpp.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include "base/pegasus_const.h"
 #include "global_env.h"
@@ -31,6 +33,14 @@ using namespace dsn;
 using namespace dsn::replication;
 using namespace pegasus;
 
+enum class throttle_type
+{
+    read_by_qps,
+    read_by_size,
+    write_by_qps,
+    write_by_size
+};
+
 enum class operation_type
 {
     get,
@@ -39,17 +49,26 @@ enum class operation_type
     multi_set
 };
 
-struct throttle_test_plan{
-    operation_type dt;
+struct throttle_test_plan
+{
+    std::string test_plan_case;
+    operation_type ot;
     int single_value_sz;
     int multi_count;
+    int limit_qps;
 };
 
-struct throttle_test_result{
-    int duration_s;
-    int query_times;
-    int reject_times;
+struct throttle_test_result
+{
+    uint64_t duration_s;
+    uint64_t query_times_per_s;
+    uint64_t reject_times_per_s;
+    uint64_t query_size_per_s;
+    uint64_t reject_size_per_s;
 };
+
+const int test_hashkey_len = 50;
+const int test_sortkey_len = 50;
 
 class test_rw_throttle : public testing::Test
 {
@@ -73,7 +92,7 @@ public:
         pg_client =
             pegasus::pegasus_client_factory::get_client("single_master_cluster", app_name.c_str());
 
-        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false);
+        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 4, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
     }
 
@@ -85,23 +104,103 @@ public:
         chdir(global_env::instance()._working_dir.c_str());
     }
 
-    void start_test(int64_t time_duration, throttle_test_plan kt)
+    void set_throttle(throttle_type type, uint64_t value)
     {
-        auto a = generate_str_vector_by_random(1,1,1);
-//        int64_t start = dsn_now_s();
-//        int err = PERR_OK;
-//        ASSERT_NE(pg_client, nullptr);
-//
-//        while (dsn_now_s() - start < time_duration) {
-//            if (kt == detection_type::write_data) {
-//                err = pg_client->set(h_key, s_key, value);
-//                ASSERT_EQ(err, PERR_OK);
-//            } else if  {
-//                err = pg_client->get(h_key, s_key, value);
-//                ASSERT_TRUE((err == PERR_OK) || err == (PERR_NOT_FOUND));
-//            }
-//        }
-        return ;
+        if (type == throttle_type::read_by_qps) {
+            auto resp = ddl_client->set_app_envs(
+                app_name, {"replica.read_throttling"}, {fmt::format("{}*reject*200", value)});
+            dassert_f(resp.get_error().code() == ERR_OK,
+                      "Set env failed: {}",
+                      resp.get_value().hint_message);
+        } else if (type == throttle_type::read_by_size) {
+            auto resp = ddl_client->set_app_envs(
+                app_name, {"replica.read_throttling_by_size"}, {fmt::format("{}", value)});
+            dassert_f(resp.get_error().code() == ERR_OK,
+                      "Set env failed: {}",
+                      resp.get_value().hint_message);
+        } else if (type == throttle_type::write_by_qps) {
+            auto resp = ddl_client->set_app_envs(
+                app_name, {"replica.write_throttling"}, {fmt::format("{}*reject*200", value)});
+            dassert_f(resp.get_error().code() == ERR_OK,
+                      "Set env failed: {}",
+                      resp.get_value().hint_message);
+        } else if (type == throttle_type::write_by_size) {
+            auto resp = ddl_client->set_app_envs(app_name,
+                                                 {"replica.write_throttling_by_size"},
+                                                 {fmt::format("{}*reject*200", value)});
+            dassert_f(resp.get_error().code() == ERR_OK,
+                      "Set env failed: {}",
+                      resp.get_value().hint_message);
+        }
+    }
+
+    throttle_test_result start_test(throttle_test_plan test_plan, uint64_t time_duration_s = 30)
+    {
+        std::cout << fmt::format("start test, on {}", test_plan.test_plan_case) << std::endl;
+
+        int64_t start = dsn_now_ns();
+        int err = PERR_OK;
+        dassert(pg_client, "pg_client is nullptr");
+
+        auto token_bucket = std::make_unique<folly::BasicTokenBucket<std::chrono::steady_clock>>(
+            test_plan.limit_qps, test_plan.limit_qps);
+        int query_times = 0;
+        int reject_times = 0;
+        int query_size = 0;
+        int reject_size = 0;
+
+        while (dsn_now_ns() - start < time_duration_s * 1000000000) {
+            token_bucket->consumeWithBorrowAndWait(1);
+
+            auto h_key = generate_hash_key(test_hashkey_len);
+            auto s_key = generate_hash_key(test_sortkey_len);
+            auto value = generate_hash_key(test_plan.single_value_sz);
+            auto sortkey_value_pairs = generate_sortkey_value_map(
+                generate_str_vector_by_random(test_sortkey_len, test_plan.multi_count),
+                generate_str_vector_by_random(test_plan.single_value_sz, test_plan.multi_count));
+
+            if (test_plan.ot == operation_type::set) {
+                err = pg_client->set(h_key, s_key, value);
+            } else if (test_plan.ot == operation_type::multi_set) {
+                err = pg_client->multi_set(h_key, sortkey_value_pairs);
+            } else if (test_plan.ot == operation_type::get) {
+                err = pg_client->set(h_key, s_key, value);
+                err = pg_client->get(h_key, s_key, value);
+            } else if (test_plan.ot == operation_type::multi_get) {
+                err = pg_client->multi_set(h_key, sortkey_value_pairs);
+                std::set<std::string> sortkeys;
+                err = pg_client->multi_get(h_key, sortkeys, sortkey_value_pairs);
+            }
+
+            query_times++;
+            query_size += test_plan.single_value_sz * test_plan.multi_count;
+
+            if (err == PERR_APP_BUSY) {
+                reject_times++;
+                reject_size += test_plan.single_value_sz * test_plan.multi_count;
+            } else {
+                dassert_f(err == PERR_OK, "get/set data failed, error code:{}", err);
+            }
+        }
+
+        throttle_test_result result = {time_duration_s,
+                                       query_times / time_duration_s,
+                                       reject_times / time_duration_s,
+                                       query_size / time_duration_s,
+                                       reject_size / time_duration_s};
+
+        std::cout << fmt::format(
+                         "{} test result: \n time_duration_s:{} \n query_times_per_s:{} \n "
+                         "reject_times_per_s:{} \n query_size_per_s:{} \n reject_size_per_s:{} \n",
+                         test_plan.test_plan_case,
+                         result.duration_s,
+                         result.query_times_per_s,
+                         result.reject_times_per_s,
+                         result.query_size_per_s,
+                         result.reject_size_per_s)
+                  << std::endl;
+
+        return result;
     }
 
     const std::string app_name = "throttle_test";
@@ -117,10 +216,9 @@ public:
 
 TEST_F(test_rw_throttle, test_rw_throttle)
 {
-    throttle_test_plan kt = {
-        operation_type::get,
-        1,
-        1
-    };
-    start_test(100,kt);
+    throttle_test_plan plan = {"set qps test", operation_type::set, 1024, 1, 500};
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 15s for setting env" << std::endl;
+    sleep(15);
+    start_test(plan);
 }

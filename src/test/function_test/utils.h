@@ -20,6 +20,7 @@
 #pragma once
 
 #include <dsn/utility/rand.h>
+#include <dsn/c/api_utilities.h>
 
 #define RETRY_OPERATION(CLIENT_FUNCTION, RESULT)                                                   \
     do {                                                                                           \
@@ -33,12 +34,8 @@
         }                                                                                          \
     } while (0)
 
-inline std::string
-generate_hash_key_by_random(bool is_hotkey, int probability = 100, uint32_t str_len = 20)
+inline std::string generate_hash_key(uint32_t str_len = 20)
 {
-    if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
-        return "ThisisahotkeyThisisahotkey";
-    }
     static const std::string chars("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                    "1234567890"
@@ -51,13 +48,35 @@ generate_hash_key_by_random(bool is_hotkey, int probability = 100, uint32_t str_
     return result;
 }
 
-inline std::vector<std::string>
-generate_str_vector_by_random(uint32_t length, uint32_t arr_len, uint32_t single_str_len)
+inline std::string
+generate_hash_key_with_hotkey(bool is_hotkey, int probability = 100, uint32_t str_len = 20)
+{
+    if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
+        return "ThisisahotkeyThisisahotkey";
+    }
+    return generate_hash_key(str_len);
+}
+
+inline std::vector<std::string> generate_str_vector_by_random(uint32_t single_str_len,
+                                                              uint32_t arr_len)
 {
     std::vector<std::string> result;
     result.reserve(arr_len);
     for (int i = 0; i < arr_len; i++) {
-        result.emplace_back(generate_hash_key_by_random(false,100,single_str_len));
+        result.emplace_back(generate_hash_key_with_hotkey(false, 100, single_str_len));
+    }
+    return result;
+}
+
+inline std::map<std::string, std::string>
+generate_sortkey_value_map(const std::vector<std::string> &sortkeys,
+                           const std::vector<std::string> &values)
+{
+    std::map<std::string, std::string> result;
+    dassert(sortkeys.size() == values.size(), "sortkeys.size() != values.size()");
+    int len = sortkeys.size();
+    for (int i = 0; i < len; i++) {
+        result.emplace(std::make_pair(sortkeys[i], values[i]));
     }
     return result;
 }
