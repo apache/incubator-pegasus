@@ -303,7 +303,7 @@ bool bulk_load_service::check_partition_status(
         dwarn_f("app({}) partition({}) primary is invalid, try it later", app_name, pid);
         tasking::enqueue(LPC_META_STATE_NORMAL,
                          _meta_svc->tracker(),
-                         [this, retry_function, app_name, pid]() { retry_function(app_name, pid); },
+                         [retry_function, app_name, pid]() { retry_function(app_name, pid); },
                          0,
                          std::chrono::seconds(1));
         return false;
@@ -329,7 +329,7 @@ bool bulk_load_service::check_partition_status(
                 dsn::enum_to_string(p_status));
         tasking::enqueue(LPC_META_STATE_NORMAL,
                          _meta_svc->tracker(),
-                         [this, retry_function, app_name, pid]() { retry_function(app_name, pid); },
+                         [retry_function, app_name, pid]() { retry_function(app_name, pid); },
                          0,
                          std::chrono::seconds(1));
         return false;
