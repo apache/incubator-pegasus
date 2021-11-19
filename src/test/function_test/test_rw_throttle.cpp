@@ -24,6 +24,9 @@
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/cpp/json_helper.h>
+#include <rapidjson/prettywriter.h>
+#include <dsn/utility/blob.h>
 
 #include "base/pegasus_const.h"
 #include "global_env.h"
@@ -58,23 +61,75 @@ struct throttle_test_plan
     int limit_qps;
 };
 
-struct throttle_test_result
+#define TIMELY_RECORD_PARAMETER(time_interval)                                                     \
+    uint64_t time_interval##query_times = 0;                                                       \
+    uint64_t time_interval##query_size = 0;                                                        \
+    uint64_t time_interval##reject_times = 0;                                                      \
+    uint64_t time_interval##reject_size = 0;                                                       \
+    uint64_t time_interval##successful_times = 0;                                                  \
+    uint64_t time_interval##successful_size = 0;
+
+#define TIMELY_RECORD(time_interval, is_reject, size)                                              \
+    do {                                                                                           \
+        time_interval##query_times++;                                                              \
+        time_interval##query_size += size;                                                         \
+        if (is_reject) {                                                                           \
+            time_interval##reject_times++;                                                         \
+            time_interval##reject_size += size;                                                    \
+        } else {                                                                                   \
+            time_interval##successful_times++;                                                     \
+            time_interval##successful_size += size;                                                \
+        }                                                                                          \
+    } while (0)
+
+struct throttle_test_recorder
 {
-    uint64_t duration_s;
+    uint64_t start_time_ms;
+    uint64_t duration_ms;
 
-    uint64_t avg_query_times_per_s;
-    uint64_t avg_reject_times_per_s;
-    uint64_t avg_query_size_per_s;
-    uint64_t avg_reject_size_per_s;
+    TIMELY_RECORD_PARAMETER(total);
+    TIMELY_RECORD_PARAMETER(avg);
+    TIMELY_RECORD_PARAMETER(first_10_ms);
+    TIMELY_RECORD_PARAMETER(first_100_ms);
+    TIMELY_RECORD_PARAMETER(first_1000_ms);
+    TIMELY_RECORD_PARAMETER(first_5000_ms);
 
-    uint64_t first_10_ms_reject_size_per_s;
-    uint64_t first_10_ms_avg_reject_size_per_s;
+    void start_test(uint64_t time_duration_s)
+    {
+        start_time_ms = dsn_now_ms();
+        duration_ms = time_duration_s * 1000;
+    }
 
-    uint64_t first_100_ms_reject_size_per_s;
-    uint64_t first_100_ms_avg_reject_size_per_s;
+    bool is_time_up()
+    {
+        if (dsn_now_ms() - start_time_ms > duration_ms) {
+            return true;
+        }
+        return false;
+    }
 
-    uint64_t first_1000_ms_reject_size_per_s;
-    uint64_t first_1000_ms_avg_reject_size_per_s;
+    void record(uint64_t size, bool is_reject)
+    {
+        if (dsn_now_ms() - start_time_ms <= 10) {
+            TIMELY_RECORD(first_10_ms, is_reject, size);
+        }
+        if (dsn_now_ms() - start_time_ms <= 100) {
+            TIMELY_RECORD(first_100_ms, is_reject, size);
+        }
+        if (dsn_now_ms() - start_time_ms <= 1000) {
+            TIMELY_RECORD(first_1000_ms, is_reject, size);
+        }
+        if (dsn_now_ms() - start_time_ms <= 5000) {
+            TIMELY_RECORD(first_1000_ms, is_reject, size);
+        }
+        TIMELY_RECORD(total, is_reject, size);
+    }
+
+    void print()
+    {
+        blob buf = dsn::json::json_forwarder<throttle_test_recorder>::encode(*this);
+        std::cout << buf.to_string() << std::endl;
+    };
 };
 
 const int test_hashkey_len = 50;
@@ -151,20 +206,17 @@ public:
         dassert_f(resp == ERR_OK, "Del env failed");
     }
 
-    throttle_test_result start_test(throttle_test_plan test_plan, uint64_t time_duration_s = 10)
+    void start_test(throttle_test_plan test_plan, uint64_t time_duration_s = 10)
     {
         std::cout << fmt::format("start test, on {}", test_plan.test_plan_case) << std::endl;
 
-        int64_t start = dsn_now_ns();
         dassert(pg_client, "pg_client is nullptr");
 
-        int query_times(0);
-        int reject_times(0);
-        int query_size(0);
-        int reject_size(0);
+        throttle_test_recorder r;
+        r.start_test(time_duration_s);
 
         bool is_running = true;
-        while (dsn_now_ns() - start < time_duration_s * 1000000000) {
+        while (!r.is_time_up()) {
             auto h_key = generate_hash_key(test_hashkey_len);
             auto s_key = generate_hash_key(test_sortkey_len);
             auto value = generate_hash_key(test_plan.single_value_sz);
@@ -178,14 +230,10 @@ public:
                         if (!is_running) {
                             return;
                         }
-                        query_times++;
-                        query_size += test_plan.single_value_sz * test_plan.multi_count;
-                        if (ec == PERR_APP_BUSY) {
-                            reject_times++;
-                            reject_size += test_plan.single_value_sz * test_plan.multi_count;
-                        } else {
-                            dassert_f(ec == PERR_OK, "get/set data failed, error code:{}", ec);
-                        }
+                        dassert_f(ec == PERR_OK || ec == PERR_APP_BUSY,
+                                  "get/set data failed, error code:{}",
+                                  ec);
+                        r.record(value.size(), ec == PERR_APP_BUSY);
                     });
             }
             //            else if (test_plan.ot == operation_type::multi_set) {
@@ -207,18 +255,11 @@ public:
                                              [&](int ec_read,
                                                  std::string &&val,
                                                  pegasus_client::internal_info &&info) {
-                                                 query_times++;
-                                                 query_size += test_plan.single_value_sz *
-                                                               test_plan.multi_count;
-                                                 if (ec_read == PERR_APP_BUSY) {
-                                                     reject_times++;
-                                                     reject_size += test_plan.single_value_sz *
-                                                                    test_plan.multi_count;
-                                                 } else {
-                                                     dassert_f(ec_read == PERR_OK,
-                                                               "get/set data failed, error code:{}",
-                                                               ec_read);
-                                                 }
+                                                 dassert_f(ec_write == PERR_OK ||
+                                                               ec_write == PERR_APP_BUSY,
+                                                           "get/set data failed, error code:{}",
+                                                           ec_write);
+                                                 r.record(value.size(), ec_write == PERR_APP_BUSY);
                                              });
                     });
             }
@@ -230,33 +271,10 @@ public:
         }
         is_running = false;
 
-        throttle_test_result result = {time_duration_s,
-                                       query_times / time_duration_s,
-                                       reject_times / time_duration_s,
-                                       query_size / time_duration_s,
-                                       reject_size / time_duration_s};
-
-        std::cout << fmt::format(
-                         "{} test result: \n time_duration_s:{} \n avg_query_times_per_s:{} \n "
-                         "avg_reject_times_per_s:{} \n avg_query_size_per_s:{} \n avg_reject_size_per_s:{} \n",
-                         test_plan.test_plan_case,
-                         result.duration_s,
-                         result.avg_query_times_per_s,
-                         result.avg_reject_times_per_s,
-                         result.avg_query_size_per_s,
-                         result.avg_reject_size_per_s)
-                  << std::endl;
-
-        return result;
+        return;
     }
 
     const std::string app_name = "throttle_test";
-    const int64_t max_detection_second = 100;
-    const int64_t warmup_second = 30;
-    int32_t app_id;
-    int32_t partition_count;
-    dsn::replication::detect_hotkey_response resp;
-    dsn::replication::detect_hotkey_request req;
     std::shared_ptr<replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;
 };
