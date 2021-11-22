@@ -24,9 +24,6 @@
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/dist/fmt_logging.h>
-#include <dsn/cpp/json_helper.h>
-#include <rapidjson/prettywriter.h>
-#include <dsn/utility/blob.h>
 
 #include "base/pegasus_const.h"
 #include "global_env.h"
@@ -61,24 +58,18 @@ struct throttle_test_plan
     int limit_qps;
 };
 
-#define TIMELY_RECORD_PARAMETER(time_interval)                                                     \
-    uint64_t time_interval##query_times = 0;                                                       \
-    uint64_t time_interval##query_size = 0;                                                        \
-    uint64_t time_interval##reject_times = 0;                                                      \
-    uint64_t time_interval##reject_size = 0;                                                       \
-    uint64_t time_interval##successful_times = 0;                                                  \
-    uint64_t time_interval##successful_size = 0;
+#define ToString(x) #x
 
 #define TIMELY_RECORD(time_interval, is_reject, size)                                              \
     do {                                                                                           \
-        time_interval##query_times++;                                                              \
-        time_interval##query_size += size;                                                         \
+        records[ToString(time_interval##_query_times)]++;                                          \
+        records[ToString(time_interval##_query_size)] += size;                                     \
         if (is_reject) {                                                                           \
-            time_interval##reject_times++;                                                         \
-            time_interval##reject_size += size;                                                    \
+            records[ToString(time_interval##_reject_times)]++;                                     \
+            records[ToString(time_interval##_reject_size)] += size;                                \
         } else {                                                                                   \
-            time_interval##successful_times++;                                                     \
-            time_interval##successful_size += size;                                                \
+            records[ToString(time_interval##_successful_times)]++;                                 \
+            records[ToString(time_interval##_successful_size)] += size;                            \
         }                                                                                          \
     } while (0)
 
@@ -86,13 +77,7 @@ struct throttle_test_recorder
 {
     uint64_t start_time_ms;
     uint64_t duration_ms;
-
-    TIMELY_RECORD_PARAMETER(total);
-    TIMELY_RECORD_PARAMETER(avg);
-    TIMELY_RECORD_PARAMETER(first_10_ms);
-    TIMELY_RECORD_PARAMETER(first_100_ms);
-    TIMELY_RECORD_PARAMETER(first_1000_ms);
-    TIMELY_RECORD_PARAMETER(first_5000_ms);
+    std::unordered_map<std::string, uint64_t> records;
 
     void start_test(uint64_t time_duration_s)
     {
@@ -127,9 +112,13 @@ struct throttle_test_recorder
 
     void print()
     {
-        blob buf = dsn::json::json_forwarder<throttle_test_recorder>::encode(*this);
-        std::cout << buf.to_string() << std::endl;
-    };
+        for (const auto &iter : records) {
+            if (iter.first.find("successful") != -1) {
+                std::cout << iter.first << ": " << iter.second << std::endl;
+            }
+        }
+        std::cout << std::endl;
+    }
 };
 
 const int test_hashkey_len = 50;
@@ -248,19 +237,22 @@ public:
                         if (!is_running) {
                             return;
                         }
-                        dassert_f(
-                            ec_write == PERR_OK, "get/set data failed, error code:{}", ec_write);
-                        pg_client->async_get(h_key,
-                                             s_key,
-                                             [&](int ec_read,
-                                                 std::string &&val,
-                                                 pegasus_client::internal_info &&info) {
-                                                 dassert_f(ec_write == PERR_OK ||
-                                                               ec_write == PERR_APP_BUSY,
-                                                           "get/set data failed, error code:{}",
-                                                           ec_write);
-                                                 r.record(value.size(), ec_write == PERR_APP_BUSY);
-                                             });
+                        dassert_f(ec_write == PERR_OK, "set data failed, error code:{}", ec_write);
+                        dassert(pg_client, "client is nullptr");
+                        pg_client->async_get(
+                            h_key,
+                            s_key,
+                            [&, h_key, s_key, value](int ec_read,
+                                                     std::string &&val,
+                                                     pegasus_client::internal_info &&info) {
+                                if (!is_running) {
+                                    return;
+                                }
+                                dassert_f(ec_read == PERR_OK || ec_read == PERR_APP_BUSY,
+                                          "get data failed, error code:{}",
+                                          ec_read);
+                                r.record(value.size(), ec_read == PERR_APP_BUSY);
+                            });
                     });
             }
             //              else if (test_plan.ot == operation_type::multi_get) {
@@ -270,7 +262,7 @@ public:
             //            }
         }
         is_running = false;
-
+        r.print();
         return;
     }
 

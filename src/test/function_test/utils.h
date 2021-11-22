@@ -38,9 +38,7 @@ inline std::string generate_hash_key(uint32_t str_len = 20)
 {
     static const std::string chars("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "1234567890"
-                                   "!@#$%^&*()"
-                                   "`~-_=+[{]{\\|;:'\",<.>/? ");
+                                   "1234567890");
     std::string result;
     for (int i = 0; i < str_len; i++) {
         result += chars[dsn::rand::next_u32(chars.size())];
