@@ -280,6 +280,7 @@ private:
 
     perf_counter_wrapper _recent_disconnect_count;
     perf_counter_wrapper _unalive_nodes_count;
+    perf_counter_wrapper _alive_nodes_count;
 
     dsn::task_tracker _tracker;
 
