@@ -94,10 +94,20 @@ struct throttle_test_recorder
     uint64_t duration_ms;
     std::map<std::string, uint64_t> records;
     std::string test_name;
+    std::vector<std::string> parameter_seq = {"total_qps",
+                                              "total_size_per_sec",
+                                              "first_10_ms_successful_times",
+                                              "first_100_ms_successful_times",
+                                              "first_1000_ms_successful_times",
+                                              "first_5000_ms_successful_times",
+                                              "first_10_ms_successful_size",
+                                              "first_100_ms_successful_size",
+                                              "first_1000_ms_successful_size",
+                                              "first_5000_ms_successful_size"};
 
-    void start_test(const std::string &name, uint64_t time_duration_s)
+    void start_test(const std::string &test_case, uint64_t time_duration_s)
     {
-        test_name = name;
+        test_name = test_case;
         start_time_ms = dsn_now_ms();
         duration_ms = time_duration_s * 1000;
         records.emplace(std::make_pair("duration_ms", duration_ms));
@@ -131,46 +141,31 @@ struct throttle_test_recorder
         records["total_size_per_sec"] =
             records["total_successful_size"] / (double)(duration_ms / 1000);
     }
+
+    void print_results(const std::string &dir)
+    {
+        std::streambuf *psbuf, *backup;
+        std::ofstream file;
+        file.open(dir);
+        backup = std::cout.rdbuf();
+        psbuf = file.rdbuf();
+        std::cout.rdbuf(psbuf);
+
+        std::cout << "test case: " << test_name << std::endl;
+        for (const auto &iter : parameter_seq) {
+            std::cout << iter << ": " << records[iter] << std::endl;
+        }
+        std::cout << std::endl;
+
+        std::cout.rdbuf(backup);
+        file.close();
+
+        return;
+    }
 };
 
 const int test_hashkey_len = 50;
 const int test_sortkey_len = 50;
-
-std::vector<std::string> parameter_seq;
-
-void init_printer()
-{
-    parameter_seq.clear();
-    parameter_seq.emplace_back("total_qps");
-    parameter_seq.emplace_back("total_size_per_sec");
-    parameter_seq.emplace_back("first_10_ms_successful_times");
-    parameter_seq.emplace_back("first_100_ms_successful_times");
-    parameter_seq.emplace_back("first_1000_ms_successful_times");
-    parameter_seq.emplace_back("first_5000_ms_successful_times");
-    parameter_seq.emplace_back("first_10_ms_successful_size");
-    parameter_seq.emplace_back("first_100_ms_successful_size");
-    parameter_seq.emplace_back("first_1000_ms_successful_size");
-    parameter_seq.emplace_back("first_5000_ms_successful_size");
-}
-
-void collect_records(throttle_test_recorder &r, const throttle_test_plan &pl)
-{
-    std::streambuf *psbuf, *backup;
-    std::ofstream file;
-    file.open("./src/builder/test/function_test/throttle_test_result.txt");
-    backup = std::cout.rdbuf();
-    psbuf = file.rdbuf();
-    std::cout.rdbuf(psbuf);
-
-    for (const auto &iter : parameter_seq) {
-        std::cout << iter << ": " << r.records[iter] << std::endl;
-    }
-
-    std::cout.rdbuf(backup);
-    file.close();
-
-    return;
-}
 
 class test_rw_throttle : public testing::Test
 {
@@ -196,8 +191,6 @@ public:
 
         auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 4, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
-
-        init_printer();
     }
 
     virtual void TearDown() override
@@ -312,6 +305,8 @@ public:
             //            }
         }
         is_running = false;
+
+        r.print_results("./src/builder/test/function_test/throttle_test_result.txt");
         return r;
     }
 
@@ -326,18 +321,16 @@ TEST_F(test_rw_throttle, test_rw_throttle)
     set_throttle(throttle_type::write_by_qps, plan.limit_qps);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    auto r = start_test(plan);
-    collect_records(r, plan);
+    start_test(plan);
     restore_throttle(throttle_type::write_by_qps);
 
-    //    plan = {"set test / throttle by size", operation_type::set, 102400, 1, 50};
-    //    set_throttle(throttle_type::write_by_size,
-    //                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
-    //    std::cout << "wait 30s for setting env" << std::endl;
-    //    sleep(30);
-    //    r = start_test(plan);
-    //    collect_records(r, plan);
-    //    restore_throttle(throttle_type::write_by_size);
+    plan = {"set test / throttle by size", operation_type::set, 102400, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle(throttle_type::write_by_size);
 
     //    plan = {"set test / throttle by qps&size", operation_type::set, 102400, 1, 50};
     //    set_throttle(throttle_type::write_by_size,
@@ -354,6 +347,6 @@ TEST_F(test_rw_throttle, test_rw_throttle)
     //    std::cout << "wait 30s for setting env" << std::endl;
     //    sleep(30);
     //    r = start_test(plan);
-    //    collect_records(r, plan);
+    //    print_results(r, plan);
     //    restore_throttle(throttle_type::read_by_size);
 }
