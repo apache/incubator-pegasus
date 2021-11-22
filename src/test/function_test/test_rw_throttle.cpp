@@ -306,7 +306,8 @@ public:
         }
         is_running = false;
 
-        r.print_results("./src/builder/test/function_test/throttle_test_result.txt");
+        r.print_results(fmt::format("./src/builder/test/function_test/throttle_test_{}_result.txt",
+                                    r.test_name));
         return r;
     }
 
