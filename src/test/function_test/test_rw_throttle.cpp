@@ -42,13 +42,6 @@ enum class throttle_type
     write_by_size
 };
 
-ENUM_BEGIN2(throttle_type, throttle_type, throttle_type::write_by_size)
-ENUM_REG(throttle_type::read_by_qps)
-ENUM_REG(throttle_type::read_by_size)
-ENUM_REG(throttle_type::write_by_qps)
-ENUM_REG(throttle_type::write_by_size)
-ENUM_END2(throttle_type, throttle_type)
-
 enum class operation_type
 {
     get,
@@ -57,13 +50,6 @@ enum class operation_type
     multi_set
 };
 
-ENUM_BEGIN2(operation_type, operation_type, operation_type::multi_set)
-ENUM_REG(operation_type::get)
-ENUM_REG(operation_type::multi_get)
-ENUM_REG(operation_type::set)
-ENUM_REG(operation_type::multi_set)
-ENUM_END2(operation_type, operation_type)
-
 struct throttle_test_plan
 {
     std::string test_plan_case;
@@ -71,6 +57,8 @@ struct throttle_test_plan
     int single_value_sz;
     int multi_count;
     int limit_qps;
+    bool random_value_size = false;
+    bool is_hotkey = false;
 };
 
 #define ToString(x) #x
@@ -137,16 +125,15 @@ struct throttle_test_recorder
         }
         TIMELY_RECORD(total, is_reject, size);
 
-        records["total_qps"] = records["total_successful_times"] / (double)(duration_ms / 1000);
-        records["total_size_per_sec"] =
-            records["total_successful_size"] / (double)(duration_ms / 1000);
+        records["total_qps"] = records["total_successful_times"] / (duration_ms / 1000);
+        records["total_size_per_sec"] = records["total_successful_size"] / (duration_ms / 1000);
     }
 
     void print_results(const std::string &dir)
     {
         std::streambuf *psbuf, *backup;
         std::ofstream file;
-        file.open(dir);
+        file.open(dir, std::ios::out | std::ios::app);
         backup = std::cout.rdbuf();
         psbuf = file.rdbuf();
         std::cout.rdbuf(psbuf);
@@ -166,6 +153,9 @@ struct throttle_test_recorder
 
 const int test_hashkey_len = 50;
 const int test_sortkey_len = 50;
+
+// read/write throttle function test
+// the details of records are saved in `./src/builder/test/function_test/throttle_test_result.txt`
 
 class test_rw_throttle : public testing::Test
 {
@@ -189,7 +179,7 @@ public:
         pg_client =
             pegasus::pegasus_client_factory::get_client("single_master_cluster", app_name.c_str());
 
-        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 4, 3, {}, false);
+        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
     }
 
@@ -222,17 +212,13 @@ public:
             resp.get_error().code() == ERR_OK, "Set env failed: {}", resp.get_value().hint_message);
     }
 
-    void restore_throttle(throttle_type type)
+    void restore_throttle()
     {
+        std::map<std::string, std::string> envs;
+        ddl_client->get_app_envs(app_name, envs);
         std::vector<std::string> keys;
-        if (type == throttle_type::read_by_qps) {
-            keys.emplace_back("replica.read_throttling");
-        } else if (type == throttle_type::read_by_size) {
-            keys.emplace_back("replica.read_throttling_by_size");
-        } else if (type == throttle_type::write_by_qps) {
-            keys.emplace_back("replica.write_throttling");
-        } else if (type == throttle_type::write_by_size) {
-            keys.emplace_back("replica.write_throttling_by_size");
+        for (const auto &iter : envs) {
+            keys.emplace_back(iter.first);
         }
         auto resp = ddl_client->del_app_envs(app_name, keys);
         dassert_f(resp == ERR_OK, "Del env failed");
@@ -248,40 +234,66 @@ public:
         r.start_test(test_plan.test_plan_case, time_duration_s);
 
         bool is_running = true;
+        std::atomic<int64_t> ref_count(0);
+
         while (!r.is_time_up()) {
-            auto h_key = generate_hash_key(test_hashkey_len);
-            auto s_key = generate_hash_key(test_sortkey_len);
-            auto value = generate_hash_key(test_plan.single_value_sz);
+            auto h_key = generate_hash_key_with_hotkey(test_plan.is_hotkey, 75, test_hashkey_len);
+            auto s_key = generate_random_str(test_sortkey_len);
+            auto value = generate_random_str(test_plan.random_value_size
+                                                 ? dsn::rand::next_u32(test_plan.single_value_sz)
+                                                 : test_plan.single_value_sz);
             auto sortkey_value_pairs = generate_sortkey_value_map(
                 generate_str_vector_by_random(test_sortkey_len, test_plan.multi_count),
-                generate_str_vector_by_random(test_plan.single_value_sz, test_plan.multi_count));
+                generate_str_vector_by_random(
+                    test_plan.single_value_sz, test_plan.multi_count, test_plan.random_value_size));
 
             if (test_plan.ot == operation_type::set) {
+                ref_count++;
                 pg_client->async_set(
                     h_key, s_key, value, [&](int ec, pegasus_client::internal_info &&info) {
                         if (!is_running) {
+                            ref_count--;
                             return;
                         }
                         dassert_f(ec == PERR_OK || ec == PERR_APP_BUSY,
                                   "get/set data failed, error code:{}",
                                   ec);
                         r.record(value.size(), ec == PERR_APP_BUSY);
+                        ref_count--;
                     });
-            }
-            //            else if (test_plan.ot == operation_type::multi_set) {
-            //                err = pg_client->multi_set(h_key, sortkey_value_pairs);
-            //            }
-            else if (test_plan.ot == operation_type::get) {
+            } else if (test_plan.ot == operation_type::multi_set) {
+                ref_count++;
+                pg_client->async_multi_set(
+                    h_key,
+                    sortkey_value_pairs,
+                    [&, sortkey_value_pairs](int ec, pegasus_client::internal_info &&info) {
+                        if (!is_running) {
+                            ref_count--;
+                            return;
+                        }
+                        dassert_f(ec == PERR_OK || ec == PERR_APP_BUSY,
+                                  "get/set data failed, error code:{}",
+                                  ec);
+                        int total_size = 0;
+                        for (const auto &iter : sortkey_value_pairs) {
+                            total_size += iter.second.size();
+                        }
+                        r.record(total_size, ec == PERR_APP_BUSY);
+                        ref_count--;
+                    });
+            } else if (test_plan.ot == operation_type::get) {
+                ref_count++;
                 pg_client->async_set(
                     h_key,
                     s_key,
                     value,
                     [&, h_key, s_key, value](int ec_write, pegasus_client::internal_info &&info) {
                         if (!is_running) {
+                            ref_count--;
                             return;
                         }
                         dassert_f(ec_write == PERR_OK, "set data failed, error code:{}", ec_write);
-                        dassert(pg_client, "client is nullptr");
+                        ref_count++;
                         pg_client->async_get(
                             h_key,
                             s_key,
@@ -289,25 +301,60 @@ public:
                                                      std::string &&val,
                                                      pegasus_client::internal_info &&info) {
                                 if (!is_running) {
+                                    ref_count--;
                                     return;
                                 }
                                 dassert_f(ec_read == PERR_OK || ec_read == PERR_APP_BUSY,
                                           "get data failed, error code:{}",
                                           ec_read);
                                 r.record(value.size(), ec_read == PERR_APP_BUSY);
+                                ref_count--;
                             });
+                        ref_count--;
+                    });
+            } else if (test_plan.ot == operation_type::multi_get) {
+                ref_count++;
+                pg_client->async_multi_set(
+                    h_key,
+                    sortkey_value_pairs,
+                    [&, h_key](int ec_write, pegasus_client::internal_info &&info) {
+                        if (!is_running) {
+                            ref_count--;
+                            return;
+                        }
+                        dassert_f(ec_write == PERR_OK, "set data failed, error code:{}", ec_write);
+                        ref_count++;
+                        std::set<std::string> empty_sortkeys;
+                        pg_client->async_multi_get(
+                            h_key,
+                            empty_sortkeys,
+                            [&](int ec_read,
+                                std::map<std::string, std::string> &&values,
+                                pegasus_client::internal_info &&info) {
+                                if (!is_running) {
+                                    ref_count--;
+                                    return;
+                                }
+                                dassert_f(ec_read == PERR_OK || ec_read == PERR_APP_BUSY,
+                                          "get data failed, error code:{}",
+                                          ec_read);
+                                int total_size = 0;
+                                for (const auto &iter : values) {
+                                    total_size += iter.second.size();
+                                }
+                                r.record(total_size, ec_read == PERR_APP_BUSY);
+                                ref_count--;
+                            });
+                        ref_count--;
                     });
             }
-            //              else if (test_plan.ot == operation_type::multi_get) {
-            //                err = pg_client->multi_set(h_key, sortkey_value_pairs);
-            //                std::set<std::string> sortkeys;
-            //                err = pg_client->multi_get(h_key, sortkeys, sortkey_value_pairs);
-            //            }
         }
         is_running = false;
+        while (ref_count.load() != 0) {
+            sleep(1);
+        }
 
-        r.print_results(fmt::format("./src/builder/test/function_test/throttle_test_{}_result.txt",
-                                    r.test_name));
+        r.print_results("./src/builder/test/function_test/throttle_test_result.txt");
         return r;
     }
 
@@ -316,38 +363,117 @@ public:
     pegasus::pegasus_client *pg_client;
 };
 
-TEST_F(test_rw_throttle, test_rw_throttle)
+TEST_F(test_rw_throttle, test1)
 {
-    throttle_test_plan plan = {"set test / throttle by qps ", operation_type::set, 1024, 1, 50};
+    throttle_test_plan plan = {
+        "set test / throttle by qps / normal value size", operation_type::set, 1024, 1, 50};
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 30s forsetting env " << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"set test / throttle by qps&size / big value size", operation_type::set, 102400, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
     set_throttle(throttle_type::write_by_qps, plan.limit_qps);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
     start_test(plan);
-    restore_throttle(throttle_type::write_by_qps);
+    restore_throttle();
 
-    plan = {"set test / throttle by size", operation_type::set, 102400, 1, 50};
-    set_throttle(throttle_type::write_by_size,
+    plan = {"get test / throttle by size / normal value size", operation_type::get, 1024, 1, 50};
+    set_throttle(throttle_type::read_by_size,
                  plan.limit_qps * plan.single_value_sz * plan.multi_count);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
     start_test(plan);
-    restore_throttle(throttle_type::write_by_size);
+    restore_throttle();
 
-    //    plan = {"set test / throttle by qps&size", operation_type::set, 102400, 1, 50};
-    //    set_throttle(throttle_type::write_by_size,
-    //                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
-    //    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
-    //    std::cout << "wait 30s for setting env" << std::endl;
-    //    sleep(30);
-    //    start_test(plan);
-    //    restore_throttle(throttle_type::write_by_size);
-    //    restore_throttle(throttle_type::write_by_qps);
-    //
-    //    plan = {"get qps test", operation_type::get, 1024, 1, 50};
-    //    set_throttle(throttle_type::read_by_size, plan.limit_qps * plan.single_value_sz);
-    //    std::cout << "wait 30s for setting env" << std::endl;
-    //    sleep(30);
-    //    r = start_test(plan);
-    //    print_results(r, plan);
-    //    restore_throttle(throttle_type::read_by_size);
+    plan = {"get test / throttle by qps", operation_type::get, 1024, 1, 50};
+    set_throttle(throttle_type::read_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"multi_get test / throttle by size / normal value size",
+            operation_type::multi_get,
+            1024,
+            50,
+            50};
+    set_throttle(throttle_type::read_by_size,
+                 plan.single_value_sz * plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"multi_get test / throttle by size / big value size",
+            operation_type::multi_get,
+            1024 * 5,
+            50,
+            50};
+    set_throttle(throttle_type::read_by_size,
+                 plan.single_value_sz * plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"multi_get test / throttle by size / random value size",
+            operation_type::multi_get,
+            1024 * 5,
+            50,
+            50,
+            true};
+    set_throttle(throttle_type::read_by_size, 5000000);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"multi_set test / throttle by size / random value size",
+            operation_type::multi_set,
+            1024 * 5,
+            50,
+            50,
+            true};
+    set_throttle(throttle_type::write_by_size, 5000000);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {
+        "get test / throttle by size / hotkey test", operation_type::get, 1024, 1, 50, false, true};
+    set_throttle(throttle_type::read_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {
+        "set test / throttle by qps / hotkey test", operation_type::set, 1024, 1, 50, false, true};
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"set test / throttle by qps / delay throttle", operation_type::set, 1024, 1, 50};
+    ddl_client->set_app_envs(
+        app_name, {"replica.write_throttling"}, {"30*delay*100,50*reject*200"});
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
+
+    plan = {"get test / throttle by qps / delay throttle", operation_type::get, 1024, 1, 50};
+    ddl_client->set_app_envs(app_name, {"replica.read_throttling"}, {"30*delay*100,50*reject*200"});
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    start_test(plan);
+    restore_throttle();
 }

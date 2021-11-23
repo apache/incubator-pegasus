@@ -34,7 +34,7 @@
         }                                                                                          \
     } while (0)
 
-inline std::string generate_hash_key(uint32_t str_len = 20)
+inline std::string generate_random_str(uint32_t str_len = 20)
 {
     static const std::string chars("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -52,23 +52,25 @@ generate_hash_key_with_hotkey(bool is_hotkey, int probability = 100, uint32_t st
     if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
         return "ThisisahotkeyThisisahotkey";
     }
-    return generate_hash_key(str_len);
+    return generate_random_str(str_len);
 }
 
 inline std::vector<std::string> generate_str_vector_by_random(uint32_t single_str_len,
-                                                              uint32_t arr_len)
+                                                              uint32_t arr_len,
+                                                              bool random_value_size = false)
 {
     std::vector<std::string> result;
     result.reserve(arr_len);
     for (int i = 0; i < arr_len; i++) {
-        result.emplace_back(generate_hash_key_with_hotkey(false, 100, single_str_len));
+        result.emplace_back(generate_random_str(
+            random_value_size ? dsn::rand::next_u32(single_str_len) : single_str_len));
     }
     return result;
 }
 
 inline std::map<std::string, std::string>
-generate_sortkey_value_map(const std::vector<std::string> &sortkeys,
-                           const std::vector<std::string> &values)
+generate_sortkey_value_map(const std::vector<std::string> sortkeys,
+                           const std::vector<std::string> values)
 {
     std::map<std::string, std::string> result;
     dassert(sortkeys.size() == values.size(), "sortkeys.size() != values.size()");
