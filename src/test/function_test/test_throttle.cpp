@@ -159,7 +159,7 @@ const int test_sortkey_len = 50;
 
 // read/write throttle function test
 // the details of records are saved in `./src/builder/test/function_test/throttle_test_result.txt`
-class test_rw_throttle : public testing::Test
+class test_throttle : public testing::Test
 {
 public:
     virtual void SetUp() override
@@ -369,7 +369,7 @@ public:
     pegasus::pegasus_client *pg_client;
 };
 
-TEST_F(test_rw_throttle, test)
+TEST_F(test_throttle, test)
 {
     throttle_test_plan plan;
     throttle_test_recorder result;

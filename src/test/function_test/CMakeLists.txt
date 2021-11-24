@@ -42,6 +42,4 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES "config.ini" "run.sh")
 
-add_definitions("-Wall -g")
-
 dsn_add_test()
