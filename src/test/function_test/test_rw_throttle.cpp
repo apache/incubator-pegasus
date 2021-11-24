@@ -111,6 +111,9 @@ struct throttle_test_recorder
 
     void record(uint64_t size, bool is_reject)
     {
+        if (is_time_up()) {
+            return;
+        }
         if (dsn_now_ms() - start_time_ms <= 10) {
             TIMELY_RECORD(first_10_ms, is_reject, size);
         }
@@ -156,7 +159,6 @@ const int test_sortkey_len = 50;
 
 // read/write throttle function test
 // the details of records are saved in `./src/builder/test/function_test/throttle_test_result.txt`
-
 class test_rw_throttle : public testing::Test
 {
 public:
@@ -179,7 +181,7 @@ public:
         pg_client =
             pegasus::pegasus_client_factory::get_client("single_master_cluster", app_name.c_str());
 
-        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false);
+        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 4, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
     }
 
@@ -250,7 +252,10 @@ public:
             if (test_plan.ot == operation_type::set) {
                 ref_count++;
                 pg_client->async_set(
-                    h_key, s_key, value, [&](int ec, pegasus_client::internal_info &&info) {
+                    h_key,
+                    s_key,
+                    value,
+                    [&, h_key, s_key, value](int ec, pegasus_client::internal_info &&info) {
                         if (!is_running) {
                             ref_count--;
                             return;
@@ -258,7 +263,7 @@ public:
                         dassert_f(ec == PERR_OK || ec == PERR_APP_BUSY,
                                   "get/set data failed, error code:{}",
                                   ec);
-                        r.record(value.size(), ec == PERR_APP_BUSY);
+                        r.record(value.size() + h_key.size() + s_key.size(), ec == PERR_APP_BUSY);
                         ref_count--;
                     });
             } else if (test_plan.ot == operation_type::multi_set) {
@@ -266,7 +271,7 @@ public:
                 pg_client->async_multi_set(
                     h_key,
                     sortkey_value_pairs,
-                    [&, sortkey_value_pairs](int ec, pegasus_client::internal_info &&info) {
+                    [&, h_key, sortkey_value_pairs](int ec, pegasus_client::internal_info &&info) {
                         if (!is_running) {
                             ref_count--;
                             return;
@@ -278,7 +283,7 @@ public:
                         for (const auto &iter : sortkey_value_pairs) {
                             total_size += iter.second.size();
                         }
-                        r.record(total_size, ec == PERR_APP_BUSY);
+                        r.record(total_size + h_key.size(), ec == PERR_APP_BUSY);
                         ref_count--;
                     });
             } else if (test_plan.ot == operation_type::get) {
@@ -307,7 +312,8 @@ public:
                                 dassert_f(ec_read == PERR_OK || ec_read == PERR_APP_BUSY,
                                           "get data failed, error code:{}",
                                           ec_read);
-                                r.record(value.size(), ec_read == PERR_APP_BUSY);
+                                r.record(value.size() + h_key.size() + s_key.size(),
+                                         ec_read == PERR_APP_BUSY);
                                 ref_count--;
                             });
                         ref_count--;
@@ -328,9 +334,9 @@ public:
                         pg_client->async_multi_get(
                             h_key,
                             empty_sortkeys,
-                            [&](int ec_read,
-                                std::map<std::string, std::string> &&values,
-                                pegasus_client::internal_info &&info) {
+                            [&, h_key](int ec_read,
+                                       std::map<std::string, std::string> &&values,
+                                       pegasus_client::internal_info &&info) {
                                 if (!is_running) {
                                     ref_count--;
                                     return;
@@ -342,7 +348,7 @@ public:
                                 for (const auto &iter : values) {
                                     total_size += iter.second.size();
                                 }
-                                r.record(total_size, ec_read == PERR_APP_BUSY);
+                                r.record(total_size + h_key.size(), ec_read == PERR_APP_BUSY);
                                 ref_count--;
                             });
                         ref_count--;
@@ -363,24 +369,29 @@ public:
     pegasus::pegasus_client *pg_client;
 };
 
-TEST_F(test_rw_throttle, test1)
+TEST_F(test_rw_throttle, test)
 {
-    throttle_test_plan plan = {
-        "set test / throttle by qps / normal value size", operation_type::set, 1024, 1, 50};
-    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
-    std::cout << "wait 30s forsetting env " << std::endl;
-    sleep(30);
-    start_test(plan);
-    restore_throttle();
+    throttle_test_plan plan;
+    throttle_test_recorder result;
 
-    plan = {"set test / throttle by qps&size / big value size", operation_type::set, 102400, 1, 50};
+    plan = {"set test / throttle by size / normal value size", operation_type::set, 1024, 1, 50};
     set_throttle(throttle_type::write_by_size,
                  plan.limit_qps * plan.single_value_sz * plan.multi_count);
-    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
+
+    plan = {"set test / throttle by qps / normal value size", operation_type::set, 1024, 1, 50};
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env " << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
 
     plan = {"get test / throttle by size / normal value size", operation_type::get, 1024, 1, 50};
     set_throttle(throttle_type::read_by_size,
@@ -389,6 +400,12 @@ TEST_F(test_rw_throttle, test1)
     sleep(30);
     start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"get test / throttle by qps", operation_type::get, 1024, 1, 50};
     set_throttle(throttle_type::read_by_qps, plan.limit_qps);
@@ -396,6 +413,8 @@ TEST_F(test_rw_throttle, test1)
     sleep(30);
     start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
 
     plan = {"multi_get test / throttle by size / normal value size",
             operation_type::multi_get,
@@ -403,24 +422,256 @@ TEST_F(test_rw_throttle, test1)
             50,
             50};
     set_throttle(throttle_type::read_by_size,
-                 plan.single_value_sz * plan.multi_count * plan.limit_qps);
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
 
-    plan = {"multi_get test / throttle by size / big value size",
-            operation_type::multi_get,
-            1024 * 5,
+    plan = {"multi_set test / throttle by size / normal value size",
+            operation_type::multi_set,
+            1024,
             50,
             50};
-    set_throttle(throttle_type::read_by_size,
-                 plan.single_value_sz * plan.multi_count * plan.limit_qps);
+    set_throttle(throttle_type::write_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+    plan = {
+        "set test / throttle by qps&size / normal value size", operation_type::set, 1024, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
 
+    plan = {
+        "get test / throttle by qps&size / normal value size", operation_type::get, 1024, 1, 50};
+    set_throttle(throttle_type::read_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    set_throttle(throttle_type::read_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
+
+    // mix throttle case
+    plan = {"set test / throttle by qps&size,loose size throttle / normal value size",
+            operation_type::set,
+            1024,
+            1,
+            50};
+    set_throttle(throttle_type::write_by_size,
+                 plan.limit_qps *
+                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * 1000);
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
+
+    plan = {"get test / throttle by qps&size,loose size throttle/normal value size",
+            operation_type::get,
+            1024,
+            1,
+            50};
+    set_throttle(throttle_type::read_by_size,
+                 plan.limit_qps *
+                     (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * 1000);
+    set_throttle(throttle_type::read_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
+
+    plan = {"set test / throttle by qps&size,loose qps throttle / normal value size",
+            operation_type::set,
+            1024,
+            1,
+            50};
+    set_throttle(throttle_type::write_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps * 1000);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"get test / throttle by qps&size,loose qps throttle/normal value size",
+            operation_type::get,
+            1024,
+            1,
+            50};
+    set_throttle(throttle_type::read_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    set_throttle(throttle_type::read_by_qps, plan.limit_qps * 1000);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    // big value test can't run normally in the function test
+    plan = {"set test / throttle by size / 20kb value size", operation_type::set, 1024 * 20, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"get test / throttle by size / 20kb value size", operation_type::get, 1024 * 20, 1, 50};
+    set_throttle(throttle_type::read_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"set test / throttle by size / 50kb value size", operation_type::set, 1024 * 50, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"get test / throttle by size / 50kb value size", operation_type::get, 1024 * 50, 1, 50};
+    set_throttle(throttle_type::read_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"set test / throttle by size / 100b value size", operation_type::set, 100, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"get test / throttle by size / 100b value size", operation_type::get, 100, 1, 50};
+    set_throttle(throttle_type::read_by_size,
+                 (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                     plan.multi_count * plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"set test / throttle by size / 10b value size", operation_type::set, 10, 1, 50};
+    set_throttle(throttle_type::write_by_size,
+                 (plan.single_value_sz + test_hashkey_len + test_sortkey_len) * plan.multi_count *
+                     plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    plan = {"get test / throttle by size / 10b value size", operation_type::get, 10, 1, 50};
+    set_throttle(throttle_type::read_by_size,
+                 (plan.single_value_sz + test_hashkey_len + test_sortkey_len) * plan.multi_count *
+                     plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+                  plan.multi_count * plan.limit_qps * 0.7);
+
+    //  random value case
     plan = {"multi_get test / throttle by size / random value size",
             operation_type::multi_get,
             1024 * 5,
@@ -430,8 +681,10 @@ TEST_F(test_rw_throttle, test1)
     set_throttle(throttle_type::read_by_size, 5000000);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"], (uint64_t)5000000 * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"], (uint64_t)5000000 * 0.7);
 
     plan = {"multi_set test / throttle by size / random value size",
             operation_type::multi_set,
@@ -442,8 +695,44 @@ TEST_F(test_rw_throttle, test1)
     set_throttle(throttle_type::write_by_size, 5000000);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"], (uint64_t)5000000 * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"], (uint64_t)5000000 * 0.7);
+
+    // hotkey test
+    plan = {
+        "get test / throttle by qps / hotkey test", operation_type::get, 1024, 1, 50, false, true};
+    set_throttle(throttle_type::read_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
+
+    plan = {
+        "set test / throttle by qps / hotkey test", operation_type::set, 1024, 1, 50, false, true};
+    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 15);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 15);
+
+    plan = {
+        "set test / throttle by size / hotkey test", operation_type::set, 1024, 1, 50, false, true};
+    set_throttle(throttle_type::write_by_size,
+                 plan.limit_qps * plan.single_value_sz * plan.multi_count);
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count * 0.7);
 
     plan = {
         "get test / throttle by size / hotkey test", operation_type::get, 1024, 1, 50, false, true};
@@ -451,29 +740,51 @@ TEST_F(test_rw_throttle, test1)
                  plan.limit_qps * plan.single_value_sz * plan.multi_count);
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_size_per_sec"],
+              (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count * 1.3);
+    ASSERT_GT(result.records["total_size_per_sec"],
+              (uint64_t)plan.limit_qps * plan.single_value_sz * plan.multi_count * 0.7);
+
+    // mix delay&reject test
+    plan = {
+        "set test / throttle by qps 500 / no delay throttle", operation_type::set, 1024, 1, 500};
+    ddl_client->set_app_envs(app_name, {"replica.write_throttling"}, {"500*reject*200"});
+    std::cout << "wait 30s for setting env" << std::endl;
+    sleep(30);
+    result = start_test(plan);
+    restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 100);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 100);
 
     plan = {
-        "set test / throttle by qps / hotkey test", operation_type::set, 1024, 1, 50, false, true};
-    set_throttle(throttle_type::write_by_qps, plan.limit_qps);
+        "get test / throttle by qps 500 / no delay throttle", operation_type::get, 1024, 1, 500};
+    ddl_client->set_app_envs(app_name, {"replica.read_throttling"}, {"500*reject*200"});
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 100);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 100);
 
-    plan = {"set test / throttle by qps / delay throttle", operation_type::set, 1024, 1, 50};
+    plan = {"set test / throttle by qps 500 / delay throttle", operation_type::set, 1024, 1, 500};
     ddl_client->set_app_envs(
-        app_name, {"replica.write_throttling"}, {"30*delay*100,50*reject*200"});
+        app_name, {"replica.write_throttling"}, {"300*delay*100,500*reject*200"});
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 100);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 100);
 
-    plan = {"get test / throttle by qps / delay throttle", operation_type::get, 1024, 1, 50};
-    ddl_client->set_app_envs(app_name, {"replica.read_throttling"}, {"30*delay*100,50*reject*200"});
+    plan = {"get test / throttle by qps 500 / delay throttle", operation_type::get, 1024, 1, 500};
+    ddl_client->set_app_envs(
+        app_name, {"replica.read_throttling"}, {"300*delay*100,500*reject*200"});
     std::cout << "wait 30s for setting env" << std::endl;
     sleep(30);
-    start_test(plan);
+    result = start_test(plan);
     restore_throttle();
+    ASSERT_LE(result.records["total_qps"], plan.limit_qps + 100);
+    ASSERT_GT(result.records["total_qps"], plan.limit_qps - 100);
 }
