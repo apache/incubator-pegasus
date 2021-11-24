@@ -401,10 +401,10 @@ TEST_F(test_throttle, test)
     start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"get test / throttle by qps", operation_type::get, 1024, 1, 50};
@@ -429,10 +429,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"multi_set test / throttle by size / normal value size",
@@ -448,10 +448,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
     plan = {
         "set test / throttle by qps&size / normal value size", operation_type::set, 1024, 1, 50};
@@ -525,10 +525,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"get test / throttle by qps&size,loose qps throttle/normal value size",
@@ -544,10 +544,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     // big value test can't run normally in the function test
@@ -560,10 +560,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"get test / throttle by size / 20kb value size", operation_type::get, 1024 * 20, 1, 50};
@@ -575,10 +575,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"set test / throttle by size / 50kb value size", operation_type::set, 1024 * 50, 1, 50};
@@ -590,10 +590,10 @@ TEST_F(test_throttle, test)
     result = start_test(plan);
     restore_throttle();
     ASSERT_LE(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 1.3);
     ASSERT_GT(result.records["total_size_per_sec"],
-              (uint64_t)(uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
+              (uint64_t)(plan.single_value_sz + test_hashkey_len + test_sortkey_len) *
                   plan.multi_count * plan.limit_qps * 0.7);
 
     plan = {"get test / throttle by size / 50kb value size", operation_type::get, 1024 * 50, 1, 50};
