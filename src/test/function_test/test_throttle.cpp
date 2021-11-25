@@ -52,11 +52,11 @@ enum class operation_type
 
 struct throttle_test_plan
 {
-    std::string test_plan_case;
-    operation_type ot;
-    int single_value_sz;
-    int multi_count;
-    int limit_qps;
+    std::string test_plan_case = "";
+    operation_type ot = operation_type::get;
+    int single_value_sz = 0;
+    int multi_count = 0;
+    int limit_qps = 0;
     bool random_value_size = false;
     bool is_hotkey = false;
 };
@@ -101,29 +101,24 @@ struct throttle_test_recorder
         records.emplace(std::make_pair("duration_ms", duration_ms));
     }
 
-    bool is_time_up()
-    {
-        if (dsn_now_ms() - start_time_ms > duration_ms) {
-            return true;
-        }
-        return false;
-    }
+    bool is_time_up() { return dsn_now_ms() - start_time_ms > duration_ms; }
 
     void record(uint64_t size, bool is_reject)
     {
         if (is_time_up()) {
             return;
         }
-        if (dsn_now_ms() - start_time_ms <= 10) {
+        auto now_ns = dsn_now_ms();
+        if (now_ns - start_time_ms <= 10) {
             TIMELY_RECORD(first_10_ms, is_reject, size);
         }
-        if (dsn_now_ms() - start_time_ms <= 100) {
+        if (now_ns - start_time_ms <= 100) {
             TIMELY_RECORD(first_100_ms, is_reject, size);
         }
-        if (dsn_now_ms() - start_time_ms <= 1000) {
+        if (now_ns - start_time_ms <= 1000) {
             TIMELY_RECORD(first_1000_ms, is_reject, size);
         }
-        if (dsn_now_ms() - start_time_ms <= 5000) {
+        if (now_ns - start_time_ms <= 5000) {
             TIMELY_RECORD(first_5000_ms, is_reject, size);
         }
         TIMELY_RECORD(total, is_reject, size);
