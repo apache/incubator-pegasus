@@ -234,11 +234,11 @@ public:
         std::atomic<int64_t> ref_count(0);
 
         while (!r.is_time_up()) {
-            auto h_key = generate_hash_key_with_hotkey(test_plan.is_hotkey, 75, test_hashkey_len);
-            auto s_key = generate_random_str(test_sortkey_len);
-            auto value = generate_random_str(test_plan.random_value_size
-                                                 ? dsn::rand::next_u32(test_plan.single_value_sz)
-                                                 : test_plan.single_value_sz);
+            auto h_key = generate_hotkey(test_plan.is_hotkey, 75, test_hashkey_len);
+            auto s_key = generate_random_string(test_sortkey_len);
+            auto value = generate_random_string(test_plan.random_value_size
+                                                    ? dsn::rand::next_u32(test_plan.single_value_sz)
+                                                    : test_plan.single_value_sz);
             auto sortkey_value_pairs = generate_sortkey_value_map(
                 generate_str_vector_by_random(test_sortkey_len, test_plan.multi_count),
                 generate_str_vector_by_random(

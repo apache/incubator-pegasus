@@ -87,7 +87,7 @@ public:
 
         for (int i = 0; dsn_now_s() - start < time_duration; ++i %= 1000) {
             std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_with_hotkey(kt, 50);
+            std::string h_key = generate_hotkey(kt, 50);
             std::string s_key = "sortkey_" + index;
             std::string value = "value_" + index;
             if (dt == detection_type::write_data) {

@@ -34,7 +34,7 @@
         }                                                                                          \
     } while (0)
 
-inline std::string generate_random_str(uint32_t str_len = 20)
+inline std::string generate_random_string(uint32_t str_len = 20)
 {
     static const std::string chars("abcdefghijklmnopqrstuvwxyz"
                                    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -46,13 +46,12 @@ inline std::string generate_random_str(uint32_t str_len = 20)
     return result;
 }
 
-inline std::string
-generate_hash_key_with_hotkey(bool is_hotkey, int probability = 100, uint32_t str_len = 20)
+inline std::string generate_hotkey(bool is_hotkey, int probability = 100, uint32_t str_len = 20)
 {
     if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
         return "ThisisahotkeyThisisahotkey";
     }
-    return generate_random_str(str_len);
+    return generate_random_string(str_len);
 }
 
 inline std::vector<std::string> generate_str_vector_by_random(uint32_t single_str_len,
@@ -62,7 +61,7 @@ inline std::vector<std::string> generate_str_vector_by_random(uint32_t single_st
     std::vector<std::string> result;
     result.reserve(arr_len);
     for (int i = 0; i < arr_len; i++) {
-        result.emplace_back(generate_random_str(
+        result.emplace_back(generate_random_string(
             random_value_size ? dsn::rand::next_u32(single_str_len) : single_str_len));
     }
     return result;
