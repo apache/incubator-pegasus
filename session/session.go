@@ -334,7 +334,7 @@ func (n *nodeSession) CallWithGpid(ctx context.Context, gpid *base.Gpid, partiti
 	}
 
 	deadLine, _ := ctx.Deadline()
-	timeout := uint32(deadLine.Second()-time.Now().Second()) * 1000
+	timeout := uint32(deadLine.UnixNano()-time.Now().UnixNano()) / 1000000
 	seqId := atomic.AddInt32(&n.seqId, 1) // increment sequence id
 	rcall, err := MarshallPegasusRpc(n.codec, seqId, gpid, partitionHash, args, name, timeout)
 	if err != nil {
