@@ -72,7 +72,7 @@ generate_sortkey_value_map(const std::vector<std::string> sortkeys,
                            const std::vector<std::string> values)
 {
     std::map<std::string, std::string> result;
-    dassert(sortkeys.size() == values.size(), "sortkeys.size() != values.size()");
+    dcheck_eq(sortkeys.size() == values.size());
     int len = sortkeys.size();
     for (int i = 0; i < len; i++) {
         result.emplace(std::make_pair(sortkeys[i], values[i]));
