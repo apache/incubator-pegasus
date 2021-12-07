@@ -99,7 +99,7 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
     // Case 1: have hotspot [1, 1, 300, 1]
     // Case 2: not have hotspot [1, 1, 1, 1]
     // In both case 1 and case 2, we select [1, 1, 1] to calculate standard_deviation, so it equals
-    // to 1. In these scenes, we simply compare the hot_value with the average
+    // to 0. In these scenes, we simply compare the hot_value with the average
     if (standard_deviation == 0) {
         return hot_value > captured_keys_avg_count;
     }
