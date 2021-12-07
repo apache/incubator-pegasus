@@ -23,32 +23,14 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
-#include <boost/lexical_cast.hpp>
-#include <dsn/utility/rand.h>
 
 #include "base/pegasus_const.h"
 #include "global_env.h"
+#include "utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
 using namespace pegasus;
-
-static std::string generate_hash_key_by_random(bool is_hotkey, int probability = 100)
-{
-    if (is_hotkey && (dsn::rand::next_u32(100) < probability)) {
-        return "ThisisahotkeyThisisahotkey";
-    }
-    static const std::string chars("abcdefghijklmnopqrstuvwxyz"
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "1234567890"
-                                   "!@#$%^&*()"
-                                   "`~-_=+[{]{\\|;:'\",<.>/? ");
-    std::string result;
-    for (int i = 0; i < 20; i++) {
-        result += chars[dsn::rand::next_u32(chars.size())];
-    }
-    return result;
-}
 
 enum detection_type
 {
@@ -105,7 +87,7 @@ public:
 
         for (int i = 0; dsn_now_s() - start < time_duration; ++i %= 1000) {
             std::string index = std::to_string(i);
-            std::string h_key = generate_hash_key_by_random(kt, 50);
+            std::string h_key = generate_hotkey(kt, 50);
             std::string s_key = "sortkey_" + index;
             std::string value = "value_" + index;
             if (dt == detection_type::write_data) {
