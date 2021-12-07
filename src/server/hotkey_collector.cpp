@@ -84,7 +84,6 @@ find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, in
             hot_value = captured_keys[i];
         }
     }
-    std::cout << std::endl;
     // TODO: (Tangyanzhao) increase a judgment of table_captured_key_sum
     double captured_keys_avg_count =
         (table_captured_key_sum - captured_keys[hot_index]) / (data_size - 1);
