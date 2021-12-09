@@ -365,6 +365,8 @@ private:
 
     uint32_t query_data_version() const override;
 
+    dsn::replication::manual_compaction_status::type query_compact_status() const override;
+
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
