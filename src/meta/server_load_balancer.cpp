@@ -120,14 +120,7 @@ public:
 local_module_initializer local_module_initializer::_instance;
 //// end of server load balancer extensions for node state
 
-server_load_balancer::server_load_balancer(meta_service *svc) : _svc(svc)
-{
-    _recent_choose_primary_fail_count.init_app_counter(
-        "eon.server_load_balancer",
-        "recent_choose_primary_fail_count",
-        COUNTER_TYPE_VOLATILE_NUMBER,
-        "choose primary fail count in the recent period");
-}
+server_load_balancer::server_load_balancer(meta_service *svc) : _svc(svc) {}
 
 void server_load_balancer::register_proposals(meta_view view,
                                               const configuration_balancer_request &req,

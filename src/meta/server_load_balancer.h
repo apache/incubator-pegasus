@@ -199,7 +199,6 @@ public:
 
 protected:
     meta_service *_svc;
-    perf_counter_wrapper _recent_choose_primary_fail_count;
 };
 } // namespace replication
 } // namespace dsn
