@@ -83,6 +83,11 @@ public:
 
     uint32_t query_data_version() const { return 1; }
 
+    manual_compaction_status::type query_compact_status() const
+    {
+        return manual_compaction_status::IDLE;
+    }
+
 private:
     std::map<std::string, std::string> _envs;
     decree _decree = 5;

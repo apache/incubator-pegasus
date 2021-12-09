@@ -76,6 +76,14 @@ enum disk_status
     SPACE_INSUFFICIENT
 }
 
+enum manual_compaction_status
+{
+    IDLE = 0,
+    QUEUING,
+    RUNNING,
+    FINISHED
+}
+
 // Used for cold backup and bulk load
 struct file_meta
 {
@@ -104,12 +112,13 @@ struct replica_configuration
 
 struct replica_info
 {
-    1:dsn.gpid               pid;
-    2:i64                    ballot;
-    3:partition_status       status;
-    4:i64                    last_committed_decree;
-    5:i64                    last_prepared_decree;
-    6:i64                    last_durable_decree;
-    7:string                 app_type;
-    8:string                 disk_tag;
+    1:dsn.gpid                          pid;
+    2:i64                               ballot;
+    3:partition_status                  status;
+    4:i64                               last_committed_decree;
+    5:i64                               last_prepared_decree;
+    6:i64                               last_durable_decree;
+    7:string                            app_type;
+    8:string                            disk_tag;
+    9:optional manual_compaction_status manual_compact_status;
 }

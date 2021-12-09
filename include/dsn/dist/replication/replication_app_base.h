@@ -253,6 +253,8 @@ public:
     // query pegasus data version
     virtual uint32_t query_data_version() const = 0;
 
+    virtual manual_compaction_status::type query_compact_status() const = 0;
+
 public:
     //
     // utility functions to be used by app

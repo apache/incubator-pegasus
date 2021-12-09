@@ -1326,6 +1326,7 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
     info.last_committed_decree = r->last_committed_decree();
     info.last_prepared_decree = r->last_prepared_decree();
     info.last_durable_decree = r->last_durable_decree();
+    // TODO(heyuchen): add manual compaction status
 
     dsn::error_code err = _fs_manager.get_disk_tag(r->dir(), info.disk_tag);
     if (dsn::ERR_OK != err) {
@@ -2958,7 +2959,7 @@ void replica_stub::query_app_data_version(
 }
 
 void replica_stub::query_app_manual_compact_status(
-    int32_t app_id, std::unordered_map<gpid, manual_compaction_status> &status)
+    int32_t app_id, std::unordered_map<gpid, manual_compaction_status::type> &status)
 {
     zauto_read_lock l(_replicas_lock);
     for (auto it = _replicas.begin(); it != _replicas.end(); ++it) {

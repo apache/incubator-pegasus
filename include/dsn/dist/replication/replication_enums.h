@@ -122,4 +122,13 @@ ENUM_BEGIN2(replication::disk_status::type, disk_status, replication::disk_statu
 ENUM_REG(replication::disk_status::NORMAL)
 ENUM_REG(replication::disk_status::SPACE_INSUFFICIENT)
 ENUM_END2(replication::disk_status::type, disk_status)
+
+ENUM_BEGIN2(replication::manual_compaction_status::type,
+            manual_compaction_status,
+            replication::manual_compaction_status::IDLE)
+ENUM_REG(replication::manual_compaction_status::IDLE)
+ENUM_REG(replication::manual_compaction_status::QUEUING)
+ENUM_REG(replication::manual_compaction_status::RUNNING)
+ENUM_REG(replication::manual_compaction_status::FINISHED)
+ENUM_END2(replication::manual_compaction_status::type, manual_compaction_status)
 } // namespace dsn

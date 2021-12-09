@@ -53,6 +53,23 @@ public:
     void query_app_data_version_handler(const http_request &req, http_response &resp);
     void query_manual_compaction_handler(const http_request &req, http_response &resp);
 
+    inline const char *manual_compaction_status_to_string(manual_compaction_status::type status)
+    {
+        switch (status) {
+        case manual_compaction_status::IDLE:
+            return "idle";
+        case manual_compaction_status::QUEUING:
+            return "queuing";
+        case manual_compaction_status::RUNNING:
+            return "running";
+        case manual_compaction_status::FINISHED:
+            return "finished";
+        default:
+            dassert(false, "invalid status({})", status);
+            __builtin_unreachable();
+        }
+    }
+
 private:
     replica_stub *_stub;
 };

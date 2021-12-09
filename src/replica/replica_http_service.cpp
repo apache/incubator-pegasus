@@ -123,7 +123,7 @@ void replica_http_service::query_manual_compaction_handler(const http_request &r
         return;
     }
 
-    std::unordered_map<gpid, manual_compaction_status> partition_compaction_status;
+    std::unordered_map<gpid, manual_compaction_status::type> partition_compaction_status;
     _stub->query_app_manual_compact_status(app_id, partition_compaction_status);
 
     int32_t idle_count = 0;
@@ -131,23 +131,23 @@ void replica_http_service::query_manual_compaction_handler(const http_request &r
     int32_t queuing_count = 0;
     int32_t finished_count = 0;
     for (const auto &kv : partition_compaction_status) {
-        if (kv.second == kRunning) {
+        if (kv.second == manual_compaction_status::RUNNING) {
             running_count++;
-        } else if (kv.second == kQueuing) {
+        } else if (kv.second == manual_compaction_status::QUEUING) {
             queuing_count++;
-        } else if (kv.second == kFinished) {
+        } else if (kv.second == manual_compaction_status::FINISHED) {
             finished_count++;
-        } else if (kv.second == kIdle) {
+        } else if (kv.second == manual_compaction_status::IDLE) {
             idle_count++;
         }
     }
 
     nlohmann::json json;
-    json["status"] =
-        nlohmann::json{{manual_compaction_status_to_string(kIdle), idle_count},
-                       {manual_compaction_status_to_string(kRunning), running_count},
-                       {manual_compaction_status_to_string(kQueuing), queuing_count},
-                       {manual_compaction_status_to_string(kFinished), finished_count}};
+    json["status"] = nlohmann::json{
+        {manual_compaction_status_to_string(manual_compaction_status::IDLE), idle_count},
+        {manual_compaction_status_to_string(manual_compaction_status::RUNNING), running_count},
+        {manual_compaction_status_to_string(manual_compaction_status::QUEUING), queuing_count},
+        {manual_compaction_status_to_string(manual_compaction_status::FINISHED), finished_count}};
     resp.status_code = http_status_code::ok;
     resp.body = json.dump();
 }

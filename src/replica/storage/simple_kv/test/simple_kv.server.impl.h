@@ -93,6 +93,11 @@ public:
 
     virtual uint32_t query_data_version() const override { return 0; }
 
+    virtual ::dsn::replication::manual_compaction_status::type query_compact_status() const override
+    {
+        return dsn::replication::manual_compaction_status::IDLE;
+    }
+
 private:
     void recover();
     void recover(const std::string &name, int64_t version);

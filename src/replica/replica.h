@@ -78,15 +78,6 @@ namespace test {
 class test_checker;
 }
 
-enum manual_compaction_status
-{
-    kIdle = 0,
-    kQueuing,
-    kRunning,
-    kFinished
-};
-const char *manual_compaction_status_to_string(manual_compaction_status status);
-
 #define CHECK_REQUEST_IF_SPLITTING(op_type)                                                        \
     if (_validate_partition_hash) {                                                                \
         if (_split_mgr->should_reject_request()) {                                                 \
@@ -419,8 +410,7 @@ private:
     // now this remote commend will be used by `scripts/pegasus_manual_compact.sh`
     std::string query_manual_compact_state() const;
 
-    // Used for http interface
-    manual_compaction_status get_manual_compact_status() const;
+    manual_compaction_status::type get_manual_compact_status() const;
 
     void init_table_level_latency_counters();
 

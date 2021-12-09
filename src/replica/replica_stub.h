@@ -223,7 +223,7 @@ public:
 
     // query partitions compact status by app_id
     void query_app_manual_compact_status(
-        int32_t app_id, /*out*/ std::unordered_map<gpid, manual_compaction_status> &status);
+        int32_t app_id, /*out*/ std::unordered_map<gpid, manual_compaction_status::type> &status);
 
     void on_add_new_disk(add_new_disk_rpc rpc);
 
