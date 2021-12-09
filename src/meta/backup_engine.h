@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#pragma once
+
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/block_service.h>
 #include <dsn/tool-api/zlocks.h>
