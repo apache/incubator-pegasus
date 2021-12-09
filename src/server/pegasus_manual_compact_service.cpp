@@ -355,7 +355,7 @@ dsn::replication::manual_compaction_status::type
 pegasus_manual_compact_service::query_compact_status() const
 {
     // Case1. last finish at [-]
-    // - partition is not manual compaction
+    // - partition is not running manual compaction
     // Case2. last finish at [timestamp], last used {time_used} ms
     // - partition manual compaction finished
     // Case3. last finish at [-], recent enqueue at [timestamp]
