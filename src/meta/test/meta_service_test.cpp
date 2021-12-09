@@ -63,6 +63,29 @@ public:
         fail::teardown();
     }
 
+    void check_op_status_lock()
+    {
+        SetUp();
+
+        meta_op_status st = _ms->get_op_status();
+        ASSERT_EQ(meta_op_status::FREE, st);
+        bool res = _ms->try_lock_meta_op_status(meta_op_status::BULKLOAD);
+        ASSERT_TRUE(res);
+        res = _ms->try_lock_meta_op_status(meta_op_status::BULKLOAD);
+        ASSERT_FALSE(res);
+        st = _ms->get_op_status();
+        ASSERT_EQ(meta_op_status::BULKLOAD, st);
+        res = _ms->try_lock_meta_op_status(meta_op_status::BACKUP);
+        ASSERT_FALSE(res);
+        st = _ms->get_op_status();
+        ASSERT_EQ(meta_op_status::BULKLOAD, st);
+        _ms->unlock_meta_op_status();
+        st = _ms->get_op_status();
+        ASSERT_EQ(meta_op_status::FREE, st);
+
+        TearDown();
+    }
+
 private:
     app_env_rpc create_fake_rpc()
     {
@@ -81,6 +104,8 @@ private:
 TEST_F(meta_service_test, check_status_failure) { check_status_failure(); }
 
 TEST_F(meta_service_test, check_status_success) { check_status_success(); }
+
+TEST_F(meta_service_test, check_op_status_lock) { check_op_status_lock(); }
 
 } // namespace replication
 } // namespace dsn
