@@ -114,6 +114,7 @@ TEST_F(coarse_collector_test, coarse_collector)
             coarse_collector.capture_data(hash_key, 1);
         });
     }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     coarse_collector.analyse_data(result);
     ASSERT_NE(result.coarse_bucket_index, -1);
     _tracker.wait_outstanding_tasks();
@@ -168,6 +169,7 @@ TEST_F(fine_collector_test, fine_collector)
             fine_collector.capture_data(hash_key, 1);
         });
     }
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     fine_collector.analyse_data(result);
     _tracker.wait_outstanding_tasks();
 
