@@ -3107,5 +3107,10 @@ void pegasus_server_impl::on_detect_hotkey(const dsn::replication::detect_hotkey
 
 uint32_t pegasus_server_impl::query_data_version() const { return _pegasus_data_version; }
 
+dsn::replication::manual_compaction_status::type pegasus_server_impl::query_compact_status() const
+{
+    return _manual_compact_svc.query_compact_status();
+}
+
 } // namespace server
 } // namespace pegasus
