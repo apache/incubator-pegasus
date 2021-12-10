@@ -115,7 +115,7 @@ echo "Wait for 3 minutes to do load balance..."
 sleep 180
 ## Number of check times for balanced state, in case that op_count is 0 but
 ## the cluster is in fact unbalanced. Each check waits for 30 secs.
-op_count_check_remain_times=1
+op_count_check_remain_times=3
 while true; do
     op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
     if [ -z $op_count ]; then
