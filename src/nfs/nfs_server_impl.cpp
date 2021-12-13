@@ -42,10 +42,11 @@
 namespace dsn {
 namespace service {
 
-DSN_DEFINE_int32("nfs",
-                 max_send_rate_megabytes_per_disk,
-                 500,
-                 "max rate per disk of send to remote node(MB/s)");
+DSN_DEFINE_uint32(
+    "nfs",
+    max_send_rate_megabytes_per_disk,
+    0,
+    "max rate per disk of send to remote node(MB/s)，zero means disable rate limiter");
 DSN_TAG_VARIABLE(max_send_rate_megabytes_per_disk, FT_MUTABLE);
 
 DSN_DECLARE_int32(file_close_timer_interval_ms_on_server);
@@ -141,10 +142,13 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
 void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callback_para &cp)
 {
-    _send_token_buckets->get_token_bucket(cp.source_disk_tag)
-        ->consumeWithBorrowAndWait(sz,
-                                   FLAGS_max_send_rate_megabytes_per_disk << 20,
-                                   1.5 * (FLAGS_max_send_rate_megabytes_per_disk << 20));
+    if (FLAGS_max_send_rate_megabytes_per_disk > 0) {
+        _send_token_buckets->get_token_bucket(cp.source_disk_tag)
+            ->consumeWithBorrowAndWait(sz,
+                                       FLAGS_max_send_rate_megabytes_per_disk << 20,
+                                       1.5 * (FLAGS_max_send_rate_megabytes_per_disk << 20));
+    }
+
     {
         zauto_lock l(_handles_map_lock);
         auto it = _handles_map.find(cp.file_path);
