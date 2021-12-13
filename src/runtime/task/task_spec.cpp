@@ -165,7 +165,7 @@ task_spec::task_spec(int code,
       on_rpc_task_dropped((std::string(name) + std::string(".dropped")).c_str()),
       on_rpc_reply((std::string(name) + std::string(".rpc.reply")).c_str()),
       on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
-      on_rpc_create_response((std::string(name) + std::string("rpc.create.response")).c_str())
+      on_rpc_create_response((std::string(name) + std::string(".rpc.response.create")).c_str())
 {
     dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH,
             "task code name '%s' is too long: length must be smaller than "
