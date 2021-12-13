@@ -434,11 +434,14 @@ bool config_context::remove_from_serving(const rpc_address &node)
 void config_context::collect_serving_replica(const rpc_address &node, const replica_info &info)
 {
     auto iter = find_from_serving(node);
+    auto compact_status = info.__isset.manual_compact_status ? info.manual_compact_status
+                                                             : manual_compaction_status::IDLE;
     if (iter != serving.end()) {
         iter->disk_tag = info.disk_tag;
         iter->storage_mb = 0;
+        iter->compact_status = compact_status;
     } else {
-        serving.emplace_back(serving_replica{node, 0, info.disk_tag});
+        serving.emplace_back(serving_replica{node, 0, info.disk_tag, compact_status});
     }
 }
 

@@ -1326,12 +1326,13 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
     info.last_committed_decree = r->last_committed_decree();
     info.last_prepared_decree = r->last_prepared_decree();
     info.last_durable_decree = r->last_durable_decree();
-    // TODO(heyuchen): add manual compaction status
 
     dsn::error_code err = _fs_manager.get_disk_tag(r->dir(), info.disk_tag);
     if (dsn::ERR_OK != err) {
         dwarn("get disk tag of %s failed: %s", r->dir().c_str(), err.to_string());
     }
+
+    info.__set_manual_compact_status(r->get_manual_compact_status());
 }
 
 void replica_stub::get_local_replicas(std::vector<replica_info> &replicas)

@@ -182,6 +182,7 @@ struct serving_replica
     // TODO: report the storage size of replica
     int64_t storage_mb;
     std::string disk_tag;
+    manual_compaction_status::type compact_status;
 };
 
 class config_context
