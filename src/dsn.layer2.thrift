@@ -64,7 +64,7 @@ struct app_info
     // New fields added from v1.12.0
     // Whether this app is duplicating.
     // If true it should prevent its unconfirmed WAL from being compacted.
-    12:optional bool duplicating;
+    12:optional bool duplicating = false;
 
     // New fields for partition split
     // If meta server failed during partition split,
