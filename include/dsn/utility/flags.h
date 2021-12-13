@@ -87,6 +87,36 @@ struct hash<flag_tag>
     static const dsn::flag_validator FLAGS_VALIDATOR_##name(                                       \
         #name, []() -> bool { return FLAGS_VALIDATOR_FN_##name(FLAGS_##name); })
 
+// There are scenarios where inconsistency should be detected and avoided between 2 or more flags.
+//
+// For example, FLAGS_a and FLAGS_b are mutually exclusive: they cannot both be true.
+// Therefore, a validator may be something like:
+// bool validate() {
+//     return !FLAGS_a || !FLAGS_b;
+// }
+//
+// Another example is that FLAGS_c must be less than FLAGS_d. As for this example,
+// a validator can be implemented as:
+// bool validate() {
+//     return FLAGS_c < FLAGS_d;
+// }
+//
+// Unfortunately, `flag_validator` is used to validate the value of individual
+// flag without involving others. Once another flag is used in `flag_validator`,
+// perhaps the validation is ineffective since that flag may not have been loaded
+// from the configuration file.
+//
+// We use grouped flag validator to detect the inconsistency between 2 or more flags.
+// In contrast with `flag_validator` for individual flag, `group_flag_validator` has a guarantee
+// that it will be run after all flags have been loaded from the configuration file.
+//
+// This is the convenient macro for the registration of a grouped flag validator.
+// `validator` must be a std::function<bool(std::string &)>. It does not receive any input
+// argument, but return true if the validation passed otherwise false, with a hint message
+// set as the output argument `std::string &`, if any.
+#define DSN_DEFINE_group_validator(name, validator)                                                \
+    static const dsn::group_flag_validator FLAGS_GROUP_VALIDATOR_##name(#name, validator)
+
 #define DSN_TAG_VARIABLE(name, tag)                                                                \
     COMPILE_ASSERT(sizeof(decltype(FLAGS_##name)), exist_##name##_##tag);                          \
     static dsn::flag_tagger FLAGS_TAGGER_##name##_##tag(#name, flag_tag::tag)
@@ -112,6 +142,14 @@ class flag_validator
 {
 public:
     flag_validator(const char *name, validator_fn);
+};
+
+// An utility class that registers a grouped validator upon initialization.
+using group_validator_fn = std::function<bool(std::string &)>;
+class group_flag_validator
+{
+public:
+    group_flag_validator(const char *name, group_validator_fn);
 };
 
 class flag_tagger

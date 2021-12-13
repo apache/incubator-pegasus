@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/utility/flags.h>
+#include <fmt/format.h>
 
 namespace dsn {
 namespace utils {
@@ -47,6 +48,86 @@ DSN_DEFINE_validator(test_validator, [](int32_t test_validator) -> bool {
     if (test_validator < 0) {
         return false;
     }
+    return true;
+});
+
+DSN_DEFINE_bool("flag_test", condition_a, false, "");
+DSN_TAG_VARIABLE(condition_a, FT_MUTABLE);
+
+DSN_DEFINE_bool("flag_test", condition_b, false, "");
+DSN_TAG_VARIABLE(condition_b, FT_MUTABLE);
+
+DSN_DEFINE_group_validator(inconsistent_conditions, [](std::string &message) -> bool {
+    return !FLAGS_condition_a || !FLAGS_condition_b;
+});
+
+DSN_DEFINE_int32("flag_test", min_value, 1, "");
+DSN_TAG_VARIABLE(min_value, FT_MUTABLE);
+DSN_DEFINE_validator(min_value, [](int32_t value) -> bool { return value > 0; });
+
+DSN_DEFINE_int32("flag_test", max_value, 5, "");
+DSN_TAG_VARIABLE(max_value, FT_MUTABLE);
+DSN_DEFINE_validator(max_value, [](int32_t value) -> bool { return value <= 10; });
+
+DSN_DEFINE_group_validator(min_max, [](std::string &message) -> bool {
+    if (FLAGS_min_value > FLAGS_max_value) {
+        message = fmt::format("min({}) should be <= max({})", FLAGS_min_value, FLAGS_max_value);
+        return false;
+    }
+    return true;
+});
+
+DSN_DEFINE_int32("flag_test", small_value, 0, "");
+DSN_TAG_VARIABLE(small_value, FT_MUTABLE);
+
+DSN_DEFINE_int32("flag_test", medium_value, 5, "");
+DSN_TAG_VARIABLE(medium_value, FT_MUTABLE);
+
+DSN_DEFINE_int32("flag_test", large_value, 10, "");
+DSN_TAG_VARIABLE(large_value, FT_MUTABLE);
+
+DSN_DEFINE_group_validator(small_medium_large, [](std::string &message) -> bool {
+    if (FLAGS_small_value >= FLAGS_medium_value) {
+        message =
+            fmt::format("small({}) should be < medium({})", FLAGS_small_value, FLAGS_medium_value);
+        return false;
+    }
+
+    if (FLAGS_medium_value >= FLAGS_large_value) {
+        message =
+            fmt::format("medium({}) should be < large({})", FLAGS_medium_value, FLAGS_large_value);
+        return false;
+    }
+
+    return true;
+});
+
+DSN_DEFINE_int32("flag_test", lesser, 0, "");
+DSN_TAG_VARIABLE(lesser, FT_MUTABLE);
+
+DSN_DEFINE_int32("flag_test", greater_0, 5, "");
+DSN_TAG_VARIABLE(greater_0, FT_MUTABLE);
+
+DSN_DEFINE_int32("flag_test", greater_1, 10, "");
+DSN_TAG_VARIABLE(greater_1, FT_MUTABLE);
+
+DSN_DEFINE_group_validator(lesser_greater_0, [](std::string &message) -> bool {
+    if (FLAGS_lesser >= FLAGS_greater_0) {
+        message =
+            fmt::format("lesser({}) should be < greater_0({})", FLAGS_lesser, FLAGS_greater_0);
+        return false;
+    }
+
+    return true;
+});
+
+DSN_DEFINE_group_validator(lesser_greater_1, [](std::string &message) -> bool {
+    if (FLAGS_lesser >= FLAGS_greater_1) {
+        message =
+            fmt::format("lesser({}) should be < greater_1({})", FLAGS_lesser, FLAGS_greater_1);
+        return false;
+    }
+
     return true;
 });
 
@@ -99,6 +180,68 @@ TEST(flag_test, update_config)
     res = update_flag("test_validator", "-1");
     ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
     ASSERT_EQ(FLAGS_test_validator, 5);
+
+    // successful detection with consistent conditions
+    res = update_flag("condition_a", "true");
+    ASSERT_TRUE(res.is_ok());
+    ASSERT_EQ(FLAGS_condition_a, true);
+
+    // failed detection with mutually exclusive conditions
+    res = update_flag("condition_b", "true");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_condition_b, false);
+    std::cout << res.description() << std::endl;
+
+    // successful detection between 2 flags
+    res = update_flag("max_value", "6");
+    ASSERT_TRUE(res.is_ok());
+    ASSERT_EQ(FLAGS_max_value, 6);
+
+    // failed detection between 2 flags with each individual validation
+    res = update_flag("min_value", "0");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_min_value, 1);
+    std::cout << res.description() << std::endl;
+
+    // failed detection between 2 flags within a grouped validator
+    res = update_flag("min_value", "7");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_min_value, 1);
+    std::cout << res.description() << std::endl;
+
+    // successful detection among 3 flags within a grouped validator
+    res = update_flag("medium_value", "6");
+    ASSERT_TRUE(res.is_ok());
+    ASSERT_EQ(FLAGS_medium_value, 6);
+
+    // failed detection among 3 flags within a grouped validator
+    res = update_flag("medium_value", "0");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_medium_value, 6);
+    std::cout << res.description() << std::endl;
+
+    // failed detection among 3 flags within a grouped validator
+    res = update_flag("medium_value", "10");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_medium_value, 6);
+    std::cout << res.description() << std::endl;
+
+    // successful detection among 3 flags within both 2 grouped validators
+    res = update_flag("lesser", "1");
+    ASSERT_TRUE(res.is_ok());
+    ASSERT_EQ(FLAGS_lesser, 1);
+
+    // failed detection among 3 flags within one of 2 grouped validators
+    res = update_flag("lesser", "6");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_lesser, 1);
+    std::cout << res.description() << std::endl;
+
+    // failed detection among 3 flags within both 2 grouped validators
+    res = update_flag("lesser", "11");
+    ASSERT_EQ(res.code(), ERR_INVALID_PARAMETERS);
+    ASSERT_EQ(FLAGS_lesser, 1);
+    std::cout << res.description() << std::endl;
 }
 
 DSN_DEFINE_int32("flag_test", has_tag, 5, "");
