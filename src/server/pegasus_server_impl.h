@@ -37,6 +37,13 @@
 #include "range_read_limiter.h"
 #include "pegasus_read_service.h"
 
+namespace dsn {
+namespace utils {
+class token_bucket_throttling_controller;
+} // namespace utils
+} // namespace dsn
+typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
+
 namespace pegasus {
 namespace server {
 
@@ -275,6 +282,8 @@ private:
 
     void update_user_specified_compaction(const std::map<std::string, std::string> &envs);
 
+    void update_throttling_controller(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -356,6 +365,8 @@ private:
 
     uint32_t query_data_version() const override;
 
+    dsn::replication::manual_compaction_status::type query_compact_status() const override;
+
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
     static const std::string COMPRESSION_HEADER;
@@ -426,6 +437,8 @@ private:
     std::shared_ptr<hotkey_collector> _read_hotkey_collector;
     std::shared_ptr<hotkey_collector> _write_hotkey_collector;
 
+    std::shared_ptr<throttling_controller> _read_size_throttling_controller;
+
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
@@ -464,6 +477,8 @@ private:
     dsn::perf_counter_wrapper _pfc_rdb_l0_hit_count;
     dsn::perf_counter_wrapper _pfc_rdb_l1_hit_count;
     dsn::perf_counter_wrapper _pfc_rdb_l2andup_hit_count;
+
+    dsn::perf_counter_wrapper _counter_recent_read_throttling_reject_count;
 };
 
 } // namespace server

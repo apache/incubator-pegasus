@@ -1568,7 +1568,8 @@ typedef struct _get_scanner_request__isset
           sort_key_filter_type(false),
           sort_key_filter_pattern(false),
           validate_partition_hash(false),
-          return_expire_ts(false)
+          return_expire_ts(false),
+          full_scan(false)
     {
     }
     bool start_key : 1;
@@ -1583,6 +1584,7 @@ typedef struct _get_scanner_request__isset
     bool sort_key_filter_pattern : 1;
     bool validate_partition_hash : 1;
     bool return_expire_ts : 1;
+    bool full_scan : 1;
 } _get_scanner_request__isset;
 
 class get_scanner_request
@@ -1600,7 +1602,8 @@ public:
           hash_key_filter_type((filter_type::type)0),
           sort_key_filter_type((filter_type::type)0),
           validate_partition_hash(0),
-          return_expire_ts(0)
+          return_expire_ts(0),
+          full_scan(0)
     {
     }
 
@@ -1617,6 +1620,7 @@ public:
     ::dsn::blob sort_key_filter_pattern;
     bool validate_partition_hash;
     bool return_expire_ts;
+    bool full_scan;
 
     _get_scanner_request__isset __isset;
 
@@ -1643,6 +1647,8 @@ public:
     void __set_validate_partition_hash(const bool val);
 
     void __set_return_expire_ts(const bool val);
+
+    void __set_full_scan(const bool val);
 
     bool operator==(const get_scanner_request &rhs) const
     {
@@ -1674,6 +1680,10 @@ public:
         if (__isset.return_expire_ts != rhs.__isset.return_expire_ts)
             return false;
         else if (__isset.return_expire_ts && !(return_expire_ts == rhs.return_expire_ts))
+            return false;
+        if (__isset.full_scan != rhs.__isset.full_scan)
+            return false;
+        else if (__isset.full_scan && !(full_scan == rhs.full_scan))
             return false;
         return true;
     }
@@ -1967,7 +1977,8 @@ inline std::ostream &operator<<(std::ostream &out, const duplicate_response &obj
     obj.printTo(out);
     return out;
 }
-}
-} // namespace
+
+} // namespace apps
+} // namespace dsn
 
 #endif

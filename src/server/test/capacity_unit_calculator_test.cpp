@@ -21,6 +21,7 @@
 #include "server/capacity_unit_calculator.h"
 
 #include <dsn/dist/replication/replica_base.h>
+#include <dsn/utils/token_bucket_throttling_controller.h>
 #include "pegasus_key_schema.h"
 #include "server/hotkey_collector.h"
 
@@ -53,7 +54,8 @@ public:
         : capacity_unit_calculator(
               r,
               std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::READ, r),
-              std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, r))
+              std::make_shared<hotkey_collector>(dsn::replication::hotkey_type::WRITE, r),
+              std::make_shared<dsn::utils::token_bucket_throttling_controller>())
     {
     }
 

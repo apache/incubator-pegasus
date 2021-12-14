@@ -20,6 +20,7 @@
 #include "capacity_unit_calculator.h"
 
 #include <dsn/utility/config_api.h>
+#include <dsn/utils/token_bucket_throttling_controller.h>
 #include <rocksdb/status.h>
 #include "hotkey_collector.h"
 
@@ -29,13 +30,17 @@ namespace server {
 capacity_unit_calculator::capacity_unit_calculator(
     replica_base *r,
     std::shared_ptr<hotkey_collector> read_hotkey_collector,
-    std::shared_ptr<hotkey_collector> write_hotkey_collector)
+    std::shared_ptr<hotkey_collector> write_hotkey_collector,
+    std::shared_ptr<throttling_controller> read_size_throttling_controller)
     : replica_base(r),
       _read_hotkey_collector(read_hotkey_collector),
-      _write_hotkey_collector(write_hotkey_collector)
+      _write_hotkey_collector(write_hotkey_collector),
+      _read_size_throttling_controller(read_size_throttling_controller)
 {
     dassert(_read_hotkey_collector != nullptr, "read hotkey collector is a nullptr");
     dassert(_write_hotkey_collector != nullptr, "write hotkey collector is a nullptr");
+    dassert(_read_size_throttling_controller != nullptr,
+            "_read_size_throttling_controller is a nullptr");
 
     _read_capacity_unit_size =
         dsn_config_get_value_uint64("pegasus.server",
@@ -106,6 +111,7 @@ int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
                           ? (read_data_size + _read_capacity_unit_size - 1) >> _log_read_cu_size
                           : 1;
     _pfc_recent_read_cu->add(read_cu);
+    _read_size_throttling_controller->consume_token(read_data_size);
     return read_cu;
 }
 

@@ -351,5 +351,32 @@ std::string pegasus_manual_compact_service::query_compact_state() const
     return state.str();
 }
 
+dsn::replication::manual_compaction_status::type
+pegasus_manual_compact_service::query_compact_status() const
+{
+    // Case1. last finish at [-]
+    // - partition is not running manual compaction
+    // Case2. last finish at [timestamp], last used {time_used} ms
+    // - partition manual compaction finished
+    // Case3. last finish at [-], recent enqueue at [timestamp]
+    // - partition is in manual compaction queue
+    // Case4. last finish at [-], recent enqueue at [timestamp], recent start at [timestamp]
+    // - partition is running manual compaction
+    uint64_t enqueue_time_ms = _manual_compact_enqueue_time_ms.load();
+    uint64_t start_time_ms = _manual_compact_start_running_time_ms.load();
+    uint64_t last_finish_time_ms = _manual_compact_last_finish_time_ms.load();
+    uint64_t last_time_used_ms = _manual_compact_last_time_used_ms.load();
+
+    if (start_time_ms > 0) {
+        return dsn::replication::manual_compaction_status::RUNNING;
+    } else if (enqueue_time_ms > 0) {
+        return dsn::replication::manual_compaction_status::QUEUING;
+    } else if (last_time_used_ms > 0 && last_finish_time_ms > 0) {
+        return dsn::replication::manual_compaction_status::FINISHED;
+    } else {
+        return dsn::replication::manual_compaction_status::IDLE;
+    }
+}
+
 } // namespace server
 } // namespace pegasus

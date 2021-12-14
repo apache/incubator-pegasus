@@ -23,6 +23,7 @@
 #include <dsn/utility/string_view.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
+#include <dsn/dist/replication/replication_types.h>
 
 namespace pegasus {
 namespace server {
@@ -38,7 +39,10 @@ public:
 
     void start_manual_compact_if_needed(const std::map<std::string, std::string> &envs);
 
+    // Called by pegasus_manual_compaction.sh
     std::string query_compact_state() const;
+
+    dsn::replication::manual_compaction_status::type query_compact_status() const;
 
 private:
     friend class manual_compact_service_test;

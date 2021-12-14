@@ -22,7 +22,7 @@
 PID=$$
 
 if [ $# -le 1 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false) <nfs_copy_rate_megabytes>(default 100)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false) <nfs_rate_megabytes_per_disk>(default 100)"
   echo 
   echo "for example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true 100"
@@ -40,9 +40,9 @@ else
 fi
 
 if [ -z $4 ]; then
-  nfs_copy_rate_megabytes=100
+  nfs_rate_megabytes_per_disk=100
 else
-  nfs_copy_rate_megabytes=$4
+  nfs_rate_megabytes_per_disk=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -88,11 +88,17 @@ if [ "$only_move_primary" == "true" ]; then
 fi
 echo
 
-echo "Set nfs_copy_rate_megabytes $nfs_copy_rate_megabytes"
-echo "remote_command -t replica-server nfs.max_copy_rate_megabytes $nfs_copy_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.cluster_rebalance.set_nfs_copy_rate_megabytes
-set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.cluster_rebalance.set_nfs_copy_rate_megabytes | wc -l`
+echo "Set nfs_copy/send_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk"
+echo "remote_command -t replica-server nfs.max_copy_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  echo "ERROR: set nfs_copy_rate_megabytes_per_disk failed"
+  exit 1
+fi
+echo "remote_command -t replica-server nfs.max_send_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_send_rate_megabytes_per_disk failed"
   exit 1
 fi
 
@@ -109,7 +115,7 @@ echo "Wait for 3 minutes to do load balance..."
 sleep 180
 ## Number of check times for balanced state, in case that op_count is 0 but
 ## the cluster is in fact unbalanced. Each check waits for 30 secs.
-op_count_check_remain_times=1
+op_count_check_remain_times=3
 while true; do
     op_count=$(echo "cluster_info" | ./run.sh shell --cluster $meta_list | grep balance_operation_count | grep -o 'total=[0-9][0-9]*' | cut -d= -f2)
     if [ -z $op_count ]; then
@@ -151,11 +157,17 @@ if [ "$only_move_primary" == "true" ]; then
   echo
 fi
 
-echo "Set nfs_copy_rate_megabytes 500"
-echo "remote_command -t replica-server nfs.max_copy_rate_megabytes 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.cluster_rebalance.set_nfs_copy_rate_megabytes
-set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.cluster_rebalance.set_nfs_copy_rate_megabytes | wc -l`
+echo "Set nfs_copy/send_rate_megabytes_per_disk 500"
+echo "remote_command -t replica-server nfs.max_copy_rate_megabytes_per_disk 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_copy_rate_megabytes failed"
+  echo "ERROR: set nfs_copy_rate_megabytes_per_disk failed"
+  exit 1
+fi
+echo "remote_command -t replica-server nfs.max_send_rate_megabytes_per_disk 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk | wc -l`
+if [ $set_ok -le 0 ]; then
+  echo "ERROR: set nfs_send_rate_megabytes_per_disk failed"
   exit 1
 fi
 
