@@ -1684,5 +1684,14 @@ replication_ddl_client::add_new_disk(const rpc_address &target_node, const std::
     return resps.begin()->second.get_value();
 }
 
+error_with<query_app_manual_compact_response>
+replication_ddl_client::query_app_manual_compact(const std::string &app_name)
+{
+    auto req = make_unique<query_app_manual_compact_request>();
+    req->app_name = app_name;
+    return call_rpc_sync(
+        query_manual_compact_rpc(std::move(req), RPC_CM_QUERY_MANUAL_COMPACT_STATUS));
+}
+
 } // namespace replication
 } // namespace dsn

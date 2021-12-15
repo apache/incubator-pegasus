@@ -237,6 +237,22 @@ struct configuration_update_app_env_response
     2:string hint_message;
 }
 
+struct query_app_manual_compact_request
+{
+    1:string app_name;
+}
+
+struct query_app_manual_compact_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: app is not executing manual compaction
+    1:dsn.error_code    err;
+    2:string            hint_msg;
+    3:optional i32      progress;
+}
+
 /////////////////// Nodes Management ////////////////////
 
 struct node_info

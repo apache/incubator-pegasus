@@ -324,6 +324,11 @@ public:
             cc.lb_actions.clear();
         }
     }
+
+    void reset_manual_compact_status();
+    // get replica group manual compact progress
+    // return false if partition is not executing manual compaction
+    bool get_manual_compact_progress(/*out*/ int32_t &progress) const;
 };
 
 /*

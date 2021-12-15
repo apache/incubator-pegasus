@@ -51,6 +51,8 @@ typedef rpc_holder<notify_stop_split_request, notify_stop_split_response> notify
 typedef rpc_holder<query_child_state_request, query_child_state_response> query_child_state_rpc;
 
 typedef rpc_holder<backup_request, backup_response> backup_rpc;
+typedef rpc_holder<query_app_manual_compact_request, query_app_manual_compact_response>
+    query_manual_compact_rpc;
 
 class replication_options
 {

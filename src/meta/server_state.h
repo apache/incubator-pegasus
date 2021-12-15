@@ -171,6 +171,9 @@ public:
 
     void on_query_restore_status(configuration_query_restore_rpc rpc);
 
+    // manual compaction
+    void on_query_manual_compact_status(query_manual_compact_rpc rpc);
+
     // return true if no need to do any actions
     bool check_all_partitions();
     void get_cluster_balance_score(double &primary_stddev /*out*/, double &total_stddev /*out*/);

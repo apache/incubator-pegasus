@@ -2943,5 +2943,40 @@ bool server_state::validate_target_max_replica_count(int32_t max_replica_count)
     return valid;
 }
 
+void server_state::on_query_manual_compact_status(query_manual_compact_rpc rpc)
+{
+    const std::string &app_name = rpc.request().app_name;
+    auto &response = rpc.response();
+
+    std::shared_ptr<app_state> app;
+    {
+        zauto_read_lock l(_lock);
+        app = get_app(app_name);
+    }
+
+    if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
+        response.err = app == nullptr ? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
+        response.hint_msg =
+            fmt::format("app {} is {}",
+                        app_name,
+                        response.err == ERR_APP_NOT_EXIST ? "not existed" : "not available");
+        derror_f("{}", response.hint_msg);
+        return;
+    }
+
+    int32_t total_progress = 0;
+    if (!app->helpers->get_manual_compact_progress(total_progress)) {
+        response.err = ERR_INVALID_STATE;
+        response.hint_msg = fmt::format("app {} is not manual compaction", app_name);
+        dwarn_f("{}", response.hint_msg);
+        return;
+    }
+
+    ddebug_f("query app {} manual compact succeed, total_progress = {}", app_name, total_progress);
+    response.err = ERR_OK;
+    response.hint_msg = "succeed";
+    response.__set_progress(total_progress);
+}
+
 } // namespace replication
 } // namespace dsn
