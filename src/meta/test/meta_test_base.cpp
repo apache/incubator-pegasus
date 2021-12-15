@@ -17,6 +17,8 @@
 
 #include "meta_test_base.h"
 
+#include <dsn/dist/fmt_logging.h>
+
 #include "meta/server_load_balancer.h"
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_split_service.h"
@@ -84,6 +86,76 @@ void meta_test_base::initialize_node_state() { _ss->initialize_node_state(); }
 
 void meta_test_base::wait_all() { _ms->tracker()->wait_outstanding_tasks(); }
 
+void meta_test_base::set_min_live_node_count_for_unfreeze(uint64_t node_count)
+{
+    _ms->_meta_opts.min_live_node_count_for_unfreeze = node_count;
+}
+
+void meta_test_base::set_node_live_percentage_threshold_for_update(uint64_t percentage_threshold)
+{
+    _ms->_node_live_percentage_threshold_for_update = percentage_threshold;
+}
+
+std::vector<rpc_address> meta_test_base::get_alive_nodes() const
+{
+    std::vector<dsn::rpc_address> nodes;
+
+    zauto_read_lock l(_ss->_lock);
+
+    for (const auto &node : _ss->_nodes) {
+        if (node.second.alive()) {
+            nodes.push_back(node.first);
+        }
+    }
+
+    return nodes;
+}
+
+std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_count)
+{
+    if (min_node_count < 1) {
+        return std::vector<dsn::rpc_address>();
+    }
+
+    std::vector<dsn::rpc_address> nodes(get_alive_nodes());
+    if (!nodes.empty()) {
+        auto node_count = static_cast<int>(nodes.size());
+        dassert_f(node_count >= min_node_count,
+                  "there should be at least {} alive nodes, now we just have {} alive nodes",
+                  min_node_count,
+                  node_count);
+
+        dinfo_f("already exists {} alive nodes: ", nodes.size());
+        for (const auto &node : nodes) {
+            dinfo_f("    {}", node.to_string());
+        }
+
+        // ensure that _ms->_alive_set is identical with _ss->_nodes
+        _ms->set_node_state(nodes, true);
+        return nodes;
+    }
+
+    nodes = generate_node_list(min_node_count);
+    _ms->set_node_state(nodes, true);
+
+    while (true) {
+        {
+            std::vector<dsn::rpc_address> alive_nodes(get_alive_nodes());
+            if (static_cast<int>(alive_nodes.size()) >= min_node_count) {
+                break;
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    dinfo_f("created {} alive nodes: ", nodes.size());
+    for (const auto &node : nodes) {
+        dinfo_f("    {}", node.to_string());
+    }
+    return nodes;
+}
+
 void meta_test_base::create_app(const std::string &name, uint32_t partition_count)
 {
     configuration_create_app_request req;
@@ -95,6 +167,9 @@ void meta_test_base::create_app(const std::string &name, uint32_t partition_coun
     req.options.success_if_exist = false;
     req.options.is_stateful = true;
     req.options.envs["value_version"] = "1";
+
+    set_min_live_node_count_for_unfreeze(2);
+    ensure_enough_alive_nodes(3);
 
     auto result = fake_create_app(_ss.get(), req);
     fake_wait_rpc(result, resp);

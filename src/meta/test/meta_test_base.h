@@ -45,6 +45,12 @@ public:
 
     void wait_all();
 
+    void set_min_live_node_count_for_unfreeze(uint64_t node_count);
+
+    void set_node_live_percentage_threshold_for_update(uint64_t percentage_threshold);
+
+    std::vector<rpc_address> ensure_enough_alive_nodes(int min_node_count);
+
     // create an app for test with specified name and specified partition count
     void create_app(const std::string &name, uint32_t partition_count);
 
@@ -70,6 +76,9 @@ public:
     std::shared_ptr<server_state> _ss;
     std::unique_ptr<meta_service> _ms;
     std::string _app_root;
+
+private:
+    std::vector<rpc_address> get_alive_nodes() const;
 };
 
 } // namespace replication

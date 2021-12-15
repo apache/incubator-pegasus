@@ -507,7 +507,7 @@ TEST_F(meta_duplication_service_test, remove_dup)
 
 TEST_F(meta_duplication_service_test, duplication_sync)
 {
-    std::vector<rpc_address> server_nodes = generate_node_list(3);
+    std::vector<rpc_address> server_nodes = ensure_enough_alive_nodes(3);
     rpc_address node = server_nodes[0];
 
     std::string test_app = "test_app_0";

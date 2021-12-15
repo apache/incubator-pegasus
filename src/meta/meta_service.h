@@ -156,6 +156,8 @@ public:
 
     dsn::task_tracker *tracker() { return &_tracker; }
 
+    size_t get_alive_node_count() const;
+
     bool try_lock_meta_op_status(meta_op_status op_status);
     void unlock_meta_op_status();
     meta_op_status get_op_status() const { return _meta_op_status.load(); }
