@@ -172,6 +172,7 @@ public:
     void on_query_restore_status(configuration_query_restore_rpc rpc);
 
     // manual compaction
+    void on_start_manual_compact(start_manual_compact_rpc rpc);
     void on_query_manual_compact_status(query_manual_compact_rpc rpc);
 
     // return true if no need to do any actions
@@ -298,6 +299,14 @@ private:
     // check whether a max replica count is valid especially for a new app
     bool validate_target_max_replica_count(int32_t max_replica_count);
 
+    // Used for `on_start_manual_compaction`
+    bool parse_compaction_envs(start_manual_compact_rpc rpc,
+                               std::vector<std::string> &keys,
+                               std::vector<std::string> &values);
+    void update_compaction_envs_on_remote_storage(start_manual_compact_rpc rpc,
+                                                  const std::vector<std::string> &keys,
+                                                  const std::vector<std::string> &values);
+
 private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
@@ -311,6 +320,7 @@ private:
     friend class meta_test_base;
     friend class test::test_checker;
     friend class server_state_restore_test;
+    friend class meta_app_compaction_test;
 
     FRIEND_TEST(meta_backup_service_test, test_add_backup_policy);
     FRIEND_TEST(policy_context_test, test_app_dropped_during_backup);

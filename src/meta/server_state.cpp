@@ -35,6 +35,7 @@
  */
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/tool-api/task.h>
@@ -2941,6 +2942,139 @@ bool server_state::validate_target_max_replica_count(int32_t max_replica_count)
     }
 
     return valid;
+}
+
+void server_state::on_start_manual_compact(start_manual_compact_rpc rpc)
+{
+    const std::string &app_name = rpc.request().app_name;
+    auto &response = rpc.response();
+
+    std::map<std::string, std::string> envs;
+    {
+        zauto_read_lock l(_lock);
+        auto app = get_app(app_name);
+        if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
+            response.err = app == nullptr ? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
+            response.hint_msg =
+                fmt::format("app {} is {}",
+                            app_name,
+                            response.err == ERR_APP_NOT_EXIST ? "not existed" : "not available");
+            derror_f("{}", response.hint_msg);
+            return;
+        }
+        envs = app->envs;
+    }
+
+    auto iter = envs.find(replica_envs::MANUAL_COMPACT_DISABLED);
+    if (iter != envs.end() && iter->second == "true") {
+        response.err = ERR_OPERATION_DISABLED;
+        response.hint_msg = fmt::format("app {} disable manual compaction", app_name);
+        derror_f("{}", response.hint_msg);
+        return;
+    }
+
+    std::vector<std::string> keys;
+    std::vector<std::string> values;
+    if (!parse_compaction_envs(rpc, keys, values)) {
+        return;
+    }
+
+    update_compaction_envs_on_remote_storage(rpc, keys, values);
+
+    // update local manual compaction status
+    {
+        zauto_write_lock l(_lock);
+        auto app = get_app(app_name);
+        app->helpers->reset_manual_compact_status();
+    }
+}
+
+bool server_state::parse_compaction_envs(start_manual_compact_rpc rpc,
+                                         std::vector<std::string> &keys,
+                                         std::vector<std::string> &values)
+{
+    const auto &request = rpc.request();
+    auto &response = rpc.response();
+
+    int32_t target_level = -1;
+    if (request.__isset.target_level) {
+        target_level = request.target_level;
+        if (target_level < -1) {
+            response.err = ERR_INVALID_PARAMETERS;
+            response.hint_msg = fmt::format(
+                "invalid target_level({}), should in range of [-1, num_levels]", target_level);
+            derror_f("{}", response.hint_msg);
+            return false;
+        }
+    }
+    keys.emplace_back(replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL);
+    values.emplace_back(std::to_string(target_level));
+
+    if (request.__isset.max_running_count) {
+        if (request.max_running_count < 0) {
+            response.err = ERR_INVALID_PARAMETERS;
+            response.hint_msg =
+                fmt::format("invalid max_running_count({}), should be greater than 0",
+                            request.max_running_count);
+            derror_f("{}", response.hint_msg);
+            return false;
+        }
+        if (request.max_running_count > 0) {
+            keys.emplace_back(replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT);
+            values.emplace_back(std::to_string(request.max_running_count));
+        }
+    }
+
+    std::string bottommost = "skip";
+    if (request.__isset.bottommost && request.bottommost) {
+        bottommost = "force";
+    }
+    keys.emplace_back(replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION);
+    values.emplace_back(bottommost);
+
+    int64_t trigger_time = dsn_now_s();
+    if (request.__isset.trigger_time) {
+        trigger_time = request.trigger_time;
+    }
+    keys.emplace_back(replica_envs::MANUAL_COMPACT_ONCE_TRIGGER_TIME);
+    values.emplace_back(std::to_string(trigger_time));
+
+    return true;
+}
+
+void server_state::update_compaction_envs_on_remote_storage(start_manual_compact_rpc rpc,
+                                                            const std::vector<std::string> &keys,
+                                                            const std::vector<std::string> &values)
+{
+    const std::string &app_name = rpc.request().app_name;
+    std::string app_path = "";
+    app_info ainfo;
+    {
+        zauto_read_lock l(_lock);
+        auto app = get_app(app_name);
+        ainfo = *(reinterpret_cast<app_info *>(app.get()));
+        app_path = get_app_path(*app);
+    }
+    for (auto idx = 0; idx < keys.size(); idx++) {
+        ainfo.envs[keys[idx]] = values[idx];
+    }
+    do_update_app_info(app_path, ainfo, [this, app_name, keys, values, rpc](error_code ec) {
+        dassert_f(ec == ERR_OK, "update app_info to remote storage failed with err = {}", ec);
+
+        zauto_write_lock l(_lock);
+        auto app = get_app(app_name);
+        std::string old_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+        for (int idx = 0; idx < keys.size(); idx++) {
+            app->envs[keys[idx]] = values[idx];
+        }
+        std::string new_envs = dsn::utils::kv_map_to_string(app->envs, ',', '=');
+        ddebug_f("update manual compaction envs succeed: old_envs = {}, new_envs = {}",
+                 old_envs,
+                 new_envs);
+
+        rpc.response().err = ERR_OK;
+        rpc.response().hint_msg = "succeed";
+    });
 }
 
 void server_state::on_query_manual_compact_status(query_manual_compact_rpc rpc)

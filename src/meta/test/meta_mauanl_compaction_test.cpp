@@ -50,6 +50,59 @@ public:
         }
     }
 
+    error_code start_manual_compaction(std::string app_name,
+                                       std::string disable_manual,
+                                       bool bottommost = false,
+                                       int32_t target_level = -1,
+                                       int32_t running_count = 0)
+    {
+        if (app_name == APP_NAME) {
+            auto app = find_app(app_name);
+            app->envs[replica_envs::MANUAL_COMPACT_DISABLED] = disable_manual;
+        }
+        auto request = dsn::make_unique<start_app_manual_compact_request>();
+        request->app_name = app_name;
+        if (target_level != -1) {
+            request->__set_target_level(target_level);
+        }
+        if (running_count != 0) {
+            request->__set_max_running_count(running_count);
+        }
+        request->__set_bottommost(bottommost);
+
+        start_manual_compact_rpc rpc(std::move(request), RPC_CM_START_MANUAL_COMPACT);
+        _ss->on_start_manual_compact(rpc);
+        _ss->wait_all_task();
+        return rpc.response().err;
+    }
+
+    void check_after_start_compaction(std::string bottommost,
+                                      int32_t target_level = -1,
+                                      int32_t running_count = 0)
+    {
+        auto app = find_app(APP_NAME);
+        if (app->envs.find(replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION) !=
+            app->envs.end()) {
+            ASSERT_EQ(app->envs[replica_envs::MANUAL_COMPACT_ONCE_BOTTOMMOST_LEVEL_COMPACTION],
+                      bottommost);
+        }
+        if (app->envs.find(replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL) != app->envs.end()) {
+            ASSERT_EQ(app->envs[replica_envs::MANUAL_COMPACT_ONCE_TARGET_LEVEL],
+                      std::to_string(target_level));
+        }
+        if (running_count > 0 &&
+            app->envs.find(replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT) !=
+                app->envs.end()) {
+            ASSERT_EQ(app->envs[replica_envs::MANUAL_COMPACT_MAX_CONCURRENT_RUNNING_COUNT],
+                      std::to_string(running_count));
+        }
+        for (auto &cc : app->helpers->contexts) {
+            for (auto &r : cc.serving) {
+                ASSERT_EQ(r.compact_status, manual_compaction_status::IDLE);
+            }
+        }
+    }
+
     query_app_manual_compact_response query_manual_compaction(int32_t mock_progress)
     {
         manual_compaction_status::type status = manual_compaction_status::IDLE;
@@ -87,6 +140,40 @@ public:
     int32_t PARTITION_COUNT = 4;
 };
 
+TEST_F(meta_app_compaction_test, test_start_compaction)
+{
+    struct test_case
+    {
+        std::string app_name;
+        std::string disable_compaction;
+        bool bottommost;
+        int32_t target_level;
+        int32_t running_count;
+        error_code expected_err;
+        std::string expected_bottommost;
+    } tests[] = {{"app_not_exist", "false", false, -1, 0, ERR_APP_NOT_EXIST, "skip"},
+                 {APP_NAME, "true", false, -1, 0, ERR_OPERATION_DISABLED, "skip"},
+                 {APP_NAME, "false", false, -5, 0, ERR_INVALID_PARAMETERS, "skip"},
+                 {APP_NAME, "false", false, -1, -1, ERR_INVALID_PARAMETERS, "skip"},
+                 {APP_NAME, "false", false, -1, 0, ERR_OK, "skip"},
+                 {APP_NAME, "false", true, -1, 0, ERR_OK, "force"},
+                 {APP_NAME, "false", false, 1, 0, ERR_OK, "skip"},
+                 {APP_NAME, "false", true, -1, 1, ERR_OK, "force"}};
+
+    for (const auto &test : tests) {
+        auto err = start_manual_compaction(test.app_name,
+                                           test.disable_compaction,
+                                           test.bottommost,
+                                           test.target_level,
+                                           test.running_count);
+        ASSERT_EQ(err, test.expected_err);
+        if (err == ERR_OK) {
+            check_after_start_compaction(
+                test.expected_bottommost, test.target_level, test.running_count);
+        }
+    }
+}
+
 TEST_F(meta_app_compaction_test, test_query_compaction)
 {
     struct test_case
@@ -95,7 +182,7 @@ TEST_F(meta_app_compaction_test, test_query_compaction)
         error_code expected_err;
     } tests[] = {{-1, ERR_INVALID_STATE}, {0, ERR_OK}, {50, ERR_OK}, {100, ERR_OK}};
 
-    for (auto test : tests) {
+    for (const auto &test : tests) {
         auto resp = query_manual_compaction(test.mock_progress);
         ASSERT_EQ(resp.err, test.expected_err);
         if (resp.err == ERR_OK) {

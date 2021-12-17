@@ -218,6 +218,12 @@ public:
     error_with<add_new_disk_response> add_new_disk(const rpc_address &target_node,
                                                    const std::string &disk_str);
 
+    error_with<start_app_manual_compact_response>
+    start_app_manual_compact(const std::string &app_name,
+                             bool bottommost = false,
+                             const int32_t level = -1,
+                             const int32_t max_count = 0);
+
     error_with<query_app_manual_compact_response>
     query_app_manual_compact(const std::string &app_name);
 

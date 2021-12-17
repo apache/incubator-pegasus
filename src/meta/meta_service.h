@@ -230,6 +230,7 @@ private:
     void on_query_bulk_load_status(query_bulk_load_rpc rpc);
 
     // manual compaction
+    void on_start_manual_compact(start_manual_compact_rpc rpc);
     void on_query_manual_compact_status(query_manual_compact_rpc rpc);
 
     // common routines

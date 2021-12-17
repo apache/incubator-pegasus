@@ -237,6 +237,26 @@ struct configuration_update_app_env_response
     2:string hint_message;
 }
 
+struct start_app_manual_compact_request
+{
+    1:string        app_name;
+    2:optional i64  trigger_time;
+    3:optional i32  target_level;
+    4:optional bool bottommost;
+    5:optional i32  max_running_count;
+}
+
+struct start_app_manual_compact_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_OPERATION_DISABLED: app disable manual compaction
+    // - ERR_INVALID_PARAMETERS: invalid manual compaction parameters
+    1:dsn.error_code    err;
+    2:string            hint_msg;
+}
+
 struct query_app_manual_compact_request
 {
     1:string app_name;
