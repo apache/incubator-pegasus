@@ -146,6 +146,42 @@ struct update_app_env_response
     2:string hint_message;
 }
 
+struct start_app_manual_compact_request
+{
+    1:string        app_name;
+    2:optional i64  trigger_time;
+    3:optional i32  target_level;
+    4:optional bool bottommost;
+    5:optional i32  max_running_count;
+}
+
+struct start_app_manual_compact_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_OPERATION_DISABLED: app disable manual compaction
+    // - ERR_INVALID_PARAMETERS: invalid manual compaction parameters
+    1:base.error_code    err;
+    2:string            hint_msg;
+}
+
+struct query_app_manual_compact_request
+{
+    1:string app_name;
+}
+
+struct query_app_manual_compact_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: app is not executing manual compaction
+    1:base.error_code    err;
+    2:string            hint_msg;
+    3:optional i32      progress;
+}
+
 /////////////////// Nodes Management ////////////////////
 
 enum node_status
@@ -684,4 +720,8 @@ service admin_client
     query_bulk_load_response query_bulk_load_status(1: query_bulk_load_request req);
 
     control_bulk_load_response control_bulk_load(1: control_bulk_load_request req);
+
+    start_app_manual_compact_response start_manual_compact(1: start_app_manual_compact_request req);
+
+    query_app_manual_compact_response query_manual_compact(1: query_app_manual_compact_request req);
 }

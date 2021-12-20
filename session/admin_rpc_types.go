@@ -583,3 +583,53 @@ func (m *MetaManager) ControlBulkLoad(ctx context.Context, req *admin.ControlBul
 	}
 	return nil, err
 }
+
+func (ms *metaSession) startManualCompact(ctx context.Context, req *admin.StartAppManualCompactRequest) (*admin.StartAppManualCompactResponse, error) {
+	arg := admin.NewAdminClientStartManualCompactArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_START_MANUAL_COMPACT")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientStartManualCompactResult)
+	return ret.GetSuccess(), nil
+}
+
+// StartManualCompact is auto-generated
+func (m *MetaManager) StartManualCompact(ctx context.Context, req *admin.StartAppManualCompactRequest) (*admin.StartAppManualCompactResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.startManualCompact(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.StartAppManualCompactResponse), fmt.Errorf("StartManualCompact failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.StartAppManualCompactResponse), nil
+	}
+	return nil, err
+}
+
+func (ms *metaSession) queryManualCompact(ctx context.Context, req *admin.QueryAppManualCompactRequest) (*admin.QueryAppManualCompactResponse, error) {
+	arg := admin.NewAdminClientQueryManualCompactArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_QUERY_MANUAL_COMPACT_STATUS")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientQueryManualCompactResult)
+	return ret.GetSuccess(), nil
+}
+
+// QueryManualCompact is auto-generated
+func (m *MetaManager) QueryManualCompact(ctx context.Context, req *admin.QueryAppManualCompactRequest) (*admin.QueryAppManualCompactResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.queryManualCompact(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.QueryAppManualCompactResponse), fmt.Errorf("QueryManualCompact failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.QueryAppManualCompactResponse), nil
+	}
+	return nil, err
+}

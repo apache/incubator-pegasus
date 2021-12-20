@@ -276,6 +276,16 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewControlBulkLoadResponse(),
 		}
 	},
+	"RPC_CM_START_MANUAL_COMPACT_ACK": func() RpcResponseResult {
+		return &admin.AdminClientStartManualCompactResult{
+			Success: admin.NewStartAppManualCompactResponse(),
+		}
+	},
+	"RPC_CM_QUERY_MANUAL_COMPACT_STATUS_ACK": func() RpcResponseResult {
+		return &admin.AdminClientQueryManualCompactResult{
+			Success: admin.NewQueryAppManualCompactResponse(),
+		}
+	},
 	"RPC_RRDB_RRDB_GET_ACK": func() RpcResponseResult {
 		return &rrdb.RrdbGetResult{
 			Success: rrdb.NewReadResponse(),
