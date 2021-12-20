@@ -34,7 +34,7 @@
 #include <event2/keyvalq_struct.h>
 
 #include <dsn/cpp/service_app.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/replication/common.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
 

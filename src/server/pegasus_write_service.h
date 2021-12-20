@@ -21,6 +21,7 @@
 
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replica_base.h>
+#include <dsn/dist/replication/common.h>
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/replication/replication_types.h>
 

@@ -24,7 +24,7 @@
 #include <vector>
 #include <chrono>
 #include <dsn/tool-api/group_address.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/replication/common.h>
 #include <dsn/dist/fmt_logging.h>
 
 #include "base/pegasus_const.h"

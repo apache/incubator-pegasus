@@ -20,7 +20,7 @@
 #include "available_detector.h"
 
 #include <algorithm>
-#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/replication/common.h>
 #include <dsn/utils/time_utils.h>
 #include <iomanip>
 #include <sstream>
