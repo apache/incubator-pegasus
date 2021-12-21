@@ -64,7 +64,7 @@ private:
     std::string _hdfs_path;
 
     std::unique_ptr<folly::DynamicTokenBucket> _read_token_bucket;
-    // TODO: add write limiter
+    std::unique_ptr<folly::DynamicTokenBucket> _write_token_bucket;
 
     friend class hdfs_file_object;
 };
