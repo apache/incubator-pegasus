@@ -17,6 +17,7 @@
 
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/common.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/utility/string_conv.h>
 

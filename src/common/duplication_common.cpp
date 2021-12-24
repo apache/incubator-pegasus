@@ -21,12 +21,9 @@
 #include <dsn/utility/singleton.h>
 #include <dsn/utils/time_utils.h>
 #include <nlohmann/json.hpp>
-#include <dsn/utility/flags.h>
 
 namespace dsn {
 namespace replication {
-DSN_DEFINE_string("replication", cluster_name, "", "name of this cluster");
-
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
     auto it = _duplication_status_VALUES_TO_NAMES.find(status);
@@ -43,12 +40,6 @@ DSN_DEFINE_string("replication", cluster_name, "", "name of this cluster");
             "unexpected type of duplication_fail_mode: %d",
             fmode);
     return it->second;
-}
-
-/*extern*/ const char *get_current_cluster_name()
-{
-    dassert(strlen(FLAGS_cluster_name) != 0, "cluster_name is not set");
-    return FLAGS_cluster_name;
 }
 
 namespace internal {

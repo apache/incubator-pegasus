@@ -32,6 +32,13 @@
 namespace dsn {
 namespace replication {
 
+/**
+ * TODO:
+ *  According to the name of this file, it's should be used for a common file about replication.
+ *  But now we put a lot of classes and types which have nothing to do with replication into it.
+ *  So, it's better to refactor it later.
+ **/
+
 typedef std::unordered_map<::dsn::rpc_address, partition_status::type> node_statuses;
 typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
 

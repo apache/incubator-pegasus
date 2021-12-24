@@ -42,12 +42,6 @@ inline bool is_duplication_status_valid(duplication_status::type status)
     return status == duplication_status::DS_PAUSE || status == duplication_status::DS_START;
 }
 
-/// Returns the cluster name (i.e, "onebox") if it's configured under
-/// "replication" section:
-///    [replication]
-///      cluster_name = "onebox"
-extern const char *get_current_cluster_name();
-
 /// Returns the cluster id of url specified in the duplication-group section
 /// of your configuration, for example:
 ///
