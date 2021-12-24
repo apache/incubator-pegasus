@@ -61,7 +61,7 @@ inline int get_cluster_id_if_exists()
     // cluster_id is 0 if not configured, which means it will accept writes
     // from any cluster as long as the timestamp is larger.
     static auto cluster_id_res =
-        dsn::replication::get_duplication_cluster_id(dsn::replication::get_current_cluster_name());
+        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name());
     static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
     return cluster_id;
 }
