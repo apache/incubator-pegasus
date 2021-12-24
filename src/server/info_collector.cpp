@@ -24,7 +24,7 @@
 #include <vector>
 #include <chrono>
 #include <dsn/tool-api/group_address.h>
-#include <dsn/dist/replication/common.h>
+#include <dsn/dist/common.h>
 #include <dsn/dist/fmt_logging.h>
 
 #include "base/pegasus_const.h"
@@ -55,7 +55,7 @@ info_collector::info_collector()
         _meta_servers.group_address()->add(ms);
     }
 
-    _cluster_name = dsn::replication::get_current_cluster_name();
+    _cluster_name = dsn::get_current_cluster_name();
 
     _shell_context = std::make_shared<shell_context>();
     _shell_context->current_cluster_name = _cluster_name;
