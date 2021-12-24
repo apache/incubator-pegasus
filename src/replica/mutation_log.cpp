@@ -223,6 +223,10 @@ mutation_log_private::mutation_log_private(const std::string &dir,
 
     _plock.lock();
 
+    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
+        ADD_POINT(mu->_tracer);
+    }
+
     // init pending buffer
     if (nullptr == _pending_write) {
         _pending_write = make_unique<log_appender>(mark_new_offset(0, true).second);
@@ -400,6 +404,12 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                                                     std::shared_ptr<log_appender> &pending,
                                                     decree max_commit)
 {
+    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
+        for (const auto &mu : pending->mutations()) {
+            ADD_POINT(mu->_tracer);
+        }
+    }
+
     lf->commit_log_blocks(
         *pending,
         LPC_WRITE_REPLICATION_LOG_PRIVATE,
@@ -410,6 +420,12 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
             for (auto &block : pending->all_blocks()) {
                 auto hdr = (log_block_header *)block.front().data();
                 dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
+            }
+
+            if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
+                for (const auto &mu : pending->mutations()) {
+                    ADD_CUSTOM_POINT(mu->_tracer, "commit_pending_completed");
+                }
             }
 
             if (err != ERR_OK) {
