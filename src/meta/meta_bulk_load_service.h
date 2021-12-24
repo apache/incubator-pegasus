@@ -40,13 +40,17 @@ struct app_bulk_load_info
     std::string file_provider_type;
     bulk_load_status::type status;
     std::string remote_root_path;
+    bool is_ever_ingesting;
+    error_code bulk_load_err;
     DEFINE_JSON_SERIALIZATION(app_id,
                               partition_count,
                               app_name,
                               cluster_name,
                               file_provider_type,
                               status,
-                              remote_root_path)
+                              remote_root_path,
+                              is_ever_ingesting,
+                              bulk_load_err)
 };
 
 struct partition_bulk_load_info
@@ -176,7 +180,7 @@ private:
 
     void try_rollback_to_downloading(const std::string &app_name, const gpid &pid);
 
-    void handle_bulk_load_failed(int32_t app_id);
+    void handle_bulk_load_failed(int32_t app_id, error_code err);
 
     // Called when app bulk load status update to ingesting
     // create ingestion_request and send it to primary
@@ -192,7 +196,14 @@ private:
                                       const gpid &pid,
                                       const rpc_address &primary_addr);
 
-    void reset_local_bulk_load_states(int32_t app_id, const std::string &app_name);
+    // is_reset_all
+    // - true  : reset all states in memory
+    // - false : keep the bulk load results in memory, reset others
+    void reset_local_bulk_load_states_unlocked(int32_t app_id,
+                                               const std::string &app_name,
+                                               bool is_reset_all);
+    void
+    reset_local_bulk_load_states(int32_t app_id, const std::string &app_name, bool is_reset_all);
 
     ///
     /// update bulk load states to remote storage functions
@@ -231,6 +242,7 @@ private:
     // update app bulk load status on remote storage
     void update_app_status_on_remote_storage_unlocked(int32_t app_id,
                                                       bulk_load_status::type new_status,
+                                                      error_code err = ERR_OK,
                                                       bool should_send_request = false);
 
     void update_app_status_on_remote_storage_reply(const app_bulk_load_info &ainfo,
@@ -389,6 +401,16 @@ private:
             return iter->second.status;
         } else {
             return bulk_load_status::BLS_INVALID;
+        }
+    }
+
+    inline error_code get_app_bulk_load_err_unlocked(int32_t app_id) const
+    {
+        const auto &iter = _app_bulk_load_info.find(app_id);
+        if (iter != _app_bulk_load_info.end()) {
+            return iter->second.bulk_load_err;
+        } else {
+            return ERR_OK;
         }
     }
 

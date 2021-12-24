@@ -250,7 +250,7 @@ public:
     void reset_local_bulk_load_states()
     {
         auto app = find_app(APP_NAME);
-        bulk_svc().reset_local_bulk_load_states(app->app_id, APP_NAME);
+        bulk_svc().reset_local_bulk_load_states(app->app_id, APP_NAME, true);
         app->is_bulk_loading = false;
     }
 
@@ -307,7 +307,7 @@ TEST_F(meta_bulk_load_http_test, query_bulk_load_request)
         {APP_NAME,
          R"({"error":"ERR_OK","app_status":"replication::bulk_load_status::BLS_DOWNLOADING"})"},
         {NOT_BULK_LOAD,
-         R"({"error":"ERR_INVALID_STATE","app_status":"replication::bulk_load_status::BLS_INVALID"})"},
+         R"({"error":"ERR_OK","app_status":"replication::bulk_load_status::BLS_INVALID"})"},
         {NOT_FOUND,
          R"({"error":"ERR_APP_NOT_EXIST","app_status":"replication::bulk_load_status::BLS_INVALID"})"}};
     for (const auto &test : tests) {

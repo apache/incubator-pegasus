@@ -195,9 +195,14 @@ struct query_bulk_load_request
 struct query_bulk_load_response
 {
     // Possible error:
+    // - ERR_OK
     // - ERR_APP_NOT_EXIST: app not exist
     // - ERR_APP_DROPPED: app has been dropped
-    // - ERR_INVALID_STATE: app is not executing bulk load
+    // - ERR_FILE_OPERATION_FAILED: local file system error
+    // - ERR_FS_INTERNAL: remote file system error
+    // - ERR_CORRUPTION: file not exist or damaged
+    // - ERR_INGESTION_FAILED: ingest failed
+    // - ERR_RETRY_EXHAUSTED: retry too many times
     1:dsn.error_code                                        err;
     2:string                                                app_name;
     3:bulk_load_status                                      app_status;
@@ -206,4 +211,5 @@ struct query_bulk_load_response
     // detailed bulk load state for each replica
     6:list<map<dsn.rpc_address, partition_bulk_load_state>> bulk_load_states;
     7:optional string                                       hint_msg;
+    8:bool                                                  is_bulk_loading;
 }

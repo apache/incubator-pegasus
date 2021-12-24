@@ -249,6 +249,18 @@ inline bool json_decode(const JsonObject &in, std::string &str)
     return true;
 }
 
+inline void json_encode(JsonWriter &out, const error_code &err)
+{
+    const char *str = err.to_string();
+    out.String(str, strlen(str), true);
+}
+inline bool json_decode(const JsonObject &in, error_code &err)
+{
+    dverify(in.IsString());
+    err = error_code(in.GetString());
+    return true;
+}
+
 // json serialization for bool types.
 // for compatibility, we treat bool as integers, which is not this case in json standard
 inline void json_encode(JsonWriter &out, bool t) { out.Int(t ? 1 : 0); }
