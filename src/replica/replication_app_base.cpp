@@ -26,13 +26,13 @@
 
 #include "replica.h"
 #include "mutation.h"
+#include "common/bulk_load_common.h"
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/crc.h>
 #include <dsn/service_api_c.h>
-#include <dsn/utility/smart_pointers.h>
 #include <fstream>
 #include <sstream>
 #include <memory>

@@ -45,11 +45,6 @@ typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
     update_app_env_rpc;
 
-typedef rpc_holder<start_bulk_load_request, start_bulk_load_response> start_bulk_load_rpc;
-typedef rpc_holder<bulk_load_request, bulk_load_response> bulk_load_rpc;
-typedef rpc_holder<control_bulk_load_request, control_bulk_load_response> control_bulk_load_rpc;
-typedef rpc_holder<query_bulk_load_request, query_bulk_load_response> query_bulk_load_rpc;
-
 typedef rpc_holder<start_partition_split_request, start_partition_split_response> start_split_rpc;
 typedef rpc_holder<control_split_request, control_split_response> control_split_rpc;
 typedef rpc_holder<query_split_request, query_split_response> query_split_rpc;
@@ -178,14 +173,5 @@ public:
     static const std::string RESTORE_PATH;
 };
 
-class bulk_load_constant
-{
-public:
-    static const std::string BULK_LOAD_INFO;
-    static const int32_t BULK_LOAD_REQUEST_INTERVAL;
-    static const std::string BULK_LOAD_METADATA;
-    static const std::string BULK_LOAD_LOCAL_ROOT_DIR;
-    static const int32_t PROGRESS_FINISHED;
-};
 } // namespace replication
 } // namespace dsn

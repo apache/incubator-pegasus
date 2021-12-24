@@ -39,6 +39,7 @@
 #include <dsn/dist/nfs_node.h>
 
 #include "common/replication_common.h"
+#include "common/bulk_load_common.h"
 #include "common/fs_manager.h"
 #include "block_service/block_service_manager.h"
 #include "replica.h"
