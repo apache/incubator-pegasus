@@ -219,7 +219,10 @@ mutation_log_private::mutation_log_private(const std::string &dir,
                                              int hash,
                                              int64_t *pending_size)
 {
-    dassert(nullptr == callback, "callback is not needed in private mutation log");
+    dsn::aio_task_ptr cb =
+        callback ? file::create_aio_task(
+                       callback_code, tracker, std::forward<aio_handler>(callback), hash)
+                 : nullptr;
 
     _plock.lock();
 
@@ -232,7 +235,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
         _pending_write = make_unique<log_appender>(mark_new_offset(0, true).second);
         _pending_write_start_time_ms = dsn_now_ms();
     }
-    _pending_write->append_mutation(mu, nullptr);
+    _pending_write->append_mutation(mu, cb);
 
     // update meta
     _pending_write_max_commit =
@@ -255,7 +258,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
         _plock.unlock();
     }
 
-    return nullptr;
+    return cb;
 }
 
 bool mutation_log_private::get_learn_state_in_memory(decree start_decree,
