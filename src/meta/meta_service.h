@@ -44,6 +44,7 @@
 #include "common/replication_common.h"
 #include "common/bulk_load_common.h"
 #include "common/partition_split_common.h"
+#include "common/manual_compact.h"
 #include "meta_rpc_types.h"
 #include "meta_options.h"
 #include "meta_backup_service.h"

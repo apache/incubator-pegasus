@@ -47,11 +47,6 @@ typedef rpc_holder<configuration_update_app_env_request, configuration_update_ap
 
 typedef rpc_holder<backup_request, backup_response> backup_rpc;
 
-typedef rpc_holder<start_app_manual_compact_request, start_app_manual_compact_response>
-    start_manual_compact_rpc;
-typedef rpc_holder<query_app_manual_compact_request, query_app_manual_compact_response>
-    query_manual_compact_rpc;
-
 class replication_options
 {
 public:
