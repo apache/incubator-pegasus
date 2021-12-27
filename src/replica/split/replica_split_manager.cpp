@@ -16,6 +16,7 @@
 // under the License.
 
 #include "replica_split_manager.h"
+#include "common/partition_split_common.h"
 
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>

@@ -45,6 +45,7 @@
 
 #include "common/replication_common.h"
 #include "common/bulk_load_common.h"
+#include "common/partition_split_common.h"
 #include "meta/meta_rpc_types.h"
 
 namespace dsn {
