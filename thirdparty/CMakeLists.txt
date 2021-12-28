@@ -331,9 +331,9 @@ ExternalProject_Add(jemalloc
 option(ROCKSDB_PORTABLE "build a portable binary" OFF)
 
 ExternalProject_Add(rocksdb
-        URL ${OSS_URL_PREFIX}/pegasus-rocksdb-6.6.4-compatible.zip
-        https://github.com/XiaoMi/pegasus-rocksdb/archive/v6.6.4-compatible.zip
-        URL_MD5 595b21fbe681dcf126c4cccda46f1cbb
+        URL ${OSS_URL_PREFIX}/pegasus-rocksdb-ef29819c7a1ea9334ae170f506b653757f517a52.zip
+        https://github.com/XiaoMi/pegasus-rocksdb/archive/ef29819c7a1ea9334ae170f506b653757f517a52.zip
+        URL_MD5 2a6488cd87c37e0c2e42a5ca74bebc87
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DWITH_LZ4=ON
