@@ -21,10 +21,9 @@
 #include <gtest/gtest.h>
 #include "runtime/rpc/network.sim.h"
 
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 #include "replica_test_base.h"
 #include "replica/replica_http_service.h"
-#include "common/backup_utils.h"
 
 namespace dsn {
 namespace replication {

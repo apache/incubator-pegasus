@@ -16,7 +16,7 @@
 // under the License.
 
 #include "cold_backup_context.h"
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
 #include "block_service/block_service_manager.h"

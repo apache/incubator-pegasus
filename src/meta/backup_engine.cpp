@@ -18,7 +18,7 @@
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>
 
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 #include "common/replication_common.h"
 #include "server_state.h"
 

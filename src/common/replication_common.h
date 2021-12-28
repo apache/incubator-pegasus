@@ -45,8 +45,6 @@ typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
     update_app_env_rpc;
 
-typedef rpc_holder<backup_request, backup_response> backup_rpc;
-
 class replication_options
 {
 public:
@@ -146,20 +144,6 @@ private:
 };
 
 extern const char *partition_status_to_string(partition_status::type status);
-
-class backup_restore_constant
-{
-public:
-    static const std::string FORCE_RESTORE;
-    static const std::string BLOCK_SERVICE_PROVIDER;
-    static const std::string CLUSTER_NAME;
-    static const std::string POLICY_NAME;
-    static const std::string APP_NAME;
-    static const std::string APP_ID;
-    static const std::string BACKUP_ID;
-    static const std::string SKIP_BAD_PARTITION;
-    static const std::string RESTORE_PATH;
-};
 
 } // namespace replication
 } // namespace dsn

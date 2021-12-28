@@ -19,7 +19,7 @@
 #include <dsn/utility/filesystem.h>
 #include <gtest/gtest.h>
 
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
 #include "meta_test_base.h"

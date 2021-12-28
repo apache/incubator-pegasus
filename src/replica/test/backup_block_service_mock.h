@@ -25,7 +25,7 @@
 #include "replica/replica_context.h"
 #include "replication_service_test_app.h"
 #include "block_service/test/block_service_mock.h"
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 
 using namespace ::dsn;
 using namespace ::dsn::dist::block_service;

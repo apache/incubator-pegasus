@@ -21,7 +21,7 @@
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/block_service.h>
 
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 
 class replication_service_test_app;
 

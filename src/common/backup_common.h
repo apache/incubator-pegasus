@@ -19,6 +19,8 @@
 
 #include <string>
 #include <dsn/tool-api/gpid.h>
+#include "backup_types.h"
+#include <dsn/cpp/rpc_holder.h>
 
 namespace dsn {
 namespace replication {
@@ -32,6 +34,22 @@ public:
     static const std::string BACKUP_METADATA;
     static const std::string BACKUP_INFO;
     static const int32_t PROGRESS_FINISHED;
+};
+
+typedef rpc_holder<backup_request, backup_response> backup_rpc;
+
+class backup_restore_constant
+{
+public:
+    static const std::string FORCE_RESTORE;
+    static const std::string BLOCK_SERVICE_PROVIDER;
+    static const std::string CLUSTER_NAME;
+    static const std::string POLICY_NAME;
+    static const std::string APP_NAME;
+    static const std::string APP_ID;
+    static const std::string BACKUP_ID;
+    static const std::string SKIP_BAD_PARTITION;
+    static const std::string RESTORE_PATH;
 };
 
 namespace cold_backup {

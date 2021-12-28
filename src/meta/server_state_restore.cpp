@@ -21,7 +21,7 @@
 #include <dsn/utility/filesystem.h>
 
 #include "block_service/block_service_manager.h"
-#include "common/backup_utils.h"
+#include "common/backup_common.h"
 #include "meta_service.h"
 #include "server_state.h"
 
