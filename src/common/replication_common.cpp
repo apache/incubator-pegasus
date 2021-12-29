@@ -41,15 +41,6 @@ DSN_DEFINE_int32("replication",
                  5,
                  "concurrent bulk load downloading replica count");
 
-/*extern*/ const char *partition_status_to_string(partition_status::type status)
-{
-    auto it = _partition_status_VALUES_TO_NAMES.find(status);
-    dassert(it != _partition_status_VALUES_TO_NAMES.end(),
-            "unexpected type of partition_status: %d",
-            status);
-    return it->second;
-}
-
 replication_options::replication_options()
 {
     deny_client_on_start = false;
