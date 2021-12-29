@@ -264,6 +264,10 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
 
     auto err_resp = sc->ddl_client->query_bulk_load(app_name);
     dsn::error_s err = err_resp.get_error();
+    if (!err.is_ok()) {
+        fmt::print(stderr, "query bulk load failed, error={}\n", err);
+        return true;
+    }
     auto resp = err_resp.get_value();
 
     std::string hint_msg;
@@ -394,7 +398,11 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         tp_summary.add_row_name_and_data("partition_bulk_load_status",
                                          get_short_status(resp.partitions_status[pidx]));
     }
+    tp_summary.add_row_name_and_data("is_bulk_loading", resp.is_bulk_loading ? "YES" : "NO");
     tp_summary.add_row_name_and_data("app_bulk_load_status", get_short_status(resp.app_status));
+    if (bulk_load_status::BLS_FAILED == resp.app_status) {
+        tp_summary.add_row_name_and_data("bulk_load_err", resp.err.to_string());
+    }
     if (print_progress) {
         tp_summary.add_row_name_and_data("app_total_download_progress", total_progress);
     }
