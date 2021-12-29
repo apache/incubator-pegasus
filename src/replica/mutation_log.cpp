@@ -38,6 +38,10 @@
 
 namespace dsn {
 namespace replication {
+DSN_DEFINE_bool("replication",
+                plog_force_flush,
+                false,
+                "when write private log, whether to flush file after write done");
 
 ::dsn::task_ptr mutation_log_shared::append(mutation_ptr &mu,
                                             dsn::task_code callback_code,
@@ -431,6 +435,12 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                 }
             }
 
+            // notify the callbacks
+            // ATTENTION: callback may be called before this code block executed done.
+            for (auto &c : pending->callbacks()) {
+                c->enqueue(err, sz);
+            }
+
             if (err != ERR_OK) {
                 derror("write private log failed, err = %s", err.to_string());
                 _is_writing.store(false, std::memory_order_relaxed);
@@ -445,7 +455,9 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
             // so that we can get all mutations in learning process.
             //
             // FIXME : the file could have been closed
-            lf->flush();
+            if (FLAGS_plog_force_flush) {
+                lf->flush();
+            }
 
             // update _private_max_commit_on_disk after written into log file done
             update_max_commit_on_disk(max_commit);
