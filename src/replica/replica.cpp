@@ -39,6 +39,7 @@
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/cpp/json_helper.h>
 #include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/rand.h>
 #include <dsn/utility/string_conv.h>
@@ -179,6 +180,7 @@ void replica::init_state()
     update_last_checkpoint_generate_time();
     _private_log = nullptr;
     init_disk_tag();
+    get_bool_envs(_app_info.envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _allow_ingest_behind);
 }
 
 replica::~replica(void)

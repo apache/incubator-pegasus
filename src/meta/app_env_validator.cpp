@@ -115,17 +115,7 @@ bool check_throttling(const std::string &env_value, std::string &hint_message)
     return true;
 }
 
-bool check_split_validation(const std::string &env_value, std::string &hint_message)
-{
-    bool result = false;
-    if (!dsn::buf2bool(env_value, result)) {
-        hint_message = fmt::format("invalid string {}, should be \"true\" or \"false\"", env_value);
-        return false;
-    }
-    return true;
-}
-
-bool check_rocksdb_block_cache_enabled(const std::string &env_value, std::string &hint_message)
+bool check_bool_value(const std::string &env_value, std::string &hint_message)
 {
     bool result = false;
     if (!dsn::buf2bool(env_value, result)) {
@@ -166,8 +156,7 @@ void app_env_validator::register_all_validators()
         {replica_envs::ROCKSDB_ITERATION_THRESHOLD_TIME_MS,
          std::bind(&check_rocksdb_iteration, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::ROCKSDB_BLOCK_CACHE_ENABLED,
-         std::bind(
-             &check_rocksdb_block_cache_enabled, std::placeholders::_1, std::placeholders::_2)},
+         std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)},
         // TODO(zhaoliwei): not implemented
         {replica_envs::BUSINESS_INFO, nullptr},
         {replica_envs::DENY_CLIENT_WRITE, nullptr},
@@ -191,10 +180,12 @@ void app_env_validator::register_all_validators()
                    std::placeholders::_1,
                    std::placeholders::_2)},
         {replica_envs::SPLIT_VALIDATE_PARTITION_HASH,
-         std::bind(&check_split_validation, std::placeholders::_1, std::placeholders::_2)},
+         std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)},
         {replica_envs::USER_SPECIFIED_COMPACTION, nullptr},
         {replica_envs::BACKUP_REQUEST_QPS_THROTTLING,
-         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)}};
+         std::bind(&check_throttling, std::placeholders::_1, std::placeholders::_2)},
+        {replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND,
+         std::bind(&check_bool_value, std::placeholders::_1, std::placeholders::_2)}};
 }
 
 } // namespace replication

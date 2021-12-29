@@ -61,6 +61,7 @@ public:
     static const std::string BACKUP_REQUEST_QPS_THROTTLING;
     static const std::string SPLIT_VALIDATE_PARTITION_HASH;
     static const std::string USER_SPECIFIED_COMPACTION;
+    static const std::string ROCKSDB_ALLOW_INGEST_BEHIND;
 };
 
 } // namespace replication

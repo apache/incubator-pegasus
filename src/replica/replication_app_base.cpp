@@ -37,6 +37,7 @@
 #include <sstream>
 #include <memory>
 #include <dsn/utility/fail_point.h>
+#include <dsn/dist/replication/replica_envs.h>
 
 namespace dsn {
 namespace replication {
@@ -266,12 +267,17 @@ error_code replica_app_info::store(const char *file)
     int magic = 0xdeadbeef;
 
     marshall(writer, magic, DSF_THRIFT_BINARY);
-    // do not persistent envs to app info file
     if (_app->envs.empty()) {
         marshall(writer, *_app, DSF_THRIFT_JSON);
     } else {
+        // for most envs, do not persistent them to app info file
+        // ROCKSDB_ALLOW_INGEST_BEHIND should be persistent
         dsn::app_info tmp = *_app;
         tmp.envs.clear();
+        const auto &iter = _app->envs.find(replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND);
+        if (iter != _app->envs.end()) {
+            tmp.envs[replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND] = iter->second;
+        }
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 

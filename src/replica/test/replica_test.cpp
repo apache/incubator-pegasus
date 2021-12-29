@@ -78,6 +78,21 @@ public:
                                         _mock_replica->_validate_partition_hash);
     }
 
+    bool get_allow_ingest_behind() const { return _mock_replica->_allow_ingest_behind; }
+
+    void reset_allow_ingest_behind() { _mock_replica->_allow_ingest_behind = false; }
+
+    void update_allow_ingest_behind(bool old_value, bool set_in_map, std::string new_value)
+    {
+        _mock_replica->_allow_ingest_behind = old_value;
+        std::map<std::string, std::string> envs;
+        if (set_in_map) {
+            envs[replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND] = new_value;
+        }
+        _mock_replica->update_bool_envs(
+            envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _mock_replica->_allow_ingest_behind);
+    }
+
     void mock_app_info()
     {
         _app_info.app_id = 2;
@@ -262,6 +277,29 @@ TEST_F(replica_test, update_validate_partition_hash_test)
         update_validate_partition_hash(test.old_value, test.set_in_map, test.new_value);
         ASSERT_EQ(get_validate_partition_hash(), test.expected_value);
         reset_validate_partition_hash();
+    }
+}
+
+TEST_F(replica_test, update_allow_ingest_behind_test)
+{
+    struct update_allow_ingest_behind_test
+    {
+        bool set_in_map;
+        bool old_value;
+        std::string new_value;
+        bool expected_value;
+    } tests[]{{true, false, "false", false},
+              {true, false, "true", true},
+              {true, true, "true", true},
+              {true, true, "false", false},
+              {false, false, "", false},
+              {false, true, "", false},
+              {true, true, "flase", true},
+              {true, false, "ture", false}};
+    for (const auto &test : tests) {
+        update_allow_ingest_behind(test.old_value, test.set_in_map, test.new_value);
+        ASSERT_EQ(get_allow_ingest_behind(), test.expected_value);
+        reset_allow_ingest_behind();
     }
 }
 

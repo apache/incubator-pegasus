@@ -642,6 +642,7 @@ const std::string
     replica_envs::SPLIT_VALIDATE_PARTITION_HASH("replica.split.validate_partition_hash");
 const std::string replica_envs::USER_SPECIFIED_COMPACTION("user_specified_compaction");
 const std::string replica_envs::BACKUP_REQUEST_QPS_THROTTLING("replica.backup_request_throttling");
+const std::string replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND("rocksdb.allow_ingest_behind");
 
 } // namespace replication
 } // namespace dsn
