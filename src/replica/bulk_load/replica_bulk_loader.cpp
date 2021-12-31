@@ -303,8 +303,7 @@ replica_bulk_loader::validate_status(const bulk_load_status::type meta_status,
     case bulk_load_status::BLS_DOWNLOADING:
         if (local_status == bulk_load_status::BLS_FAILED ||
             local_status == bulk_load_status::BLS_PAUSING ||
-            local_status == bulk_load_status::BLS_CANCELED ||
-            local_status == bulk_load_status::BLS_SUCCEED) {
+            local_status == bulk_load_status::BLS_CANCELED) {
             err = ERR_INVALID_STATE;
         }
         break;
