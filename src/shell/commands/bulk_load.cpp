@@ -24,6 +24,7 @@ bool start_bulk_load(command_executor *e, shell_context *sc, arguments args)
     static struct option long_options[] = {{"app_name", required_argument, 0, 'a'},
                                            {"cluster_name", required_argument, 0, 'c'},
                                            {"file_provider_type", required_argument, 0, 'p'},
+                                           {"root_path", required_argument, 0, 'r'},
                                            {"ingest_behind", no_argument, 0, 'i'},
                                            {0, 0, 0, 0}};
     std::string app_name;
