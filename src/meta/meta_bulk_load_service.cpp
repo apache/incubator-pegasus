@@ -16,6 +16,7 @@
 // under the License.
 
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include <dsn/utility/fail_point.h>
 
 #include "meta_bulk_load_service.h"
@@ -91,13 +92,8 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
     }
 
     std::string hint_msg;
-    error_code e = check_bulk_load_request_params(request.app_name,
-                                                  request.cluster_name,
-                                                  request.file_provider_type,
-                                                  request.remote_root_path,
-                                                  app->app_id,
-                                                  app->partition_count,
-                                                  hint_msg);
+    error_code e = check_bulk_load_request_params(
+        request, app->app_id, app->partition_count, app->envs, hint_msg);
     if (e != ERR_OK) {
         response.err = e;
         response.hint_msg = hint_msg;
@@ -105,11 +101,13 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
         return;
     }
 
-    ddebug_f("app({}) start bulk load, cluster_name = {}, provider = {}, remote root path = {}",
+    ddebug_f("app({}) start bulk load, cluster_name = {}, provider = {}, remote root path = {}, "
+             "ingest_behind = {}",
              request.app_name,
              request.cluster_name,
              request.file_provider_type,
-             request.remote_root_path);
+             request.remote_root_path,
+             request.ingest_behind);
 
     // clear old bulk load result
     reset_local_bulk_load_states(app->app_id, app->app_name, true);
@@ -123,17 +121,23 @@ void bulk_load_service::on_start_bulk_load(start_bulk_load_rpc rpc)
 }
 
 // ThreadPool: THREAD_POOL_META_SERVER
-error_code bulk_load_service::check_bulk_load_request_params(const std::string &app_name,
-                                                             const std::string &cluster_name,
-                                                             const std::string &file_provider,
-                                                             const std::string &remote_root_path,
-                                                             const int32_t app_id,
-                                                             const int32_t partition_count,
-                                                             std::string &hint_msg)
+error_code
+bulk_load_service::check_bulk_load_request_params(const start_bulk_load_request &request,
+                                                  const int32_t app_id,
+                                                  const int32_t partition_count,
+                                                  const std::map<std::string, std::string> &envs,
+                                                  std::string &hint_msg)
 {
     FAIL_POINT_INJECT_F("meta_check_bulk_load_request_params",
                         [](dsn::string_view) -> error_code { return ERR_OK; });
 
+    if (!validate_ingest_behind(envs, request.ingest_behind)) {
+        hint_msg = fmt::format("inconsistent ingestion behind option");
+        derror_f("{}", hint_msg);
+        return ERR_INCONSISTENT_STATE;
+    }
+
+    auto file_provider = request.file_provider_type;
     // check file provider
     dsn::dist::block_service::block_filesystem *blk_fs =
         _meta_svc->get_block_service_manager().get_or_create_block_filesystem(file_provider);
@@ -145,7 +149,7 @@ error_code bulk_load_service::check_bulk_load_request_params(const std::string &
 
     // sync get bulk_load_info file_handler
     const std::string remote_path =
-        get_bulk_load_info_path(app_name, cluster_name, remote_root_path);
+        get_bulk_load_info_path(request.app_name, request.cluster_name, request.remote_root_path);
     dsn::dist::block_service::create_file_request cf_req;
     cf_req.file_name = remote_path;
     cf_req.ignore_metadata = true;
@@ -193,7 +197,7 @@ error_code bulk_load_service::check_bulk_load_request_params(const std::string &
     if (bl_info.app_id != app_id || bl_info.partition_count != partition_count) {
         derror_f("app({}) information is inconsistent, local app_id({}) VS remote app_id({}), "
                  "local partition_count({}) VS remote partition_count({})",
-                 app_name,
+                 request.app_name,
                  app_id,
                  bl_info.app_id,
                  partition_count,
@@ -246,6 +250,7 @@ void bulk_load_service::create_app_bulk_load_dir(const std::string &app_name,
     ainfo.cluster_name = req.cluster_name;
     ainfo.file_provider_type = req.file_provider_type;
     ainfo.remote_root_path = req.remote_root_path;
+    ainfo.ingest_behind = req.ingest_behind;
     ainfo.is_ever_ingesting = false;
     ainfo.bulk_load_err = ERR_OK;
 
@@ -1186,6 +1191,7 @@ void bulk_load_service::send_ingestion_request(const std::string &app_name,
     {
         zauto_read_lock l(_lock);
         req.metadata = _partition_bulk_load_info[pid].metadata;
+        req.ingest_behind = _app_bulk_load_info[pid.get_app_id()].ingest_behind;
     }
     // create a client request, whose gpid field in header should be pid
     message_ex *msg = message_ex::create_request(dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
@@ -1623,7 +1629,7 @@ void bulk_load_service::try_to_continue_app_bulk_load(
     }
 
     // check app bulk load info
-    if (!validate_app(app->app_id, app->partition_count, ainfo, pinfo_map.size())) {
+    if (!validate_app(app->app_id, app->partition_count, app->envs, ainfo, pinfo_map.size())) {
         remove_bulk_load_dir_on_remote_storage(std::move(app), true);
         return;
     }
@@ -1652,8 +1658,28 @@ void bulk_load_service::try_to_continue_app_bulk_load(
 }
 
 // ThreadPool: THREAD_POOL_META_SERVER
+/*static*/ bool
+bulk_load_service::validate_ingest_behind(const std::map<std::string, std::string> &envs,
+                                          bool ingest_behind)
+{
+    bool app_allow_ingest_behind = false;
+    const auto &iter = envs.find(replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND);
+    if (iter != envs.end()) {
+        if (!buf2bool(iter->second, app_allow_ingest_behind)) {
+            dwarn_f("can not convert {} to bool", iter->second);
+            app_allow_ingest_behind = false;
+        }
+    }
+    if (ingest_behind && !app_allow_ingest_behind) {
+        return false;
+    }
+    return true;
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
 /*static*/ bool bulk_load_service::validate_app(int32_t app_id,
                                                 int32_t partition_count,
+                                                const std::map<std::string, std::string> &envs,
                                                 const app_bulk_load_info &ainfo,
                                                 int32_t pinfo_count)
 {
@@ -1691,6 +1717,11 @@ void bulk_load_service::try_to_continue_app_bulk_load(
                  ainfo.app_name,
                  dsn::enum_to_string(ainfo.status),
                  partition_count - pinfo_count);
+        return false;
+    }
+
+    if (!validate_ingest_behind(envs, ainfo.ingest_behind)) {
+        derror_f("app({}) has inconsistent ingest_behind option", ainfo.app_name);
         return false;
     }
 

@@ -56,6 +56,7 @@ struct start_bulk_load_request
     2:string    cluster_name;
     3:string    file_provider_type;
     4:string    remote_root_path;
+    5:bool      ingest_behind = false;
 }
 
 struct start_bulk_load_response
@@ -150,6 +151,7 @@ struct ingestion_request
 {
     1:string                app_name;
     2:bulk_load_metadata    metadata;
+    3:bool                  ingest_behind;
 }
 
 struct ingestion_response

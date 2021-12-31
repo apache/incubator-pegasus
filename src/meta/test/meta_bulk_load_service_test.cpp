@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include <dsn/utility/fail_point.h>
 
 #include "meta_test_base.h"
@@ -52,9 +53,25 @@ public:
                                                     int32_t app_id,
                                                     int32_t partition_count)
     {
+        start_bulk_load_request request;
+        request.app_name = APP_NAME;
+        request.cluster_name = CLUSTER;
+        request.file_provider_type = provider;
+        request.remote_root_path = ROOT_PATH;
+
+        std::map<std::string, std::string> envs;
         std::string hint_msg;
         return bulk_svc().check_bulk_load_request_params(
-            APP_NAME, CLUSTER, provider, ROOT_PATH, app_id, partition_count, hint_msg);
+            request, app_id, partition_count, envs, hint_msg);
+    }
+
+    bool validate_ingest_behind(bool mock_value, const std::string &app_value, bool request_value)
+    {
+        std::map<std::string, std::string> envs;
+        if (mock_value) {
+            envs[replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND] = app_value;
+        }
+        return bulk_svc().validate_ingest_behind(envs, request_value);
     }
 
     error_code control_bulk_load(int32_t app_id,
@@ -476,6 +493,29 @@ TEST_F(bulk_load_service_test, check_partition_status_test)
                   test.expected_val);
     }
     drop_app(APP_NAME);
+}
+
+/// validate ingest behind unit tests
+TEST_F(bulk_load_service_test, validate_ingest_behind_test)
+{
+    struct validate_test
+    {
+        bool mock_value;
+        std::string app_value;
+        bool request_value;
+        bool expected_result;
+    } tests[] = {{true, "true", true, true},
+                 {true, "true", false, true},
+                 {true, "false", true, false},
+                 {true, "false", false, true},
+                 {true, "invalid", true, false},
+                 {true, "invalid", false, true},
+                 {false, "false", true, false},
+                 {false, "false", false, true}};
+    for (const auto &test : tests) {
+        ASSERT_EQ(validate_ingest_behind(test.mock_value, test.app_value, test.request_value),
+                  test.expected_result);
+    }
 }
 
 /// control bulk load unit tests
@@ -1002,6 +1042,7 @@ public:
         ainfo.remote_root_path = ROOT_PATH;
         ainfo.partition_count = partition_count;
         ainfo.status = status;
+        ainfo.ingest_behind = false;
         ainfo.is_ever_ingesting = false;
         ainfo.bulk_load_err = ERR_OK;
         _app_bulk_load_info_map[app_id] = ainfo;
