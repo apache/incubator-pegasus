@@ -99,4 +99,6 @@ const std::string SPLIT_VALIDATE_PARTITION_HASH("replica.split.validate_partitio
 const std::string USER_SPECIFIED_COMPACTION("user_specified_compaction");
 
 const std::string READ_SIZE_THROTTLING("replica.read_throttling_by_size");
+
+const std::string ROCKSDB_ALLOW_INGEST_BEHIND("rocksdb.allow_ingest_behind");
 } // namespace pegasus

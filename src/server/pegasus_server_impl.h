@@ -284,6 +284,9 @@ private:
 
     void update_throttling_controller(const std::map<std::string, std::string> &envs);
 
+    void update_allow_ingest_behind(const std::map<std::string, std::string> &envs,
+                                    bool default_value);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -431,6 +434,8 @@ private:
 
     dsn::replication::ingestion_status::type _ingestion_status{
         dsn::replication::ingestion_status::IS_INVALID};
+
+    bool _allow_ingest_behind{false};
 
     dsn::task_tracker _tracker;
 

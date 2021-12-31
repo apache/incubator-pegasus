@@ -485,7 +485,8 @@ public:
     // \return ERR_OK: rocksdb ingestion succeed
     dsn::error_code ingestion_files(const int64_t decree,
                                     const std::string &bulk_load_dir,
-                                    const dsn::replication::bulk_load_metadata &metadata)
+                                    const dsn::replication::bulk_load_metadata &metadata,
+                                    const bool ingest_behind)
     {
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
@@ -495,7 +496,8 @@ public:
         }
 
         // ingest external files
-        if (dsn_unlikely(_rocksdb_wrapper->ingestion_files(decree, sst_file_list) != 0)) {
+        if (dsn_unlikely(_rocksdb_wrapper->ingestion_files(decree, sst_file_list, ingest_behind) !=
+                         0)) {
             return dsn::ERR_INGESTION_FAILED;
         }
         return dsn::ERR_OK;

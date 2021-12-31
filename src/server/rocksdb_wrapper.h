@@ -64,7 +64,9 @@ public:
     int write(int64_t decree);
     int write_batch_delete(int64_t decree, dsn::string_view raw_key);
     void clear_up_write_batch();
-    int ingestion_files(int64_t decree, const std::vector<std::string> &sst_file_list);
+    int ingestion_files(int64_t decree,
+                        const std::vector<std::string> &sst_file_list,
+                        bool ingest_behind);
 
     void set_default_ttl(uint32_t ttl);
 

@@ -101,9 +101,10 @@ public:
         system(copy_file_cmd.c_str());
     }
 
-    error_code start_bulk_load()
+    error_code start_bulk_load(bool ingest_behind = false)
     {
-        auto err_resp = ddl_client->start_bulk_load(APP_NAME, CLUSTER, PROVIDER, LOCAL_ROOT);
+        auto err_resp =
+            ddl_client->start_bulk_load(APP_NAME, CLUSTER, PROVIDER, LOCAL_ROOT, ingest_behind);
         return err_resp.get_value().err;
     }
 
@@ -121,6 +122,26 @@ public:
                           "mock_bulk_load_info/. " +
                           bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/";
         system(cmd.c_str());
+    }
+
+    void update_allow_ingest_behind(const std::string &allow_ingest_behind)
+    {
+        // update app envs
+        std::vector<std::string> keys;
+        keys.emplace_back(ROCKSDB_ALLOW_INGEST_BEHIND);
+        std::vector<std::string> values;
+        values.emplace_back(allow_ingest_behind);
+        auto err_resp = ddl_client->set_app_envs(APP_NAME, keys, values);
+        ASSERT_EQ(err_resp.get_value().err, ERR_OK);
+        std::cout << "sleep 30s to wait app_envs update" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(30));
+        // restart onebox to make config works
+        chdir(pegasus_root_dir.c_str());
+        system("./run.sh stop_onebox");
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        system("./run.sh start_onebox -w");
+        std::this_thread::sleep_for(std::chrono::seconds(20));
+        chdir(working_root_dir.c_str());
     }
 
     bulk_load_status::type wait_bulk_load_finish(int64_t seconds)
@@ -260,6 +281,42 @@ TEST_F(bulk_load_test, bulk_load_tests)
 
     // value overide by bulk_loaded_data
     operate_data(operation::GET, VALUE, 10);
+
+    // write data after bulk load succeed
+    operate_data(operation::SET, "valueAfterBulkLoad", 20);
+    operate_data(operation::GET, "valueAfterBulkLoad", 20);
+
+    // del data after bulk load succeed
+    operate_data(operation::DEL, "", 15);
+    operate_data(operation::NO_VALUE, "", 15);
+}
+
+///
+/// case1: inconsistent ingest_behind
+/// case2: bulk load(ingest_behind) succeed with data verfied
+/// case3: bulk load data consistent:
+///     - bulk load data will be overrided by old data
+///     - get/set/del succeed after bulk load
+///
+TEST_F(bulk_load_test, bulk_load_ingest_behind_tests)
+{
+    // app envs allow_ingest_behind = false, request ingest_behind = true
+    ASSERT_EQ(start_bulk_load(true), ERR_INCONSISTENT_STATE);
+
+    // update app allow_
+    update_allow_ingest_behind("true");
+
+    // write old data
+    operate_data(operation::SET, "oldValue", 10);
+    operate_data(operation::GET, "oldValue", 10);
+
+    ASSERT_EQ(start_bulk_load(true), ERR_OK);
+    ASSERT_EQ(wait_bulk_load_finish(300), bulk_load_status::BLS_SUCCEED);
+
+    std::cout << "Start to verify data..." << std::endl;
+    // value overide by bulk_loaded_data
+    operate_data(operation::GET, "oldValue", 10);
+    ASSERT_TRUE(verify_data("hashkey", "sortkey"));
 
     // write data after bulk load succeed
     operate_data(operation::SET, "valueAfterBulkLoad", 20);
