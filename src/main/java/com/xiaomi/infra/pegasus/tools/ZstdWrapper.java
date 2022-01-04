@@ -65,9 +65,8 @@ public class ZstdWrapper {
 
     // fallback to decompress in streaming mode
     byte[] inBuf = new byte[1024];
-    ByteArrayOutputStream decompressOutBuf = new ByteArrayOutputStream();
-    try {
-      ZstdInputStream decompress = new ZstdInputStream(new ByteArrayInputStream(src));
+    try (ByteArrayOutputStream decompressOutBuf = new ByteArrayOutputStream();
+        ZstdInputStream decompress = new ZstdInputStream(new ByteArrayInputStream(src))) {
       while (true) {
         int n = decompress.read(inBuf);
         if (n <= 0) {
