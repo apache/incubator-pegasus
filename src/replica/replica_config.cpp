@@ -46,7 +46,6 @@
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/dist/replication/replica_envs.h>
-#include <dsn/utility/filesystem.h>
 
 namespace dsn {
 namespace replication {
@@ -614,14 +613,9 @@ void replica::update_allow_ingest_behind(const std::map<std::string, std::string
         return;
     }
     if (new_value != _allow_ingest_behind) {
-        // TODO(heyuchen): refactor it, add a function to update .app_info file
         auto info = _app_info;
         info.envs = envs;
-        replica_app_info new_info((app_info *)&info);
-        std::string info_path = utils::filesystem::path_combine(_dir, ".app-info");
-        auto err = new_info.store(info_path.c_str());
-        if (err != ERR_OK) {
-            derror_replica("failed to save app_info to {}, error = {}", info_path, err);
+        if (store_app_info(info) != ERR_OK) {
             return;
         }
         ddebug_replica("switch env[{}] from {} to {}",

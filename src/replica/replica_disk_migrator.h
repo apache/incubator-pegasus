@@ -53,7 +53,6 @@ private:
     const static std::string kReplicaDirTempSuffix;
     const static std::string kReplicaDirOriginSuffix;
     const static std::string kDataDirFolder;
-    const static std::string kAppInfo;
 
     replica *_replica;
 

@@ -41,6 +41,7 @@
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/replication/replica_envs.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/filesystem.h>
 #include <dsn/utility/rand.h>
 #include <dsn/utility/string_conv.h>
 #include <dsn/utility/strings.h>
@@ -48,6 +49,8 @@
 
 namespace dsn {
 namespace replication {
+
+const std::string replica::kAppInfo = ".app-info";
 
 replica::replica(
     replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool need_restore)
@@ -554,6 +557,17 @@ void replica::init_disk_tag()
     if (dsn::ERR_OK != err) {
         derror_replica("get disk tag of {} failed: {}, init it to empty ", dir(), err);
     }
+}
+
+error_code replica::store_app_info(app_info &info, const std::string &path)
+{
+    replica_app_info new_info((app_info *)&info);
+    const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
+    auto err = new_info.store(info_path.c_str());
+    if (dsn_unlikely(err != ERR_OK)) {
+        derror_replica("failed to save app_info to {}, error = {}", info_path, err);
+    }
+    return err;
 }
 
 } // namespace replication
