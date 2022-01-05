@@ -87,9 +87,6 @@ public:
     int32_t fd_grace_seconds;
 
     int32_t log_private_file_size_mb;
-    int32_t log_private_batch_buffer_kb;
-    int32_t log_private_batch_buffer_count;
-    int32_t log_private_batch_buffer_flush_interval_ms;
     int32_t log_private_reserve_max_size_mb;
     int32_t log_private_reserve_max_time_seconds;
 

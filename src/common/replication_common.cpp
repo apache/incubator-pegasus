@@ -81,9 +81,6 @@ replication_options::replication_options()
     fd_grace_seconds = 10;
 
     log_private_file_size_mb = 32;
-    log_private_batch_buffer_kb = 512;
-    log_private_batch_buffer_count = 512;
-    log_private_batch_buffer_flush_interval_ms = 10000;
     log_private_reserve_max_size_mb = 0;
     log_private_reserve_max_time_seconds = 0;
 
@@ -312,21 +309,6 @@ void replication_options::initialize()
                                          "log_private_file_size_mb",
                                          log_private_file_size_mb,
                                          "private log maximum segment file size (MB)");
-    log_private_batch_buffer_kb =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_private_batch_buffer_kb",
-                                         log_private_batch_buffer_kb,
-                                         "private log buffer size (KB) for batching incoming logs");
-    log_private_batch_buffer_count = (int)dsn_config_get_value_uint64(
-        "replication",
-        "log_private_batch_buffer_count",
-        log_private_batch_buffer_count,
-        "private log buffer max item count for batching incoming logs");
-    log_private_batch_buffer_flush_interval_ms =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_private_batch_buffer_flush_interval_ms",
-                                         log_private_batch_buffer_flush_interval_ms,
-                                         "private log buffer flush interval in milli-seconds");
     // ATTENTION: only when log_private_reserve_max_size_mb and log_private_reserve_max_time_seconds
     // are both satisfied, the useless logs can be reserved.
     log_private_reserve_max_size_mb =

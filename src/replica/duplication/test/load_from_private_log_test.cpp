@@ -66,13 +66,8 @@ public:
         std::vector<std::string> mutations;
         int max_log_file_mb = 1;
 
-        mutation_log_ptr mlog = new mutation_log_private(_replica->dir(),
-                                                         max_log_file_mb,
-                                                         _replica->get_gpid(),
-                                                         _replica.get(),
-                                                         1024,
-                                                         512,
-                                                         10000);
+        mutation_log_ptr mlog = new mutation_log_private(
+            _replica->dir(), max_log_file_mb, _replica->get_gpid(), _replica.get());
         EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
         load.find_log_file_to_start({});
@@ -218,8 +213,8 @@ public:
         int try_cnt = 0;
         while (try_cnt < 5) {
             try_cnt++;
-            mlog = new mutation_log_private(
-                _replica->dir(), private_log_size_mb, id, _replica.get(), 1024, 512, 10000);
+            mlog =
+                new mutation_log_private(_replica->dir(), private_log_size_mb, id, _replica.get());
             error_code err = mlog->open(cb, nullptr, replay_condition);
             if (err == ERR_OK) {
                 break;

@@ -203,15 +203,8 @@ void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
 mutation_log_private::mutation_log_private(const std::string &dir,
                                            int32_t max_log_file_mb,
                                            gpid gpid,
-                                           replica *r,
-                                           uint32_t batch_buffer_bytes,
-                                           uint32_t batch_buffer_max_count,
-                                           uint64_t batch_buffer_flush_interval_ms)
-    : mutation_log(dir, max_log_file_mb, gpid, r),
-      replica_base(r),
-      _batch_buffer_bytes(batch_buffer_bytes),
-      _batch_buffer_max_count(batch_buffer_max_count),
-      _batch_buffer_flush_interval_ms(batch_buffer_flush_interval_ms)
+                                           replica *r)
+    : mutation_log(dir, max_log_file_mb, gpid, r), replica_base(r)
 {
     mutation_log_private::init_states();
 }
@@ -237,7 +230,6 @@ mutation_log_private::mutation_log_private(const std::string &dir,
     // init pending buffer
     if (nullptr == _pending_write) {
         _pending_write = make_unique<log_appender>(mark_new_offset(0, true).second);
-        _pending_write_start_time_ms = dsn_now_ms();
     }
     _pending_write->append_mutation(mu, cb);
 
@@ -247,10 +239,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
     _pending_write_max_decree = std::max(_pending_write_max_decree, mu->data.header.decree);
 
     // start to write if possible
-    if (!_is_writing.load(std::memory_order_acquire) &&
-        (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes ||
-         static_cast<uint32_t>(_pending_write->blob_count()) >= _batch_buffer_max_count ||
-         flush_interval_expired())) {
+    if (!_is_writing.load(std::memory_order_acquire)) {
         write_pending_mutations(true);
         if (pending_size) {
             *pending_size = 0;
@@ -261,7 +250,6 @@ mutation_log_private::mutation_log_private(const std::string &dir,
         }
         _plock.unlock();
     }
-
     return cb;
 }
 
@@ -375,7 +363,6 @@ void mutation_log_private::init_states()
     _is_writing.store(false, std::memory_order_release);
     _issued_write.reset();
     _pending_write = nullptr;
-    _pending_write_start_time_ms = 0;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 }
@@ -396,7 +383,6 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     // move or reset pending variables
     std::shared_ptr<log_appender> pending = std::move(_pending_write);
     _issued_write = pending;
-    _pending_write_start_time_ms = 0;
     decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
@@ -467,10 +453,7 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
             // start to write if possible
             _plock.lock();
 
-            if (!_is_writing.load(std::memory_order_acquire) && _pending_write &&
-                (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes ||
-                 static_cast<uint32_t>(_pending_write->blob_count()) >= _batch_buffer_max_count ||
-                 flush_interval_expired())) {
+            if (!_is_writing.load(std::memory_order_acquire) && _pending_write) {
                 write_pending_mutations(true);
             } else {
                 _plock.unlock();

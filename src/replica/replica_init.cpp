@@ -233,14 +233,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             _config.ballot = _app->init_info().init_ballot;
             _prepare_list->reset(_app->last_committed_decree());
 
-            _private_log =
-                new mutation_log_private(log_dir,
-                                         _options->log_private_file_size_mb,
-                                         get_gpid(),
-                                         this,
-                                         _options->log_private_batch_buffer_kb * 1024,
-                                         _options->log_private_batch_buffer_count,
-                                         _options->log_private_batch_buffer_flush_interval_ms);
+            _private_log = new mutation_log_private(
+                log_dir, _options->log_private_file_size_mb, get_gpid(), this);
             ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 
             // sync valid_start_offset between app and logs
@@ -332,14 +326,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 dassert(false, "Fail to create directory %s.", log_dir.c_str());
             }
 
-            _private_log =
-                new mutation_log_private(log_dir,
-                                         _options->log_private_file_size_mb,
-                                         get_gpid(),
-                                         this,
-                                         _options->log_private_batch_buffer_kb * 1024,
-                                         _options->log_private_batch_buffer_count,
-                                         _options->log_private_batch_buffer_flush_interval_ms);
+            _private_log = new mutation_log_private(
+                log_dir, _options->log_private_file_size_mb, get_gpid(), this);
             ddebug("%s: plog_dir = %s", name(), log_dir.c_str());
 
             err = _private_log->open(nullptr, [this](error_code err) {

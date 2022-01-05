@@ -84,8 +84,7 @@ TEST_F(mutation_log_test, learn)
 
         // writing logs
         time_tic = clock.now();
-        mutation_log_ptr mlog =
-            new mutation_log_private(logp, 32, gpid, _replica.get(), 4096, 512, 10000);
+        mutation_log_ptr mlog = new mutation_log_private(logp, 32, gpid, _replica.get());
         mlog->open(nullptr, nullptr);
         for (auto &mu : mutations) {
             mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
@@ -110,7 +109,7 @@ TEST_F(mutation_log_test, learn)
 
         // reading logs
         time_tic = clock.now();
-        mlog = new mutation_log_private(logp, 1, gpid, _replica.get(), 1024, 512, 10000);
+        mlog = new mutation_log_private(logp, 1, gpid, _replica.get());
         mlog->open([](int log_length, mutation_ptr &mu) -> bool { return true; }, nullptr);
         time_toc = clock.now();
         std::cout

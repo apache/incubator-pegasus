@@ -66,8 +66,8 @@ public:
 
     void test_pause_start_duplication()
     {
-        mutation_log_ptr mlog = new mutation_log_private(
-            _replica->dir(), 4, _replica->get_gpid(), _replica.get(), 1024, 512, 10000);
+        mutation_log_ptr mlog =
+            new mutation_log_private(_replica->dir(), 4, _replica->get_gpid(), _replica.get());
         EXPECT_EQ(mlog->open(nullptr, nullptr), ERR_OK);
 
         {
