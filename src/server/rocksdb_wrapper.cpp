@@ -185,6 +185,7 @@ int rocksdb_wrapper::ingestion_files(int64_t decree,
                                      bool ingest_behind)
 {
     rocksdb::IngestExternalFileOptions ifo;
+    ifo.move_files = true;
     ifo.ingest_behind = ingest_behind;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
     if (dsn_unlikely(!s.ok())) {
