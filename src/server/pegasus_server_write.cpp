@@ -195,7 +195,7 @@ void pegasus_server_write::init_non_batch_write_handlers()
         {dsn::apps::RPC_RRDB_RRDB_BULK_LOAD,
          [this](dsn::message_ex *request) -> int {
              auto rpc = ingestion_rpc::auto_reply(request);
-             return _write_svc->ingestion_files(_decree, rpc.request(), rpc.response());
+             return _write_svc->ingest_files(_decree, rpc.request(), rpc.response());
          }},
     };
 }

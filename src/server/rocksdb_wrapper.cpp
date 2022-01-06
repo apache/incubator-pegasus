@@ -180,9 +180,9 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, dsn::string_view raw_key
 
 void rocksdb_wrapper::clear_up_write_batch() { _write_batch->Clear(); }
 
-int rocksdb_wrapper::ingestion_files(int64_t decree,
-                                     const std::vector<std::string> &sst_file_list,
-                                     bool ingest_behind)
+int rocksdb_wrapper::ingest_files(int64_t decree,
+                                  const std::vector<std::string> &sst_file_list,
+                                  const bool ingest_behind)
 {
     rocksdb::IngestExternalFileOptions ifo;
     ifo.move_files = true;

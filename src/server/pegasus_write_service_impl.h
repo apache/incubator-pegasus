@@ -483,10 +483,10 @@ public:
     // \return ERR_WRONG_CHECKSUM: verify files failed
     // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
     // \return ERR_OK: rocksdb ingestion succeed
-    dsn::error_code ingestion_files(const int64_t decree,
-                                    const std::string &bulk_load_dir,
-                                    const dsn::replication::bulk_load_metadata &metadata,
-                                    const bool ingest_behind)
+    dsn::error_code ingest_files(const int64_t decree,
+                                 const std::string &bulk_load_dir,
+                                 const dsn::replication::bulk_load_metadata &metadata,
+                                 const bool ingest_behind)
     {
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
@@ -496,7 +496,7 @@ public:
         }
 
         // ingest external files
-        if (dsn_unlikely(_rocksdb_wrapper->ingestion_files(decree, sst_file_list, ingest_behind) !=
+        if (dsn_unlikely(_rocksdb_wrapper->ingest_files(decree, sst_file_list, ingest_behind) !=
                          0)) {
             return dsn::ERR_INGESTION_FAILED;
         }

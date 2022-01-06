@@ -1487,15 +1487,13 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
             reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
-            update_allow_ingest_behind(envs, loaded_db_opt.allow_ingest_behind);
-            _db_opts.allow_ingest_behind = _allow_ingest_behind;
+            _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
         }
     } else {
         // When create new DB, we have to create a new column family to store meta data (meta column
         // family).
         _db_opts.create_missing_column_families = true;
-        update_allow_ingest_behind(envs, false);
-        _db_opts.allow_ingest_behind = _allow_ingest_behind;
+        _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
@@ -2699,20 +2697,20 @@ void pegasus_server_impl::update_user_specified_compaction(
     }
 }
 
-void pegasus_server_impl::update_allow_ingest_behind(const std::map<std::string, std::string> &envs,
-                                                     bool default_value)
+bool pegasus_server_impl::parse_allow_ingest_behind(const std::map<std::string, std::string> &envs)
 {
+    bool allow_ingest_behind = false;
     const auto &iter = envs.find(ROCKSDB_ALLOW_INGEST_BEHIND);
     if (iter == envs.end()) {
-        _allow_ingest_behind = false;
-        return;
+        return allow_ingest_behind;
     }
-    if (!dsn::buf2bool(iter->second, _allow_ingest_behind)) {
+    if (!dsn::buf2bool(iter->second, allow_ingest_behind)) {
         dwarn_replica(
-            "{}={} is invalid, set default value={}", iter->first, iter->second, default_value);
-        _allow_ingest_behind = default_value;
+            "{}={} is invalid, set allow_ingest_behind = false", iter->first, iter->second);
+        return false;
     }
-    ddebug_replica("update allow_ingest_behind={}", _allow_ingest_behind);
+    ddebug_replica("update allow_ingest_behind = {}", allow_ingest_behind);
+    return allow_ingest_behind;
 }
 
 bool pegasus_server_impl::parse_compression_types(

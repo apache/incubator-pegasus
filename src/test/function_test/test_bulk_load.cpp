@@ -303,7 +303,6 @@ TEST_F(bulk_load_test, bulk_load_ingest_behind_tests)
     // app envs allow_ingest_behind = false, request ingest_behind = true
     ASSERT_EQ(start_bulk_load(true), ERR_INCONSISTENT_STATE);
 
-    // update app allow_
     update_allow_ingest_behind("true");
 
     // write old data
