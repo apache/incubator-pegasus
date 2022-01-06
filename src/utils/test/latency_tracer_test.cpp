@@ -81,6 +81,7 @@ public:
     }
 };
 
+/*
 TEST_F(latency_tracer_test, add_point)
 {
     auto tracer1_points = get_points(_tracer1);
@@ -138,5 +139,6 @@ TEST_F(latency_tracer_test, add_point)
     auto tracer4_points = get_points(_tracer4);
     ASSERT_EQ(tracer4_points.size(), 0);
 }
+ */
 } // namespace utils
 } // namespace dsn

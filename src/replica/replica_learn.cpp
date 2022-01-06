@@ -806,14 +806,12 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                       req.signature,
                       mu->name());
 
-                // write to shared log with no callback, the later 2pc ensures that logs
+                // write to private log with no callback, the later 2pc ensures that logs
                 // are written to the disk
-                _stub->_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
-
-                // because shared log are written without callback, need to manully
-                // set flag and write mutations to private log
-                mu->set_logged();
                 _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
+
+                // because private log are written without callback, need to manully set flag
+                mu->set_logged();
 
                 // then we prepare, it is possible that a committed mutation exists in learner's
                 // prepare log,
