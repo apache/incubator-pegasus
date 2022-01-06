@@ -29,6 +29,29 @@ if [ $# -le 3 ]; then
   exit 1
 fi
 
+function find_app()
+{
+  meta_list=$1
+  app_name=$2
+  find_app="false"
+
+  echo ls | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.update_ingestion_behind.ls
+  while read app_line
+  do
+    status=`echo ${app_line} | awk '{print $2}'`
+    name=`echo ${app_line} | awk '{print $3}'`
+    if [ "${app_name}" != "$name" ]; then
+        continue
+    fi
+    if [ "$status" == "AVAILABLE" ]; then
+        find_app="true"
+        break
+    fi
+  done </tmp/$UID.$PID.pegasus.update_ingestion_behind.ls
+  echo "$find_app"
+}
+
+
 function get_app_node_count()
 {
   meta_list=$1
@@ -70,31 +93,11 @@ start_task_id=0
 rebalance_cluster_after_rolling=true
 rebalance_only_move_primary=false
 
-pwd="$( cd "$( dirname "$0"  )" && pwd )"
-shell_dir="$( cd $pwd/.. && pwd )"
-cd $shell_dir
-
-source ./scripts/minos_common.sh
-find_cluster $cluster
-if [ $? -ne 0 ]; then
-  echo "ERROR: cluster \"$cluster\" not found"
-  exit 1
-fi
-
 echo "UID=$UID"
 echo "PID=$PID"
 echo "Start time: `date`"
 total_start_time=$((`date +%s`))
 echo
-
-rs_list_file="/tmp/$UID.$PID.pegasus.update_ingestion_behind.rs.list"
-echo "Generating $rs_list_file..."
-minos_show_replica $cluster $rs_list_file
-replica_server_count=`cat $rs_list_file | wc -l`
-if [ $replica_server_count -eq 0 ]; then
-  echo "ERROR: replica server count is 0 by minos show"
-  exit 1
-fi
 
 echo "Generating /tmp/$UID.$PID.pegasus.update_ingestion_behind.cluster_info..."
 echo cluster_info | ./run.sh shell --cluster $meta_list 2>&1 | sed 's/ *$//' >/tmp/$UID.$PID.pegasus.update_ingestion_behind.cluster_info
@@ -103,33 +106,37 @@ if [ "$cname" != "$cluster" ]; then
   echo "ERROR: cluster name and meta list not matched"
   exit 1
 fi
+
+app_found=`find_app ${meta_list} ${app_name}`
+if [ "$app_found" != "true" ]; then
+  echo "ERROR: can't find app $app_name in cluster $cluster"
+  exit 1
+fi
+
 pmeta=`grep primary_meta_server /tmp/$UID.$PID.pegasus.update_ingestion_behind.cluster_info | grep -o '[0-9.:]*$'`
 if [ "$pmeta" == "" ]; then
   echo "ERROR: extract primary_meta_server by shell failed"
   exit 1
 fi
 
-echo "Generating /tmp/$UID.$PID.pegasus.update_ingestion_behind.nodes..."
+rs_list_file="/tmp/$UID.$PID.pegasus.update_ingestion_behind.rs.list"
+echo "Generating $rs_list_file..."
 echo nodes | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.update_ingestion_behind.nodes
-rs_port=`grep '^[0-9.]*:' /tmp/$UID.$PID.pegasus.update_ingestion_behind.nodes | head -n 1 | grep -o ':[0-9]*' | grep -o '[0-9]*'`
-if [ "$rs_port" == "" ]; then
-  echo "ERROR: extract replica server port by shell failed"
-  exit 1
-fi
+while read line
+do
+  node_status=`echo $line | awk '{print $2}'`
+  if [ "$node_status" != "ALIVE" ]; then
+    continue
+  else
+    echo $line | awk '{print $1}' >>$rs_list_file
+  fi
+done </tmp/$UID.$PID.pegasus.update_ingestion_behind.nodes
 
 echo "Set meta level to steady..."
 echo "set_meta_level steady" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.update_ingestion_behind.set_meta_level
 set_ok=`grep 'control meta level ok' /tmp/$UID.$PID.pegasus.update_ingestion_behind.set_meta_level | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set meta level to steady failed"
-  exit 1
-fi
-
-echo "Set lb.assign_delay_ms to 30min..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms 180000000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
-set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
-if [ $set_ok -ne 1 ]; then
-  echo "ERROR: set lb.assign_delay_ms to 30min failed"
   exit 1
 fi
 
@@ -141,22 +148,25 @@ if [ ${set_fail} -eq 1 ]; then
     echo "ERROR: set app envs failed, refer to ${log_file}"
     exit 1
 fi
-
 echo "Sleep 30 seconds to wait app envs working..."
 sleep 30
+
+echo "Set lb.assign_delay_ms to 30min..."
+echo "remote_command -l $pmeta meta.lb.assign_delay_ms 180000000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
+set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
+if [ $set_ok -ne 1 ]; then
+  echo "ERROR: set lb.assign_delay_ms to 30min failed"
+  exit 1
+fi
 
 echo
 while read line
 do
-  task_id=`echo $line | awk '{print $1}'`
-  if [ $task_id -lt $start_task_id ]; then
-    continue
-  fi
   start_time=$((`date +%s`))
-  node_str=`echo $line | awk '{print $2}'`
-  node_ip=`getent hosts $node_str | awk '{print $1}'`
-  node_name=`getent hosts $node_str | awk '{print $2}'`
-  node=${node_ip}:${rs_port}
+  node=$line
+  node_ip=`echo ${line} | cut -d ':' -f1`
+  node_name=`getent hosts $node_ip | awk '{print $2}'`
+
   echo "=================================================================="
   echo "=================================================================="
   echo "Closing partitions of [$app_name] on [$node_name] [$node]..."
