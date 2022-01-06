@@ -1505,7 +1505,7 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
         }
     }
 
-    response.is_bulk_loading = app->is_bulk_loading;
+    response.__set_is_bulk_loading(app->is_bulk_loading);
 
     if (!app->is_bulk_loading && bulk_load_status::BLS_FAILED == response.app_status) {
         response.err = get_app_bulk_load_err_unlocked(app_id);
