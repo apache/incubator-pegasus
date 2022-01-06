@@ -142,9 +142,9 @@ public:
                   dsn::apps::duplicate_response &resp);
 
     // Execute bulk load ingestion
-    int ingestion_files(int64_t decree,
-                        const dsn::replication::ingestion_request &req,
-                        dsn::replication::ingestion_response &resp);
+    int ingest_files(int64_t decree,
+                     const dsn::replication::ingestion_request &req,
+                     dsn::replication::ingestion_response &resp);
 
     /// For batch write.
 

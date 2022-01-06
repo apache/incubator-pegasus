@@ -373,9 +373,9 @@ int pegasus_write_service::duplicate(int64_t decree,
     return empty_put(ctx.decree);
 }
 
-int pegasus_write_service::ingestion_files(int64_t decree,
-                                           const dsn::replication::ingestion_request &req,
-                                           dsn::replication::ingestion_response &resp)
+int pegasus_write_service::ingest_files(int64_t decree,
+                                        const dsn::replication::ingestion_request &req,
+                                        dsn::replication::ingestion_response &resp)
 {
     // TODO(heyuchen): consider cu
 
@@ -391,7 +391,7 @@ int pegasus_write_service::ingestion_files(int64_t decree,
     _server->set_ingestion_status(dsn::replication::ingestion_status::IS_RUNNING);
     dsn::tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
         dsn::error_code err =
-            _impl->ingestion_files(decree, _server->bulk_load_dir(), req.metadata);
+            _impl->ingest_files(decree, _server->bulk_load_dir(), req.metadata, req.ingest_behind);
         if (err == dsn::ERR_OK) {
             _server->set_ingestion_status(dsn::replication::ingestion_status::IS_SUCCEED);
         } else {
