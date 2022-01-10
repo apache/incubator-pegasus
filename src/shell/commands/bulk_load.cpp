@@ -403,7 +403,8 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         tp_summary.add_row_name_and_data("partition_bulk_load_status",
                                          get_short_status(resp.partitions_status[pidx]));
     }
-    tp_summary.add_row_name_and_data("is_bulk_loading", resp.is_bulk_loading ? "YES" : "NO");
+    bool is_bulk_loading = resp.__isset.is_bulk_loading ? resp.is_bulk_loading : false;
+    tp_summary.add_row_name_and_data("is_bulk_loading", is_bulk_loading ? "YES" : "NO");
     tp_summary.add_row_name_and_data("app_bulk_load_status", get_short_status(resp.app_status));
     if (bulk_load_status::BLS_FAILED == resp.app_status) {
         tp_summary.add_row_name_and_data("bulk_load_err", resp.err.to_string());
