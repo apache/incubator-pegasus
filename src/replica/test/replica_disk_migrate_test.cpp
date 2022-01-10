@@ -222,12 +222,14 @@ TEST_F(replica_disk_migrate_test, disk_migrate_replica_run)
         fmt::format("./{}/{}.replica.disk.migrate.tmp/data/rdb/checkpoint.file",
                     request.target_disk,
                     request.pid.to_string());
-    const std::string kTargetInitInfoFile =
-        fmt::format("./{}/{}.replica.disk.migrate.tmp/.init-info",
-                    request.target_disk,
-                    request.pid.to_string());
-    const std::string kTargetAppInfoFile = fmt::format(
-        "./{}/{}.replica.disk.migrate.tmp/.app-info", request.target_disk, request.pid.to_string());
+    const std::string kTargetInitInfoFile = fmt::format("./{}/{}.replica.disk.migrate.tmp/{}",
+                                                        request.target_disk,
+                                                        request.pid.to_string(),
+                                                        replica_init_info::kInitInfo);
+    const std::string kTargetAppInfoFile = fmt::format("./{}/{}.replica.disk.migrate.tmp/{}",
+                                                       request.target_disk,
+                                                       request.pid.to_string(),
+                                                       replica::kAppInfo);
 
     init_migration_target_dir(fake_migrate_rpc);
     ASSERT_TRUE(utils::filesystem::directory_exists(kTargetDataDir));

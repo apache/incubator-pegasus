@@ -43,109 +43,30 @@
 namespace dsn {
 namespace replication {
 
+const std::string replica_init_info::kInitInfo = ".init-info";
+
 error_code replica_init_info::load(const std::string &dir)
 {
-    std::string old_info_path = utils::filesystem::path_combine(dir, ".info");
-    std::string new_info_path = utils::filesystem::path_combine(dir, ".init-info");
-    std::string load_path;
-    error_code err;
-    if (utils::filesystem::path_exists(new_info_path)) {
-        load_path = new_info_path;
-        err = load_json(new_info_path.c_str());
-    } else {
-        load_path = old_info_path;
-        err = load_binary(old_info_path.c_str());
-    }
-
-    ERR_LOG_AND_RETURN_NOT_OK(err, "load replica_init_info from {} failed", load_path);
-
-    ddebug_f("load replica_init_info from {} succeed: {}", load_path, to_string());
-    if (load_path == old_info_path) {
-        // change replica_init_info file from old to new
-        ERR_LOG_AND_RETURN_NOT_OK(store_json(new_info_path.c_str()),
-                                  "change replica_init_info file from {} to {} failed",
-                                  old_info_path,
-                                  new_info_path);
-
-        ddebug_f(
-            "change replica_init_info file from {} to {} succeed", old_info_path, new_info_path);
-        dassert_f(
-            utils::filesystem::remove_path(old_info_path), "remove file {} failed", old_info_path);
-    }
-
+    std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
+    dassert_f(utils::filesystem::path_exists(info_path), "file({}) not exist", info_path);
+    ERR_LOG_AND_RETURN_NOT_OK(
+        load_json(info_path.c_str()), "load replica_init_info from {} failed", info_path);
+    ddebug_f("load replica_init_info from {} succeed: {}", info_path, to_string());
     return ERR_OK;
 }
 
 error_code replica_init_info::store(const std::string &dir)
 {
     uint64_t start = dsn_now_ns();
-    std::string new_info_path = utils::filesystem::path_combine(dir, ".init-info");
-    ERR_LOG_AND_RETURN_NOT_OK(store_json(new_info_path.c_str()),
+    std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
+    ERR_LOG_AND_RETURN_NOT_OK(store_json(info_path.c_str()),
                               "store replica_init_info to {} failed, time_used_ns = {}",
-                              new_info_path,
+                              info_path,
                               dsn_now_ns() - start);
-
-    std::string old_info_path = utils::filesystem::path_combine(dir, ".info");
-    if (utils::filesystem::file_exists(old_info_path)) {
-        dassert_f(
-            utils::filesystem::remove_path(old_info_path), "remove file {} failed", old_info_path);
-    }
-
     ddebug_f("store replica_init_info to {} succeed, time_used_ns = {}: {}",
-             new_info_path,
+             info_path,
              dsn_now_ns() - start,
              to_string());
-
-    return ERR_OK;
-}
-
-error_code replica_init_info::load_binary(const char *file)
-{
-    std::ifstream is(file, std::ios::binary);
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        is.is_open(), ERR_FILE_OPERATION_FAILED, "open file {} failed", file);
-
-    magic = 0x0;
-    is.read((char *)this, sizeof(*this));
-    is.close();
-
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        magic == 0xdeadbeef, ERR_INVALID_DATA, "data in file {} is invalid (magic)", file);
-
-    auto fcrc = crc;
-    crc = 0; // set for crc computation
-    auto lcrc = dsn::utils::crc32_calc((const void *)this, sizeof(*this), 0);
-    crc = fcrc; // recover
-
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        lcrc == fcrc, ERR_INVALID_DATA, "data in file {} is invalid (crc)", file);
-
-    return ERR_OK;
-}
-
-error_code replica_init_info::store_binary(const char *file)
-{
-    std::string ffile = std::string(file);
-    std::string tmp_file = ffile + ".tmp";
-
-    std::ofstream os(tmp_file.c_str(),
-                     (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        os.is_open(), ERR_FILE_OPERATION_FAILED, "open file {} failed", tmp_file);
-
-    // compute crc
-    crc = 0;
-    crc = dsn::utils::crc32_calc((const void *)this, sizeof(*this), 0);
-
-    os.write((const char *)this, sizeof(*this));
-    os.close();
-
-    ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::rename_path(tmp_file, ffile),
-                                ERR_FILE_OPERATION_FAILED,
-                                "move file from {} to {} failed",
-                                tmp_file,
-                                ffile);
-
     return ERR_OK;
 }
 

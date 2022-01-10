@@ -54,6 +54,8 @@ public:
                               init_offset_in_shared_log,
                               init_offset_in_private_log)
 
+    static const std::string kInitInfo;
+
 public:
     replica_init_info() { memset((void *)this, 0, sizeof(*this)); }
     error_code load(const std::string &dir);
@@ -61,8 +63,6 @@ public:
     std::string to_string();
 
 private:
-    error_code load_binary(const char *file);
-    error_code store_binary(const char *file);
     error_code load_json(const char *file);
     error_code store_json(const char *file);
 };

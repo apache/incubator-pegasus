@@ -146,7 +146,7 @@ error_code replica::initialize_on_load()
 
     dsn::app_info info;
     replica_app_info info2(&info);
-    std::string path = utils::filesystem::path_combine(dir, ".app-info");
+    std::string path = utils::filesystem::path_combine(dir, kAppInfo);
     auto err = info2.load(path.c_str());
     if (ERR_OK != err) {
         derror("load app-info from %s failed, err = %s", path.c_str(), err.to_string());
@@ -472,5 +472,5 @@ void replica::reset_prepare_list_after_replay()
     // align the prepare list and the app
     _prepare_list->truncate(_app->last_committed_decree());
 }
-}
-} // namespace
+} // namespace replication
+} // namespace dsn
