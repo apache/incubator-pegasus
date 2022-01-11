@@ -61,8 +61,8 @@ bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 
 bool unlock_meta_op_status(command_executor *e, shell_context *sc, arguments args)
 {
-    ::dsn::error_code err = sc->ddl_client->unlock_meta_op_status();
-    if (err != ::dsn::ERR_OK) {
+    dsn::error_code err = sc->ddl_client->unlock_meta_op_status();
+    if (err != dsn::ERR_OK) {
         std::cout << "unlock meta op status failed, error=" << err.to_string() << std::endl;
     }
     return true;
