@@ -61,7 +61,7 @@ inline int get_cluster_id_if_exists()
     // cluster_id is 0 if not configured, which means it will accept writes
     // from any cluster as long as the timestamp is larger.
     static auto cluster_id_res =
-        dsn::replication::get_duplication_cluster_id(dsn::replication::get_current_cluster_name());
+        dsn::replication::get_duplication_cluster_id(dsn::get_current_cluster_name());
     static uint64_t cluster_id = cluster_id_res.is_ok() ? cluster_id_res.get_value() : 0;
     return cluster_id;
 }
@@ -483,9 +483,10 @@ public:
     // \return ERR_WRONG_CHECKSUM: verify files failed
     // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
     // \return ERR_OK: rocksdb ingestion succeed
-    dsn::error_code ingestion_files(const int64_t decree,
-                                    const std::string &bulk_load_dir,
-                                    const dsn::replication::bulk_load_metadata &metadata)
+    dsn::error_code ingest_files(const int64_t decree,
+                                 const std::string &bulk_load_dir,
+                                 const dsn::replication::bulk_load_metadata &metadata,
+                                 const bool ingest_behind)
     {
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
@@ -495,7 +496,8 @@ public:
         }
 
         // ingest external files
-        if (dsn_unlikely(_rocksdb_wrapper->ingestion_files(decree, sst_file_list) != 0)) {
+        if (dsn_unlikely(_rocksdb_wrapper->ingest_files(decree, sst_file_list, ingest_behind) !=
+                         0)) {
             return dsn::ERR_INGESTION_FAILED;
         }
         return dsn::ERR_OK;

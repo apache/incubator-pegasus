@@ -124,7 +124,7 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 echo "Set lb.assign_delay_ms to 30min..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms 1800000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
+echo "remote_command -l $pmeta meta.lb.assign_delay_ms 180000000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to 30min failed"
@@ -190,7 +190,7 @@ do
   sleeped=0
   while true
   do
-    if [ $((sleeped%10)) -eq 0 ]; then
+    if [ $((sleeped%50)) -eq 0 ]; then
       ./run.sh downgrade_node -c $meta_list -n $node -t run &>/tmp/$UID.$PID.pegasus.rolling_update.downgrade_node
       echo "Send downgrade propose, refer to /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node for details"
     fi
@@ -214,7 +214,7 @@ do
   sleeped=0
   while true
   do
-    if [ $((sleeped%10)) -eq 0 ]; then
+    if [ $((sleeped%50)) -eq 0 ]; then
       echo "Send kill_partition commands to node..."
       grep '^propose ' /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node >/tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose
       while read line2

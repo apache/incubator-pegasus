@@ -151,7 +151,7 @@ echo "Pegasus Tools $version ($commit_id) $platform $build_type" >${pack}/VERSIO
 
 tar cfz ${pack}.tar.gz ${pack}
 
-if [ -f $pack_template ]; then
+if [ -f "$pack_template" ]; then
     echo "Modifying $pack_template ..."
     sed -i "/^version:/c version: \"$pack_version\"" $pack_template
     sed -i "/^build:/c build: \"\.\/run.sh pack_tools\"" $pack_template

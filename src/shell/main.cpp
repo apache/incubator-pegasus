@@ -462,7 +462,7 @@ static command_executor commands[] = {
         "start_bulk_load",
         "start app bulk load",
         "<-a --app_name str> <-c --cluster_name str> <-p --file_provider_type str> <-r "
-        "--root_path>",
+        "--root_path> [-i --ingest_behind]",
         start_bulk_load,
     },
     {

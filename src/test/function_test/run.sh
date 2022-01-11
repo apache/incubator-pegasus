@@ -79,4 +79,6 @@ if [ $on_travis == "NO" ]; then
     exit_if_fail $? "run test backup_restore_test load failed: $test_case $config_file $table_name"
     GTEST_OUTPUT="xml:$REPORT_DIR/split.xml" GTEST_FILTER="partition_split_test.*" ./$test_case $config_file $table_name
     exit_if_fail $? "run test split failed: $test_case $config_file $table_name"
+    GTEST_OUTPUT="xml:$REPORT_DIR/test_throttle.xml" GTEST_FILTER="test_throttle.*" ./$test_case $config_file $table_name
+    exit_if_fail $? "run test test_throttle load failed: $test_case $config_file $table_name"
 fi
