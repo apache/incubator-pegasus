@@ -494,10 +494,7 @@ static command_executor commands[] = {
         detect_hotkey,
     },
     {
-        "unlock_meta_op_status",
-        "set op_status of meta to FREE",
-        "",
-        unlock_meta_op_status,
+        "unlock_meta_op_status", "set op_status of meta to FREE", "", unlock_meta_op_status,
     },
     {
         "exit", "exit shell", "", exit_shell,
