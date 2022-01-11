@@ -117,6 +117,8 @@ bool cc_command(command_executor *e, shell_context *sc, arguments args);
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args);
 
+bool unlock_meta_op_status(command_executor *e, shell_context *sc, arguments args);
+
 bool ls_nodes(command_executor *e, shell_context *sc, arguments args);
 
 bool server_info(command_executor *e, shell_context *sc, arguments args);
