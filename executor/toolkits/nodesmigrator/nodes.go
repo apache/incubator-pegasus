@@ -32,7 +32,7 @@ func (m *MigratorNode) downgradeAllReplicaToSecondary(client *executor.Client) {
 	for {
 		err := migrator.MigratePrimariesOut(client.Meta, m.node)
 		if err != nil {
-			logWarn(fmt.Sprintf("WARN: migrate primary out of %s is invalid now, err = %s\n", m.String(), err), false)
+			logDebug(fmt.Sprintf("migrate primary out of %s is invalid now, err = %s\n", m.String(), err))
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -50,23 +50,23 @@ func (m *MigratorNode) downgradeAllReplicaToSecondary(client *executor.Client) {
 func (m *MigratorNode) checkIfNoPrimary(client *executor.Client) bool {
 	tables, err := client.Meta.ListAvailableApps()
 	if err != nil {
-		logWarn(fmt.Sprintf("WARN:migrate primary out of %s is invalid when list app, err = %s", m.String(), err), false)
+		logDebug(fmt.Sprintf("migrate primary out of %s is invalid when list app, err = %s", m.String(), err))
 		return false
 	}
 
 	for _, tb := range tables {
 		partitions, err := migrator.ListPrimariesOnNode(client.Meta, m.node, tb.AppName)
 		if err != nil {
-			logWarn(fmt.Sprintf("WARN:migrate primary out of %s is invalid when list primaries, err = %s", m.String(), err), false)
+			logDebug(fmt.Sprintf("migrate primary out of %s is invalid when list primaries, err = %s", m.String(), err))
 			return false
 		}
 		if len(partitions) > 0 {
-			logWarn(fmt.Sprintf("WARN: migrate primary out of %s is not completed, current count = %d", m.String(), len(partitions)), false)
+			logDebug(fmt.Sprintf("migrate primary out of %s is not completed, current count = %d", m.String(), len(partitions)))
 			return false
 		}
 	}
 
-	logInfo(fmt.Sprintf("INFO: migrate primary out of %s successfully", m.String()), true)
+	logInfo(fmt.Sprintf("migrate primary out of %s successfully", m.String()))
 	return true
 }
 

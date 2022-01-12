@@ -6,18 +6,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func logInfo(log string, stdout bool) {
-	if stdout {
-		fmt.Println(log)
-	}
+func logInfo(log string) {
+	fmt.Printf("INFO: %s\n", log)
 	logrus.Info(log)
 }
 
-func logWarn(log string, stdout bool) {
-	if stdout {
-		fmt.Println(log)
-	}
+func logWarn(log string) {
+	fmt.Printf("WARN: %s\n", log)
 	logrus.Warn(log)
+}
+
+func logDebug(log string) {
+	logrus.Debugf(log)
 }
 
 func logPanic(log string) {

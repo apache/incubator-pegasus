@@ -31,9 +31,9 @@ func (m *Migrator) run(client *executor.Client, table string, round int, origin 
 		m.updateNodesReplicaInfo(client, table)
 		m.updateOngoingActionList()
 		remainingCount := m.getRemainingReplicaCount(origin)
-		if remainingCount <= 0 || len(balanceTargets) == len(m.targets) || len(invalidTargets) == len(m.targets) {
-			logInfo(fmt.Sprintf("INFO: [%s]completed(remaining=%d, balance=%v, invalid=%v) for no replicas can be migrated",
-				table, remainingCount, len(balanceTargets) == len(m.targets), len(invalidTargets) == len(m.targets)), true)
+		if remainingCount <= 0 || len(balanceTargets)+len(invalidTargets) >= len(m.targets) {
+			logInfo(fmt.Sprintf("[%s]completed(remaining=%d, balance=%d, invalid=%d, total=%d) for no replicas can be migrated",
+				table, remainingCount, len(balanceTargets), len(invalidTargets), len(m.targets)))
 			return m.getTotalRemainingReplicaCount()
 		}
 
@@ -41,30 +41,34 @@ func (m *Migrator) run(client *executor.Client, table string, round int, origin 
 		currentCount := m.getCurrentReplicaCount(target)
 		if currentCount >= expectCount {
 			balanceTargets[target.String()] = 1
-			logInfo(fmt.Sprintf("INFO: [%s]balance: no need migrate replicas to %s, current=%d, expect=max(%d)",
-				table, target.String(), currentCount, expectCount), false)
-			time.Sleep(10 * time.Second)
+			logDebug(fmt.Sprintf("[%s]balance: no need migrate replicas to %s, current=%d, expect=max(%d), total_balance=%d",
+				table, target.String(), currentCount, expectCount, len(balanceTargets)))
+			if len(m.ongoingActions.actionList) > 0 {
+				time.Sleep(10 * time.Second)
+			}
 			continue
 		}
 
 		if !m.existValidReplica(origin, target) {
 			invalidTargets[target.String()] = 1
-			time.Sleep(10 * time.Second)
+			logDebug(fmt.Sprintf("[%s]invalid: no invalid migrate replicas to %s, total_invalid=%d",
+				table, target.String(), len(invalidTargets)))
+			if len(m.ongoingActions.actionList) > 0 {
+				time.Sleep(10 * time.Second)
+			}
 			continue
 		}
 
 		currentConcurrentCount := target.concurrent(m.ongoingActions)
 		if currentConcurrentCount == maxConcurrent {
-			logWarn(fmt.Sprintf("WARN: [%s] %s has excceed the max concurrent = %d", table, target.String(),
-				currentConcurrentCount), true)
+			logDebug(fmt.Sprintf("[%s] %s has excceed the max concurrent = %d", table, target.String(),
+				currentConcurrentCount))
 			time.Sleep(10 * time.Second)
 			continue
 		}
 
 		concurrent := int(math.Min(float64(maxConcurrent-target.concurrent(m.ongoingActions)), float64(expectCount-currentCount)))
 		m.submitMigrateTask(client, table, origin, target, concurrent)
-		logInfo(fmt.Sprintf("INFO: [%s]send %s migrate task, ongiong task = %d", table, target.String(),
-			target.concurrent(m.ongoingActions)), true)
 		time.Sleep(10 * time.Second)
 	}
 }
@@ -86,7 +90,7 @@ func (m *Migrator) selectNextTargetNode() *MigratorNode {
 func (m *Migrator) updateNodesReplicaInfo(client *executor.Client, table string) {
 	for {
 		if err := m.syncNodesReplicaInfo(client, table); err != nil {
-			logWarn(fmt.Sprintf("WARN: [%s]table may be unhealthy: %s", table, err.Error()), true)
+			logDebug(fmt.Sprintf("[%s]table may be unhealthy: %s", table, err.Error()))
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -208,7 +212,7 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 	from := m.nodes[origin.String()]
 	to := m.nodes[target.String()]
 	if len(from.replicas) == 0 {
-		logWarn(fmt.Sprintf("WARN: the node[%s] has no replica to migrate", target.node.String()), false)
+		logDebug(fmt.Sprintf("the node[%s] has no replica to migrate", target.node.String()))
 		return
 	}
 
@@ -225,12 +229,12 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 		}
 
 		if to.contain(replica.gpid) {
-			logWarn(fmt.Sprintf("WARN: actions[%s] target has existed the replica", action.toString()), false)
+			logDebug(fmt.Sprintf("actions[%s] target has existed the replica", action.toString()))
 			continue
 		}
 
 		if m.totalActions.exist(action) {
-			logWarn(fmt.Sprintf("WARN: action[%s] has assgin other task", action.toString()), false)
+			logDebug(fmt.Sprintf("action[%s] has assgin other task", action.toString()))
 			continue
 		}
 
@@ -240,10 +244,10 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 		if err != nil {
 			m.totalActions.delete(action)
 			m.ongoingActions.delete(action)
-			logWarn(fmt.Sprintf("WARN: send failed: %s", err.Error()), false)
+			logWarn(fmt.Sprintf("send failed: %s", err.Error()))
 			continue
 		}
-		logInfo(fmt.Sprintf("INFO: send action: %s", action.toString()), true)
+		logInfo(fmt.Sprintf("[%s]send %s success, ongiong task = %d", table, action.toString(), target.concurrent(m.ongoingActions)))
 		return
 	}
 }
@@ -260,10 +264,10 @@ func (m *Migrator) updateOngoingActionList() {
 	for name, act := range m.ongoingActions.actionList {
 		node := m.nodes[act.to.String()]
 		if node.contain(act.replica.gpid) {
-			logInfo(fmt.Sprintf("INFO: %s has completed", name), true)
+			logInfo(fmt.Sprintf("%s has completed", name))
 			m.ongoingActions.delete(act)
 		} else {
-			logWarn(fmt.Sprintf("INFO: %s is running", name), true)
+			logInfo(fmt.Sprintf("%s is running", name))
 		}
 	}
 }

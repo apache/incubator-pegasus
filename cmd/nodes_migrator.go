@@ -35,7 +35,7 @@ func init() {
 			a.String("f", "from", "", "origin nodes list, such as: 127.0.0.1:34801,127.0.0.2:34801")
 			a.String("t", "to", "", "target nodes list, such as: 127.0.0.3:34802,127.0.0.3:34802")
 			a.String("a", "table", "", "specify the table list, default migrate all table")
-			a.Int("c", "concurrent", 10, "max concurrent replica migrate task count")
+			a.Int("c", "concurrent", 1, "max concurrent replica migrate task count")
 		},
 		Run: func(c *grumble.Context) error {
 			from := strings.Split(c.Flags.String("from"), ",")
