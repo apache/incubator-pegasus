@@ -147,7 +147,7 @@ error_code replica::initialize_on_load()
     dsn::app_info info;
     replica_app_info info2(&info);
     std::string path = utils::filesystem::path_combine(dir, kAppInfo);
-    auto err = info2.load(path.c_str());
+    auto err = info2.load(path);
     if (ERR_OK != err) {
         derror("load app-info from %s failed, err = %s", path.c_str(), err.to_string());
         return nullptr;

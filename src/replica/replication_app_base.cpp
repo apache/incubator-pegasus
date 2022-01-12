@@ -30,6 +30,7 @@
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_app_base.h>
+#include <dsn/utility/defer.h>
 #include <dsn/utility/factory_store.h>
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/crc.h>
@@ -45,12 +46,53 @@ namespace replication {
 
 const std::string replica_init_info::kInitInfo = ".init-info";
 
+DEFINE_TASK_CODE_AIO(LPC_AIO_INFO_WRITE, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
+
+namespace {
+error_code write_blob_to_file(const std::string &file, const blob &data)
+{
+    std::string tmp_file = file + ".tmp";
+    disk_file *hfile = file::open(tmp_file.c_str(), O_WRONLY | O_CREAT | O_BINARY | O_TRUNC, 0666);
+    ERR_LOG_AND_RETURN_NOT_TRUE(hfile, ERR_FILE_OPERATION_FAILED, "open file {} failed", tmp_file);
+    auto cleanup = defer([tmp_file]() { utils::filesystem::remove_path(tmp_file); });
+
+    error_code err;
+    size_t sz = 0;
+    task_tracker tracker;
+    aio_task_ptr tsk = file::write(hfile,
+                                   data.data(),
+                                   data.length(),
+                                   0,
+                                   LPC_AIO_INFO_WRITE,
+                                   &tracker,
+                                   [&err, &sz](error_code e, size_t s) {
+                                       err = e;
+                                       sz = s;
+                                   },
+                                   0);
+    dassert_f(tsk, "create file::write task failed");
+    tracker.wait_outstanding_tasks();
+    file::flush(hfile);
+    file::close(hfile);
+    ERR_LOG_AND_RETURN_NOT_OK(err, "write file {} failed", tmp_file);
+    dcheck_eq(data.length(), sz);
+    // TODO(yingchun): need fsync too？
+    ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::rename_path(tmp_file, file),
+                                ERR_FILE_OPERATION_FAILED,
+                                "move file from {} to {} failed",
+                                tmp_file,
+                                file);
+
+    return ERR_OK;
+}
+} // namespace
+
 error_code replica_init_info::load(const std::string &dir)
 {
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
     dassert_f(utils::filesystem::path_exists(info_path), "file({}) not exist", info_path);
     ERR_LOG_AND_RETURN_NOT_OK(
-        load_json(info_path.c_str()), "load replica_init_info from {} failed", info_path);
+        load_json(info_path), "load replica_init_info from {} failed", info_path);
     ddebug_f("load replica_init_info from {} succeed: {}", info_path, to_string());
     return ERR_OK;
 }
@@ -59,7 +101,7 @@ error_code replica_init_info::store(const std::string &dir)
 {
     uint64_t start = dsn_now_ns();
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
-    ERR_LOG_AND_RETURN_NOT_OK(store_json(info_path.c_str()),
+    ERR_LOG_AND_RETURN_NOT_OK(store_json(info_path),
                               "store replica_init_info to {} failed, time_used_ns = {}",
                               info_path,
                               dsn_now_ns() - start);
@@ -70,7 +112,7 @@ error_code replica_init_info::store(const std::string &dir)
     return ERR_OK;
 }
 
-error_code replica_init_info::load_json(const char *file)
+error_code replica_init_info::load_json(const std::string &file)
 {
     std::ifstream is(file, std::ios::binary);
     ERR_LOG_AND_RETURN_NOT_TRUE(
@@ -96,33 +138,14 @@ error_code replica_init_info::load_json(const char *file)
     return ERR_OK;
 }
 
-error_code replica_init_info::store_json(const char *file)
+error_code replica_init_info::store_json(const std::string &file)
 {
-    std::string ffile(file);
-    std::string tmp_file = ffile + ".tmp";
-
-    std::ofstream os(tmp_file.c_str(),
-                     (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        os.is_open(), ERR_FILE_OPERATION_FAILED, "open file {} failed", tmp_file);
-
-    dsn::blob bb = dsn::json::json_forwarder<replica_init_info>::encode(*this);
-    os.write((const char *)bb.data(), (std::streamsize)bb.length());
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        !os.bad(), ERR_FILE_OPERATION_FAILED, "write file {} failed", tmp_file);
-    os.close();
-
-    ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::rename_path(tmp_file, ffile),
-                                ERR_FILE_OPERATION_FAILED,
-                                "move file from {} to {} failed",
-                                tmp_file,
-                                ffile);
-
-    return ERR_OK;
+    return write_blob_to_file(file, json::json_forwarder<replica_init_info>::encode(*this));
 }
 
 std::string replica_init_info::to_string()
 {
+    // TODO(yingchun): use fmt instead
     std::ostringstream oss;
     oss << "init_ballot = " << init_ballot << ", init_durable_decree = " << init_durable_decree
         << ", init_offset_in_shared_log = " << init_offset_in_shared_log
@@ -130,7 +153,7 @@ std::string replica_init_info::to_string()
     return oss.str();
 }
 
-error_code replica_app_info::load(const char *file)
+error_code replica_app_info::load(const std::string &file)
 {
     std::ifstream is(file, std::ios::binary);
     ERR_LOG_AND_RETURN_NOT_TRUE(
@@ -157,7 +180,7 @@ error_code replica_app_info::load(const char *file)
     return ERR_OK;
 }
 
-error_code replica_app_info::store(const char *file)
+error_code replica_app_info::store(const std::string &file)
 {
     binary_writer writer;
     int magic = 0xdeadbeef;
@@ -177,24 +200,7 @@ error_code replica_app_info::store(const char *file)
         marshall(writer, tmp, DSF_THRIFT_JSON);
     }
 
-    std::string ffile = std::string(file);
-    std::string tmp_file = ffile + ".tmp";
-
-    std::ofstream os(tmp_file.c_str(),
-                     (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
-    ERR_LOG_AND_RETURN_NOT_TRUE(
-        os.is_open(), ERR_FILE_OPERATION_FAILED, "open file {} failed", tmp_file);
-
-    auto data = writer.get_buffer();
-    os.write((const char *)data.data(), (std::streamsize)data.length());
-    os.close();
-
-    ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::rename_path(tmp_file, ffile),
-                                ERR_FILE_OPERATION_FAILED,
-                                "move file from {} to {} failed",
-                                tmp_file,
-                                ffile);
-    return ERR_OK;
+    return write_blob_to_file(file, writer.get_buffer());
 }
 
 /*static*/
@@ -268,12 +274,10 @@ error_code replication_app_base::open_new_internal(replica *r,
                                 _dir_data);
 
     ERR_LOG_AND_RETURN_NOT_OK(open(), "[{}]: open replica app failed", r->name());
-
     _last_committed_decree = last_durable_decree();
     ERR_LOG_AND_RETURN_NOT_OK(update_init_info(_replica, shared_log_start, private_log_start, 0),
                               "[{}]: open replica app failed",
                               r->name());
-
     return ERR_OK;
 }
 
@@ -334,6 +338,7 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
 {
     int storage_error = 0;
     for (int i = 0; i < request_length; ++i) {
+        // TODO(yingchun): better to return error_code
         int e = on_request(requests[i]);
         if (e != 0) {
             derror_replica("got storage error when handler request({})",
