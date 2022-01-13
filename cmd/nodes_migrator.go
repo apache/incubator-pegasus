@@ -36,13 +36,16 @@ func init() {
 			a.String("t", "to", "", "target nodes list, such as: 127.0.0.3:34802,127.0.0.3:34802")
 			a.String("a", "table", "", "specify the table list, default migrate all table")
 			a.Int("c", "concurrent", 1, "max concurrent replica migrate task count")
+			a.Bool("b", "batch", false, "whether to batch migrate multi tables(tips: set true "+
+				"when only table partition size is less 1GB)")
 		},
 		Run: func(c *grumble.Context) error {
 			from := strings.Split(c.Flags.String("from"), ",")
 			to := strings.Split(c.Flags.String("to"), ",")
 			tables := strings.Split(c.Flags.String("table"), ",")
 			concurrent := c.Flags.Int("concurrent")
-			return nodesmigrator.MigrateAllReplicaToNodes(pegasusClient, from, to, tables, concurrent)
+			batch := c.Flags.Bool("batch")
+			return nodesmigrator.MigrateAllReplicaToNodes(pegasusClient, from, to, tables, batch, concurrent)
 		},
 	})
 }

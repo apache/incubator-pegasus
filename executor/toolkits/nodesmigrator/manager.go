@@ -3,13 +3,15 @@ package nodesmigrator
 import (
 	"fmt"
 	"math"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/pegasus-kv/admin-cli/executor"
 )
 
-func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []string, tables []string, concurrent int) error {
+func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []string, tables []string, batch bool, concurrent int) error {
 	nodesMigrator, err := createNewMigrator(client, from, to)
 	if err != nil {
 		return err
@@ -30,7 +32,7 @@ func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []strin
 
 	currentOriginNode := nodesMigrator.selectNextOriginNode()
 	firstOrigin := currentOriginNode
-	totalRemainingReplica := math.MaxInt16
+	var totalRemainingReplica int32 = math.MaxInt32
 	round := -1
 	for {
 		if totalRemainingReplica <= 0 {
@@ -46,10 +48,25 @@ func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []strin
 		currentOriginNode.downgradeAllReplicaToSecondary(client)
 
 		totalRemainingReplica = 0
+		tableCount := len(tableList)
+		var wg sync.WaitGroup
+		wg.Add(tableCount)
 		for _, tb := range tableList {
-			remainingCount := nodesMigrator.run(client, tb, round, currentOriginNode, concurrent)
-			totalRemainingReplica = totalRemainingReplica + remainingCount
+			targetTable := tb
+			if batch {
+				go func() {
+					worker, _ := createNewMigrator(client, from, to)
+					remainingCount := worker.run(client, targetTable, round, currentOriginNode, concurrent)
+					atomic.AddInt32(&totalRemainingReplica, int32(remainingCount))
+					wg.Done()
+				}()
+			} else {
+				remainingCount := nodesMigrator.run(client, targetTable, round, currentOriginNode, concurrent)
+				atomic.AddInt32(&totalRemainingReplica, int32(remainingCount))
+				wg.Done()
+			}
 		}
+		wg.Wait()
 		currentOriginNode = nodesMigrator.selectNextOriginNode()
 		time.Sleep(10 * time.Second)
 	}
