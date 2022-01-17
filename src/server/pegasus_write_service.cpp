@@ -391,12 +391,14 @@ int pegasus_write_service::ingest_files(int64_t decree,
     _server->set_ingestion_status(dsn::replication::ingestion_status::IS_RUNNING);
     dsn::tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
         dsn::error_code err =
-            _impl->ingest_files(decree, _server->bulk_load_dir(), req.metadata, req.ingest_behind);
-        if (err == dsn::ERR_OK) {
-            _server->set_ingestion_status(dsn::replication::ingestion_status::IS_SUCCEED);
-        } else {
-            _server->set_ingestion_status(dsn::replication::ingestion_status::IS_FAILED);
+            _impl->ingest_files(decree, _server->bulk_load_dir(), req, _server->get_ballot());
+        auto status = dsn::replication::ingestion_status::IS_SUCCEED;
+        if (err == dsn::ERR_INVALID_VERSION) {
+            status = dsn::replication::ingestion_status::IS_INVALID;
+        } else if (err != dsn::ERR_OK) {
+            status = dsn::replication::ingestion_status::IS_FAILED;
         }
+        _server->set_ingestion_status(status);
     });
     return rocksdb::Status::kOk;
 }

@@ -480,23 +480,35 @@ public:
         return 0;
     }
 
+    // \return ERR_INVALID_VERSION: replay or commit out-date ingest request
     // \return ERR_WRONG_CHECKSUM: verify files failed
     // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
     // \return ERR_OK: rocksdb ingestion succeed
     dsn::error_code ingest_files(const int64_t decree,
                                  const std::string &bulk_load_dir,
-                                 const dsn::replication::bulk_load_metadata &metadata,
-                                 const bool ingest_behind)
+                                 const dsn::replication::ingestion_request &req,
+                                 const int64_t current_ballot)
     {
+        const auto &req_ballot = req.ballot;
+
+        // if ballot updated, ignore this request
+        if (req_ballot < current_ballot) {
+            dwarn_replica("out-dated ingestion request, ballot changed, request({}) vs "
+                          "current({}), ignore it",
+                          req_ballot,
+                          current_ballot);
+            return dsn::ERR_INVALID_VERSION;
+        }
+
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
-        dsn::error_code err = get_external_files_path(bulk_load_dir, metadata, sst_file_list);
+        dsn::error_code err = get_external_files_path(bulk_load_dir, req.metadata, sst_file_list);
         if (err != dsn::ERR_OK) {
             return err;
         }
 
         // ingest external files
-        if (dsn_unlikely(_rocksdb_wrapper->ingest_files(decree, sst_file_list, ingest_behind) !=
+        if (dsn_unlikely(_rocksdb_wrapper->ingest_files(decree, sst_file_list, req.ingest_behind) !=
                          0)) {
             return dsn::ERR_INGESTION_FAILED;
         }
