@@ -40,7 +40,7 @@ set(MY_PROJ_LIBS
     )
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 if (UNIX)
     SET(CMAKE_INSTALL_RPATH ".")
