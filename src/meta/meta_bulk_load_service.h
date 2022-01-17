@@ -188,7 +188,8 @@ private:
 
     void send_ingestion_request(const std::string &app_name,
                                 const gpid &pid,
-                                const rpc_address &primary_addr);
+                                const rpc_address &primary_addr,
+                                const ballot &meta_ballot);
 
     void on_partition_ingestion_reply(error_code err,
                                       const ingestion_response &&resp,

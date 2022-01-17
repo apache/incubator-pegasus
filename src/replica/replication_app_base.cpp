@@ -234,6 +234,8 @@ bool replication_app_base::is_primary() const
 
 bool replication_app_base::is_duplicating() const { return _replica->is_duplicating(); }
 
+const ballot &replication_app_base::get_ballot() const { return _replica->get_ballot(); }
+
 error_code replication_app_base::open_internal(replica *r)
 {
     ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::directory_exists(_dir_data),

@@ -152,6 +152,7 @@ struct ingestion_request
     1:string                app_name;
     2:bulk_load_metadata    metadata;
     3:bool                  ingest_behind;
+    4:i64                   ballot;
 }
 
 struct ingestion_response

@@ -171,7 +171,7 @@ public:
     //
     //  local information query
     //
-    ballot get_ballot() const { return _config.ballot; }
+    const ballot &get_ballot() const { return _config.ballot; }
     partition_status::type status() const { return _config.status; }
     replication_app_base *get_app() { return _app.get(); }
     const app_info *get_app_info() const { return &_app_info; }

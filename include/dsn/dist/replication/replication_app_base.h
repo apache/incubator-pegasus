@@ -106,6 +106,8 @@ public:
     // Whether this replica is duplicating.
     bool is_duplicating() const;
 
+    const ballot &get_ballot() const;
+
     //
     // Open the app.
     //

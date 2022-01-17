@@ -1094,7 +1094,13 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
 
     if (new_status == bulk_load_status::BLS_INGESTING) {
         for (int i = 0; i < partition_count; ++i) {
-            partition_ingestion(ainfo.app_name, gpid(app_id, i));
+            tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                _meta_svc->tracker(),
+                std::bind(
+                    &bulk_load_service::partition_ingestion, this, ainfo.app_name, gpid(app_id, i)),
+                0,
+                std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
         }
     }
 
@@ -1166,10 +1172,15 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
     }
 
     rpc_address primary_addr = pconfig.primary;
-    tasking::enqueue(
-        LPC_BULK_LOAD_INGESTION,
-        _meta_svc->tracker(),
-        std::bind(&bulk_load_service::send_ingestion_request, this, app_name, pid, primary_addr));
+    ballot meta_ballot = pconfig.ballot;
+    tasking::enqueue(LPC_BULK_LOAD_INGESTION,
+                     _meta_svc->tracker(),
+                     std::bind(&bulk_load_service::send_ingestion_request,
+                               this,
+                               app_name,
+                               pid,
+                               primary_addr,
+                               meta_ballot));
     {
         zauto_write_lock l(_lock);
         _apps_ingesting_count[pid.get_app_id()]++;
@@ -1184,10 +1195,12 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
 // ThreadPool: THREAD_POOL_DEFAULT
 void bulk_load_service::send_ingestion_request(const std::string &app_name,
                                                const gpid &pid,
-                                               const rpc_address &primary_addr)
+                                               const rpc_address &primary_addr,
+                                               const ballot &meta_ballot)
 {
     ingestion_request req;
     req.app_name = app_name;
+    req.ballot = meta_ballot;
     {
         zauto_read_lock l(_lock);
         req.metadata = _partition_bulk_load_info[pid].metadata;
