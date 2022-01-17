@@ -390,7 +390,7 @@ int pegasus_write_service::ingest_files(int64_t decree,
     // ingest files asynchronously
     _server->set_ingestion_status(dsn::replication::ingestion_status::IS_RUNNING);
     dsn::tasking::enqueue(LPC_INGESTION, &_server->_tracker, [this, decree, req]() {
-        dsn::error_code err =
+        const auto &err =
             _impl->ingest_files(decree, _server->bulk_load_dir(), req, _server->get_ballot());
         auto status = dsn::replication::ingestion_status::IS_SUCCEED;
         if (err == dsn::ERR_INVALID_VERSION) {

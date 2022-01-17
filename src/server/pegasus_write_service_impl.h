@@ -502,7 +502,7 @@ public:
 
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
-        dsn::error_code err = get_external_files_path(bulk_load_dir, req.metadata, sst_file_list);
+        const auto &err = get_external_files_path(bulk_load_dir, req.metadata, sst_file_list);
         if (err != dsn::ERR_OK) {
             return err;
         }
