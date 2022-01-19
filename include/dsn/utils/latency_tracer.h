@@ -27,20 +27,20 @@ namespace utils {
 
 #define ADD_POINT(tracer)                                                                          \
     do {                                                                                           \
-        if ((tracer))                                                                              \
+        if (tracer != nullptr && (tracer)->enabled())                                              \
             (tracer)->add_point(fmt::format("{}:{}:{}", __FILENAME__, __LINE__, __FUNCTION__));    \
     } while (0)
 
 #define ADD_CUSTOM_POINT(tracer, message)                                                          \
     do {                                                                                           \
-        if ((tracer))                                                                              \
+        if (tracer != nullptr && (tracer)->enabled())                                              \
             (tracer)->add_point(                                                                   \
                 fmt::format("{}:{}:{}_{}", __FILENAME__, __LINE__, __FUNCTION__, (message)));      \
     } while (0)
 
 #define APPEND_EXTERN_POINT(tracer, ts, message)                                                   \
     do {                                                                                           \
-        if ((tracer))                                                                              \
+        if (tracer != nullptr && (tracer)->enabled())                                              \
             (tracer)->append_point(                                                                \
                 fmt::format("{}:{}:{}_{}", __FILENAME__, __LINE__, __FUNCTION__, (message)),       \
                 (ts));                                                                             \
@@ -80,7 +80,7 @@ namespace utils {
  *  start---->stageA----->stageB---->end
  *
  * "request.tracer" will record the time duration among all trace points.
-**/
+ **/
 DSN_DECLARE_bool(enable_latency_tracer);
 DSN_DECLARE_bool(enable_latency_tracer_report);
 
@@ -155,6 +155,8 @@ public:
     uint64_t last_time() const { return _last_time; }
 
     const std::string &last_stage_name() const { return _last_stage; }
+
+    bool enabled() const { return _enable_trace; }
 
 private:
     // report the trace point duration to monitor system
