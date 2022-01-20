@@ -153,6 +153,7 @@ struct ingestion_request
     2:bulk_load_metadata    metadata;
     3:bool                  ingest_behind;
     4:i64                   ballot;
+    5:bool                  verify_before_ingest;
 }
 
 struct ingestion_response

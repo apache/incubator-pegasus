@@ -40,6 +40,12 @@ DSN_DEFINE_uint32("meta_server",
                   "max partition_count executing ingestion at the same time");
 DSN_TAG_VARIABLE(bulk_load_ingestion_concurrent_count, FT_MUTABLE);
 
+DSN_DEFINE_bool("meta_server",
+                bulk_load_verify_before_ingest,
+                false,
+                "verify files according to metadata before ingest");
+DSN_TAG_VARIABLE(bulk_load_verify_before_ingest, FT_MUTABLE);
+
 bulk_load_service::bulk_load_service(meta_service *meta_svc, const std::string &bulk_load_dir)
     : _meta_svc(meta_svc), _state(meta_svc->get_server_state()), _bulk_load_root(bulk_load_dir)
 {
@@ -1201,6 +1207,7 @@ void bulk_load_service::send_ingestion_request(const std::string &app_name,
     ingestion_request req;
     req.app_name = app_name;
     req.ballot = meta_ballot;
+    req.verify_before_ingest = FLAGS_bulk_load_verify_before_ingest;
     {
         zauto_read_lock l(_lock);
         req.metadata = _partition_bulk_load_info[pid].metadata;
