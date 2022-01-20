@@ -223,9 +223,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
 
     _plock.lock();
 
-    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
-        ADD_POINT(mu->_tracer);
-    }
+    ADD_POINT(mu->_tracer);
 
     // init pending buffer
     if (nullptr == _pending_write) {
