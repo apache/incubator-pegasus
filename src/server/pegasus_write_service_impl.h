@@ -67,17 +67,17 @@ inline int get_cluster_id_if_exists()
 }
 
 inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
+                                               const bool verify_before_ingest,
                                                const dsn::replication::bulk_load_metadata &metadata,
                                                /*out*/ std::vector<std::string> &files_path)
 {
     for (const auto &f_meta : metadata.files) {
-        const std::string &file_name =
-            dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
-        if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
-            files_path.emplace_back(file_name);
-        } else {
+        const auto &file_name = dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
+        if (verify_before_ingest &&
+            !dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
             break;
         }
+        files_path.emplace_back(file_name);
     }
     return files_path.size() == metadata.files.size() ? dsn::ERR_OK : dsn::ERR_WRONG_CHECKSUM;
 }
@@ -502,7 +502,8 @@ public:
 
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
-        const auto &err = get_external_files_path(bulk_load_dir, req.metadata, sst_file_list);
+        const auto &err = get_external_files_path(
+            bulk_load_dir, req.verify_before_ingest, req.metadata, sst_file_list);
         if (err != dsn::ERR_OK) {
             return err;
         }
