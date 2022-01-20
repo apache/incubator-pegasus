@@ -406,10 +406,7 @@ bool run(const char *config_file,
     }
     spec.data_dir = cdir;
 
-    // setup coredump dir
-    spec.dir_coredump = ::dsn::utils::filesystem::path_combine(cdir, "coredumps");
-    dsn::utils::filesystem::create_directory(spec.dir_coredump);
-    ::dsn::utils::coredump::init(spec.dir_coredump.c_str());
+    ::dsn::utils::coredump::init();
 
     // setup log dir
     spec.dir_log = ::dsn::utils::filesystem::path_combine(cdir, "log");

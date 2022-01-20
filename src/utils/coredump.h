@@ -43,8 +43,8 @@ namespace utils {
 class coredump
 {
 public:
-    static void init(const char *dump_dir);
+    static void init();
     static void write();
 };
-}
-}
+} // namespace utils
+} // namespace dsn

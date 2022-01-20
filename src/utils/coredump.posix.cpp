@@ -44,14 +44,11 @@
 namespace dsn {
 namespace utils {
 
-static std::string s_dump_dir;
 static void handle_core_dump(int);
 static void handle_term(int);
 
-void coredump::init(const char *dump_dir)
+void coredump::init()
 {
-    s_dump_dir = dump_dir;
-
     signal(SIGSEGV, handle_core_dump);
     signal(SIGTERM, handle_term);
 }

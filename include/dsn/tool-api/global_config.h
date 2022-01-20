@@ -169,7 +169,6 @@ struct service_spec
     std::vector<service_app_spec> app_specs;
 
     // auto-set
-    std::string dir_coredump;
     std::string dir_log;
 
     service_spec() {}
