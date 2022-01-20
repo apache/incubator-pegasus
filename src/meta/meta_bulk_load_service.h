@@ -80,6 +80,9 @@ struct bulk_load_info
 ///           start bulk load
 ///                  |
 ///                  v
+/// remove previous bulk load info on remote storage
+///                  |
+///                  v
 ///          is_bulk_loading = true
 ///                  |
 ///                  v
@@ -98,8 +101,8 @@ struct bulk_load_info
 ///     v            v
 ///   Failed       Succeed
 ///     |            |
-///     v            v
-///    remove bulk load info on remote storage
+///     |            v
+///     |---> is_bulk_loading = false
 ///                  |
 ///                  v
 ///         is_bulk_loading = false
@@ -226,19 +229,19 @@ private:
                                                      const gpid &pid,
                                                      const bulk_load_metadata &metadata);
 
-    // update partition bulk load status on remote storage
+    // update partition bulk load info on remote storage
     // if should_send_request = true, will send bulk load request after update local partition
     // status, this parameter will be true when restarting bulk load, status will turn from paused
     // to downloading
-    void update_partition_status_on_remote_storage(const std::string &app_name,
-                                                   const gpid &pid,
-                                                   bulk_load_status::type new_status,
-                                                   bool should_send_request = false);
+    void update_partition_info_on_remote_storage(const std::string &app_name,
+                                                 const gpid &pid,
+                                                 bulk_load_status::type new_status,
+                                                 bool should_send_request = false);
 
-    void update_partition_status_on_remote_storage_reply(const std::string &app_name,
-                                                         const gpid &pid,
-                                                         bulk_load_status::type new_status,
-                                                         bool should_send_request);
+    void update_partition_info_on_remote_storage_reply(const std::string &app_name,
+                                                       const gpid &pid,
+                                                       bulk_load_status::type new_status,
+                                                       bool should_send_request);
 
     // update app bulk load status on remote storage
     void update_app_status_on_remote_storage_unlocked(int32_t app_id,
