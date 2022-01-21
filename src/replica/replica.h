@@ -482,8 +482,7 @@ private:
     uint64_t _last_checkpoint_generate_time_ms;
     uint64_t _next_checkpoint_interval_trigger_time_ms;
 
-    // prepare list
-    prepare_list *_prepare_list;
+    std::unique_ptr<prepare_list> _prepare_list;
 
     // private prepare log (may be empty, depending on config)
     mutation_log_ptr _private_log;

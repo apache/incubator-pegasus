@@ -129,7 +129,7 @@ public:
                 mu->set_logged();
             }
         }
-        rep->_prepare_list = _mock_plist;
+        rep->_prepare_list.reset(_mock_plist);
     }
 
     void mock_parent_states()

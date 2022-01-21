@@ -149,7 +149,7 @@ public:
     void set_replica_config(replica_configuration &config) { _config = config; }
     void set_partition_status(partition_status::type status) { _config.status = status; }
     void set_last_committed_decree(decree d) { _prepare_list->reset(d); }
-    prepare_list *get_plist() { return _prepare_list; }
+    prepare_list *get_plist() const { return _prepare_list.get(); }
     void prepare_list_truncate(decree d) { _prepare_list->truncate(d); }
     void prepare_list_commit_hard(decree d) { _prepare_list->commit(d, COMMIT_TO_DECREE_HARD); }
     decree get_app_last_committed_decree() { return _app->last_committed_decree(); }

@@ -296,8 +296,7 @@ void replica_split_manager::child_copy_prepare_list(
 
     // copy parent prepare list
     plist->set_committer(std::bind(&replica::execute_mutation, _replica, std::placeholders::_1));
-    delete _replica->_prepare_list;
-    _replica->_prepare_list = new prepare_list(this, *plist);
+    _replica->_prepare_list.reset(new prepare_list(this, *plist));
     for (decree d = last_committed_decree + 1; d <= _replica->_prepare_list->max_decree(); ++d) {
         mutation_ptr mu = _replica->_prepare_list->get_mutation_by_decree(d);
         dassert_replica(mu != nullptr, "can not find mutation, dercee={}", d);

@@ -167,11 +167,11 @@ void replica::init_state()
     _inactive_is_transient = false;
     _is_initializing = false;
     _deny_client_write = false;
-    _prepare_list =
-        new prepare_list(this,
-                         0,
-                         _options->max_mutation_count_in_prepare_list,
-                         std::bind(&replica::execute_mutation, this, std::placeholders::_1));
+    _prepare_list = dsn::make_unique<prepare_list>(
+        this,
+        0,
+        _options->max_mutation_count_in_prepare_list,
+        std::bind(&replica::execute_mutation, this, std::placeholders::_1));
 
     _config.ballot = 0;
     _config.pid.set_app_id(0);
@@ -189,12 +189,7 @@ void replica::init_state()
 replica::~replica(void)
 {
     close();
-
-    if (nullptr != _prepare_list) {
-        delete _prepare_list;
-        _prepare_list = nullptr;
-    }
-
+    _prepare_list = nullptr;
     dinfo("%s: replica destroyed", name());
 }
 
