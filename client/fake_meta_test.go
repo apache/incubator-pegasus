@@ -245,3 +245,11 @@ func (m *fakeMeta) RestartBulkLoad(tableName string) error {
 func (m *fakeMeta) CancelBulkLoad(tableName string, forced bool) error {
 	panic("unimplemented")
 }
+
+func (m *fakeMeta) StartManualCompaction(tableName string, targetLevel int, maxRunningCount int, bottommost bool) error {
+	panic("unimplemented")
+}
+
+func (m *fakeMeta) QueryManualCompaction(tableName string) (*admin.QueryAppManualCompactResponse, error) {
+	panic("unimplemented")
+}

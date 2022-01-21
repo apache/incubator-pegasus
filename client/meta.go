@@ -120,6 +120,10 @@ type Meta interface {
 	RestartBulkLoad(tableName string) error
 
 	CancelBulkLoad(tableName string, forced bool) error
+
+	StartManualCompaction(tableName string, targetLevel int, maxRunningCount int, bottommost bool) error
+
+	QueryManualCompaction(tableName string) (*admin.QueryAppManualCompactResponse, error)
 }
 
 type rpcBasedMeta struct {
@@ -593,4 +597,31 @@ func (m *rpcBasedMeta) CancelBulkLoad(tableName string, forced bool) error {
 		result = resp.(*admin.ControlBulkLoadResponse)
 	})
 	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) StartManualCompaction(tableName string, targetLevel int, maxRunningCount int, bottommost bool) error {
+	var level int32 = int32(targetLevel)
+	var count int32 = int32(maxRunningCount)
+	req := &admin.StartAppManualCompactRequest{
+		AppName:         tableName,
+		TargetLevel:     &level,
+		Bottommost:      &bottommost,
+		MaxRunningCount: &count,
+	}
+	var result *admin.StartAppManualCompactResponse
+	err := m.callMeta("StartManualCompact", req, func(resp interface{}) {
+		result = resp.(*admin.StartAppManualCompactResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) QueryManualCompaction(tableName string) (*admin.QueryAppManualCompactResponse, error) {
+	req := &admin.QueryAppManualCompactRequest{
+		AppName: tableName,
+	}
+	var result *admin.QueryAppManualCompactResponse
+	err := m.callMeta("QueryManualCompact", req, func(resp interface{}) {
+		result = resp.(*admin.QueryAppManualCompactResponse)
+	})
+	return result, wrapHintIntoError(result.GetHintMsg(), err)
 }

@@ -32,8 +32,8 @@ github.com/VividCortex/ewma v1.1.1 h1:MnEK4VOv6n0RSY4vtRe3h11qjxL3+t0B8yOL8iMXdc
 github.com/VividCortex/ewma v1.1.1/go.mod h1:2Tkkvm3sRDVXaiyucHiACn4cqf7DpdyLvmxzcbUokwA=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/XiaoMi/pegasus-go-client v0.0.0-20201127155445-d3b9a03abf6e/go.mod h1:H83dStz3HvHBFC0n7QK+qLHAjqsIghFOFx2TCvq6vzI=
-github.com/XiaoMi/pegasus-go-client v0.0.0-20211013054553-ae3787ff8253 h1:Ho1oXfP+K58rWtj1g+NvP79ADOn9OBw7yY7snik5M/A=
-github.com/XiaoMi/pegasus-go-client v0.0.0-20211013054553-ae3787ff8253/go.mod h1:VrfgKISflRhFm32m3e0SXLccvNJTyG8PRywWbUuGEfY=
+github.com/XiaoMi/pegasus-go-client v0.0.0-20211220102249-0e7f49437ffe h1:WSrSLLtR2PGDcCht8BXMk1CgTccvRNQerPpxwxGCle4=
+github.com/XiaoMi/pegasus-go-client v0.0.0-20211220102249-0e7f49437ffe/go.mod h1:VrfgKISflRhFm32m3e0SXLccvNJTyG8PRywWbUuGEfY=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/agiledragon/gomonkey v2.0.2+incompatible h1:eXKi9/piiC3cjJD1658mEE2o3NjkJ5vDLgYjCQu0Xlw=
 github.com/agiledragon/gomonkey v2.0.2+incompatible/go.mod h1:2NGfXu1a80LLr2cmWXGBDaHEjb1idR6+FVlX5T3D9hw=
