@@ -189,9 +189,16 @@ int rocksdb_wrapper::ingest_files(int64_t decree,
     ifo.ingest_behind = ingest_behind;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
     if (dsn_unlikely(!s.ok())) {
-        derror_rocksdb("IngestExternalFile", s.ToString(), "decree = {}", decree);
+        derror_rocksdb("IngestExternalFile",
+                       s.ToString(),
+                       "decree = {}, ingest_behind = {}",
+                       decree,
+                       ingest_behind);
     } else {
-        ddebug_rocksdb("IngestExternalFile", "Ingest files succeed, decree = {}", decree);
+        ddebug_rocksdb("IngestExternalFile",
+                       "Ingest files succeed, decree = {}, ingest_behind = {}",
+                       decree,
+                       ingest_behind);
     }
     return s.code();
 }
