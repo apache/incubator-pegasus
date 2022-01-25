@@ -67,17 +67,17 @@ inline int get_cluster_id_if_exists()
 }
 
 inline dsn::error_code get_external_files_path(const std::string &bulk_load_dir,
+                                               const bool verify_before_ingest,
                                                const dsn::replication::bulk_load_metadata &metadata,
                                                /*out*/ std::vector<std::string> &files_path)
 {
     for (const auto &f_meta : metadata.files) {
-        const std::string &file_name =
-            dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
-        if (dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
-            files_path.emplace_back(file_name);
-        } else {
+        const auto &file_name = dsn::utils::filesystem::path_combine(bulk_load_dir, f_meta.name);
+        if (verify_before_ingest &&
+            !dsn::utils::filesystem::verify_file(file_name, f_meta.md5, f_meta.size)) {
             break;
         }
+        files_path.emplace_back(file_name);
     }
     return files_path.size() == metadata.files.size() ? dsn::ERR_OK : dsn::ERR_WRONG_CHECKSUM;
 }
@@ -480,23 +480,36 @@ public:
         return 0;
     }
 
+    // \return ERR_INVALID_VERSION: replay or commit out-date ingest request
     // \return ERR_WRONG_CHECKSUM: verify files failed
     // \return ERR_INGESTION_FAILED: rocksdb ingestion failed
     // \return ERR_OK: rocksdb ingestion succeed
     dsn::error_code ingest_files(const int64_t decree,
                                  const std::string &bulk_load_dir,
-                                 const dsn::replication::bulk_load_metadata &metadata,
-                                 const bool ingest_behind)
+                                 const dsn::replication::ingestion_request &req,
+                                 const int64_t current_ballot)
     {
+        const auto &req_ballot = req.ballot;
+
+        // if ballot updated, ignore this request
+        if (req_ballot < current_ballot) {
+            dwarn_replica("out-dated ingestion request, ballot changed, request({}) vs "
+                          "current({}), ignore it",
+                          req_ballot,
+                          current_ballot);
+            return dsn::ERR_INVALID_VERSION;
+        }
+
         // verify external files before ingestion
         std::vector<std::string> sst_file_list;
-        dsn::error_code err = get_external_files_path(bulk_load_dir, metadata, sst_file_list);
+        const auto &err = get_external_files_path(
+            bulk_load_dir, req.verify_before_ingest, req.metadata, sst_file_list);
         if (err != dsn::ERR_OK) {
             return err;
         }
 
         // ingest external files
-        if (dsn_unlikely(_rocksdb_wrapper->ingest_files(decree, sst_file_list, ingest_behind) !=
+        if (dsn_unlikely(_rocksdb_wrapper->ingest_files(decree, sst_file_list, req.ingest_behind) !=
                          0)) {
             return dsn::ERR_INGESTION_FAILED;
         }
