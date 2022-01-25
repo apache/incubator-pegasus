@@ -24,18 +24,14 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-#include <dsn/utility/filesystem.h>
-#include <queue>
-#include <dsn/tool-api/command_manager.h>
 #include "nfs_client_impl.h"
+
+#include <fcntl.h>
+
+#include <queue>
+
+#include <dsn/utility/filesystem.h>
+#include <dsn/tool-api/command_manager.h>
 
 namespace dsn {
 namespace service {

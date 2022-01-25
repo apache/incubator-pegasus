@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <iostream>
+
 #include <dsn/utility/ports.h>
 
 namespace dsn {

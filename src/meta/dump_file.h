@@ -35,6 +35,7 @@
  */
 #pragma once
 
+#include <dsn/utility/safe_strerror_posix.h>
 #include <dsn/service_api_c.h>
 #include <dsn/service_api_cpp.h>
 #include <dsn/utility/crc.h>
@@ -42,23 +43,9 @@
 #include <cerrno>
 #include <iostream>
 
-inline void error_msg(int err_number, /*out*/ char *buffer, int buflen)
-{
-#ifdef _WIN32
-    int result = strerror_s(buffer, buflen, err_number);
-    if (result != 0)
-        fprintf(stderr, "maybe unknown err number(%d)", err_number);
-#else
-    char *result = strerror_r(err_number, buffer, buflen);
-    if (result != buffer) {
-        fprintf(stderr, "%s\n", result);
-    }
-#endif
-}
-
 #define log_error_and_return(buffer, length)                                                       \
     do {                                                                                           \
-        error_msg(errno, buffer, length);                                                          \
+        ::dsn::utils::safe_strerror_r(errno, buffer, length);                                      \
         derror("append file failed, reason(%s)", buffer);                                          \
         return -1;                                                                                 \
     } while (0)

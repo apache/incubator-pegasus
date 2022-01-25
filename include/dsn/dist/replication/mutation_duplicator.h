@@ -33,7 +33,7 @@ typedef std::tuple<uint64_t, task_code, blob> mutation_tuple;
 /// mutations are sorted by timestamp in mutation_tuple_set.
 struct mutation_tuple_cmp
 {
-    inline bool operator()(const mutation_tuple &lhs, const mutation_tuple &rhs)
+    inline bool operator()(const mutation_tuple &lhs, const mutation_tuple &rhs) const
     {
         // different mutations is probable to be batched together
         // and sharing the same timestamp, so here we also compare

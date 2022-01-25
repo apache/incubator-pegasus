@@ -33,6 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <array>
+
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/threadpool_spec.h>

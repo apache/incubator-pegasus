@@ -267,8 +267,10 @@ function(dsn_setup_system_libs)
 
     set(DSN_SYSTEM_LIBS "")
 
-    find_package(RT REQUIRED)
-    set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${RT_LIBRARIES})
+    if (NOT APPLE)
+        find_package(RT REQUIRED)
+        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${RT_LIBRARIES})
+    endif()
 
     find_package(DL REQUIRED)
     set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${DL_LIBRARIES})
@@ -276,10 +278,16 @@ function(dsn_setup_system_libs)
     # for md5 calculation
     find_package(OpenSSL REQUIRED)
     set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${OPENSSL_CRYPTO_LIBRARY})
+    if (APPLE)
+        include_directories(SYSTEM ${OPENSSL_ROOT_DIR}/include)
+        link_directories("${OPENSSL_ROOT_DIR}/lib")
+    endif()
 
-    if(ENABLE_GPERF)
-        set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} tcmalloc_and_profiler)
-        add_definitions(-DDSN_ENABLE_GPERF)
+    if (NOT APPLE)
+        if(ENABLE_GPERF)
+            set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} tcmalloc_and_profiler)
+            add_definitions(-DDSN_ENABLE_GPERF)
+        endif()
     endif()
 
     if(USE_JEMALLOC)
@@ -339,7 +347,9 @@ function(dsn_setup_thirdparty_libs)
     link_libraries(${JAVA_JVM_LIBRARY})
 
     link_directories(${DSN_THIRDPARTY_ROOT}/lib)
-    link_directories(${DSN_THIRDPARTY_ROOT}/lib64)
+    if (NOT APPLE)
+        link_directories(${DSN_THIRDPARTY_ROOT}/lib64)
+    endif()
 endfunction(dsn_setup_thirdparty_libs)
 
 function(dsn_common_setup)

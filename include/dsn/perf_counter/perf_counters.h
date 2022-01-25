@@ -34,6 +34,7 @@
 #include <sstream>
 #include <queue>
 #include <functional>
+#include <unordered_map>
 
 namespace dsn {
 

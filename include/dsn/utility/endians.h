@@ -19,7 +19,7 @@
 
 #include <cstdint>
 #include <cassert>
-#include <endian.h>
+#include <dsn/utility/ports.h>
 #include <dsn/utility/string_view.h>
 
 namespace dsn {
@@ -28,19 +28,36 @@ namespace endian {
 
 inline uint8_t hton(uint8_t v) { return v; }
 
+inline uint8_t ntoh(uint8_t v) { return v; }
+
+#if defined(__linux__)
+
 inline uint16_t hton(uint16_t v) { return htobe16(v); }
 
 inline uint32_t hton(uint32_t v) { return htobe32(v); }
 
 inline uint64_t hton(uint64_t v) { return htobe64(v); }
 
-inline uint8_t ntoh(uint8_t v) { return v; }
-
 inline uint16_t ntoh(uint16_t v) { return be16toh(v); }
 
 inline uint32_t ntoh(uint32_t v) { return be32toh(v); }
 
 inline uint64_t ntoh(uint64_t v) { return be64toh(v); }
+
+#elif defined(__APPLE__)
+
+inline uint16_t hton(uint16_t v) { return htons(v); }
+
+inline uint32_t hton(uint32_t v) { return htonl(v); }
+
+inline uint64_t hton(uint64_t v) { return htonll(v); }
+
+inline uint16_t ntoh(uint16_t v) { return ntohs(v); }
+
+inline uint32_t ntoh(uint32_t v) { return ntohl(v); }
+
+inline uint64_t ntoh(uint64_t v) { return ntohll(v); }
+#endif // defined(__linux__)
 
 } // namespace endian
 

@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include <dsn/utility/synchronize.h>
 #include <dsn/utility/TokenBucket.h>
 

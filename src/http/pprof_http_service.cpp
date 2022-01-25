@@ -17,6 +17,8 @@
 
 #ifdef DSN_ENABLE_GPERF
 
+#include <fcntl.h>
+
 #include <cstdlib>
 #include <chrono>
 #include <fstream>

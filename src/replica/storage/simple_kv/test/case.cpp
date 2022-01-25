@@ -37,6 +37,8 @@
 #include "simple_kv.server.impl.h"
 #include "checker.h"
 
+#include <fmt/printf.h>
+
 #include <dsn/tool-api/task.h>
 #include <dsn/tool-api/rpc_message.h>
 #include "replica/replica_stub.h"
@@ -536,9 +538,7 @@ void event_on_rpc::init(message_ex *msg, task *tsk)
 {
     event_on_task::init(tsk);
     if (msg != nullptr) {
-        char buf[100];
-        sprintf(buf, "%016lx", msg->header->trace_id);
-        _trace_id = buf;
+        _trace_id = fmt::sprintf("%016llx", msg->header->trace_id);
         _rpc_name = msg->header->rpc_name;
         _from = address_to_node(msg->header->from_address);
         _to = address_to_node(msg->to_address);

@@ -65,14 +65,14 @@ protected:
     virtual void on_write(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_WRITE ... (not implemented) " << std::endl;
-        int32_t resp;
+        int32_t resp = 0;
         reply(resp);
     }
     // RPC_SIMPLE_KV_SIMPLE_KV_APPEND
     virtual void on_append(const kv_pair &pr, ::dsn::rpc_replier<int32_t> &reply)
     {
         std::cout << "... exec RPC_SIMPLE_KV_SIMPLE_KV_APPEND ... (not implemented) " << std::endl;
-        int32_t resp;
+        int32_t resp = 0;
         reply(resp);
     }
 

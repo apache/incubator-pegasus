@@ -12,6 +12,10 @@ set(MY_PROJ_LIBS crypto)
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
-dsn_add_shared_library()
+if (APPLE)
+    dsn_add_static_library()
+else()
+    dsn_add_shared_library()
+endif()
 
 add_subdirectory(test)

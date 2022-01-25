@@ -344,7 +344,7 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     blob header_bb = header_writer.get_buffer();
     blob end_bb = end_writer.get_buffer();
     int32_t *total_length = reinterpret_cast<int32_t *>((void *)header_bb.data());
-    *total_length = htobe32(header_bb.length() + header->body_length + end_bb.length());
+    *total_length = endian::hton(header_bb.length() + header->body_length + end_bb.length());
 
     unsigned int dsn_size = sizeof(message_header) + header->body_length;
     int dsn_buf_count = 0;

@@ -27,6 +27,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif ()
 endif ()
 
+if (APPLE)
+    if (${MACOS_OPENSSL_ROOT_DIR} STREQUAL "")
+        message(FATAL_ERROR "OpenSSL root should be set for MacOS")
+    endif()
+endif()
+
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
 
@@ -99,15 +105,16 @@ ExternalProject_Add(gperftools
         BUILD_IN_SOURCE 1
         )
 
-file(MAKE_DIRECTORY ${TP_OUTPUT}/include/hdfs)
+set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
 ExternalProject_Add(hadoop
-        URL ${OSS_URL_PREFIX}/hadoop-2.8.4.tar.gz
-        https://archive.apache.org/dist/hadoop/common/hadoop-2.8.4/hadoop-2.8.4.tar.gz
-        URL_MD5 b30b409bb69185003b3babd1504ba224
+        URL https://github.com/apache/hadoop/archive/refs/tags/rel/release-2.8.4.tar.gz
+        URL_MD5 a1be737d4bff14923689619ab6545a96
+        PATCH_COMMAND ""
+        COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar
+        COMMAND cd ${HDFS_CLIENT_DIR} && cp -R target/hadoop-hdfs-native-client-2.8.4/include/. ${TP_OUTPUT}/include/hdfs && cp -R target/hadoop-hdfs-native-client-2.8.4/lib/native/. ${TP_OUTPUT}/lib
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
-        INSTALL_COMMAND cp -R include/. ${TP_OUTPUT}/include/hdfs && cp -R lib/native/. ${TP_OUTPUT}/lib
-        BUILD_IN_SOURCE 1
+        INSTALL_COMMAND ""
         )
 
 # header-only
@@ -174,10 +181,11 @@ ExternalProject_Add(libevent
         )
 
 ExternalProject_Add(poco
-        URL ${OSS_URL_PREFIX}/poco-poco-1.7.8-release.tar.gz
-        https://codeload.github.com/pocoproject/poco/tar.gz/poco-1.7.8-release
-        URL_MD5 4dbf02e14b9f20940ca0e8c70d8f6036
+        URL ${OSS_URL_PREFIX}/poco-1.11.1-release.tar.gz
+        https://github.com/pocoproject/poco/archive/refs/tags/poco-1.11.1-release.tar.gz
+        URL_MD5 a96210b60a675c4a8183ad1f2099d549
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DOPENSSL_ROOT_DIR=${MACOS_OPENSSL_ROOT_DIR}
         -DENABLE_MONGODB=OFF
         -DENABLE_PDF=OFF
         -DENABLE_DATA=OFF
@@ -192,7 +200,6 @@ ExternalProject_Add(poco
         -DENABLE_PAGECOMPILER=OFF
         -DENABLE_PAGECOMPILER_FILE2PAGE=OFF
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DBOOST_ROOT=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         DEPENDS boost
@@ -201,10 +208,11 @@ ExternalProject_Add(poco
 ExternalProject_Add(fds
         URL https://github.com/XiaoMi/galaxy-fds-sdk-cpp/archive/refs/tags/v1.0.0.tar.gz
         URL_MD5 f7e0f86534f7b15c2a9b349f5cb45503
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_fds_for_macos.patch
         CMAKE_ARGS -DPOCO_INCLUDE=${TP_OUTPUT}/include
+        -DMACOS_OPENSSL_INCLUDE_DIR=${MACOS_OPENSSL_ROOT_DIR}/include
         -DPOCO_LIB=${TP_OUTPUT}/lib
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DBOOST_ROOT=${TP_OUTPUT}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         INSTALL_COMMAND cp libgalaxy-fds-sdk-cpp.a ${TP_OUTPUT}/lib
@@ -218,9 +226,8 @@ ExternalProject_Add(fds
 
 # fmtlib >=6.x requires c++14 support, do not update this library for now
 ExternalProject_Add(fmt
-        URL ${OSS_URL_PREFIX}/fmt-5.3.0.zip
-        https://github.com/fmtlib/fmt/releases/download/5.3.0/fmt-5.3.0.zip
-        URL_MD5 56717619dcd9fa8c470533eb4d7d33aa
+        URL https://github.com/fmtlib/fmt/archive/refs/tags/5.3.0.tar.gz
+        URL_MD5 1015bf3ff2a140dfe03de50ee2469401
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_BUILD_TYPE=release
         -DFMT_TEST=false
@@ -336,6 +343,9 @@ ExternalProject_Add(rocksdb
         URL_MD5 2a6488cd87c37e0c2e42a5ca74bebc87
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        -DFAIL_ON_WARNINGS=OFF
+        -DWITH_BENCHMARK_TOOLS=OFF
+        -DWITH_TOOLS=OFF
         -DWITH_LZ4=ON
         -DWITH_ZSTD=ON
         -DWITH_SNAPPY=ON
@@ -350,6 +360,7 @@ ExternalProject_Add(rocksdb
         -DPORTABLE=${ROCKSDB_PORTABLE}
         )
 
+if (NOT APPLE)
 # kerberos
 ExternalProject_Add(krb5
         URL ${OSS_URL_PREFIX}/krb5-1.16.1.tar.gz
@@ -377,6 +388,7 @@ ExternalProject_Add(cyrus-sasl
         BUILD_IN_SOURCE 1
         )
 add_dependencies(cyrus-sasl krb5)
+endif()
 
 ExternalProject_Add(http-parser
         URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip

@@ -25,6 +25,9 @@
  */
 
 #include "native_linux_aio_provider.h"
+
+#include <fcntl.h>
+
 #include "runtime/service_engine.h"
 
 #include <dsn/tool-api/async_calls.h>

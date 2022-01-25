@@ -24,23 +24,16 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     a simple version of meta state service for development
- *
- * Revision history:
- *     2015-11-04, @imzhenyu (Zhenyu.Guo@microsoft.com), setup the sketch
- *     2015-11-11, Tianyi WANG, first version done
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "meta_state_service_simple.h"
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/utility/filesystem.h>
+
+#include <fcntl.h>
 
 #include <stack>
 #include <utility>
+
+#include <dsn/tool-api/task.h>
+#include <dsn/tool-api/async_calls.h>
+#include <dsn/utility/filesystem.h>
 
 namespace dsn {
 namespace dist {

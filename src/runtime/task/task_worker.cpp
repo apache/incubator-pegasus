@@ -24,6 +24,10 @@
  * THE SOFTWARE.
  */
 
+#if defined(__linux__)
+#include <sys/prctl.h>
+#endif // defined(__linux__)
+
 #include <sstream>
 #include <dsn/utility/process_utils.h>
 #include <dsn/utility/smart_pointers.h>
@@ -87,11 +91,18 @@ void task_worker::stop()
 
 void task_worker::set_name(const char *name)
 {
-    std::string sname(name);
-    auto thread_name = sname.substr(0, (16 - 1));
-    auto tid = pthread_self();
-    int err = pthread_setname_np(tid, thread_name.c_str());
-    if (err != 0) {
+#if defined(__linux__)
+    // http://0pointer.de/blog/projects/name-your-threads.html
+    // Set the name for the LWP (which gets truncated to 15 characters).
+    // Note that glibc also has a 'pthread_setname_np' api, but it may not be
+    // available everywhere and it's only benefit over using prctl directly is
+    // that it can set the name of threads other than the current thread.
+    int err = prctl(PR_SET_NAME, name);
+#else
+    int err = pthread_setname_np(name);
+#endif // defined(__linux__)
+    // We expect EPERM failures in sandboxed processes, just ignore those.
+    if (err < 0 && errno != EPERM) {
         dwarn("Fail to set pthread name. err = %d", err);
     }
 }
@@ -123,6 +134,7 @@ void task_worker::set_priority(worker_priority_t pri)
 
 void task_worker::set_affinity(uint64_t affinity)
 {
+#if defined(__linux__)
     dassert(affinity > 0, "affinity cannot be 0.");
 
     int nr_cpu = static_cast<int>(std::thread::hardware_concurrency());
@@ -147,6 +159,7 @@ void task_worker::set_affinity(uint64_t affinity)
     if (err != 0) {
         dwarn("Fail to set thread affinity. err = %d", err);
     }
+#endif // defined(__linux__)
 }
 
 void task_worker::run_internal()

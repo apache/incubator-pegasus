@@ -28,7 +28,10 @@ set(MY_PROJ_LIBS
     PocoNetSSL
     PocoJSON
     crypto
+    hdfs
     )
+
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")

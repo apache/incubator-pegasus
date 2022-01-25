@@ -15,15 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "block_service/fds/fds_service.h"
+
+#include <fcntl.h>
+
+#include <array>
+#include <fstream>
 #include <gtest/gtest.h>
+#include <memory>
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/rand.h>
 #include <dsn/dist/block_service.h>
-#include <memory>
-#include <fstream>
-
-#include "block_service/fds/fds_service.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;

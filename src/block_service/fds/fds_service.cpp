@@ -36,6 +36,7 @@
 #include <string.h>
 #include <dsn/utility/defer.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/safe_strerror_posix.h>
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
@@ -613,12 +614,10 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
         std::ifstream is(local_file, std::ios::binary | std::ios::in);
 
         if (!is.is_open()) {
-            char buffer[256];
-            char *ptr = strerror_r(errno, buffer, 256);
-            derror("fds upload failed: open local file(%s) failed when upload to(%s), error(%s)",
-                   local_file.c_str(),
-                   file_name().c_str(),
-                   ptr);
+            derror_f("fds upload failed: open local file({}) failed when upload to({}), error({})",
+                     local_file,
+                     file_name(),
+                     ::dsn::utils::safe_strerror(errno));
             resp.err = dsn::ERR_FILE_OPERATION_FAILED;
         } else {
             resp.err = put_content(is, file_sz, resp.uploaded_size);
@@ -674,12 +673,10 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
     std::shared_ptr<std::ofstream> handle(new std::ofstream(
         req.output_local_name, std::ios::binary | std::ios::out | std::ios::trunc));
     if (!handle->is_open()) {
-        char buffer[512];
-        char *ptr = strerror_r(errno, buffer, 512);
-        derror("fds download failed: fail to open localfile(%s) when download(%s), error(%s)",
-               req.output_local_name.c_str(),
-               _fds_path.c_str(),
-               ptr);
+        derror_f("fds download failed: fail to open localfile({}) when download({}), error({})",
+                 req.output_local_name,
+                 _fds_path,
+                 ::dsn::utils::safe_strerror(errno));
         resp.err = ERR_FILE_OPERATION_FAILED;
         resp.downloaded_size = 0;
         t->enqueue_with(resp);

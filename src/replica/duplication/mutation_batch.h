@@ -22,6 +22,7 @@
 
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"
+
 namespace dsn {
 namespace replication {
 

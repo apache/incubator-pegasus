@@ -45,9 +45,11 @@
 
 #include <sys/stat.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <boost/filesystem.hpp>
 #include <openssl/md5.h>
+#include <ftw.h>
 
 #define getcwd_ getcwd
 #define rmdir_ rmdir
@@ -147,7 +149,11 @@ bool file_tree_walk(const std::string &dirpath, ftw_handler handler, bool recurs
 {
     tls_ftw_ctx.handler = &handler;
     tls_ftw_ctx.recursive = recursive;
+#if defined(__linux__)
     int flags = FTW_ACTIONRETVAL;
+#else
+    int flags = 0;
+#endif // defined(__linux__)
     if (recursive) {
         flags |= FTW_DEPTH;
     }

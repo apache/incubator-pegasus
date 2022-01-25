@@ -33,7 +33,7 @@ set(MY_PROJ_LIBS
         PocoJSON
         crypto
         gtest
-        )
+        hdfs)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 

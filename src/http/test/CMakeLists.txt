@@ -11,7 +11,7 @@ set(MY_PROJ_LIBS
     gtest_main
     )
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES
     "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"

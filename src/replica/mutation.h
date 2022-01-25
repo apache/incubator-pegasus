@@ -41,10 +41,6 @@
 #include <dsn/utility/link.h>
 #include <dsn/utils/latency_tracer.h>
 
-#ifndef __linux__
-#pragma warning(disable : 4201)
-#endif
-
 namespace dsn {
 namespace replication {
 
@@ -244,7 +240,3 @@ private:
 };
 }
 } // namespace
-
-#ifndef __linux__
-#pragma warning(default : 4201)
-#endif

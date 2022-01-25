@@ -15,11 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "duplication_pipeline.h"
+
 #include <dsn/dist/replication/replication_app_base.h>
 #include <dsn/dist/fmt_logging.h>
 
 #include "replica/replica_stub.h"
-#include "duplication_pipeline.h"
 #include "load_from_private_log.h"
 
 namespace dsn {

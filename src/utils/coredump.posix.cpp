@@ -24,17 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#ifndef _WIN32
-
 #include "coredump.h"
 #include <dsn/tool_api.h>
 #include <sys/types.h>
@@ -84,5 +73,3 @@ static void handle_term(int signal_id)
 }
 } // namespace utils
 } // namespace dsn
-
-#endif

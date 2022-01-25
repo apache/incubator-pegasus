@@ -25,11 +25,14 @@
  */
 
 #include "log_file.h"
-#include "log_file_stream.h"
+
+#include <fcntl.h>
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/crc.h>
 #include <dsn/dist/fmt_logging.h>
+
+#include "log_file_stream.h"
 
 namespace dsn {
 namespace replication {

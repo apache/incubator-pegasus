@@ -80,7 +80,7 @@ perf_counter_ptr get_trace_counter(const std::string &name)
     return perf_counter;
 }
 
-bool is_enable_trace(const dsn::task_code code)
+bool is_enable_trace(const dsn::task_code &code)
 {
     if (!FLAGS_enable_latency_tracer) {
         return false;

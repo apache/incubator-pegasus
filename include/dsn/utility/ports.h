@@ -24,27 +24,9 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#if defined(_WIN32)
-
-#include <Windows.h>
-
-__pragma(warning(disable : 4127))
-
-#define __thread __declspec(thread)
-#define __selectany __declspec(selectany) extern
-
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__APPLE__)
 
 #include <unistd.h>
 
@@ -58,31 +40,6 @@ __pragma(warning(disable : 4127))
 
 #error "unsupported platform"
 #endif
-
-// stl headers
-#include <string>
-#include <memory>
-#include <map>
-#include <unordered_map>
-#include <set>
-#include <unordered_set>
-#include <vector>
-#include <list>
-#include <algorithm>
-
-// common c headers
-#include <cassert>
-#include <cstring>
-#include <cstdlib>
-#include <fcntl.h> // for file open flags
-#include <cstdio>
-#include <climits>
-#include <cerrno>
-#include <cstdint>
-#include <inttypes.h>
-
-// common utilities
-#include <atomic>
 
 // common macros and data structures
 #ifndef FIELD_OFFSET
@@ -102,51 +59,22 @@ __pragma(warning(disable : 4127))
 #define ARRAYSIZE(a) ((sizeof(a) / sizeof(*(a))) / static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 #endif
 
-#ifndef snprintf_p
-#if defined(_WIN32)
-#define snprintf_p sprintf_s
-#else
 #define snprintf_p std::snprintf
-#endif
-#endif
-
-#ifdef _WIN32
-#define dsn_likely(pred) pred
-#define dsn_unlikely(pred) pred
-#else
 #define dsn_likely(pred) (__builtin_expect((pred), 1))
 #define dsn_unlikely(pred) (__builtin_expect((pred), 0))
-#endif
-
-#ifdef _WIN32
-
-// make sure to include <Winsock2.h> before the usage
-
-#ifndef be16toh
-#define be16toh(x) ntohs(x)
-#endif
-
-#ifndef htobe16
-#define htobe16(x) htons(x)
-#endif
-
-    static_assert(sizeof(int32_t) == sizeof(long),
-                  "sizeof(int32_t) == sizeof(u_long) for use of ntohl");
-
-#ifndef be32toh
-#define be32toh(x) ntohl(x)
-#endif
-
-#ifndef htobe32
-#define htobe32(x) htonl(x)
-#endif
-
-#ifndef be64toh
-#define be64toh(x) ((be32toh((x) >> 32) & 0xffffffff) | (be32toh((x)&0xffffffff) << 32))
-#endif
-
-#endif
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName)                                                         \
     TypeName(const TypeName &) = delete;                                                           \
     void operator=(const TypeName &) = delete
+
+#if defined OS_LINUX || defined OS_CYGWIN
+
+// _BIG_ENDIAN
+#include <endian.h>
+
+#elif defined __APPLE__
+
+// BIG_ENDIAN
+#include <machine/endian.h> // NOLINT(build/include)
+
+#endif
