@@ -130,9 +130,9 @@ public:
         config.pid = gpid(app->app_id, 0);
         config.max_replica_count = 3;
         config.ballot = BALLOT;
-        config.primary = rpc_address("127.0.0.1", 10086);
-        config.secondaries.emplace_back(rpc_address("127.0.0.1", 10085));
-        config.secondaries.emplace_back(rpc_address("127.0.0.1", 10087));
+        config.primary = PRIMARY;
+        config.secondaries.emplace_back(SECONDARY1);
+        config.secondaries.emplace_back(SECONDARY2);
         app->partitions.clear();
         app->partitions.emplace_back(config);
         mock_meta_bulk_load_context(app->app_id, app->partition_count, status);
@@ -163,6 +163,49 @@ public:
         return flag;
     }
 
+    void set_partition_bulk_load_info(const gpid &pid,
+                                      bool ever_ingest_succeed,
+                                      bool use_secondary3 = false)
+    {
+        partition_bulk_load_info &pinfo = bulk_svc()._partition_bulk_load_info[pid];
+        pinfo.status = bulk_load_status::BLS_INGESTING;
+        pinfo.addresses.clear();
+        pinfo.addresses.emplace_back(PRIMARY);
+        pinfo.addresses.emplace_back(SECONDARY1);
+        if (use_secondary3) {
+            pinfo.addresses.emplace_back(SECONDARY3);
+        } else {
+            pinfo.addresses.emplace_back(SECONDARY2);
+        }
+        pinfo.ever_ingest_succeed = ever_ingest_succeed;
+    }
+
+    bool test_check_ever_ingestion(const gpid &pid,
+                                   bool ever_ingest_succeed,
+                                   int32_t secondary_count,
+                                   bool same)
+    {
+        set_partition_bulk_load_info(pid, ever_ingest_succeed);
+        partition_configuration config;
+        config.pid = pid;
+        config.primary = PRIMARY;
+        if (same) {
+            config.secondaries.emplace_back(SECONDARY1);
+            config.secondaries.emplace_back(SECONDARY2);
+        } else {
+            config.secondaries.emplace_back(SECONDARY1);
+            if (secondary_count == 2) {
+                config.secondaries.emplace_back(SECONDARY3);
+            } else if (secondary_count >= 3) {
+                config.secondaries.emplace_back(SECONDARY2);
+                config.secondaries.emplace_back(SECONDARY3);
+            }
+        }
+        auto flag = bulk_svc().check_ever_ingestion_succeed(config, APP_NAME, pid);
+        wait_all();
+        return flag;
+    }
+
     void on_partition_bulk_load_reply(error_code err,
                                       const bulk_load_request &request,
                                       const bulk_load_response &response)
@@ -185,6 +228,16 @@ public:
         return bulk_svc().get_app_bulk_load_status_unlocked(app_id);
     }
 
+    const partition_bulk_load_info &get_partition_bulk_load_info(const gpid &pid)
+    {
+        return bulk_svc()._partition_bulk_load_info[pid];
+    }
+
+    bulk_load_status::type get_partition_bulk_load_status(const gpid &pid)
+    {
+        return bulk_svc().get_partition_bulk_load_status_unlocked(pid);
+    }
+
     error_code get_app_bulk_load_err(int32_t app_id)
     {
         return bulk_svc().get_app_bulk_load_err_unlocked(app_id);
@@ -194,7 +247,7 @@ public:
                                            const gpid &pid,
                                            error_code rpc_err = ERR_OK)
     {
-        bulk_svc().on_partition_ingestion_reply(rpc_err, std::move(resp), APP_NAME, pid, ADDRESS);
+        bulk_svc().on_partition_ingestion_reply(rpc_err, std::move(resp), APP_NAME, pid, PRIMARY);
         wait_all();
     }
 
@@ -398,7 +451,10 @@ public:
     std::string PROVIDER = "local_service";
     std::string ROOT_PATH = "bulk_load_root";
     int64_t BALLOT = 4;
-    rpc_address ADDRESS = rpc_address("127.0.0.1", 10086);
+    const rpc_address PRIMARY = rpc_address("127.0.0.1", 10086);
+    const rpc_address SECONDARY1 = rpc_address("127.0.0.1", 10085);
+    const rpc_address SECONDARY2 = rpc_address("127.0.0.1", 10087);
+    const rpc_address SECONDARY3 = rpc_address("127.0.0.1", 10080);
 };
 
 /// start bulk load unit tests
@@ -516,6 +572,41 @@ TEST_F(bulk_load_service_test, validate_ingest_behind_test)
         ASSERT_EQ(validate_ingest_behind(test.mock_value, test.app_value, test.request_value),
                   test.expected_result);
     }
+}
+
+/// check_ever_ingestion_succeed unit tests
+TEST_F(bulk_load_service_test, check_ever_ingestion_test)
+{
+    create_app(APP_NAME);
+    const auto &app = find_app(APP_NAME);
+    auto pid = gpid(app->app_id, 0);
+    start_bulk_load(APP_NAME);
+    mock_meta_bulk_load_context(app->app_id, app->partition_count, bulk_load_status::BLS_INGESTING);
+    // Test cases:
+    // - ever_ingest_succeed=false
+    // - ever_ingest_succeed=true, secondary address same
+    // - ever_ingest_succeed=true, secondary address different
+    // - ever_ingest_succeed=true, secondary address count is 1
+    // - ever_ingest_succeed=true, secondary address count is 3
+    struct ever_ingestion_test
+    {
+        bool ever_ingest_succeed;
+        int32_t secondary_count;
+        bool same;
+        bool expected_value;
+        bulk_load_status::type expected_bulk_load_status;
+    } tests[]{{false, 2, true, false, bulk_load_status::BLS_INGESTING},
+              {true, 2, true, true, bulk_load_status::BLS_SUCCEED},
+              {true, 2, false, false, bulk_load_status::BLS_INGESTING},
+              {true, 1, false, false, bulk_load_status::BLS_INGESTING},
+              {true, 3, false, false, bulk_load_status::BLS_INGESTING}};
+    for (const auto &test : tests) {
+        ASSERT_EQ(test_check_ever_ingestion(
+                      pid, test.ever_ingest_succeed, test.secondary_count, test.same),
+                  test.expected_value);
+        ASSERT_EQ(get_partition_bulk_load_status(pid), test.expected_bulk_load_status);
+    }
+    drop_app(APP_NAME);
 }
 
 /// control bulk load unit tests
@@ -719,9 +810,6 @@ public:
 
 public:
     const int32_t _pidx = 0;
-    const rpc_address PRIMARY = rpc_address("127.0.0.1", 10086);
-    const rpc_address SECONDARY1 = rpc_address("127.0.0.1", 10085);
-    const rpc_address SECONDARY2 = rpc_address("127.0.0.1", 10087);
 
     int32_t _app_id;
     int32_t _partition_count;
@@ -813,6 +901,34 @@ TEST_F(bulk_load_process_test, ingestion_error)
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_FAILED);
     ASSERT_EQ(get_app_ingesting_count(_app_id), 2);
     ASSERT_EQ(get_app_bulk_load_err(_app_id), ERR_INGESTION_FAILED);
+}
+
+TEST_F(bulk_load_process_test, ingestion_one_succeed)
+{
+    mock_response_ingestion_status(ingestion_status::IS_SUCCEED, 4);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_ingesting_count(_app_id), 3);
+    const auto &pinfo = get_partition_bulk_load_info(gpid(_app_id, _pidx));
+    ASSERT_EQ(pinfo.status, bulk_load_status::BLS_SUCCEED);
+    ASSERT_TRUE(pinfo.ever_ingest_succeed);
+    ASSERT_EQ(pinfo.addresses.size(), 3);
+}
+
+TEST_F(bulk_load_process_test, ingestion_one_succeed_update)
+{
+    const auto pid = gpid(_app_id, _pidx);
+    mock_response_ingestion_status(ingestion_status::IS_SUCCEED, 4);
+    set_partition_bulk_load_info(pid, true, true);
+    test_on_partition_bulk_load_reply(_partition_count, bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
+    ASSERT_EQ(get_app_ingesting_count(_app_id), 3);
+    const auto &pinfo = get_partition_bulk_load_info(pid);
+    ASSERT_EQ(pinfo.status, bulk_load_status::BLS_SUCCEED);
+    ASSERT_TRUE(pinfo.ever_ingest_succeed);
+    ASSERT_EQ(pinfo.addresses.size(), 3);
+    ASSERT_EQ(std::find(pinfo.addresses.begin(), pinfo.addresses.end(), SECONDARY3),
+              pinfo.addresses.end());
 }
 
 TEST_F(bulk_load_process_test, normal_succeed)
@@ -1151,7 +1267,8 @@ TEST_F(bulk_load_failover_test, sync_bulk_load)
 }
 
 /// try_to_continue_bulk_load unit test
-// partition_count from bulk load is SYNC_PARTITION_COUNT, app partition_count is PARTITION_COUNT
+// partition_count from bulk load is SYNC_PARTITION_COUNT, app partition_count is
+// PARTITION_COUNT
 TEST_F(bulk_load_failover_test, app_info_inconsistency)
 {
     prepare_bulk_load_structures(SYNC_APP_ID,

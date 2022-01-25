@@ -897,6 +897,7 @@ TEST_F(replica_bulk_loader_test, validate_status_test)
                  {bulk_load_status::BLS_INGESTING, bulk_load_status::BLS_DOWNLOADED, true},
                  {bulk_load_status::BLS_INGESTING, bulk_load_status::BLS_SUCCEED, false},
                  {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_INVALID, true},
+                 {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_DOWNLOADED, true},
                  {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_INGESTING, true},
                  {bulk_load_status::BLS_SUCCEED, bulk_load_status::BLS_DOWNLOADING, false},
                  {bulk_load_status::BLS_PAUSING, bulk_load_status::BLS_INVALID, true},

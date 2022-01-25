@@ -293,6 +293,7 @@ void bulk_load_service::create_partition_bulk_load_dir(const std::string &app_na
 {
     partition_bulk_load_info pinfo;
     pinfo.status = bulk_load_status::BLS_DOWNLOADING;
+    pinfo.ever_ingest_succeed = false;
     blob value = dsn::json::json_forwarder<partition_bulk_load_info>::encode(pinfo);
 
     _meta_svc->get_meta_storage()->create_node(
@@ -950,9 +951,9 @@ void bulk_load_service::update_partition_info_on_remote_storage(const std::strin
     }
 
     _partitions_pending_sync_flag[pid] = true;
-    pinfo.status = new_status;
-    blob value = json::json_forwarder<partition_bulk_load_info>::encode(pinfo);
+    update_partition_info_unlock(pid, new_status, pinfo);
 
+    blob value = json::json_forwarder<partition_bulk_load_info>::encode(pinfo);
     _meta_svc->get_meta_storage()->set_data(
         get_partition_bulk_load_path(pid),
         std::move(value),
@@ -960,21 +961,43 @@ void bulk_load_service::update_partition_info_on_remote_storage(const std::strin
                   this,
                   app_name,
                   pid,
-                  new_status,
+                  pinfo,
                   should_send_request));
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void bulk_load_service::update_partition_info_unlock(const gpid &pid,
+                                                     bulk_load_status::type new_status,
+                                                     /*out*/ partition_bulk_load_info &pinfo)
+{
+    auto old_status = pinfo.status;
+    pinfo.status = new_status;
+    if (old_status != bulk_load_status::BLS_INGESTING ||
+        new_status != bulk_load_status::BLS_SUCCEED ||
+        _partitions_bulk_load_state.find(pid) == _partitions_bulk_load_state.end()) {
+        // no need to update other field of partition_bulk_load_info
+        return;
+    }
+    pinfo.addresses.clear();
+    const auto &state = _partitions_bulk_load_state[pid];
+    for (const auto &kv : state) {
+        pinfo.addresses.emplace_back(kv.first);
+    }
+    pinfo.ever_ingest_succeed = true;
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::update_partition_info_on_remote_storage_reply(
     const std::string &app_name,
     const gpid &pid,
-    bulk_load_status::type new_status,
+    const partition_bulk_load_info &new_info,
     bool should_send_request)
 {
     {
         zauto_write_lock l(_lock);
         auto old_status = _partition_bulk_load_info[pid].status;
-        _partition_bulk_load_info[pid].status = new_status;
+        auto new_status = new_info.status;
+        _partition_bulk_load_info[pid] = new_info;
         _partitions_pending_sync_flag[pid] = false;
 
         ddebug_f("app({}) update partition({}) status from {} to {}",
@@ -1121,6 +1144,41 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
 }
 
 // ThreadPool: THREAD_POOL_META_STATE
+bool bulk_load_service::check_ever_ingestion_succeed(const partition_configuration &config,
+                                                     const std::string &app_name,
+                                                     const gpid &pid)
+{
+    partition_bulk_load_info pinfo;
+    {
+        zauto_read_lock l(_lock);
+        pinfo = _partition_bulk_load_info[pid];
+    }
+
+    if (!pinfo.ever_ingest_succeed) {
+        return false;
+    }
+
+    std::vector<rpc_address> current_nodes;
+    current_nodes.emplace_back(config.primary);
+    for (const auto &secondary : config.secondaries) {
+        current_nodes.emplace_back(secondary);
+    }
+
+    std::sort(pinfo.addresses.begin(), pinfo.addresses.end());
+    std::sort(current_nodes.begin(), current_nodes.end());
+    if (current_nodes == pinfo.addresses) {
+        ddebug_f("app({}) partition({}) has already executed ingestion succeed", app_name, pid);
+        update_partition_info_on_remote_storage(app_name, pid, bulk_load_status::BLS_SUCCEED);
+        return true;
+    }
+
+    dwarn_f("app({}) partition({}) configuration changed, should executed ingestion again",
+            app_name,
+            pid);
+    return false;
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::partition_ingestion(const std::string &app_name, const gpid &pid)
 {
     FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [=](dsn::string_view) {
@@ -1128,24 +1186,6 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
             _apps_ingesting_count[pid.get_app_id()]++;
         }
     });
-
-    {
-        zauto_read_lock l(_lock);
-        if (_apps_ingesting_count[pid.get_app_id()] >= FLAGS_bulk_load_ingestion_concurrent_count) {
-            dwarn_f("app({}) has already {} partitions executing ingestion, partition({}) will "
-                    "wait and try it later",
-                    app_name,
-                    _apps_ingesting_count[pid.get_app_id()],
-                    pid);
-            tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                _meta_svc->tracker(),
-                std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
-                pid.thread_hash(),
-                std::chrono::seconds(5));
-            return;
-        }
-    }
 
     auto app_status = get_app_bulk_load_status(pid.get_app_id());
     if (app_status != bulk_load_status::BLS_INGESTING) {
@@ -1174,6 +1214,28 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
                  pid);
         handle_bulk_load_failed(pid.get_app_id(), ERR_CORRUPTION);
         return;
+    }
+
+    if (check_ever_ingestion_succeed(pconfig, app_name, pid)) {
+        return;
+    }
+
+    {
+        zauto_read_lock l(_lock);
+        if (_apps_ingesting_count[pid.get_app_id()] >= FLAGS_bulk_load_ingestion_concurrent_count) {
+            dwarn_f("app({}) has already {} partitions executing ingestion, partition({}) will "
+                    "wait and try it later",
+                    app_name,
+                    _apps_ingesting_count[pid.get_app_id()],
+                    pid);
+            tasking::enqueue(
+                LPC_META_STATE_NORMAL,
+                _meta_svc->tracker(),
+                std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
+                pid.thread_hash(),
+                std::chrono::seconds(5));
+            return;
+        }
     }
 
     rpc_address primary_addr = pconfig.primary;

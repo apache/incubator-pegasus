@@ -59,7 +59,9 @@ struct partition_bulk_load_info
 {
     bulk_load_status::type status;
     bulk_load_metadata metadata;
-    DEFINE_JSON_SERIALIZATION(status, metadata)
+    bool ever_ingest_succeed;
+    std::vector<rpc_address> addresses;
+    DEFINE_JSON_SERIALIZATION(status, metadata, ever_ingest_succeed, addresses)
 };
 
 // Used for remote file provider
@@ -103,9 +105,6 @@ struct bulk_load_info
 ///     |            |
 ///     |            v
 ///     |---> is_bulk_loading = false
-///                  |
-///                  v
-///         is_bulk_loading = false
 ///                  |
 ///                  v
 ///            bulk load end
@@ -200,6 +199,14 @@ private:
                                       const gpid &pid,
                                       const rpc_address &primary_addr);
 
+    // Called by `partition_ingestion`
+    // - true : this partition has ever executed ingestion succeed, no need to send ingestion
+    // request
+    // - false: this partition has not executed ingestion or executed ingestion failed
+    bool check_ever_ingestion_succeed(const partition_configuration &config,
+                                      const std::string &app_name,
+                                      const gpid &pid);
+
     // is_reset_all
     // - true  : reset all states in memory
     // - false : keep the bulk load results in memory, reset others
@@ -238,9 +245,13 @@ private:
                                                  bulk_load_status::type new_status,
                                                  bool should_send_request = false);
 
+    void update_partition_info_unlock(const gpid &pid,
+                                      bulk_load_status::type new_status,
+                                      /*out*/ partition_bulk_load_info &pinfo);
+
     void update_partition_info_on_remote_storage_reply(const std::string &app_name,
                                                        const gpid &pid,
-                                                       bulk_load_status::type new_status,
+                                                       const partition_bulk_load_info &new_info,
                                                        bool should_send_request);
 
     // update app bulk load status on remote storage
