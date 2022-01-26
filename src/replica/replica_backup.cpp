@@ -219,7 +219,7 @@ void replica::send_backup_request_to_secondary(const backup_request &request)
 {
     for (const auto &target_address : _primary_states.membership.secondaries) {
         // primary will send backup_request to secondary periodically
-        // so, we shouldn't handler the response
+        // so, we shouldn't handle the response
         rpc::call_one_way_typed(target_address, RPC_COLD_BACKUP, request, get_gpid().thread_hash());
     }
 }

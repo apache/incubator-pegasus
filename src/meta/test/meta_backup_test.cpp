@@ -243,10 +243,24 @@ public:
         _backup_engine->on_backup_reply(rpc_err, resp, pid, mock_primary_address);
     }
 
+    void mock_on_backup_reply_when_timeout(int32_t partition_index, error_code rpc_err)
+    {
+        gpid pid = gpid(_app_id, partition_index);
+        rpc_address mock_primary_address = rpc_address("127.0.0.1", 10000 + partition_index);
+        backup_response resp;
+        _backup_engine->on_backup_reply(rpc_err, resp, pid, mock_primary_address);
+    }
+
     bool is_backup_failed() const
     {
         zauto_lock l(_backup_engine->_lock);
         return _backup_engine->_is_backup_failed;
+    }
+
+    void reset_backup_engine()
+    {
+        zauto_lock l(_backup_engine->_lock);
+        _backup_engine->_is_backup_failed = false;
     }
 
 protected:
@@ -267,28 +281,41 @@ TEST_F(backup_engine_test, test_on_backup_reply)
     ASSERT_TRUE(_backup_engine->is_in_progress());
 
     // recieve a backup finished response
+    reset_backup_engine();
     mock_on_backup_reply(/*partition_index=*/1,
                          ERR_OK,
                          ERR_OK,
                          /*progress=*/cold_backup_constant::PROGRESS_FINISHED);
     ASSERT_TRUE(_backup_engine->is_in_progress());
 
-    // recieve a backup in-progress response
+    // receive a backup in-progress response
+    reset_backup_engine();
     mock_on_backup_reply(/*partition_index=*/2, ERR_OK, ERR_BUSY, /*progress=*/0);
     ASSERT_TRUE(_backup_engine->is_in_progress());
+    ASSERT_EQ(_backup_engine->_backup_status[2], backup_status::ALIVE);
 
-    // recieve a backup failed response
-    mock_on_backup_reply(/*partition_index=*/3, ERR_OK, ERR_LOCAL_APP_FAILURE, /*progress=*/0);
-    ASSERT_TRUE(is_backup_failed());
+    // if one partition fail, all backup plan will fail
+    {
+        // receive a backup failed response
+        reset_backup_engine();
+        mock_on_backup_reply(/*partition_index=*/3, ERR_OK, ERR_LOCAL_APP_FAILURE, /*progress=*/0);
+        ASSERT_TRUE(is_backup_failed());
 
-    // this backup is still a failure even recieved non-failure response
-    mock_on_backup_reply(/*partition_index=*/4, ERR_OK, ERR_BUSY, /*progress=*/0);
-    ASSERT_TRUE(is_backup_failed());
-    mock_on_backup_reply(/*partition_index=*/5,
-                         ERR_OK,
-                         ERR_OK,
-                         /*progress=*/cold_backup_constant::PROGRESS_FINISHED);
-    ASSERT_TRUE(is_backup_failed());
+        // this backup is still a failure even received non-failure response
+        mock_on_backup_reply(/*partition_index=*/4, ERR_OK, ERR_BUSY, /*progress=*/0);
+        ASSERT_TRUE(is_backup_failed());
+
+        mock_on_backup_reply(/*partition_index=*/5,
+                             ERR_OK,
+                             ERR_OK,
+                             /*progress=*/cold_backup_constant::PROGRESS_FINISHED);
+        ASSERT_TRUE(is_backup_failed());
+    }
+
+    // meta request is timeout
+    reset_backup_engine();
+    mock_on_backup_reply_when_timeout(/*partition_index=*/5, ERR_TIMEOUT);
+    ASSERT_FALSE(is_backup_failed());
 }
 
 TEST_F(backup_engine_test, test_backup_completed)

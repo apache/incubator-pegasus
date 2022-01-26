@@ -194,14 +194,36 @@ void backup_engine::backup_app_partition(const gpid &pid)
     _backup_status[pid.get_partition_index()] = backup_status::ALIVE;
 }
 
-void backup_engine::on_backup_reply(error_code err,
-                                    const backup_response &response,
-                                    gpid pid,
-                                    const rpc_address &primary)
+inline void backup_engine::handle_replica_backup_failed(const backup_response &response,
+                                                        const gpid pid)
 {
     dcheck_eq(response.pid, pid);
     dcheck_eq(response.backup_id, _cur_backup.backup_id);
 
+    derror_f("backup_id({}): backup for partition {} failed, response.err: {}",
+             _cur_backup.backup_id,
+             pid.to_string(),
+             response.err.to_string());
+    zauto_lock l(_lock);
+    // if one partition fail, the whole backup plan fail.
+    _is_backup_failed = true;
+    _backup_status[pid.get_partition_index()] = backup_status::FAILED;
+}
+
+inline void backup_engine::retry_backup(const dsn::gpid pid)
+{
+    tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                     &_tracker,
+                     [this, pid]() { backup_app_partition(pid); },
+                     0,
+                     std::chrono::seconds(1));
+}
+
+void backup_engine::on_backup_reply(const error_code err,
+                                    const backup_response &response,
+                                    const gpid pid,
+                                    const rpc_address &primary)
+{
     {
         zauto_lock l(_lock);
         // if backup of some partition failed, we would not handle response from other partitions.
@@ -215,51 +237,47 @@ void backup_engine::on_backup_reply(error_code err,
     // if backup failed, receive ERR_LOCAL_APP_FAILURE;
     // backup not completed in other cases.
     // see replica::on_cold_backup() for details.
-    int32_t partition = pid.get_partition_index();
-    if (err == dsn::ERR_OK && response.err == dsn::ERR_OK &&
-        response.progress == cold_backup_constant::PROGRESS_FINISHED) {
+
+    auto rep_error = err == ERR_OK ? response.err : err;
+
+    if (rep_error == ERR_LOCAL_APP_FAILURE) {
+        handle_replica_backup_failed(response, pid);
+        return;
+    }
+
+    if (rep_error != ERR_OK) {
+        derror_f("backup_id({}): backup request to server {} failed, error: {}, retry to "
+                 "send backup request.",
+                 _cur_backup.backup_id,
+                 primary.to_string(),
+                 rep_error.to_string());
+        retry_backup(pid);
+        return;
+    };
+
+    if (response.progress == cold_backup_constant::PROGRESS_FINISHED) {
+        dcheck_eq(response.pid, pid);
+        dcheck_eq(response.backup_id, _cur_backup.backup_id);
         ddebug_f("backup_id({}): backup for partition {} completed.",
                  _cur_backup.backup_id,
                  pid.to_string());
         {
             zauto_lock l(_lock);
-            _backup_status[partition] = backup_status::COMPLETED;
+            _backup_status[pid.get_partition_index()] = backup_status::COMPLETED;
         }
         complete_current_backup();
         return;
     }
 
-    if (response.err == ERR_LOCAL_APP_FAILURE) {
-        derror_f("backup_id({}): backup for partition {} failed.",
-                 _cur_backup.backup_id,
-                 pid.to_string());
-        zauto_lock l(_lock);
-        _is_backup_failed = true;
-        _backup_status[partition] = backup_status::FAILED;
-        return;
-    }
+    // backup is not finished, meta polling to send request
+    ddebug_f("backup_id({}): receive backup response for partition {} from server {}, now "
+             "progress {}, retry to send backup request.",
+             _cur_backup.backup_id,
+             pid.to_string(),
+             primary.to_string(),
+             response.progress);
 
-    if (err != ERR_OK) {
-        dwarn_f("backup_id({}): send backup request to server {} failed, rpc error: {}, retry to "
-                "send backup request.",
-                _cur_backup.backup_id,
-                primary.to_string(),
-                err.to_string());
-    } else {
-        ddebug_f(
-            "backup_id({}): receive backup response for partition {} from server {}, rpc error "
-            "{}, response error {}, retry to send backup request.",
-            _cur_backup.backup_id,
-            pid.to_string(),
-            primary.to_string(),
-            err.to_string(),
-            response.err.to_string());
-    }
-    tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                     &_tracker,
-                     [this, pid]() { backup_app_partition(pid); },
-                     0,
-                     std::chrono::seconds(1));
+    retry_backup(pid);
 }
 
 void backup_engine::write_backup_info()
