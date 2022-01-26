@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <pegasus/client.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/c/app_model.h>
 
 #include "benchmark.h"
 
@@ -47,5 +48,6 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    return db_bench_tool(argv[1]);
+    auto result = db_bench_tool(argv[1]);
+    dsn_exit(result);
 }

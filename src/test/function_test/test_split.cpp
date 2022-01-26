@@ -205,7 +205,7 @@ public:
         pegasus_client::scan_options options;
         auto ret = pg_client->get_unordered_scanners(10000, options, scanners);
         ASSERT_EQ(ret, PERR_OK);
-        int32_t count;
+        int32_t count = 0;
         for (auto i = 0; i < scanners.size(); i++) {
             std::string hash_key;
             std::string sort_key;
