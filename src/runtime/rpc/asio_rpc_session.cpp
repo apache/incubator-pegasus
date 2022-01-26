@@ -31,7 +31,6 @@ namespace tools {
 
 void asio_rpc_session::set_options()
 {
-    utils::auto_write_lock socket_guard(_socket_lock);
 
     if (_socket->is_open()) {
         boost::system::error_code ec;
@@ -82,8 +81,6 @@ void asio_rpc_session::do_read(int read_next)
 
     void *ptr = _reader.read_buffer_ptr(read_next);
     int remaining = _reader.read_buffer_capacity();
-
-    utils::auto_read_lock socket_guard(_socket_lock);
 
     _socket->async_read_some(
         boost::asio::buffer(ptr, remaining),
@@ -142,7 +139,6 @@ void asio_rpc_session::send(uint64_t signature)
 
     add_ref();
 
-    utils::auto_read_lock socket_guard(_socket_lock);
     boost::asio::async_write(
         *_socket, asio_wbufs, [this, signature](boost::system::error_code ec, std::size_t length) {
             if (ec) {
@@ -169,7 +165,6 @@ asio_rpc_session::asio_rpc_session(asio_network_provider &net,
 
 void asio_rpc_session::close()
 {
-    utils::auto_write_lock socket_guard(_socket_lock);
 
     boost::system::error_code ec;
     _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);

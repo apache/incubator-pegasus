@@ -29,14 +29,27 @@
 
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
+#include <dsn/utility/flags.h>
 
 namespace dsn {
 namespace tools {
 
+DSN_DEFINE_uint32("network",
+                  io_service_worker_count,
+                  1,
+                  "thread number for io service (timer and boost network)");
+
+const int threads_per_event_loop = 1;
+
 asio_network_provider::asio_network_provider(rpc_engine *srv, network *inner_provider)
-    : connection_oriented_network(srv, inner_provider)
+    : connection_oriented_network(srv, inner_provider), _acceptor(nullptr)
 {
-    _acceptor = nullptr;
+    for (auto i = 0; i < FLAGS_io_service_worker_count; i++) {
+        // Using thread-local operation queues in single-threaded use cases (i.e. when
+        // concurrency_hint is 1) to eliminate a lock/unlock pair.
+        _io_services.emplace_back(
+            std::make_unique<boost::asio::io_service>(threads_per_event_loop));
+    }
 }
 
 asio_network_provider::~asio_network_provider()
@@ -44,7 +57,10 @@ asio_network_provider::~asio_network_provider()
     if (_acceptor) {
         _acceptor->close();
     }
-    _io_service.stop();
+    for (auto &io_service : _io_services) {
+        io_service->stop();
+    }
+
     for (auto &w : _workers) {
         w->join();
     }
@@ -55,17 +71,11 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
     if (_acceptor != nullptr)
         return ERR_SERVICE_ALREADY_RUNNING;
 
-    int io_service_worker_count =
-        (int)dsn_config_get_value_uint64("network",
-                                         "io_service_worker_count",
-                                         1,
-                                         "thread number for io service (timer and boost network)");
-
     // get connection threshold from config, default value 0 means no threshold
     _cfg_conn_threshold_per_ip = (uint32_t)dsn_config_get_value_uint64(
         "network", "conn_threshold_per_ip", 0, "max connection count to each server per ip");
 
-    for (int i = 0; i < io_service_worker_count; i++) {
+    for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 
@@ -74,9 +84,9 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
             sprintf(buffer, "%s.asio.%d", name, i);
             task_worker::set_name(buffer);
 
-            boost::asio::io_service::work work(_io_service);
+            boost::asio::io_service::work work(*_io_services[i]);
             boost::system::error_code ec;
-            _io_service.run(ec);
+            _io_services[i]->run(ec);
             if (ec) {
                 dassert(false, "boost::asio::io_service run failed: err(%s)", ec.message().data());
             }
@@ -95,7 +105,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         auto v4_addr = boost::asio::ip::address_v4::any(); //(ntohl(_address.ip));
         ::boost::asio::ip::tcp::endpoint endpoint(v4_addr, _address.port());
         boost::system::error_code ec;
-        _acceptor.reset(new boost::asio::ip::tcp::acceptor(_io_service));
+        _acceptor.reset(new boost::asio::ip::tcp::acceptor(get_io_service()));
         _acceptor->open(endpoint.protocol(), ec);
         if (ec) {
             derror("asio tcp acceptor open failed, error = %s", ec.message().c_str());
@@ -126,14 +136,14 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
 rpc_session_ptr asio_network_provider::create_client_session(::dsn::rpc_address server_addr)
 {
-    auto sock = std::make_shared<boost::asio::ip::tcp::socket>(_io_service);
+    auto sock = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
     message_parser_ptr parser(new_message_parser(_client_hdr_format));
     return rpc_session_ptr(new asio_rpc_session(*this, server_addr, sock, parser, true));
 }
 
 void asio_network_provider::do_accept()
 {
-    auto socket = std::make_shared<boost::asio::ip::tcp::socket>(_io_service);
+    auto socket = std::make_shared<boost::asio::ip::tcp::socket>(get_io_service());
 
     _acceptor->async_accept(*socket, [this, socket](boost::system::error_code ec) {
         if (!ec) {
@@ -394,5 +404,12 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
 
     return ERR_OK;
 }
+
+// use a round-robin scheme to choose the next io_service to use.
+boost::asio::io_service &asio_network_provider::get_io_service()
+{
+    return *_io_services[rand::next_u32(0, FLAGS_io_service_worker_count - 1)];
+}
+
 } // namespace tools
 } // namespace dsn

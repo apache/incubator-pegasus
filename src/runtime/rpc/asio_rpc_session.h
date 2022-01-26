@@ -68,7 +68,6 @@ private:
     // boost::asio::socket is thread-unsafe, must use lock to prevent a
     // reading/writing socket being modified or closed concurrently.
     std::shared_ptr<boost::asio::ip::tcp::socket> _socket;
-    ::dsn::utils::rw_lock_nr _socket_lock;
 };
 
 } // namespace tools
