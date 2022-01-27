@@ -2830,7 +2830,7 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
             new_options["write_buffer_size"] = std::to_string(buffer_size);
             uint64_t max_size = get_random_nearby(_data_cf_opts.max_bytes_for_level_base);
             new_options["level0_file_num_compaction_trigger"] =
-                std::to_string(std::max(4UL, max_size / buffer_size));
+                std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
         }
     } else if (usage_scenario == ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD) {
         // refer to Options::PrepareForBulkLoad()

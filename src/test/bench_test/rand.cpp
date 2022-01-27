@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <algorithm>
 #include <random>
 
 namespace pegasus {
@@ -37,7 +38,7 @@ std::string generate_string(uint64_t len)
 
     // fill with random int
     uint64_t random_int = next_u64();
-    key.append(reinterpret_cast<char *>(&random_int), std::min(len, 8UL));
+    key.append(reinterpret_cast<char *>(&random_int), std::min<uint64_t>(len, 8UL));
 
     // append with '0'
     key.resize(len, '0');

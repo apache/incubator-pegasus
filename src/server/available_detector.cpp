@@ -386,7 +386,7 @@ void available_detector::on_day_report()
     ddebug("start to report on new day, last_day = %s", _old_day.c_str());
     int64_t detect_times = _recent_day_detect_times.fetch_and(0);
     int64_t fail_times = _recent_day_fail_times.fetch_and(0);
-    int64_t succ_times = std::max(0L, detect_times - fail_times);
+    int64_t succ_times = std::max<int64_t>(0L, detect_times - fail_times);
     int64_t available = 0;
     std::string hash_key("detect_available_day");
     std::string sort_key(_old_day);
@@ -437,7 +437,7 @@ void available_detector::on_hour_report()
     ddebug("start to report on new hour, last_hour = %s", _old_hour.c_str());
     int64_t detect_times = _recent_hour_detect_times.fetch_and(0);
     int64_t fail_times = _recent_hour_fail_times.fetch_and(0);
-    int64_t succ_times = std::max(0L, detect_times - fail_times);
+    int64_t succ_times = std::max<int64_t>(0L, detect_times - fail_times);
     int64_t available = 0;
     std::string hash_key("detect_available_hour");
     std::string sort_key(_old_hour);
@@ -461,7 +461,7 @@ void available_detector::on_minute_report()
     ddebug("start to report on new minute, last_minute = %s", _old_minute.c_str());
     int64_t detect_times = _recent_minute_detect_times.fetch_and(0);
     int64_t fail_times = _recent_minute_fail_times.fetch_and(0);
-    int64_t succ_times = std::max(0L, detect_times - fail_times);
+    int64_t succ_times = std::max<int64_t>(0L, detect_times - fail_times);
     int64_t available = 0;
     std::string hash_key("detect_available_minute");
     std::string sort_key(_old_minute);
