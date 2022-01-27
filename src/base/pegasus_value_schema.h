@@ -20,7 +20,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <string.h>
+#include <array>
 #include <string>
 #include <vector>
 

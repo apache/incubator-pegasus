@@ -24,6 +24,7 @@
 
 #include <dsn/c/api_utilities.h>
 #include <dsn/utility/blob.h>
+#include <dsn/utility/endians.h>
 
 namespace pegasus {
 namespace server {
@@ -46,7 +47,7 @@ public:
         }
 
         // hash_key_len is in big endian
-        uint16_t hash_key_len = be16toh(*(int16_t *)(src.data()));
+        uint16_t hash_key_len = dsn::endian::ntoh(*(uint16_t *)(src.data()));
         dassert(src.size() >= 2 + hash_key_len,
                 "key length must be no less than (2 + hash_key_len)");
         return rocksdb::Slice(src.data(), 2 + hash_key_len);
