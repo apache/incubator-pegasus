@@ -27,6 +27,8 @@ namespace server {
 typedef ::dsn::rpc_holder<::dsn::blob, ::dsn::apps::read_response> get_rpc;
 typedef ::dsn::rpc_holder<dsn::apps::multi_get_request, dsn::apps::multi_get_response>
     multi_get_rpc;
+typedef ::dsn::rpc_holder<::dsn::apps::batch_get_request, ::dsn::apps::batch_get_response>
+    batch_get_rpc;
 typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::count_response> sortkey_count_rpc;
 typedef ::dsn::rpc_holder<::dsn::blob, dsn::apps::ttl_response> ttl_rpc;
 typedef ::dsn::rpc_holder<::dsn::apps::get_scanner_request, dsn::apps::scan_response>
@@ -53,6 +55,8 @@ protected:
     virtual void on_get(get_rpc rpc) = 0;
     // RPC_RRDB_RRDB_MULTI_GET
     virtual void on_multi_get(multi_get_rpc rpc) = 0;
+    // RPC_RRDB_RRDB_BATCH_GET
+    virtual void on_batch_get(batch_get_rpc rpc) = 0;
     // RPC_RRDB_RRDB_SORTKEY_COUNT
     virtual void on_sortkey_count(sortkey_count_rpc rpc) = 0;
     // RPC_RRDB_RRDB_TTL
@@ -70,6 +74,8 @@ protected:
         register_rpc_handler_with_rpc_holder(
             dsn::apps::RPC_RRDB_RRDB_MULTI_GET, "multi_get", on_multi_get);
         register_rpc_handler_with_rpc_holder(
+            dsn::apps::RPC_RRDB_RRDB_BATCH_GET, "batch_get", on_batch_get);
+        register_rpc_handler_with_rpc_holder(
             dsn::apps::RPC_RRDB_RRDB_SORTKEY_COUNT, "sortkey_count", on_sortkey_count);
         register_rpc_handler_with_rpc_holder(dsn::apps::RPC_RRDB_RRDB_TTL, "ttl", on_ttl);
         register_rpc_handler_with_rpc_holder(
@@ -84,6 +90,10 @@ private:
     static void on_multi_get(pegasus_read_service *svc, multi_get_rpc rpc)
     {
         svc->on_multi_get(rpc);
+    }
+    static void on_batch_get(pegasus_read_service *svc, batch_get_rpc rpc)
+    {
+        svc->on_batch_get(rpc);
     }
     static void on_sortkey_count(pegasus_read_service *svc, sortkey_count_rpc rpc)
     {

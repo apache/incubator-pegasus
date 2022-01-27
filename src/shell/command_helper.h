@@ -583,7 +583,7 @@ struct row_data
     row_data() = default;
     explicit row_data(const std::string &row_name) : row_name(row_name) {}
 
-    double get_total_read_qps() const { return get_qps + multi_get_qps + scan_qps; }
+    double get_total_read_qps() const { return get_qps + multi_get_qps + batch_get_qps + scan_qps; }
 
     double get_total_write_qps() const
     {
@@ -591,7 +591,10 @@ struct row_data
                check_and_mutate_qps + incr_qps + duplicate_qps;
     }
 
-    double get_total_read_bytes() const { return get_bytes + multi_get_bytes + scan_bytes; }
+    double get_total_read_bytes() const
+    {
+        return get_bytes + multi_get_bytes + batch_get_bytes + scan_bytes;
+    }
 
     double get_total_write_bytes() const
     {
@@ -602,6 +605,7 @@ struct row_data
     {
         get_qps += row.get_qps;
         multi_get_qps += row.multi_get_qps;
+        batch_get_qps += row.batch_get_qps;
         put_qps += row.put_qps;
         multi_put_qps += row.multi_put_qps;
         remove_qps += row.remove_qps;
@@ -647,6 +651,7 @@ struct row_data
         backup_request_bytes += row.backup_request_bytes;
         get_bytes += row.get_bytes;
         multi_get_bytes += row.multi_get_bytes;
+        batch_get_bytes += row.batch_get_bytes;
         scan_bytes += row.scan_bytes;
         put_bytes += row.put_bytes;
         multi_put_bytes += row.multi_put_bytes;
@@ -667,6 +672,7 @@ struct row_data
     int32_t partition_count = 0;
     double get_qps = 0;
     double multi_get_qps = 0;
+    double batch_get_qps = 0;
     double put_qps = 0;
     double multi_put_qps = 0;
     double remove_qps = 0;
@@ -709,6 +715,7 @@ struct row_data
     double backup_request_bytes = 0;
     double get_bytes = 0;
     double multi_get_bytes = 0;
+    double batch_get_bytes = 0;
     double scan_bytes = 0;
     double put_bytes = 0;
     double multi_put_bytes = 0;
@@ -731,6 +738,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.get_qps += value;
     else if (counter_name == "multi_get_qps")
         row.multi_get_qps += value;
+    else if (counter_name == "batch_get_qps")
+        row.batch_get_qps += value;
     else if (counter_name == "put_qps")
         row.put_qps += value;
     else if (counter_name == "multi_put_qps")
@@ -815,6 +824,8 @@ update_app_pegasus_perf_counter(row_data &row, const std::string &counter_name, 
         row.get_bytes += value;
     else if (counter_name == "multi_get_bytes")
         row.multi_get_bytes += value;
+    else if (counter_name == "batch_get_bytes")
+        row.batch_get_bytes += value;
     else if (counter_name == "scan_bytes")
         row.scan_bytes += value;
     else if (counter_name == "put_bytes")

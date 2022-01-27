@@ -76,6 +76,7 @@ public:
     // the following methods may set physical error if internal error occurs
     void on_get(get_rpc rpc) override;
     void on_multi_get(multi_get_rpc rpc) override;
+    void on_batch_get(batch_get_rpc rpc) override;
     void on_sortkey_count(sortkey_count_rpc rpc) override;
     void on_ttl(ttl_rpc rpc) override;
     void on_get_scanner(get_scanner_rpc rpc) override;
@@ -343,6 +344,21 @@ private:
         return false;
     }
 
+    bool is_batch_get_abnormal(uint64_t time_used, uint64_t size, uint64_t count)
+    {
+        if (_abnormal_batch_get_size_threshold && size >= _abnormal_batch_get_size_threshold) {
+            return true;
+        }
+        if (_abnormal_batch_get_count_threshold && count >= _abnormal_batch_get_count_threshold) {
+            return true;
+        }
+        if (time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
+    }
+
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
         if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
@@ -382,6 +398,8 @@ private:
     uint64_t _abnormal_get_size_threshold;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
+    uint64_t _abnormal_batch_get_size_threshold;
+    uint64_t _abnormal_batch_get_count_threshold;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
     uint64_t _slow_query_threshold_ns_in_config;
@@ -444,10 +462,12 @@ private:
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
+    ::dsn::perf_counter_wrapper _pfc_batch_get_qps;
     ::dsn::perf_counter_wrapper _pfc_scan_qps;
 
     ::dsn::perf_counter_wrapper _pfc_get_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_get_latency;
+    ::dsn::perf_counter_wrapper _pfc_batch_get_latency;
     ::dsn::perf_counter_wrapper _pfc_scan_latency;
 
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;
