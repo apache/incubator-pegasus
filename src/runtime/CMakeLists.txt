@@ -28,4 +28,5 @@ add_library(dsn_runtime STATIC
         zlocks.cpp
         )
 target_link_libraries(dsn_runtime PRIVATE dsn_utils sasl2 gssapi_krb5 krb5)
+define_file_basename_for_sources(dsn_runtime)
 install(TARGETS dsn_runtime DESTINATION "lib")

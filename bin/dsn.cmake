@@ -41,6 +41,31 @@ endif()
 
 # ================================================================== #
 
+# Helper function to add preprocesor definition of FILE_BASENAME
+# to pass the filename without directory path for debugging use.
+#
+# Note that in header files this is not consistent with
+# __FILE__ and __LINE__ since FILE_BASENAME will be the
+# compilation unit source file name (.c/.cpp).
+#
+# Example:
+#
+#   define_file_basename_for_sources(my_target)
+#
+# Will add -DFILE_BASENAME="filename" for each source file depended on
+# by my_target, where filename is the name of the file.
+#
+function(define_file_basename_for_sources targetname)
+    get_target_property(source_files "${targetname}" SOURCES)
+    foreach(sourcefile ${source_files})
+        # Add the FILE_BASENAME=filename compile definition to the list.
+        get_filename_component(basename "${sourcefile}" NAME)
+        # Set the updated compile definitions on the source file.
+        set_property(
+            SOURCE "${sourcefile}" APPEND
+            PROPERTY COMPILE_DEFINITIONS "__FILENAME__=\"${basename}\"")
+    endforeach()
+endfunction()
 
 # Install this target into ${CMAKE_INSTALL_PREFIX}/lib
 function(dsn_install_library)
@@ -140,6 +165,7 @@ function(dsn_add_project)
         set(MY_PROJ_LIBS ${MY_PROJ_LIBS} ${DEFAULT_THIRDPARTY_LIBS} ${MY_BOOST_LIBS} ${DSN_SYSTEM_LIBS})
     endif()
     ms_add_project("${MY_PROJ_TYPE}" "${MY_PROJ_NAME}" "${MY_PROJ_SRC}" "${MY_PROJ_LIBS}" "${MY_BINPLACES}")
+    define_file_basename_for_sources(${MY_PROJ_NAME})
 endfunction(dsn_add_project)
 
 function(dsn_add_static_library)
@@ -353,8 +379,6 @@ function(dsn_setup_thirdparty_libs)
 endfunction(dsn_setup_thirdparty_libs)
 
 function(dsn_common_setup)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__FILENAME__='\"$(notdir $(abspath $<))\"'" CACHE STRING "" FORCE)
-
     if(NOT (UNIX))
         message(FATAL_ERROR "Only Unix are supported.")
     endif()
