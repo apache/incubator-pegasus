@@ -26,6 +26,7 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 DSN_DECLARE_int32(min_allowed_replica_count);
 DSN_DECLARE_int32(max_allowed_replica_count);
 
@@ -207,6 +208,9 @@ TEST_F(meta_app_operation_test, create_app)
     // even if alive_nodes >= min_live_node_count_for_unfreeze
     set_node_live_percentage_threshold_for_update(0);
 
+    // save original FLAGS_min_live_node_count_for_unfreeze
+    auto reserved_min_live_node_count_for_unfreeze = FLAGS_min_live_node_count_for_unfreeze;
+
     // save original FLAGS_max_allowed_replica_count
     auto reserved_max_allowed_replica_count = FLAGS_max_allowed_replica_count;
 
@@ -290,6 +294,9 @@ TEST_F(meta_app_operation_test, create_app)
                       std::to_string(reserved_max_allowed_replica_count));
     ASSERT_TRUE(res.is_ok());
     ASSERT_EQ(FLAGS_max_allowed_replica_count, reserved_max_allowed_replica_count);
+
+    // recover original FLAGS_min_live_node_count_for_unfreeze
+    set_min_live_node_count_for_unfreeze(reserved_min_live_node_count_for_unfreeze);
 }
 
 TEST_F(meta_app_operation_test, drop_app)

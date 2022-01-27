@@ -52,6 +52,14 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_uint64("meta_server",
+                  min_live_node_count_for_unfreeze,
+                  3,
+                  "minimum live node count without which the state is freezed");
+DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
+DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
+                     [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
+
 meta_service::meta_service()
     : serverlet("meta_service"), _failure_detector(nullptr), _started(false), _recovering(false)
 {
@@ -101,7 +109,7 @@ void meta_service::stop()
 bool meta_service::check_freeze() const
 {
     zauto_lock l(_failure_detector->_lock);
-    if (_alive_set.size() < _meta_opts.min_live_node_count_for_unfreeze)
+    if (_alive_set.size() < FLAGS_min_live_node_count_for_unfreeze)
         return true;
     int total = _alive_set.size() + _dead_set.size();
     return _alive_set.size() * 100 < _node_live_percentage_threshold_for_update * total;

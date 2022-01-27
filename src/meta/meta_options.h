@@ -70,7 +70,6 @@ public:
     std::vector<std::string> meta_state_service_args;
 
     uint64_t node_live_percentage_threshold_for_update;
-    uint64_t min_live_node_count_for_unfreeze;
     meta_function_level::type meta_function_level_on_start;
     bool recover_from_replica_server;
     int32_t hold_seconds_for_dropped_app;
