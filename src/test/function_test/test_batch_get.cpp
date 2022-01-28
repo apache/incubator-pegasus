@@ -21,11 +21,14 @@
 #include<string>
 
 #include <base/pegasus_const.h>
+#include <base/pegasus_key_schema.h>
 #include <dsn/service_api_c.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <gtest/gtest.h>
 #include <pegasus/client.h>
 #include <rrdb/rrdb_types.h>
+#include <rrdb/rrdb.client.h>
+#include <rocksdb/status.h>
 
 using namespace ::pegasus;
 using namespace ::dsn;
@@ -35,65 +38,55 @@ extern pegasus_client *client;
 extern std::shared_ptr<replication_ddl_client> ddl_client;
 
 
-/*
-class batch_get_resolver : public partition_resolver {
-public:
-    batch_get_resolver(std::vector<rpc_address> meta_server_list, const char *app_name) : partition_resolver(meta_server_list[0], app_name) {
-        inner_resolver = dsn::replication::partition_resolver::get_resolver("mycluster", meta_server_list, app_name);
-    }
-
-    void resolve(uint64_t partition_hash,
-                 std::function<void(resolve_result &&)> &&callback,
-                 int timeout_ms) override
-    {
-        partition_resolver *ptr = inner_resolver.get();
-        ptr->resolve(); // this can not be done!
-    }
-    void on_access_failure(int partition_index, error_code err) override {}
-    int get_partition_index(int partition_count, uint64_t partition_hash) override { return 0; }
-
-private:
-    dsn::replication::partition_resolver_ptr inner_resolver;
-};
-*/
-
-
 TEST(batch_get, set_and_then_batch_get)
 {
+    std::vector<rpc_address> meta_list;
+    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
+    auto rrdb_client = new ::dsn::apps::rrdb_client("mycluster", meta_list, client->get_app_name());
+
+    int test_data_count = 100;
+    int test_timeout_milliseconds = 3000;
+    uint64_t test_partition_hash = 0;
+
+    apps::batch_get_request batch_request;
     std::vector<std::pair<std::string, std::string>> key_pair_list;
     std::vector<std::string> value_list;
 
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < test_data_count; ++i) {
         std::string hash_key = "hash_key_prefix_" + std::to_string(i);
         std::string sort_key = "sort_key_prefix_" + std::to_string(i);
         std::string value = "value_" + std::to_string(i);
-        int ret = client->set(hash_key, sort_key, value);
-        ASSERT_EQ(0, ret);
+
+        apps::update_request one_request;
+        one_request.__isset.key = true;
+        pegasus_generate_key(one_request.key, hash_key, sort_key);
+        one_request.__isset.value = true;
+        one_request.value.assign(value.c_str(), 0, value.size());
+        auto put_result = rrdb_client->put_sync(one_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
+        ASSERT_EQ(ERR_OK,  put_result.first);
+        ASSERT_EQ(rocksdb::Status::kOk, put_result.second.error);
+
+        apps::full_key one_full_key;
+        one_full_key.__isset.hash_key = true;
+        one_full_key.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
+        one_full_key.__isset.sort_key = true;
+        one_full_key.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
+        batch_request.keys.emplace_back(one_full_key);
 
         key_pair_list.emplace_back(std::make_pair(hash_key, sort_key));
         value_list.push_back(value);
     }
 
-    const std::string app_name(client->get_app_name());
-    int app_id;
-    int partition_count = 0;
-    std::vector<partition_configuration> pc;
-    auto list_app_error_code = ddl_client->list_app(app_name, app_id, partition_count, pc);
-    ASSERT_EQ(ERR_OK, list_app_error_code);
-
-    std::vector<apps::batch_get_request> v_batch_get(partition_count);
-    std::vector<int> partition_to_error(partition_count, 0);
-
-    std::vector<rpc_address> meta_list;
-    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
-
-    // can not call inner_resolver->resolve & get_partition_index ......
-    auto inner_resolver = dsn::replication::partition_resolver::get_resolver("mycluster", meta_list, app_name.c_str());
-
-    std::vector<int> response_index;
-    for (auto & i : key_pair_list) {
-        auto &hash_key = i.first;
-        auto &sort_key = i.second;
+    auto batch_get_result = rrdb_client->batch_get_sync(batch_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
+    ASSERT_EQ(ERR_OK, batch_get_result.first);
+    auto &response = batch_get_result.second;
+    ASSERT_EQ(rocksdb::Status::kOk, response.error);
+    ASSERT_EQ(test_data_count, response.data.size());
+    for (int i = 0; i < test_data_count; ++i) {
+        ASSERT_EQ(response.data[i].hash_key.to_string(), key_pair_list[i].first);
+        ASSERT_EQ(response.data[i].sort_key.to_string(), key_pair_list[i].second);
+        ASSERT_EQ(response.data[i].value.to_string(), value_list[i]);
+        ASSERT_EQ(response.data[i].exists, true);
     }
 }
 
