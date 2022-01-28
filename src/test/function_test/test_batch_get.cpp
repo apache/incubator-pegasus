@@ -71,7 +71,7 @@ TEST(batch_get, set_and_then_batch_get)
         one_full_key.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
         one_full_key.__isset.sort_key = true;
         one_full_key.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
-        batch_request.keys.emplace_back(one_full_key);
+        batch_request.keys.emplace_back(std::move(one_full_key));
 
         key_pair_list.emplace_back(std::move(hash_key), std::move(sort_key));
         value_list.push_back(std::move(value));
