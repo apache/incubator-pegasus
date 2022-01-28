@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "meta_bulk_load_ingestion_context.h"
 #include "meta_service.h"
 #include "server_state.h"
 
@@ -24,7 +25,6 @@ namespace dsn {
 namespace replication {
 
 DSN_DECLARE_uint32(bulk_load_max_rollback_times);
-DSN_DECLARE_uint32(bulk_load_ingestion_concurrent_count);
 
 ///
 /// bulk load path on remote storage:
@@ -215,6 +215,23 @@ private:
                                                bool is_reset_all);
     void
     reset_local_bulk_load_states(int32_t app_id, const std::string &app_name, bool is_reset_all);
+
+    ///
+    /// ingestion_context functions
+    ///
+    bool try_partition_ingestion(const partition_configuration &config, const config_context &cc)
+    {
+        return _ingestion_context->try_partition_ingestion(config, cc);
+    }
+
+    void finish_ingestion(const gpid &pid) { _ingestion_context->remove_partition(pid); }
+
+    const int32_t get_app_ingesting_count(const int32_t app_id) const
+    {
+        return _ingestion_context->get_app_ingesting_count(app_id);
+    }
+
+    void reset_app_ingestion(const int32_t app_id) { _ingestion_context->reset_app(app_id); }
 
     ///
     /// update bulk load states to remote storage functions
@@ -438,15 +455,6 @@ private:
         return (_bulk_load_app_id.find(app_id) != _bulk_load_app_id.end());
     }
 
-    inline void decrease_app_ingestion_count(const gpid &pid)
-    {
-        zauto_write_lock l(_lock);
-        auto app_id = pid.get_app_id();
-        if (_apps_ingesting_count.find(app_id) != _apps_ingesting_count.end()) {
-            _apps_ingesting_count[app_id]--;
-        }
-    }
-
 private:
     friend class bulk_load_service_test;
     friend class meta_bulk_load_http_test;
@@ -455,6 +463,7 @@ private:
     server_state *_state;
 
     std::unique_ptr<mss::meta_storage> _sync_bulk_load_storage;
+    std::unique_ptr<ingestion_context> _ingestion_context;
     task_tracker _sync_tracker;
 
     zrwlock_nr &app_lock() const { return _state->_lock; }
@@ -485,8 +494,6 @@ private:
     std::unordered_map<app_id, bool> _apps_rolling_back;
     // Used for restrict bulk load rollback count
     std::unordered_map<app_id, int32_t> _apps_rollback_count;
-    // app_id -> ingesting partition count
-    std::unordered_map<app_id, int32_t> _apps_ingesting_count;
 };
 
 } // namespace replication

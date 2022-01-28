@@ -34,12 +34,6 @@ DSN_DEFINE_uint32("meta_server",
                   "failed");
 DSN_TAG_VARIABLE(bulk_load_max_rollback_times, FT_MUTABLE);
 
-DSN_DEFINE_uint32("meta_server",
-                  bulk_load_ingestion_concurrent_count,
-                  4,
-                  "max partition_count executing ingestion at the same time");
-DSN_TAG_VARIABLE(bulk_load_ingestion_concurrent_count, FT_MUTABLE);
-
 DSN_DEFINE_bool("meta_server",
                 bulk_load_verify_before_ingest,
                 false,
@@ -56,6 +50,7 @@ void bulk_load_service::initialize_bulk_load_service()
 {
     _sync_bulk_load_storage =
         make_unique<mss::meta_storage>(_meta_svc->get_remote_storage(), &_sync_tracker);
+    _ingestion_context = make_unique<ingestion_context>();
 
     create_bulk_load_root_dir();
     _sync_tracker.wait_outstanding_tasks();
@@ -233,7 +228,6 @@ void bulk_load_service::do_start_app_bulk_load(std::shared_ptr<app_state> app,
                 zauto_write_lock l(_lock);
                 _bulk_load_app_id.insert(app->app_id);
                 _apps_in_progress_count[app->app_id] = app->partition_count;
-                _apps_ingesting_count[app->app_id] = 0;
             }
             create_app_bulk_load_dir(
                 app->app_name, app->app_id, app->partition_count, std::move(rpc));
@@ -662,7 +656,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
                      app_name,
                      pid,
                      kv.first.to_string());
-            decrease_app_ingestion_count(pid);
+            finish_ingestion(pid);
             handle_bulk_load_failed(pid.get_app_id(), ERR_INGESTION_FAILED);
             return;
         }
@@ -682,7 +676,7 @@ void bulk_load_service::handle_app_ingestion(const bulk_load_response &response,
 
     if (response.is_group_ingestion_finished) {
         ddebug_f("app({}) partition({}) ingestion files succeed", app_name, pid);
-        decrease_app_ingestion_count(pid);
+        finish_ingestion(pid);
         update_partition_info_on_remote_storage(app_name, pid, bulk_load_status::BLS_SUCCEED);
     }
 }
@@ -1111,7 +1105,7 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
         // when rollback from ingesting, ingesting_count should be reset
         if (old_status == bulk_load_status::BLS_INGESTING &&
             new_status == bulk_load_status::BLS_DOWNLOADING) {
-            _apps_ingesting_count[app_id] = 0;
+            reset_app_ingestion(app_id);
         }
     }
 
@@ -1121,14 +1115,8 @@ void bulk_load_service::update_app_status_on_remote_storage_reply(const app_bulk
              dsn::enum_to_string(new_status));
 
     if (new_status == bulk_load_status::BLS_INGESTING) {
-        for (int i = 0; i < partition_count; ++i) {
-            tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                _meta_svc->tracker(),
-                std::bind(
-                    &bulk_load_service::partition_ingestion, this, ainfo.app_name, gpid(app_id, i)),
-                0,
-                std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
+        for (auto i = 0; i < partition_count; ++i) {
+            partition_ingestion(ainfo.app_name, gpid(app_id, i));
         }
     }
 
@@ -1181,11 +1169,7 @@ bool bulk_load_service::check_ever_ingestion_succeed(const partition_configurati
 // ThreadPool: THREAD_POOL_META_STATE
 void bulk_load_service::partition_ingestion(const std::string &app_name, const gpid &pid)
 {
-    FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [=](dsn::string_view) {
-        if (_apps_ingesting_count[pid.get_app_id()] < FLAGS_bulk_load_ingestion_concurrent_count) {
-            _apps_ingesting_count[pid.get_app_id()]++;
-        }
-    });
+    FAIL_POINT_INJECT_F("meta_bulk_load_partition_ingestion", [](dsn::string_view) {});
 
     auto app_status = get_app_bulk_load_status(pid.get_app_id());
     if (app_status != bulk_load_status::BLS_INGESTING) {
@@ -1193,6 +1177,14 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
                 app_name,
                 dsn::enum_to_string(app_status),
                 pid);
+        return;
+    }
+
+    if (is_partition_metadata_not_updated(pid)) {
+        derror_f("app({}) partition({}) doesn't have bulk load metadata, set bulk load failed",
+                 app_name,
+                 pid);
+        handle_bulk_load_failed(pid.get_app_id(), ERR_CORRUPTION);
         return;
     }
 
@@ -1208,34 +1200,20 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
         return;
     }
 
-    if (is_partition_metadata_not_updated(pid)) {
-        derror_f("app({}) partition({}) doesn't have bulk load metadata, set bulk load failed",
-                 app_name,
-                 pid);
-        handle_bulk_load_failed(pid.get_app_id(), ERR_CORRUPTION);
-        return;
-    }
-
     if (check_ever_ingestion_succeed(pconfig, app_name, pid)) {
         return;
     }
 
-    {
-        zauto_read_lock l(_lock);
-        if (_apps_ingesting_count[pid.get_app_id()] >= FLAGS_bulk_load_ingestion_concurrent_count) {
-            dwarn_f("app({}) has already {} partitions executing ingestion, partition({}) will "
-                    "wait and try it later",
-                    app_name,
-                    _apps_ingesting_count[pid.get_app_id()],
-                    pid);
-            tasking::enqueue(
-                LPC_META_STATE_NORMAL,
-                _meta_svc->tracker(),
-                std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
-                pid.thread_hash(),
-                std::chrono::seconds(5));
-            return;
-        }
+    auto app = get_app(pid.get_app_id());
+    if (!try_partition_ingestion(pconfig, app->helpers->contexts[pid.get_partition_index()])) {
+        dwarn_f(
+            "app({}) partition({}) couldn't execute ingestion, wait and try later", app_name, pid);
+        tasking::enqueue(LPC_META_STATE_NORMAL,
+                         _meta_svc->tracker(),
+                         std::bind(&bulk_load_service::partition_ingestion, this, app_name, pid),
+                         pid.thread_hash(),
+                         std::chrono::seconds(5));
+        return;
     }
 
     rpc_address primary_addr = pconfig.primary;
@@ -1247,16 +1225,9 @@ void bulk_load_service::partition_ingestion(const std::string &app_name, const g
                                app_name,
                                pid,
                                primary_addr,
-                               meta_ballot));
-    {
-        zauto_write_lock l(_lock);
-        _apps_ingesting_count[pid.get_app_id()]++;
-        ddebug_f("send ingest_request to node({}), app({}) partition({}), ingestion_count({})",
-                 primary_addr.to_string(),
-                 app_name,
-                 pid,
-                 _apps_ingesting_count[pid.get_app_id()]);
-    }
+                               meta_ballot),
+                     0,
+                     std::chrono::seconds(bulk_load_constant::BULK_LOAD_REQUEST_INTERVAL));
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -1289,6 +1260,10 @@ void bulk_load_service::send_ingestion_request(const std::string &app_name,
             on_partition_ingestion_reply(err, std::move(resp), app_name, pid, primary_addr);
         });
     _meta_svc->send_request(msg, primary_addr, rpc_callback);
+    ddebug_f("send ingest_request to node({}), app({}) partition({})",
+             primary_addr.to_string(),
+             app_name,
+             pid);
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -1299,7 +1274,7 @@ void bulk_load_service::on_partition_ingestion_reply(error_code err,
                                                      const rpc_address &primary_addr)
 {
     if (err != ERR_OK || resp.err != ERR_OK || resp.rocksdb_error != ERR_OK) {
-        decrease_app_ingestion_count(pid);
+        finish_ingestion(pid);
     }
 
     if (err == ERR_NO_NEED_OPERATE) {
@@ -1418,7 +1393,7 @@ void bulk_load_service::reset_local_bulk_load_states_unlocked(int32_t app_id,
     erase_map_elem_by_id(app_id, _partitions_total_download_progress);
     _apps_rolling_back.erase(app_id);
     _apps_rollback_count.erase(app_id);
-    _apps_ingesting_count.erase(app_id);
+    reset_app_ingestion(app_id);
     _bulk_load_app_id.erase(app_id);
 
     if (is_reset_result) {
@@ -1936,7 +1911,6 @@ void bulk_load_service::do_continue_app_bulk_load(
         zauto_write_lock l(_lock);
         _apps_in_progress_count[app_id] = in_progress_partition_count;
         _apps_rollback_count[app_id] = 0;
-        _apps_ingesting_count[app_id] = 0;
     }
 
     // if app is paused, no need to send bulk_load_request, just return

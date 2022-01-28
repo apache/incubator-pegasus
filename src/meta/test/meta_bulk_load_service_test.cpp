@@ -261,14 +261,21 @@ public:
         return bulk_svc()._apps_in_progress_count[app_id];
     }
 
+    // should call fail::setup() before calling this function
     void set_app_ingesting_count(int32_t app_id, int32_t count)
     {
-        bulk_svc()._apps_ingesting_count[app_id] = count;
+        fail::cfg("ingestion_try_partition_ingestion", "return()");
+        config_context cc;
+        for (auto i = 0; i < count; i++) {
+            partition_configuration config;
+            config.pid = gpid(app_id, i);
+            bulk_svc().try_partition_ingestion(config, cc);
+        }
     }
 
     int32_t get_app_ingesting_count(int32_t app_id)
     {
-        return bulk_svc()._apps_ingesting_count[app_id];
+        return bulk_svc().get_app_ingesting_count(app_id);
     }
 
     /// Used for bulk_load_failover_test
@@ -751,7 +758,6 @@ public:
         _resp.group_bulk_load_state[SECONDARY1] = state;
         _resp.group_bulk_load_state[SECONDARY2] = state2;
         _resp.__set_is_group_ingestion_finished(secondary_istatus == ingestion_status::IS_SUCCEED);
-        FLAGS_bulk_load_ingestion_concurrent_count = 4;
         set_app_ingesting_count(_app_id, ingestion_count);
     }
 
@@ -801,7 +807,6 @@ public:
                                 int32_t in_progress_count,
                                 int32_t ingestion_count)
     {
-        FLAGS_bulk_load_ingestion_concurrent_count = 4;
         mock_meta_bulk_load_context(_app_id, in_progress_count, bulk_load_status::BLS_INGESTING);
         set_app_ingesting_count(_app_id, ingestion_count);
         _ingestion_resp.err = err;
@@ -870,20 +875,8 @@ TEST_F(bulk_load_process_test, start_ingesting)
 {
     fail::cfg("meta_bulk_load_partition_ingestion", "return()");
     mock_response_progress(ERR_OK, true);
-    FLAGS_bulk_load_ingestion_concurrent_count = _partition_count;
     test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_DOWNLOADED);
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
-    ASSERT_EQ(get_app_ingesting_count(_app_id), _partition_count);
-}
-
-TEST_F(bulk_load_process_test, ingestion_count_restriction)
-{
-    fail::cfg("meta_bulk_load_partition_ingestion", "return()");
-    mock_response_progress(ERR_OK, true);
-    FLAGS_bulk_load_ingestion_concurrent_count = 1;
-    test_on_partition_bulk_load_reply(1, bulk_load_status::BLS_DOWNLOADED);
-    ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
-    ASSERT_EQ(get_app_ingesting_count(_app_id), 1);
 }
 
 TEST_F(bulk_load_process_test, ingestion_running)
@@ -1037,7 +1030,6 @@ TEST_F(bulk_load_process_test, rollback_count_exceed)
 
 TEST_F(bulk_load_process_test, response_ingestion_error)
 {
-    FLAGS_bulk_load_ingestion_concurrent_count = 4;
     set_app_ingesting_count(_app_id, 3);
     test_on_partition_bulk_load_reply(
         _partition_count, bulk_load_status::BLS_INGESTING, ERR_INVALID_STATE);
@@ -1077,7 +1069,7 @@ TEST_F(bulk_load_process_test, ingest_empty_write_error)
     mock_ingestion_context(ERR_TRY_AGAIN, 11, _partition_count, 4);
     test_on_partition_ingestion_reply(_ingestion_resp, gpid(_app_id, _pidx));
     ASSERT_EQ(get_app_bulk_load_status(_app_id), bulk_load_status::BLS_INGESTING);
-    ASSERT_EQ(get_app_ingesting_count(_app_id), 4);
+    ASSERT_EQ(get_app_ingesting_count(_app_id), 3);
 }
 
 TEST_F(bulk_load_process_test, ingest_wrong)
