@@ -17,8 +17,8 @@
 * under the License.
 */
 
-#include<vector>
-#include<string>
+#include <vector>
+#include <string>
 
 #include <base/pegasus_const.h>
 #include <base/pegasus_key_schema.h>
@@ -36,7 +36,6 @@ using namespace ::replication;
 
 extern pegasus_client *client;
 extern std::shared_ptr<replication_ddl_client> ddl_client;
-
 
 TEST(batch_get, set_and_then_batch_get)
 {
@@ -62,8 +61,9 @@ TEST(batch_get, set_and_then_batch_get)
         pegasus_generate_key(one_request.key, hash_key, sort_key);
         one_request.__isset.value = true;
         one_request.value.assign(value.c_str(), 0, value.size());
-        auto put_result = rrdb_client->put_sync(one_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
-        ASSERT_EQ(ERR_OK,  put_result.first);
+        auto put_result = rrdb_client->put_sync(
+            one_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
+        ASSERT_EQ(ERR_OK, put_result.first);
         ASSERT_EQ(rocksdb::Status::kOk, put_result.second.error);
 
         apps::full_key one_full_key;
@@ -77,7 +77,8 @@ TEST(batch_get, set_and_then_batch_get)
         value_list.push_back(value);
     }
 
-    auto batch_get_result = rrdb_client->batch_get_sync(batch_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
+    auto batch_get_result = rrdb_client->batch_get_sync(
+        batch_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
     ASSERT_EQ(ERR_OK, batch_get_result.first);
     auto &response = batch_get_result.second;
     ASSERT_EQ(rocksdb::Status::kOk, response.error);
@@ -89,5 +90,3 @@ TEST(batch_get, set_and_then_batch_get)
         ASSERT_EQ(response.data[i].exists, true);
     }
 }
-
-
