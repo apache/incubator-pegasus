@@ -73,8 +73,8 @@ TEST(batch_get, set_and_then_batch_get)
         one_full_key.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
         batch_request.keys.emplace_back(one_full_key);
 
-        key_pair_list.emplace_back(std::make_pair(hash_key, sort_key));
-        value_list.push_back(value);
+        key_pair_list.emplace_back(std::move(hash_key), std::move(sort_key));
+        value_list.push_back(std::move(value));
     }
 
     auto batch_get_result = rrdb_client->batch_get_sync(
