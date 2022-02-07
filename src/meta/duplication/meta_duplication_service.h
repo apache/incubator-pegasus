@@ -79,6 +79,10 @@ private:
                                        duplication_sync_rpc &rpc,
                                        int32_t partition_idx,
                                        int64_t confirmed_decree);
+    void trigger_follower_duplicate_checkpoint(const std::shared_ptr<duplication_info> &dup,
+                                               const std::shared_ptr<app_state> &app);
+    void
+    check_follower_duplicate_checkpoint_if_completed(const std::shared_ptr<duplication_info> &dup);
 
     // Get zk path for duplication.
     std::string get_duplication_path(const app_state &app) const
@@ -109,7 +113,7 @@ private:
     {
         for (const auto &kv : app->duplications) {
             const auto &dup = kv.second;
-            if (dup->is_valid()) {
+            if (!dup->is_invalid_status()) {
                 app->__set_duplicating(true);
                 return;
             }

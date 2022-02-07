@@ -39,7 +39,9 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     auto it = ent.progress.find(get_gpid().get_partition_index());
     if (it->second == invalid_decree) {
         // keep current max committed_decree as start point.
-        _progress.last_decree = _replica->private_log()->max_commit_on_disk();
+        // todo(jiashuo1) _start_point_decree hasn't be ready to persist zk, so if master restart,
+        // the value will be reset 0
+        _start_point_decree = _progress.last_decree = _replica->private_log()->max_commit_on_disk();
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
@@ -47,12 +49,13 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
         "initialize replica_duplicator [dupid:{}, meta_confirmed_decree:{}]", id(), it->second);
     thread_pool(LPC_REPLICATION_LOW).task_tracker(tracker()).thread_hash(get_gpid().thread_hash());
 
-    if (_status == duplication_status::DS_START) {
-        start_dup();
-    }
+    prepare_dup();
 }
 
-void replica_duplicator::start_dup()
+// todo(jiashuo1) wait detail implementation
+void replica_duplicator::prepare_dup() {}
+
+void replica_duplicator::start_dup_log()
 {
     ddebug_replica("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
                    to_string(),
@@ -72,7 +75,7 @@ void replica_duplicator::start_dup()
     run_pipeline();
 }
 
-void replica_duplicator::pause_dup()
+void replica_duplicator::pause_dup_log()
 {
     ddebug_replica("pausing duplication: {}", to_string());
 
@@ -109,20 +112,46 @@ std::string replica_duplicator::to_string() const
 
 void replica_duplicator::update_status_if_needed(duplication_status::type next_status)
 {
-    if (_status == next_status) {
+    if (is_duplication_status_invalid(next_status)) {
+        derror_replica("unexpected duplication status ({})",
+                       duplication_status_to_string(next_status));
         return;
     }
 
-    if (next_status == duplication_status::DS_START) {
-        start_dup();
-        _status = next_status;
-    } else if (next_status == duplication_status::DS_PAUSE) {
-        pause_dup();
-        _status = next_status;
-    } else {
-        derror_replica("unexpected duplication status ({})",
-                       duplication_status_to_string(next_status));
-        // _status keeps unchanged
+    // DS_PREPARE means replica is checkpointing, it may need trigger multi time to catch
+    // _start_point_decree of the plog
+    if (_status == next_status && next_status != duplication_status::DS_PREPARE) {
+        return;
+    }
+
+    ddebug_replica(
+        "update duplication status: {}=>{}[start_point={}, last_commit={}, last_durable={}]",
+        duplication_status_to_string(_status),
+        duplication_status_to_string(next_status),
+        _start_point_decree,
+        _replica->last_committed_decree(),
+        _replica->last_durable_decree());
+
+    _status = next_status;
+    if (_status == duplication_status::DS_PREPARE) {
+        prepare_dup();
+        return;
+    }
+
+    // DS_APP means the replica follower is duplicate checkpoint from master, just return and wait
+    // next loop
+    if (_status == duplication_status::DS_APP) {
+        return;
+    }
+
+    if (_status == duplication_status::DS_LOG) {
+        start_dup_log();
+        return;
+    }
+
+    if (_status == duplication_status::DS_PAUSE) {
+        pause_dup_log();
+        return;
     }
 }
 

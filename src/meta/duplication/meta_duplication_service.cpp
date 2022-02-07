@@ -183,10 +183,6 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
                                                   duplication_add_rpc &rpc)
 {
     dup->start();
-    if (rpc.request().freezed) {
-        dup->persist_status();
-        dup->alter_status(duplication_status::DS_PAUSE);
-    }
     blob value = dup->to_json_blob();
 
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
@@ -259,8 +255,16 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
         for (const auto &kv2 : app->duplications) {
             dupid_t dup_id = kv2.first;
             const auto &dup = kv2.second;
-            if (!dup->is_valid()) {
+            if (dup->is_invalid_status()) {
                 continue;
+            }
+
+            if (dup->all_checkpoint_has_prepared()) {
+                if (dup->status() == duplication_status::DS_PREPARE) {
+                    trigger_follower_duplicate_checkpoint(dup, app);
+                } else if (dup->status() == duplication_status::DS_APP) {
+                    check_follower_duplicate_checkpoint_if_completed(dup);
+                }
             }
 
             response.dup_map[app_id][dup_id] = dup->to_duplication_entry();
@@ -291,13 +295,27 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
             }
 
             duplication_info_s_ptr &dup = it2->second;
-            if (!dup->is_valid()) {
+            if (dup->is_invalid_status()) {
                 continue;
             }
             do_update_partition_confirmed(
                 dup, rpc, gpid.get_partition_index(), confirm.confirmed_decree);
         }
     }
+}
+
+// todo(jiashuo1) wait detail implementation
+void meta_duplication_service::trigger_follower_duplicate_checkpoint(
+    const std::shared_ptr<duplication_info> &dup, const std::shared_ptr<app_state> &app)
+{
+    dup->alter_status(duplication_status::DS_APP);
+}
+
+// todo(jiashuo1) wait detail implementation
+void meta_duplication_service::check_follower_duplicate_checkpoint_if_completed(
+    const std::shared_ptr<duplication_info> &dup)
+{
+    dup->alter_status(duplication_status::DS_LOG);
 }
 
 void meta_duplication_service::do_update_partition_confirmed(duplication_info_s_ptr &dup,
@@ -458,7 +476,7 @@ void meta_duplication_service::do_restore_duplication(dupid_t dup_id,
                 derror_f("failed to decode json \"{}\" on path {}", json.to_string(), store_path);
                 return; // fail fast
             }
-            if (dup->is_valid()) {
+            if (!dup->is_invalid_status()) {
                 app->duplications[dup->id] = dup;
                 refresh_duplicating_no_lock(app);
 

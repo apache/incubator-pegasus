@@ -114,7 +114,7 @@ TEST_F(ship_mutation_test, pause)
     shipper->run(2, std::move(in));
 
     // the ongoing RPC will be abandoned when pause_dup called.
-    duplicator->pause_dup();
+    duplicator->pause_dup_log();
 }
 
 } // namespace replication

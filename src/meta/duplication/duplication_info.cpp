@@ -34,8 +34,10 @@ namespace replication {
     static const std::map<std::string, duplication_status::type>
         _duplication_status_NAMES_TO_VALUES = {
             {"DS_INIT", duplication_status::DS_INIT},
+            {"DS_PREPARE", duplication_status::DS_PREPARE},
+            {"DS_APP", duplication_status::DS_APP},
+            {"DS_LOG", duplication_status::DS_LOG},
             {"DS_PAUSE", duplication_status::DS_PAUSE},
-            {"DS_START", duplication_status::DS_START},
             {"DS_REMOVED", duplication_status::DS_REMOVED},
         };
 
@@ -89,11 +91,11 @@ error_code duplication_info::alter_status(duplication_status::type to_status,
         return ERR_BUSY;
     }
 
-    if (!is_valid()) {
+    if (_status == duplication_status::DS_REMOVED) {
         return ERR_OBJECT_NOT_FOUND;
     }
 
-    if (to_status == duplication_status::DS_INIT) {
+    if (!is_valid_alteration(to_status)) {
         return ERR_INVALID_PARAMETERS;
     }
 
@@ -156,9 +158,10 @@ void duplication_info::persist_status()
 {
     zauto_write_lock l(_lock);
 
-    dassert_dup(_is_altering,
-                this,
-                "impossible, callers never write a duplication that is not altering to meta store");
+    if (!_is_altering) {
+        derror_dup(this, "callers never write a duplication that is not altering to meta store");
+        return;
+    }
     ddebug_dup(this,
                "change duplication status from {} to {} successfully [app_id: {}]",
                duplication_status_to_string(_status),

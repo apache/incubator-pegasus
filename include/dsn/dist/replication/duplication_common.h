@@ -37,9 +37,9 @@ extern const char *duplication_status_to_string(duplication_status::type status)
 
 extern const char *duplication_fail_mode_to_string(duplication_fail_mode::type);
 
-inline bool is_duplication_status_valid(duplication_status::type status)
+inline bool is_duplication_status_invalid(duplication_status::type status)
 {
-    return status == duplication_status::DS_PAUSE || status == duplication_status::DS_START;
+    return status == duplication_status::DS_INIT || status == duplication_status::DS_REMOVED;
 }
 
 /// Returns the cluster id of url specified in the duplication-group section

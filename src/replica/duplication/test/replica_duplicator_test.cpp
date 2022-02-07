@@ -74,17 +74,17 @@ public:
             _replica->init_private_log(mlog);
             auto duplicator = create_test_duplicator();
 
-            duplicator->update_status_if_needed(duplication_status::DS_START);
-            ASSERT_EQ(duplicator->_status, duplication_status::DS_START);
+            duplicator->update_status_if_needed(duplication_status::DS_LOG);
+            ASSERT_EQ(duplicator->_status, duplication_status::DS_LOG);
             auto expected_env = duplicator->_ship->_mutation_duplicator->_env;
             ASSERT_EQ(duplicator->tracker(), expected_env.__conf.tracker);
             ASSERT_EQ(duplicator->get_gpid().thread_hash(), expected_env.__conf.thread_hash);
 
             // corner cases: next_status is INIT
             duplicator->update_status_if_needed(duplication_status::DS_INIT);
-            ASSERT_EQ(duplicator->_status, duplication_status::DS_START);
-            duplicator->update_status_if_needed(duplication_status::DS_START);
-            ASSERT_EQ(duplicator->_status, duplication_status::DS_START);
+            ASSERT_EQ(duplicator->_status, duplication_status::DS_LOG);
+            duplicator->update_status_if_needed(duplication_status::DS_LOG);
+            ASSERT_EQ(duplicator->_status, duplication_status::DS_LOG);
 
             duplicator->update_status_if_needed(duplication_status::DS_PAUSE);
             ASSERT_TRUE(duplicator->paused());

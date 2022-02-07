@@ -344,35 +344,12 @@ public:
                 auto dup = app->duplications[resp.dupid];
                 ASSERT_TRUE(dup != nullptr);
                 ASSERT_EQ(dup->app_id, app->app_id);
-                ASSERT_EQ(dup->_status, duplication_status::DS_START);
+                ASSERT_EQ(dup->_status, duplication_status::DS_PREPARE);
                 ASSERT_EQ(dup->remote, ok_remote);
                 ASSERT_EQ(resp.dupid, dup->id);
                 ASSERT_EQ(app->duplicating, true);
             }
         }
-    }
-
-    void test_add_duplication_freezed()
-    {
-        std::string test_app = "test-app";
-
-        create_app(test_app);
-        auto app = find_app(test_app);
-
-        auto test_dup = create_dup(test_app, "slave-cluster", true);
-        ASSERT_EQ(test_dup.err, ERR_OK);
-        ASSERT_TRUE(app->duplications[test_dup.dupid] != nullptr);
-        auto dup = app->duplications[test_dup.dupid];
-        ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
-
-        // reset meta server states
-        SetUp();
-
-        // ensure dup is still paused after meta fail-over.
-        recover_from_meta_state();
-        app = find_app(test_app);
-        dup = app->duplications[test_dup.dupid];
-        ASSERT_EQ(dup->_status, duplication_status::DS_PAUSE);
     }
 };
 
@@ -407,7 +384,7 @@ TEST_F(meta_duplication_service_test, dup_op_upon_unavail_app)
     for (auto tt : tests) {
         ASSERT_EQ(query_dup_info(tt.app).err, tt.wec);
         ASSERT_EQ(create_dup(tt.app).err, tt.wec);
-        ASSERT_EQ(change_dup_status(tt.app, test_dup, duplication_status::DS_PAUSE).err, tt.wec);
+        ASSERT_EQ(change_dup_status(tt.app, test_dup, duplication_status::DS_REMOVED).err, tt.wec);
     }
 }
 
@@ -432,7 +409,7 @@ TEST_F(meta_duplication_service_test, dont_create_if_existed)
         ASSERT_EQ(resp.entry_list.size(), 1);
 
         const auto &duplication_entry = resp.entry_list.back();
-        ASSERT_EQ(duplication_entry.status, duplication_status::DS_START);
+        ASSERT_EQ(duplication_entry.status, duplication_status::DS_PREPARE);
         ASSERT_EQ(duplication_entry.dupid, dupid);
     }
 }
@@ -444,6 +421,8 @@ TEST_F(meta_duplication_service_test, change_duplication_status)
     create_app(test_app);
     auto app = find_app(test_app);
     dupid_t test_dup = create_dup(test_app).dupid;
+    change_dup_status(test_app, test_dup, duplication_status::DS_APP);
+    change_dup_status(test_app, test_dup, duplication_status::DS_LOG);
 
     struct TestData
     {
@@ -453,13 +432,13 @@ TEST_F(meta_duplication_service_test, change_duplication_status)
 
         error_code wec;
     } tests[] = {
-        {test_app, test_dup + 1, duplication_status::DS_INIT, ERR_OBJECT_NOT_FOUND},
+        {test_app, test_dup + 1, duplication_status::DS_REMOVED, ERR_OBJECT_NOT_FOUND},
 
         // ok test
         {test_app, test_dup, duplication_status::DS_PAUSE, ERR_OK}, // start->pause
         {test_app, test_dup, duplication_status::DS_PAUSE, ERR_OK}, // pause->pause
-        {test_app, test_dup, duplication_status::DS_START, ERR_OK}, // pause->start
-        {test_app, test_dup, duplication_status::DS_START, ERR_OK}, // start->start
+        {test_app, test_dup, duplication_status::DS_LOG, ERR_OK},   // pause->start
+        {test_app, test_dup, duplication_status::DS_LOG, ERR_OK},   // start->start
     };
 
     for (auto tt : tests) {
@@ -550,7 +529,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ASSERT_EQ(resp.dup_map.size(), 1);
         ASSERT_EQ(resp.dup_map[app->app_id].size(), 1);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].dupid, dupid);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_START);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_PREPARE);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].create_ts, dup->create_timestamp_ms);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->remote);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].fail_mode, dup->fail_mode());
@@ -629,7 +608,7 @@ TEST_F(meta_duplication_service_test, query_duplication_info)
     auto resp = query_dup_info(test_app);
     ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(resp.entry_list.size(), 1);
-    ASSERT_EQ(resp.entry_list.back().status, duplication_status::DS_PAUSE);
+    ASSERT_EQ(resp.entry_list.back().status, duplication_status::DS_PREPARE);
     ASSERT_EQ(resp.entry_list.back().dupid, test_dup);
     ASSERT_EQ(resp.appid, app->app_id);
 
@@ -665,7 +644,7 @@ TEST_F(meta_duplication_service_test, re_add_duplication)
 
     auto dup_list = query_dup_info(test_app).entry_list;
     ASSERT_EQ(dup_list.size(), 1);
-    ASSERT_EQ(dup_list.begin()->status, duplication_status::DS_START);
+    ASSERT_EQ(dup_list.begin()->status, duplication_status::DS_PREPARE);
     ASSERT_EQ(dup_list.begin()->dupid, test_dup_2.dupid);
 
     // reset meta server states
@@ -676,8 +655,6 @@ TEST_F(meta_duplication_service_test, re_add_duplication)
     ASSERT_TRUE(app->duplications.find(test_dup.dupid) == app->duplications.end());
     ASSERT_EQ(app->duplications.size(), 1);
 }
-
-TEST_F(meta_duplication_service_test, add_duplication_freezed) { test_add_duplication_freezed(); }
 
 TEST_F(meta_duplication_service_test, recover_from_corrupted_meta_data)
 {
@@ -711,7 +688,7 @@ TEST_F(meta_duplication_service_test, query_duplication_handler)
               std::string() + R"({"1":{"create_ts":")" + ts_buf + R"(","dupid":)" +
                   std::to_string(dup->id) +
                   R"(,"fail_mode":"FAIL_SLOW")"
-                  R"(,"remote":"slave-cluster","status":"DS_START"},"appid":2})");
+                  R"(,"remote":"slave-cluster","status":"DS_PREPARE"},"appid":2})");
 }
 
 TEST_F(meta_duplication_service_test, fail_mode)
@@ -723,20 +700,22 @@ TEST_F(meta_duplication_service_test, fail_mode)
     auto dup_add_resp = create_dup(test_app);
     auto dup = app->duplications[dup_add_resp.dupid];
     ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SLOW);
-    ASSERT_EQ(dup->status(), duplication_status::DS_START);
+    ASSERT_EQ(dup->status(), duplication_status::DS_PREPARE);
 
     auto resp = update_fail_mode(test_app, dup->id, duplication_fail_mode::FAIL_SKIP);
     ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);
-    ASSERT_EQ(dup->status(), duplication_status::DS_START);
+    ASSERT_EQ(dup->status(), duplication_status::DS_PREPARE);
 
     // change nothing
     resp = update_fail_mode(test_app, dup->id, duplication_fail_mode::FAIL_SKIP);
     ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);
-    ASSERT_EQ(dup->status(), duplication_status::DS_START);
+    ASSERT_EQ(dup->status(), duplication_status::DS_PREPARE);
 
     // change status but fail mode not changed
+    change_dup_status(test_app, dup->id, duplication_status::DS_APP);
+    change_dup_status(test_app, dup->id, duplication_status::DS_LOG);
     resp = change_dup_status(test_app, dup->id, duplication_status::DS_PAUSE);
     ASSERT_EQ(resp.err, ERR_OK);
     ASSERT_EQ(dup->fail_mode(), duplication_fail_mode::FAIL_SKIP);

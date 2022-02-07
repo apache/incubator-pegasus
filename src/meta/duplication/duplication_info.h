@@ -59,12 +59,7 @@ public:
 
     duplication_info() = default;
 
-    void start()
-    {
-        zauto_write_lock l(_lock);
-        _is_altering = true;
-        _next_status = duplication_status::DS_START;
-    }
+    void start() { alter_status(duplication_status::DS_PREPARE); }
 
     // error will be returned if this state transition is not allowed.
     error_code
@@ -79,7 +74,21 @@ public:
     duplication_fail_mode::type fail_mode() const { return _fail_mode; }
 
     // if this duplication is in valid status.
-    bool is_valid() const { return is_duplication_status_valid(_status); }
+    bool is_invalid_status() const { return is_duplication_status_invalid(_status); }
+
+    bool is_valid_alteration(duplication_status::type to_status) const
+    {
+        return to_status == _status || (to_status == duplication_status::DS_PREPARE &&
+                                        _status == duplication_status::DS_INIT) ||
+               (to_status == duplication_status::DS_APP &&
+                _status == duplication_status::DS_PREPARE) ||
+               (to_status == duplication_status::DS_LOG &&
+                (_status == duplication_status::DS_PAUSE ||
+                 _status == duplication_status::DS_APP)) ||
+               (to_status == duplication_status::DS_PAUSE &&
+                _status == duplication_status::DS_LOG) ||
+               (to_status == duplication_status::DS_REMOVED);
+    };
 
     ///
     /// alter_progress -> persist_progress
@@ -126,6 +135,9 @@ public:
         }
         return entry;
     }
+
+    // todo(jiashuo1) wait detail implementation
+    bool all_checkpoint_has_prepared() { return false; }
 
     void report_progress_if_time_up();
 

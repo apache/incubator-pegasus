@@ -20,15 +20,19 @@ include "../dsn.layer2.thrift"
 
 namespace cpp dsn.replication
 
-//  - INIT  -> START
-//  - START -> PAUSE
-//  - START -> REMOVED
-//  - PAUSE -> START
-//  - PAUSE -> REMOVED
+//  - INIT  -> PREPARE
+//  - PREPARE -> APP
+//  - APP -> LOG
+//  NOTE: Just LOG and PAUSE can be transferred states to each other
+//  - LOG -> PAUSE
+//  - PAUSE -> LOG
+//  - ALL -> REMOVED
 enum duplication_status
 {
     DS_INIT = 0,
-    DS_START,
+    DS_PREPARE,// replica prepare latest checkpoint for follower
+    DS_APP,// follower start duplicate checkpoint
+    DS_LOG,// master start batch send plog to follower
     DS_PAUSE,
     DS_REMOVED,
 }

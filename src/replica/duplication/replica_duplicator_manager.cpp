@@ -59,7 +59,7 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
 
     replica_duplicator_u_ptr &dup = _duplications[dupid];
     if (dup == nullptr) {
-        if (is_duplication_status_valid(next_status)) {
+        if (!is_duplication_status_invalid(next_status)) {
             dup = make_unique<replica_duplicator>(ent, _replica);
         } else {
             derror_replica("illegal duplication status: {}",
@@ -104,7 +104,6 @@ void replica_duplicator_manager::remove_non_existed_duplications(
     const std::map<dupid_t, duplication_entry> &new_dup_map)
 {
     zauto_lock l(_lock);
-
     std::vector<dupid_t> removal_set;
     for (auto &pair : _duplications) {
         dupid_t cur_dupid = pair.first;

@@ -101,13 +101,15 @@ public:
     // Thread-safe
     error_s update_progress(const duplication_progress &p);
 
-    void start_dup();
+    void prepare_dup();
+
+    void start_dup_log();
 
     // Pausing duplication will clear all the internal volatile states, thus
     // when next time it restarts, the states will be reinitialized like the
     // server being restarted.
     // It is useful when something went wrong internally.
-    void pause_dup();
+    void pause_dup_log();
 
     // Holds its own tracker, so that other tasks
     // won't be effected when this duplication is removed.
@@ -142,6 +144,7 @@ private:
     replica_stub *_stub;
     dsn::task_tracker _tracker;
 
+    decree _start_point_decree = invalid_decree;
     duplication_status::type _status{duplication_status::DS_INIT};
     std::atomic<duplication_fail_mode::type> _fail_mode{duplication_fail_mode::FAIL_SLOW};
 
