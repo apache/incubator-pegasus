@@ -70,5 +70,11 @@ inline bool is_cluster_id_configured(uint8_t cid)
     return get_distinct_cluster_id_set().find(cid) != get_distinct_cluster_id_set().end();
 }
 
+// todo(jiashuo1) it will be filled more constants
+struct duplication_constants
+{
+    const static std::string kClustersSectionKey;
+};
+
 } // namespace replication
 } // namespace dsn

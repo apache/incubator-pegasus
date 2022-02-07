@@ -42,8 +42,15 @@ public:
 
     static void test_alter_progress()
     {
-        duplication_info dup(
-            1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
+
+        duplication_info dup(1,
+                             1,
+                             "temp",
+                             4,
+                             0,
+                             "dsn://slave-cluster/temp",
+                             std::vector<rpc_address>(),
+                             "/meta_test/101/duplication/1");
         ASSERT_FALSE(dup.alter_progress(1, 5));
 
         dup.init_progress(1, invalid_decree);
@@ -72,8 +79,14 @@ public:
 
     static void test_init_and_start()
     {
-        duplication_info dup(
-            1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
+        duplication_info dup(1,
+                             1,
+                             "temp",
+                             4,
+                             0,
+                             "dsn://slave-cluster/temp",
+                             std::vector<rpc_address>(),
+                             "/meta_test/101/duplication/1");
         ASSERT_FALSE(dup.is_altering());
         ASSERT_EQ(dup._status, duplication_status::DS_INIT);
         ASSERT_EQ(dup._next_status, duplication_status::DS_INIT);
@@ -96,8 +109,14 @@ public:
 
     static void test_persist_status()
     {
-        duplication_info dup(
-            1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
+        duplication_info dup(1,
+                             1,
+                             "temp",
+                             4,
+                             0,
+                             "dsn://slave-cluster/temp",
+                             std::vector<rpc_address>(),
+                             "/meta_test/101/duplication/1");
         dup.start();
 
         dup.persist_status();
@@ -108,8 +127,15 @@ public:
 
     static void test_encode_and_decode()
     {
-        duplication_info dup(
-            1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
+        dsn_run_config("config-test.ini", false);
+        duplication_info dup(1,
+                             1,
+                             "temp",
+                             4,
+                             0,
+                             "slave-cluster",
+                             std::vector<rpc_address>(),
+                             "/meta_test/101/duplication/1");
         dup.start();
         dup.persist_status();
 
@@ -121,10 +147,10 @@ public:
         ASSERT_TRUE(json::json_forwarder<duplication_info::json_helper>::decode(json, copy));
         ASSERT_EQ(copy.status, duplication_status::DS_APP);
         ASSERT_EQ(copy.create_timestamp_ms, dup.create_timestamp_ms);
-        ASSERT_EQ(copy.remote, dup.remote);
+        ASSERT_EQ(copy.remote, dup.follower_cluster_name);
 
-        auto dup_sptr =
-            duplication_info::decode_from_blob(1, 1, 4, "/meta_test/101/duplication/1", json);
+        auto dup_sptr = duplication_info::decode_from_blob(
+            1, 1, "temp", 4, "/meta_test/101/duplication/1", json);
         ASSERT_TRUE(dup_sptr->equals_to(dup)) << dup_sptr->to_string() << " " << dup.to_string();
 
         blob new_json =
@@ -136,7 +162,14 @@ public:
 
 TEST_F(duplication_info_test, alter_status_when_busy)
 {
-    duplication_info dup(1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
+    duplication_info dup(1,
+                         1,
+                         "temp",
+                         4,
+                         0,
+                         "dsn://slave-cluster/temp",
+                         std::vector<rpc_address>(),
+                         "/meta_test/101/duplication/1");
     dup.start();
 
     ASSERT_EQ(dup.alter_status(duplication_status::DS_PAUSE), ERR_BUSY);
@@ -200,9 +233,14 @@ TEST_F(duplication_info_test, alter_status)
          ERR_INVALID_PARAMETERS}};
 
     for (auto tt : tests) {
-        duplication_info dup(
-            1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
-
+        duplication_info dup(1,
+                             1,
+                             "temp",
+                             4,
+                             0,
+                             "dsn://slave-cluster/temp",
+                             std::vector<rpc_address>(),
+                             "/meta_test/101/duplication/1");
         for (const auto from : tt.from_list) {
             force_update_status(dup, from);
             for (const auto to : tt.to_list) {
@@ -225,7 +263,14 @@ TEST_F(duplication_info_test, encode_and_decode) { test_encode_and_decode(); }
 
 TEST_F(duplication_info_test, is_valid)
 {
-    duplication_info dup(1, 1, 4, 0, "dsn://slave-cluster/temp", "/meta_test/101/duplication/1");
+    duplication_info dup(1,
+                         1,
+                         "temp",
+                         4,
+                         0,
+                         "dsn://slave-cluster/temp",
+                         std::vector<rpc_address>(),
+                         "/meta_test/101/duplication/1");
     ASSERT_TRUE(dup.is_invalid_status());
 
     dup.start();

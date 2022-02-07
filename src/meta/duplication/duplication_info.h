@@ -42,13 +42,17 @@ public:
     /// \see duplication_info::decode_from_blob
     duplication_info(dupid_t dupid,
                      int32_t appid,
+                     std::string app_name,
                      int32_t partition_count,
                      uint64_t create_now_ms,
-                     std::string remote_cluster_name,
+                     std::string follower_cluster_name,
+                     std::vector<rpc_address> &&follower_cluster_metas,
                      std::string meta_store_path)
         : id(dupid),
           app_id(appid),
-          remote(std::move(remote_cluster_name)),
+          app_name(std::move(app_name)),
+          follower_cluster_name(std::move(follower_cluster_name)),
+          follower_cluster_metas(std::move(follower_cluster_metas)),
           store_path(std::move(meta_store_path)),
           create_timestamp_ms(create_now_ms)
     {
@@ -109,6 +113,7 @@ public:
     /// \see meta_duplication_service::recover_from_meta_state
     static duplication_info_s_ptr decode_from_blob(dupid_t dup_id,
                                                    int32_t app_id,
+                                                   const std::string &app_name,
                                                    int32_t partition_count,
                                                    std::string store_path,
                                                    const blob &json);
@@ -123,7 +128,7 @@ public:
         duplication_entry entry;
         entry.dupid = id;
         entry.create_ts = create_timestamp_ms;
-        entry.remote = remote;
+        entry.remote = follower_cluster_name;
         entry.status = _status;
         entry.__set_fail_mode(_fail_mode);
         entry.__isset.progress = true;
@@ -195,7 +200,10 @@ private:
 public:
     const dupid_t id{0};
     const int32_t app_id{0};
-    const std::string remote;
+    const std::string app_name;
+
+    const std::string follower_cluster_name;
+    const std::vector<rpc_address> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
 };

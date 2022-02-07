@@ -134,7 +134,8 @@ public:
 
         int last_dup = 0;
         for (int i = 0; i < 1000; i++) {
-            auto dup = dup_svc().new_dup_from_init(remote_cluster_address, app);
+            auto dup = dup_svc().new_dup_from_init(
+                remote_cluster_address, std::vector<rpc_address>(), app);
 
             ASSERT_GT(dup->id, 0);
             ASSERT_FALSE(dup->is_altering());
@@ -345,7 +346,7 @@ public:
                 ASSERT_TRUE(dup != nullptr);
                 ASSERT_EQ(dup->app_id, app->app_id);
                 ASSERT_EQ(dup->_status, duplication_status::DS_PREPARE);
-                ASSERT_EQ(dup->remote, ok_remote);
+                ASSERT_EQ(dup->follower_cluster_name, ok_remote);
                 ASSERT_EQ(resp.dupid, dup->id);
                 ASSERT_EQ(app->duplicating, true);
             }
@@ -531,7 +532,7 @@ TEST_F(meta_duplication_service_test, duplication_sync)
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].dupid, dupid);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].status, duplication_status::DS_PREPARE);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].create_ts, dup->create_timestamp_ms);
-        ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->remote);
+        ASSERT_EQ(resp.dup_map[app->app_id][dupid].remote, dup->follower_cluster_name);
         ASSERT_EQ(resp.dup_map[app->app_id][dupid].fail_mode, dup->fail_mode());
 
         auto progress_map = resp.dup_map[app->app_id][dupid].progress;
