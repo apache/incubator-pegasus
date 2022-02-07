@@ -86,7 +86,8 @@ public:
     static bool get_replica_config(const partition_configuration &partition_config,
                                    ::dsn::rpc_address node,
                                    /*out*/ replica_configuration &replica_config);
-    static void load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
+    // true if meta_list's value of config is valid, otherwise return false
+    static bool load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
                                   const char *section = "meta_server",
                                   const char *key = "server_list");
 };

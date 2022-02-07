@@ -150,22 +150,17 @@ void meta_duplication_service::add_duplication(duplication_add_rpc rpc)
         return;
     }
 
-    std::string metas =
-        dsn_config_get_value_string(duplication_constants::kClustersSectionKey.c_str(),
-                                    request.remote_cluster_name.c_str(),
-                                    "",
-                                    "follower cluster meta list");
-    if (metas.empty()) {
+    std::vector<rpc_address> meta_list;
+    if (!dsn::replication::replica_helper::load_meta_servers(
+            meta_list,
+            duplication_constants::kClustersSectionName.c_str(),
+            request.remote_cluster_name.c_str())) {
         response.err = ERR_INVALID_PARAMETERS;
-        response.__set_hint("failed to find cluster address in config [pegasus.clusters]");
+        response.__set_hint(fmt::format("failed to find cluster[{}] address in config [{}]",
+                                        request.remote_cluster_name,
+                                        duplication_constants::kClustersSectionName));
         return;
     }
-
-    std::vector<rpc_address> meta_list;
-    dsn::replication::replica_helper::load_meta_servers(
-        meta_list,
-        duplication_constants::kClustersSectionKey.c_str(),
-        request.remote_cluster_name.c_str());
 
     auto app = _state->get_app(request.app_name);
     if (!app || app->status != app_status::AS_AVAILABLE) {

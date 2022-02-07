@@ -210,8 +210,10 @@ duplication_info_s_ptr duplication_info::decode_from_blob(dupid_t dup_id,
         return nullptr;
     }
     std::vector<rpc_address> meta_list;
-    dsn::replication::replica_helper::load_meta_servers(
-        meta_list, duplication_constants::kClustersSectionKey.c_str(), info.remote.c_str());
+    if (!dsn::replication::replica_helper::load_meta_servers(
+            meta_list, duplication_constants::kClustersSectionName.c_str(), info.remote.c_str())) {
+        return nullptr;
+    }
 
     auto dup = std::make_shared<duplication_info>(dup_id,
                                                   app_id,

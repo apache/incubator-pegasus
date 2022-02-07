@@ -25,7 +25,7 @@
 namespace dsn {
 namespace replication {
 
-const std::string duplication_constants::kClustersSectionKey = "pegasus.clusters";
+const std::string duplication_constants::kClustersSectionName = "pegasus.clusters";
 
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {

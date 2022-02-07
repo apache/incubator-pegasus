@@ -408,7 +408,7 @@ void replication_options::initialize()
 
     max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
-    replica_helper::load_meta_servers(meta_servers);
+    dassert_f(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
 
     sanity_check();
 }
@@ -456,7 +456,7 @@ void replication_options::sanity_check()
     }
 }
 
-void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
+bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &servers,
                                        const char *section,
                                        const char *key)
 {
@@ -467,12 +467,16 @@ void replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
     for (auto &s : lv) {
         ::dsn::rpc_address addr;
         if (!addr.from_string_ipv4(s.c_str())) {
-            dassert(
-                false, "invalid address '%s' specified in config [%s].%s", s.c_str(), section, key);
+            derror_f("invalid address '{}' specified in config [{}].{}", s, section, key);
+            return false;
         }
         servers.push_back(addr);
     }
-    dassert(servers.size() > 0, "no meta server specified in config [%s].%s", section, key);
+    if (servers.empty()) {
+        derror_f("no meta server specified in config [{}].{}", section, key);
+        return false;
+    }
+    return true;
 }
 
 /*static*/ bool
