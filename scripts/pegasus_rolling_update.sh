@@ -164,6 +164,7 @@ do
 
   echo "Migrating primary replicas out of node..."
   sleeped=0
+  # Migration timeout 30 seconds
   while true
   do
     if [ $((sleeped%10)) -eq 0 ]; then
@@ -175,7 +176,7 @@ do
       echo "Migrate done."
       break
     elif [ $sleeped -gt 28 ]; then
-      echo "Downgrade timeout."
+      echo "Migrate timeout."
       break
     else
       echo "Still $pri_count primary replicas left on $node"
@@ -188,6 +189,7 @@ do
 
   echo "Downgrading replicas on node..."
   sleeped=0
+  # Downgrade timeout 90 seconds
   while true
   do
     if [ $((sleeped%50)) -eq 0 ]; then
@@ -198,7 +200,7 @@ do
     if [ $rep_count -eq 0 ]; then
       echo "Downgrade done."
       break
-    elif [ $sleeped -gt 28 ]; then
+    elif [ $sleeped -gt 88 ]; then
       echo "Downgrade timeout."
       break
     else
@@ -212,6 +214,7 @@ do
 
   echo "Checking replicas closed on node..."
   sleeped=0
+  # Close timeout 90 seconds
   while true
   do
     if [ $((sleeped%50)) -eq 0 ]; then
@@ -236,7 +239,7 @@ do
     if [ $rep_count -eq 0 ]; then
       echo "Close done."
       break
-    elif [ $sleeped -gt 28 ]; then
+    elif [ $sleeped -gt 88 ]; then
       echo "Close timeout."
       break
     else
