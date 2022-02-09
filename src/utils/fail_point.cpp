@@ -59,6 +59,8 @@ inline const char *task_type_to_string(fail_point::task_type t)
         return "Return";
     case fail_point::Print:
         return "Print";
+    case fail_point::Void:
+        return "Void";
     default:
         dfatal("unexpected type: %d", t);
         __builtin_unreachable();
@@ -123,6 +125,8 @@ bool fail_point::parse_from_string(string_view action)
                 _task = Return;
             } else if (task_type.compare("print") == 0) {
                 _task = Print;
+            } else if (task_type.compare("void") == 0) {
+                _task = Void;
             } else {
                 return false;
             }
@@ -153,6 +157,7 @@ const std::string *fail_point::eval()
     switch (_task) {
     case Off:
         break;
+    case Void:
     case Return:
         return &_arg;
     case Print:

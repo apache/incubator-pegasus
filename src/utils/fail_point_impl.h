@@ -44,9 +44,19 @@ struct fail_point
 {
     enum task_type
     {
+        // `action` contain `off()`, which would `close` the fail_point whose `function` passed will
+        // not be executed;
         Off,
+        // `action` contain `return()`, which would `return` args passed and execute `return` type
+        // function passed. it's usually used for `FAIL_POINT_INJECT_F`
         Return,
+        // `action` contain `print()`, which would only just print `action` string value and ignore
+        // the `function` passed
         Print,
+        // `action` contain `void()`, which would return args and execute `function` passed that
+        // better mark as `void` type, it's usually used for `FAIL_POINT_INJECT_NOT_RETURN_F` to
+        // avoid `return` function
+        Void,
     };
 
     void set_action(string_view action);

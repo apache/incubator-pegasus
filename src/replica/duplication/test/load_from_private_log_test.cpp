@@ -175,7 +175,7 @@ public:
         fail::setup();
         fail::cfg("open_read", "25%1*return()");
         fail::cfg("mutation_log_read_log_block", "25%1*return()");
-        fail::cfg("duplication_sync_complete", "off()");
+        fail::cfg("duplication_sync_complete", "void()");
         duplicator->run_pipeline();
         duplicator->wait_all();
         fail::teardown();
