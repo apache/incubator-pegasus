@@ -801,7 +801,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     keys.reserve(request.keys.size());
     std::vector<::dsn::blob> keys_holder;
     keys_holder.reserve(request.keys.size());
-    for (auto &key : request.keys) {
+    for (const auto &key : request.keys) {
         ::dsn::blob raw_key;
         pegasus_generate_key(raw_key, key.hash_key, key.sort_key);
         keys.emplace_back(rocksdb::Slice(raw_key.data(), raw_key.length()));
@@ -857,12 +857,12 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
                     "rocksdb get failed for batch_get from {}:  error = {}, key size = {}",
                     replica_name(),
                     rpc.remote_address().to_string(),
-                    status.ToString().c_str(),
+                    status.ToString(),
                     request.keys.size());
             } else {
                 derror_replica("rocksdb get failed for batch_get from {}: error = {}",
                                rpc.remote_address().to_string(),
-                               status.ToString().c_str());
+                               status.ToString());
             }
 
             error_occurred = true;

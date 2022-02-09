@@ -185,7 +185,7 @@ void capacity_unit_calculator::add_batch_get_cu(dsn::message_ex *req,
 {
     int64_t data_size = 0;
     for (const auto &data : datas) {
-        data_size += data.value.size();
+        data_size += data.hash_key.size() + data.sort_key.size() + data.value.size();
         _read_hotkey_collector->capture_hash_key(data.hash_key, 1);
     }
 
