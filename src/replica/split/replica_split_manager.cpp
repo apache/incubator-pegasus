@@ -26,6 +26,7 @@
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_bool(empty_write_disabled);
 
 replica_split_manager::replica_split_manager(replica *r)
     : replica_base(r), _replica(r), _stub(r->get_replica_stub())
@@ -631,7 +632,7 @@ void replica_split_manager::parent_handle_child_catch_up(
     // sync_point is the first decree after parent send write request to child synchronously
     // when sync_point commit, parent consider child has all data it should have during async-learn
     decree sync_point = _replica->_prepare_list->max_decree() + 1;
-    if (!_replica->_options->empty_write_disabled) {
+    if (!FLAGS_empty_write_disabled) {
         // empty wirte here to commit sync_point
         mutation_ptr mu = _replica->new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);

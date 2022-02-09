@@ -47,6 +47,7 @@
 
 namespace dsn {
 namespace replication {
+DSN_DECLARE_bool(empty_write_disabled);
 
 void replica::init_group_check()
 {
@@ -139,7 +140,7 @@ void replica::broadcast_group_check()
     }
 
     // send empty prepare when necessary
-    if (!_options->empty_write_disabled &&
+    if (!FLAGS_empty_write_disabled &&
         dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms) {
         mutation_ptr mu = new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
@@ -248,5 +249,5 @@ void replica::inject_error(error_code err)
                      [this, err]() { handle_local_failure(err); },
                      get_gpid().thread_hash());
 }
-}
-} // end namepspace
+} // namespace replication
+} // namespace dsn

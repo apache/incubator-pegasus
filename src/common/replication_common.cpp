@@ -41,13 +41,22 @@ DSN_DEFINE_int32("replication",
                  5,
                  "concurrent bulk load downloading replica count");
 
+/**
+ * Empty write is used for flushing WAL log entry which is submit asynchronously.
+ * Make sure it can work well if you diable it.
+ */
+DSN_DEFINE_bool("replication",
+                empty_write_disabled,
+                false,
+                "whether to disable empty write, default is false");
+DSN_TAG_VARIABLE(empty_write_disabled, FT_MUTABLE);
+
 replication_options::replication_options()
 {
     deny_client_on_start = false;
     verbose_client_log_on_start = false;
     verbose_commit_log_on_start = false;
     delay_for_fd_timeout_on_start = false;
-    empty_write_disabled = false;
     duplication_enabled = true;
 
     prepare_timeout_ms_for_secondaries = 1000;
@@ -182,11 +191,6 @@ void replication_options::initialize()
                                   delay_for_fd_timeout_on_start,
                                   "whether to delay for beacon grace period to make failure "
                                   "detector timeout when starting the server, default is false");
-    empty_write_disabled =
-        dsn_config_get_value_bool("replication",
-                                  "empty_write_disabled",
-                                  empty_write_disabled,
-                                  "whether to disable empty write, default is false");
 
     duplication_enabled = dsn_config_get_value_bool(
         "replication", "duplication_enabled", duplication_enabled, "is duplication enabled");
