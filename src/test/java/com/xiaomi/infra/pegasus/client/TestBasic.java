@@ -1647,6 +1647,7 @@ public class TestBasic {
       client.batchMultiGet(tableName, keys, values);
       Assert.assertEquals(4, values.size());
 
+      Assert.assertTrue(values.get(0).allFetched);
       Assert.assertArrayEquals(keys.get(0).getLeft(), values.get(0).hashKey);
       Assert.assertEquals(3, values.get(0).values.size());
       Assert.assertArrayEquals(
@@ -1662,6 +1663,7 @@ public class TestBasic {
       Assert.assertArrayEquals(
           "basic_test_value_3".getBytes(), values.get(0).values.get(2).getRight());
 
+      Assert.assertTrue(values.get(1).allFetched);
       Assert.assertArrayEquals(keys.get(1).getLeft(), values.get(1).hashKey);
       Assert.assertEquals(2, values.get(1).values.size());
       Assert.assertArrayEquals(
@@ -1673,6 +1675,7 @@ public class TestBasic {
       Assert.assertArrayEquals(
           "basic_test_value_2".getBytes(), values.get(1).values.get(1).getRight());
 
+      Assert.assertTrue(values.get(2).allFetched);
       Assert.assertArrayEquals(keys.get(2).getLeft(), values.get(2).hashKey);
       Assert.assertEquals(1, values.get(2).values.size());
       Assert.assertArrayEquals(
@@ -1680,6 +1683,7 @@ public class TestBasic {
       Assert.assertArrayEquals(
           "basic_test_value_1".getBytes(), values.get(2).values.get(0).getRight());
 
+      Assert.assertTrue(values.get(3).allFetched);
       Assert.assertArrayEquals(keys.get(3).getLeft(), values.get(3).hashKey);
       Assert.assertEquals(0, values.get(3).values.size());
 

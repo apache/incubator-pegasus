@@ -281,7 +281,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public Future<MultiGetResult> asyncMultiGet(byte[] hashKey, List<byte[]> sortKeys, int timeout) {
-    return asyncMultiGet(hashKey, sortKeys, 100, 1000000, false, timeout);
+    return asyncMultiGet(hashKey, sortKeys, -1, -1, false, timeout);
   }
 
   @Override
@@ -363,7 +363,7 @@ public class PegasusTable implements PegasusTableInterface {
       byte[] stopSortKey,
       MultiGetOptions options,
       int timeout /* ms */) {
-    return asyncMultiGet(hashKey, startSortKey, stopSortKey, options, 100, 1000000, timeout);
+    return asyncMultiGet(hashKey, startSortKey, stopSortKey, options, -1, -1, timeout);
   }
 
   @Override
@@ -396,7 +396,7 @@ public class PegasusTable implements PegasusTableInterface {
 
   @Override
   public Future<MultiGetSortKeysResult> asyncMultiGetSortKeys(byte[] hashKey, int timeout) {
-    return asyncMultiGetSortKeys(hashKey, 100, 1000000, timeout);
+    return asyncMultiGetSortKeys(hashKey, -1, -1, timeout);
   }
 
   @Override
@@ -1122,7 +1122,8 @@ public class PegasusTable implements PegasusTableInterface {
       Future<MultiGetResult> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        values.set(i, new HashKeyData(keys.get(i).getLeft(), fu.getNow().values));
+        values.set(
+            i, new HashKeyData(fu.getNow().allFetched, keys.get(i).getLeft(), fu.getNow().values));
       } else {
         Throwable cause = fu.cause();
         throw new PException(
@@ -1155,7 +1156,11 @@ public class PegasusTable implements PegasusTableInterface {
       Future<MultiGetResult> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        results.add(Pair.of(nullEx, new HashKeyData(keys.get(i).getLeft(), fu.getNow().values)));
+        results.add(
+            Pair.of(
+                nullEx,
+                new HashKeyData(
+                    fu.getNow().allFetched, keys.get(i).getLeft(), fu.getNow().values)));
         count++;
       } else {
         Throwable cause = fu.cause();
