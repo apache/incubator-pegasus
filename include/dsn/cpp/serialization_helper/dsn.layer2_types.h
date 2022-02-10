@@ -290,7 +290,7 @@ typedef struct _app_info__isset
           expire_second(false),
           create_second(false),
           drop_second(false),
-          duplicating(false),
+          duplicating(true),
           init_partition_count(true),
           is_bulk_loading(true)
     {
@@ -329,7 +329,7 @@ public:
           expire_second(0),
           create_second(0),
           drop_second(0),
-          duplicating(0),
+          duplicating(false),
           init_partition_count(-1),
           is_bulk_loading(false)
     {

@@ -79,8 +79,8 @@ private:
                                        duplication_sync_rpc &rpc,
                                        int32_t partition_idx,
                                        int64_t confirmed_decree);
-    void trigger_follower_duplicate_checkpoint(const std::shared_ptr<duplication_info> &dup,
-                                               const std::shared_ptr<app_state> &app);
+    void create_follower_app_for_duplication(const std::shared_ptr<duplication_info> &dup,
+                                             const std::shared_ptr<app_state> &app);
     void
     check_follower_duplicate_checkpoint_if_completed(const std::shared_ptr<duplication_info> &dup);
 
