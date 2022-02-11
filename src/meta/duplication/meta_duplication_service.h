@@ -78,7 +78,8 @@ private:
     void do_update_partition_confirmed(duplication_info_s_ptr &dup,
                                        duplication_sync_rpc &rpc,
                                        int32_t partition_idx,
-                                       int64_t confirmed_decree);
+                                       const duplication_confirm_entry &confirm_entry);
+
     void create_follower_app_for_duplication(const std::shared_ptr<duplication_info> &dup,
                                              const std::shared_ptr<app_state> &app);
     void

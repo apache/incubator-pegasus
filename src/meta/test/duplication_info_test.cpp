@@ -46,35 +46,52 @@ public:
         duplication_info dup(1,
                              1,
                              "temp",
-                             4,
+                             2,
                              0,
                              "dsn://slave-cluster/temp",
                              std::vector<rpc_address>(),
                              "/meta_test/101/duplication/1");
-        ASSERT_FALSE(dup.alter_progress(1, 5));
+        duplication_confirm_entry entry;
+        ASSERT_FALSE(dup.alter_progress(0, entry));
 
-        dup.init_progress(1, invalid_decree);
-        ASSERT_TRUE(dup.alter_progress(1, 5));
-        ASSERT_EQ(dup._progress[1].volatile_decree, 5);
-        ASSERT_TRUE(dup._progress[1].is_altering);
+        dup.init_progress(0, invalid_decree);
+        entry.confirmed_decree = 5;
+        entry.checkpoint_prepared = true;
+        ASSERT_TRUE(dup.alter_progress(0, entry));
+        ASSERT_EQ(dup._progress[0].volatile_decree, 5);
+        ASSERT_TRUE(dup._progress[0].is_altering);
+        ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
 
         // busy updating
-        ASSERT_FALSE(dup.alter_progress(1, 10));
-        ASSERT_EQ(dup._progress[1].volatile_decree, 5);
-        ASSERT_TRUE(dup._progress[1].is_altering);
+        entry.confirmed_decree = 10;
+        entry.checkpoint_prepared = false;
+        ASSERT_FALSE(dup.alter_progress(0, entry));
+        ASSERT_EQ(dup._progress[0].volatile_decree, 5);
+        ASSERT_TRUE(dup._progress[0].is_altering);
+        ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
 
-        dup.persist_progress(1);
-        ASSERT_EQ(dup._progress[1].stored_decree, 5);
-        ASSERT_FALSE(dup._progress[1].is_altering);
+        dup.persist_progress(0);
+        ASSERT_EQ(dup._progress[0].stored_decree, 5);
+        ASSERT_FALSE(dup._progress[0].is_altering);
+        ASSERT_TRUE(dup._progress[0].checkpoint_prepared);
 
         // too frequent to update
-        ASSERT_FALSE(dup.alter_progress(1, 10));
+        dup.init_progress(1, invalid_decree);
+        ASSERT_TRUE(dup.alter_progress(1, entry));
+        ASSERT_TRUE(dup._progress[1].is_altering);
+        dup.persist_progress(1);
+
+        ASSERT_FALSE(dup.alter_progress(1, entry));
         ASSERT_FALSE(dup._progress[1].is_altering);
 
         dup._progress[1].last_progress_update_ms -=
             duplication_info::PROGRESS_UPDATE_PERIOD_MS + 100;
-        ASSERT_TRUE(dup.alter_progress(1, 15));
+
+        entry.confirmed_decree = 15;
+        entry.checkpoint_prepared = true;
+        ASSERT_TRUE(dup.alter_progress(1, entry));
         ASSERT_TRUE(dup._progress[1].is_altering);
+        ASSERT_TRUE(dup.all_checkpoint_has_prepared());
     }
 
     static void test_init_and_start()

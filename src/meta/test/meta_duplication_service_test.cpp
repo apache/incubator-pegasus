@@ -188,13 +188,17 @@ public:
             auto dup = app->duplications[resp.dupid];
             duplication_sync_rpc rpc(make_unique<duplication_sync_request>(),
                                      RPC_CM_DUPLICATION_SYNC);
-            dup_svc().do_update_partition_confirmed(dup, rpc, 1, 1000);
+            duplication_confirm_entry entry;
+            entry.confirmed_decree = 1000;
+            dup_svc().do_update_partition_confirmed(dup, rpc, 1, entry);
             wait_all();
 
-            dup_svc().do_update_partition_confirmed(dup, rpc, 2, 2000);
+            entry.confirmed_decree = 2000;
+            dup_svc().do_update_partition_confirmed(dup, rpc, 2, entry);
             wait_all();
 
-            dup_svc().do_update_partition_confirmed(dup, rpc, 4, 4000);
+            entry.confirmed_decree = 1000;
+            dup_svc().do_update_partition_confirmed(dup, rpc, 4, entry);
             wait_all();
         }
 

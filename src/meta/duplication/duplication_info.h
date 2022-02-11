@@ -98,9 +98,9 @@ public:
     /// alter_progress -> persist_progress
     ///
 
-    // Returns: false if `d` is not supposed to be persisted,
-    //          maybe because meta storage is busy or `d` is stale.
-    bool alter_progress(int partition_index, decree d);
+    // Returns: false if `confirm_entry` is not supposed to be persisted,
+    //          maybe because meta storage is busy or `confirm_entry` is stale.
+    bool alter_progress(int partition_index, const duplication_confirm_entry &confirm_entry);
 
     void persist_progress(int partition_index);
 
@@ -141,8 +141,14 @@ public:
         return entry;
     }
 
-    // todo(jiashuo1) wait detail implementation
-    bool all_checkpoint_has_prepared() { return false; }
+    bool all_checkpoint_has_prepared()
+    {
+        return std::all_of(_progress.begin(),
+                           _progress.end(),
+                           [](std::pair<int, partition_progress> item) -> bool {
+                               return item.second.checkpoint_prepared;
+                           });
+    }
 
     void report_progress_if_time_up();
 
@@ -175,6 +181,7 @@ private:
         bool is_altering{false};
         uint64_t last_progress_update_ms{0};
         bool is_inited{false};
+        bool checkpoint_prepared{false};
     };
 
     // partition_idx => progress

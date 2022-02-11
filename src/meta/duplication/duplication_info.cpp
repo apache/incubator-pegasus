@@ -119,7 +119,8 @@ void duplication_info::init_progress(int partition_index, decree d)
     p.is_inited = true;
 }
 
-bool duplication_info::alter_progress(int partition_index, decree d)
+bool duplication_info::alter_progress(int partition_index,
+                                      const duplication_confirm_entry &confirm_entry)
 {
     zauto_write_lock l(_lock);
 
@@ -130,8 +131,10 @@ bool duplication_info::alter_progress(int partition_index, decree d)
     if (p.is_altering) {
         return false;
     }
-    if (p.volatile_decree < d) {
-        p.volatile_decree = d;
+
+    p.checkpoint_prepared = confirm_entry.checkpoint_prepared;
+    if (p.volatile_decree < confirm_entry.confirmed_decree) {
+        p.volatile_decree = confirm_entry.confirmed_decree;
     }
     if (p.volatile_decree != p.stored_decree) {
         // progress update is not supposed to be too frequent.
