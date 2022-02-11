@@ -434,10 +434,6 @@ void replica::close()
         _checkpoint_timer = nullptr;
     }
 
-    if (_app != nullptr) {
-        _app->cancel_background_work(true);
-    }
-
     _tracker.cancel_outstanding_tasks();
 
     cleanup_preparing_mutations(true);

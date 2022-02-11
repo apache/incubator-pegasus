@@ -114,11 +114,6 @@ public:
     error_code open();
 
     //
-    // Cancel all background flush and compaction work.
-    //
-    virtual void cancel_background_work(bool wait) {}
-
-    //
     // Close the app.
     // If `clear_state' is true, means clear the app state after close it.
     //
