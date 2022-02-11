@@ -2578,8 +2578,6 @@ void full_data::__set_sort_key(const ::dsn::blob &val) { this->sort_key = val; }
 
 void full_data::__set_value(const ::dsn::blob &val) { this->value = val; }
 
-void full_data::__set_exists(const bool val) { this->exists = val; }
-
 uint32_t full_data::read(::apache::thrift::protocol::TProtocol *iprot)
 {
 
@@ -2623,14 +2621,6 @@ uint32_t full_data::read(::apache::thrift::protocol::TProtocol *iprot)
                 xfer += iprot->skip(ftype);
             }
             break;
-        case 4:
-            if (ftype == ::apache::thrift::protocol::T_BOOL) {
-                xfer += iprot->readBool(this->exists);
-                this->__isset.exists = true;
-            } else {
-                xfer += iprot->skip(ftype);
-            }
-            break;
         default:
             xfer += iprot->skip(ftype);
             break;
@@ -2661,10 +2651,6 @@ uint32_t full_data::write(::apache::thrift::protocol::TProtocol *oprot) const
     xfer += this->value.write(oprot);
     xfer += oprot->writeFieldEnd();
 
-    xfer += oprot->writeFieldBegin("exists", ::apache::thrift::protocol::T_BOOL, 4);
-    xfer += oprot->writeBool(this->exists);
-    xfer += oprot->writeFieldEnd();
-
     xfer += oprot->writeFieldStop();
     xfer += oprot->writeStructEnd();
     return xfer;
@@ -2676,7 +2662,6 @@ void swap(full_data &a, full_data &b)
     swap(a.hash_key, b.hash_key);
     swap(a.sort_key, b.sort_key);
     swap(a.value, b.value);
-    swap(a.exists, b.exists);
     swap(a.__isset, b.__isset);
 }
 
@@ -2685,7 +2670,6 @@ full_data::full_data(const full_data &other93)
     hash_key = other93.hash_key;
     sort_key = other93.sort_key;
     value = other93.value;
-    exists = other93.exists;
     __isset = other93.__isset;
 }
 full_data::full_data(full_data &&other94)
@@ -2693,7 +2677,6 @@ full_data::full_data(full_data &&other94)
     hash_key = std::move(other94.hash_key);
     sort_key = std::move(other94.sort_key);
     value = std::move(other94.value);
-    exists = std::move(other94.exists);
     __isset = std::move(other94.__isset);
 }
 full_data &full_data::operator=(const full_data &other95)
@@ -2701,7 +2684,6 @@ full_data &full_data::operator=(const full_data &other95)
     hash_key = other95.hash_key;
     sort_key = other95.sort_key;
     value = other95.value;
-    exists = other95.exists;
     __isset = other95.__isset;
     return *this;
 }
@@ -2710,7 +2692,6 @@ full_data &full_data::operator=(full_data &&other96)
     hash_key = std::move(other96.hash_key);
     sort_key = std::move(other96.sort_key);
     value = std::move(other96.value);
-    exists = std::move(other96.exists);
     __isset = std::move(other96.__isset);
     return *this;
 }
@@ -2723,8 +2704,6 @@ void full_data::printTo(std::ostream &out) const
         << "sort_key=" << to_string(sort_key);
     out << ", "
         << "value=" << to_string(value);
-    out << ", "
-        << "exists=" << to_string(exists);
     out << ")";
 }
 

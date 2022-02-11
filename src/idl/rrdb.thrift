@@ -184,7 +184,6 @@ struct full_data {
     1:dsn.blob hash_key;
     2:dsn.blob sort_key;
     3:dsn.blob value;
-    4:bool exists // true mean data exists, false means not
 }
 
 struct incr_request

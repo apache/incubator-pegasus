@@ -787,6 +787,12 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     response.partition_index = _gpid.get_partition_index();
     response.server = _primary_address;
 
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
     const auto &request = rpc.request();
     if (request.keys.empty()) {
         response.error = rocksdb::Status::kInvalidArgument;
@@ -819,16 +825,8 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         const auto &status = statuses[i];
         const ::dsn::blob &hash_key = request.keys[i].hash_key;
         const ::dsn::blob &sort_key = request.keys[i].sort_key;
-        ::dsn::apps::full_data r;
-        r.hash_key = hash_key;
-        r.sort_key = sort_key;
-        r.exists = false;
-        response.data.emplace_back(std::move(r));
-        ::dsn::apps::full_data &current_data = response.data.back();
 
         if (status.IsNotFound()) {
-            current_data.value = ::dsn::blob();
-            current_data.exists = false;
             continue;
         }
 
@@ -840,17 +838,17 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
                     derror_replica("rocksdb data expired for batch_get from {}",
                                    rpc.remote_address().to_string());
                 }
-
-                current_data.value = ::dsn::blob();
-                current_data.exists = false;
                 continue;
             }
 
             ::dsn::blob real_value;
             pegasus_extract_user_data(_pegasus_data_version, std::move(value), real_value);
+            ::dsn::apps::full_data current_data;
+            current_data.hash_key = hash_key;
+            current_data.sort_key = sort_key;
             current_data.value = std::move(real_value);
-            current_data.exists = true;
             total_data_size += current_data.value.size();
+            response.data.emplace_back(std::move(current_data));
         } else {
             if (_verbose_log) {
                 derror_replica(

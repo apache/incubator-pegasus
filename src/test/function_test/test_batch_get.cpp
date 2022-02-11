@@ -87,6 +87,5 @@ TEST(batch_get, set_and_then_batch_get)
         ASSERT_EQ(response.data[i].hash_key.to_string(), key_pair_list[i].first);
         ASSERT_EQ(response.data[i].sort_key.to_string(), key_pair_list[i].second);
         ASSERT_EQ(response.data[i].value.to_string(), value_list[i]);
-        ASSERT_EQ(response.data[i].exists, true);
     }
 }

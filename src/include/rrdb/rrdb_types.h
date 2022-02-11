@@ -1118,11 +1118,10 @@ inline std::ostream &operator<<(std::ostream &out, const batch_get_response &obj
 
 typedef struct _full_data__isset
 {
-    _full_data__isset() : hash_key(false), sort_key(false), value(false), exists(false) {}
+    _full_data__isset() : hash_key(false), sort_key(false), value(false) {}
     bool hash_key : 1;
     bool sort_key : 1;
     bool value : 1;
-    bool exists : 1;
 } _full_data__isset;
 
 class full_data
@@ -1132,13 +1131,12 @@ public:
     full_data(full_data &&);
     full_data &operator=(const full_data &);
     full_data &operator=(full_data &&);
-    full_data() : exists(0) {}
+    full_data() {}
 
     virtual ~full_data() throw();
     ::dsn::blob hash_key;
     ::dsn::blob sort_key;
     ::dsn::blob value;
-    bool exists;
 
     _full_data__isset __isset;
 
@@ -1148,8 +1146,6 @@ public:
 
     void __set_value(const ::dsn::blob &val);
 
-    void __set_exists(const bool val);
-
     bool operator==(const full_data &rhs) const
     {
         if (!(hash_key == rhs.hash_key))
@@ -1157,8 +1153,6 @@ public:
         if (!(sort_key == rhs.sort_key))
             return false;
         if (!(value == rhs.value))
-            return false;
-        if (!(exists == rhs.exists))
             return false;
         return true;
     }
