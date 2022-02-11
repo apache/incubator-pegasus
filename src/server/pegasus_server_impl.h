@@ -91,7 +91,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE
     ::dsn::error_code start(int argc, char **argv) override;
 
-    void cancel_background_work(bool wait) override;
+    void cancel_background_work(bool wait);
 
     // returns:
     //  - ERR_OK

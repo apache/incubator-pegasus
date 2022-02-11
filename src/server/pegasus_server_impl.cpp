@@ -1636,6 +1636,8 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         flush_all_family_columns(true);
     }
 
+    cancel_background_work(true);
+
     // stop all tracked tasks when pegasus server is stopped.
     if (_update_replica_rdb_stat != nullptr) {
         _update_replica_rdb_stat->cancel(true);
