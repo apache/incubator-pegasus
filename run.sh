@@ -181,6 +181,10 @@ function run_build()
             --enable_rocksdb_portable)
                 ENABLE_ROCKSDB_PORTABLE=YES
                 ;;
+            --use_jemalloc)
+                USE_JEMALLOC=YES
+                DISABLE_GPERF=YES
+                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -255,7 +259,8 @@ function run_build()
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
         WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER"\
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" ./build.sh
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF"\
+        USE_JEMALLOC="$USE_JEMALLOC" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
         exit 1

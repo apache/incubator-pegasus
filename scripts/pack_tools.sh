@@ -24,6 +24,7 @@ function usage()
     echo "  -h"
     echo "  -p|--update-package-template <minos-package-template-file-path>"
     echo "  -g|--custom-gcc"
+    echo "  -j|--use-jemalloc"
     exit 0
 }
 
@@ -79,6 +80,7 @@ if [ -n "$MINOS_CONFIG_FILE" ]; then
 fi
 
 custom_gcc="false"
+use_jemalloc="no"
 
 while [[ $# > 0 ]]; do
     option_key="$1"
@@ -92,6 +94,9 @@ while [[ $# > 0 ]]; do
             ;;
         -h|--help)
             usage
+            ;;
+        -j|--use-jemalloc)
+            use_jemalloc="yes"
             ;;
     esac
     shift
@@ -111,7 +116,14 @@ cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
 mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
+
+if [ "$use_jemalloc" == "yes" ]; then
+    copy_file ./rdsn/thirdparty/output/lib/libjemalloc.so.2 ${pack}/DSN_ROOT/lib/
+    copy_file ./rdsn/thirdparty/output/lib/libprofiler.so.0 ${pack}/DSN_ROOT/lib/
+else
+    copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
+fi
+
 copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/DSN_ROOT/lib
 copy_file ./rdsn/thirdparty/output/lib/libsasl2.so.3 ${pack}/DSN_ROOT/lib/
