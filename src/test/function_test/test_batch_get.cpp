@@ -77,6 +77,19 @@ TEST(batch_get, set_and_then_batch_get)
         value_list.push_back(std::move(value));
     }
 
+    int test_no_exist_data_count = 6;
+    for (int i = 0; i < test_no_exist_data_count; ++i) {
+        std::string hash_key = "hash_key_prefix_no_exist_" + std::to_string(i);
+        std::string sort_key = "sort_key_prefix_no_exist_" + std::to_string(i);
+
+        apps::full_key one_full_key;
+        one_full_key.__isset.hash_key = true;
+        one_full_key.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
+        one_full_key.__isset.sort_key = true;
+        one_full_key.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
+        batch_request.keys.emplace_back(std::move(one_full_key));
+    }
+
     auto batch_get_result = rrdb_client->batch_get_sync(
         batch_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
     ASSERT_EQ(ERR_OK, batch_get_result.first);
