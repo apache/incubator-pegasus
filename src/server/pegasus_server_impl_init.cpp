@@ -81,6 +81,20 @@ DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per
             (read_amp_bytes_per_bit & (read_amp_bytes_per_bit - 1)) == 0);
 });
 
+DSN_DEFINE_uint64("pegasus.server",
+                  rocksdb_abnormal_batch_get_size_threshold,
+                  10000000,
+                  "batch-get operation total key-value size exceed this "
+                  "threshold will be logged, 0 means no check");
+DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_size_threshold, FT_MUTABLE);
+
+DSN_DEFINE_uint64(
+    "pegasus.server",
+    rocksdb_abnormal_batch_get_count_threshold,
+    2000,
+    "batch-get operation iterate count exceed this threshold will be logged, 0 means no check");
+DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_count_threshold, FT_MUTABLE);
+
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -140,18 +154,6 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "rocksdb_abnormal_multi_get_iterate_count_threshold",
         1000,
         "multi-get operation iterate count exceed this threshold will be logged, 0 means no check");
-
-    _abnormal_batch_get_size_threshold =
-        dsn_config_get_value_uint64("pegasus.server",
-                                    "rocksdb_abnormal_batch_get_size_threshold",
-                                    10000000,
-                                    "batch-get operation total key-value size exceed this "
-                                    "threshold will be logged, 0 means no check");
-    _abnormal_batch_get_count_threshold = dsn_config_get_value_uint64(
-        "pegasus.server",
-        "rocksdb_abnormal_batch_get_count_threshold",
-        1000,
-        "batch-get operation iterate count exceed this threshold will be logged, 0 means no check");
 
     _rng_rd_opts.multi_get_max_iteration_count = (uint32_t)dsn_config_get_value_uint64(
         "pegasus.server",

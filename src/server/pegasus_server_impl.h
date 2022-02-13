@@ -26,6 +26,7 @@
 #include <rocksdb/options.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <dsn/utility/flags.h>
 #include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
 #include <rocksdb/rate_limiter.h>
@@ -46,6 +47,9 @@ typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
 
 namespace pegasus {
 namespace server {
+
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_size_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
 
 class meta_store;
 class capacity_unit_calculator;
@@ -346,10 +350,12 @@ private:
 
     bool is_batch_get_abnormal(uint64_t time_used, uint64_t size, uint64_t count)
     {
-        if (_abnormal_batch_get_size_threshold && size >= _abnormal_batch_get_size_threshold) {
+        if (FLAGS_rocksdb_abnormal_batch_get_size_threshold &&
+            size >= FLAGS_rocksdb_abnormal_batch_get_size_threshold) {
             return true;
         }
-        if (_abnormal_batch_get_count_threshold && count >= _abnormal_batch_get_count_threshold) {
+        if (FLAGS_rocksdb_abnormal_batch_get_count_threshold &&
+            count >= FLAGS_rocksdb_abnormal_batch_get_count_threshold) {
             return true;
         }
         if (time_used >= _slow_query_threshold_ns) {
@@ -398,8 +404,6 @@ private:
     uint64_t _abnormal_get_size_threshold;
     uint64_t _abnormal_multi_get_size_threshold;
     uint64_t _abnormal_multi_get_iterate_count_threshold;
-    uint64_t _abnormal_batch_get_size_threshold;
-    uint64_t _abnormal_batch_get_count_threshold;
     // slow query time threshold. exceed this threshold will be logged.
     uint64_t _slow_query_threshold_ns;
     uint64_t _slow_query_threshold_ns_in_config;
