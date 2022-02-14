@@ -224,7 +224,7 @@ do
     if [ $rep_count -eq 0 ]; then
       echo "Downgrade done."
       break
-    elif [ $sleeped -gt 28 ]; then
+    elif [ $sleeped -gt 88 ]; then
       echo "Downgrade timeout."
       break
     else
@@ -262,7 +262,7 @@ do
     if [ $rep_count -eq 0 ]; then
       echo "Close done."
       break
-    elif [ $sleeped -gt 28 ]; then
+    elif [ $sleeped -gt 88 ]; then
       echo "Close timeout."
       break
     else
