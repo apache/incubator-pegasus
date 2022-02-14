@@ -823,13 +823,12 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     response.data.reserve(request.keys.size());
     for (int i = 0; i < keys.size(); i++) {
         const auto &status = statuses[i];
-        const ::dsn::blob &hash_key = request.keys[i].hash_key;
-        const ::dsn::blob &sort_key = request.keys[i].sort_key;
-
         if (status.IsNotFound()) {
             continue;
         }
 
+        const ::dsn::blob &hash_key = request.keys[i].hash_key;
+        const ::dsn::blob &sort_key = request.keys[i].sort_key;
         std::string &value = values[i];
 
         if (dsn_likely(status.ok())) {
