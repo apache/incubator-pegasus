@@ -835,9 +835,11 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
                 if (_verbose_log) {
-                    derror_replica("rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
-                                   rpc.remote_address().to_string(), pegasus::utils::c_escape_string(hash_key),
-                                   pegasus::utils::c_escape_string(sort_key));
+                    derror_replica(
+                        "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
+                        rpc.remote_address().to_string(),
+                        pegasus::utils::c_escape_string(hash_key),
+                        pegasus::utils::c_escape_string(sort_key));
                 }
                 continue;
             }
