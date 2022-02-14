@@ -808,7 +808,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     std::vector<::dsn::blob> keys_holder;
     keys_holder.reserve(request.keys.size());
     for (const auto &key : request.keys) {
-        ::dsn::blob raw_key;
+        dsn::blob raw_key;
         pegasus_generate_key(raw_key, key.hash_key, key.sort_key);
         keys.emplace_back(rocksdb::Slice(raw_key.data(), raw_key.length()));
         keys_holder.emplace_back(std::move(raw_key));
@@ -835,8 +835,9 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         if (dsn_likely(status.ok())) {
             if (check_if_record_expired(epoch_now, value)) {
                 if (_verbose_log) {
-                    derror_replica("rocksdb data expired for batch_get from {}",
-                                   rpc.remote_address().to_string());
+                    derror_replica("rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
+                                   rpc.remote_address().to_string(), pegasus::utils::c_escape_string(hash_key),
+                                   pegasus::utils::c_escape_string(sort_key));
                 }
                 continue;
             }
@@ -853,7 +854,6 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
             if (_verbose_log) {
                 derror_replica(
                     "rocksdb get failed for batch_get from {}:  error = {}, key size = {}",
-                    replica_name(),
                     rpc.remote_address().to_string(),
                     status.ToString(),
                     request.keys.size());
