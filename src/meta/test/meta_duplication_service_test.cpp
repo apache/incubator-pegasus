@@ -130,9 +130,20 @@ public:
         dup_svc().create_follower_app_for_duplication(dup, app);
     }
 
+    void check_follower_app_if_create_completed(const std::shared_ptr<duplication_info> &dup)
+    {
+        dup_svc().check_follower_app_if_create_completed(dup);
+    }
+
     duplication_status::type next_status(const std::shared_ptr<duplication_info> &dup) const
     {
         return dup->_next_status;
+    }
+
+    void force_update_dup_status(const std::shared_ptr<duplication_info> &dup,
+                                 duplication_status::type to_status)
+    {
+        dup->_status = to_status;
     }
 
     /// === Tests ===
@@ -782,7 +793,7 @@ TEST_F(meta_duplication_service_test, create_follower_app_for_duplication)
                        "return()",
                        true,
                        duplication_status::DS_PREPARE,
-                       duplication_status::DS_INIT}};
+                       duplication_status::DS_APP}};
 
     for (const auto &test : test_cases) {
         std::string test_app = test.fail_cfg_name;
@@ -797,7 +808,58 @@ TEST_F(meta_duplication_service_test, create_follower_app_for_duplication)
         create_follower_app_for_duplication(dup, app);
         wait_all();
         fail::teardown();
-        ASSERT_TRUE(!dup->is_altering());
+        ASSERT_EQ(dup->is_altering(), test.is_altering);
+        ASSERT_EQ(next_status(dup), test.next_status);
+        ASSERT_EQ(dup->status(), test.cur_status);
+    }
+}
+
+TEST_F(meta_duplication_service_test, check_follower_app_if_create_completed)
+{
+    struct test_case
+    {
+        std::vector<std::string> fail_cfg_name;
+        std::vector<std::string> fail_cfg_action;
+        bool is_altering;
+        duplication_status::type cur_status;
+        duplication_status::type next_status;
+    } test_cases[] = {{{"create_app_ok"},
+                       {"void()"},
+                       false,
+                       duplication_status::DS_LOG,
+                       duplication_status::DS_INIT},
+                      // the case just `palace holder`, actually
+                      // `check_follower_app_if_create_completed` is failed by default in unit test
+                      {{"create_app_failed"},
+                       {"off()"},
+                       false,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_INIT},
+                      {{"create_app_ok", "persist_dup_status_failed"},
+                       {"void()", "return()"},
+                       true,
+                       duplication_status::DS_APP,
+                       duplication_status::DS_LOG}};
+
+    for (const auto &test : test_cases) {
+        std::string test_app =
+            fmt::format("{}{}", test.fail_cfg_name[0], test.fail_cfg_name.size());
+        create_app(test_app);
+        auto app = find_app(test_app);
+
+        auto dup_add_resp = create_dup(test_app);
+        auto dup = app->duplications[dup_add_resp.dupid];
+        // 'check_follower_app_if_create_completed' must execute under duplication_status::DS_APP,
+        // so force update it
+        force_update_dup_status(dup, duplication_status::DS_APP);
+        fail::setup();
+        for (int i = 0; i < test.fail_cfg_name.size(); i++) {
+            fail::cfg(test.fail_cfg_name[i], test.fail_cfg_action[i]);
+        }
+        check_follower_app_if_create_completed(dup);
+        wait_all();
+        fail::teardown();
+        ASSERT_EQ(dup->is_altering(), test.is_altering);
         ASSERT_EQ(next_status(dup), test.next_status);
         ASSERT_EQ(dup->status(), test.cur_status);
     }

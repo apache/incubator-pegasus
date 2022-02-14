@@ -82,8 +82,7 @@ private:
 
     void create_follower_app_for_duplication(const std::shared_ptr<duplication_info> &dup,
                                              const std::shared_ptr<app_state> &app);
-    void
-    check_follower_duplicate_checkpoint_if_completed(const std::shared_ptr<duplication_info> &dup);
+    void check_follower_app_if_create_completed(const std::shared_ptr<duplication_info> &dup);
 
     // Get zk path for duplication.
     std::string get_duplication_path(const app_state &app) const

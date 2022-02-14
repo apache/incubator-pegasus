@@ -51,6 +51,7 @@ public:
         : id(dupid),
           app_id(appid),
           app_name(std::move(app_name)),
+          partition_count(partition_count),
           follower_cluster_name(std::move(follower_cluster_name)),
           follower_cluster_metas(std::move(follower_cluster_metas)),
           store_path(std::move(meta_store_path)),
@@ -208,6 +209,7 @@ public:
     const dupid_t id{0};
     const int32_t app_id{0};
     const std::string app_name;
+    const int32_t partition_count{0};
 
     const std::string follower_cluster_name;
     const std::vector<rpc_address> follower_cluster_metas;
