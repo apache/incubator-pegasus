@@ -82,11 +82,11 @@ DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per
 });
 
 DSN_DEFINE_uint64("pegasus.server",
-                  rocksdb_abnormal_batch_get_size_threshold,
-                  10000000,
-                  "batch-get operation total key-value size exceed this "
+                  rocksdb_abnormal_batch_get_bytes_threshold,
+                  1e7,
+                  "batch-get operation total key-value bytes size exceed this "
                   "threshold will be logged, 0 means no check");
-DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_size_threshold, FT_MUTABLE);
+DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_bytes_threshold, FT_MUTABLE);
 
 DSN_DEFINE_uint64(
     "pegasus.server",

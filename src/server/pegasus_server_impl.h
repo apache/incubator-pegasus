@@ -48,7 +48,7 @@ typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
 namespace pegasus {
 namespace server {
 
-DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_size_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_bytes_threshold);
 DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
 
 class meta_store;
@@ -350,8 +350,8 @@ private:
 
     bool is_batch_get_abnormal(uint64_t time_used, uint64_t size, uint64_t count)
     {
-        if (FLAGS_rocksdb_abnormal_batch_get_size_threshold &&
-            size >= FLAGS_rocksdb_abnormal_batch_get_size_threshold) {
+        if (FLAGS_rocksdb_abnormal_batch_get_bytes_threshold &&
+            size >= FLAGS_rocksdb_abnormal_batch_get_bytes_threshold) {
             return true;
         }
         if (FLAGS_rocksdb_abnormal_batch_get_count_threshold &&

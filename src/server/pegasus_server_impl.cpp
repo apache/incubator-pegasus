@@ -817,7 +817,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
     rocksdb::Status final_status;
     bool error_occurred = false;
     int64_t total_data_size = 0;
-    uint32_t epoch_now = ::pegasus::utils::epoch_now();
+    uint32_t epoch_now = pegasus::utils::epoch_now();
     std::vector<std::string> values;
     std::vector<rocksdb::Status> statuses = _db->MultiGet(_data_cf_rd_opts, keys, &values);
     response.data.reserve(request.keys.size());
@@ -841,9 +841,9 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
                 continue;
             }
 
-            ::dsn::blob real_value;
+            dsn::blob real_value;
             pegasus_extract_user_data(_pegasus_data_version, std::move(value), real_value);
-            ::dsn::apps::full_data current_data;
+            dsn::apps::full_data current_data;
             current_data.hash_key = hash_key;
             current_data.sort_key = sort_key;
             current_data.value = std::move(real_value);
