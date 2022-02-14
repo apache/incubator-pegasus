@@ -197,6 +197,11 @@ void capacity_unit_calculator::add_batch_get_cu(dsn::message_ex *req,
         return;
     }
 
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(1);
+        return;
+    }
+
     add_read_cu(data_size);
 }
 
