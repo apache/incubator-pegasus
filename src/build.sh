@@ -93,6 +93,14 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
+if [ "$USE_JEMALLOC" == "YES" ]
+then
+    echo "USE_JEMALLOC=YES"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_JEMALLOC=ON"
+else
+    echo "USE_JEMALLOC=NO"
+fi
+
 if [ ! -z "$SANITIZER" ]
 then
     echo "SANITIZER=$SANITIZER"

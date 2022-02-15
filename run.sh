@@ -90,6 +90,8 @@ function usage_build()
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
+    echo "   --use_jemalloc        build with jemalloc"
+
 }
 function run_build()
 {
@@ -112,6 +114,7 @@ function run_build()
     SANITIZER=""
     TEST_MODULE=""
     ENABLE_ROCKSDB_PORTABLE=NO
+    USE_JEMALLOC=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -168,6 +171,10 @@ function run_build()
                 ;;
             --disable_gperf)
                 DISABLE_GPERF=YES
+                ;;
+	    --use_jemalloc)
+		DISABLE_GPERF=YES
+                USE_JEMALLOC=YES
                 ;;
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
@@ -235,6 +242,9 @@ function run_build()
     if [ "$ENABLE_ROCKSDB_PORTABLE" == "YES" ]; then
         OPT="$OPT --enable_rocksdb_portable"
     fi
+    if [ "$USE_JEMALLOC" == "YES" ]; then
+        OPT="$OPT --use_jemalloc"
+    fi
     ./run.sh build $OPT --notest
     if [ $? -ne 0 ]; then
         echo "ERROR: build rdsn failed"
@@ -246,7 +256,7 @@ function run_build()
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
         WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER"\
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" ./build.sh
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" ./build.sh
     if [ $? -ne 0 ]; then
         echo "ERROR: build pegasus failed"
         exit 1
