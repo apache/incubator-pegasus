@@ -171,10 +171,6 @@ function run_build()
             --disable_gperf)
                 DISABLE_GPERF=YES
                 ;;
-	    --use_jemalloc)
-		DISABLE_GPERF=YES
-                USE_JEMALLOC=YES
-                ;;
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
                 ;;
