@@ -62,3 +62,31 @@ jobs:
         run: |
           source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
+
+  test-with-jemalloc:
+    name: Test With Jemalloc
+    needs: lint
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+      - name: Compilation
+        run: ./run.sh build -c --skip_thirdparty --use_jemalloc
+      -
+        name: Packaging Server
+        run: ./run.sh pack_server --use-jemalloc
+      -
+        name: Packaging Tools
+        run: ./run.sh pack_tools --use-jemalloc
+      - name: Unit Testing
+        run: |
+          source ./scripts/config_hdfs.sh
+          ./run.sh test --on_travis
