@@ -91,7 +91,6 @@ function usage_build()
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
     echo "   --use_jemalloc        build with jemalloc"
-
 }
 function run_build()
 {
