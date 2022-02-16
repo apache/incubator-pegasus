@@ -69,6 +69,12 @@ DSN_DEFINE_bool("replication",
                 true,
                 "true means ignore broken data disk when initialize");
 
+DSN_DEFINE_uint32("replication",
+                  max_concurrent_manual_emergency_checkpointing_count,
+                  1,
+                  "max concurrent manual emergency checkpoint running count");
+DSN_TAG_VARIABLE(max_concurrent_manual_emergency_checkpointing_count, FT_MUTABLE);
+
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
@@ -91,6 +97,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
       _learn_app_concurrent_count(0),
       _fs_manager(false),
       _bulk_load_downloading_count(0),
+      _manual_emergency_checkpointing_count(0),
       _is_running(false)
 {
 #ifdef DSN_ENABLE_GPERF

@@ -46,7 +46,11 @@ public:
     error_code start(int, char **) override { return ERR_NOT_IMPLEMENTED; }
     error_code stop(bool) override { return ERR_NOT_IMPLEMENTED; }
     error_code sync_checkpoint() override { return ERR_OK; }
-    error_code async_checkpoint(bool) override { return ERR_NOT_IMPLEMENTED; }
+    error_code async_checkpoint(bool) override
+    {
+        _last_durable_decree = _expect_last_durable_decree;
+        return ERR_OK;
+    }
     error_code prepare_get_checkpoint(blob &) override { return ERR_NOT_IMPLEMENTED; }
     error_code get_checkpoint(int64_t, const blob &, learn_state &) override
     {
@@ -73,7 +77,7 @@ public:
     // we mock the followings
     void update_app_envs(const std::map<std::string, std::string> &envs) override { _envs = envs; }
     void query_app_envs(std::map<std::string, std::string> &out) override { out = _envs; }
-    decree last_durable_decree() const override { return 0; }
+    decree last_durable_decree() const override { return _last_durable_decree; }
 
     // TODO(heyuchen): implement this function in further pull request
     void set_partition_version(int32_t partition_version) override {}
@@ -88,10 +92,16 @@ public:
         return manual_compaction_status::IDLE;
     }
 
+    void set_last_durable_decree(decree d) { _last_durable_decree = d; }
+
+    void set_expect_last_durable_decree(decree d) { _expect_last_durable_decree = d; }
+
 private:
     std::map<std::string, std::string> _envs;
     decree _decree = 5;
     ingestion_status::type _ingestion_status;
+    decree _last_durable_decree{0};
+    decree _expect_last_durable_decree{0};
 };
 
 class mock_replica : public replica
@@ -112,6 +122,7 @@ public:
     ~mock_replica() override
     {
         _config.status = partition_status::PS_INACTIVE;
+        _tracker.wait_outstanding_tasks();
         _app.reset(nullptr);
     }
 
@@ -194,8 +205,20 @@ public:
         backup_context->complete_checkpoint();
     }
 
+    void update_last_durable_decree(decree decree)
+    {
+        dynamic_cast<mock_replication_app_base *>(_app.get())->set_last_durable_decree(decree);
+    }
+
+    void update_expect_last_durable_decree(decree decree)
+    {
+        dynamic_cast<mock_replication_app_base *>(_app.get())
+            ->set_expect_last_durable_decree(decree);
+    }
+
 private:
     decree _max_gced_decree{invalid_decree - 1};
+    decree _last_durable_decree{0};
 };
 typedef dsn::ref_ptr<mock_replica> mock_replica_ptr;
 

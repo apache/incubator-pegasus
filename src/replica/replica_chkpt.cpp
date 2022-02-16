@@ -39,6 +39,7 @@
 #include "replica_stub.h"
 #include "duplication/replica_duplicator_manager.h"
 #include "split/replica_split_manager.h"
+#include "dsn/utility/fail_point.h"
 #include <dsn/utility/filesystem.h>
 #include <dsn/utility/chrono_literals.h>
 #include <dsn/dist/replication/replication_app_base.h>
@@ -121,6 +122,46 @@ void replica::on_checkpoint_timer()
                                                                 1000000);
                          });
     }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
+{
+    _checker.only_one_thread_access();
+
+    if (_app == nullptr) {
+        derror_replica("app hasn't been init or has been released");
+        return ERR_LOCAL_APP_FAILURE;
+    }
+
+    if (old_decree <= _app->last_durable_decree()) {
+        ddebug_replica("checkpoint has been successful: old = {} vs latest = {}",
+                       old_decree,
+                       _app->last_durable_decree());
+        _is_manual_emergency_checkpointing = false;
+        _stub->_manual_emergency_checkpointing_count == 0
+            ? 0
+            : (--_stub->_manual_emergency_checkpointing_count);
+        return ERR_OK;
+    }
+
+    if (_is_manual_emergency_checkpointing) {
+        dwarn_replica("replica is checkpointing, last_durable_decree = {}",
+                      _app->last_durable_decree());
+        return ERR_BUSY;
+    }
+
+    if (++_stub->_manual_emergency_checkpointing_count >
+        FLAGS_max_concurrent_manual_emergency_checkpointing_count) {
+        dwarn_replica("please try again later because checkpointing exceed max running count[{}]",
+                      FLAGS_max_concurrent_manual_emergency_checkpointing_count);
+        --_stub->_manual_emergency_checkpointing_count;
+        return ERR_TRY_AGAIN;
+    }
+
+    _is_manual_emergency_checkpointing = true;
+    init_checkpoint(true);
+    return ERR_OK;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION

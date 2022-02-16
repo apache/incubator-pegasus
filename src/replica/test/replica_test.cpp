@@ -17,7 +17,6 @@
 
 #include <dsn/dist/replication/replica_envs.h>
 #include <dsn/utility/defer.h>
-#include <dsn/utility/fail_point.h>
 #include <gtest/gtest.h>
 #include "runtime/rpc/network.sim.h"
 
@@ -150,6 +149,13 @@ public:
         std::string remote_chkpt_dir;
         return _mock_replica->find_valid_checkpoint(req, remote_chkpt_dir);
     }
+
+    void force_update_checkpointing(bool running)
+    {
+        _mock_replica->_is_manual_emergency_checkpointing = running;
+    }
+
+    bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
 
 public:
     dsn::app_info _app_info;
@@ -316,6 +322,30 @@ TEST_F(replica_test, test_replica_backup_and_restore_with_specific_path)
     test_on_cold_backup(user_specified_path);
     auto err = test_find_valid_checkpoint(user_specified_path);
     ASSERT_EQ(ERR_OK, err);
+}
+
+TEST_F(replica_test, trigger_manual_emergency_checkpoint)
+{
+    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
+    ASSERT_TRUE(is_checkpointing());
+    _mock_replica->update_last_durable_decree(100);
+
+    // test no need start checkpoint because `old_decree` < `last_durable`
+    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
+    ASSERT_FALSE(is_checkpointing());
+
+    // test has existed running task
+    force_update_checkpointing(true);
+    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_BUSY);
+    ASSERT_TRUE(is_checkpointing());
+    force_update_checkpointing(false);
+
+    // test exceed max concurrent count
+    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_OK);
+    force_update_checkpointing(false);
+    ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_TRY_AGAIN);
+    ASSERT_FALSE(is_checkpointing());
+    _mock_replica->tracker()->wait_outstanding_tasks();
 }
 
 } // namespace replication

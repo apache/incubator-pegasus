@@ -129,6 +129,7 @@ public:
     uint64_t get_pending_mutations_count() const;
 
 private:
+    friend class duplication_test_base;
     friend class replica_duplicator_test;
     friend class duplication_sync_timer_test;
     friend class load_from_private_log_test;

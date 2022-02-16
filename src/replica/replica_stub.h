@@ -47,6 +47,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_uint32(max_concurrent_manual_emergency_checkpointing_count);
+
 typedef rpc_holder<group_check_response, learn_notify_response> learn_completion_notification_rpc;
 typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;
 typedef rpc_holder<query_replica_decree_request, query_replica_decree_response>
@@ -404,8 +406,11 @@ private:
     // write body size exceed this threshold will be logged and reject, 0 means no check
     uint64_t _max_allowed_write_size;
 
-    // replica count exectuting bulk load downloading concurrently
+    // replica count executing bulk load downloading concurrently
     std::atomic_int _bulk_load_downloading_count;
+
+    // replica count executing emergency checkpoint concurrently
+    std::atomic_int _manual_emergency_checkpointing_count;
 
     bool _is_running;
 

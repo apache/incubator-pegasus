@@ -54,14 +54,18 @@ public:
         return dup_entities[dupid].get();
     }
 
-    std::unique_ptr<replica_duplicator> create_test_duplicator(decree confirmed = invalid_decree)
+    std::unique_ptr<replica_duplicator> create_test_duplicator(decree confirmed = invalid_decree,
+                                                               decree start = invalid_decree)
     {
         duplication_entry dup_ent;
         dup_ent.dupid = 1;
         dup_ent.remote = "remote_address";
         dup_ent.status = duplication_status::DS_PAUSE;
         dup_ent.progress[_replica->get_gpid().get_partition_index()] = confirmed;
-        return make_unique<replica_duplicator>(dup_ent, _replica.get());
+
+        auto duplicator = make_unique<replica_duplicator>(dup_ent, _replica.get());
+        duplicator->_start_point_decree = start;
+        return duplicator;
     }
 
     std::map<int, log_file_ptr> open_log_file_map(const std::string &log_dir)
@@ -77,6 +81,12 @@ public:
         auto mut = replica_test_base::create_test_mutation(decree, data);
         mut->data.updates[0].code = RPC_DUPLICATION_IDEMPOTENT_WRITE; // must be idempotent write
         return mut;
+    }
+
+    void wait_all(const std::unique_ptr<replica_duplicator> &dup)
+    {
+        dup->tracker()->wait_outstanding_tasks();
+        dup->_replica->tracker()->wait_outstanding_tasks();
     }
 };
 
