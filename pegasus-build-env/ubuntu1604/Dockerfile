@@ -47,6 +47,7 @@ RUN apt-get update -y; \
                        libtool \
                        libssl-dev \
                        bison \
+		       maven \
                        flex; \
     rm -rf /var/lib/apt/lists/*
 

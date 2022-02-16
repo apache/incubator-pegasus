@@ -49,6 +49,7 @@ zlib-devel \
 libzstd-devel \
 lz4-devel \
 bison \
+maven \
 flex \
 patch; \
 yum clean all; \
