@@ -494,6 +494,18 @@ static command_executor commands[] = {
         detect_hotkey,
     },
     {
+        "get_replica_count",
+        "get the max replica count of an app",
+        "<app_name>",
+        get_max_replica_count,
+    },
+    {
+        "set_replica_count",
+        "set the max replica count of an app",
+        "<app_name> <replica_count>",
+        set_max_replica_count,
+    },
+    {
         "exit", "exit shell", "", exit_shell,
     },
     {

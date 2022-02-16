@@ -45,3 +45,35 @@ bool validate_ip(shell_context *sc,
     err_info = fmt::format("invalid ip:port={}, can't find it in the cluster", ip_str);
     return false;
 }
+
+bool confirm_unsafe_command(const char *action)
+{
+    const int max_attempts = 5;
+    int attempts = 0;
+    for (; attempts < max_attempts; ++attempts) {
+        fmt::print(stdout,
+                   "PLEASE be CAUTIOUS with this operation ! "
+                   "Are you sure to {} ? [Y/n]: ",
+                   action);
+
+        int choice = fgetc(stdin);
+        int len = 0;
+        for (int c = choice; c != '\n' && c != EOF; ++len) {
+            c = fgetc(stdin);
+        }
+        if (len != 1) {
+            continue;
+        }
+
+        if (choice == 'Y') {
+            fmt::print(stdout, "you've chosen YES, we will continue ...\n");
+            return true;
+        } else if (choice == 'n') {
+            fmt::print(stdout, "you've chosen NO, we will stop !\n");
+            return false;
+        }
+    }
+
+    fmt::print(stdout, "too many failed attempts, we will stop !\n");
+    return false;
+}
