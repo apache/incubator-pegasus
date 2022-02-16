@@ -299,6 +299,32 @@ public:
                                   reply_thread_hash);
     }
 
+    // ---------- call RPC_RRDB_RRDB_BATCH_GET ------------
+    // - synchronous
+    std::pair<::dsn::error_code, batch_get_response> batch_get_sync(
+        const batch_get_request &args, std::chrono::milliseconds timeout, uint64_t partition_hash)
+    {
+        return ::dsn::rpc::wait_and_unwrap<batch_get_response>(_resolver->call_op(
+            RPC_RRDB_RRDB_BATCH_GET, args, &_tracker, empty_rpc_handler, timeout, partition_hash));
+    }
+
+    // - asynchronous with on-stack BatchGetRequest and BatchGetResponse
+    template <typename TCallback>
+    ::dsn::task_ptr batch_get(const batch_get_request &args,
+                              TCallback &&callback,
+                              std::chrono::milliseconds timeout,
+                              uint64_t request_partition_hash,
+                              int reply_thread_hash = 0)
+    {
+        return _resolver->call_op(RPC_RRDB_RRDB_BATCH_GET,
+                                  args,
+                                  &_tracker,
+                                  std::forward<TCallback>(callback),
+                                  timeout,
+                                  request_partition_hash,
+                                  reply_thread_hash);
+    }
+
     // ---------- call RPC_RRDB_RRDB_SORTKEY_COUNT ------------
     // - synchronous
     std::pair<::dsn::error_code, count_response> sortkey_count_sync(

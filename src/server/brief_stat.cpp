@@ -30,6 +30,8 @@ static std::map<std::string, std::string> s_brief_stat_map = {
     {"zion*profiler*RPC_RRDB_RRDB_GET.latency.server", "get_p99(ns)"},
     {"zion*profiler*RPC_RRDB_RRDB_MULTI_GET.qps", "multi_get_qps"},
     {"zion*profiler*RPC_RRDB_RRDB_MULTI_GET.latency.server", "multi_get_p99(ns)"},
+    {"zion*profiler*RPC_RRDB_RRDB_BATCH_GET.qps", "batch_get_qps"},
+    {"zion*profiler*RPC_RRDB_RRDB_BATCH_GET.latency.server", "batch_get_p99(ns)"},
     {"zion*profiler*RPC_RRDB_RRDB_PUT.qps", "put_qps"},
     {"zion*profiler*RPC_RRDB_RRDB_PUT.latency.server", "put_p99(ns)"},
     {"zion*profiler*RPC_RRDB_RRDB_MULTI_PUT.qps", "multi_put_qps"},

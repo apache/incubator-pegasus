@@ -776,6 +776,122 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
 }
 
+void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
+{
+    dassert(_is_open, "");
+    _pfc_batch_get_qps->increment();
+    int64_t start_time = dsn_now_ns();
+
+    auto &response = rpc.response();
+    response.app_id = _gpid.get_app_id();
+    response.partition_index = _gpid.get_partition_index();
+    response.server = _primary_address;
+
+    if (!_read_size_throttling_controller->available()) {
+        rpc.error() = dsn::ERR_BUSY;
+        _counter_recent_read_throttling_reject_count->increment();
+        return;
+    }
+
+    const auto &request = rpc.request();
+    if (request.keys.empty()) {
+        response.error = rocksdb::Status::kInvalidArgument;
+        derror_replica("Invalid argument for batch_get from {}: 'keys' field in request is empty",
+                       rpc.remote_address().to_string());
+        _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
+        _pfc_batch_get_latency->set(dsn_now_ns() - start_time);
+        return;
+    }
+
+    std::vector<rocksdb::Slice> keys;
+    keys.reserve(request.keys.size());
+    std::vector<::dsn::blob> keys_holder;
+    keys_holder.reserve(request.keys.size());
+    for (const auto &key : request.keys) {
+        dsn::blob raw_key;
+        pegasus_generate_key(raw_key, key.hash_key, key.sort_key);
+        keys.emplace_back(rocksdb::Slice(raw_key.data(), raw_key.length()));
+        keys_holder.emplace_back(std::move(raw_key));
+    }
+
+    rocksdb::Status final_status;
+    bool error_occurred = false;
+    int64_t total_data_size = 0;
+    uint32_t epoch_now = pegasus::utils::epoch_now();
+    std::vector<std::string> values;
+    std::vector<rocksdb::Status> statuses = _db->MultiGet(_data_cf_rd_opts, keys, &values);
+    response.data.reserve(request.keys.size());
+    for (int i = 0; i < keys.size(); i++) {
+        const auto &status = statuses[i];
+        if (status.IsNotFound()) {
+            continue;
+        }
+
+        const ::dsn::blob &hash_key = request.keys[i].hash_key;
+        const ::dsn::blob &sort_key = request.keys[i].sort_key;
+        std::string &value = values[i];
+
+        if (dsn_likely(status.ok())) {
+            if (check_if_record_expired(epoch_now, value)) {
+                if (_verbose_log) {
+                    derror_replica(
+                        "rocksdb data expired for batch_get from {}, hash_key = {}, sort_key = {}",
+                        rpc.remote_address().to_string(),
+                        pegasus::utils::c_escape_string(hash_key),
+                        pegasus::utils::c_escape_string(sort_key));
+                }
+                continue;
+            }
+
+            dsn::blob real_value;
+            pegasus_extract_user_data(_pegasus_data_version, std::move(value), real_value);
+            dsn::apps::full_data current_data;
+            current_data.hash_key = hash_key;
+            current_data.sort_key = sort_key;
+            current_data.value = std::move(real_value);
+            total_data_size += current_data.value.size();
+            response.data.emplace_back(std::move(current_data));
+        } else {
+            if (_verbose_log) {
+                derror_replica(
+                    "rocksdb get failed for batch_get from {}:  error = {}, key size = {}",
+                    rpc.remote_address().to_string(),
+                    status.ToString(),
+                    request.keys.size());
+            } else {
+                derror_replica("rocksdb get failed for batch_get from {}: error = {}",
+                               rpc.remote_address().to_string(),
+                               status.ToString());
+            }
+
+            error_occurred = true;
+            final_status = status;
+            break;
+        }
+    }
+
+    if (error_occurred) {
+        response.error = final_status.code();
+        response.data.clear();
+    } else {
+        response.error = rocksdb::Status::kOk;
+    }
+
+    int64_t time_used = dsn_now_ns() - start_time;
+    if (is_batch_get_abnormal(time_used, total_data_size, request.keys.size())) {
+        dwarn_replica("rocksdb abnormal batch_get from {}: total data size = {}, row count = {}, "
+                      "time_used = {} us",
+                      rpc.remote_address().to_string(),
+                      total_data_size,
+                      request.keys.size(),
+                      time_used / 1000);
+        _pfc_recent_abnormal_count->increment();
+    }
+
+    _cu_calculator->add_batch_get_cu(rpc.dsn_request(), response.error, response.data);
+    _pfc_batch_get_latency->set(time_used);
+}
+
 void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
     dassert(_is_open, "");
