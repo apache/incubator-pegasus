@@ -81,6 +81,20 @@ DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per
             (read_amp_bytes_per_bit & (read_amp_bytes_per_bit - 1)) == 0);
 });
 
+DSN_DEFINE_uint64("pegasus.server",
+                  rocksdb_abnormal_batch_get_bytes_threshold,
+                  1e7,
+                  "batch-get operation total key-value bytes size exceed this "
+                  "threshold will be logged, 0 means no check");
+DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_bytes_threshold, FT_MUTABLE);
+
+DSN_DEFINE_uint64(
+    "pegasus.server",
+    rocksdb_abnormal_batch_get_count_threshold,
+    2000,
+    "batch-get operation iterate count exceed this threshold will be logged, 0 means no check");
+DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_count_threshold, FT_MUTABLE);
+
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -558,6 +572,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _pfc_multi_get_qps.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of MULTI_GET request");
 
+    snprintf(name, 255, "batch_get_qps@%s", str_gpid.c_str());
+    _pfc_batch_get_qps.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of BATCH_GET request");
+
     snprintf(name, 255, "scan_qps@%s", str_gpid.c_str());
     _pfc_scan_qps.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the qps of SCAN request");
@@ -573,6 +591,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                             name,
                                             COUNTER_TYPE_NUMBER_PERCENTILES,
                                             "statistic the latency of MULTI_GET request");
+
+    snprintf(name, 255, "batch_get_latency@%s", str_gpid.c_str());
+    _pfc_batch_get_latency.init_app_counter("app.pegasus",
+                                            name,
+                                            COUNTER_TYPE_NUMBER_PERCENTILES,
+                                            "statistic the latency of BATCH_GET request");
 
     snprintf(name, 255, "scan_latency@%s", str_gpid.c_str());
     _pfc_scan_latency.init_app_counter("app.pegasus",
