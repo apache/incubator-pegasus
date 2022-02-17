@@ -184,5 +184,23 @@ TEST_F(replica_duplicator_manager_test, remove_non_existed_duplications)
 
 TEST_F(replica_duplicator_manager_test, min_confirmed_decree) { test_min_confirmed_decree(); }
 
+TEST_F(replica_duplicator_manager_test, update_checkpoint_prepared)
+{
+    auto r = stub->add_primary_replica(2, 1);
+    duplication_entry ent;
+    ent.dupid = 1;
+    ent.status = duplication_status::DS_PAUSE;
+    ent.progress[r->get_gpid().get_partition_index()] = 0;
+
+    auto dup = make_unique<replica_duplicator>(ent, r);
+    r->update_last_durable_decree(100);
+    dup->update_progress(dup->progress().set_last_decree(2).set_confirmed_decree(1));
+    add_dup(r, std::move(dup));
+    auto updates = r->get_replica_duplicator_manager().get_duplication_confirms_to_update();
+    for (const auto &update : updates) {
+        ASSERT_TRUE(update.checkpoint_prepared);
+    }
+}
+
 } // namespace replication
 } // namespace dsn

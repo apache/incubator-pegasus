@@ -187,6 +187,7 @@ error_s replica_duplicator::update_progress(const duplication_progress &p)
     decree last_confirmed_decree = _progress.confirmed_decree;
     _progress.confirmed_decree = std::max(_progress.confirmed_decree, p.confirmed_decree);
     _progress.last_decree = std::max(_progress.last_decree, p.last_decree);
+    _progress.checkpoint_has_prepared = _start_point_decree <= _replica->last_durable_decree();
 
     if (_progress.confirmed_decree > _progress.last_decree) {
         return FMT_ERR(ERR_INVALID_STATE,

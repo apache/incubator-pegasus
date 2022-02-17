@@ -143,6 +143,13 @@ TEST_F(replica_duplicator_test, duplication_progress)
     ASSERT_EQ(duplicator->update_progress(duplicator->progress().set_confirmed_decree(12)),
               error_s::make(ERR_INVALID_STATE,
                             "last_decree(10) should always larger than confirmed_decree(12)"));
+
+    auto duplicator_for_checkpoint = create_test_duplicator(invalid_decree, 100);
+    ASSERT_FALSE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
+
+    replica()->update_last_durable_decree(101);
+    duplicator_for_checkpoint->update_progress(duplicator->progress());
+    ASSERT_TRUE(duplicator_for_checkpoint->progress().checkpoint_has_prepared);
 }
 
 TEST_F(replica_duplicator_test, prapre_dup)

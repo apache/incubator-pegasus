@@ -29,6 +29,8 @@ namespace replication {
 class duplication_progress
 {
 public:
+    // check if checkpoint has catch up with `_start_point_decree`
+    bool checkpoint_has_prepared{false};
     // the maximum decree that's been persisted in meta server
     decree confirmed_decree{invalid_decree};
 
