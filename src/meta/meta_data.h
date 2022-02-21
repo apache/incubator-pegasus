@@ -57,7 +57,7 @@ namespace replication {
 enum class config_status
 {
     not_pending,
-    pending_proposal,
+    pending_proposal, // deprecated since pegasus v1.8 or older version
     pending_remote_sync,
     invalid_status
 };

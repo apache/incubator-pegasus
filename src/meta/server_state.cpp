@@ -1907,8 +1907,7 @@ void server_state::on_update_configuration(
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
     } else {
-        dassert(config_status::not_pending == cc.stage ||
-                    config_status::pending_proposal == cc.stage,
+        dassert(config_status::not_pending == cc.stage,
                 "invalid config status, cc.stage = %s",
                 enum_to_string(cc.stage));
         cc.stage = config_status::pending_remote_sync;

@@ -148,8 +148,7 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
     }
 
     config_context &parent_context = app->helpers->contexts[parent_gpid.get_partition_index()];
-    if (parent_context.stage == config_status::pending_proposal ||
-        parent_context.stage == config_status::pending_remote_sync) {
+    if (parent_context.stage == config_status::pending_remote_sync) {
         dwarn_f("app({}) partition({}): another request is syncing with remote storage, ignore "
                 "this request",
                 app_name,
