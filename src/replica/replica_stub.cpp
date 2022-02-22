@@ -1225,19 +1225,6 @@ void replica_stub::on_learn(dsn::message_ex *msg)
     }
 }
 
-void replica_stub::on_copy_checkpoint(copy_checkpoint_rpc rpc)
-{
-    const replica_configuration &request = rpc.request();
-    learn_response &response = rpc.response();
-
-    replica_ptr rep = get_replica(request.pid);
-    if (rep != nullptr) {
-        rep->on_copy_checkpoint(request, response);
-    } else {
-        response.err = ERR_OBJECT_NOT_FOUND;
-    }
-}
-
 void replica_stub::on_learn_completion_notification(learn_completion_notification_rpc rpc)
 {
     const group_check_response &report = rpc.request();
@@ -2198,8 +2185,6 @@ void replica_stub::open_service()
         RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
-    register_rpc_handler_with_rpc_holder(
-        RPC_REPLICA_COPY_LAST_CHECKPOINT, "copy_checkpoint", &replica_stub::on_copy_checkpoint);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
     register_rpc_handler_with_rpc_holder(

@@ -156,7 +156,6 @@ public:
     void on_add_learner(const group_check_request &request);
     void on_remove(const replica_configuration &request);
     void on_group_check(const group_check_request &request, /*out*/ group_check_response &response);
-    void on_copy_checkpoint(const replica_configuration &request, /*out*/ learn_response &response);
 
     //
     //    messsages from liveness monitor

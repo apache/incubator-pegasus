@@ -133,7 +133,6 @@ public:
     void on_add_learner(const group_check_request &request);
     void on_remove(const replica_configuration &request);
     void on_group_check(group_check_rpc rpc);
-    void on_copy_checkpoint(copy_checkpoint_rpc rpc);
     void on_group_bulk_load(group_bulk_load_rpc rpc);
 
     //
