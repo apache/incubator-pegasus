@@ -324,7 +324,7 @@ TEST_F(replica_test, test_replica_backup_and_restore_with_specific_path)
     ASSERT_EQ(ERR_OK, err);
 }
 
-TEST_F(replica_test, trigger_manual_emergency_checkpoint)
+TEST_F(replica_test, test_trigger_manual_emergency_checkpoint)
 {
     ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(100), ERR_OK);
     ASSERT_TRUE(is_checkpointing());
@@ -346,6 +346,29 @@ TEST_F(replica_test, trigger_manual_emergency_checkpoint)
     ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_TRY_AGAIN);
     ASSERT_FALSE(is_checkpointing());
     _mock_replica->tracker()->wait_outstanding_tasks();
+}
+
+TEST_F(replica_test, test_query_last_checkpoint_info)
+{
+    // test no exist gpid
+    auto req = std::make_unique<learn_request>();
+    req->pid = gpid(100, 100);
+    query_last_checkpoint_info_rpc rpc =
+        query_last_checkpoint_info_rpc(std::move(req), RPC_QUERY_LAST_CHECKPOINT_INFO);
+    stub->on_query_last_checkpoint(rpc);
+    ASSERT_EQ(rpc.response().err, ERR_OBJECT_NOT_FOUND);
+
+    learn_response resp;
+    // last_checkpoint hasn't exist
+    _mock_replica->on_query_last_checkpoint(resp);
+    ASSERT_EQ(resp.err, ERR_PATH_NOT_FOUND);
+
+    // query ok
+    _mock_replica->update_last_durable_decree(100);
+    _mock_replica->set_last_committed_decree(200);
+    _mock_replica->on_query_last_checkpoint(resp);
+    ASSERT_EQ(resp.last_committed_decree, 200);
+    ASSERT_EQ(resp.base_local_dir, "./data/checkpoint.100");
 }
 
 } // namespace replication

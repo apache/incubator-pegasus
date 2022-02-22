@@ -192,6 +192,7 @@ public:
     // Duplication
     //
     error_code trigger_manual_emergency_checkpoint(decree old_decree);
+    void on_query_last_checkpoint(learn_response &response);
     replica_duplicator_manager *get_duplication_manager() const { return _duplication_mgr.get(); }
     bool is_duplicating() const { return _duplicating; }
 

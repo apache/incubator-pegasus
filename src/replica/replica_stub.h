@@ -54,7 +54,7 @@ typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;
 typedef rpc_holder<query_replica_decree_request, query_replica_decree_response>
     query_replica_decree_rpc;
 typedef rpc_holder<query_replica_info_request, query_replica_info_response> query_replica_info_rpc;
-typedef rpc_holder<replica_configuration, learn_response> copy_checkpoint_rpc;
+typedef rpc_holder<learn_request, learn_response> query_last_checkpoint_info_rpc;
 typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
 typedef rpc_holder<replica_disk_migrate_request, replica_disk_migrate_response>
     replica_disk_migrate_rpc;
@@ -228,6 +228,9 @@ public:
         int32_t app_id, /*out*/ std::unordered_map<gpid, manual_compaction_status::type> &status);
 
     void on_add_new_disk(add_new_disk_rpc rpc);
+
+    // query last checkpoint info for follower in duplication process
+    void on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc);
 
 private:
     enum replica_node_state

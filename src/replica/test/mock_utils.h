@@ -52,9 +52,12 @@ public:
         return ERR_OK;
     }
     error_code prepare_get_checkpoint(blob &) override { return ERR_NOT_IMPLEMENTED; }
-    error_code get_checkpoint(int64_t, const blob &, learn_state &) override
+    error_code get_checkpoint(int64_t learn_start,
+                              const dsn::blob &learn_request,
+                              dsn::replication::learn_state &state) override
     {
-        return ERR_NOT_IMPLEMENTED;
+        state.to_decree_included = last_durable_decree();
+        return ERR_OK;
     }
     error_code storage_apply_checkpoint(chkpt_apply_mode, const learn_state &) override
     {

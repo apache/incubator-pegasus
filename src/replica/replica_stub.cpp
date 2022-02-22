@@ -1025,6 +1025,19 @@ void replica_stub::on_query_replica_info(query_replica_info_rpc rpc)
     resp.err = ERR_OK;
 }
 
+void replica_stub::on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc)
+{
+    const learn_request &request = rpc.request();
+    learn_response &response = rpc.response();
+
+    replica_ptr rep = get_replica(request.pid);
+    if (rep != nullptr) {
+        rep->on_query_last_checkpoint(response);
+    } else {
+        response.err = ERR_OBJECT_NOT_FOUND;
+    }
+}
+
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
 {
@@ -2206,6 +2219,9 @@ void replica_stub::open_service()
         RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
+    register_rpc_handler_with_rpc_holder(RPC_QUERY_LAST_CHECKPOINT_INFO,
+                                         "query_last_checkpoint_info",
+                                         &replica_stub::on_query_last_checkpoint);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_DISK_INFO, "query_disk_info", &replica_stub::on_query_disk_info);
     register_rpc_handler_with_rpc_holder(

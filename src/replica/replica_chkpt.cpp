@@ -48,6 +48,13 @@
 namespace dsn {
 namespace replication {
 
+const std::string kCheckpointFolderPrefix /*NOLINT*/ = "checkpoint";
+
+static std::string checkpoint_folder(int64_t decree)
+{
+    return fmt::format("{}.{}", kCheckpointFolderPrefix, decree);
+}
+
 // ThreadPool: THREAD_POOL_REPLICATION
 void replica::on_checkpoint_timer()
 {
@@ -189,6 +196,35 @@ void replica::init_checkpoint(bool is_emergency)
 
     if (is_emergency)
         _stub->_counter_recent_trigger_emergency_checkpoint_count->increment();
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica::on_query_last_checkpoint(/*out*/ learn_response &response)
+{
+    _checker.only_one_thread_access();
+
+    if (_app->last_durable_decree() == 0) {
+        response.err = ERR_PATH_NOT_FOUND;
+        return;
+    }
+
+    blob placeholder;
+    int err = _app->get_checkpoint(0, placeholder, response.state);
+    if (err != 0) {
+        response.err = ERR_GET_LEARN_STATE_FAILED;
+    } else {
+        response.err = ERR_OK;
+        response.last_committed_decree = last_committed_decree();
+        // for example: base_local_dir = "./data" + "checkpoint.1024" = "./data/checkpoint.1024"
+        response.base_local_dir = utils::filesystem::path_combine(
+            _app->data_dir(), checkpoint_folder(response.state.to_decree_included));
+        response.address = _stub->_primary_address;
+        for (auto &file : response.state.files) {
+            // response.state.files contain file absolute path， for example:
+            // "./data/checkpoint.1024/1.sst" use `substr` to get the file name: 1.sst
+            file = file.substr(response.base_local_dir.length() + 1);
+        }
+    }
 }
 
 // run in background thread
