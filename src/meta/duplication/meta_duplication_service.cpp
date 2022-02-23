@@ -317,7 +317,7 @@ void meta_duplication_service::create_follower_app_for_duplication(
     request.options.app_type = app->app_type;
     request.options.partition_count = app->partition_count;
     request.options.replica_count = app->max_replica_count;
-    request.options.success_if_exist = true;
+    request.options.success_if_exist = false;
     request.options.envs = app->envs;
     request.options.is_stateful = app->is_stateful;
 

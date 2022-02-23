@@ -1089,11 +1089,20 @@ void server_state::create_app(dsn::message_ex *msg)
     bool will_create_app = false;
     dsn::unmarshall(msg, request);
 
-    ddebug("create app request, name(%s), type(%s), partition_count(%d), replica_count(%d)",
-           request.app_name.c_str(),
-           request.options.app_type.c_str(),
-           request.options.partition_count,
-           request.options.replica_count);
+    const auto &duplication_env_iterator =
+        request.options.envs.find(duplication_constants::kDuplicationEnvMasterClusterKey);
+    ddebug_f("create app request, name({}), type({}), partition_count({}), replica_count({}), "
+             "duplication({})",
+             request.app_name,
+             request.options.app_type,
+             request.options.partition_count,
+             request.options.replica_count,
+             duplication_env_iterator == request.options.envs.end()
+                 ? "false"
+                 : fmt::format(
+                       "{}.{}",
+                       request.options.envs[duplication_constants::kDuplicationEnvMasterClusterKey],
+                       request.app_name));
 
     auto option_match_check = [](const create_app_options &opt, const app_state &exist_app) {
         return opt.partition_count == exist_app.partition_count &&
@@ -1117,9 +1126,11 @@ void server_state::create_app(dsn::message_ex *msg)
         if (nullptr != app) {
             switch (app->status) {
             case app_status::AS_AVAILABLE:
-                if (!request.options.success_if_exist || !option_match_check(request.options, *app))
+                if (!request.options.success_if_exist) {
+                    response.err = ERR_APP_EXIST;
+                } else if (!option_match_check(request.options, *app)) {
                     response.err = ERR_INVALID_PARAMETERS;
-                else {
+                } else {
                     response.err = ERR_OK;
                     response.appid = app->app_id;
                 }
