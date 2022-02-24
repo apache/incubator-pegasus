@@ -37,8 +37,9 @@ shellcheck_must_pass ./scripts/ci-test.sh
 
 # The new version of pegasus client is not compatible with old version server which contains old rpc protocol,
 # So we use snapshot version of pegasus-tools, because we don`t have a new release version, which contains the new version of rpc protocol,
-PEGASUS_PKG="pegasus-tools-2.0.0-5d969e8-glibc2.12-release"
-PEGASUS_PKG_URL="https://github.com/apache/incubator-pegasus/releases/download/v2.0.0/pegasus-tools-2.0.0-5d969e8-glibc2.12-release.tar.gz"
+# TODO: This is a temp url. We will change it later.
+PEGASUS_PKG="pegasus-tools-2.1.SNAPSHOT-dc4c710-glibc2.17-release"
+PEGASUS_PKG_URL="https://github.com/levy5307/pegasus-tools/raw/master/pegasus-tools-2.1.SNAPSHOT-dc4c710-glibc2.17-release.tar.gz"
 
 # check format
 if ! mvn spotless:check

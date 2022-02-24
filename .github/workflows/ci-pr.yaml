@@ -23,6 +23,7 @@ on:
     branches:
         - master
         - 'v[0-9]+.*' # release branch
+        - '*dev'      # developing branch
   workflow_dispatch:
 
 defaults:
