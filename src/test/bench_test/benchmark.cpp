@@ -84,7 +84,7 @@ void benchmark::run_benchmark(int thread_count, operation_type op_type)
 
 void benchmark::thread_body(void *v)
 {
-    thread_arg *arg = reinterpret_cast<thread_arg *>(v);
+    thread_arg *arg = static_cast<thread_arg *>(v);
 
     // reseed local random generator
     reseed_thread_local_rng(arg->seed);
