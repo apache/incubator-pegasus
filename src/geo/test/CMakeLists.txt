@@ -35,7 +35,7 @@ set(MY_PROJ_LIBS
         dsn_utils
         gtest)
 
-set(MY_BOOST_LIBS Boost::system Boost::filesystem)
+set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 add_definitions(-Wno-attributes)
 

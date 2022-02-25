@@ -1,3 +1,4 @@
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,32 +15,23 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
 
-set(MY_PROJ_NAME pegasus_geo_bench)
-project(${MY_PROJ_NAME} C CXX)
+name: Issue check
 
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+on:
+  pull_request:
+    types: ['opened', 'edited', 'reopened', 'synchronize']
 
-# Search mode for source files under CURRENT project directory?
-# "GLOB_RECURSE" for recursive search
-# "GLOB" for non-recursive search
-set(MY_SRC_SEARCH_MODE "GLOB")
+jobs:
+  title:
+    name: Issue check
+    runs-on: ubuntu-latest
 
-set(MY_PROJ_LIBS
-        pegasus_geo_lib
-        s2testing
-        s2
-        pegasus_client_static
-        RocksDB::rocksdb
-        dsn_utils
-        )
-
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
-
-set(MY_BINPLACES "config.ini")
-
-dsn_add_executable()
-
-dsn_install_executable()
+    steps:
+      - name: Check for ticket
+        uses: neofinancial/ticket-check-action@v1.3.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ticketPrefix: '#'
+          bodyURLRegex: 'http(s?):\/\/(github.com)(\/apache)(\/incubator-pegasus)(\/issues)\/\d+'

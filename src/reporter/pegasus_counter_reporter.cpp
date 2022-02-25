@@ -34,7 +34,7 @@
 #include <event2/keyvalq_struct.h>
 
 #include <dsn/cpp/service_app.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include <dsn/dist/common.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/flags.h>
 
@@ -137,7 +137,7 @@ void pegasus_counter_reporter::start()
 
     _app_name = dsn::service_app::current_service_app_info().full_name;
 
-    _cluster_name = dsn::replication::get_current_cluster_name();
+    _cluster_name = dsn::get_current_cluster_name();
 
     _last_report_time_ms = dsn_now_ms();
 

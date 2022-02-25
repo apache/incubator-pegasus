@@ -163,6 +163,29 @@ struct multi_get_response
     6:string        server;
 }
 
+struct batch_get_request {
+    1:list<full_key> keys;
+}
+
+struct full_key {
+    1:dsn.blob hash_key;
+    2:dsn.blob sort_key;
+}
+
+struct batch_get_response {
+    1:i32               error;
+    2:list<full_data>   data;
+    3:i32               app_id;
+    4:i32               partition_index;
+    6:string            server;
+}
+
+struct full_data {
+    1:dsn.blob hash_key;
+    2:dsn.blob sort_key;
+    3:dsn.blob value;
+}
+
 struct incr_request
 {
     1:dsn.blob      key;
@@ -310,6 +333,7 @@ service rrdb
     check_and_mutate_response check_and_mutate(1:check_and_mutate_request request);
     read_response get(1:dsn.blob key);
     multi_get_response multi_get(1:multi_get_request request);
+    batch_get_response batch_get(1:batch_get_request request);
     count_response sortkey_count(1:dsn.blob hash_key);
     ttl_response ttl(1:dsn.blob key);
 

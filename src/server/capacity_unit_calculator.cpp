@@ -80,6 +80,10 @@ capacity_unit_calculator::capacity_unit_calculator(
     _pfc_multi_get_bytes.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the multi get bytes");
 
+    snprintf(name, 255, "batch_get_bytes@%s", str_gpid.c_str());
+    _pfc_batch_get_bytes.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the batch get bytes");
+
     snprintf(name, 255, "scan_bytes@%s", str_gpid.c_str());
     _pfc_scan_bytes.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the scan bytes");
@@ -173,6 +177,32 @@ void capacity_unit_calculator::add_multi_get_cu(dsn::message_ex *req,
     }
     add_read_cu(data_size);
     _read_hotkey_collector->capture_hash_key(hash_key, key_count);
+}
+
+void capacity_unit_calculator::add_batch_get_cu(dsn::message_ex *req,
+                                                int32_t status,
+                                                const std::vector<::dsn::apps::full_data> &datas)
+{
+    int64_t data_size = 0;
+    for (const auto &data : datas) {
+        data_size += data.hash_key.size() + data.sort_key.size() + data.value.size();
+        _read_hotkey_collector->capture_hash_key(data.hash_key, 1);
+    }
+
+    _pfc_batch_get_bytes->add(data_size);
+    add_backup_request_bytes(req, data_size);
+
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
+        status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
+        return;
+    }
+
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(1);
+        return;
+    }
+
+    add_read_cu(data_size);
 }
 
 void capacity_unit_calculator::add_scan_cu(dsn::message_ex *req,

@@ -93,6 +93,14 @@ class multi_get_request;
 
 class multi_get_response;
 
+class batch_get_request;
+
+class full_key;
+
+class batch_get_response;
+
+class full_data;
+
 class incr_request;
 
 class incr_response;
@@ -932,6 +940,235 @@ public:
 void swap(multi_get_response &a, multi_get_response &b);
 
 inline std::ostream &operator<<(std::ostream &out, const multi_get_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _batch_get_request__isset
+{
+    _batch_get_request__isset() : keys(false) {}
+    bool keys : 1;
+} _batch_get_request__isset;
+
+class batch_get_request
+{
+public:
+    batch_get_request(const batch_get_request &);
+    batch_get_request(batch_get_request &&);
+    batch_get_request &operator=(const batch_get_request &);
+    batch_get_request &operator=(batch_get_request &&);
+    batch_get_request() {}
+
+    virtual ~batch_get_request() throw();
+    std::vector<full_key> keys;
+
+    _batch_get_request__isset __isset;
+
+    void __set_keys(const std::vector<full_key> &val);
+
+    bool operator==(const batch_get_request &rhs) const
+    {
+        if (!(keys == rhs.keys))
+            return false;
+        return true;
+    }
+    bool operator!=(const batch_get_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const batch_get_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(batch_get_request &a, batch_get_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const batch_get_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _full_key__isset
+{
+    _full_key__isset() : hash_key(false), sort_key(false) {}
+    bool hash_key : 1;
+    bool sort_key : 1;
+} _full_key__isset;
+
+class full_key
+{
+public:
+    full_key(const full_key &);
+    full_key(full_key &&);
+    full_key &operator=(const full_key &);
+    full_key &operator=(full_key &&);
+    full_key() {}
+
+    virtual ~full_key() throw();
+    ::dsn::blob hash_key;
+    ::dsn::blob sort_key;
+
+    _full_key__isset __isset;
+
+    void __set_hash_key(const ::dsn::blob &val);
+
+    void __set_sort_key(const ::dsn::blob &val);
+
+    bool operator==(const full_key &rhs) const
+    {
+        if (!(hash_key == rhs.hash_key))
+            return false;
+        if (!(sort_key == rhs.sort_key))
+            return false;
+        return true;
+    }
+    bool operator!=(const full_key &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const full_key &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(full_key &a, full_key &b);
+
+inline std::ostream &operator<<(std::ostream &out, const full_key &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _batch_get_response__isset
+{
+    _batch_get_response__isset()
+        : error(false), data(false), app_id(false), partition_index(false), server(false)
+    {
+    }
+    bool error : 1;
+    bool data : 1;
+    bool app_id : 1;
+    bool partition_index : 1;
+    bool server : 1;
+} _batch_get_response__isset;
+
+class batch_get_response
+{
+public:
+    batch_get_response(const batch_get_response &);
+    batch_get_response(batch_get_response &&);
+    batch_get_response &operator=(const batch_get_response &);
+    batch_get_response &operator=(batch_get_response &&);
+    batch_get_response() : error(0), app_id(0), partition_index(0), server() {}
+
+    virtual ~batch_get_response() throw();
+    int32_t error;
+    std::vector<full_data> data;
+    int32_t app_id;
+    int32_t partition_index;
+    std::string server;
+
+    _batch_get_response__isset __isset;
+
+    void __set_error(const int32_t val);
+
+    void __set_data(const std::vector<full_data> &val);
+
+    void __set_app_id(const int32_t val);
+
+    void __set_partition_index(const int32_t val);
+
+    void __set_server(const std::string &val);
+
+    bool operator==(const batch_get_response &rhs) const
+    {
+        if (!(error == rhs.error))
+            return false;
+        if (!(data == rhs.data))
+            return false;
+        if (!(app_id == rhs.app_id))
+            return false;
+        if (!(partition_index == rhs.partition_index))
+            return false;
+        if (!(server == rhs.server))
+            return false;
+        return true;
+    }
+    bool operator!=(const batch_get_response &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const batch_get_response &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(batch_get_response &a, batch_get_response &b);
+
+inline std::ostream &operator<<(std::ostream &out, const batch_get_response &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _full_data__isset
+{
+    _full_data__isset() : hash_key(false), sort_key(false), value(false) {}
+    bool hash_key : 1;
+    bool sort_key : 1;
+    bool value : 1;
+} _full_data__isset;
+
+class full_data
+{
+public:
+    full_data(const full_data &);
+    full_data(full_data &&);
+    full_data &operator=(const full_data &);
+    full_data &operator=(full_data &&);
+    full_data() {}
+
+    virtual ~full_data() throw();
+    ::dsn::blob hash_key;
+    ::dsn::blob sort_key;
+    ::dsn::blob value;
+
+    _full_data__isset __isset;
+
+    void __set_hash_key(const ::dsn::blob &val);
+
+    void __set_sort_key(const ::dsn::blob &val);
+
+    void __set_value(const ::dsn::blob &val);
+
+    bool operator==(const full_data &rhs) const
+    {
+        if (!(hash_key == rhs.hash_key))
+            return false;
+        if (!(sort_key == rhs.sort_key))
+            return false;
+        if (!(value == rhs.value))
+            return false;
+        return true;
+    }
+    bool operator!=(const full_data &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const full_data &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(full_data &a, full_data &b);
+
+inline std::ostream &operator<<(std::ostream &out, const full_data &obj)
 {
     obj.printTo(out);
     return out;
@@ -1977,8 +2214,7 @@ inline std::ostream &operator<<(std::ostream &out, const duplicate_response &obj
     obj.printTo(out);
     return out;
 }
-
-} // namespace apps
-} // namespace dsn
+}
+} // namespace
 
 #endif

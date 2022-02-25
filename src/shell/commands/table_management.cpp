@@ -490,6 +490,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         sum.partition_count += row.partition_count;
         sum.get_qps += row.get_qps;
         sum.multi_get_qps += row.multi_get_qps;
+        sum.batch_get_qps += row.batch_get_qps;
         sum.put_qps += row.put_qps;
         sum.multi_put_qps += row.multi_put_qps;
         sum.remove_qps += row.remove_qps;
@@ -548,6 +549,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
     if (!only_usage) {
         tp.add_column("GET", tp_alignment::kRight);
         tp.add_column("MGET", tp_alignment::kRight);
+        tp.add_column("BGET", tp_alignment::kRight);
         tp.add_column("PUT", tp_alignment::kRight);
         tp.add_column("MPUT", tp_alignment::kRight);
         tp.add_column("DEL", tp_alignment::kRight);
@@ -584,6 +586,7 @@ bool app_stat(command_executor *e, shell_context *sc, arguments args)
         if (!only_usage) {
             tp.append_data(row.get_qps);
             tp.append_data(row.multi_get_qps);
+            tp.append_data(row.batch_get_qps);
             tp.append_data(row.put_qps);
             tp.append_data(row.multi_put_qps);
             tp.append_data(row.remove_qps);

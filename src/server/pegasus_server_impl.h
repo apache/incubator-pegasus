@@ -26,6 +26,7 @@
 #include <rocksdb/options.h>
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <dsn/dist/replication/replication.codes.h>
+#include <dsn/utility/flags.h>
 #include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
 #include <rocksdb/rate_limiter.h>
@@ -46,6 +47,9 @@ typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
 
 namespace pegasus {
 namespace server {
+
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_bytes_threshold);
+DSN_DECLARE_uint64(rocksdb_abnormal_batch_get_count_threshold);
 
 class meta_store;
 class capacity_unit_calculator;
@@ -76,6 +80,7 @@ public:
     // the following methods may set physical error if internal error occurs
     void on_get(get_rpc rpc) override;
     void on_multi_get(multi_get_rpc rpc) override;
+    void on_batch_get(batch_get_rpc rpc) override;
     void on_sortkey_count(sortkey_count_rpc rpc) override;
     void on_ttl(ttl_rpc rpc) override;
     void on_get_scanner(get_scanner_rpc rpc) override;
@@ -91,7 +96,7 @@ public:
     //  - ERR_LOCAL_APP_FAILURE
     ::dsn::error_code start(int argc, char **argv) override;
 
-    void cancel_background_work(bool wait) override;
+    void cancel_background_work(bool wait);
 
     // returns:
     //  - ERR_OK
@@ -284,6 +289,8 @@ private:
 
     void update_throttling_controller(const std::map<std::string, std::string> &envs);
 
+    bool parse_allow_ingest_behind(const std::map<std::string, std::string> &envs);
+
     // return true if parse compression types 'config' success, otherwise return false.
     // 'compression_per_level' will not be changed if parse failed.
     bool parse_compression_types(const std::string &config,
@@ -341,6 +348,23 @@ private:
         return false;
     }
 
+    bool is_batch_get_abnormal(uint64_t time_used, uint64_t size, uint64_t count)
+    {
+        if (FLAGS_rocksdb_abnormal_batch_get_bytes_threshold &&
+            size >= FLAGS_rocksdb_abnormal_batch_get_bytes_threshold) {
+            return true;
+        }
+        if (FLAGS_rocksdb_abnormal_batch_get_count_threshold &&
+            count >= FLAGS_rocksdb_abnormal_batch_get_count_threshold) {
+            return true;
+        }
+        if (time_used >= _slow_query_threshold_ns) {
+            return true;
+        }
+
+        return false;
+    }
+
     bool is_get_abnormal(uint64_t time_used, uint64_t value_size)
     {
         if (_abnormal_get_size_threshold && value_size >= _abnormal_get_size_threshold) {
@@ -364,6 +388,8 @@ private:
                           dsn::replication::detect_hotkey_response &resp) override;
 
     uint32_t query_data_version() const override;
+
+    dsn::replication::manual_compaction_status::type query_compact_status() const override;
 
 private:
     static const std::chrono::seconds kServerStatUpdateTimeSec;
@@ -440,10 +466,12 @@ private:
     // perf counters
     ::dsn::perf_counter_wrapper _pfc_get_qps;
     ::dsn::perf_counter_wrapper _pfc_multi_get_qps;
+    ::dsn::perf_counter_wrapper _pfc_batch_get_qps;
     ::dsn::perf_counter_wrapper _pfc_scan_qps;
 
     ::dsn::perf_counter_wrapper _pfc_get_latency;
     ::dsn::perf_counter_wrapper _pfc_multi_get_latency;
+    ::dsn::perf_counter_wrapper _pfc_batch_get_latency;
     ::dsn::perf_counter_wrapper _pfc_scan_latency;
 
     ::dsn::perf_counter_wrapper _pfc_recent_expire_count;

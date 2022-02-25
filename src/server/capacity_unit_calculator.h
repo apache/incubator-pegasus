@@ -52,6 +52,9 @@ public:
                           int32_t status,
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
+    void add_batch_get_cu(dsn::message_ex *req,
+                          int32_t status,
+                          const std::vector<::dsn::apps::full_data> &rows);
     void add_scan_cu(dsn::message_ex *req,
                      int32_t status,
                      const std::vector<::dsn::apps::key_value> &kvs);
@@ -101,6 +104,7 @@ private:
 
     ::dsn::perf_counter_wrapper _pfc_get_bytes;
     ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_batch_get_bytes;
     ::dsn::perf_counter_wrapper _pfc_scan_bytes;
     ::dsn::perf_counter_wrapper _pfc_put_bytes;
     ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
