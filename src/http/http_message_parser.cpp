@@ -71,7 +71,7 @@ http_message_parser::http_message_parser()
     memset(&_parser_setting, 0, sizeof(_parser_setting));
 
     _parser_setting.on_message_begin = [](http_parser *parser) -> int {
-        auto &msg = reinterpret_cast<parser_context *>(parser->data)->parser->_current_message;
+        auto &msg = static_cast<parser_context *>(parser->data)->parser->_current_message;
 
         // initialize http message
         // msg->buffers[0] = header
@@ -87,7 +87,7 @@ http_message_parser::http_message_parser()
     };
 
     _parser_setting.on_url = [](http_parser *parser, const char *at, size_t length) -> int {
-        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        http_message_parser *msg_parser = static_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_URL;
         msg_parser->_url.append(at, length);
         return 0;
@@ -95,7 +95,7 @@ http_message_parser::http_message_parser()
 
     _parser_setting.on_header_field =
         [](http_parser *parser, const char *at, size_t length) -> int {
-        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        http_message_parser *msg_parser = static_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADER_FIELD;
         if (strncmp(at, "Content-Type", length) == 0) {
             msg_parser->_is_field_content_type = true;
@@ -105,7 +105,7 @@ http_message_parser::http_message_parser()
 
     _parser_setting.on_header_value =
         [](http_parser *parser, const char *at, size_t length) -> int {
-        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        http_message_parser *msg_parser = static_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADER_VALUE;
         if (msg_parser->_is_field_content_type) {
             auto &msg = msg_parser->_current_message;
@@ -117,7 +117,7 @@ http_message_parser::http_message_parser()
     };
 
     _parser_setting.on_headers_complete = [](http_parser *parser) -> int {
-        http_message_parser *msg_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        http_message_parser *msg_parser = static_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADERS_COMPLETE;
 
         auto &msg = msg_parser->_current_message;
@@ -140,7 +140,7 @@ http_message_parser::http_message_parser()
     };
 
     _parser_setting.on_message_complete = [](http_parser *parser) -> int {
-        auto message_parser = reinterpret_cast<parser_context *>(parser->data)->parser;
+        auto message_parser = static_cast<parser_context *>(parser->data)->parser;
         message_parser->_received_messages.emplace(std::move(message_parser->_current_message));
         message_parser->_stage = HTTP_ON_MESSAGE_COMPLETE;
         return 0;
@@ -160,7 +160,7 @@ message_ex *http_message_parser::get_message_on_receive(message_reader *reader,
         _parser.data = &ctx;
 
         _parser_setting.on_body = [](http_parser *parser, const char *at, size_t length) -> int {
-            auto data = reinterpret_cast<parser_context *>(parser->data);
+            auto data = static_cast<parser_context *>(parser->data);
             auto &msg = data->parser->_current_message;
             blob read_buf = data->reader->_buffer;
 

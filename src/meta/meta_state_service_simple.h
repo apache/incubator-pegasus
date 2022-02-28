@@ -205,7 +205,7 @@ private:
             writer.write(static_cast<int>(op));
             write(writer, head, tail...);
             auto shared_blob = writer.get_buffer();
-            reinterpret_cast<log_header *>((char *)shared_blob.data())->size =
+            reinterpret_cast<log_header *>(const_cast<char *>(shared_blob.data()))->size =
                 shared_blob.length() - sizeof(log_header);
             return shared_blob;
         }
@@ -266,5 +266,5 @@ private:
 
     dsn::task_tracker _tracker;
 };
-}
-}
+} // namespace dist
+} // namespace dsn

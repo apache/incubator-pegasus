@@ -78,7 +78,7 @@ TEST(core, aio)
     tasks.clear();
     std::unique_ptr<dsn_file_buffer_t[]> buffers(new dsn_file_buffer_t[100]);
     for (int i = 0; i < 10; i++) {
-        buffers[i].buffer = reinterpret_cast<void *>(const_cast<char *>(buffer));
+        buffers[i].buffer = static_cast<void *>(const_cast<char *>(buffer));
         buffers[i].size = len;
     }
     for (int i = 0; i < 10; i++) {
