@@ -103,8 +103,10 @@ public:
 
     bool is_primary() const;
 
-    // Whether this replica is duplicating.
-    bool is_duplicating() const;
+    // Whether this replica is duplicating as master.
+    bool is_duplication_master() const;
+    // Whether this replica is duplicating as follower.
+    bool is_duplication_follower() const;
 
     const ballot &get_ballot() const;
 

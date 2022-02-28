@@ -18,10 +18,12 @@
 #include <dsn/dist/replication/replica_envs.h>
 #include <dsn/utility/defer.h>
 #include <gtest/gtest.h>
+#include <dsn/utility/filesystem.h>
 #include "runtime/rpc/network.sim.h"
 
 #include "common/backup_common.h"
 #include "replica_test_base.h"
+#include "replica/replica.h"
 #include "replica/replica_http_service.h"
 
 namespace dsn {
@@ -43,7 +45,7 @@ public:
         FLAGS_enable_http_server = false;
         stub->install_perf_counters();
         mock_app_info();
-        _mock_replica = stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1);
+        _mock_replica = stub->generate_replica_ptr(_app_info, pid, partition_status::PS_PRIMARY, 1);
 
         // set cold_backup_root manually.
         // `cold_backup_root` is set by configuration "replication.cold_backup_root",
@@ -156,6 +158,24 @@ public:
     }
 
     bool is_checkpointing() { return _mock_replica->_is_manual_emergency_checkpointing; }
+
+    replica *call_clear_on_failure(replica_stub *stub,
+                                   replica *rep,
+                                   const std::string &path,
+                                   const gpid &gpid)
+    {
+        return replica::clear_on_failure(stub, rep, path, gpid);
+    }
+
+    bool has_gpid(gpid &gpid) const
+    {
+        for (const auto &node : stub->_fs_manager._dir_nodes) {
+            if (node->has(gpid)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 public:
     dsn::app_info _app_info;
@@ -369,6 +389,21 @@ TEST_F(replica_test, test_query_last_checkpoint_info)
     _mock_replica->on_query_last_checkpoint(resp);
     ASSERT_EQ(resp.last_committed_decree, 200);
     ASSERT_EQ(resp.base_local_dir, "./data/checkpoint.100");
+}
+
+TEST_F(replica_test, test_clear_on_failer)
+{
+    replica *rep =
+        stub->generate_replica(_app_info, pid, partition_status::PS_PRIMARY, 1, false, true);
+    auto path = stub->get_replica_dir(_app_info.app_type.c_str(), pid);
+    dsn::utils::filesystem::create_directory(path);
+    ASSERT_TRUE(dsn::utils::filesystem::path_exists(path));
+    ASSERT_TRUE(has_gpid(pid));
+
+    ASSERT_FALSE(call_clear_on_failure(stub.get(), rep, path, pid));
+
+    ASSERT_FALSE(dsn::utils::filesystem::path_exists(path));
+    ASSERT_FALSE(has_gpid(pid));
 }
 
 } // namespace replication

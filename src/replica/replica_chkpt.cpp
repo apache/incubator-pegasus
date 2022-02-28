@@ -101,7 +101,7 @@ void replica::on_checkpoint_timer()
                                min_confirmed_decree,
                                last_durable_decree);
             }
-        } else if (is_duplicating()) {
+        } else if (is_duplication_master()) {
             // unsure if the logs can be dropped, because min_confirmed_decree
             // is currently unavailable
             ddebug_replica(

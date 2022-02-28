@@ -30,7 +30,7 @@ public:
     replica_split_test()
     {
         mock_app_info();
-        _parent_replica = stub->generate_replica(
+        _parent_replica = stub->generate_replica_ptr(
             _app_info, PARENT_GPID, partition_status::PS_PRIMARY, INIT_BALLOT);
         _parent_split_mgr = make_unique<replica_split_manager>(_parent_replica.get());
         fail::setup();
@@ -53,7 +53,7 @@ public:
 
     void generate_child()
     {
-        _child_replica = stub->generate_replica(
+        _child_replica = stub->generate_replica_ptr(
             _app_info, CHILD_GPID, partition_status::PS_PARTITION_SPLIT, INIT_BALLOT);
         _child_split_mgr = make_unique<replica_split_manager>(_child_replica.get());
     }
@@ -204,7 +204,7 @@ public:
 
     void test_child_init_replica()
     {
-        _child_replica = stub->generate_replica(
+        _child_replica = stub->generate_replica_ptr(
             _app_info, CHILD_GPID, partition_status::PS_INACTIVE, INIT_BALLOT);
         _child_split_mgr = make_unique<replica_split_manager>(_child_replica.get());
         _child_split_mgr->child_init_replica(PARENT_GPID, PRIMARY, INIT_BALLOT);

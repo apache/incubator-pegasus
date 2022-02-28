@@ -269,7 +269,7 @@ decree replica::get_learn_start_decree(const learn_request &request) // on prima
     dcheck_le_replica(request.last_committed_decree_in_app, local_committed_decree);
 
     decree learn_start_decree_no_dup = request.last_committed_decree_in_app + 1;
-    if (!is_duplicating()) {
+    if (!is_duplication_master()) {
         // fast path for no duplication case: only learn those that the learner is not having.
         return learn_start_decree_no_dup;
     }
@@ -1500,7 +1500,7 @@ void replica::on_add_learner(const group_check_request &request)
                         "invalid partition_status, status = {}",
                         enum_to_string(status()));
 
-        _duplicating = request.app.duplicating;
+        _is_duplication_master = request.app.duplicating;
         init_learn(request.config.learner_signature);
     }
 }
@@ -1508,7 +1508,7 @@ void replica::on_add_learner(const group_check_request &request)
 // in non-replication thread
 error_code replica::apply_learned_state_from_private_log(learn_state &state)
 {
-    bool duplicating = is_duplicating();
+    bool duplicating = is_duplication_master();
     // if no dunplicate, learn_start_decree=last_commit decree, step_back means whether
     // `learn_start_decree`should be stepped back to include all the
     // unconfirmed when duplicating in this round of learn. default is false

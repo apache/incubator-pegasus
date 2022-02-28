@@ -4,6 +4,7 @@ set(DUPLICATION_SRC
         duplication/replica_duplicator_manager.cpp
         duplication/duplication_sync_timer.cpp
         duplication/replica_duplicator.cpp
+        duplication/replica_follower.cpp
         duplication/duplication_pipeline.cpp
         duplication/load_from_private_log.cpp
         duplication/mutation_batch.cpp
