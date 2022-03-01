@@ -17,6 +17,7 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/fail_point.h>
 
 #include "replica/duplication/replica_follower.h"
 #include "duplication_test_base.h"
@@ -53,6 +54,24 @@ public:
             app, gpid(2, 1), partition_status::PS_PRIMARY, 1, false, is_duplication_follower);
     }
 
+    void set_duplicating(bool duplicating, replica_follower *follower)
+    {
+        follower->_duplicating_checkpoint = duplicating;
+    }
+
+    bool get_duplicating(replica_follower *follower) { return follower->_duplicating_checkpoint; }
+
+    void async_duplicate_checkpoint_from_master_replica(replica_follower *follower)
+    {
+        follower->async_duplicate_checkpoint_from_master_replica();
+    }
+
+    bool wait_follower_task_completed(replica_follower *follower)
+    {
+        follower->_tracker.wait_outstanding_tasks();
+        return follower->_tracker.all_tasks_success();
+    }
+
 public:
     dsn::app_info _app_info;
     mock_replica_ptr _mock_replica;
@@ -80,6 +99,44 @@ TEST_F(replica_follower_test, test_init_master_info)
     follower = _mock_replica->get_replica_follower();
     ASSERT_FALSE(follower->is_need_duplicate());
     ASSERT_FALSE(_mock_replica->is_duplication_follower());
+}
+
+TEST_F(replica_follower_test, test_duplicate_checkpoint)
+{
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+                           "127.0.0.1:34801,127.0.0.2:34801,127.0.0.3:34802");
+    update_mock_replica(_app_info);
+
+    auto follower = _mock_replica->get_replica_follower();
+
+    ASSERT_EQ(follower->duplicate_checkpoint(), ERR_OK);
+    ASSERT_FALSE(get_duplicating(follower));
+
+    set_duplicating(true, follower);
+    ASSERT_EQ(follower->duplicate_checkpoint(), ERR_BUSY);
+}
+
+TEST_F(replica_follower_test, test_async_duplicate_checkpoint_from_master_replica)
+{
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+                           "127.0.0.1:34801,127.0.0.2:34801,127.0.0.3:34802");
+    update_mock_replica(_app_info);
+
+    auto follower = _mock_replica->get_replica_follower();
+
+    fail::setup();
+    fail::cfg("duplicate_checkpoint_failed", "void()");
+    async_duplicate_checkpoint_from_master_replica(follower);
+    ASSERT_FALSE(wait_follower_task_completed(follower));
+
+    fail::setup();
+    fail::cfg("duplicate_checkpoint_ok", "void()");
+    async_duplicate_checkpoint_from_master_replica(follower);
+    ASSERT_TRUE(wait_follower_task_completed(follower));
+    fail::teardown();
+    fail::teardown();
 }
 } // namespace replication
 } // namespace dsn

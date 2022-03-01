@@ -89,7 +89,8 @@ error_code replica::initialize_on_new()
 
     if (is_duplication_follower &&
         (err = rep->get_replica_follower()->duplicate_checkpoint()) != dsn::ERR_OK) {
-        derror_f("{}: try to duplicate replica checkpoint failed, error({})",
+        derror_f("{}: try to duplicate replica checkpoint failed, error({}) and please check "
+                 "previous detail error log",
                  rep->name(),
                  err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
