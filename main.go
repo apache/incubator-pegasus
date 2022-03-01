@@ -40,6 +40,7 @@ func main() {
 		Filename:  "./shell.log",
 		LocalTime: true,
 	})
+	logrus.SetLevel(logrus.DebugLevel)
 
 	shell.App.OnInit(func(a *grumble.App, flags grumble.FlagMap) error {
 		metaListStr := flags.String("meta")

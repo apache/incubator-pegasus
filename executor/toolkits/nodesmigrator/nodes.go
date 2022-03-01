@@ -10,14 +10,20 @@ import (
 	"github.com/pegasus-kv/admin-cli/util"
 )
 
-type MigratorNode struct {
-	node     *util.PegasusNode
-	replicas []*Replica
-}
-
 type Replica struct {
 	gpid      *base.Gpid
 	operation migrator.BalanceType
+}
+
+type ReplicasSlice []*Replica
+
+func (r ReplicasSlice) Len() int           { return len(r) }
+func (r ReplicasSlice) Less(i, j int) bool { return r[i].operation == migrator.BalanceCopySec }
+func (r ReplicasSlice) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+
+type MigratorNode struct {
+	node     *util.PegasusNode
+	replicas ReplicasSlice
 }
 
 func (r *Replica) String() string {
@@ -83,6 +89,7 @@ func (m *MigratorNode) concurrent(acts *MigrateActions) int {
 	return acts.getConcurrent(m)
 }
 
+/* todo(jiashuo1) maybe need delete
 func (m *MigratorNode) primaryCount() int {
 	count := 0
 	for _, replica := range m.replicas {
@@ -92,6 +99,16 @@ func (m *MigratorNode) primaryCount() int {
 	}
 	return count
 }
+
+func (m *MigratorNode) secondaryCount() int {
+	count := 0
+	for _, replica := range m.replicas {
+		if replica.operation == migrator.BalanceCopySec {
+			count++
+		}
+	}
+	return count
+}*/
 
 func (m *MigratorNode) String() string {
 	return m.node.String()

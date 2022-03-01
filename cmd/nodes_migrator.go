@@ -34,18 +34,24 @@ func init() {
 		Flags: func(a *grumble.Flags) {
 			a.String("f", "from", "", "origin nodes list, such as: 127.0.0.1:34801,127.0.0.2:34801")
 			a.String("t", "to", "", "target nodes list, such as: 127.0.0.3:34802,127.0.0.3:34802")
-			a.String("a", "table", "", "specify the table list, default migrate all table")
-			a.Int("c", "concurrent", 1, "max concurrent replica migrate task count")
-			a.Bool("b", "batch", false, "whether to batch migrate multi tables(tips: set true "+
+			a.String("a", "table", "", "specify the table list(default migrate all table)")
+			a.Int("c", "concurrent", 1, "max concurrent replica migrate task count(default 1)")
+			a.BoolL("batch_table", false, "whether to batch migrate multi tables(default false, tips: set true "+
 				"when only table partition size is less 1GB)")
+			a.BoolL("batch_target", false, "whether to batch migrate to multi targets(default false, "+
+				"tips: disable it will decrease the influence but increase time)")
+			a.IntL("final_target", 0, "specify the final target count, note: this count is final "+
+				"count in cluster, and len(to) must be equal with it")
 		},
 		Run: func(c *grumble.Context) error {
 			from := strings.Split(c.Flags.String("from"), ",")
 			to := strings.Split(c.Flags.String("to"), ",")
 			tables := strings.Split(c.Flags.String("table"), ",")
 			concurrent := c.Flags.Int("concurrent")
-			batch := c.Flags.Bool("batch")
-			return nodesmigrator.MigrateAllReplicaToNodes(pegasusClient, from, to, tables, batch, concurrent)
+			batchTable := c.Flags.Bool("batch_table")
+			batchTarget := c.Flags.Bool("batch_target")
+			finalTargets := c.Flags.Int("final_target")
+			return nodesmigrator.MigrateAllReplicaToNodes(pegasusClient, from, to, tables, batchTable, batchTarget, finalTargets, concurrent)
 		},
 	})
 }

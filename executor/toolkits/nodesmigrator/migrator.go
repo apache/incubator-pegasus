@@ -3,6 +3,8 @@ package nodesmigrator
 import (
 	"fmt"
 	"math"
+	"math/rand"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -23,21 +25,28 @@ type Migrator struct {
 	targets []*util.PegasusNode
 }
 
-func (m *Migrator) run(client *executor.Client, table string, round int, origin *MigratorNode, maxConcurrent int) int {
+func (m *Migrator) run(client *executor.Client, table string, balanceFactor int, origin *MigratorNode,
+	targets []*util.PegasusNode, maxConcurrent int) int {
 	balanceTargets := make(map[string]int)
 	invalidTargets := make(map[string]int)
+
 	for {
-		target := m.selectNextTargetNode()
-		m.updateNodesReplicaInfo(client, table)
-		m.updateOngoingActionList()
-		remainingCount := m.getRemainingReplicaCount(origin)
-		if remainingCount <= 0 || len(balanceTargets)+len(invalidTargets) >= len(m.targets) {
-			logInfo(fmt.Sprintf("[%s]completed(remaining=%d, balance=%d, invalid=%d, total=%d) for no replicas can be migrated",
-				table, remainingCount, len(balanceTargets), len(invalidTargets), len(m.targets)))
+		target := m.selectNextTargetNode(targets)
+		if target.String() == origin.String() {
+			logInfo(fmt.Sprintf("completed for origin and target is same: %s", origin.String()))
 			return m.getTotalRemainingReplicaCount()
 		}
 
-		expectCount := m.getExpectReplicaCount(round)
+		m.updateNodesReplicaInfo(client, table)
+		m.updateOngoingActionList()
+		remainingCount := m.getRemainingReplicaCount(origin)
+		if remainingCount <= 0 || len(balanceTargets)+len(invalidTargets) >= len(targets) {
+			logInfo(fmt.Sprintf("[%s]completed(remaining=%d, balance=%d, invalid=%d, running_target=%d, final_target=%d) for no replicas can be migrated",
+				table, remainingCount, len(balanceTargets), len(invalidTargets), len(targets), len(m.targets)))
+			return m.getTotalRemainingReplicaCount()
+		}
+
+		expectCount := m.getExpectReplicaCount(balanceFactor)
 		currentCount := m.getCurrentReplicaCount(target)
 		if currentCount >= expectCount {
 			balanceTargets[target.String()] = 1
@@ -82,8 +91,8 @@ func (m *Migrator) selectNextOriginNode() *MigratorNode {
 
 var targetIndex int32 = -1
 
-func (m *Migrator) selectNextTargetNode() *MigratorNode {
-	currentTargetNode := m.targets[int(atomic.AddInt32(&targetIndex, 1))%len(m.targets)]
+func (m *Migrator) selectNextTargetNode(targets []*util.PegasusNode) *MigratorNode {
+	currentTargetNode := targets[int(atomic.AddInt32(&targetIndex, int32(1+rand.Intn(len(targets)))))%len(targets)]
 	return &MigratorNode{node: currentTargetNode}
 }
 
@@ -175,12 +184,12 @@ func (m *Migrator) getTotalRemainingReplicaCount() int {
 	return remainingCount
 }
 
-func (m *Migrator) getExpectReplicaCount(round int) int {
+func (m *Migrator) getExpectReplicaCount(balanceFactor int) int {
 	totalReplicaCount := 0
 	for _, node := range m.nodes {
 		totalReplicaCount = totalReplicaCount + len(node.replicas)
 	}
-	return (totalReplicaCount / len(m.targets)) + round
+	return (totalReplicaCount / len(m.targets)) + balanceFactor
 }
 
 func (m *Migrator) existValidReplica(origin *MigratorNode, target *MigratorNode) bool {
@@ -216,10 +225,8 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 		return
 	}
 
-	if from.primaryCount() != 0 {
-		logPanic(fmt.Sprintf("FATAL: the origin[%s] should not exist primary replica", target.node.String()))
-	}
-
+	// migrate start from secondary
+	sort.Sort(from.replicas)
 	var action *Action
 	for _, replica := range from.replicas {
 		action = &Action{

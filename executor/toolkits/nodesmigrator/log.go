@@ -17,7 +17,7 @@ func logWarn(log string) {
 }
 
 func logDebug(log string) {
-	logrus.Debugf(log)
+	logrus.Debug(log)
 }
 
 func logPanic(log string) {
