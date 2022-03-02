@@ -1486,8 +1486,9 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
     //
     // here, we must distinguish three cases, such as:
     //  case 1: we open the db that already exist
-    //  case 2: we open a new db
-    //  case 3: we restore the db base on old data
+    //  case 2: we load duplication data base checkpoint from master
+    //  case 3: we open a new db
+    //  case 4: we restore the db base on old data
     //
     // if we want to restore the db base on old data, only all of the restore preconditions are
     // satisfied
@@ -1503,12 +1504,11 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         // only case 1
         ddebug_replica("rdb is already exist, path = {}", rdb_path);
     } else {
+        // case 2
         if (dsn::utils::filesystem::path_exists(duplication_path) && is_duplication_follower()) {
             if (!dsn::utils::filesystem::rename_path(duplication_path, rdb_path)) {
                 derror_replica(
-                    "load duplication data from {} to {} failed",
-                    duplication_path,
-                    rdb_path);
+                    "load duplication data from {} to {} failed", duplication_path, rdb_path);
                 return ::dsn::ERR_FILE_OPERATION_FAILED;
             }
         } else {
@@ -1516,7 +1516,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             const std::string &restore_dir = restore_info.first;
             bool force_restore = restore_info.second;
             if (restore_dir.empty()) {
-                // case 2
+                // case 3
                 if (force_restore) {
                     derror_replica("try to restore, but we can't combine restore_dir from envs");
                     return ::dsn::ERR_FILE_OPERATION_FAILED;
@@ -1525,7 +1525,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
                     dinfo_replica("open a new db, path = {}", rdb_path);
                 }
             } else {
-                // case 3
+                // case 4
                 ddebug_replica("try to restore from restore_dir = {}", restore_dir);
                 if (::dsn::utils::filesystem::directory_exists(restore_dir)) {
                     // here, we just rename restore_dir to rdb, then continue the normal process
