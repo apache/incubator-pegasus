@@ -36,6 +36,8 @@ namespace replication {
 /// Each app has an attribute called "duplicating" which indicates
 /// whether this app should prevent its unconfirmed WAL from being compacted.
 ///
+
+/// Ref-Issue: https://github.com/apache/incubator-pegasus/issues/892
 class meta_duplication_service
 {
 public:

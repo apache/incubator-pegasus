@@ -30,6 +30,8 @@ namespace replication {
 
 /// replica_duplicator_manager manages the set of duplications on this replica.
 /// \see duplication_sync_timer
+
+/// Ref-Issue: https://github.com/apache/incubator-pegasus/issues/892
 class replica_duplicator_manager : public replica_base
 {
 public:

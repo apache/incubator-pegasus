@@ -72,6 +72,22 @@ public:
         return follower->_tracker.all_tasks_success();
     }
 
+    void mark_tracker_tasks_success(replica_follower *follower)
+    {
+        follower->_tracker.set_success();
+    }
+
+    error_code update_master_replica_config(replica_follower *follower,
+                                            configuration_query_by_index_response &resp)
+    {
+        return follower->update_master_replica_config(ERR_OK, std::move(resp));
+    }
+
+    const partition_configuration &master_replica_config(replica_follower *follower) const
+    {
+        return follower->_master_replica_config;
+    }
+
 public:
     dsn::app_info _app_info;
     mock_replica_ptr _mock_replica;
@@ -110,6 +126,10 @@ TEST_F(replica_follower_test, test_duplicate_checkpoint)
 
     auto follower = _mock_replica->get_replica_follower();
 
+    ASSERT_EQ(follower->duplicate_checkpoint(), ERR_CORRUPTION);
+    ASSERT_FALSE(get_duplicating(follower));
+
+    mark_tracker_tasks_success(follower);
     ASSERT_EQ(follower->duplicate_checkpoint(), ERR_OK);
     ASSERT_FALSE(get_duplicating(follower));
 
@@ -130,13 +150,60 @@ TEST_F(replica_follower_test, test_async_duplicate_checkpoint_from_master_replic
     fail::cfg("duplicate_checkpoint_failed", "void()");
     async_duplicate_checkpoint_from_master_replica(follower);
     ASSERT_FALSE(wait_follower_task_completed(follower));
+    fail::teardown();
 
     fail::setup();
     fail::cfg("duplicate_checkpoint_ok", "void()");
     async_duplicate_checkpoint_from_master_replica(follower);
     ASSERT_TRUE(wait_follower_task_completed(follower));
     fail::teardown();
-    fail::teardown();
+}
+
+TEST_F(replica_follower_test, test_update_master_replica_config)
+{
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterClusterKey, "master");
+    _app_info.envs.emplace(duplication_constants::kDuplicationEnvMasterMetasKey,
+                           "127.0.0.1:34801,127.0.0.2:34801,127.0.0.3:34802");
+    update_mock_replica(_app_info);
+    auto follower = _mock_replica->get_replica_follower();
+
+    configuration_query_by_index_response resp;
+    ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
+    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
+
+    resp.partition_count = 100;
+    ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
+    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
+
+    resp.partition_count = _app_info.partition_count;
+    partition_configuration p;
+    resp.partitions.emplace_back(p);
+    resp.partitions.emplace_back(p);
+    ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_DATA);
+    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
+
+    resp.partitions.clear();
+    p.pid = gpid(2, 100);
+    resp.partitions.emplace_back(p);
+    ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INCONSISTENT_STATE);
+    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
+
+    resp.partitions.clear();
+    p.primary = rpc_address::s_invalid_address;
+    p.pid = gpid(2, 1);
+    resp.partitions.emplace_back(p);
+    ASSERT_EQ(update_master_replica_config(follower, resp), ERR_INVALID_STATE);
+    ASSERT_EQ(master_replica_config(follower).primary, rpc_address::s_invalid_address);
+
+    resp.partitions.clear();
+    p.pid = gpid(2, 1);
+    p.primary = rpc_address("127.0.0.1", 34801);
+    p.secondaries.emplace_back(rpc_address("127.0.0.2", 34801));
+    p.secondaries.emplace_back(rpc_address("127.0.0.3", 34801));
+    resp.partitions.emplace_back(p);
+    ASSERT_EQ(update_master_replica_config(follower, resp), ERR_OK);
+    ASSERT_EQ(master_replica_config(follower).primary, p.primary);
+    ASSERT_EQ(master_replica_config(follower).pid, p.pid);
 }
 } // namespace replication
 } // namespace dsn
