@@ -1506,8 +1506,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
         if (dsn::utils::filesystem::path_exists(duplication_path) && is_duplication_follower()) {
             if (!dsn::utils::filesystem::rename_path(duplication_path, rdb_path)) {
                 derror_replica(
-                    "load duplication data[{}] from {} to {} failed",
-                    envs[dsn::replication::duplication_constants::kDuplicationEnvMasterClusterKey],
+                    "load duplication data from {} to {} failed",
                     duplication_path,
                     rdb_path);
                 return ::dsn::ERR_FILE_OPERATION_FAILED;
