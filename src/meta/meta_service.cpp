@@ -556,6 +556,9 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(RPC_CM_QUERY_MANUAL_COMPACT_STATUS,
                                          "query_manual_compact_status",
                                          &meta_service::on_query_manual_compact_status);
+    register_rpc_handler_with_rpc_holder(RPC_CM_GET_MAX_REPLICA_COUNT,
+                                         "get_max_replica_count",
+                                         &meta_service::on_get_max_replica_count);
 }
 
 int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address)
@@ -1270,6 +1273,19 @@ void meta_service::on_query_manual_compact_status(query_manual_compact_rpc rpc)
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      nullptr,
                      std::bind(&server_state::on_query_manual_compact_status, _state.get(), rpc));
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void meta_service::on_get_max_replica_count(configuration_get_max_replica_count_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     std::bind(&server_state::get_max_replica_count, _state.get(), rpc),
+                     server_state::sStateHash);
 }
 
 } // namespace replication

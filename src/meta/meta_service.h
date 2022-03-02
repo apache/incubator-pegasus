@@ -246,6 +246,9 @@ private:
     void on_start_manual_compact(start_manual_compact_rpc rpc);
     void on_query_manual_compact_status(query_manual_compact_rpc rpc);
 
+    // get/set max_replica_count of an app
+    void on_get_max_replica_count(configuration_get_max_replica_count_rpc rpc);
+
     // common routines
     // ret:
     //   1. the meta is leader

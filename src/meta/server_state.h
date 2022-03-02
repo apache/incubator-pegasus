@@ -121,14 +121,14 @@ public:
     void lock_read(zauto_read_lock &other);
     void lock_write(zauto_write_lock &other);
     const meta_view get_meta_view() { return {&_all_apps, &_nodes}; }
-    std::shared_ptr<app_state> get_app(const std::string &name)
+    std::shared_ptr<app_state> get_app(const std::string &name) const
     {
         auto iter = _exist_apps.find(name);
         if (iter == _exist_apps.end())
             return nullptr;
         return iter->second;
     }
-    std::shared_ptr<app_state> get_app(int32_t app_id)
+    std::shared_ptr<app_state> get_app(int32_t app_id) const
     {
         auto iter = _all_apps.find(app_id);
         if (iter == _all_apps.end())
@@ -174,6 +174,9 @@ public:
     // manual compaction
     void on_start_manual_compact(start_manual_compact_rpc rpc);
     void on_query_manual_compact_status(query_manual_compact_rpc rpc);
+
+    // get/set max_replica_count of an app
+    void get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const;
 
     // return true if no need to do any actions
     bool check_all_partitions();

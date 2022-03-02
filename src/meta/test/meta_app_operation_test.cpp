@@ -22,6 +22,7 @@
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
 #include "meta/meta_split_service.h"
+#include "misc/misc.h"
 
 namespace dsn {
 namespace replication {
@@ -103,6 +104,29 @@ public:
     }
 
     void clear_nodes() { _ss->_nodes.clear(); }
+
+    configuration_get_max_replica_count_response get_max_replica_count(const std::string &app_name)
+    {
+        auto req = dsn::make_unique<configuration_get_max_replica_count_request>();
+        req->__set_app_name(app_name);
+
+        configuration_get_max_replica_count_rpc rpc(std::move(req), RPC_CM_GET_MAX_REPLICA_COUNT);
+        _ss->get_max_replica_count(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
+    void set_partition_max_replica_count(const std::string &app_name,
+                                         int32_t partition_index,
+                                         int32_t max_replica_count)
+    {
+        auto app = find_app(app_name);
+        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+
+        auto &partition_config = app->partitions[partition_index];
+        partition_config.max_replica_count = max_replica_count;
+    }
 
     const std::string APP_NAME = "app_operation_test";
     const std::string OLD_APP_NAME = "old_app_operation";
@@ -372,6 +396,48 @@ TEST_F(meta_app_operation_test, recall_app)
         }
         auto err = recall_app_test(test.new_app_name, test.app_id);
         ASSERT_EQ(err, test.expected_err);
+    }
+}
+
+TEST_F(meta_app_operation_test, get_max_replica_count)
+{
+    const uint32_t partition_count = 4;
+    create_app(APP_NAME, partition_count);
+
+    // Test cases:
+    // - get max_replica_count from a non-existent table
+    // - get max_replica_count from an inconsistent table
+    // - get max_replica_count successfully
+    struct test_case
+    {
+        std::string app_name;
+        error_code expected_err;
+        int32_t expected_max_replica_count;
+    } tests[] = {{"abc_xyz", ERR_APP_NOT_EXIST, 0},
+                 {APP_NAME, ERR_INCONSISTENT_STATE, 0},
+                 {APP_NAME, ERR_OK, 3}};
+
+    for (const auto &test : tests) {
+        std::cout << "test get_max_replica_count: "
+                  << "app_name=" << test.app_name << ", expected_err=" << test.expected_err
+                  << ", expected_max_replica_count=" << test.expected_max_replica_count
+                  << std::endl;
+
+        std::function<void()> recover_partition_max_replica_count = []() {};
+
+        if (test.expected_err == ERR_INCONSISTENT_STATE) {
+            auto partition_index = static_cast<int32_t>(random32(0, partition_count - 1));
+            set_partition_max_replica_count(APP_NAME, partition_index, 2);
+            recover_partition_max_replica_count = [this, partition_index]() {
+                set_partition_max_replica_count(APP_NAME, partition_index, 3);
+            };
+        }
+
+        const auto resp = get_max_replica_count(test.app_name);
+        ASSERT_EQ(resp.err, test.expected_err);
+        ASSERT_EQ(resp.max_replica_count, test.expected_max_replica_count);
+
+        recover_partition_max_replica_count();
     }
 }
 

@@ -1720,5 +1720,14 @@ replication_ddl_client::query_app_manual_compact(const std::string &app_name)
         query_manual_compact_rpc(std::move(req), RPC_CM_QUERY_MANUAL_COMPACT_STATUS));
 }
 
+error_with<configuration_get_max_replica_count_response>
+replication_ddl_client::get_max_replica_count(const std::string &app_name)
+{
+    auto req = make_unique<configuration_get_max_replica_count_request>();
+    req->__set_app_name(app_name);
+    return call_rpc_sync(
+        configuration_get_max_replica_count_rpc(std::move(req), RPC_CM_GET_MAX_REPLICA_COUNT));
+}
+
 } // namespace replication
 } // namespace dsn

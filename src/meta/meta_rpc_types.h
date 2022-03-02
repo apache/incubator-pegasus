@@ -56,6 +56,8 @@ typedef rpc_holder<configuration_modify_backup_policy_request,
 typedef rpc_holder<start_backup_app_request, start_backup_app_response> start_backup_app_rpc;
 typedef rpc_holder<query_backup_status_request, query_backup_status_response>
     query_backup_status_rpc;
-
+typedef rpc_holder<configuration_get_max_replica_count_request,
+                   configuration_get_max_replica_count_response>
+    configuration_get_max_replica_count_rpc;
 } // namespace replication
 } // namespace dsn

@@ -230,6 +230,9 @@ public:
     error_with<query_app_manual_compact_response>
     query_app_manual_compact(const std::string &app_name);
 
+    error_with<configuration_get_max_replica_count_response>
+    get_max_replica_count(const std::string &app_name);
+
 private:
     bool static valid_app_char(int c);
 

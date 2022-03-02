@@ -3123,5 +3123,53 @@ void server_state::on_query_manual_compact_status(query_manual_compact_rpc rpc)
     response.__set_progress(total_progress);
 }
 
+// ThreadPool: THREAD_POOL_META_STATE
+void server_state::get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const
+{
+    const auto &app_name = rpc.request().app_name;
+    auto &response = rpc.response();
+
+    zauto_read_lock l(_lock);
+
+    auto app = get_app(app_name);
+    if (app == nullptr) {
+        response.err = ERR_APP_NOT_EXIST;
+        response.max_replica_count = 0;
+        response.hint_message = fmt::format("app({}) does not exist", app_name);
+        dwarn_f("failed to get max_replica_count: app_name={}, error_code={}",
+                app_name,
+                response.err.to_string());
+        return;
+    }
+
+    for (int i = 0; i < static_cast<int>(app->partitions.size()); ++i) {
+        const auto &partition_config = app->partitions[i];
+        if (partition_config.max_replica_count == app->max_replica_count) {
+            continue;
+        }
+
+        response.err = ERR_INCONSISTENT_STATE;
+        response.max_replica_count = 0;
+        response.hint_message = fmt::format("partition_max_replica_count({}) != "
+                                            "app_max_replica_count({}) for partition {}",
+                                            partition_config.max_replica_count,
+                                            app->max_replica_count,
+                                            i);
+        derror_f("failed to get max_replica_count: app_name={}, error_code={}, hint_message={}",
+                 app_name,
+                 response.err.to_string(),
+                 response.hint_message);
+        return;
+    }
+
+    response.err = ERR_OK;
+    response.max_replica_count = app->max_replica_count;
+    ddebug_f("get max_replica_count successfully: app_name={}, app_id={}, "
+             "max_replica_count={}",
+             app_name,
+             app->app_id,
+             response.max_replica_count);
+}
+
 } // namespace replication
 } // namespace dsn
