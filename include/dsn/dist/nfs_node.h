@@ -77,6 +77,12 @@ public:
                                    aio_handler &&callback,
                                    int hash = 0);
 
+    aio_task_ptr copy_remote_files(std::shared_ptr<remote_copy_request> &request,
+                                   task_code callback_code,
+                                   task_tracker *tracker,
+                                   aio_handler &&callback,
+                                   int hash = 0);
+
     nfs_node() {}
     virtual ~nfs_node() {}
     virtual error_code start() = 0;

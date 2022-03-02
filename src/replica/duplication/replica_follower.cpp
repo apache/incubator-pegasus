@@ -179,18 +179,30 @@ void replica_follower::copy_master_replica_checkpoint()
               });
 }
 
-// todo(jiashuo1)
 // ThreadPool: THREAD_POOL_DEFAULT
-void replica_follower::nfs_copy_checkpoint(error_code err, learn_response &&resp)
+error_code replica_follower::nfs_copy_checkpoint(error_code err, learn_response &&resp)
 {
-    nfs_copy_remote_files(resp.address,
-                          resp.replica_disk_tag,
-                          resp.base_local_dir,
-                          resp.state.files,
-                          "todo(jiashuo1): placeholder");
+    error_code err_code = err != ERR_OK ? err : resp.err;
+    if (dsn_unlikely(err_code != ERR_OK)) {
+        derror_replica("query master[{}] replica checkpoint info failed, err = {}",
+                       master_replica_name(),
+                       err_code.to_string());
+        return err_code;
+    }
+
+    std::string dest =
+        utils::filesystem::path_combine(_replica->dir(), duplication_constants::kCheckpointRootDir);
+    if (!utils::filesystem::remove_path(dest)) {
+        derror_replica(
+            "clear master[{}] replica checkpoint dest dir {} failed", master_replica_name(), dest);
+        return ERR_FILE_OPERATION_FAILED;
+    }
+
+    nfs_copy_remote_files(
+        resp.address, resp.replica_disk_tag, resp.base_local_dir, resp.state.files, dest);
+    return ERR_OK;
 }
 
-// todo(jiashuo1)
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
                                              const std::string &remote_disk,
@@ -198,7 +210,39 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
                                              std::vector<std::string> &file_list,
                                              const std::string &dest_dir)
 {
-    _tracker.set_success();
+    ddebug_replica(
+        "nfs start copy master[{}] replica checkpoint: {}", master_replica_name(), remote_dir);
+    std::shared_ptr<remote_copy_request> request = std::make_shared<remote_copy_request>();
+    request->source = remote_node;
+    request->source_disk_tag = remote_disk;
+    request->source_dir = remote_dir;
+    request->files = file_list;
+    request->dest_disk_tag = _replica->get_replica_disk_tag();
+    request->dest_dir = dest_dir;
+    request->overwrite = true;
+    request->high_priority = false;
+
+    _replica->_stub->_nfs->copy_remote_files(
+        request,
+        LPC_DUPLICATE_CHECKPOINT_COMPLETED,
+        &_tracker,
+        [&, remote_dir](error_code err, size_t size) mutable {
+            FAIL_POINT_INJECT_NOT_RETURN_F("nfs_copy_ok",
+                                           [&](string_view s) -> void { err = ERR_OK; });
+
+            if (dsn_unlikely(err != ERR_OK)) {
+                derror_replica("nfs copy master[{}] checkpoint failed: checkpoint = {}, err = {}",
+                               master_replica_name(),
+                               remote_dir,
+                               err.to_string());
+                return;
+            }
+            ddebug_replica("nfs copy master[{}] checkpoint completed: checkpoint = {}, size = {}",
+                           master_replica_name(),
+                           remote_dir,
+                           size);
+            _tracker.set_success();
+        });
 }
 
 } // namespace replication

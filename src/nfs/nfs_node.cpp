@@ -65,4 +65,15 @@ aio_task_ptr nfs_node::copy_remote_files(const rpc_address &remote,
 
     return cb;
 }
+
+aio_task_ptr nfs_node::copy_remote_files(std::shared_ptr<remote_copy_request> &request,
+                                         task_code callback_code,
+                                         task_tracker *tracker,
+                                         aio_handler &&callback,
+                                         int hash)
+{
+    auto cb = dsn::file::create_aio_task(callback_code, tracker, std::move(callback), hash);
+    call(request, cb);
+    return cb;
+}
 }

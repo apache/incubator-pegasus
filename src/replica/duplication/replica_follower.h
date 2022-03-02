@@ -56,7 +56,7 @@ private:
     error_code update_master_replica_config(error_code err,
                                             configuration_query_by_index_response &&resp);
     void copy_master_replica_checkpoint();
-    void nfs_copy_checkpoint(error_code err, learn_response &&resp);
+    error_code nfs_copy_checkpoint(error_code err, learn_response &&resp);
     void nfs_copy_remote_files(const rpc_address &remote_node,
                                const std::string &remote_disk,
                                const std::string &remote_dir,
