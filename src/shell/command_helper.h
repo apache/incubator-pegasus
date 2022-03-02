@@ -36,6 +36,7 @@
 #include <dsn/perf_counter/perf_counter_utils.h>
 #include <dsn/utility/string_view.h>
 #include <dsn/utils/time_utils.h>
+#include <dsn/utility/synchronize.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
@@ -67,7 +68,8 @@ enum scan_data_operator
     SCAN_COPY,
     SCAN_CLEAR,
     SCAN_COUNT,
-    SCAN_GEN_GEO
+    SCAN_GEN_GEO,
+    SCAN_AND_MULTI_SET
 };
 class top_container
 {
@@ -148,6 +150,12 @@ struct scan_data_context
     bool count_hash_key;
     std::string last_hash_key;
     std::atomic_long split_hash_key_count;
+
+    long data_count;
+    uint32_t multi_expire_ts_seconds;
+    std::unordered_map<std::string, std::map<std::string, std::string>> multi_kvs;
+    dsn::utils::semaphore sema;
+
     scan_data_context(scan_data_operator op_,
                       int split_id_,
                       int max_batch_count_,
@@ -156,6 +164,7 @@ struct scan_data_context
                       pegasus::pegasus_client *client_,
                       pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
+                      int max_multi_set_concurrency = 100,
                       bool stat_size_ = false,
                       std::shared_ptr<rocksdb::Statistics> statistics_ = nullptr,
                       int top_count_ = 0,
@@ -179,7 +188,10 @@ struct scan_data_context
           top_count(top_count_),
           top_rows(top_count_),
           count_hash_key(count_hash_key_),
-          split_hash_key_count(0)
+          split_hash_key_count(0),
+          data_count(0),
+          multi_expire_ts_seconds(0),
+          sema(max_multi_set_concurrency)
     {
         // max_batch_count should > 1 because scan may be terminated
         // when split_request_count = 1
@@ -269,6 +281,82 @@ inline int compute_ttl_seconds(uint32_t expire_ts_seconds, bool &ts_expired)
         return static_cast<int>(expire_ts_seconds - epoch_now);
     }
     return 0;
+}
+
+inline void batch_execute_multi_set(scan_data_context *context)
+{
+    for (auto it = context->multi_kvs.begin(); it != context->multi_kvs.end(); ++it) {
+        // wait for satisfied with  max_multi_set_concurrency
+        context->sema.wait();
+        int multi_size = it->second.size();
+        context->client->async_multi_set(
+            it->first,
+            it->second,
+            [context, multi_size](int err, pegasus::pegasus_client::internal_info &&info) {
+                if (err != pegasus::PERR_OK) {
+                    if (!context->split_completed.exchange(true)) {
+                        fprintf(stderr,
+                                "ERROR: split[%d] async_multi_set set failed: %s\n",
+                                context->split_id,
+                                context->client->get_error_string(err));
+                        context->error_occurred->store(true);
+                    }
+                } else {
+                    context->split_rows += multi_size;
+                }
+                context->sema.signal();
+            },
+            context->timeout_ms,
+            context->multi_expire_ts_seconds);
+    }
+    context->multi_kvs.clear();
+    context->data_count = 0;
+}
+// copy data by async_multi_set
+inline void scan_multi_data_next(scan_data_context *context)
+{
+    if (!context->split_completed.load() && !context->error_occurred->load()) {
+        context->scanner->async_next([context](int ret,
+                                               std::string &&hash_key,
+                                               std::string &&sort_key,
+                                               std::string &&value,
+                                               pegasus::pegasus_client::internal_info &&info,
+                                               uint32_t expire_ts_seconds) {
+            if (ret == pegasus::PERR_OK) {
+                if (validate_filter(context, sort_key, value)) {
+                    bool ts_expired = false;
+                    int ttl_seconds = 0;
+                    ttl_seconds = compute_ttl_seconds(expire_ts_seconds, ts_expired);
+                    if (!ts_expired) {
+                        context->data_count++;
+                        if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
+                            context->multi_kvs.emplace(hash_key, std::map<std::string, std::string>());
+                        }
+                        if (expire_ts_seconds && context->multi_expire_ts_seconds < ttl_seconds) {
+                            context->multi_expire_ts_seconds = expire_ts_seconds;
+                        }
+                        context->multi_kvs[hash_key].emplace(std::move(sort_key), std::move(value));
+
+                        if (context->data_count >= context->max_batch_count) {
+                            batch_execute_multi_set(context);
+                        }
+                    }
+                }
+                scan_multi_data_next(context);
+            } else if (ret == pegasus::PERR_SCAN_COMPLETE) {
+                batch_execute_multi_set(context);
+                context->split_completed.store(true);
+            } else {
+                if (!context->split_completed.exchange(true)) {
+                    fprintf(stderr,
+                            "ERROR: split[%d] scan next failed: %s\n",
+                            context->split_id,
+                            context->client->get_error_string(ret));
+                    context->error_occurred->store(true);
+                }
+            }
+        });
+    }
 }
 
 inline void scan_data_next(scan_data_context *context)
