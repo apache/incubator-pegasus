@@ -26,10 +26,8 @@
 namespace pegasus {
 namespace test {
 /** Thread safety singleton */
-struct config : public ::dsn::utils::singleton<config>
+struct config : public dsn::utils::singleton<config>
 {
-    config();
-
     std::string pegasus_cluster_name;
     std::string pegasus_app_name;
     // Pegasus read/write/delete timeout in milliseconds
@@ -50,6 +48,11 @@ struct config : public ::dsn::utils::singleton<config>
     uint64_t seed;
     // Default environment suitable for the current operating system
     rocksdb::Env *env;
+
+private:
+    config();
+
+    friend class dsn::utils::singleton<config>;
 };
 } // namespace test
 } // namespace pegasus

@@ -31,9 +31,18 @@ namespace server {
 // TODO: seperate this into per-node service, so we can use
 // task::get_current_node for faster access to the nodes in all tasks
 // coz tasks may run in io-threads when [task.xxx] allow_inline is true
-class pegasus_io_service : public ::dsn::utils::singleton<pegasus_io_service>
+class pegasus_io_service : public dsn::utils::singleton<pegasus_io_service>
 {
 public:
+    ~pegasus_io_service()
+    {
+        ios.stop();
+        for (auto worker : _workers) {
+            worker->join();
+        }
+    }
+
+private:
     pegasus_io_service()
     {
         _io_service_worker_count = 2;
@@ -45,19 +54,11 @@ public:
         }
     }
 
-    ~pegasus_io_service()
-    {
-        ios.stop();
-        for (auto worker : _workers) {
-            worker->join();
-        }
-    }
-
     boost::asio::io_service ios;
-
-private:
     int _io_service_worker_count;
     std::vector<std::shared_ptr<std::thread>> _workers;
+
+    friend class dsn::utils::singleton<pegasus_io_service>;
 };
-}
-} // namespace
+} // namespace server
+} // namespace pegasus
