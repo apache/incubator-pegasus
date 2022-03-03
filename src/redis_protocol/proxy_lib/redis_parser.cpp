@@ -109,13 +109,13 @@ void redis_parser::prepare_current_buffer()
             first_msg->header->from_address.to_string(),
             first_msg->to_address.to_string(),
             first_msg->header->rpc_name);
-        _current_buffer = reinterpret_cast<char *>(msg_buffer);
+        _current_buffer = static_cast<char *>(msg_buffer);
         _current_cursor = 0;
     } else if (_current_cursor >= _current_buffer_length) {
         dsn::message_ex *first_msg = _recv_buffers.front();
         first_msg->read_commit(_current_buffer_length);
         if (first_msg->read_next(&msg_buffer, &_current_buffer_length)) {
-            _current_buffer = reinterpret_cast<char *>(msg_buffer);
+            _current_buffer = static_cast<char *>(msg_buffer);
             _current_cursor = 0;
         } else {
             // we have consume this message all over
