@@ -220,8 +220,10 @@ TEST_F(pegasus_write_service_test, duplicate_not_batched)
     }
 
     dsn::apps::duplicate_request duplicate;
-    duplicate.timestamp = 1000;
-    duplicate.cluster_id = 2;
+    dsn::apps::duplicate_entry entry;
+    entry.timestamp = 1000;
+    entry.cluster_id = 2;
+    duplicate.entries.emplace_back(entry);
     dsn::apps::duplicate_response resp;
 
     {
@@ -233,8 +235,8 @@ TEST_F(pegasus_write_service_test, duplicate_not_batched)
         }
         dsn::message_ptr mput_msg = pegasus::create_multi_put_request(mput);
 
-        duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
-        duplicate.raw_message = dsn::move_message_to_blob(mput_msg.get());
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
+        entry.raw_message = dsn::move_message_to_blob(mput_msg.get());
 
         _write_svc->duplicate(1, duplicate, resp);
         ASSERT_EQ(resp.error, 0);
@@ -248,8 +250,8 @@ TEST_F(pegasus_write_service_test, duplicate_not_batched)
         }
         dsn::message_ptr mremove_msg = pegasus::create_multi_remove_request(mremove);
 
-        duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
-        duplicate.raw_message = dsn::move_message_to_blob(mremove_msg.get());
+        entry.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_REMOVE;
+        entry.raw_message = dsn::move_message_to_blob(mremove_msg.get());
 
         _write_svc->duplicate(1, duplicate, resp);
         ASSERT_EQ(resp.error, 0);
@@ -270,8 +272,10 @@ TEST_F(pegasus_write_service_test, duplicate_batched)
 
     {
         dsn::apps::duplicate_request duplicate;
-        duplicate.timestamp = 1000;
-        duplicate.cluster_id = 2;
+        dsn::apps::duplicate_entry entry;
+        entry.timestamp = 1000;
+        entry.cluster_id = 2;
+        duplicate.entries.emplace_back(entry);
         dsn::apps::duplicate_response resp;
 
         for (int i = 0; i < kv_num; i++) {
@@ -280,8 +284,8 @@ TEST_F(pegasus_write_service_test, duplicate_batched)
             request.value.assign(value[i].data(), 0, value[i].size());
 
             dsn::message_ptr msg_ptr = pegasus::create_put_request(request);
-            duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
-            duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            entry.raw_message = dsn::move_message_to_blob(msg_ptr.get());
+            entry.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
             _write_svc->duplicate(1, duplicate, resp);
             ASSERT_EQ(resp.error, 0);
         }
@@ -296,8 +300,10 @@ TEST_F(pegasus_write_service_test, illegal_duplicate_request)
 
     // cluster=13 is from nowhere
     dsn::apps::duplicate_request duplicate;
-    duplicate.cluster_id = 13;
-    duplicate.timestamp = 10;
+    dsn::apps::duplicate_entry entry;
+    entry.timestamp = 1000;
+    entry.cluster_id = 2;
+    duplicate.entries.emplace_back(entry);
     dsn::apps::duplicate_response resp;
 
     dsn::apps::update_request request;
@@ -305,8 +311,8 @@ TEST_F(pegasus_write_service_test, illegal_duplicate_request)
     request.value.assign(value.data(), 0, value.size());
 
     dsn::message_ptr msg_ptr = pegasus::create_put_request(request); // auto release memory
-    duplicate.raw_message = dsn::move_message_to_blob(msg_ptr.get());
-    duplicate.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+    entry.raw_message = dsn::move_message_to_blob(msg_ptr.get());
+    entry.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
     _write_svc->duplicate(1, duplicate, resp);
     ASSERT_EQ(resp.error, rocksdb::Status::kInvalidArgument);
 }

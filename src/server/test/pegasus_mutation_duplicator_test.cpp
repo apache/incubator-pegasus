@@ -223,7 +223,8 @@ public:
 private:
     static uint64_t get_hash(const duplicate_rpc &rpc)
     {
-        return get_hash_from_request(rpc.request().task_code, rpc.request().raw_message);
+        return get_hash_from_request(rpc.request().entries[0].task_code,
+                                     rpc.request().entries[0].raw_message);
     }
 };
 
@@ -322,9 +323,11 @@ TEST_F(pegasus_mutation_duplicator_test, duplicate_duplicate)
 
     // a duplicate from onebox2
     dsn::apps::duplicate_request dup;
-    dup.cluster_id = 2;
-    dup.raw_message = data;
-    dup.timestamp = 200;
+    dsn::apps::duplicate_entry entry;
+    entry.cluster_id = 2;
+    entry.raw_message = data;
+    entry.timestamp = 200;
+    dup.entries.emplace_back(entry);
     msg = dsn::from_thrift_request_to_received_message(dup, dsn::apps::RPC_RRDB_RRDB_DUPLICATE);
     data = dsn::move_message_to_blob(msg.get());
 
