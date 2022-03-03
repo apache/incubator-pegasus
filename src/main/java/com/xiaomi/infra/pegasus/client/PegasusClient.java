@@ -249,6 +249,14 @@ public class PegasusClient implements PegasusClientInterface {
   }
 
   @Override
+  public int batchGetByPartitions(
+      String tableName, List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> values)
+      throws PException {
+    PegasusTable tb = getTable(tableName);
+    return tb.batchGetByPartitions(keys, values, 0);
+  }
+
+  @Override
   public boolean multiGet(
       String tableName,
       byte[] hashKey,

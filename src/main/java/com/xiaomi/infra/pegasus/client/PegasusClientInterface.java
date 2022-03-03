@@ -149,6 +149,10 @@ public interface PegasusClientInterface {
       String tableName, List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results)
       throws PException;
 
+  public int batchGetByPartitions(
+      String tableName, List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results)
+      throws PException;
+
   /**
    * Get multiple values under the same hash key.
    *

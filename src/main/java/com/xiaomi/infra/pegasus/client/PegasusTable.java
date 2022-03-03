@@ -400,6 +400,57 @@ public class PegasusTable implements PegasusTableInterface {
   }
 
   @Override
+  public Future<BatchGetResult> asyncBatchGet(batch_get_request request, int timeout) {
+    final DefaultPromise<BatchGetResult> promise = table.newPromise();
+    if (request.keys.isEmpty()) {
+      promise.setFailure(new PException("Invalid parameter: hashKey should not be null or empty"));
+      return promise;
+    }
+    for (full_key fullKey : request.keys) {
+      blob key = fullKey.hash_key;
+      if (key.data.length >= 0xFFFF) {
+        promise.setFailure(
+            new PException("Invalid parameter: hashKey length should be less than UINT16_MAX"));
+        return promise;
+      }
+    }
+
+    long partitionHash = table.getKeyHash(request.keys.get(0).hash_key.data);
+    gpid gpid = table.getGpidByHash(partitionHash);
+    batch_get_operator op =
+        new batch_get_operator(gpid, table.getTableName(), request, partitionHash);
+
+    table.asyncOperate(
+        op,
+        new Table.ClientOPCallback() {
+          @Override
+          public void onCompletion(client_operator clientOP) {
+            batch_get_operator gop = (batch_get_operator) clientOP;
+            if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
+              handleReplicaException(
+                  new Request(request.keys.get(0).hash_key.data), promise, op, table, timeout);
+            } else if (gop.get_response().error != 0 && gop.get_response().error != 7) {
+              // rocksdb::Status::kOk && rocksdb::Status::kIncomplete
+              promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
+            } else {
+              BatchGetResult result = new BatchGetResult();
+              result.allFetched = (gop.get_response().error == 0);
+              result.valueMap = new HashMap<>();
+              for (full_data data : gop.get_response().data) {
+                result.valueMap.put(
+                    Pair.of(new String(data.hash_key.data), new String(data.sort_key.data)),
+                    data.value.data);
+              }
+
+              promise.setSuccess(result);
+            }
+          }
+        },
+        timeout);
+    return promise;
+  }
+
+  @Override
   public Future<Void> asyncMultiSet(
       byte[] hashKey, List<Pair<byte[], byte[]>> values, int ttlSeconds, int timeout) {
     final DefaultPromise<Void> promise = table.newPromise();
@@ -983,6 +1034,91 @@ public class PegasusTable implements PegasusTableInterface {
         throw new PException("Get value of keys[" + i + "] failed: " + cause.getMessage(), cause);
       }
     }
+  }
+
+  @Override
+  public int batchGetByPartitions(
+      List<Pair<byte[], byte[]>> keys, List<Pair<PException, byte[]>> results, int timeout)
+      throws PException {
+    if (keys == null || keys.size() == 0) {
+      throw new PException("Invalid parameter: keys should not be null or empty");
+    }
+    if (results == null) {
+      throw new PException("Invalid parameter: results should not be null");
+    }
+    results.clear();
+    List<Future<BatchGetResult>> futures = new ArrayList<Future<BatchGetResult>>();
+
+    // Group By Partition Index Id
+    List<batch_get_request> requestList = new ArrayList<batch_get_request>();
+    List<PException> partitionToPException = new ArrayList<>();
+    for (int i = 0; i < this.table.getPartitionCount(); i++) {
+      batch_get_request templateRequest = new batch_get_request();
+      templateRequest.keys = new ArrayList<>();
+      requestList.add(templateRequest);
+      partitionToPException.add(null);
+    }
+
+    List<Integer> responseIndex = new ArrayList<>();
+    for (Pair<byte[], byte[]> k : keys) {
+      byte[] hashKey = k.getLeft();
+      byte[] sortKey = k.getRight();
+
+      long partitionHash = table.getKeyHash(hashKey);
+      gpid gpid = table.getGpidByHash(partitionHash);
+      batch_get_request r = requestList.get(gpid.get_pidx());
+      responseIndex.add(gpid.get_pidx());
+
+      full_key fullKey = new full_key();
+      fullKey.hash_key = new blob(hashKey);
+      fullKey.sort_key = new blob(sortKey);
+      r.keys.add(fullKey);
+    }
+
+    for (int i = 0; i < requestList.size(); i++) {
+      batch_get_request request = requestList.get(i);
+      if (request.keys.isEmpty()) {
+        futures.add(null);
+        continue;
+      }
+      futures.add(asyncBatchGet(request, timeout));
+    }
+
+    List<Map<Pair<String, String>, byte[]>> resultMapList = new ArrayList<>();
+    for (int i = 0; i < this.table.getPartitionCount(); i++) {
+      if (requestList.get(i).keys.isEmpty()) {
+        Map<Pair<String, String>, byte[]> emptyMap = new HashMap<>();
+        resultMapList.add(emptyMap);
+        continue;
+      }
+      Future<BatchGetResult> fu = futures.get(i);
+      fu.awaitUninterruptibly();
+      if (fu.isSuccess()) {
+        resultMapList.add(fu.getNow().valueMap);
+      } else {
+        Throwable cause = fu.cause();
+        partitionToPException.set(
+            i, new PException("Get value of keys[" + i + "] failed: " + cause.getMessage(), cause));
+      }
+    }
+
+    int count = 0;
+    for (int i = 0; i < responseIndex.size(); i++) {
+      int index = responseIndex.get(i);
+      if (null != partitionToPException.get(index)) {
+        results.add(Pair.of(partitionToPException.get(index), null));
+        continue;
+      }
+
+      byte[] value =
+          resultMapList
+              .get(index)
+              .get(Pair.of(new String(keys.get(i).getLeft()), new String(keys.get(i).getRight())));
+      results.add(Pair.of(null, value));
+
+      count++;
+    }
+    return count;
   }
 
   @Override
