@@ -42,6 +42,8 @@ public:
         }
     }
 
+    boost::asio::io_service ios;
+
 private:
     pegasus_io_service()
     {
@@ -54,7 +56,6 @@ private:
         }
     }
 
-    boost::asio::io_service ios;
     int _io_service_worker_count;
     std::vector<std::shared_ptr<std::thread>> _workers;
 
