@@ -35,8 +35,8 @@
 #include <dsn/dist/replication/mutation_log_tool.h>
 #include <dsn/perf_counter/perf_counter_utils.h>
 #include <dsn/utility/string_view.h>
-#include <dsn/utils/time_utils.h>
 #include <dsn/utility/synchronize.h>
+#include <dsn/utils/time_utils.h>
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
@@ -285,13 +285,13 @@ inline int compute_ttl_seconds(uint32_t expire_ts_seconds, bool &ts_expired)
 
 inline void batch_execute_multi_set(scan_data_context *context)
 {
-    for (auto it = context->multi_kvs.begin(); it != context->multi_kvs.end(); ++it) {
-        // wait for satisfied with  max_multi_set_concurrency
+    for (const auto &kv : context->multi_kvs) {
+        // wait for satisfied with max_multi_set_concurrency
         context->sema.wait();
-        int multi_size = it->second.size();
+        int multi_size = kv.second.size();
         context->client->async_multi_set(
-            it->first,
-            it->second,
+            kv.first,
+            kv.second,
             [context, multi_size](int err, pegasus::pegasus_client::internal_info &&info) {
                 if (err != pegasus::PERR_OK) {
                     if (!context->split_completed.exchange(true)) {
@@ -330,7 +330,8 @@ inline void scan_multi_data_next(scan_data_context *context)
                     if (!ts_expired) {
                         context->data_count++;
                         if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
-                            context->multi_kvs.emplace(hash_key, std::map<std::string, std::string>());
+                            context->multi_kvs.emplace(hash_key,
+                                                       std::map<std::string, std::string>());
                         }
                         if (expire_ts_seconds && context->multi_expire_ts_seconds < ttl_seconds) {
                             context->multi_expire_ts_seconds = expire_ts_seconds;

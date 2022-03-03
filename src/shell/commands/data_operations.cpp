@@ -1694,8 +1694,8 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    if (max_multi_set_concurrency < 1) {
-        fprintf(stderr, "ERROR: max_multi_set_concurrency should be greater than 1\n");
+    if (max_multi_set_concurrency <= 0) {
+        fprintf(stderr, "ERROR: max_multi_set_concurrency should be greater than 0\n");
         return false;
     }
 
