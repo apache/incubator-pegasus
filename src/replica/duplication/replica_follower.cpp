@@ -190,8 +190,8 @@ error_code replica_follower::nfs_copy_checkpoint(error_code err, learn_response 
         return err_code;
     }
 
-    std::string dest =
-        utils::filesystem::path_combine(_replica->dir(), duplication_constants::kCheckpointRootDir);
+    std::string dest = utils::filesystem::path_combine(
+        _replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
     if (!utils::filesystem::remove_path(dest)) {
         derror_replica(
             "clear master[{}] replica checkpoint dest dir {} failed", master_replica_name(), dest);

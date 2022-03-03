@@ -231,8 +231,8 @@ TEST_F(replica_follower_test, test_nfs_copy_checkpoint)
     auto resp = learn_response();
     resp.address = rpc_address("127.0.0.1", 34801);
 
-    std::string dest = utils::filesystem::path_combine(_mock_replica->dir(),
-                                                       duplication_constants::kCheckpointRootDir);
+    std::string dest = utils::filesystem::path_combine(
+        _mock_replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
     dsn::utils::filesystem::create_directory(dest);
     ASSERT_TRUE(dsn::utils::filesystem::path_exists(dest));
     ASSERT_EQ(nfs_copy_checkpoint(follower, ERR_OK, resp), ERR_OK);
