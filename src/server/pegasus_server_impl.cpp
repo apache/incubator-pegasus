@@ -1509,7 +1509,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
             if (!dsn::utils::filesystem::rename_path(duplication_path, rdb_path)) {
                 derror_replica(
                     "load duplication data from {} to {} failed", duplication_path, rdb_path);
-                return ::dsn::ERR_FILE_OPERATION_FAILED;
+                return dsn::ERR_FILE_OPERATION_FAILED;
             }
         } else {
             std::pair<std::string, bool> restore_info = get_restore_dir_from_env(envs);

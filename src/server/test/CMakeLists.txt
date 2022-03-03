@@ -58,6 +58,7 @@ set(MY_PROJ_LIBS
         PocoJSON
         pegasus_base
         gtest
+        gmock
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)
