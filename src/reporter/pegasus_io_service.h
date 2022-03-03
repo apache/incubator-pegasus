@@ -34,14 +34,6 @@ namespace server {
 class pegasus_io_service : public dsn::utils::singleton<pegasus_io_service>
 {
 public:
-    ~pegasus_io_service()
-    {
-        ios.stop();
-        for (auto worker : _workers) {
-            worker->join();
-        }
-    }
-
     boost::asio::io_service ios;
 
 private:
@@ -53,6 +45,14 @@ private:
                 boost::asio::io_service::work work(ios);
                 ios.run();
             })));
+        }
+    }
+
+    ~pegasus_io_service()
+    {
+        ios.stop();
+        for (auto worker : _workers) {
+            worker->join();
         }
     }
 

@@ -51,6 +51,7 @@ struct config : public dsn::utils::singleton<config>
 
 private:
     config();
+    ~config() = default;
 
     friend class dsn::utils::singleton<config>;
 };

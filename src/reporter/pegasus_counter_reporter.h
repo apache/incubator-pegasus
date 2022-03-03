@@ -57,12 +57,12 @@ enum class perf_counter_sink_t
 class pegasus_counter_reporter : public dsn::utils::singleton<pegasus_counter_reporter>
 {
 public:
-    virtual ~pegasus_counter_reporter();
     void start();
     void stop();
 
 private:
     pegasus_counter_reporter();
+    virtual ~pegasus_counter_reporter();
 
     void falcon_initialize();
     void prometheus_initialize();
