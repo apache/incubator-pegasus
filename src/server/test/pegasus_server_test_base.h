@@ -22,11 +22,21 @@
 #include "server/pegasus_server_impl.h"
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <dsn/dist/replication/replica_test_utils.h>
 #include <dsn/utility/filesystem.h>
 
 namespace pegasus {
 namespace server {
+
+class mock_pegasus_server_impl : public pegasus_server_impl
+{
+public:
+    mock_pegasus_server_impl(dsn::replication::replica *r) : pegasus_server_impl(r) {}
+
+public:
+    MOCK_CONST_METHOD0(is_duplication_follower, bool());
+};
 
 class pegasus_server_test_base : public ::testing::Test
 {
@@ -41,10 +51,10 @@ public:
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
 
-        _replica =
-            dsn::replication::create_test_replica(_replica_stub, _gpid, app_info, "./", false);
+        _replica = dsn::replication::create_test_replica(
+            _replica_stub, _gpid, app_info, "./", false, false);
 
-        _server = dsn::make_unique<pegasus_server_impl>(_replica);
+        _server = dsn::make_unique<mock_pegasus_server_impl>(_replica);
     }
 
     dsn::error_code start(const std::map<std::string, std::string> &envs = {})
@@ -72,7 +82,7 @@ public:
     }
 
 protected:
-    std::unique_ptr<pegasus_server_impl> _server;
+    std::unique_ptr<mock_pegasus_server_impl> _server;
     dsn::replication::replica *_replica;
     dsn::replication::replica_stub *_replica_stub;
     dsn::gpid _gpid;
