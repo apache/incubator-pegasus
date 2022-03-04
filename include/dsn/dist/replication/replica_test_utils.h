@@ -35,8 +35,12 @@ namespace replication {
 class replica;
 class replica_stub;
 
-extern replica *create_test_replica(
-    replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool restore_if_necessary);
+extern replica *create_test_replica(replica_stub *stub,
+                                    gpid gpid,
+                                    const app_info &app,
+                                    const char *dir,
+                                    bool restore_if_necessary,
+                                    bool is_duplication_follower);
 
 extern replica_stub *create_test_replica_stub();
 

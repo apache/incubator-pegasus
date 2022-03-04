@@ -39,16 +39,21 @@ public:
                  const gpid &gpid,
                  const app_info &app,
                  const char *dir,
-                 bool restore_if_necessary)
-        : replica(stub, gpid, app, dir, restore_if_necessary)
+                 bool restore_if_necessary,
+                 bool is_duplication_follower)
+        : replica(stub, gpid, app, dir, restore_if_necessary, is_duplication_follower)
     {
     }
 };
 
-replica *create_test_replica(
-    replica_stub *stub, gpid gpid, const app_info &app, const char *dir, bool restore_if_necessary)
+replica *create_test_replica(replica_stub *stub,
+                             gpid gpid,
+                             const app_info &app,
+                             const char *dir,
+                             bool restore_if_necessary,
+                             bool is_duplication_follower)
 {
-    return new mock_replica(stub, gpid, app, dir, restore_if_necessary);
+    return new mock_replica(stub, gpid, app, dir, restore_if_necessary, is_duplication_follower);
 }
 
 replica_stub *create_test_replica_stub() { return new replica_stub(); }
