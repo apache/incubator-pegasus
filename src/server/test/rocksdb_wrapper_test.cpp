@@ -62,9 +62,9 @@ public:
         dsn::app_info app_info;
         app_info.app_type = "pegasus";
         app_info.duplicating = true;
-        _replica =
-            dsn::replication::create_test_replica(_replica_stub, _gpid, app_info, "./", false);
-        _server = dsn::make_unique<pegasus_server_impl>(_replica);
+        _replica = dsn::replication::create_test_replica(
+            _replica_stub, _gpid, app_info, "./", false, false);
+        _server = dsn::make_unique<mock_pegasus_server_impl>(_replica);
 
         SetUp();
     }

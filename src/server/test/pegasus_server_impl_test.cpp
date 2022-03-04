@@ -143,5 +143,29 @@ TEST_F(pegasus_server_impl_test, test_update_user_specified_compaction)
     _server->update_user_specified_compaction(envs);
     ASSERT_EQ(user_specified_compaction, _server->_user_specified_compaction);
 }
+
+TEST_F(pegasus_server_impl_test, test_load_from_duplication_data)
+{
+    auto origin_file = fmt::format("{}/{}", _server->duplication_dir(), "checkpoint");
+    dsn::utils::filesystem::create_directory(_server->duplication_dir());
+    dsn::utils::filesystem::create_file(origin_file);
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists(origin_file));
+
+    EXPECT_CALL(*_server, is_duplication_follower()).WillRepeatedly(testing::Return(true));
+
+    auto tempFolder = "invalid";
+    dsn::utils::filesystem::rename_path(_server->data_dir(), tempFolder);
+    ASSERT_EQ(start(), dsn::ERR_FILE_OPERATION_FAILED);
+
+    dsn::utils::filesystem::rename_path(tempFolder, _server->data_dir());
+    auto rdb_path = fmt::format("{}/rdb/", _server->data_dir());
+    auto new_file = fmt::format("{}/{}", rdb_path, "checkpoint");
+    ASSERT_EQ(start(), dsn::ERR_LOCAL_APP_FAILURE);
+    ASSERT_TRUE(dsn::utils::filesystem::directory_exists(rdb_path));
+    ASSERT_FALSE(dsn::utils::filesystem::file_exists(origin_file));
+    ASSERT_TRUE(dsn::utils::filesystem::file_exists(new_file));
+    dsn::utils::filesystem::remove_file_name(new_file);
+}
+
 } // namespace server
 } // namespace pegasus

@@ -14,6 +14,7 @@ on:
       - master
       - 'v[0-9]+.*' # release branch
       - ci-test # testing branch for github action
+      - '*dev'
   # for manually triggering workflow
   workflow_dispatch:
 
