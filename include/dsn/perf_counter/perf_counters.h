@@ -45,9 +45,6 @@ namespace dsn {
 class perf_counters : public utils::singleton<perf_counters>
 {
 public:
-    perf_counters();
-    ~perf_counters();
-
     ///
     /// get counter with (current_app_name, section, name), try to create a new one
     /// if create_if_not_exist==true
@@ -136,6 +133,9 @@ public:
         std::function<bool(const std::string &arg, const counter_snapshot &cs)> filter) const;
 
 private:
+    perf_counters();
+    ~perf_counters();
+
     // full_name = perf_counter::build_full_name(...);
     perf_counter *new_counter(const char *app,
                               const char *section,
@@ -168,6 +168,8 @@ private:
     dsn_handle_t _perf_counters_by_substr_cmd;
     dsn_handle_t _perf_counters_by_prefix_cmd;
     dsn_handle_t _perf_counters_by_postfix_cmd;
+
+    friend class utils::singleton<perf_counters>;
 };
 
 } // namespace dsn

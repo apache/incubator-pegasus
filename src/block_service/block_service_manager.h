@@ -28,8 +28,11 @@ namespace block_service {
 // a singleton for rDSN service_engine to register all blocks, this should be called only once
 class block_service_registry : public utils::singleton<block_service_registry>
 {
-public:
+private:
     block_service_registry();
+    ~block_service_registry() = default;
+
+    friend class utils::singleton<block_service_registry>;
 };
 
 // this should be shared within a service node

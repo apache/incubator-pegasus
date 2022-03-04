@@ -66,6 +66,7 @@ public:
 private:
     friend class utils::singleton<http_call_registry>;
     http_call_registry() = default;
+    ~http_call_registry() = default;
 
 private:
     mutable std::mutex _mu;

@@ -46,11 +46,28 @@ namespace internal {
 
 class duplication_group_registry : public utils::singleton<duplication_group_registry>
 {
-private:
-    std::map<std::string, uint8_t> _group;
-    std::set<uint8_t> _distinct_cids;
-
 public:
+    error_with<uint8_t> get_cluster_id(const std::string &cluster_name) const
+    {
+        if (cluster_name.empty()) {
+            return error_s::make(ERR_INVALID_PARAMETERS, "cluster_name is empty");
+        }
+        if (_group.empty()) {
+            return error_s::make(ERR_OBJECT_NOT_FOUND, "`duplication-group` is not configured");
+        }
+
+        auto it = _group.find(cluster_name);
+        if (it == _group.end()) {
+            return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get cluster id for ")
+                   << cluster_name.data();
+        }
+        return it->second;
+    }
+
+    const std::map<std::string, uint8_t> &get_duplication_group() { return _group; }
+    const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
+
+private:
     duplication_group_registry()
     {
         std::vector<std::string> clusters;
@@ -73,26 +90,12 @@ public:
         dassert_f(_distinct_cids.size() == _group.size(),
                   "there might be duplicate cluster_id in configuration");
     }
+    ~duplication_group_registry() = default;
 
-    error_with<uint8_t> get_cluster_id(const std::string &cluster_name) const
-    {
-        if (cluster_name.empty()) {
-            return error_s::make(ERR_INVALID_PARAMETERS, "cluster_name is empty");
-        }
-        if (_group.empty()) {
-            return error_s::make(ERR_OBJECT_NOT_FOUND, "`duplication-group` is not configured");
-        }
+    std::map<std::string, uint8_t> _group;
+    std::set<uint8_t> _distinct_cids;
 
-        auto it = _group.find(cluster_name);
-        if (it == _group.end()) {
-            return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get cluster id for ")
-                   << cluster_name.data();
-        }
-        return it->second;
-    }
-
-    const std::map<std::string, uint8_t> &get_duplication_group() { return _group; }
-    const std::set<uint8_t> &get_distinct_cluster_id_set() { return _distinct_cids; }
+    friend class utils::singleton<duplication_group_registry>;
 };
 
 } // namespace internal

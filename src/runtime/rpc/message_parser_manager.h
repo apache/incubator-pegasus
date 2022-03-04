@@ -63,6 +63,7 @@ public:
 private:
     friend class utils::singleton<message_parser_manager>;
     message_parser_manager() = default;
+    ~message_parser_manager() = default;
 
     std::vector<parser_factory_info> _factory_vec;
 };

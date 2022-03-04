@@ -85,9 +85,6 @@ class checker;
 class scheduler : public utils::singleton<scheduler>
 {
 public:
-    scheduler(void);
-    ~scheduler(void);
-
     void start();
     uint64_t now_ns() const
     {
@@ -135,6 +132,9 @@ private:
     std::vector<checker_info> _checkers;
 
 private:
+    scheduler(void);
+    ~scheduler(void);
+
     void schedule();
     void check();
 
@@ -142,10 +142,12 @@ private:
     static void on_task_worker_start(task_worker *worker);
     static void on_task_wait(task *waitor, task *waitee, uint32_t timeout_milliseconds);
     static void on_task_wait_notified(task *task);
+
+    friend class utils::singleton<scheduler>;
 };
 
 // ------------------  inline implementation ----------------------------
 
 inline void scheduler::reset() { _wheel.clear(); }
-}
-} // end namespace
+} // namespace tools
+} // namespace dsn

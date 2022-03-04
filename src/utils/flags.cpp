@@ -336,6 +336,7 @@ public:
 private:
     friend class utils::singleton<flag_registry>;
     flag_registry() = default;
+    ~flag_registry() = default;
 
 private:
     std::map<std::string, flag_data> _flags;

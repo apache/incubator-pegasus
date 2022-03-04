@@ -76,14 +76,13 @@ error_s check_configuration()
 class kinit_context : public utils::singleton<kinit_context>
 {
 public:
-    ~kinit_context();
-
     // implementation of 'kinit -k -t <keytab_file> <principal>'
     error_s kinit();
     const std::string &username() const { return _user_name; }
 
 private:
     kinit_context() = default;
+    ~kinit_context();
 
     // init kerberos context
     void init_krb5_ctx();

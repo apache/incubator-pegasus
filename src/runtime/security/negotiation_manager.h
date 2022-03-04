@@ -39,6 +39,8 @@ public:
 
 private:
     negotiation_manager();
+    ~negotiation_manager() = default;
+
     void on_negotiation_request(negotiation_rpc rpc);
     static std::shared_ptr<negotiation> get_negotiation(negotiation_rpc rpc);
 
