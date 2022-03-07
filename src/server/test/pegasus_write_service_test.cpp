@@ -223,7 +223,6 @@ TEST_F(pegasus_write_service_test, duplicate_not_batched)
     dsn::apps::duplicate_entry entry;
     entry.timestamp = 1000;
     entry.cluster_id = 2;
-    duplicate.entries.emplace_back(entry);
     dsn::apps::duplicate_response resp;
 
     {
@@ -237,7 +236,7 @@ TEST_F(pegasus_write_service_test, duplicate_not_batched)
 
         entry.task_code = dsn::apps::RPC_RRDB_RRDB_MULTI_PUT;
         entry.raw_message = dsn::move_message_to_blob(mput_msg.get());
-
+        duplicate.entries.emplace_back(entry);
         _write_svc->duplicate(1, duplicate, resp);
         ASSERT_EQ(resp.error, 0);
     }
@@ -275,7 +274,6 @@ TEST_F(pegasus_write_service_test, duplicate_batched)
         dsn::apps::duplicate_entry entry;
         entry.timestamp = 1000;
         entry.cluster_id = 2;
-        duplicate.entries.emplace_back(entry);
         dsn::apps::duplicate_response resp;
 
         for (int i = 0; i < kv_num; i++) {
@@ -286,6 +284,7 @@ TEST_F(pegasus_write_service_test, duplicate_batched)
             dsn::message_ptr msg_ptr = pegasus::create_put_request(request);
             entry.raw_message = dsn::move_message_to_blob(msg_ptr.get());
             entry.task_code = dsn::apps::RPC_RRDB_RRDB_PUT;
+            duplicate.entries.emplace_back(entry);
             _write_svc->duplicate(1, duplicate, resp);
             ASSERT_EQ(resp.error, 0);
         }
