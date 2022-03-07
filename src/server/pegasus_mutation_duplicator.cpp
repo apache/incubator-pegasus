@@ -42,10 +42,10 @@ namespace replication {
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int32("pegasus",
-                 duplicate_log_batch_megabytes,
-                 4,
-                 "send mutation log batch size per rpc");
+DSN_DEFINE_uint32("pegasus",
+                  duplicate_log_batch_megabytes,
+                  4,
+                  "send mutation log batch size per rpc");
 
 using namespace dsn::literals::chrono_literals;
 
