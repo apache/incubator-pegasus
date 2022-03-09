@@ -1814,6 +1814,9 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     if (is_geo_data) {
         op = SCAN_GEN_GEO;
     } else if (use_multi_set) {
+        fprintf(stderr,
+                "WARN: used multi_set will lose accurate ttl time per value! "
+                "ttl time will be assign the max value of this batch data.\n");
         op = SCAN_AND_MULTI_SET;
         // threadpool worker_count should greater than source app scanner count
         int worker_count = dsn_config_get_value_int64("threadpool.THREAD_POOL_DEFAULT",
