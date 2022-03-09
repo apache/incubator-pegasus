@@ -152,7 +152,7 @@ struct scan_data_context
     std::atomic_long split_hash_key_count;
 
     long data_count;
-    uint32_t multi_expire_ts_seconds;
+    uint32_t multi_ttl_seconds;
     std::unordered_map<std::string, std::map<std::string, std::string>> multi_kvs;
     dsn::utils::semaphore sema;
 
@@ -190,7 +190,7 @@ struct scan_data_context
           count_hash_key(count_hash_key_),
           split_hash_key_count(0),
           data_count(0),
-          multi_expire_ts_seconds(0),
+          multi_ttl_seconds(0),
           sema(max_multi_set_concurrency)
     {
         // max_batch_count should > 1 because scan may be terminated
@@ -307,7 +307,7 @@ inline void batch_execute_multi_set(scan_data_context *context)
                 context->sema.signal();
             },
             context->timeout_ms,
-            context->multi_expire_ts_seconds);
+            context->multi_ttl_seconds);
     }
     context->multi_kvs.clear();
     context->data_count = 0;
@@ -333,8 +333,8 @@ inline void scan_multi_data_next(scan_data_context *context)
                             context->multi_kvs.emplace(hash_key,
                                                        std::map<std::string, std::string>());
                         }
-                        if (expire_ts_seconds && context->multi_expire_ts_seconds < ttl_seconds) {
-                            context->multi_expire_ts_seconds = expire_ts_seconds;
+                        if (context->multi_ttl_seconds < ttl_seconds || ttl_seconds == 0) {
+                            context->multi_ttl_seconds = ttl_seconds;
                         }
                         context->multi_kvs[hash_key].emplace(std::move(sort_key), std::move(value));
 
