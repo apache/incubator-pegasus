@@ -298,6 +298,11 @@ struct scan_response
 
 struct duplicate_request
 {
+    1: list<duplicate_entry> entries
+}
+
+struct duplicate_entry
+{
     // The timestamp of this write.
     1: optional i64 timestamp
 
