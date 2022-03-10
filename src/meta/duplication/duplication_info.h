@@ -64,7 +64,7 @@ public:
 
     duplication_info() = default;
 
-    void start() { alter_status(duplication_status::DS_PREPARE); }
+    error_code start() { return alter_status(duplication_status::DS_PREPARE); }
 
     // error will be returned if this state transition is not allowed.
     error_code

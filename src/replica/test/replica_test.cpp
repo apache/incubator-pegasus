@@ -358,7 +358,9 @@ TEST_F(replica_test, test_trigger_manual_emergency_checkpoint)
     force_update_checkpointing(true);
     ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_BUSY);
     ASSERT_TRUE(is_checkpointing());
-    force_update_checkpointing(false);
+    // test running task completed
+    _mock_replica->tracker()->wait_outstanding_tasks();
+    ASSERT_FALSE(is_checkpointing());
 
     // test exceed max concurrent count
     ASSERT_EQ(_mock_replica->trigger_manual_emergency_checkpoint(101), ERR_OK);

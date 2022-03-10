@@ -142,7 +142,7 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
     }
 
     if (old_decree <= _app->last_durable_decree()) {
-        ddebug_replica("checkpoint has been successful: old = {} vs latest = {}",
+        ddebug_replica("checkpoint has been completed: old = {} vs latest = {}",
                        old_decree,
                        _app->last_durable_decree());
         _is_manual_emergency_checkpointing = false;
@@ -166,8 +166,8 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
         return ERR_TRY_AGAIN;
     }
 
-    _is_manual_emergency_checkpointing = true;
     init_checkpoint(true);
+    _is_manual_emergency_checkpointing = true;
     return ERR_OK;
 }
 
@@ -249,7 +249,18 @@ error_code replica::background_async_checkpoint(bool is_emergency)
                    _app->last_durable_decree());
             update_last_checkpoint_generate_time();
         }
-    } else if (err == ERR_TRY_AGAIN) {
+
+        if (_is_manual_emergency_checkpointing) {
+            _is_manual_emergency_checkpointing = false;
+            _stub->_manual_emergency_checkpointing_count == 0
+                ? 0
+                : (--_stub->_manual_emergency_checkpointing_count);
+        }
+
+        return err;
+    }
+
+    if (err == ERR_TRY_AGAIN) {
         // already triggered memory flushing on async_checkpoint(), then try again later.
         ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
                ", schedule later checkpoint after 10 seconds",
@@ -260,7 +271,16 @@ error_code replica::background_async_checkpoint(bool is_emergency)
                          [this] { init_checkpoint(false); },
                          get_gpid().thread_hash(),
                          std::chrono::seconds(10));
-    } else if (err == ERR_WRONG_TIMING) {
+        return err;
+    }
+
+    if (_is_manual_emergency_checkpointing) {
+        _is_manual_emergency_checkpointing = false;
+        _stub->_manual_emergency_checkpointing_count == 0
+            ? 0
+            : (--_stub->_manual_emergency_checkpointing_count);
+    }
+    if (err == ERR_WRONG_TIMING) {
         // do nothing
         ddebug("%s: call app.async_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
                ", just ignore",
