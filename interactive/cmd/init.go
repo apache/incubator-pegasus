@@ -22,11 +22,11 @@ package cmd
 import (
 	"errors"
 	"os"
-	"pegic/executor"
 	"strings"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/desertbit/grumble"
+	"github.com/pegasus-kv/pegic/executor"
 )
 
 var globalContext *executor.Context

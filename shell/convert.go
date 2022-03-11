@@ -20,8 +20,7 @@
 package shell
 
 import (
-	"pegic/executor/util"
-
+	"github.com/pegasus-kv/pegic/executor/util"
 	"github.com/spf13/cobra"
 )
 

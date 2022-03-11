@@ -2,3 +2,4 @@ bin/
 .*-history
 *.log
 .idea
+golangci-lint-1.35.2-linux-amd64*

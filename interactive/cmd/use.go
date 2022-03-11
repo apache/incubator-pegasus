@@ -22,11 +22,11 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"pegic/interactive"
 	"strings"
 	"time"
 
 	"github.com/desertbit/grumble"
+	"github.com/pegasus-kv/pegic/interactive"
 )
 
 func init() {

@@ -1,4 +1,4 @@
-module pegic
+module github.com/pegasus-kv/pegic
 
 go 1.14
 

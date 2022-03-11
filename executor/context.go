@@ -22,10 +22,10 @@ package executor
 import (
 	"fmt"
 	"io"
-	"pegic/executor/util"
 
 	"github.com/XiaoMi/pegasus-go-client/pegasus"
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/pegasus-kv/pegic/executor/util"
 )
 
 type Context struct {

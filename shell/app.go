@@ -21,10 +21,10 @@ package shell
 
 import (
 	"os"
-	"pegic/interactive"
-	"pegic/interactive/cmd"
 	"strings"
 
+	"github.com/pegasus-kv/pegic/interactive"
+	"github.com/pegasus-kv/pegic/interactive/cmd"
 	"github.com/spf13/cobra"
 )
 
