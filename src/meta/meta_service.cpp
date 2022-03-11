@@ -559,6 +559,9 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler_with_rpc_holder(RPC_CM_GET_MAX_REPLICA_COUNT,
                                          "get_max_replica_count",
                                          &meta_service::on_get_max_replica_count);
+    register_rpc_handler_with_rpc_holder(RPC_CM_SET_MAX_REPLICA_COUNT,
+                                         "set_max_replica_count",
+                                         &meta_service::on_set_max_replica_count);
 }
 
 int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_address)
@@ -1285,6 +1288,19 @@ void meta_service::on_get_max_replica_count(configuration_get_max_replica_count_
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      tracker(),
                      std::bind(&server_state::get_max_replica_count, _state.get(), rpc),
+                     server_state::sStateHash);
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void meta_service::on_set_max_replica_count(configuration_set_max_replica_count_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     std::bind(&server_state::set_max_replica_count, _state.get(), rpc),
                      server_state::sStateHash);
 }
 

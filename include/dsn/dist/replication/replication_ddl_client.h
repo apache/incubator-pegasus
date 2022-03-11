@@ -233,6 +233,9 @@ public:
     error_with<configuration_get_max_replica_count_response>
     get_max_replica_count(const std::string &app_name);
 
+    error_with<configuration_set_max_replica_count_response>
+    set_max_replica_count(const std::string &app_name, int32_t max_replica_count);
+
 private:
     bool static valid_app_char(int c);
 

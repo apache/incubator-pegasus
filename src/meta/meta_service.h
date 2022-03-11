@@ -248,6 +248,7 @@ private:
 
     // get/set max_replica_count of an app
     void on_get_max_replica_count(configuration_get_max_replica_count_rpc rpc);
+    void on_set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
 
     // common routines
     // ret:

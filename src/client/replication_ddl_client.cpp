@@ -1729,5 +1729,16 @@ replication_ddl_client::get_max_replica_count(const std::string &app_name)
         configuration_get_max_replica_count_rpc(std::move(req), RPC_CM_GET_MAX_REPLICA_COUNT));
 }
 
+error_with<configuration_set_max_replica_count_response>
+replication_ddl_client::set_max_replica_count(const std::string &app_name,
+                                              int32_t max_replica_count)
+{
+    auto req = make_unique<configuration_set_max_replica_count_request>();
+    req->__set_app_name(app_name);
+    req->__set_max_replica_count(max_replica_count);
+    return call_rpc_sync(
+        configuration_set_max_replica_count_rpc(std::move(req), RPC_CM_SET_MAX_REPLICA_COUNT));
+}
+
 } // namespace replication
 } // namespace dsn

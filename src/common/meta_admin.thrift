@@ -406,3 +406,16 @@ struct configuration_get_max_replica_count_response
     2:i32                       max_replica_count;
     3:string                    hint_message;
 }
+
+struct configuration_set_max_replica_count_request
+{
+    1:string                    app_name;
+    2:i32                       max_replica_count;
+}
+
+struct configuration_set_max_replica_count_response
+{
+    1:dsn.error_code            err;
+    2:i32                       old_max_replica_count;
+    3:string                    hint_message;
+}

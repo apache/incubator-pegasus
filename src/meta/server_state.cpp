@@ -1114,7 +1114,7 @@ void server_state::create_app(dsn::message_ex *msg)
 
     auto level = _meta_svc->get_function_level();
     if (level <= meta_function_level::fl_freezed) {
-        derror_f("current meta function level is freezed since there are too few alive nodes");
+        derror("current meta function level is freezed, since there are too few alive nodes");
         response.err = ERR_STATE_FREEZED;
         will_create_app = false;
     } else if (request.options.partition_count <= 0 ||
@@ -2941,13 +2941,19 @@ bool validate_target_max_replica_count_internal(int32_t max_replica_count,
 
 } // anonymous namespace
 
-bool server_state::validate_target_max_replica_count(int32_t max_replica_count)
+bool server_state::validate_target_max_replica_count(int32_t max_replica_count,
+                                                     std::string &hint_message) const
 {
-    auto alive_node_count = static_cast<int32_t>(_meta_svc->get_alive_node_count());
+    const auto alive_node_count = static_cast<int32_t>(_meta_svc->get_alive_node_count());
 
-    std::string hint_message;
-    bool valid = validate_target_max_replica_count_internal(
+    return validate_target_max_replica_count_internal(
         max_replica_count, alive_node_count, hint_message);
+}
+
+bool server_state::validate_target_max_replica_count(int32_t max_replica_count) const
+{
+    std::string hint_message;
+    const auto valid = validate_target_max_replica_count(max_replica_count, hint_message);
     if (!valid) {
         derror_f("target max replica count is invalid: message={}", hint_message);
     }
@@ -3123,6 +3129,41 @@ void server_state::on_query_manual_compact_status(query_manual_compact_rpc rpc)
     response.__set_progress(total_progress);
 }
 
+template <typename Response>
+std::shared_ptr<app_state> server_state::get_app_and_check_exist(const std::string &app_name,
+                                                                 Response &response) const
+{
+    auto app = get_app(app_name);
+    if (app == nullptr) {
+        response.err = ERR_APP_NOT_EXIST;
+        response.hint_message = fmt::format("app({}) does not exist", app_name);
+    }
+
+    return app;
+}
+
+template <typename Response>
+bool server_state::check_max_replica_count_consistent(const std::shared_ptr<app_state> &app,
+                                                      Response &response) const
+{
+    for (int i = 0; i < static_cast<int>(app->partitions.size()); ++i) {
+        const auto &partition_config = app->partitions[i];
+        if (partition_config.max_replica_count == app->max_replica_count) {
+            continue;
+        }
+
+        response.err = ERR_INCONSISTENT_STATE;
+        response.hint_message = fmt::format("partition_max_replica_count({}) != "
+                                            "app_max_replica_count({}) for partition {}",
+                                            partition_config.max_replica_count,
+                                            app->max_replica_count,
+                                            i);
+        return false;
+    }
+
+    return true;
+}
+
 // ThreadPool: THREAD_POOL_META_STATE
 void server_state::get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const
 {
@@ -3131,32 +3172,22 @@ void server_state::get_max_replica_count(configuration_get_max_replica_count_rpc
 
     zauto_read_lock l(_lock);
 
-    auto app = get_app(app_name);
+    auto app = get_app_and_check_exist(app_name, response);
     if (app == nullptr) {
-        response.err = ERR_APP_NOT_EXIST;
         response.max_replica_count = 0;
-        response.hint_message = fmt::format("app({}) does not exist", app_name);
-        dwarn_f("failed to get max_replica_count: app_name={}, error_code={}",
+        dwarn_f("failed to get max_replica_count: app_name={}, error_code={}, hint_message={}",
                 app_name,
-                response.err.to_string());
+                response.err.to_string(),
+                response.hint_message);
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(app->partitions.size()); ++i) {
-        const auto &partition_config = app->partitions[i];
-        if (partition_config.max_replica_count == app->max_replica_count) {
-            continue;
-        }
-
-        response.err = ERR_INCONSISTENT_STATE;
+    if (!check_max_replica_count_consistent(app, response)) {
         response.max_replica_count = 0;
-        response.hint_message = fmt::format("partition_max_replica_count({}) != "
-                                            "app_max_replica_count({}) for partition {}",
-                                            partition_config.max_replica_count,
-                                            app->max_replica_count,
-                                            i);
-        derror_f("failed to get max_replica_count: app_name={}, error_code={}, hint_message={}",
+        derror_f("failed to get max_replica_count: app_name={}, app_id={}, error_code={}, "
+                 "hint_message={}",
                  app_name,
+                 app->app_id,
                  response.err.to_string(),
                  response.hint_message);
         return;
@@ -3164,11 +3195,94 @@ void server_state::get_max_replica_count(configuration_get_max_replica_count_rpc
 
     response.err = ERR_OK;
     response.max_replica_count = app->max_replica_count;
+
     ddebug_f("get max_replica_count successfully: app_name={}, app_id={}, "
              "max_replica_count={}",
              app_name,
              app->app_id,
              response.max_replica_count);
+}
+
+// ThreadPool: THREAD_POOL_META_STATE
+void server_state::set_max_replica_count(configuration_set_max_replica_count_rpc rpc)
+{
+    const auto &app_name = rpc.request().app_name;
+    const auto new_max_replica_count = rpc.request().max_replica_count;
+    auto &response = rpc.response();
+
+    int32_t app_id = 0;
+
+    {
+        zauto_read_lock l(_lock);
+
+        auto app = get_app_and_check_exist(app_name, response);
+        if (app == nullptr) {
+            response.old_max_replica_count = 0;
+            dwarn_f("failed to set max_replica_count: app_name={}, error_code={}, hint_message={}",
+                    app_name,
+                    response.err.to_string(),
+                    response.hint_message);
+            return;
+        }
+
+        app_id = app->app_id;
+
+        if (!check_max_replica_count_consistent(app, response)) {
+            response.old_max_replica_count = 0;
+            derror_f("failed to set max_replica_count: app_name={}, app_id={}, error_code={}, "
+                     "hint_message={}",
+                     app_name,
+                     app_id,
+                     response.err.to_string(),
+                     response.hint_message);
+            return;
+        }
+
+        response.old_max_replica_count = app->max_replica_count;
+    }
+
+    auto level = _meta_svc->get_function_level();
+    if (level <= meta_function_level::fl_freezed) {
+        response.err = ERR_STATE_FREEZED;
+        response.hint_message =
+            "current meta function level is freezed, since there are too few alive nodes";
+        derror_f(
+            "failed to set max_replica_count: app_name={}, app_id={}, error_code={}, message={}",
+            app_name,
+            app_id,
+            response.err.to_string(),
+            response.hint_message);
+        return;
+    }
+
+    if (!validate_target_max_replica_count(new_max_replica_count, response.hint_message)) {
+        response.err = ERR_INVALID_PARAMETERS;
+        dwarn_f(
+            "failed to set max_replica_count: app_name={}, app_id={}, error_code={}, message={}",
+            app_name,
+            app_id,
+            response.err.to_string(),
+            response.hint_message);
+        return;
+    }
+
+    if (new_max_replica_count == response.old_max_replica_count) {
+        response.err = ERR_OK;
+        response.hint_message = "no need to update max_replica_count since it's not changed";
+        dwarn_f("{}: app_name={}, app_id={}", response.hint_message, app_name, app_id);
+        return;
+    }
+
+    ddebug_f("request for {} max_replica_count: app_name={}, app_id={}, "
+             "old_max_replica_count={}, new_max_replica_count={}",
+             new_max_replica_count > response.old_max_replica_count ? "increasing" : "decreasing",
+             app_name,
+             app_id,
+             response.old_max_replica_count,
+             new_max_replica_count);
+
+    // TODO: update partition-level and app-level max_replica_count
+    response.err = ERR_OK;
 }
 
 } // namespace replication

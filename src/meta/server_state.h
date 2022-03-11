@@ -177,6 +177,7 @@ public:
 
     // get/set max_replica_count of an app
     void get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const;
+    void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -300,7 +301,17 @@ private:
     void transition_staging_state(std::shared_ptr<app_state> &app);
 
     // check whether a max replica count is valid especially for a new app
-    bool validate_target_max_replica_count(int32_t max_replica_count);
+    bool validate_target_max_replica_count(int32_t max_replica_count,
+                                           std::string &hint_message) const;
+    bool validate_target_max_replica_count(int32_t max_replica_count) const;
+
+    template <typename Response>
+    std::shared_ptr<app_state> get_app_and_check_exist(const std::string &app_name,
+                                                       Response &response) const;
+
+    template <typename Response>
+    bool check_max_replica_count_consistent(const std::shared_ptr<app_state> &app,
+                                            Response &response) const;
 
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,
