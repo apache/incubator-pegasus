@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "hdfs_service.h"
-
 #include <algorithm>
 #include <fstream>
 
@@ -30,6 +28,9 @@
 #include <dsn/utility/safe_strerror_posix.h>
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/utility/utils.h>
+
+#include "hdfs_service.h"
+#include "block_service/directio_writable_file.h"
 
 namespace dsn {
 namespace dist {
@@ -54,6 +55,8 @@ DSN_DEFINE_uint64("replication",
                   64 << 20,
                   "hdfs write batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_write_batch_size_bytes, FT_MUTABLE);
+
+DSN_DECLARE_bool(enable_direct_io);
 
 hdfs_service::hdfs_service()
 {
@@ -497,13 +500,33 @@ dsn::task_ptr hdfs_file_object::download(const download_request &req,
         resp.err =
             read_data_in_batches(req.remote_pos, req.remote_length, read_buffer, read_length);
         if (resp.err == ERR_OK) {
-            std::ofstream out(req.output_local_name,
-                              std::ios::binary | std::ios::out | std::ios::trunc);
-            if (out.is_open()) {
-                out.write(read_buffer.c_str(), read_length);
-                out.close();
-                resp.downloaded_size = read_length;
+            bool write_succ = false;
+            if (FLAGS_enable_direct_io) {
+                auto dio_file = std::make_unique<direct_io_writable_file>(req.output_local_name);
+                do {
+                    if (!dio_file->initialize()) {
+                        break;
+                    }
+                    bool wr_ret = dio_file->write(read_buffer.c_str(), read_length);
+                    if (!wr_ret) {
+                        break;
+                    }
+                    if (dio_file->finalize()) {
+                        resp.downloaded_size = read_length;
+                        write_succ = true;
+                    }
+                } while (0);
             } else {
+                std::ofstream out(req.output_local_name,
+                                  std::ios::binary | std::ios::out | std::ios::trunc);
+                if (out.is_open()) {
+                    out.write(read_buffer.c_str(), read_length);
+                    out.close();
+                    resp.downloaded_size = read_length;
+                    write_succ = true;
+                }
+            }
+            if (!write_succ) {
                 derror_f("HDFS download failed: fail to open localfile {} when download {}, "
                          "error: {}",
                          req.output_local_name,
