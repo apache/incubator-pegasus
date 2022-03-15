@@ -54,15 +54,16 @@ enum class perf_counter_sink_t
     INVALID
 };
 
-class pegasus_counter_reporter : public ::dsn::utils::singleton<pegasus_counter_reporter>
+class pegasus_counter_reporter : public dsn::utils::singleton<pegasus_counter_reporter>
 {
 public:
-    pegasus_counter_reporter();
-    virtual ~pegasus_counter_reporter();
     void start();
     void stop();
 
 private:
+    pegasus_counter_reporter();
+    virtual ~pegasus_counter_reporter();
+
     void falcon_initialize();
     void prometheus_initialize();
 
@@ -97,6 +98,8 @@ private:
     std::shared_ptr<prometheus::Registry> _registry;
     std::unique_ptr<prometheus::Exposer> _exposer;
     std::map<std::string, prometheus::Family<prometheus::Gauge> *> _gauge_family_map;
+
+    friend class dsn::utils::singleton<pegasus_counter_reporter>;
 };
 } // namespace server
 } // namespace pegasus

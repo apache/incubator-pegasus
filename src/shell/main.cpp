@@ -275,9 +275,9 @@ static command_executor commands[] = {
         "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
         "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
-        "[-z|--value_filter_pattern str] "
-        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data] "
-        "[-e|--no_ttl]",
+        "[-z|--value_filter_pattern str] [-m|--max_multi_set_concurrency] "
+        "[-o|--scan_option_batch_size] [-e|--no_ttl] "
+        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data] [-u|--use_multi_set]",
         data_operations,
     },
     {
