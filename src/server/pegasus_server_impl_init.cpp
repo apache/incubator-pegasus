@@ -548,7 +548,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _data_cf_opts.periodic_compaction_seconds =
         dsn_config_get_value_uint64("pegasus.server",
                                     "rocksdb_periodic_compaction_seconds",
-                                    30 * 24 * 60 * 60,
+                                    0,
                                     "periodic_compaction_seconds, 0 means no periodic compaction");
 
     // get the checkpoint reserve options.
