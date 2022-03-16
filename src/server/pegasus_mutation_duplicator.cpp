@@ -42,6 +42,10 @@ namespace replication {
 namespace pegasus {
 namespace server {
 
+    dsn::perf_counter_wrapper _shipping_batch_count;
+    dsn::perf_counter_wrapper _shipping_batch_bytes;
+
+
 DSN_DEFINE_uint32("pegasus",
                   duplicate_log_batch_megabytes,
                   4,
@@ -80,6 +84,22 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                                                          dsn::string_view app)
     : mutation_duplicator(r), _remote_cluster(remote_cluster)
 {
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _shipping_batch_count.init_app_counter(
+                "app.pegasus",
+                "dup_ship_count",
+                COUNTER_TYPE_NUMBER_PERCENTILES,
+                "the time (in ms) lag between master and slave in the duplication");
+
+        _shipping_batch_bytes.init_app_counter(
+                "app.pegasus",
+                "dup_ship_bytes",
+                COUNTER_TYPE_NUMBER_PERCENTILES,
+                "the time (in ms) lag between master and slave in the duplication");
+
+    });
+
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
 
@@ -218,6 +238,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
 
         if (batch_bytes >= (FLAGS_duplicate_log_batch_megabytes << 20) ||
             cur_count == muts.size()) {
+            _shipping_batch_count->add(cur_count);
+            _shipping_batch_bytes->add(batch_bytes);
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
             // current hash value, it will still send to remote correct replica
