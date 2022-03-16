@@ -74,7 +74,7 @@ public:
 
     void mark_tracker_tasks_success(replica_follower *follower)
     {
-        follower->_tracker.set_success();
+        follower->_tracker.set_tasks_success();
     }
 
     error_code update_master_replica_config(replica_follower *follower,
@@ -137,7 +137,7 @@ TEST_F(replica_follower_test, test_duplicate_checkpoint)
 
     auto follower = _mock_replica->get_replica_follower();
 
-    ASSERT_EQ(follower->duplicate_checkpoint(), ERR_CORRUPTION);
+    ASSERT_EQ(follower->duplicate_checkpoint(), ERR_TRY_AGAIN);
     ASSERT_FALSE(get_duplicating(follower));
 
     mark_tracker_tasks_success(follower);

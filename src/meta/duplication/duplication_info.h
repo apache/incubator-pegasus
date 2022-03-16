@@ -22,6 +22,7 @@
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/cpp/json_helper.h>
 #include <dsn/tool-api/zlocks.h>
+#include <dsn/dist/fmt_logging.h>
 
 #include <utility>
 #include <fmt/format.h>
@@ -144,11 +145,18 @@ public:
 
     bool all_checkpoint_has_prepared()
     {
-        return std::all_of(_progress.begin(),
-                           _progress.end(),
-                           [](std::pair<int, partition_progress> item) -> bool {
-                               return item.second.checkpoint_prepared;
-                           });
+        int prepared = 0;
+        bool completed =
+            std::all_of(_progress.begin(),
+                        _progress.end(),
+                        [&](std::pair<int, partition_progress> item) -> bool {
+                            prepared = item.second.checkpoint_prepared ? prepared + 1 : prepared;
+                            return item.second.checkpoint_prepared;
+                        });
+        if (!completed) {
+            dwarn_f("replica checkpoint still running: {}/{}", prepared, _progress.size());
+        }
+        return completed;
     }
 
     void report_progress_if_time_up();

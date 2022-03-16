@@ -118,7 +118,7 @@ error_code replica::initialize_on_new()
     // clear work on failure
     utils::filesystem::remove_path(path);
     stub->_fs_manager.remove_replica(pid);
-    return rep;
+    return nullptr;
 }
 
 error_code replica::initialize_on_load()

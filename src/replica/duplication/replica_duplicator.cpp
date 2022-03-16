@@ -55,9 +55,10 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 void replica_duplicator::prepare_dup()
 {
     ddebug_replica("start prepare checkpoint to catch up with latest durable decree: "
-                   "start_point_decree({}) vs last_durable_decree({})",
+                   "start_point_decree({}) < last_durable_decree({}) = {}",
                    _start_point_decree,
-                   _replica->last_durable_decree());
+                   _replica->last_durable_decree(),
+                   _start_point_decree < _replica->last_durable_decree());
 
     tasking::enqueue(
         LPC_REPLICATION_COMMON,

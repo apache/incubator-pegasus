@@ -167,7 +167,9 @@ public:
     // return not finished task count
     int cancel_but_not_wait_outstanding_tasks();
 
-    void set_success() { _all_tasks_success = true; }
+    void set_tasks_success() { _all_tasks_success = true; }
+
+    void clear_tasks_state() { _all_tasks_success = false; }
 
     bool all_tasks_success() const { return _all_tasks_success; }
 

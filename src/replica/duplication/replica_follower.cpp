@@ -66,21 +66,27 @@ void replica_follower::init_master_info()
 // ThreadPool: THREAD_POOL_REPLICATION_LONG
 error_code replica_follower::duplicate_checkpoint()
 {
+    zauto_lock l(_lock);
     if (_duplicating_checkpoint) {
         dwarn_replica("duplicate master[{}] checkpoint is running", master_replica_name());
         return ERR_BUSY;
     }
 
     ddebug_replica("start duplicate master[{}] checkpoint", master_replica_name());
-    zauto_lock l(_lock);
     _duplicating_checkpoint = true;
-    async_duplicate_checkpoint_from_master_replica();
+    tasking::enqueue(LPC_DUPLICATE_CHECKPOINT, &_tracker, [=]() mutable {
+        async_duplicate_checkpoint_from_master_replica();
+    });
     _tracker.wait_outstanding_tasks();
     _duplicating_checkpoint = false;
-    return _tracker.all_tasks_success() ? ERR_OK : ERR_CORRUPTION;
+    if (_tracker.all_tasks_success()) {
+        _tracker.clear_tasks_state();
+        return ERR_OK;
+    }
+    return ERR_TRY_AGAIN;
 }
 
-// ThreadPool: THREAD_POOL_REPLICATION_LONG
+// ThreadPool: THREAD_POOL_DEFAULT
 void replica_follower::async_duplicate_checkpoint_from_master_replica()
 {
     rpc_address meta_servers;
@@ -100,18 +106,16 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
               msg,
               &_tracker,
               [&](error_code err, configuration_query_by_index_response &&resp) mutable {
-                  tasking::enqueue(LPC_DUPLICATE_CHECKPOINT, &_tracker, [=]() mutable {
-                      FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](string_view s) -> void {
-                          _tracker.set_success();
-                          return;
-                      });
-
-                      FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
-                                          [&](string_view s) -> void { return; });
-                      if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
-                          copy_master_replica_checkpoint();
-                      }
+                  FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](string_view s) -> void {
+                      _tracker.set_tasks_success();
+                      return;
                   });
+
+                  FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
+                                      [&](string_view s) -> void { return; });
+                  if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
+                      copy_master_replica_checkpoint();
+                  }
               });
 }
 
@@ -158,6 +162,11 @@ replica_follower::update_master_replica_config(error_code err,
 
     // since the request just specify one partition, the result size is single
     _master_replica_config = resp.partitions[0];
+    ddebug_replica(
+        "query master[{}] config successfully and update local config: remote={}, gpid={}",
+        master_replica_name(),
+        _master_replica_config.primary.to_string(),
+        _master_replica_config.pid.to_string());
     return ERR_OK;
 }
 
@@ -241,7 +250,7 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
                            master_replica_name(),
                            remote_dir,
                            size);
-            _tracker.set_success();
+            _tracker.set_tasks_success();
         });
 }
 
