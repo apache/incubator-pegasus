@@ -42,10 +42,9 @@ namespace replication {
 namespace pegasus {
 namespace server {
 
-    dsn::perf_counter_wrapper _shipping_batch_count;
-    dsn::perf_counter_wrapper _shipping_batch_bytes;
-    dsn::perf_counter_wrapper _shipping_total_count;
-
+dsn::perf_counter_wrapper _shipping_batch_count;
+dsn::perf_counter_wrapper _shipping_batch_bytes;
+dsn::perf_counter_wrapper _shipping_total_count;
 
 DSN_DEFINE_uint32("pegasus",
                   duplicate_log_batch_megabytes,
@@ -88,22 +87,22 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         _shipping_total_count.init_app_counter(
-                "app.pegasus",
-                "dup_ship_total",
-                COUNTER_TYPE_NUMBER_PERCENTILES,
-                "the time (in ms) lag between master and slave in the duplication");
+            "app.pegasus",
+            "dup_ship_total",
+            COUNTER_TYPE_NUMBER_PERCENTILES,
+            "the time (in ms) lag between master and slave in the duplication");
 
         _shipping_batch_count.init_app_counter(
-                "app.pegasus",
-                "dup_ship_count",
-                COUNTER_TYPE_NUMBER_PERCENTILES,
-                "the time (in ms) lag between master and slave in the duplication");
+            "app.pegasus",
+            "dup_ship_count",
+            COUNTER_TYPE_NUMBER_PERCENTILES,
+            "the time (in ms) lag between master and slave in the duplication");
 
         _shipping_batch_bytes.init_app_counter(
-                "app.pegasus",
-                "dup_ship_bytes",
-                COUNTER_TYPE_NUMBER_PERCENTILES,
-                "the time (in ms) lag between master and slave in the duplication");
+            "app.pegasus",
+            "dup_ship_bytes",
+            COUNTER_TYPE_NUMBER_PERCENTILES,
+            "the time (in ms) lag between master and slave in the duplication");
 
     });
 
@@ -220,7 +219,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     uint batch_bytes = 0;
     int cur_count = 0;
 
-    _shipping_total_count->add(muts.size());
+    _shipping_total_count->set(muts.size());
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
 
@@ -246,8 +245,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
 
         if (batch_bytes >= (FLAGS_duplicate_log_batch_megabytes << 20) ||
             cur_count == muts.size()) {
-            _shipping_batch_count->add(cur_count);
-            _shipping_batch_bytes->add(batch_bytes);
+            _shipping_batch_count->set(cur_count);
+            _shipping_batch_bytes->set(batch_bytes);
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
             // current hash value, it will still send to remote correct replica
