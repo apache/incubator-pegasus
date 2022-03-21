@@ -46,9 +46,9 @@ dsn::perf_counter_wrapper _shipping_batch_count;
 dsn::perf_counter_wrapper _shipping_batch_bytes;
 dsn::perf_counter_wrapper _shipping_total_count;
 
-DSN_DEFINE_uint32("pegasus",
+DSN_DEFINE_uint32("pegasus.server",
                   duplicate_log_batch_kilobytes,
-                  500,
+                  100,
                   "send mutation log batch KB size per rpc");
 
 using namespace dsn::literals::chrono_literals;
