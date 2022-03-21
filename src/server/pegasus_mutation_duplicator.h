@@ -28,7 +28,7 @@
 
 namespace pegasus {
 namespace server {
-DSN_DECLARE_uint32(duplicate_log_batch_megabytes);
+DSN_DECLARE_uint32(duplicate_log_batch_kilobytes);
 
 using namespace dsn::literals::chrono_literals;
 

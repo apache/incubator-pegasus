@@ -47,9 +47,9 @@ dsn::perf_counter_wrapper _shipping_batch_bytes;
 dsn::perf_counter_wrapper _shipping_total_count;
 
 DSN_DEFINE_uint32("pegasus",
-                  duplicate_log_batch_megabytes,
-                  4,
-                  "send mutation log batch size per rpc");
+                  duplicate_log_batch_kilobytes,
+                  500,
+                  "send mutation log batch KB size per rpc");
 
 using namespace dsn::literals::chrono_literals;
 
@@ -243,7 +243,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        if (batch_bytes >= (FLAGS_duplicate_log_batch_megabytes << 20) ||
+        if (batch_bytes >= (FLAGS_duplicate_log_batch_kilobytes << 10) ||
             cur_count == muts.size()) {
             _shipping_batch_count->set(cur_count);
             _shipping_batch_bytes->set(batch_bytes);

@@ -70,7 +70,7 @@ public:
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
         }
-        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_megabytes << 20) + 1;
+        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_kilobytes << 20) + 1;
 
         size_t total_shipped_size = 0;
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
@@ -134,7 +134,7 @@ public:
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
         }
-        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_megabytes << 20) + 1;
+        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_kilobytes << 20) + 1;
 
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
@@ -206,7 +206,7 @@ public:
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
         }
-        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_megabytes << 20) + 1;
+        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_kilobytes << 20) + 1;
 
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
