@@ -252,6 +252,7 @@ struct download_response
 {
     dsn::error_code err;
     uint64_t downloaded_size;
+    std::string file_md5;
 };
 typedef std::function<void(const download_response &)> download_callback;
 typedef future_task<download_response> download_future;

@@ -124,12 +124,23 @@ download_block_file_sync(const std::string &local_file_path, block_file *bf, tas
     return ret;
 }
 
-// ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_DEFAULT
 error_code block_service_manager::download_file(const std::string &remote_dir,
                                                 const std::string &local_dir,
                                                 const std::string &file_name,
                                                 block_filesystem *fs,
                                                 /*out*/ uint64_t &download_file_size)
+{
+    std::string md5;
+    return download_file(remote_dir, local_dir, file_name, fs, download_file_size, md5);
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION, THREAD_POOL_DEFAULT
+error_code block_service_manager::download_file(const std::string &remote_dir,
+                                                const std::string &local_dir,
+                                                const std::string &file_name,
+                                                block_filesystem *fs,
+                                                /*out*/ uint64_t &download_file_size,
+                                                /*out*/ std::string &download_file_md5)
 {
     // local file exists
     const std::string local_file_name = utils::filesystem::path_combine(local_dir, file_name);
@@ -167,6 +178,7 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     ddebug_f(
         "download file({}) succeed, file_size = {}", local_file_name.c_str(), resp.downloaded_size);
     download_file_size = resp.downloaded_size;
+    download_file_md5 = resp.file_md5;
     return ERR_OK;
 }
 

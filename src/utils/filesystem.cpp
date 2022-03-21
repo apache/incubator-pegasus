@@ -40,6 +40,7 @@
 #include <dsn/utility/defer.h>
 #include <dsn/utility/fail_point.h>
 #include <dsn/utility/filesystem.h>
+#include <dsn/utility/strings.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/safe_strerror_posix.h>
 
@@ -836,6 +837,43 @@ bool verify_file(const std::string &fname,
                  fname,
                  f_size,
                  expected_fsize,
+                 md5,
+                 expected_md5);
+        return false;
+    }
+    return true;
+}
+
+bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
+{
+    if (!file_exists(fname)) {
+        derror_f("file({}) is not existed", fname);
+        return false;
+    }
+    int64_t f_size = 0;
+    if (!file_size(fname, f_size)) {
+        derror_f("verify file({}) size failed, becaused failed to get file size", fname);
+        return false;
+    }
+    if (f_size != expected_fsize) {
+        derror_f("verify file({}) size failed, because file damaged, size: {} VS {}",
+                 fname,
+                 f_size,
+                 expected_fsize);
+        return false;
+    }
+    return true;
+}
+
+bool verify_data_md5(const std::string &fname,
+                     const char *data,
+                     const size_t data_size,
+                     const std::string &expected_md5)
+{
+    std::string md5 = string_md5(data, data_size);
+    if (md5 != expected_md5) {
+        derror_f("verify data({}) failed, because data damaged, size: md5: {} VS {}",
+                 fname,
                  md5,
                  expected_md5);
         return false;

@@ -136,6 +136,13 @@ bool verify_file(const std::string &fname,
                  const std::string &expected_md5,
                  const int64_t &expected_fsize);
 
+bool verify_file_size(const std::string &fname, const int64_t &expected_fsize);
+
+bool verify_data_md5(const std::string &fname,
+                     const char *data,
+                     const size_t data_size,
+                     const std::string &expected_md5);
+
 // create driectory and get absolute path
 bool create_directory(const std::string &path,
                       /*out*/ std::string &absolute_path,

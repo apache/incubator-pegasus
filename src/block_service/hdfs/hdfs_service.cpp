@@ -513,6 +513,7 @@ dsn::task_ptr hdfs_file_object::download(const download_request &req,
                     }
                     if (dio_file->finalize()) {
                         resp.downloaded_size = read_length;
+                        resp.file_md5 = utils::string_md5(read_buffer.c_str(), read_length);
                         write_succ = true;
                     }
                 } while (0);
@@ -523,6 +524,7 @@ dsn::task_ptr hdfs_file_object::download(const download_request &req,
                     out.write(read_buffer.c_str(), read_length);
                     out.close();
                     resp.downloaded_size = read_length;
+                    resp.file_md5 = utils::string_md5(read_buffer.c_str(), read_length);
                     write_succ = true;
                 }
             }

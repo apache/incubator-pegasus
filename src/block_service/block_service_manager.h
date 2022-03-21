@@ -60,6 +60,13 @@ public:
                              const std::string &local_dir,
                              const std::string &file_name,
                              block_filesystem *fs,
+                             /*out*/ uint64_t &download_file_size,
+                             /*out*/ std::string &download_file_md5);
+
+    error_code download_file(const std::string &remote_dir,
+                             const std::string &local_dir,
+                             const std::string &file_name,
+                             block_filesystem *fs,
                              /*out*/ uint64_t &download_file_size);
 
 private:

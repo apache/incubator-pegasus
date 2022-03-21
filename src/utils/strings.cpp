@@ -205,6 +205,7 @@ std::string string_md5(const char *buffer, unsigned length)
             block = 4096;
         MD5_Update(&c, buffer, block);
         offset += block;
+        buffer += block;
     }
     MD5_Final(out, &c);
 
