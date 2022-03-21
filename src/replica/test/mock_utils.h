@@ -103,6 +103,12 @@ public:
         _app = make_unique<replication::mock_replication_app_base>(this);
     }
 
+    void register_service()
+    {
+        _app->register_storage_engine("replica",
+                                      replication_app_base::create<mock_replication_app_base>);
+    }
+
     ~mock_replica() override
     {
         _config.status = partition_status::PS_INACTIVE;

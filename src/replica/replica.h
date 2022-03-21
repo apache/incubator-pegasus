@@ -473,6 +473,7 @@ private:
     friend class replica_disk_migrator;
     friend class replica_disk_test;
     friend class replica_disk_migrate_test;
+    friend class open_replica_test;
 
     // replica configuration, updated by update_local_configuration ONLY
     replica_configuration _config;

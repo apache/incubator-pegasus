@@ -326,6 +326,8 @@ private:
     friend class replica_test;
     friend class replica_disk_test_base;
     friend class replica_disk_migrate_test;
+    friend class replica_stub_test_base;
+    friend class open_replica_test;
 
     typedef std::unordered_map<gpid, ::dsn::task_ptr> opening_replicas;
     typedef std::unordered_map<gpid, std::tuple<task_ptr, replica_ptr, app_info, replica_info>>
