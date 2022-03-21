@@ -23,12 +23,12 @@
 #include <dsn/dist/replication/replica_base.h>
 #include <rrdb/rrdb.code.definition.h>
 #include <dsn/utility/flags.h>
+#include <dsn/dist/replication/duplication_common.h>
 
 #include "client_lib/pegasus_client_factory_impl.h"
 
 namespace pegasus {
 namespace server {
-DSN_DECLARE_uint32(duplicate_log_batch_kilobytes);
 
 using namespace dsn::literals::chrono_literals;
 

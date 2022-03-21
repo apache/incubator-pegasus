@@ -23,7 +23,6 @@
 
 #include <dsn/cpp/message_utils.h>
 #include <dsn/utility/chrono_literals.h>
-#include <dsn/dist/replication/duplication_common.h>
 #include <rrdb/rrdb.client.h>
 
 namespace dsn {
@@ -45,11 +44,6 @@ namespace server {
 dsn::perf_counter_wrapper _shipping_batch_count;
 dsn::perf_counter_wrapper _shipping_batch_bytes;
 dsn::perf_counter_wrapper _shipping_total_count;
-
-DSN_DEFINE_uint32("pegasus.server",
-                  duplicate_log_batch_kilobytes,
-                  100,
-                  "send mutation log batch KB size per rpc");
 
 using namespace dsn::literals::chrono_literals;
 
@@ -216,7 +210,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     _total_shipped_size = 0;
 
     auto batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
-    auto batch_count = 0;
+    uint batch_count = 0;
+    uint batch_bytes = 0;
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
         batch_count++;
@@ -236,12 +231,14 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             entry.__set_timestamp(std::get<0>(mut));
             entry.__set_cluster_id(get_current_cluster_id());
             batch_request->entries.emplace_back(std::move(entry));
+            batch_bytes += raw_message.length();
         }
 
         // since all the plog's mutations of replica belong to same gpid though the hash of
         // mutation is different, use the last mutation of one batch to get and represents the
         // current hash value, it will still send to remote correct replica
-        if (batch_count == muts.size()) {
+        if (batch_count == muts.size() ||
+            batch_bytes >= (dsn::replication::FLAGS_duplicate_log_batch_kilobytes < 10)) {
             uint64_t hash = get_hash_from_request(rpc_code, raw_message);
             duplicate_rpc rpc(std::move(batch_request),
                               dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
@@ -249,6 +246,7 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
                               hash);
             _inflights[hash].push_back(std::move(rpc));
             batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
+            batch_bytes = 0;
         }
     }
 
