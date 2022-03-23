@@ -41,10 +41,6 @@ namespace replication {
 namespace pegasus {
 namespace server {
 
-dsn::perf_counter_wrapper _shipping_batch_count;
-dsn::perf_counter_wrapper _shipping_batch_bytes;
-dsn::perf_counter_wrapper _shipping_total_count;
-
 using namespace dsn::literals::chrono_literals;
 
 /*extern*/ uint64_t get_hash_from_request(dsn::task_code tc, const dsn::blob &data)
@@ -78,28 +74,6 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                                                          dsn::string_view app)
     : mutation_duplicator(r), _remote_cluster(remote_cluster)
 {
-    static std::once_flag flag;
-    std::call_once(flag, [&]() {
-        _shipping_total_count.init_app_counter(
-            "app.pegasus",
-            "dup_ship_total",
-            COUNTER_TYPE_NUMBER_PERCENTILES,
-            "the time (in ms) lag between master and slave in the duplication");
-
-        _shipping_batch_count.init_app_counter(
-            "app.pegasus",
-            "dup_ship_count",
-            COUNTER_TYPE_NUMBER_PERCENTILES,
-            "the time (in ms) lag between master and slave in the duplication");
-
-        _shipping_batch_bytes.init_app_counter(
-            "app.pegasus",
-            "dup_ship_bytes",
-            COUNTER_TYPE_NUMBER_PERCENTILES,
-            "the time (in ms) lag between master and slave in the duplication");
-
-    });
-
     // initialize pegasus-client when this class is first time used.
     static __attribute__((unused)) bool _dummy = pegasus_client_factory::initialize(nullptr);
 
