@@ -208,11 +208,11 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        // since all the plog's mutations of replica belong to same gpid though the hash of
-        // mutation is different, use the last mutation of one batch to get and represents the
-        // current hash value, it will still send to remote correct replica
         if (batch_count == muts.size() ||
             batch_bytes >= dsn::replication::FLAGS_duplicate_log_batch_bytes) {
+            // since all the plog's mutations of replica belong to same gpid though the hash of
+            // mutation is different, use the last mutation of one batch to get and represents the
+            // current hash value, it will still send to remote correct replica
             uint64_t hash = get_hash_from_request(rpc_code, raw_message);
             duplicate_rpc rpc(std::move(batch_request),
                               dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
