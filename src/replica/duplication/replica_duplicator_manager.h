@@ -94,6 +94,8 @@ private:
         if (_duplications.empty())
             return;
 
+        dwarn_replica("remove all duplication, replica status = {}",
+                      enum_to_string(_replica->status()));
         _duplications.clear();
     }
 

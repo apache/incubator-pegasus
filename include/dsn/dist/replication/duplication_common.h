@@ -22,9 +22,12 @@
 #include <dsn/cpp/rpc_holder.h>
 #include <dsn/utility/errors.h>
 #include <dsn/dist/replication/replication_types.h>
+#include <dsn/utility/flags.h>
 
 namespace dsn {
 namespace replication {
+
+DSN_DECLARE_uint32(duplicate_log_batch_bytes);
 
 typedef rpc_holder<duplication_modify_request, duplication_modify_response> duplication_modify_rpc;
 typedef rpc_holder<duplication_add_request, duplication_add_response> duplication_add_rpc;

@@ -45,11 +45,17 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
-    ddebug_replica(
-        "initialize replica_duplicator [dupid:{}, meta_confirmed_decree:{}]", id(), it->second);
+    ddebug_replica("initialize replica_duplicator[{}] [dupid:{}, meta_confirmed_decree:{}]",
+                   duplication_status_to_string(_status),
+                   id(),
+                   it->second);
     thread_pool(LPC_REPLICATION_LOW).task_tracker(tracker()).thread_hash(get_gpid().thread_hash());
 
-    prepare_dup();
+    if (_status == duplication_status::DS_PREPARE) {
+        prepare_dup();
+    } else if (_status == duplication_status::DS_LOG) {
+        start_dup_log();
+    }
 }
 
 void replica_duplicator::prepare_dup()

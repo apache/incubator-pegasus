@@ -40,18 +40,21 @@ public:
 
 TEST_F(mutation_batch_test, add_mutation_if_valid)
 {
+    auto duplicator = create_test_duplicator(0);
+    mutation_batch batcher(duplicator.get());
+
     mutation_tuple_set result;
 
     std::string s = "hello";
     mutation_ptr mu1 = create_test_mutation(1, s);
-    add_mutation_if_valid(mu1, result, 0);
+    batcher.add_mutation_if_valid(mu1, 0);
+    result = batcher.move_all_mutations();
     mutation_tuple mt1 = *result.begin();
-
-    result.clear();
 
     s = "world";
     mutation_ptr mu2 = create_test_mutation(2, s);
-    add_mutation_if_valid(mu2, result, 0);
+    batcher.add_mutation_if_valid(mu2, 0);
+    result = batcher.move_all_mutations();
     mutation_tuple mt2 = *result.begin();
 
     ASSERT_EQ(std::get<2>(mt1).to_string(), "hello");
@@ -59,18 +62,22 @@ TEST_F(mutation_batch_test, add_mutation_if_valid)
 
     // decree 1 should be ignored
     mutation_ptr mu3 = create_test_mutation(1, s);
-    add_mutation_if_valid(mu2, result, 2);
+    batcher.add_mutation_if_valid(mu2, 2);
+    batcher.add_mutation_if_valid(mu3, 1);
+    result = batcher.move_all_mutations();
     ASSERT_EQ(result.size(), 2);
 }
 
 TEST_F(mutation_batch_test, ignore_non_idempotent_write)
 {
-    mutation_tuple_set result;
+    auto duplicator = create_test_duplicator(0);
+    mutation_batch batcher(duplicator.get());
 
     std::string s = "hello";
     mutation_ptr mu = create_test_mutation(1, s);
     mu->data.updates[0].code = RPC_DUPLICATION_NON_IDEMPOTENT_WRITE;
-    add_mutation_if_valid(mu, result, 0);
+    batcher.add_mutation_if_valid(mu, 0);
+    mutation_tuple_set result = batcher.move_all_mutations();
     ASSERT_EQ(result.size(), 0);
 }
 

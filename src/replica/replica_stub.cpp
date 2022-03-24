@@ -71,7 +71,7 @@ DSN_DEFINE_bool("replication",
 
 DSN_DEFINE_uint32("replication",
                   max_concurrent_manual_emergency_checkpointing_count,
-                  1,
+                  10,
                   "max concurrent manual emergency checkpoint running count");
 DSN_TAG_VARIABLE(max_concurrent_manual_emergency_checkpointing_count, FT_MUTABLE);
 

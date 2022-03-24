@@ -122,6 +122,7 @@ mutation_tuple_set mutation_batch::move_all_mutations()
 {
     // free the internal space
     _mutation_buffer->truncate(last_decree());
+    _total_bytes = 0;
     return std::move(_loaded_mutations);
 }
 
@@ -135,15 +136,14 @@ mutation_batch::mutation_batch(replica_duplicator *r) : replica_base(r)
     _mutation_buffer =
         make_unique<mutation_buffer>(&base, 0, PREPARE_LIST_NUM_ENTRIES, [this](mutation_ptr &mu) {
             // committer
-            add_mutation_if_valid(mu, _loaded_mutations, _start_decree);
+            add_mutation_if_valid(mu, _start_decree);
         });
 
     // start duplication from confirmed_decree
     _mutation_buffer->reset(r->progress().confirmed_decree);
 }
 
-/*extern*/ void
-add_mutation_if_valid(mutation_ptr &mu, mutation_tuple_set &mutations, decree start_decree)
+void mutation_batch::add_mutation_if_valid(mutation_ptr &mu, decree start_decree)
 {
     if (mu->get_decree() < start_decree) {
         // ignore
@@ -169,7 +169,9 @@ add_mutation_if_valid(mutation_ptr &mu, mutation_tuple_set &mutations, decree st
             bb = blob::create_from_bytes(update.data.data(), update.data.length());
         }
 
-        mutations.emplace(std::make_tuple(mu->data.header.timestamp, update.code, std::move(bb)));
+        _total_bytes += bb.length();
+        _loaded_mutations.emplace(
+            std::make_tuple(mu->data.header.timestamp, update.code, std::move(bb)));
     }
 }
 

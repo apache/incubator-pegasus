@@ -169,12 +169,7 @@ void load_from_private_log::replay_log_block()
                                    },
                                    _start_offset,
                                    _current_global_end_offset);
-    if (!err.is_ok()) {
-        if (err.code() == ERR_HANDLE_EOF && switch_to_next_log_file()) {
-            repeat();
-            return;
-        }
-
+    if (!err.is_ok() && err.code() != ERR_HANDLE_EOF) {
         // Error handling on loading failure:
         // - If block loading failed for `MAX_ALLOWED_REPEATS` times, it restarts reading the file.
         // - If file loading failed for `MAX_ALLOWED_FILE_REPEATS` times, which means it
@@ -220,9 +215,23 @@ void load_from_private_log::replay_log_block()
         return;
     }
 
-    _start_offset = static_cast<size_t>(_current_global_end_offset - _current->start_offset());
-
+    if (err.is_ok()) {
+        _start_offset = static_cast<size_t>(_current_global_end_offset - _current->start_offset());
+        if (_mutation_batch.bytes() < FLAGS_duplicate_log_batch_bytes) {
+            repeat();
+            return;
+        }
+    } else if (switch_to_next_log_file()) {
+        // !err.is_ok() means that err.code() == ERR_HANDLE_EOF, the current file read completed and
+        // try next file
+        repeat();
+        return;
+    }
     // update last_decree even for empty batch.
+    // case1: err.is_ok(err.code() != ERR_HANDLE_EOF), but _mutation_batch.bytes() >=
+    // FLAGS_duplicate_log_batch_bytes
+    // case2: !err.is_ok(err.code() == ERR_HANDLE_EOF) and no next file, need commit the last
+    // mutations()
     step_down_next_stage(_mutation_batch.last_decree(), _mutation_batch.move_all_mutations());
 }
 

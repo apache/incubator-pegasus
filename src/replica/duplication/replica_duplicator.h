@@ -130,6 +130,8 @@ public:
     // For metric "dup.pending_mutations_count"
     uint64_t get_pending_mutations_count() const;
 
+    duplication_status::type status() const { return _status; };
+
 private:
     friend class duplication_test_base;
     friend class replica_duplicator_test;
