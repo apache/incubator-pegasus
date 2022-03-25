@@ -151,10 +151,71 @@ public:
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {
+            // set local max_replica_count of each partition
             auto &partition_config = app->partitions[i];
             partition_config.max_replica_count = max_replica_count;
+
+            // set remote max_replica_count of each partition
+            auto partition_path = _ss->get_partition_path(partition_config.pid);
+            auto json_config =
+                dsn::json::json_forwarder<partition_configuration>::encode(partition_config);
+            dsn::task_tracker tracker;
+            _ms->get_remote_storage()->set_data(partition_path,
+                                                json_config,
+                                                LPC_META_STATE_HIGH,
+                                                [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                                                &tracker);
+            tracker.wait_outstanding_tasks();
         }
+
+        // set local max_replica_count of app
         app->max_replica_count = max_replica_count;
+
+        // set remote max_replica_count of app
+        auto app_path = _ss->get_app_path(*app);
+        auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
+        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
+        dsn::task_tracker tracker;
+        _ms->get_remote_storage()->set_data(app_path,
+                                            json_config,
+                                            LPC_META_STATE_HIGH,
+                                            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                                            &tracker);
+        tracker.wait_outstanding_tasks();
+    }
+
+    void verify_all_partitions_max_replica_count(const std::string &app_name,
+                                                 int32_t expected_max_replica_count)
+    {
+        auto app = find_app(app_name);
+        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+
+        auto partition_size = static_cast<int>(app->partitions.size());
+        for (int i = 0; i < partition_size; ++i) {
+            // verify local max_replica_count of each partition
+            auto &partition_config = app->partitions[i];
+            ASSERT_EQ(partition_config.max_replica_count, expected_max_replica_count);
+
+            // verify remote max_replica_count of each partition
+            auto partition_path = _ss->get_partition_path(partition_config.pid);
+            dsn::task_tracker tracker;
+            _ms->get_remote_storage()->get_data(
+                partition_path,
+                LPC_META_CALLBACK,
+                [ this, expected_pid = partition_config.pid, expected_max_replica_count ](
+                    error_code ec, const blob &value) {
+                    ASSERT_EQ(ec, ERR_OK);
+
+                    partition_configuration partition_config;
+                    dsn::json::json_forwarder<partition_configuration>::decode(value,
+                                                                               partition_config);
+
+                    ASSERT_EQ(partition_config.pid, expected_pid);
+                    ASSERT_EQ(partition_config.max_replica_count, expected_max_replica_count);
+                },
+                &tracker);
+            tracker.wait_outstanding_tasks();
+        }
     }
 
     const std::string APP_NAME = "app_operation_test";
@@ -498,6 +559,28 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
     // - cluster is freezed (alive_node_count = 0)
     // - cluster is freezed (alive_node_count = 1 < min_live_node_count_for_unfreeze)
     // - cluster is freezed (alive_node_count = 2 < min_live_node_count_for_unfreeze)
+    // - increase with valid max_replica_count (= max_allowed_replica_count, and = alive_node_count)
+    // - decrease with valid max_replica_count (= max_allowed_replica_count, and = alive_node_count)
+    // - unchanged valid max_replica_count (= max_allowed_replica_count, and = alive_node_count)
+    // - increase with valid max_replica_count (= max_allowed_replica_count, and < alive_node_count)
+    // - decrease with valid max_replica_count (= max_allowed_replica_count, and < alive_node_count)
+    // - unchanged valid max_replica_count (= max_allowed_replica_count, and < alive_node_count)
+    // - increase with valid max_replica_count (< max_allowed_replica_count, and = alive_node_count)
+    // - decrease with valid max_replica_count (< max_allowed_replica_count, and = alive_node_count)
+    // - unchanged valid max_replica_count (< max_allowed_replica_count, and = alive_node_count)
+    // - decrease with valid max_replica_count (< max_allowed_replica_count < alive_node_count)
+    // - unchanged valid max_replica_count (< max_allowed_replica_count < alive_node_count)
+    // - decrease with valid max_replica_count (< alive_node_count < max_allowed_replica_count)
+    // - unchanged valid max_replica_count (< alive_node_count < max_allowed_replica_count)
+    // - increase with valid max_replica_count (< alive_node_count = max_allowed_replica_count)
+    // - decrease with valid max_replica_count (< alive_node_count = max_allowed_replica_count)
+    // - unchanged valid max_replica_count (< alive_node_count = max_allowed_replica_count)
+    // - increase with valid max_replica_count (= min_allowed_replica_count, and < alive_node_count)
+    // - decrease with valid max_replica_count (= min_allowed_replica_count, and < alive_node_count)
+    // - unchanged valid max_replica_count (= min_allowed_replica_count, and < alive_node_count)
+    // - increase max_replica_count from 2 to 3
+    // - increase max_replica_count from 1 to 3
+    // - decrease max_replica_count from 3 to 1
     struct test_case
     {
         std::string app_name;
@@ -528,7 +611,29 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
                  {APP_NAME, 2, 2, 2, 1, 1, 2, 3, ERR_INVALID_PARAMETERS},
                  {APP_NAME, 1, 1, 2, 1, 0, 1, 3, ERR_STATE_FREEZED},
                  {APP_NAME, 1, 1, 2, 2, 1, 1, 3, ERR_STATE_FREEZED},
-                 {APP_NAME, 1, 1, 2, 3, 2, 1, 3, ERR_STATE_FREEZED}};
+                 {APP_NAME, 1, 1, 2, 3, 2, 1, 3, ERR_STATE_FREEZED},
+                 {APP_NAME, 1, 1, 2, 1, 2, 1, 2, ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 1, 1, 1, ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 2, 1, 2, ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 3, 1, 2, ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 2, 1, 1, ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 3, 1, 2, ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 2, 1, 3, ERR_OK},
+                 {APP_NAME, 3, 3, 2, 1, 2, 1, 3, ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 2, 1, 3, ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 3, 1, 2, ERR_OK},
+                 {APP_NAME, 1, 1, 1, 1, 3, 1, 2, ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 2, 1, 3, ERR_OK},
+                 {APP_NAME, 1, 1, 1, 1, 2, 1, 3, ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 3, 1, 3, ERR_OK},
+                 {APP_NAME, 3, 3, 2, 1, 3, 1, 3, ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 3, 1, 3, ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 3, 2, 3, ERR_OK},
+                 {APP_NAME, 3, 3, 2, 1, 3, 2, 3, ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 3, 2, 3, ERR_OK},
+                 {APP_NAME, 2, 2, 3, 2, 3, 2, 3, ERR_OK},
+                 {APP_NAME, 1, 1, 3, 2, 3, 1, 3, ERR_OK},
+                 {APP_NAME, 3, 3, 1, 2, 3, 1, 3, ERR_OK}};
 
     const int32_t total_node_count = 3;
     auto nodes = ensure_enough_alive_nodes(total_node_count);
@@ -595,11 +700,14 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
         const auto set_resp = set_max_replica_count(test.app_name, test.new_max_replica_count);
         ASSERT_EQ(set_resp.err, test.expected_err);
         ASSERT_EQ(set_resp.old_max_replica_count, test.expected_old_max_replica_count);
+        if (test.expected_err == ERR_OK) {
+            verify_all_partitions_max_replica_count(test.app_name, test.new_max_replica_count);
+        }
 
         const auto get_resp = get_max_replica_count(test.app_name);
         if (test.expected_err == ERR_APP_NOT_EXIST || test.expected_err == ERR_INCONSISTENT_STATE) {
             ASSERT_EQ(get_resp.err, test.expected_err);
-        } else {
+        } else if (test.expected_err != ERR_OK) {
             ASSERT_EQ(get_resp.err, ERR_OK);
         }
 
