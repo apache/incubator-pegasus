@@ -65,10 +65,8 @@ func DiskMigrate(client *Client, replicaServer string, pidStr string, from strin
 	return nil
 }
 
-const (
-	WaitRunning  = time.Second * 10 // time for wait migrate complete
-	WaitCleaning = time.Second * 90 // time for wait garbage replica to clean complete
-)
+var WaitRunning = time.Second * 10  // time for wait migrate complete
+var WaitCleaning = time.Second * 90 // time for wait garbage replica to clean complete
 
 // auto balance target node disk usage:
 // -1. change the pegasus server disk cleaner internal for clean temp replica to free disk space in time
@@ -79,7 +77,9 @@ const (
 // -6. start next loop until can't allow to balance the node
 // -7. recover disk cleaner internal if balance complete
 // -8. set meta status to `lively` to balance primary and secondary // TODO(jiashuo1)
-func DiskBalance(client *Client, replicaServer string, minSize int64, auto bool) error {
+func DiskBalance(client *Client, replicaServer string, minSize int64, interval int, auto bool) error {
+	WaitCleaning = time.Second * time.Duration(interval)
+
 	if err := changeDiskCleanerInterval(client, replicaServer, "1"); err != nil {
 		return err
 	}
@@ -94,7 +94,9 @@ func DiskBalance(client *Client, replicaServer string, minSize int64, auto bool)
 		if err != nil {
 			return err
 		}
-		if action.replica.Status != "secondary" {
+
+		err = DiskMigrate(client, replicaServer, action.replica.Gpid, action.from, action.to)
+		if err != nil && action.replica.Status != "secondary" {
 			err := forceAssignReplicaToSecondary(client, replicaServer, action.replica.Gpid)
 			if err != nil {
 				return err
@@ -102,31 +104,36 @@ func DiskBalance(client *Client, replicaServer string, minSize int64, auto bool)
 			time.Sleep(WaitRunning)
 			continue
 		}
-		err = DiskMigrate(client, replicaServer, action.replica.Gpid, action.from, action.to)
-		if err == nil {
-			fmt.Printf("migrate(%s) has started, wait complete...\n", action.toString())
-			for {
-				// TODO(jiashuo1): using DiskMigrate RPC to query status, consider support queryDiskMigrateStatus RPC
-				err = DiskMigrate(client, replicaServer, action.replica.Gpid, action.from, action.to)
-				if err == nil {
-					time.Sleep(WaitRunning)
-					continue
-				}
-				if strings.Contains(err.Error(), base.ERR_BUSY.String()) {
-					fmt.Printf("migrate(%s) is running, msg=%s, wait complete...\n", action.toString(), err.Error())
-					time.Sleep(WaitRunning)
-					continue
-				}
-				fmt.Printf("migrate(%s) is completed，result=%s, wait disk cleaner remove garbage...\n\n", action.toString(), err.Error())
-				break
-			}
-			time.Sleep(WaitCleaning)
-			continue
+
+		if err != nil {
+			return fmt.Errorf("migrate(%s) start failed[auto=%v] err = %s", action.toString(), auto, err.Error())
 		}
+
+		fmt.Printf("migrate(%s) has started[auto=%v], wait complete...\n", action.toString(), auto)
+		for {
+			// TODO(jiashuo1): using DiskMigrate RPC to query status, consider support queryDiskMigrateStatus RPC
+			err = DiskMigrate(client, replicaServer, action.replica.Gpid, action.from, action.to)
+			if err == nil {
+				time.Sleep(WaitRunning)
+				continue
+			}
+			if strings.Contains(err.Error(), base.ERR_BUSY.String()) {
+				fmt.Printf("migrate(%s) is running, msg=%s, wait complete...\n", action.toString(), err.Error())
+				time.Sleep(WaitRunning)
+				continue
+			}
+			fmt.Printf("migrate(%s) is completed，result=%s, wait[%ds] disk cleaner remove garbage...\n\n",
+				action.toString(), err.Error(), interval)
+			break
+		}
+
 		if auto {
 			time.Sleep(WaitCleaning)
 			continue
 		}
+
+		time.Sleep(WaitCleaning)
+		fmt.Printf("you now disable auto-balance[auto=%v], stop and wait manual loop\n\n", auto)
 		break
 	}
 	return nil
