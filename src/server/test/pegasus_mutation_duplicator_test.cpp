@@ -57,7 +57,8 @@ public:
 
         mutation_tuple_set muts;
         uint total_bytes = 0;
-        for (uint64_t i = 0; i < 4000; i++) {
+        uint batch_count = 0;
+        for (uint64_t i = 0; i < 400; i++) {
             uint64_t ts = 200 + i;
             dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
 
@@ -69,8 +70,12 @@ public:
 
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
+
+            if (total_bytes >= FLAGS_duplicate_log_batch_bytes) {
+                batch_count++;
+                total_bytes = 0;
+            }
         }
-        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_megabytes << 20) + 1;
 
         size_t total_shipped_size = 0;
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
@@ -121,7 +126,8 @@ public:
 
         mutation_tuple_set muts;
         uint total_bytes = 0;
-        for (uint64_t i = 0; i < 4000; i++) {
+        uint batch_count = 0;
+        for (uint64_t i = 0; i < 400; i++) {
             uint64_t ts = 200 + i;
             dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
 
@@ -133,8 +139,12 @@ public:
 
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
+
+            if (total_bytes >= FLAGS_duplicate_log_batch_bytes) {
+                batch_count++;
+                total_bytes = 0;
+            }
         }
-        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_megabytes << 20) + 1;
 
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
@@ -193,6 +203,7 @@ public:
 
         mutation_tuple_set muts;
         uint total_bytes = 0;
+        uint batch_count = 0;
         for (uint64_t i = 0; i < total_size; i++) {
             uint64_t ts = 200 + i;
             dsn::task_code code = dsn::apps::RPC_RRDB_RRDB_PUT;
@@ -205,8 +216,12 @@ public:
 
             muts.insert(std::make_tuple(ts, code, data));
             total_bytes += data.length();
+
+            if (total_bytes >= FLAGS_duplicate_log_batch_bytes) {
+                batch_count++;
+                total_bytes = 0;
+            }
         }
-        auto batch_count = total_bytes / (FLAGS_duplicate_log_batch_megabytes << 20) + 1;
 
         auto duplicator_impl = dynamic_cast<pegasus_mutation_duplicator *>(duplicator.get());
         RPC_MOCKING(duplicate_rpc)
