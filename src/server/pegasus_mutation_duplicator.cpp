@@ -23,7 +23,6 @@
 
 #include <dsn/cpp/message_utils.h>
 #include <dsn/utility/chrono_literals.h>
-#include <dsn/dist/replication/duplication_common.h>
 #include <rrdb/rrdb.client.h>
 
 namespace dsn {
@@ -41,11 +40,6 @@ namespace replication {
 
 namespace pegasus {
 namespace server {
-
-DSN_DEFINE_uint32("pegasus",
-                  duplicate_log_batch_megabytes,
-                  4,
-                  "send mutation log batch size per rpc");
 
 using namespace dsn::literals::chrono_literals;
 
@@ -190,13 +184,11 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
     _total_shipped_size = 0;
 
     auto batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
+    uint batch_count = 0;
     uint batch_bytes = 0;
-    int cur_count = 0;
-
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
-
-        cur_count++;
+        batch_count++;
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
@@ -216,8 +208,8 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             batch_bytes += raw_message.length();
         }
 
-        if (batch_bytes >= (FLAGS_duplicate_log_batch_megabytes << 20) ||
-            cur_count == muts.size()) {
+        if (batch_count == muts.size() ||
+            batch_bytes >= dsn::replication::FLAGS_duplicate_log_batch_bytes) {
             // since all the plog's mutations of replica belong to same gpid though the hash of
             // mutation is different, use the last mutation of one batch to get and represents the
             // current hash value, it will still send to remote correct replica
