@@ -58,9 +58,6 @@ struct duplication_add_request
 {
     1:string  app_name;
     2:string  remote_cluster_name;
-
-    // True means to initialize the duplication in DS_PAUSE.
-    3:bool    freezed;
 }
 
 struct duplication_add_response

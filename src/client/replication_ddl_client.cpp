@@ -1373,12 +1373,11 @@ dsn::error_code replication_ddl_client::query_restore(int32_t restore_app_id, bo
 }
 
 error_with<duplication_add_response>
-replication_ddl_client::add_dup(std::string app_name, std::string remote_cluster_name, bool freezed)
+replication_ddl_client::add_dup(std::string app_name, std::string remote_cluster_name)
 {
     auto req = make_unique<duplication_add_request>();
     req->app_name = std::move(app_name);
     req->remote_cluster_name = std::move(remote_cluster_name);
-    req->freezed = freezed;
     return call_rpc_sync(duplication_add_rpc(std::move(req), RPC_CM_ADD_DUPLICATION));
 }
 

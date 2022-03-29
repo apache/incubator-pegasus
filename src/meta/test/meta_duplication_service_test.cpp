@@ -54,7 +54,6 @@ public:
         auto req = make_unique<duplication_add_request>();
         req->app_name = app_name;
         req->remote_cluster_name = remote_cluster;
-        req->freezed = freezed;
 
         duplication_add_rpc rpc(std::move(req), RPC_CM_ADD_DUPLICATION);
         dup_svc().add_duplication(rpc);
