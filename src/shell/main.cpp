@@ -449,8 +449,7 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
-    // todo(jiashuo1) [-f|--freezed] is Deprecated, it will be removed later
-    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-f|--freezed]", add_dup},
+    {"add_dup", "add duplication", "<app_name> <remote_cluster_name>", add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
