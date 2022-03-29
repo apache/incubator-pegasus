@@ -16,26 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.xiaomi.infra.pegasus.rpc;
 
-import com.xiaomi.infra.pegasus.client.ClientOptions;
-import com.xiaomi.infra.pegasus.client.PException;
-import com.xiaomi.infra.pegasus.rpc.async.ClusterManager;
-import org.apache.thrift.TException;
+include "base.thrift"
 
-public abstract class Cluster {
+namespace cpp dsn.replication
+namespace java com.xiaomi.infra.pegasus.replication
 
-  public static Cluster createCluster(ClientOptions clientOptions)
-      throws IllegalArgumentException, PException {
-    return new ClusterManager(clientOptions);
-  }
+struct create_app_options
+{
+    1:i32              partition_count;
+    2:i32              replica_count;
+    3:bool             success_if_exist;
+    4:string           app_type;
+    5:bool             is_stateful;
+    6:map<string, string>  envs;
+}
 
-  public abstract String[] getMetaList();
+// client => meta_server
+struct configuration_create_app_request
+{
+    1:string                   app_name;
+    2:create_app_options       options;
+}
 
-  public abstract Table openTable(String name, InternalTableOptions options)
-      throws ReplicationException, TException;
-
-  public abstract Meta getMeta();
-
-  public abstract void close();
+// meta_server => client
+struct configuration_create_app_response
+{
+    1:base.error_code  err;
+    2:i32              appid;
 }

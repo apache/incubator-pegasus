@@ -54,6 +54,8 @@ public class ClusterManager extends Cluster {
   private MetaSession metaSession;
   private ReplicaSessionInterceptorManager sessionInterceptorManager;
 
+  private MetaHandler metaHandler = null;
+
   private static final String osName;
 
   static {
@@ -156,6 +158,19 @@ public class ClusterManager extends Cluster {
   public TableHandler openTable(String name, InternalTableOptions internalTableOptions)
       throws ReplicationException {
     return new TableHandler(this, name, internalTableOptions);
+  }
+
+  @Override
+  public MetaHandler getMeta() {
+    if (null == metaHandler) {
+      synchronized (this) {
+        if (null == metaHandler) {
+          metaHandler = new MetaHandler(this.metaSession);
+        }
+      }
+    }
+
+    return metaHandler;
   }
 
   @Override

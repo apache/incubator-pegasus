@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -22,14 +21,11 @@ import org.slf4j.LoggerFactory;
  * @author qinzuoyan
  *     <p>Implementation of {@link PegasusClientInterface}.
  */
-public class PegasusClient implements PegasusClientInterface {
+public class PegasusClient extends PegasusAbstractClient implements PegasusClientInterface {
   private static final Logger LOGGER = LoggerFactory.getLogger(PegasusClient.class);
 
-  private final ClientOptions clientOptions;
-
-  private final ConcurrentHashMap<String, PegasusTable> tableMap;
-  private final Object tableMapLock;
-  private Cluster cluster;
+  private ConcurrentHashMap<String, PegasusTable> tableMap;
+  private Object tableMapLock;
 
   private static class PegasusHasher implements KeyHasher {
     @Override
@@ -68,24 +64,24 @@ public class PegasusClient implements PegasusClientInterface {
     return table;
   }
 
-  public PegasusClient(Properties properties) throws PException {
-    this(ClientOptions.create(properties));
+  private void initTableMap() {
+    this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
+    this.tableMapLock = new Object();
   }
 
-  // configPath could be:
-  // - zk path: zk://host1:port1,host2:port2,host3:port3/path/to/config
-  // - local file path: file:///path/to/config
-  // - resource path: resource:///path/to/config
+  public PegasusClient(Properties properties) throws PException {
+    super(properties);
+    initTableMap();
+  }
+
   public PegasusClient(String configPath) throws PException {
-    this(ClientOptions.create(configPath));
+    super(configPath);
+    initTableMap();
   }
 
   public PegasusClient(ClientOptions clientOptions) throws PException {
-    this.clientOptions = clientOptions;
-    this.cluster = Cluster.createCluster(clientOptions);
-    this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
-    this.tableMapLock = new Object();
-    LOGGER.info(getConfigurationString());
+    super(clientOptions);
+    initTableMap();
   }
 
   public boolean isWriteLimitEnabled() {
@@ -94,11 +90,6 @@ public class PegasusClient implements PegasusClientInterface {
 
   String getMetaList() {
     return clientOptions.getMetaServers();
-  }
-
-  @Override
-  public void finalize() {
-    close();
   }
 
   // generate rocksdb key.
@@ -174,19 +165,6 @@ public class PegasusClient implements PegasusClientInterface {
 
   public String getConfigurationString() {
     return clientOptions.toString();
-  }
-
-  @Override
-  public void close() {
-    synchronized (this) {
-      if (cluster != null) {
-        String metaList = StringUtils.join(cluster.getMetaList(), ",");
-        LOGGER.info("start to close pegasus client for [{}]", metaList);
-        cluster.close();
-        cluster = null;
-        LOGGER.info("finish to close pegasus client for [{}]", metaList);
-      }
-    }
   }
 
   @Override

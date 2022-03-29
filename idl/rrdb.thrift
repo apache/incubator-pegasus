@@ -1,5 +1,6 @@
 include "base.thrift"
 include "replication.thrift"
+include "meta_admin.thrift"
 
 namespace cpp dsn.apps
 namespace java com.xiaomi.infra.pegasus.apps
@@ -298,4 +299,5 @@ service rrdb
 service meta
 {
     replication.query_cfg_response query_cfg(1:replication.query_cfg_request query);
+    meta_admin.configuration_create_app_response create_app(1:meta_admin.configuration_create_app_request request);
 }

@@ -22,6 +22,7 @@ import com.google.common.net.InetAddresses;
 import com.xiaomi.infra.pegasus.base.error_code.error_types;
 import com.xiaomi.infra.pegasus.base.rpc_address;
 import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.operator.create_app_operator;
 import com.xiaomi.infra.pegasus.operator.query_cfg_operator;
 import com.xiaomi.infra.pegasus.replication.partition_configuration;
 import io.netty.channel.EventLoopGroup;
@@ -72,33 +73,45 @@ public class MetaSession extends HostNameResolver {
 
   public static error_types getMetaServiceError(client_operator metaQueryOp) {
     if (metaQueryOp.rpc_error.errno != error_types.ERR_OK) return metaQueryOp.rpc_error.errno;
-    query_cfg_operator op = (query_cfg_operator) metaQueryOp;
-    return op.get_response().getErr().errno;
+
+    if (metaQueryOp instanceof query_cfg_operator) {
+      return ((query_cfg_operator) (metaQueryOp)).get_response().getErr().errno;
+    } else if (metaQueryOp instanceof create_app_operator) {
+      return ((create_app_operator) (metaQueryOp)).get_response().getErr().errno;
+    } else {
+      assert (false);
+      return null;
+    }
   }
 
   public static rpc_address getMetaServiceForwardAddress(client_operator metaQueryOp) {
     if (metaQueryOp.rpc_error.errno != error_types.ERR_OK) return null;
-    query_cfg_operator op = (query_cfg_operator) metaQueryOp;
-    if (op.get_response().getErr().errno != error_types.ERR_FORWARD_TO_OTHERS) return null;
-    java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
-    if (partitions == null || partitions.isEmpty()) return null;
-    rpc_address addr = partitions.get(0).getPrimary();
-    if (addr == null || addr.isInvalid()) return null;
+
+    rpc_address addr = null;
+    if (metaQueryOp instanceof query_cfg_operator) {
+      query_cfg_operator op = (query_cfg_operator) metaQueryOp;
+      if (op.get_response().getErr().errno != error_types.ERR_FORWARD_TO_OTHERS) return null;
+      java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
+      if (partitions == null || partitions.isEmpty()) return null;
+      addr = partitions.get(0).getPrimary();
+      if (addr == null || addr.isInvalid()) return null;
+    }
+
     return addr;
   }
 
-  public final void asyncQuery(client_operator op, Runnable callbackFunc, int maxQueryCount) {
-    if (maxQueryCount == 0) {
-      maxQueryCount = defaultMaxQueryCount;
+  public final void asyncExecute(client_operator op, Runnable callbackFunc, int maxExecuteCount) {
+    if (maxExecuteCount == 0) {
+      maxExecuteCount = defaultMaxQueryCount;
     }
     MetaRequestRound round;
     synchronized (this) {
-      round = new MetaRequestRound(op, callbackFunc, maxQueryCount, metaList.get(curLeader));
+      round = new MetaRequestRound(op, callbackFunc, maxExecuteCount, metaList.get(curLeader));
     }
     asyncCall(round);
   }
 
-  public final void query(client_operator op, int maxQueryCount) {
+  public final void execute(client_operator op, int maxExecuteCount) {
     FutureTask<Void> v =
         new FutureTask<Void>(
             new Callable<Void>() {
@@ -107,7 +120,7 @@ public class MetaSession extends HostNameResolver {
                 return null;
               }
             });
-    asyncQuery(op, v, maxQueryCount);
+    asyncExecute(op, v, maxExecuteCount);
     while (true) {
       try {
         v.get();
@@ -148,7 +161,7 @@ public class MetaSession extends HostNameResolver {
     boolean needSwitchLeader = false;
     rpc_address forwardAddress = null;
 
-    --round.maxQueryCount;
+    --round.maxExecuteCount;
 
     error_types metaError = error_types.ERR_UNKNOWN;
     if (op.rpc_error.errno == error_types.ERR_OK) {
@@ -181,7 +194,7 @@ public class MetaSession extends HostNameResolver {
         metaError.toString(),
         forwardAddress,
         round.lastSession.name(),
-        round.maxQueryCount,
+        round.maxExecuteCount,
         needSwitchLeader,
         needDelay);
     synchronized (this) {
@@ -211,14 +224,14 @@ public class MetaSession extends HostNameResolver {
           if (curLeader == 0 && hostPort != null && round.maxResolveCount != 0) {
             resolveHost(hostPort);
             round.maxResolveCount--;
-            round.maxQueryCount = metaList.size();
+            round.maxExecuteCount = metaList.size();
           }
         }
       }
       round.lastSession = metaList.get(curLeader);
     }
 
-    if (round.maxQueryCount == 0) {
+    if (round.maxExecuteCount == 0) {
       round.callbackFunc.run();
       return;
     }
@@ -243,13 +256,13 @@ public class MetaSession extends HostNameResolver {
 
     public client_operator op;
     public Runnable callbackFunc;
-    public int maxQueryCount;
+    public int maxExecuteCount;
     public ReplicaSession lastSession;
 
     public MetaRequestRound(client_operator o, Runnable r, int q, ReplicaSession l) {
       op = o;
       callbackFunc = r;
-      maxQueryCount = q;
+      maxExecuteCount = q;
       lastSession = l;
     }
   }

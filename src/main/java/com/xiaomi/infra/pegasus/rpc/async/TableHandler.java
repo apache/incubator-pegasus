@@ -92,7 +92,7 @@ public class TableHandler extends Table {
 
     query_cfg_request req = new query_cfg_request(name, new ArrayList<Integer>());
     query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
-    mgr.getMetaSession().query(op, 5);
+    mgr.getMetaSession().execute(op, 5);
     error_types err = MetaSession.getMetaServiceError(op);
     if (err != error_types.ERR_OK) {
       handleMetaException(err, mgr, name);
@@ -276,7 +276,7 @@ public class TableHandler extends Table {
     logger.info("query meta for table({}) query request", tableName_);
     manager_
         .getMetaSession()
-        .asyncQuery(
+        .asyncExecute(
             query_op,
             new Runnable() {
               @Override

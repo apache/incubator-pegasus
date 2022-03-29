@@ -197,7 +197,7 @@ public interface PegasusTableInterface {
   }
 
   /**
-   * @param request it contains a list of <hashKey, sortKey> pair, which is related to one partition
+   * @param request it contains a list of (hashKey, sortKey) pair, which is related to one partition
    * @param timeout how long will the operation timeout in milliseconds. if timeout > 0, it is a
    *     timeout value for current op, else the timeout value in the configuration file will be
    *     used.

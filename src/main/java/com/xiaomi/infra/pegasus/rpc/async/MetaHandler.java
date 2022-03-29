@@ -16,26 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.xiaomi.infra.pegasus.rpc;
 
-import com.xiaomi.infra.pegasus.client.ClientOptions;
-import com.xiaomi.infra.pegasus.client.PException;
-import com.xiaomi.infra.pegasus.rpc.async.ClusterManager;
-import org.apache.thrift.TException;
+package com.xiaomi.infra.pegasus.rpc.async;
 
-public abstract class Cluster {
+import com.xiaomi.infra.pegasus.base.error_code;
+import com.xiaomi.infra.pegasus.operator.client_operator;
+import com.xiaomi.infra.pegasus.rpc.Meta;
 
-  public static Cluster createCluster(ClientOptions clientOptions)
-      throws IllegalArgumentException, PException {
-    return new ClusterManager(clientOptions);
+public class MetaHandler extends Meta {
+  private MetaSession session;
+
+  public MetaHandler(MetaSession metaSession) {
+    this.session = metaSession;
   }
 
-  public abstract String[] getMetaList();
-
-  public abstract Table openTable(String name, InternalTableOptions options)
-      throws ReplicationException, TException;
-
-  public abstract Meta getMeta();
-
-  public abstract void close();
+  @Override
+  public error_code.error_types operate(client_operator op, int retryCount) {
+    this.session.execute(op, retryCount);
+    return MetaSession.getMetaServiceError(op);
+  }
 }
