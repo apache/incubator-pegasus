@@ -54,8 +54,9 @@ RUN apt-get update -y; \
 RUN add-apt-repository ppa:git-core/ppa -y; \
     apt-get update -y; \
     apt-get install git -y; \
+    apt-get install pkg-config -y; \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir cmake
 
-WORKDIR /root/pegasus
+WORKDIR /root/apache

@@ -17,7 +17,7 @@
 
 ARG OS_VERSION=centos7
 
-FROM ghcr.io/pegasus-kv/thirdparties-src as builder
+FROM apachepegasus/thirdparties-src as builder
 
 ARG OS_VERSION=centos7
 

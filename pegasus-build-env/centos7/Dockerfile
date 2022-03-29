@@ -59,4 +59,4 @@ RUN pip3 install --no-cache-dir cmake
 
 ENV PATH="/opt/rh/devtoolset-7/root/bin/:${PATH}"
 
-WORKDIR /root/pegasus
+WORKDIR /root/apache

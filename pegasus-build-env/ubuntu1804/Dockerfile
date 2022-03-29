@@ -55,8 +55,14 @@ RUN apt-get update -y; \
 RUN add-apt-repository ppa:git-core/ppa -y; \
     apt-get update -y; \
     apt-get install git -y; \
+    apt-get install pkg-config -y; \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir cmake
 
-WORKDIR /root/pegasus
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV CLASSPATH=$JAVA_HOME/lib/
+ENV PATH=$JAVA_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$LD_LIBRARY_PATH
+
+WORKDIR /root/apache

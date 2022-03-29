@@ -18,7 +18,7 @@
 # use dockerhub by default
 ARG REGISTRY_REPO=apachepegasus
 
-FROM ${REGISTRY_REPO}/build-env:ubuntu1804 as builder
+FROM ${REGISTRY_REPO}/build-env:centos7 as builder
 
 WORKDIR /root
 
