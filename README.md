@@ -5,17 +5,11 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 
 ## Workflows
 
-![Build and publish pegasus-build-env Docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20publish%20pegasus-build-env%20Docker%20images/badge.svg?branch=master)
+![Build and publish multi pegasus-build-env docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/BuildCompilationEnvDocker-build%20and%20publish%20multi%20compilation%20os%20env/badge.svg?branch=master)
 
-![Build and upload third-party source package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20source%20package%20to%20GHCR/badge.svg)
+![Build and publish multi os env thirdparty docker images every week](https://github.com/pegasus-kv/pegasus-docker/workflows/BuildThirdpartyDockerRegularly-build%20and%20publish%20thirdparty%20every%20week/badge.svg?branch=master)
 
-![Build and upload third-party binary package to GHCR](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20and%20upload%20third-party%20binary%20package%20to%20GHCR/badge.svg?branch=master)
-
-![Build rdsn regularly](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20rdsn%20regularly/badge.svg?branch=master)
-
-![Build rdsn with sanitizers](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20rdsn%20with%20sanitizers/badge.svg)
-
-![Build Pegasus regularly](https://github.com/pegasus-kv/pegasus-docker/workflows/Build%20Pegasus%20regularly/badge.svg)
+![Build pegasus/rdsn regularly based env and thirdparty docker  everyday](https://github.com/pegasus-kv/pegasus-docker/workflows/BuildPegasusRegularly-build%20pegasus%20and%20rdsn%20on%20different%20env%20every%20day/badge.svg?branch=master)
 
 ## pegasus-build-env
 
@@ -27,10 +21,6 @@ Github Actions automatically rebuilds and publishes build-env for every commit.
 - `apachepegasus/build-env:ubuntu1604`
 - `apachepegasus/build-env:ubuntu1804`
 - `apachepegasus/build-env:ubuntu2004`
-- `ghcr.io/pegasus-kv/build-env:centos7`
-- `ghcr.io/pegasus-kv/build-env:ubuntu1604`
-- `ghcr.io/pegasus-kv/build-env:ubuntu1804`
-- `ghcr.io/pegasus-kv/build-env:ubuntu2004`
 
 DockerHub: https://hub.docker.com/r/apachepegasus/build-env
 
@@ -43,17 +33,14 @@ It packages the downloaded sources into a zip in the container, so that
 other repos can easily extract third-parties from the container (via `docker cp`),
 without downloading from the cloud object storage.
 
-Since it mostly benefits the building in Github Actions, we uploaded it automatically
-to the Github Container Registry:
-
-- `ghcr.io/pegasus-kv/thirdparties-src`
+- `apachepegasus/thirdparties-src`
 
 ## thirdparties-bin
 
 This is a Docker image for Pegasus unit-testing. It prebuilts the thirdparty libraries,
 so jobs based on this image can skip building third-parties.
 
-- `ghcr.io/pegasus-kv/thirdparties-bin:centos7`
-- `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1604`
-- `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804`
-- `ghcr.io/pegasus-kv/thirdparties-bin:ubuntu2004`
+- `apachepegasus/thirdparties-bin:centos7`
+- `apachepegasus/thirdparties-bin:ubuntu1604`
+- `apachepegasus/thirdparties-bin:ubuntu1804`
+- `apachepegasus/thirdparties-bin:ubuntu2004`

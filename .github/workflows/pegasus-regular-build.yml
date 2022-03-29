@@ -1,4 +1,4 @@
-name: EnvCIRegularly-build pegasus on different env every day
+name: BuildPegasusRegularly-build pegasus and rdsn on different env every day
 
 on:
   push:
