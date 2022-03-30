@@ -205,7 +205,7 @@ bool change_dup_status(command_executor *e,
 
     std::string operation;
     switch (status) {
-    case duplication_status::DS_START:
+    case duplication_status::DS_LOG:
         operation = "starting duplication";
         break;
     case duplication_status::DS_PAUSE:
@@ -215,7 +215,7 @@ bool change_dup_status(command_executor *e,
         operation = "removing duplication";
         break;
     default:
-        dfatal("unexpected duplication status %d", status);
+        dfatal("can't change duplication under status %d", status);
     }
 
     auto err_resp = sc->ddl_client->change_dup_status(app_name, dup_id, status);
@@ -231,7 +231,7 @@ bool remove_dup(command_executor *e, shell_context *sc, arguments args)
 
 bool start_dup(command_executor *e, shell_context *sc, arguments args)
 {
-    return change_dup_status(e, sc, args, duplication_status::DS_START);
+    return change_dup_status(e, sc, args, duplication_status::DS_LOG);
 }
 
 bool pause_dup(command_executor *e, shell_context *sc, arguments args)
