@@ -38,12 +38,6 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         fmt::print(stderr, "too many params\n");
         return false;
     }
-    for (const auto &flag : cmd.flags()) {
-        if (flag != "f" && flag != "freeze") {
-            fmt::print(stderr, "unknown flag {}\n", flag);
-            return false;
-        }
-    }
 
     if (!cmd(1)) {
         fmt::print(stderr, "missing param <app_name>\n");
@@ -63,9 +57,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    bool freeze = cmd[{"-f", "--freeze"}];
-
-    auto err_resp = sc->ddl_client->add_dup(app_name, remote_cluster_name, freeze);
+    auto err_resp = sc->ddl_client->add_dup(app_name, remote_cluster_name);
     dsn::error_s err = err_resp.get_error();
     std::string hint;
     if (err.is_ok()) {
@@ -74,10 +66,9 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
     if (!err.is_ok()) {
         fmt::print(stderr,
-                   "adding duplication failed [app: {}, remote: {}, freeze: {}, error: {}]\n",
+                   "adding duplication failed [app: {}, remote: {}, error: {}]\n",
                    app_name,
                    remote_cluster_name,
-                   freeze,
                    err.description());
         if (!hint.empty()) {
             fmt::print(stderr, "detail:\n  {}\n", hint);
@@ -85,12 +76,11 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-                   "{}, freeze: {}]\n",
+                   "{}]\n",
                    app_name,
                    remote_cluster_name,
                    resp.appid,
-                   resp.dupid,
-                   freeze);
+                   resp.dupid);
     }
     return true;
 }
