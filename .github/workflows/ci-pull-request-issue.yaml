@@ -33,6 +33,5 @@ jobs:
         uses: neofinancial/ticket-check-action@v1.3.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          ticketPrefix: '#'
           titleFormat: '%title%'
           bodyURLRegex: 'http(s?):\/\/(github.com)(\/apache)(\/incubator-pegasus)(\/issues)\/\d+'
