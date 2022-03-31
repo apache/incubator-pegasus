@@ -37,8 +37,8 @@ github:
     squash:  true
     # disable merge button:
     merge:   false
-    # disable rebase button:
-    rebase:  false
+    # enable rebase button:
+    rebase:  true
 
 notifications:
   commits: commits@pegasus.apache.org
