@@ -40,7 +40,7 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
 
     for (const auto &flag : cmd.flags()) {
-        if (flag != "s" && flag != "sst") {
+        if (dsn_unlikely(flag != "s" && flag != "sst")) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
         }
