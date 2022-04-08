@@ -39,6 +39,13 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
+    for (const auto &flag : cmd.flags()) {
+        if (dsn_unlikely(flag != "s" && flag != "sst")) {
+            fmt::print(stderr, "unknown flag {}\n", flag);
+            return false;
+        }
+    }
+
     if (!cmd(1)) {
         fmt::print(stderr, "missing param <app_name>\n");
         return false;
@@ -57,7 +64,9 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    auto err_resp = sc->ddl_client->add_dup(app_name, remote_cluster_name);
+    bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
+    auto err_resp =
+        sc->ddl_client->add_dup(app_name, remote_cluster_name, is_duplicating_checkpoint);
     dsn::error_s err = err_resp.get_error();
     std::string hint;
     if (err.is_ok()) {
@@ -66,9 +75,10 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
     if (!err.is_ok()) {
         fmt::print(stderr,
-                   "adding duplication failed [app: {}, remote: {}, error: {}]\n",
+                   "adding duplication failed [app: {}, remote: {}, checkpoint: {}, error: {}]\n",
                    app_name,
                    remote_cluster_name,
+                   is_duplicating_checkpoint,
                    err.description());
         if (!hint.empty()) {
             fmt::print(stderr, "detail:\n  {}\n", hint);
@@ -76,11 +86,12 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-                   "{}]\n",
+                   "{}], checkpoint: {}\n",
                    app_name,
                    remote_cluster_name,
                    resp.appid,
-                   resp.dupid);
+                   resp.dupid,
+                   is_duplicating_checkpoint);
     }
     return true;
 }
