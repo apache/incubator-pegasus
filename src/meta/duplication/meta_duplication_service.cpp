@@ -188,7 +188,7 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
                                                   duplication_info_s_ptr &dup,
                                                   duplication_add_rpc &rpc)
 {
-    const auto err = dup->start();
+    const auto err = dup->start(rpc.request().is_duplicating_checkpoint);
     if (dsn_unlikely(err != ERR_OK)) {
         derror_f("start dup[{}({})] failed: err = {}", app->app_name, dup->id, err.to_string());
         return;
@@ -269,7 +269,7 @@ void meta_duplication_service::duplication_sync(duplication_sync_rpc rpc)
                 continue;
             }
 
-            if (dup->all_checkpoint_has_prepared()) {
+            if (dup->status() < duplication_status::DS_LOG && dup->all_checkpoint_has_prepared()) {
                 if (dup->status() == duplication_status::DS_PREPARE) {
                     create_follower_app_for_duplication(dup, app);
                 } else if (dup->status() == duplication_status::DS_APP) {

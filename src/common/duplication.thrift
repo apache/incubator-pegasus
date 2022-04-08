@@ -58,6 +58,12 @@ struct duplication_add_request
 {
     1:string  app_name;
     2:string  remote_cluster_name;
+    // whether to duplicate checkpoint.
+    // - if true, duplication start state=DS_PREPARE,
+    // server will use nfs duplicate checkpoint to follower cluster,
+    // - if false, duplication start state=DS_LOG,
+    // server will replay and send plog mutation to follower cluster derectly
+    3:optional bool is_duplicating_checkpoint = true;
 }
 
 struct duplication_add_response

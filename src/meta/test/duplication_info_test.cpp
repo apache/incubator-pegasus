@@ -207,7 +207,10 @@ TEST_F(duplication_info_test, alter_status)
         {{duplication_status::DS_PREPARE, duplication_status::DS_APP},
          {duplication_status::DS_APP},
          ERR_OK},
-        {{duplication_status::DS_APP, duplication_status::DS_PAUSE, duplication_status::DS_LOG},
+        {{duplication_status::DS_INIT,
+          duplication_status::DS_APP,
+          duplication_status::DS_PAUSE,
+          duplication_status::DS_LOG},
          {duplication_status::DS_LOG},
          ERR_OK},
         {{duplication_status::DS_LOG, duplication_status::DS_PAUSE},
@@ -241,9 +244,7 @@ TEST_F(duplication_info_test, alter_status)
          {duplication_status::DS_PAUSE},
          ERR_INVALID_PARAMETERS},
 
-        {{duplication_status::DS_INIT, duplication_status::DS_PREPARE},
-         {duplication_status::DS_LOG},
-         ERR_INVALID_PARAMETERS},
+        {{duplication_status::DS_PREPARE}, {duplication_status::DS_LOG}, ERR_INVALID_PARAMETERS},
 
         {{duplication_status::DS_LOG},
          {duplication_status::DS_INIT, duplication_status::DS_PREPARE, duplication_status::DS_APP},

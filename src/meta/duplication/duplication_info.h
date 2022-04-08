@@ -65,7 +65,17 @@ public:
 
     duplication_info() = default;
 
-    error_code start() { return alter_status(duplication_status::DS_PREPARE); }
+    error_code start(bool is_duplicating_checkpoint = true)
+    {
+        if (is_duplicating_checkpoint) {
+            return alter_status(duplication_status::DS_PREPARE);
+        }
+        dwarn_f("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
+                id,
+                follower_cluster_name,
+                app_name);
+        return alter_status(duplication_status::DS_LOG);
+    }
 
     // error will be returned if this state transition is not allowed.
     error_code
@@ -89,8 +99,8 @@ public:
                (to_status == duplication_status::DS_APP &&
                 _status == duplication_status::DS_PREPARE) ||
                (to_status == duplication_status::DS_LOG &&
-                (_status == duplication_status::DS_PAUSE ||
-                 _status == duplication_status::DS_APP)) ||
+                (_status == duplication_status::DS_PAUSE || _status == duplication_status::DS_APP ||
+                 _status == duplication_status::DS_INIT)) ||
                (to_status == duplication_status::DS_PAUSE &&
                 _status == duplication_status::DS_LOG) ||
                (to_status == duplication_status::DS_REMOVED);
