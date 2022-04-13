@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replica_envs.h>
 #include <dsn/service_api_c.h>
 #include <dsn/utility/defer.h>
 
@@ -127,6 +128,18 @@ public:
 
         auto &partition_config = app->partitions[partition_index];
         partition_config.max_replica_count = max_replica_count;
+    }
+
+    void set_max_replica_count_env(const std::string &app_name, const std::string &env)
+    {
+        auto app = find_app(app_name);
+        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+
+        if (env.empty()) {
+            app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
+        } else {
+            app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT] = env;
+        }
     }
 
     configuration_set_max_replica_count_response set_max_replica_count(const std::string &app_name,
@@ -559,6 +572,7 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
     // - cluster is freezed (alive_node_count = 0)
     // - cluster is freezed (alive_node_count = 1 < min_live_node_count_for_unfreeze)
     // - cluster is freezed (alive_node_count = 2 < min_live_node_count_for_unfreeze)
+    // - request is rejected once there has been already an unfinished update
     // - increase with valid max_replica_count (= max_allowed_replica_count, and = alive_node_count)
     // - decrease with valid max_replica_count (= max_allowed_replica_count, and = alive_node_count)
     // - unchanged valid max_replica_count (= max_allowed_replica_count, and = alive_node_count)
@@ -591,49 +605,51 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
         int alive_node_count;
         int32_t min_allowed_replica_count;
         int32_t max_allowed_replica_count;
+        std::string env;
         error_code expected_err;
-    } tests[] = {{"abc_xyz", 0, 3, 3, 2, 3, 1, 3, ERR_APP_NOT_EXIST},
-                 {APP_NAME, 0, 3, 3, 2, 3, 1, 3, ERR_INCONSISTENT_STATE},
-                 {APP_NAME, 3, 3, -1, 2, 3, 1, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 3, 3, 0, 2, 3, 1, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 3, 1, 1, 1, 2, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 3, 1, 2, 1, 1, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 2, 1, 1, 1, 1, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 2, 1, 1, 1, 2, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 2, 1, 1, 1, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 2, 1, 2, 1, 1, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 2, 1, 3, 1, 1, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 2, 2, 1, 1, 3, 2, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 3, 3, 1, 1, 2, 3, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 3, 3, 2, 1, 3, 3, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 3, 3, 2, 1, 1, 3, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 3, 3, 2, 1, 2, 3, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 2, 2, 2, 1, 1, 2, 3, ERR_INVALID_PARAMETERS},
-                 {APP_NAME, 1, 1, 2, 1, 0, 1, 3, ERR_STATE_FREEZED},
-                 {APP_NAME, 1, 1, 2, 2, 1, 1, 3, ERR_STATE_FREEZED},
-                 {APP_NAME, 1, 1, 2, 3, 2, 1, 3, ERR_STATE_FREEZED},
-                 {APP_NAME, 1, 1, 2, 1, 2, 1, 2, ERR_OK},
-                 {APP_NAME, 2, 2, 1, 1, 1, 1, 1, ERR_OK},
-                 {APP_NAME, 2, 2, 2, 1, 2, 1, 2, ERR_OK},
-                 {APP_NAME, 1, 1, 2, 1, 3, 1, 2, ERR_OK},
-                 {APP_NAME, 2, 2, 1, 1, 2, 1, 1, ERR_OK},
-                 {APP_NAME, 2, 2, 2, 1, 3, 1, 2, ERR_OK},
-                 {APP_NAME, 1, 1, 2, 1, 2, 1, 3, ERR_OK},
-                 {APP_NAME, 3, 3, 2, 1, 2, 1, 3, ERR_OK},
-                 {APP_NAME, 2, 2, 2, 1, 2, 1, 3, ERR_OK},
-                 {APP_NAME, 2, 2, 1, 1, 3, 1, 2, ERR_OK},
-                 {APP_NAME, 1, 1, 1, 1, 3, 1, 2, ERR_OK},
-                 {APP_NAME, 2, 2, 1, 1, 2, 1, 3, ERR_OK},
-                 {APP_NAME, 1, 1, 1, 1, 2, 1, 3, ERR_OK},
-                 {APP_NAME, 1, 1, 2, 1, 3, 1, 3, ERR_OK},
-                 {APP_NAME, 3, 3, 2, 1, 3, 1, 3, ERR_OK},
-                 {APP_NAME, 2, 2, 2, 1, 3, 1, 3, ERR_OK},
-                 {APP_NAME, 1, 1, 2, 1, 3, 2, 3, ERR_OK},
-                 {APP_NAME, 3, 3, 2, 1, 3, 2, 3, ERR_OK},
-                 {APP_NAME, 2, 2, 2, 1, 3, 2, 3, ERR_OK},
-                 {APP_NAME, 2, 2, 3, 2, 3, 2, 3, ERR_OK},
-                 {APP_NAME, 1, 1, 3, 2, 3, 1, 3, ERR_OK},
-                 {APP_NAME, 3, 3, 1, 2, 3, 1, 3, ERR_OK}};
+    } tests[] = {{"abc_xyz", 0, 3, 3, 2, 3, 1, 3, "", ERR_APP_NOT_EXIST},
+                 {APP_NAME, 0, 3, 3, 2, 3, 1, 3, "", ERR_INCONSISTENT_STATE},
+                 {APP_NAME, 3, 3, -1, 2, 3, 1, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 3, 3, 0, 2, 3, 1, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 3, 1, 1, 1, 2, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 3, 1, 2, 1, 1, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 2, 1, 1, 1, 1, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 2, 1, 1, 1, 2, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 2, 1, 1, 1, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 2, 1, 2, 1, 1, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 2, 1, 3, 1, 1, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 2, 2, 1, 1, 3, 2, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 3, 3, 1, 1, 2, 3, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 3, 3, 2, 1, 3, 3, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 3, 3, 2, 1, 1, 3, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 3, 3, 2, 1, 2, 3, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 2, 2, 2, 1, 1, 2, 3, "", ERR_INVALID_PARAMETERS},
+                 {APP_NAME, 1, 1, 2, 1, 0, 1, 3, "", ERR_STATE_FREEZED},
+                 {APP_NAME, 1, 1, 2, 2, 1, 1, 3, "", ERR_STATE_FREEZED},
+                 {APP_NAME, 1, 1, 2, 3, 2, 1, 3, "", ERR_STATE_FREEZED},
+                 {APP_NAME, 2, 2, 3, 2, 3, 2, 3, "updating;3", ERR_OPERATION_DISABLED},
+                 {APP_NAME, 1, 1, 2, 1, 2, 1, 2, "", ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 1, 1, 1, "", ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 2, 1, 2, "", ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 3, 1, 2, "", ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 2, 1, 1, "", ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 3, 1, 2, "", ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 2, 1, 3, "", ERR_OK},
+                 {APP_NAME, 3, 3, 2, 1, 2, 1, 3, "", ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 2, 1, 3, "", ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 3, 1, 2, "", ERR_OK},
+                 {APP_NAME, 1, 1, 1, 1, 3, 1, 2, "", ERR_OK},
+                 {APP_NAME, 2, 2, 1, 1, 2, 1, 3, "", ERR_OK},
+                 {APP_NAME, 1, 1, 1, 1, 2, 1, 3, "", ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 3, 1, 3, "", ERR_OK},
+                 {APP_NAME, 3, 3, 2, 1, 3, 1, 3, "", ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 3, 1, 3, "", ERR_OK},
+                 {APP_NAME, 1, 1, 2, 1, 3, 2, 3, "", ERR_OK},
+                 {APP_NAME, 3, 3, 2, 1, 3, 2, 3, "", ERR_OK},
+                 {APP_NAME, 2, 2, 2, 1, 3, 2, 3, "", ERR_OK},
+                 {APP_NAME, 2, 2, 3, 2, 3, 2, 3, "", ERR_OK},
+                 {APP_NAME, 1, 1, 3, 2, 3, 1, 3, "", ERR_OK},
+                 {APP_NAME, 3, 3, 1, 2, 3, 1, 3, "", ERR_OK}};
 
     const int32_t total_node_count = 3;
     auto nodes = ensure_enough_alive_nodes(total_node_count);
@@ -657,6 +673,7 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
         set_node_live_percentage_threshold_for_update(0);
 
         if (test.expected_err != ERR_APP_NOT_EXIST) {
+            set_max_replica_count_env(test.app_name, test.env);
             // set the initial max_replica_count for the app and all of its partitions
             set_app_and_all_partitions_max_replica_count(test.app_name,
                                                          test.initial_max_replica_count);
