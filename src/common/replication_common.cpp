@@ -591,7 +591,7 @@ replication_options::check_if_in_black_list(const std::vector<std::string> &blac
     return false;
 }
 
-const std::string replica_envs::DENY_CLIENT_WRITE("replica.deny_client_write");
+const std::string replica_envs::DENY_CLIENT_REQUEST("replica.deny_client_request");
 const std::string replica_envs::WRITE_QPS_THROTTLING("replica.write_throttling");
 const std::string replica_envs::WRITE_SIZE_THROTTLING("replica.write_throttling_by_size");
 const uint64_t replica_envs::MIN_SLOW_QUERY_THRESHOLD_MS = 20;

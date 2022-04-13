@@ -140,7 +140,33 @@ TEST_F(meta_app_envs_test, update_app_envs_test)
          "",
          "200"},
         {replica_envs::BUSINESS_INFO, "300", ERR_OK, "", "300"},
-        {replica_envs::DENY_CLIENT_WRITE, "400", ERR_OK, "", "400"},
+        {replica_envs::DENY_CLIENT_REQUEST,
+         "400",
+         ERR_INVALID_PARAMETERS,
+         "Invalid deny client args, valid include: timeout*all, "
+         "timeout*write, timeout*read; reconfig*all, reconfig*write, "
+         "reconfig*read",
+         "400"},
+        {replica_envs::DENY_CLIENT_REQUEST,
+         "invalid*all",
+         ERR_INVALID_PARAMETERS,
+         "Invalid deny client args, valid include: timeout*all, "
+         "timeout*write, timeout*read; reconfig*all, reconfig*write, "
+         "reconfig*read",
+         "invalid*all"},
+        {replica_envs::DENY_CLIENT_REQUEST,
+         "timeout*invalid",
+         ERR_INVALID_PARAMETERS,
+         "Invalid deny client args, valid include: timeout*all, "
+         "timeout*write, timeout*read; reconfig*all, reconfig*write, "
+         "reconfig*read",
+         "timeout*invalid"},
+        {replica_envs::DENY_CLIENT_REQUEST, "reconfig*all", ERR_OK, "", "reconfig*all"},
+        {replica_envs::DENY_CLIENT_REQUEST, "reconfig*write", ERR_OK, "", "reconfig*write"},
+        {replica_envs::DENY_CLIENT_REQUEST, "reconfig*read", ERR_OK, "", "reconfig*read"},
+        {replica_envs::DENY_CLIENT_REQUEST, "timeout*all", ERR_OK, "", "timeout*all"},
+        {replica_envs::DENY_CLIENT_REQUEST, "timeout*write", ERR_OK, "", "timeout*write"},
+        {replica_envs::DENY_CLIENT_REQUEST, "timeout*read", ERR_OK, "", "timeout*read"},
         {"not_exist_env",
          "500",
          ERR_INVALID_PARAMETERS,

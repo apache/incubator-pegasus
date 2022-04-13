@@ -94,6 +94,14 @@ public:
             envs, replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND, _mock_replica->_allow_ingest_behind);
     }
 
+    const deny_client &update_deny_client(const std::string &env_name, std::string env_value)
+    {
+        std::map<std::string, std::string> envs;
+        envs[env_name] = std::move(env_value);
+        _mock_replica->update_deny_client(envs);
+        return _mock_replica->_deny_client;
+    }
+
     void mock_app_info()
     {
         _app_info.app_id = 2;
@@ -409,5 +417,23 @@ TEST_F(replica_test, test_clear_on_failer)
     ASSERT_FALSE(has_gpid(pid));
 }
 
+TEST_F(replica_test, update_deny_client_test)
+{
+    struct update_deny_client_test
+    {
+        std::string env_name;
+        std::string env_value;
+        deny_client expected;
+    } tests[]{{"invalid", "invalid", {false, false, false}},
+              {"replica.deny_client_request", "reconfig*all", {true, true, true}},
+              {"replica.deny_client_request", "reconfig*write", {false, true, true}},
+              {"replica.deny_client_request", "reconfig*read", {true, false, true}},
+              {"replica.deny_client_request", "timeout*all", {true, true, false}},
+              {"replica.deny_client_request", "timeout*write", {false, true, false}},
+              {"replica.deny_client_request", "timeout*read", {true, false, false}}};
+    for (const auto &test : tests) {
+        ASSERT_EQ(update_deny_client(test.env_name, test.env_value), test.expected);
+    }
+}
 } // namespace replication
 } // namespace dsn
