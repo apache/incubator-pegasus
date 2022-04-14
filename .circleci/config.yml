@@ -1,4 +1,3 @@
-#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,24 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-#!/usr/bin/env bash
-
-cd "$( dirname "${BASH_SOURCE[0]}" )" || exit 1
-
-source cluster_args.sh
-
-if ! [[ -d "${DOCKER_DIR}" ]]; then
-    echo "Cleared ${DOCKER_DIR} already"
-    exit 0
-fi
-cd "${DOCKER_DIR}" || exit 1
-pwd
-
-docker-compose kill
-docker-compose rm -f -v
-docker network prune -f
-
-cd "${ROOT}" || exit 1
-
-sudo rm -rf "${DOCKER_DIR}"
+---
+version: 2.1
+orbs:
+  docker: circleci/docker@2.0.3
+workflows:
+  lint:
+    jobs:
+      - docker/hadolint:
+          dockerfiles: 'docker/bcc-centos7/Dockerfile:docker/ci-env/Dockerfile:docker/clang-format-3.9/Dockerfile:docker/pegasus-build-env/centos7/Dockerfile:docker/pegasus-build-env/ubuntu1604/Dockerfile:docker/pegasus-build-env/ubuntu1804/Dockerfile:docker/pegasus-build-env/ubuntu2004/Dockerfile:docker/pegasus-docker-compose/image_for_prebuilt_bin/Dockerfile:docker/thirdparties-bin/Dockerfile:docker/thirdparties-src/Dockerfile'
+          ignore-rules: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006'
