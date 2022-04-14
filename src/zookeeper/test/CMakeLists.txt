@@ -12,8 +12,11 @@ set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_LIBS 
     dsn.replication.zookeeper_provider
     dsn_runtime
-    zookeeper_mt
+    zookeeper
+    hashtable
     gtest
+    ssl
+    crypto
     )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

@@ -21,7 +21,7 @@ set(MY_PROJ_LIBS
     dsn_http
     dsn_runtime
     dsn_aio
-    zookeeper_mt
+    zookeeper
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation

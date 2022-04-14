@@ -33,9 +33,22 @@
  */
 
 #include <zookeeper/zookeeper.h>
+#include <sasl/sasl.h>
 
 #include "zookeeper_session.h"
 #include "zookeeper_session_mgr.h"
+
+#include <dsn/utility/flags.h>
+
+namespace dsn {
+namespace security {
+DSN_DECLARE_bool(enable_zookeeper_kerberos);
+DSN_DEFINE_string("security",
+                  zookeeper_kerberos_service_name,
+                  "zookeeper",
+                  "zookeeper kerberos service name");
+} // namespace security
+} // namespace dsn
 
 namespace dsn {
 namespace dist {
@@ -141,12 +154,26 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
 {
     utils::auto_write_lock l(_watcher_lock);
     if (nullptr == _handle) {
-        _handle = zookeeper_init(zookeeper_session_mgr::instance().zoo_hosts(),
-                                 global_watcher,
-                                 zookeeper_session_mgr::instance().timeout(),
-                                 nullptr,
-                                 this,
-                                 0);
+        if (dsn::security::FLAGS_enable_zookeeper_kerberos) {
+            zoo_sasl_params_t sasl_params = {0};
+            sasl_params.service = dsn::security::FLAGS_zookeeper_kerberos_service_name;
+            sasl_params.mechlist = "GSSAPI";
+            _handle = zookeeper_init_sasl(zookeeper_session_mgr::instance().zoo_hosts(),
+                                          global_watcher,
+                                          zookeeper_session_mgr::instance().timeout(),
+                                          nullptr,
+                                          this,
+                                          0,
+                                          NULL,
+                                          &sasl_params);
+        } else {
+            _handle = zookeeper_init(zookeeper_session_mgr::instance().zoo_hosts(),
+                                     global_watcher,
+                                     zookeeper_session_mgr::instance().timeout(),
+                                     nullptr,
+                                     this,
+                                     0);
+        }
         dassert(_handle != nullptr, "zookeeper session init failed");
     }
 

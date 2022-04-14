@@ -20,7 +20,8 @@ set(MY_PROJ_LIBS dsn_meta_server
                  dsn.failure_detector
                  dsn_http
                  dsn_runtime
-                 zookeeper_mt
+                 zookeeper
+                 hashtable
                  gtest)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

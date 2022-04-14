@@ -25,7 +25,8 @@ set(MY_PROJ_LIBS
         dsn_http
         dsn_runtime
         dsn_aio
-        zookeeper_mt
+        zookeeper
+        hashtable
         galaxy-fds-sdk-cpp
         PocoNet
         PocoFoundation
@@ -33,6 +34,7 @@ set(MY_PROJ_LIBS
         PocoJSON
         crypto
         gtest
+        ssl
         hdfs)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

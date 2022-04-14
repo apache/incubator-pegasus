@@ -48,7 +48,7 @@ set(TP_OUTPUT ${PROJECT_SOURCE_DIR}/output)
 # LOG_DIR      = <STAMP_DIR>
 set_property(DIRECTORY PROPERTY EP_BASE ${TP_DIR}/build)
 
-set(OSS_URL_PREFIX "http://pegasus-thirdparties.oss-cn-beijing.aliyuncs.com")
+set(OSS_URL_PREFIX "http://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.com")
 
 message(STATUS "Setting up third-parties...")
 
@@ -107,7 +107,8 @@ ExternalProject_Add(gperftools
 
 set(HDFS_CLIENT_DIR "hadoop-hdfs-project/hadoop-hdfs-native-client")
 ExternalProject_Add(hadoop
-        URL https://github.com/apache/hadoop/archive/refs/tags/rel/release-2.8.4.tar.gz
+        URL ${OSS_URL_PREFIX}/hadoop-release-2.8.4.tar.gz
+        https://github.com/apache/hadoop/archive/refs/tags/rel/release-2.8.4.tar.gz
         URL_MD5 a1be737d4bff14923689619ab6545a96
         PATCH_COMMAND ""
         COMMAND cd ${HDFS_CLIENT_DIR} && mvn package -Pdist,native -DskipTests -Dmaven.javadoc.skip=true -Dtar
@@ -160,12 +161,16 @@ if (COMPILER_SUPPORTS_FORMAT_OVERFLOW)
     set(ZOOKEEPER_CFLAGS -Wno-error=format-overflow)
 endif ()
 ExternalProject_Add(zookeeper
-        URL ${OSS_URL_PREFIX}/zookeeper-3.4.10.tar.gz
-        http://ftp.jaist.ac.jp/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
-        URL_MD5 e4cf1b1593ca870bf1c7a75188f09678
-        CONFIGURE_COMMAND cd src/c && CFLAGS=${ZOOKEEPER_CFLAGS} ./configure --enable-static=yes --enable-shared=no --prefix=${TP_OUTPUT} --with-pic=yes
-        BUILD_COMMAND cd src/c && make
-        INSTALL_COMMAND cd src/c && make install
+        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.7.0.tar.gz
+        http://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0.tar.gz
+        URL_MD5 44c2a33e01931aed94ef7f3d39d0963e
+        PATCH_COMMAND ""
+        COMMAND cd zookeeper-jute && mvn compile && cd ../zookeeper-client/zookeeper-client-c && cmake -DCMAKE_BUILD_TYPE=release -DWANT_CPPUNIT=OFF -WITH_OPENSSL=OFF -DWITH_CYRUS_SASL=${TP_OUTPUT} -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
+        COMMAND cd zookeeper-client/zookeeper-client-c && make
+        COMMAND cp -R zookeeper-client/zookeeper-client-c/include/. ${TP_OUTPUT}/include/zookeeper && cp zookeeper-client/zookeeper-client-c/generated/zookeeper.jute.h ${TP_OUTPUT}/include/zookeeper && cp zookeeper-client/zookeeper-client-c/libzookeeper.a ${TP_OUTPUT}/lib && cp zookeeper-client/zookeeper-client-c/libhashtable.a ${TP_OUTPUT}/lib
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
         )
 
@@ -206,7 +211,8 @@ ExternalProject_Add(poco
         )
 
 ExternalProject_Add(fds
-        URL https://github.com/XiaoMi/galaxy-fds-sdk-cpp/archive/refs/tags/v1.0.0.tar.gz
+        URL ${OSS_URL_PREFIX}/fds-1.0.0.tar.gz
+        https://github.com/XiaoMi/galaxy-fds-sdk-cpp/archive/refs/tags/v1.0.0.tar.gz
         URL_MD5 f7e0f86534f7b15c2a9b349f5cb45503
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_fds_for_macos.patch
         CMAKE_ARGS -DPOCO_INCLUDE=${TP_OUTPUT}/include
@@ -226,7 +232,8 @@ ExternalProject_Add(fds
 
 # fmtlib >=6.x requires c++14 support, do not update this library for now
 ExternalProject_Add(fmt
-        URL https://github.com/fmtlib/fmt/archive/refs/tags/5.3.0.tar.gz
+        URL ${OSS_URL_PREFIX}/fmt-5.3.0.tar.gz
+        https://github.com/fmtlib/fmt/archive/refs/tags/5.3.0.tar.gz
         URL_MD5 1015bf3ff2a140dfe03de50ee2469401
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DCMAKE_BUILD_TYPE=release
@@ -327,7 +334,8 @@ option(USE_JEMALLOC "use jemalloc" OFF)
 message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
 
 ExternalProject_Add(jemalloc
-        URL https://github.com/jemalloc/jemalloc/releases/download/5.2.1/jemalloc-5.2.1.tar.bz2
+        URL ${OSS_URL_PREFIX}/jemalloc-5.2.1.tar.bz2
+        https://github.com/jemalloc/jemalloc/releases/download/5.2.1/jemalloc-5.2.1.tar.bz2
         URL_MD5 3d41fbf006e6ebffd489bdb304d009ae
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-cxx --enable-stats --enable-prof
         BUILD_COMMAND make
@@ -359,36 +367,6 @@ ExternalProject_Add(rocksdb
         -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
         -DPORTABLE=${ROCKSDB_PORTABLE}
         )
-
-if (NOT APPLE)
-# kerberos
-ExternalProject_Add(krb5
-        URL ${OSS_URL_PREFIX}/krb5-1.16.1.tar.gz
-        http://web.mit.edu/kerberos/dist/krb5/1.16/krb5-1.16.1.tar.gz
-        URL_MD5 848e9b80d6aaaa798e3f3df24b83c407
-        CONFIGURE_COMMAND cd src && ./configure --prefix=${TP_OUTPUT}
-        BUILD_COMMAND cd src && make
-        INSTALL_COMMAND cd src && make install
-        BUILD_IN_SOURCE 1
-        )
-
-# cyrus-sasl
-ExternalProject_Add(cyrus-sasl
-        URL ${OSS_URL_PREFIX}/cyrus-sasl-2.1.27.tar.gz
-        http://www.cyrusimap.org/releases/cyrus-sasl-2.1.27.tar.gz
-        URL_MD5 a33820c66e0622222c5aefafa1581083
-        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
-        --enable-gssapi=${TP_OUTPUT}
-        --enable-scram=no
-        --enable-digest=no
-        --enable-cram=no
-        --enable-otp=no
-        BUILD_COMMAND make
-        INSTALL_COMMAND make install
-        BUILD_IN_SOURCE 1
-        )
-add_dependencies(cyrus-sasl krb5)
-endif()
 
 ExternalProject_Add(http-parser
         URL ${OSS_URL_PREFIX}/http-parser-2.9.4.zip

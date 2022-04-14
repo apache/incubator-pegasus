@@ -13,7 +13,7 @@ set(MY_PROJ_SRC ${SIMPLE_KV_THRIFT_SRCS})
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS dsn_replica_server dsn_meta_server dsn_client dsn_runtime)
+set(MY_PROJ_LIBS dsn_replica_server dsn_meta_server dsn_client dsn_runtime hashtable)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 

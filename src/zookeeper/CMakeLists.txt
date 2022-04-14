@@ -10,11 +10,13 @@ set(MY_PROJ_SRC "")
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS "")
+set(MY_PROJ_LIBS zookeeper hashtable ssl crypto)
 
 # Extra files that will be installed
 set(MY_BINPLACES "")
 
 dsn_add_static_library()
+
+add_definitions(-DHAVE_CYRUS_SASL_H)
 
 add_subdirectory(test)

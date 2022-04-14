@@ -12,7 +12,8 @@ set(MY_PROJ_LIBS dsn_replica_server
                  dsn.failure_detector
                  dsn.replication.zookeeper_provider
                  dsn_runtime
-                 zookeeper_mt
+                 zookeeper
+                 hashtable
                  gtest
                  )
 

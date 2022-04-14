@@ -16,6 +16,7 @@ set(MY_PROJ_LIBS
     dsn_replication_common
     dsn.failure_detector
     gtest
+    hashtable
     )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
