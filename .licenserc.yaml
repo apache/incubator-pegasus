@@ -25,9 +25,10 @@ header:
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
     - 'src/.clang-format'
-    # TODO(yingchun): we have to fix the following files later
+    # TODO(yingchun): rrdb_types.* files can be automatic generated when build, we can remove them later.
     - 'src/base/rrdb_types.cpp'
     - 'src/include/rrdb/rrdb_types.h'
+    # TODO(yingchun): shell/* files are import from thirdparties, we can move them to rdsn/thirdparty later.
     - 'src/shell/argh.h'
     - 'src/shell/linenoise/linenoise.c'
     - 'src/shell/linenoise/linenoise.h'
