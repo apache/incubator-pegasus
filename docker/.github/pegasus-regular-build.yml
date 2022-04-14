@@ -1,0 +1,76 @@
+name: BuildPegasusRegularly-build pegasus and rdsn on different env every day
+
+on:
+  push:
+    paths:
+      - '.github/workflows/pegasus-regular-build.yml'
+
+  # for manually triggering workflow
+  workflow_dispatch:
+
+  # run for every day 2am UTC+8(Beijing)
+  schedule:
+    - cron:  '0 18 */1 * *'
+
+jobs:
+  build_docker_images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu1604
+          - ubuntu1804
+          - ubuntu2004
+          #- centos6 is EOL
+          - centos7
+        compiler-family:
+          - gcc
+        include:
+          - compiler-family: clang
+            compiler: "clang-10,clang++-10"
+            os: ubuntu2004
+          - compiler-family: clang
+            compiler: "clang-9,clang++-9"
+            os: ubuntu1804
+    container:
+      image: apachepegasus/thirdparties-bin:${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: /root/incubator-pegasus
+    steps:
+      - name: Clone Apache Pegasus Source
+        working-directory: /root
+        run: |
+          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+          cd incubator-pegasus
+      -
+        name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+      -
+        name: Compilation rdsn on GCC 
+        if: ${{ matrix.compiler-family == 'gcc' }}
+        run: |
+          cd ./rdsn
+          ./run.sh build -c --skip_thirdparty
+      -
+        name: Compilation pegasus on GCC 
+        if: ${{ matrix.compiler-family == 'gcc' }}
+        run: ./run.sh build -c --skip_thirdparty
+      -
+        name: Compilation rdsn on Clang
+        if: ${{ matrix.compiler-family == 'clang' }}
+        env:
+          COMPILER: ${{ matrix.compiler }}
+        run: |
+          cd ./rdsn
+          ./run.sh build --compiler $COMPILER --skip_thirdparty
+      -
+        name: Compilation pegasus on Clang
+        if: ${{ matrix.compiler-family == 'clang' }}
+        env:
+          COMPILER: ${{ matrix.compiler }}
+        run: ./run.sh build --compiler $COMPILER --skip_thirdparty
+      -
+        name: Packaging Server
+        run: ./run.sh pack_server

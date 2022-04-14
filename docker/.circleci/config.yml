@@ -1,0 +1,9 @@
+version: 2.1
+orbs:
+  docker: circleci/docker@2.0.3
+workflows:
+  lint:
+    jobs:
+      - docker/hadolint:
+          dockerfiles: 'bcc-centos7/Dockerfile:ci-env/Dockerfile:clang-format-3.9/Dockerfile:pegasus-build-env/centos7/Dockerfile:pegasus-build-env/ubuntu1604/Dockerfile:pegasus-build-env/ubuntu1804/Dockerfile:pegasus-build-env/ubuntu2004/Dockerfile:pegasus-docker-compose/image_for_prebuilt_bin/Dockerfile:thirdparties-bin/Dockerfile:thirdparties-src/Dockerfile'
+          ignore-rules: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006'
