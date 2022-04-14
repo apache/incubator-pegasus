@@ -42,6 +42,7 @@ RUN apt-get update -y; \
                        git \
                        curl \
                        zip \
+                       unzip \
                        gdb \
                        vim \
                        automake \
