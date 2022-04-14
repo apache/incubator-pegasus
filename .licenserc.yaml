@@ -20,9 +20,6 @@ header:
     copyright-owner: Apache Software Foundation
 
   paths-ignore:
-    - 'dist'
-    - 'licenses'
-    - '**/*.md'
     - 'LICENSE'
     - 'NOTICE'
     - '.rat-excludes'
