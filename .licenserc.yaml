@@ -28,5 +28,14 @@ header:
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
     - 'src/.clang-format'
+    # TODO(yingchun): we have to fix the following files later
+    - 'src/base/rrdb_types.cpp'
+    - 'src/include/rrdb/rrdb_types.h'
+    - 'src/shell/argh.h'
+    - 'src/shell/linenoise/linenoise.c'
+    - 'src/shell/linenoise/linenoise.h'
+    - 'src/shell/sds/sds.c'
+    - 'src/shell/sds/sds.h'
+    - 'src/shell/sds/sdsalloc.h'
 
   comment: on-failure
