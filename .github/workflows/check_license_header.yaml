@@ -15,15 +15,25 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
-name: Check Markdown links
-
+name: License Check
 on:
   pull_request:
-    types: [ synchronize, opened, reopened ]
-
+  push:
+    branches:
+      - master
 jobs:
-  markdown-link-check:
+  license-check:
+    name: "License Check"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: gaurav-nelson/github-action-markdown-link-check@v1
+      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+        uses: actions/checkout@v2
+      - name: Check License Header
+        uses: apache/skywalking-eyes@v0.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # needed only when you want License-Eye to comment on the pull request.
+        # with:
+            # Optional: set the log level. The default value is `info`.
+            # log: debug
+            # Optional: set the config file. The default value is `.licenserc.yaml`.
+            # config: .licenserc.yaml

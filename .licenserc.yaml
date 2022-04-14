@@ -14,16 +14,26 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
----
-name: Check Markdown links
+header:
+  license:
+    spdx-id: Apache-2.0
+    copyright-owner: Apache Software Foundation
 
-on:
-  pull_request:
-    types: [ synchronize, opened, reopened ]
+  paths-ignore:
+    - 'LICENSE'
+    - 'NOTICE'
+    - '.rat-excludes'
+    - 'DISCLAIMER-WIP'
+    - 'src/.clang-format'
+    # TODO(yingchun): rrdb_types.* files can be automatic generated when build, we can remove them later.
+    - 'src/base/rrdb_types.cpp'
+    - 'src/include/rrdb/rrdb_types.h'
+    # TODO(yingchun): shell/* files are import from thirdparties, we can move them to rdsn/thirdparty later.
+    - 'src/shell/argh.h'
+    - 'src/shell/linenoise/linenoise.c'
+    - 'src/shell/linenoise/linenoise.h'
+    - 'src/shell/sds/sds.c'
+    - 'src/shell/sds/sds.h'
+    - 'src/shell/sds/sdsalloc.h'
 
-jobs:
-  markdown-link-check:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-    - uses: gaurav-nelson/github-action-markdown-link-check@v1
+  comment: on-failure
