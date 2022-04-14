@@ -58,7 +58,7 @@ rm -rf /var/cache/yum;
 
 RUN pip3 install --no-cache-dir cmake
 
-RUN wget https://archive.apache.org/dist/maven/maven-3/3.8.3/binaries/apache-maven-3.8.3-bin.tar.gz -P /opt/maven \
+RUN wget --progress=dot:giga https://archive.apache.org/dist/maven/maven-3/3.8.3/binaries/apache-maven-3.8.3-bin.tar.gz -P /opt/maven \
     && cd /opt/maven \
     && tar -zxf apache-maven-3.8.3-bin.tar.gz \
     && rm apache-maven-3.8.3-bin.tar.gz

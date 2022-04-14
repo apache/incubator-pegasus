@@ -20,26 +20,26 @@ FROM centos:7.5.1804 as builder
 LABEL maintainer=wutao
 
 RUN yum install -y epel-release \
-&& yum update -y \
-&& yum groupinstall -y "Development tools" \
-&& yum install -y elfutils-libelf-devel git bison flex ncurses-devel python3 \
-&& yum install -y luajit luajit-devel \
-&& yum -y install centos-release-scl \
-&& yum-config-manager --enable rhel-server-rhscl-7-rpms \
-&& yum install -y devtoolset-7 llvm-toolset-7 llvm-toolset-7-llvm-devel llvm-toolset-7-llvm-static llvm-toolset-7-clang-devel \
-&& yum clean all \
-&& rm -rf /var/cache/yum;
+  && yum update -y \
+  && yum groupinstall -y "Development tools" \
+  && yum install -y elfutils-libelf-devel git bison flex ncurses-devel python3 \
+  && yum install -y luajit luajit-devel \
+  && yum -y install centos-release-scl \
+  && yum-config-manager --enable rhel-server-rhscl-7-rpms \
+  && yum install -y devtoolset-7 llvm-toolset-7 llvm-toolset-7-llvm-devel llvm-toolset-7-llvm-static llvm-toolset-7-clang-devel \
+  && yum clean all \
+  && rm -rf /var/cache/yum;
 
 RUN pip3 install --no-cache-dir cmake
 
 # install results to /root/bcc
 RUN git clone https://github.com/iovisor/bcc.git \
-&& cd bcc \
-&& source scl_source enable devtoolset-7 llvm-toolset-7 \
-&& cmake -B build/ . \
-&& cmake --build build/ -j $(($(nproc)/2+1)) \
-&& cmake --install build/ --prefix $HOME/bcc \
-&& rm -rf /bcc
+  && cd bcc \
+  && source scl_source enable devtoolset-7 llvm-toolset-7 \
+  && cmake -B build/ . \
+  && cmake --build build/ -j $(($(nproc)/2+1)) \
+  && cmake --install build/ --prefix $HOME/bcc \
+  && rm -rf /bcc
 
 FROM centos:7.5.1804
 

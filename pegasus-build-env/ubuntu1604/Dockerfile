@@ -23,7 +23,8 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update -y; \
-    apt-get -y install build-essential \
+    apt-get install -y --no-install-recommends \
+                       build-essential \
                        software-properties-common \
                        openjdk-8-jdk \
                        python3-pip \
@@ -55,8 +56,7 @@ RUN apt-get update -y; \
 
 RUN add-apt-repository ppa:git-core/ppa -y; \
     apt-get update -y; \
-    apt-get install git -y; \
-    apt-get install pkg-config -y; \
+    apt-get install git pkg-config -y --no-install-recommends; \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir cmake

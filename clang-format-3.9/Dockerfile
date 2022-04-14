@@ -21,8 +21,8 @@ LABEL maintainer=wutao
 
 RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/' /etc/apt/sources.list \
     && apt-get update -y \
-    && apt-get install -y software-properties-common \
+    && apt-get install --no-install-recommends -y software-properties-common \
     && add-apt-repository ppa:git-core/ppa \
     && apt-get update -y \
-    && apt-get -y install clang-format-3.9 git \
+    && apt-get install --no-install-recommends -y clang-format-3.9 git \
     && rm -rf /var/lib/apt/lists/*
