@@ -22,6 +22,7 @@ on:
     paths:
       - 'docker/pegasus-build-env/**'
       - '.github/workflows/build-push-env-docker.yml'
+      # TODO(yingchun): just for testing
 
   # for manually triggering workflow
   workflow_dispatch:
