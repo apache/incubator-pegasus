@@ -347,7 +347,7 @@ void replica_disk_migrator::update_replica_dir()
 
     _replica->get_replica_stub()->_fs_manager.remove_replica(get_gpid());
     _replica->get_replica_stub()->_fs_manager.add_replica(get_gpid(), _target_replica_dir);
-    _replica->get_replica_stub()->update_disk_holding_replicas();
+    _replica->get_replica_stub()->on_disk_stat();
 
     _status = disk_migration_status::CLOSED;
     ddebug_replica("disk replica migration move data from origin dir({}) to new dir({}) "
