@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,31 +14,20 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
 
-github:
-  description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
-  homepage: https://pegasus.apache.org/
-  labels:
-    - pegasus
-    - key-value-store
-    - nosql
-    - distributed-database
-  features:
-    # Enable wiki for documentation
-    wiki: false
-    # Enable issues management
-    issues: true
-    # Enable projects for project management boards
-    projects: true
-  enabled_merge_buttons:
-    # enable squash button:
-    squash:  true
-    # disable merge button:
-    merge:   false
-    # disable rebase button:
-    rebase:  false
+FROM apachepegasus/build-env:ubuntu2004
 
-notifications:
-  commits: commits@pegasus.apache.org
-  pullrequests: commits@pegasus.apache.org
+ARG SERVER_PKG_NAME
+
+COPY ./$SERVER_PKG_NAME.tar.gz /
+RUN cd / \
+    && tar xvf /$SERVER_PKG_NAME.tar.gz \
+    && mv $SERVER_PKG_NAME pegasus \
+    && rm /$SERVER_PKG_NAME.tar.gz
+
+COPY ./entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
+ENV LD_LIBRARY_PATH=/pegasus/bin
+
+ENTRYPOINT ["/entrypoint.sh"]

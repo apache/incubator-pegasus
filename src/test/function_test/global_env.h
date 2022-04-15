@@ -33,6 +33,7 @@ private:
     global_env();
     global_env(const global_env &other) = delete;
     global_env(global_env &&other) = delete;
+    ~global_env() = default;
 
     void get_hostip();
     void get_dirs();

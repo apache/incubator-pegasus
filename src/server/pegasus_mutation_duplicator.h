@@ -22,6 +22,8 @@
 #include <dsn/dist/replication/mutation_duplicator.h>
 #include <dsn/dist/replication/replica_base.h>
 #include <rrdb/rrdb.code.definition.h>
+#include <dsn/utility/flags.h>
+#include <dsn/dist/replication/duplication_common.h>
 
 #include "client_lib/pegasus_client_factory_impl.h"
 
