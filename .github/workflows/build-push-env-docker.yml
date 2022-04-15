@@ -18,6 +18,10 @@
 name: BuildCompilationEnvDocker-build and publish multi compilation os env
 
 on:
+  # run on each pull request
+  pull_request:
+    types: [ synchronize, opened, reopened ]
+
   push:
     paths:
       - 'docker/pegasus-build-env/**'
