@@ -18,6 +18,10 @@
 name:  BuildThirdpartyDockerRegularly-build and publish thirdparty every week
 
 on:
+  # run on each pull request
+  pull_request:
+    types: [ synchronize, opened, reopened ]
+
   push:
     paths:
       - 'docker/thirdparties-src/**'

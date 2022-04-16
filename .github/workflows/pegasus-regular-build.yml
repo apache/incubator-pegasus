@@ -18,6 +18,10 @@
 name: BuildPegasusRegularly-build pegasus and rdsn on different env every day
 
 on:
+  # run on each pull request
+  pull_request:
+    types: [ synchronize, opened, reopened ]
+
   push:
     paths:
       - '.github/workflows/pegasus-regular-build.yml'
