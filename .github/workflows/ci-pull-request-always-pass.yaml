@@ -26,7 +26,7 @@ on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
-    paths:
+    paths-ignore:
       - src
       - rdsn
       - run.sh
