@@ -23,11 +23,11 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 
 ## Workflows
 
-![Build and publish multi pegasus-build-env docker images](https://github.com/pegasus-kv/pegasus-docker/workflows/BuildCompilationEnvDocker-build%20and%20publish%20multi%20compilation%20os%20env/badge.svg?branch=master)
+![Build and publish multi pegasus-build-env docker images](https://github.com/apache/incubator-pegasus/workflows/BuildCompilationEnvDocker-build%20and%20publish%20multi%20compilation%20os%20env/badge.svg?branch=master)
 
-![Build and publish multi os env thirdparty docker images every week](https://github.com/pegasus-kv/pegasus-docker/workflows/BuildThirdpartyDockerRegularly-build%20and%20publish%20thirdparty%20every%20week/badge.svg?branch=master)
+![Build and publish multi os env thirdparty docker images every week](https://github.com/apache/incubator-pegasus/workflows/BuildThirdpartyDockerRegularly-build%20and%20publish%20thirdparty%20every%20week/badge.svg?branch=master)
 
-![Build pegasus/rdsn regularly based env and thirdparty docker  everyday](https://github.com/pegasus-kv/pegasus-docker/workflows/BuildPegasusRegularly-build%20pegasus%20and%20rdsn%20on%20different%20env%20every%20day/badge.svg?branch=master)
+![Build pegasus/rdsn regularly based env and thirdparty docker everyday](https://github.com/apache/incubator-pegasus/workflows/BuildPegasusRegularly-build%20pegasus%20and%20rdsn%20on%20different%20env%20every%20day/badge.svg?branch=master)
 
 ## pegasus-build-env
 
