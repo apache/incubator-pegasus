@@ -41,13 +41,13 @@ on:
 
 jobs:
   lint:
-    name: Clang Format Lint
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "No build required" '
 
   test:
-    name: Unit Test
+    name: Test
     needs: lint
     runs-on: ubuntu-latest
     steps:

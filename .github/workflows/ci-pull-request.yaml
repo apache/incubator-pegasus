@@ -46,7 +46,7 @@ defaults:
 
 jobs:
   lint:
-    name: Clang Format Lint
+    name: Lint
     runs-on: ubuntu-latest
     container:
       image: apachepegasus/clang-format-3.9
@@ -59,7 +59,7 @@ jobs:
         run: ./rdsn/scripts/linux/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn -r ./src
 
   test:
-    name: Unit Test
+    name: Test
     needs: lint
     runs-on: ubuntu-latest
     container:
