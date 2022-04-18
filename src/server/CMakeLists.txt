@@ -41,13 +41,13 @@ set(MY_PROJ_LIBS
     pegasus_reporter
     pegasus_base
     pegasus_client_static
-    zookeeper_mt
     event
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation
     PocoNetSSL
     PocoJSON
+    hashtable
     )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
