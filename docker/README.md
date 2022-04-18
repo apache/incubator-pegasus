@@ -35,12 +35,12 @@ Building environment for Pegasus compilation.
 
 Github Actions automatically rebuilds and publishes build-env for every commit.
 
-- `apachepegasus/build-env:centos7`
-- `apachepegasus/build-env:ubuntu1604`
-- `apachepegasus/build-env:ubuntu1804`
-- `apachepegasus/build-env:ubuntu2004`
+- `apache/pegasus/build-env:centos7`
+- `apache/pegasus/build-env:ubuntu1604`
+- `apache/pegasus/build-env:ubuntu1804`
+- `apache/pegasus/build-env:ubuntu2004`
 
-DockerHub: https://hub.docker.com/r/apachepegasus/build-env
+DockerHub: https://hub.docker.com/r/apache/pegasus/build-env
 
 The How-to-use Manual is at: http://pegasus.apache.org/docs/build/compile-by-docker/
 
@@ -51,14 +51,14 @@ It packages the downloaded sources into a zip in the container, so that
 other repos can easily extract third-parties from the container (via `docker cp`),
 without downloading from the cloud object storage.
 
-- `apachepegasus/thirdparties-src`
+- `apache/pegasus/thirdparties-src`
 
 ## thirdparties-bin
 
 This is a Docker image for Pegasus unit-testing. It prebuilts the thirdparty libraries,
 so jobs based on this image can skip building third-parties.
 
-- `apachepegasus/thirdparties-bin:centos7`
-- `apachepegasus/thirdparties-bin:ubuntu1604`
-- `apachepegasus/thirdparties-bin:ubuntu1804`
-- `apachepegasus/thirdparties-bin:ubuntu2004`
+- `apache/pegasus/thirdparties-bin:centos7`
+- `apache/pegasus/thirdparties-bin:ubuntu1604`
+- `apache/pegasus/thirdparties-bin:ubuntu1804`
+- `apache/pegasus/thirdparties-bin:ubuntu2004`

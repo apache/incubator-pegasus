@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM apachepegasus/build-env:centos7
+FROM apache/pegasus/build-env:centos7
 
 WORKDIR /root
 

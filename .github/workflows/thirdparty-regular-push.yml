@@ -57,9 +57,9 @@ jobs:
           file: ./docker/thirdparties-src/Dockerfile
           push: true
           tags: |
-            apachepegasus/thirdparties-src
+            apache/pegasus/thirdparties-src
           build-args: |
-            REGISTRY_REPO=apachepegasus
+            REGISTRY_REPO=apache/pegasus
       -
         name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
@@ -98,7 +98,7 @@ jobs:
           file: ./docker/thirdparties-bin/Dockerfile
           push: true
           tags: |
-            apachepegasus/thirdparties-bin:${{ matrix.osversion }}
+            apache/pegasus/thirdparties-bin:${{ matrix.osversion }}
           build-args: |
             OS_VERSION=${{ matrix.osversion }}
       -
