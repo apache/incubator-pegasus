@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
-name: BuildCompilationEnvDocker-build and publish multi compilation os env
+name: BuildCompilationEnvDocker - build and publish multi compilation OS env
 
 on:
   push:
@@ -62,7 +62,7 @@ jobs:
           file: ./docker/pegasus-build-env/${{ matrix.dockertag }}/Dockerfile
           push: true
           tags: |
-            apachepegasus/build-env:${{ matrix.dockertag }}
+            apache/pegasus/build-env:${{ matrix.dockertag }}
       -
         name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
