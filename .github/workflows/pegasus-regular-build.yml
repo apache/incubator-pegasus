@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
-name: BuildPegasusRegularly-build pegasus and rdsn on different env every day
+name: BuildPegasusRegularly - build pegasus and rdsn on different env every day
 
 on:
   push:
@@ -39,7 +39,6 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
-          #- centos6 is EOL
           - centos7
         compiler-family:
           - gcc
@@ -61,33 +60,27 @@ jobs:
         run: |
           git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
           cd incubator-pegasus
-      -
-        name: Unpack prebuilt third-parties
+      - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
-      -
-        name: Compilation rdsn on GCC 
+      - name: Compilation rdsn on GCC
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: |
           cd ./rdsn
           ./run.sh build -c --skip_thirdparty
-      -
-        name: Compilation pegasus on GCC 
+      - name: Compilation pegasus on GCC
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: ./run.sh build -c --skip_thirdparty
-      -
-        name: Compilation rdsn on Clang
+      - name: Compilation rdsn on Clang
         if: ${{ matrix.compiler-family == 'clang' }}
         env:
           COMPILER: ${{ matrix.compiler }}
         run: |
           cd ./rdsn
           ./run.sh build --compiler $COMPILER --skip_thirdparty
-      -
-        name: Compilation pegasus on Clang
+      - name: Compilation pegasus on Clang
         if: ${{ matrix.compiler-family == 'clang' }}
         env:
           COMPILER: ${{ matrix.compiler }}
         run: ./run.sh build --compiler $COMPILER --skip_thirdparty
-      -
-        name: Packaging Server
+      - name: Packaging Server
         run: ./run.sh pack_server
