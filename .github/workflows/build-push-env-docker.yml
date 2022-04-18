@@ -57,6 +57,6 @@ jobs:
           file: ./docker/pegasus-build-env/${{ matrix.dockertag }}/Dockerfile
           push: true
           tags: |
-            apache/pegasus/build-env:${{ matrix.dockertag }}
+            apache/pegasus:build-env-${{ matrix.dockertag }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

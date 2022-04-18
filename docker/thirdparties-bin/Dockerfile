@@ -17,11 +17,11 @@
 
 ARG OS_VERSION=centos7
 
-FROM apache/pegasus/thirdparties-src as builder
+FROM apache/pegasus:thirdparties-src as builder
 
 ARG OS_VERSION=centos7
 
-FROM apache/pegasus/build-env:${OS_VERSION}
+FROM apache/pegasus:build-env-${OS_VERSION}
 
 WORKDIR /root
 

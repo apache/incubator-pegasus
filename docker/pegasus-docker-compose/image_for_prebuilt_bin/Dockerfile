@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM apache/pegasus/build-env:ubuntu2004
+FROM apache/pegasus:build-env-ubuntu2004
 
 ARG SERVER_PKG_NAME
 

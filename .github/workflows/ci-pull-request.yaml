@@ -49,7 +49,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus/clang-format-3.9
+      image: apache/pegasus:clang-format-3.9
     steps:
       - uses: actions/checkout@v2
         with:

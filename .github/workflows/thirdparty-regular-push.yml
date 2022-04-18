@@ -57,7 +57,7 @@ jobs:
           file: ./docker/thirdparties-src/Dockerfile
           push: true
           tags: |
-            apache/pegasus/thirdparties-src
+            apache/pegasus:thirdparties-src
           build-args: |
             REGISTRY_REPO=apache/pegasus
       -
@@ -98,7 +98,7 @@ jobs:
           file: ./docker/thirdparties-bin/Dockerfile
           push: true
           tags: |
-            apache/pegasus/thirdparties-bin:${{ matrix.osversion }}
+            apache/pegasus:thirdparties-bin-${{ matrix.osversion }}
           build-args: |
             OS_VERSION=${{ matrix.osversion }}
       -
