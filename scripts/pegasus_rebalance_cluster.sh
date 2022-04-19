@@ -22,7 +22,7 @@
 PID=$$
 
 if [ $# -le 1 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false) <nfs_rate_megabytes_per_disk>(default 100)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <only-move-primary>(default false) <nfs_rate_megabytes>(default 100)"
   echo 
   echo "for example:"
   echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 true 100"
@@ -40,9 +40,9 @@ else
 fi
 
 if [ -z $4 ]; then
-  nfs_rate_megabytes_per_disk=100
+  nfs_rate_megabytes=100
 else
-  nfs_rate_megabytes_per_disk=$4
+  nfs_rate_megabytes=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -54,6 +54,9 @@ echo "PID=$PID"
 echo "Start time: `date`"
 rebalance_start_time=$((`date +%s`))
 echo
+
+echo "Check the cluster version..."
+source ./scripts/pegasus_command_version.sh $cluster $meta_list
 
 echo "Generating /tmp/$UID.$PID.pegasus.rebalance.cluster_info..."
 echo cluster_info | ./run.sh shell --cluster $meta_list 2>&1 | sed 's/ *$//' >/tmp/$UID.$PID.pegasus.rebalance.cluster_info
@@ -69,29 +72,29 @@ if [ "$pmeta" == "" ]; then
 fi
 
 if [ "$only_move_primary" == "true" ]; then
-  echo "Set meta.lb.only_move_primary true"
+  echo "Set ${meta.lb.only_move_primary} true"
   echo "This remote-command tells the meta-server to ignore copying primaries during rebalancing."
   echo "So the following steps only include move_primary and copy_secondary."
-  echo "remote_command -l $pmeta meta.lb.only_move_primary true" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance.only_move_primary
+  echo "remote_command -l $pmeta ${meta.lb.only_move_primary} true" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance.only_move_primary
   set_ok=`grep OK /tmp/$UID.$PID.pegasus.rebalance.only_move_primary | wc -l`
   if [ $set_ok -ne 1 ]; then
-    echo "ERROR: meta.lb.only_move_primary true"
+    echo "ERROR: ${meta.lb.only_move_primary} true"
     exit 1
   fi
 fi
 echo
 
-echo "Set nfs_copy/send_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk"
-echo "remote_command -t replica-server nfs.max_copy_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk
-set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk | wc -l`
+echo "Set nfs_copy/send_rate_megabytes $nfs_rate_megabytes"
+echo "remote_command -t replica-server ${nfs.max_copy_rate_megabytes} $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_copy_rate_megabytes_per_disk failed"
+  echo "ERROR: set nfs_copy_rate_megabytes failed"
   exit 1
 fi
-echo "remote_command -t replica-server nfs.max_send_rate_megabytes_per_disk $nfs_rate_megabytes_per_disk" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk
-set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk | wc -l`
+echo "remote_command -t replica-server nfs.max_send_rate_megabytes $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_send_rate_megabytes_per_disk failed"
+  echo "ERROR: set nfs_send_rate_megabytes failed"
   exit 1
 fi
 
@@ -139,28 +142,28 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 if [ "$only_move_primary" == "true" ]; then
-  echo "Set meta.lb.only_move_primary false"
+  echo "Set ${meta.lb.only_move_primary} false"
   echo "This remote-command tells the meta-server to rebalance with copying primaries."
-  echo "remote_command -l $pmeta meta.lb.only_move_primary false" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance.only_move_primary
+  echo "remote_command -l $pmeta ${meta.lb.only_move_primary} false" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance.only_move_primary
   set_ok=`grep OK /tmp/$UID.$PID.pegasus.rebalance.only_move_primary | wc -l`
   if [ $set_ok -ne 1 ]; then
-    echo "ERROR: meta.lb.only_move_primary false"
+    echo "ERROR: ${meta.lb.only_move_primary} false"
     exit 1
   fi
   echo
 fi
 
-echo "Set nfs_copy/send_rate_megabytes_per_disk 500"
-echo "remote_command -t replica-server nfs.max_copy_rate_megabytes_per_disk 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk
-set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes_per_disk | wc -l`
+echo "Set nfs_copy/send_rate_megabytes 500"
+echo "remote_command -t replica-server ${nfs.max_copy_rate_megabytes} 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_copy_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_copy_rate_megabytes_per_disk failed"
+  echo "ERROR: set nfs_copy_rate_megabytes failed"
   exit 1
 fi
-echo "remote_command -t replica-server nfs.max_send_rate_megabytes_per_disk 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk
-set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes_per_disk | wc -l`
+echo "remote_command -t replica-server nfs.max_send_rate_megabytes 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes
+set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
-  echo "ERROR: set nfs_send_rate_megabytes_per_disk failed"
+  echo "ERROR: set nfs_send_rate_megabytes failed"
   exit 1
 fi
 

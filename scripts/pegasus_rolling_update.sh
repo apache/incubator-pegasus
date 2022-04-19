@@ -85,6 +85,9 @@ echo "Start time: `date`"
 rolling_start_time=$((`date +%s`))
 echo
 
+echo "Check the cluster version..."
+source ./scripts/pegasus_command_version.sh $cluster $meta_list
+
 rs_list_file="/tmp/$UID.$PID.pegasus.rolling_update.rs.list"
 echo "Generating $rs_list_file..."
 minos_show_replica $cluster $rs_list_file
@@ -124,7 +127,7 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 echo "Set lb.assign_delay_ms to 30min..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms 180000000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
+echo "remote_command -l $pmeta ${meta.lb.assign_delay_ms} 180000000" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to 30min failed"
@@ -154,7 +157,7 @@ do
   echo
 
   echo "Set lb.add_secondary_max_count_for_one_node to 0..."
-  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+  echo "remote_command -l $pmeta ${meta.lb.add_secondary_max_count_for_one_node} 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
   set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 0 failed"
@@ -223,7 +226,7 @@ do
       while read line2
       do
         gpid=`echo $line2 | awk '{print $3}' | sed 's/\./ /'`
-        echo "remote_command -l $node replica.kill_partition $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.kill_partition
+        echo "remote_command -l $node ${replica.kill_partition} $gpid" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.kill_partition
       done </tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose
       echo "Sent to `cat /tmp/$UID.$PID.pegasus.rolling_update.downgrade_node.propose | wc -l` partitions."
     fi
@@ -274,7 +277,7 @@ do
   sleep 1
 
   echo "Set lb.add_secondary_max_count_for_one_node to 100..."
-  echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+  echo "remote_command -l $pmeta ${meta.lb.add_secondary_max_count_for_one_node} 100" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
   set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
   if [ $set_ok -ne 1 ]; then
     echo "ERROR: set lb.add_secondary_max_count_for_one_node to 100 failed"
@@ -306,7 +309,7 @@ do
 done <$rs_list_file
 
 echo "Set lb.add_secondary_max_count_for_one_node to DEFAULT..."
-echo "remote_command -l $pmeta meta.lb.add_secondary_max_count_for_one_node DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
+echo "remote_command -l $pmeta ${meta.lb.add_secondary_max_count_for_one_node} DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_update.add_secondary_max_count_for_one_node | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.add_secondary_max_count_for_one_node to DEFAULT failed"
@@ -314,7 +317,7 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 echo "Set lb.assign_delay_ms to DEFAULT..."
-echo "remote_command -l $pmeta meta.lb.assign_delay_ms DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
+echo "remote_command -l $pmeta ${meta.lb.assign_delay_ms} DEFAULT" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.rolling_node.assign_delay_ms | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_delay_ms to DEFAULT failed"

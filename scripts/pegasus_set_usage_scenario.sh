@@ -48,6 +48,10 @@ echo "Start time: `date`"
 all_start_time=$((`date +%s`))
 echo
 
+
+echo "Check the cluster version..."
+source ./scripts/pegasus_command_version.sh  "" $cluster
+
 echo -e "use $app_name\nset_app_envs $scenario_key $scenario" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.set_app_envs
 set_fail=`grep 'set app env failed' /tmp/$UID.$PID.pegasus.set_app_envs | wc -l`
 if [ $set_fail -eq 1 ]; then
@@ -76,7 +80,7 @@ do
     sleeped=0
     while true
     do
-      echo "remote_command -t replica-server replica.query-app-envs $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.query_app_envs.$app
+      echo "remote_command -t replica-server ${replica.query-app-envs} $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.query_app_envs.$app
       effect_count=`grep "$scenario_key=$scenario" /tmp/$UID.$PID.pegasus.query_app_envs.$app | wc -l`
       total_count=$((partition_count * replica_count))
       if [ $effect_count -ge $total_count ]; then
