@@ -73,7 +73,7 @@ if [[ ($version = ~"1.1.6") || ($version = ~"1.12.2") || ($version = ~"1.12.3") 
   replica.query-compact="replica.query-compact"
   replica.trigger-checkpoint="replica.trigger-checkpoint"
 elif [[ ($version = ~"2.1.1") ]];then
-  meta.lb.assign_secondary_black_list="meta.lb.assign_secondary_black_list"
+  meta.lb.assign_secondary_black_list="lb.assign_secondary_black_list"
   meta.live_percentage="live_percentage"
   meta.lb.assign_delay_ms="lb.assign_delay_ms"
   meta.lb.only_move_primary="lb.only_move_primary"
