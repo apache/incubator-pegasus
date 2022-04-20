@@ -57,19 +57,15 @@ jobs:
             compiler: "clang-9,clang++-9"
             os: ubuntu1804
     container:
-      image: ghcr.io/pegasus-kv/thirdparties-bin:${{ matrix.os }}
+      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}
     steps:
-      -
-        uses: actions/checkout@v2
-      -
-        name: Unpack prebuilt third-parties
+      - uses: actions/checkout@v2
+      - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      -
-        name: Compilation on GCC
+      - name: Compilation on GCC
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: ./run.sh build -c --skip_thirdparty
-      -
-        name: Compilation on Clang
+      - name: Compilation on Clang
         if: ${{ matrix.compiler-family == 'clang' }}
         env:
           COMPILER: ${{ matrix.compiler }}

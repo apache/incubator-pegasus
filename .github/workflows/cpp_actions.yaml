@@ -38,7 +38,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     container:
-      image: apachepegasus/clang-format-3.9
+      image: apache/pegasus:clang-format-3.9
     steps:
       - uses: actions/checkout@v2
         with:
@@ -51,7 +51,7 @@ jobs:
     needs: lint
     runs-on: self-hosted
     container:
-      image: apachepegasus/thirdparties-bin:ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
         CCACHE_DIR: /tmp/ccache/pegasus
         CCACHE_MAXSIZE: 10G
@@ -88,7 +88,7 @@ jobs:
     needs: lint
     runs-on: self-hosted
     container:
-      image: apachepegasus/thirdparties-bin:ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
         CCACHE_DIR: /tmp/ccache/pegasus
         CCACHE_MAXSIZE: 10G
@@ -125,7 +125,7 @@ jobs:
     needs: lint
     runs-on: self-hosted
     container:
-      image: apachepegasus/thirdparties-bin:ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
         CCACHE_DIR: /tmp/ccache/pegasus
         CCACHE_MAXSIZE: 10G
@@ -162,7 +162,7 @@ jobs:
     needs: lint
     runs-on: self-hosted
     container:
-      image: apachepegasus/thirdparties-bin:ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
         CCACHE_DIR: /tmp/ccache/pegasus
         CCACHE_MAXSIZE: 10G
