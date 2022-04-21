@@ -29,13 +29,13 @@ on:
     paths-ignore:
       - .github/workflows/cpp_actions.yaml
       - CMakeLists.txt
-      - bin
+      - bin/**
       - compile_thrift.py
-      - include
+      - include/**
       - run.sh
-      - scripts
-      - src
-      - thirdparty
+      - scripts/**
+      - src/**
+      - thirdparty/**
     branches:
       - master
       - 'v[0-9]+.*' # release branch
