@@ -63,7 +63,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
+      image: apachepegasus/thirdparties-bin:ubuntu1804
     defaults:
       run:
         shell: bash
