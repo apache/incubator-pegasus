@@ -23,11 +23,11 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 
 ## Workflows
 
-![BuildCompilationEnvDocker - build and publish multi compilation OS env](https://github.com/apache/incubator-pegasus/actions/workflows/build-push-env-docker.yml/badge.svg)
+[![BuildCompilationEnvDocker - build and publish multi compilation OS env](https://github.com/apache/incubator-pegasus/actions/workflows/build-push-env-docker.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/build-push-env-docker.yml)
 
-![BuildPegasusRegularly - build pegasus and rdsn on different env every day](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml/badge.svg)
+[![BuildThirdpartyDockerRegularly - build and publish thirdparty every week](https://github.com/apache/incubator-pegasus/actions/workflows/thirdparty-regular-push.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/thirdparty-regular-push.yml)
 
-![BuildThirdpartyDockerRegularly - build and publish thirdparty every week](https://github.com/apache/incubator-pegasus/actions/workflows/thirdparty-regular-push.yml/badge.svg)
+[![BuildPegasusRegularly - build pegasus and rdsn on different env every day](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml)
 
 ## pegasus-build-env
 
