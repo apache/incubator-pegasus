@@ -63,7 +63,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     container:
-      image: apachepegasus/thirdparties-bin:ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
     defaults:
       run:
         shell: bash
@@ -75,11 +75,9 @@ jobs:
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
-      -
-        name: Packaging Server
+      - name: Packaging Server
         run: ./run.sh pack_server
-      -
-        name: Packaging Tools
+      - name: Packaging Tools
         run: ./run.sh pack_tools
       - name: Unit Testing
         run: |

@@ -26,7 +26,7 @@ on:
 
   # for manually triggering workflow
   workflow_dispatch:
-  
+
   # run for every week 2am UTC+8(Beijing)
   schedule:
     - cron:  '0 18 * * 1'
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to DockerHub
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -57,7 +57,7 @@ jobs:
             REGISTRY_REPO=apache/pegasus
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
-        
+
   build_push_bin_docker_images:
     runs-on: ubuntu-latest
     strategy:
@@ -76,7 +76,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to DockerHub
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
