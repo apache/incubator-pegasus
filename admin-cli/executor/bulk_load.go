@@ -23,9 +23,9 @@ import (
 	"fmt"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/admin-cli/tabular"
+	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pegasus-kv/admin-cli/admin-cli/tabular"
-	"github.com/pegasus-kv/admin-cli/admin-cli/util"
 )
 
 func StartBulkLoad(client *Client, tableName string, clusterName string, providerType string, rootPath string) error {

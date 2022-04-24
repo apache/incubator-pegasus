@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/pegasus-kv/admin-cli/admin-cli/tabular"
+	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/pegasus-kv/collector/aggregate"
 )
 

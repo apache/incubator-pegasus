@@ -22,7 +22,7 @@ package executor
 import (
 	"fmt"
 
-	"github.com/pegasus-kv/admin-cli/admin-cli/tabular"
+	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 )
 
 func StartPartitionSplit(client *Client, tableName string, newPartitionCount int) error {

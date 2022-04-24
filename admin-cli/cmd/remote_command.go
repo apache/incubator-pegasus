@@ -20,8 +20,8 @@
 package cmd
 
 import (
-	"github.com/pegasus-kv/admin-cli/admin-cli/executor"
-	"github.com/pegasus-kv/admin-cli/admin-cli/shell"
+	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/shell"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/desertbit/grumble"

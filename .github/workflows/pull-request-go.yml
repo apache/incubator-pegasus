@@ -16,17 +16,41 @@
 # under the License.
 ---
 # workflow name
-name: Generate release-artifacts
+name: Golang Lint and Unit Test
 
 # on events
 on:
-  release:
-    types: 
-        - created
+  # run on each pull request
+  pull_request:
+    types: [ synchronize, opened, reopened ]
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+      - ci-test # testing branch for github action
+      - '*dev'
+    paths:
+      - admin-cli/**
+
+  # for manually triggering workflow
+  workflow_dispatch:
 
 # workflow tasks
 jobs:
-  goreleaser:
+  lint:
+    name: Golang Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./admin-cli
+
+  build:
+    name: Golang Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,11 +61,9 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.14
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
-        with:
-          workdir: ./admin-cli
-          version: latest
-          args: release --rm-dist
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compile
+        working-directory: ./admin-cli
+        run: make
+      - name: Test
+        working-directory: ./admin-cli
+        run: make test

@@ -20,9 +20,9 @@
 package cmd
 
 import (
+	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/shell"
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/admin-cli/admin-cli/executor"
-	"github.com/pegasus-kv/admin-cli/admin-cli/shell"
 )
 
 func init() {

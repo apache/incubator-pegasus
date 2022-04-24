@@ -21,10 +21,10 @@ package executor
 
 import (
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/admin-cli/client"
+	"github.com/apache/incubator-pegasus/admin-cli/tabular"
+	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/olekukonko/tablewriter"
-	"github.com/pegasus-kv/admin-cli/admin-cli/client"
-	"github.com/pegasus-kv/admin-cli/admin-cli/tabular"
-	"github.com/pegasus-kv/admin-cli/admin-cli/util"
 )
 
 // ServerInfo command

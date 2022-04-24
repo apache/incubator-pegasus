@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/go-resty/resty/v2"
-	"github.com/pegasus-kv/admin-cli/admin-cli/util"
 )
 
 type httpRequest func(addr string, cmd command) (string, error)

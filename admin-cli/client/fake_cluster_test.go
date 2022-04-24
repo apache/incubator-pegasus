@@ -25,7 +25,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/XiaoMi/pegasus-go-client/session"
-	"github.com/pegasus-kv/admin-cli/admin-cli/util"
+	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/rand"
 )

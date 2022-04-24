@@ -22,7 +22,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/pegasus-kv/admin-cli/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/executor"
 )
 
 // globalMetaList is the user-input MetaServer IP:Port addresses

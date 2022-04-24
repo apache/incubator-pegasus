@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/admin-cli/admin-cli/tabular"
+	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 )
 
 func BackupTable(client *Client, tableID int, providerType string, backupPath string) error {

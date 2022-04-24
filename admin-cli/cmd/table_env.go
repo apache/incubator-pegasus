@@ -22,9 +22,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/shell"
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/admin-cli/admin-cli/executor"
-	"github.com/pegasus-kv/admin-cli/admin-cli/shell"
 )
 
 // NOTE: some old-version servers may not support some of the keys.

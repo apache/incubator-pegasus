@@ -20,14 +20,14 @@
 # 'always pass' action to resolve it, see more details:
 # https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 
-name: Code Lint and Unit Test
+name: CPP Lint and Unit Test
 
 on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
     paths-ignore:
-      - src
+      - src/**
       - rdsn
       - run.sh
     branches:

@@ -22,9 +22,9 @@ package cmd
 import (
 	"strings"
 
+	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits/nodesmigrator"
+	"github.com/apache/incubator-pegasus/admin-cli/shell"
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/admin-cli/admin-cli/executor/toolkits/nodesmigrator"
-	"github.com/pegasus-kv/admin-cli/admin-cli/shell"
 )
 
 func init() {

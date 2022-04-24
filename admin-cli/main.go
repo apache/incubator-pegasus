@@ -25,9 +25,9 @@ import (
 	"strings"
 
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/apache/incubator-pegasus/admin-cli/cmd"
+	"github.com/apache/incubator-pegasus/admin-cli/shell"
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/admin-cli/admin-cli/cmd"
-	"github.com/pegasus-kv/admin-cli/admin-cli/shell"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 )

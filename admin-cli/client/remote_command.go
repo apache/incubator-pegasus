@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	adminCli "github.com/XiaoMi/pegasus-go-client/admin"
-	"github.com/pegasus-kv/admin-cli/admin-cli/util"
+	"github.com/apache/incubator-pegasus/admin-cli/util"
 )
 
 // CmdResult is the result of remote command to a node.
