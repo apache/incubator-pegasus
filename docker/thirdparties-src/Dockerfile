@@ -16,9 +16,9 @@
 # under the License.
 
 # use dockerhub by default
-ARG REGISTRY_REPO=apachepegasus
+ARG REGISTRY_REPO=apache/pegasus
 
-FROM ${REGISTRY_REPO}/build-env:centos7 as builder
+FROM ${REGISTRY_REPO}:build-env-centos7 as builder
 
 WORKDIR /root
 
