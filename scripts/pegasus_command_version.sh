@@ -23,7 +23,7 @@
 # different pegasus versions have different remote command, this script init it base version
 PID=$$
 
-if [ $# -le 2 ]; then
+if [ $# -le 1 ]; then
   echo "USAGE: $0 <cluster-name> <cluster-meta-list> <version>"
   echo
   echo "init pegasus remote command base version, for example:"
