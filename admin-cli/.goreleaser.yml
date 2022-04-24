@@ -1,0 +1,12 @@
+builds:
+  - goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 7
+    main: ./main.go
+    binary: admin-cli
