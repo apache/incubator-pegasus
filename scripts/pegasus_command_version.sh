@@ -61,7 +61,8 @@ replica_query_compact="server-info"
 nfs_max_copy_rate_megabytes="server-info"
 nfs_max_send_rate_megabytes="server-info"
 
-if [[ ($version = ~"1.1.6") || ($version = ~"1.12.2") || ($version = ~"1.12.3") || ($version = ~"2.0.0") || ($version = ~"2.0-write-optm") ]];then
+# shellcheck disable=SC2076
+if [[ ($version =~ "1.1.6") || ($version =~ "1.12.2") || ($version =~ "1.12.3") || ($version =~ "2.0.0") || ($version =~ "2.0-write-optm") ]];then
   meta_lb_assign_secondary_black_list="meta.lb.assign_secondary_black_list"
   meta_live_percentage="meta.live_percentage"
   meta_lb_assign_delay_ms="meta.lb.assign_delay_ms"
@@ -72,7 +73,7 @@ if [[ ($version = ~"1.1.6") || ($version = ~"1.12.2") || ($version = ~"1.12.3") 
   replica_query_app_envs="replica.query-app-envs"
   replica_query_compact="replica.query-compact"
   replica_query_compact="replica.trigger-checkpoint"
-elif [[ ($version = ~"2.1.1") ]];then
+elif [[ ($version =~ "2.1.1") ]];then
   meta_lb_assign_secondary_black_list="lb.assign_secondary_black_list"
   meta_live_percentage="live_percentage"
   meta_lb_assign_delay_ms="lb.assign_delay_ms"
@@ -85,7 +86,7 @@ elif [[ ($version = ~"2.1.1") ]];then
   replica_query_compact="trigger-checkpoint"
 
   nfs_max_copy_rate_megabytes="nfs.max_copy_rate_megabytes"
-elif [[ ($version = ~"2.2.1") || ($version = ~"2.2.2") || ($version = ~"2.2.3") ]];then
+elif [[ ($version =~ "2.2.1") || ($version =~ "2.2.2") || ($version =~ "2.2.3") ]];then
   meta_lb_assign_secondary_black_list="meta.lb.assign_secondary_black_list"
   meta_live_percentage="meta.live_percentage"
   meta_lb_assign_delay_ms="meta.lb.assign_delay_ms"
@@ -98,7 +99,7 @@ elif [[ ($version = ~"2.2.1") || ($version = ~"2.2.2") || ($version = ~"2.2.3") 
   replica_query_compact="replica.trigger-checkpoint"
 
   nfs_max_copy_rate_megabytes="nfs.max_copy_rate_megabytes"
-elif [[ ($version = ~"2.3.0") || ($version = ~"2.3.1") || ($version = ~"2.3.2") || ($version = ~"2.3.3")]];then
+elif [[ ($version =~ "2.3.0") || ($version =~ "2.3.1") || ($version =~ "2.3.2") || ($version =~ "2.3.3")]];then
   meta_lb_assign_secondary_black_list="meta.lb.assign_secondary_black_list"
   meta_live_percentage="meta.live_percentage"
   meta_lb_assign_delay_ms="meta.lb.assign_delay_ms"
