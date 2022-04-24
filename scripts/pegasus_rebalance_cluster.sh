@@ -91,7 +91,7 @@ if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_copy_rate_megabytes failed"
   exit 1
 fi
-echo "remote_command -t replica-server {nfs_max_send_rate_megabytes} $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes
+echo "remote_command -t replica-server ${nfs_max_send_rate_megabytes}  $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_send_rate_megabytes failed"
@@ -160,7 +160,7 @@ if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_copy_rate_megabytes failed"
   exit 1
 fi
-echo "remote_command -t replica-server {nfs_max_send_rate_megabytes} 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes
+echo "remote_command -t replica-server ${nfs_max_send_rate_megabytes}  500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.rebalance_cluster.set_nfs_send_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_send_rate_megabytes failed"
