@@ -80,7 +80,7 @@ do
     sleeped=0
     while true
     do
-      echo "remote_command -t replica-server ${replica.query-app-envs} $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.query_app_envs.$app
+      echo "remote_command -t replica-server ${replica_query_app_envs} $gid" | ./run.sh shell --cluster $cluster &>/tmp/$UID.$PID.pegasus.query_app_envs.$app
       effect_count=`grep "$scenario_key=$scenario" /tmp/$UID.$PID.pegasus.query_app_envs.$app | wc -l`
       total_count=$((partition_count * replica_count))
       if [ $effect_count -ge $total_count ]; then

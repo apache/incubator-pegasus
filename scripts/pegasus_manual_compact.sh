@@ -107,7 +107,7 @@ function wait_manual_compact()
     trigger_time=$2
     total_replica_count=$3
 
-    query_cmd="remote_command -t replica-server ${replica.query-compact} ${app_id}"
+    query_cmd="remote_command -t replica-server ${replica_query_compact} ${app_id}"
     earliest_finish_time_ms=$(date -d @${trigger_time} +"%Y-%m-%d %H:%M:%S.000")
     echo "Checking once compact progress since [$trigger_time] [$earliest_finish_time_ms]..."
 
@@ -148,7 +148,7 @@ function create_checkpoint()
 
     echo "Start to create checkpoint..."
     chkpt_log_file="/tmp/$UID.$PID.pegasus.trigger_checkpoint.${app_id}"
-    echo "remote_command -t replica-server ${replica.trigger-checkpoint} ${app_id}" | ./run.sh shell --cluster ${cluster} &>${chkpt_log_file}
+    echo "remote_command -t replica-server ${replica_query_compact} ${app_id}" | ./run.sh shell --cluster ${cluster} &>${chkpt_log_file}
     not_found_count=`grep '^    .*not found' ${chkpt_log_file} | wc -l`
     triggered_count=`grep '^    .*triggered' ${chkpt_log_file} | wc -l`
     ignored_count=`grep '^    .*ignored' ${chkpt_log_file} | wc -l`

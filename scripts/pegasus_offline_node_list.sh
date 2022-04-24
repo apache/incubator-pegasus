@@ -62,13 +62,13 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Set nfs_copy/send_rate_megabytes $nfs_rate_megabytes"
-echo "remote_command -t replica-server ${nfs.max_copy_rate_megabytes} $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+echo "remote_command -t replica-server ${nfs_max_copy_rate_megabytes} $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_copy_rate_megabytes failed"
   exit 1
 fi
-echo "remote_command -t replica-server nfs.max_send_rate_megabytes $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes
+echo "remote_command -t replica-server {nfs_max_send_rate_megabytes} $nfs_rate_megabytes" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_send_rate_megabytes failed"
@@ -76,7 +76,7 @@ if [ $set_ok -le 0 ]; then
 fi
 
 echo "Set lb.assign_secondary_black_list..."
-echo "remote_command -l $pmeta ${meta.lb.assign_secondary_black_list} $address_list" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list
+echo "remote_command -l $pmeta ${meta_lb_assign_secondary_black_list} $address_list" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list
 set_ok=`grep "set ok" /tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set lb.assign_secondary_black_list failed, refer to /tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list"
@@ -84,7 +84,7 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 echo "Set live_percentage to 0...(No need to set it back to default. When this offline task is done, meta-server should be restarted, and live_percentage will be loaded from the config file)"
-echo "remote_command -l $pmeta ${meta.live_percentage} 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.live_percentage
+echo "remote_command -l $pmeta ${meta_live_percentage} 0" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node.live_percentage
 set_ok=`grep OK /tmp/$UID.$PID.pegasus.offline_node.live_percentage | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: set live_percentage to 0 failed"
@@ -106,7 +106,7 @@ do
 done
 
 echo "Clear lb.assign_secondary_black_list..."
-echo "remote_command -l $pmeta ${meta.lb.assign_secondary_black_list} clear" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list
+echo "remote_command -l $pmeta ${meta_lb_assign_secondary_black_list} clear" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list
 set_ok=`grep "clear ok" /tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list | wc -l`
 if [ $set_ok -ne 1 ]; then
   echo "ERROR: clear lb.assign_secondary_black_list failed, refer to /tmp/$UID.$PID.pegasus.offline_node_list.assign_secondary_black_list"
@@ -114,13 +114,13 @@ if [ $set_ok -ne 1 ]; then
 fi
 
 echo "Set nfs_copy/send_rate_megabytes 500"
-echo "remote_command -t replica-server ${nfs.max_copy_rate_megabytes} 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
+echo "remote_command -t replica-server ${nfs_max_copy_rate_megabytes} 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_copy_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_copy_rate_megabytes failed"
   exit 1
 fi
-echo "remote_command -t replica-server nfs.max_send_rate_megabytes 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes
+echo "remote_command -t replica-server {nfs_max_send_rate_megabytes} 500" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes
 set_ok=`grep 'succeed: OK' /tmp/$UID.$PID.pegasus.offline_node_list.set_nfs_send_rate_megabytes | wc -l`
 if [ $set_ok -le 0 ]; then
   echo "ERROR: set nfs_send_rate_megabytes failed"
