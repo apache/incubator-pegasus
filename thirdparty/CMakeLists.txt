@@ -319,6 +319,7 @@ ExternalProject_Add(s2geometry
         URL ${OSS_URL_PREFIX}/s2geometry-e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
         https://github.com/neverchanje/s2geometry/archive/e8d16637a467d9f096a92a6d81a50a9b747ca828.zip
         URL_MD5 75cc44c9c31382083d8a2d0e42590788
+        PATCH_COMMAND patch -p0 < ${TP_DIR}/fix_s2_for_aarch64.patch
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DGTEST_ROOT=${googletest_SRC}/googletest
         -DBUILD_SHARED_LIBS=OFF

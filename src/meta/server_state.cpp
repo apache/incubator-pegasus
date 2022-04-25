@@ -612,8 +612,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         if (app->helpers->partitions_in_progress.load() == 0 &&
                             app->status == app_status::AS_AVAILABLE &&
                             _meta_svc->get_bulk_load_service()) {
+                            bool is_bulk_loading = app->is_bulk_loading;
                             _meta_svc->get_bulk_load_service()->check_app_bulk_load_states(
-                                std::move(app), app->is_bulk_loading);
+                                std::move(app), is_bulk_loading);
                         }
                     }
                 } else if (ec == ERR_OBJECT_NOT_FOUND) {
