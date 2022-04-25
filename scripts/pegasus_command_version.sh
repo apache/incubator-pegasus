@@ -36,7 +36,6 @@ meta_list=$2
 version=$3
 
 if [ "$version" = "" ]; then
-  echo "check pegasus server version"
   echo "server_info" | ./run.sh shell --cluster $meta_list &>/tmp/$UID.$PID.pegasus.command.version
   version=`grep 'Pegasus Server' /tmp/$UID.$PID.pegasus.command.version | head -n 1`
   if [ "$version" = "" ]; then
