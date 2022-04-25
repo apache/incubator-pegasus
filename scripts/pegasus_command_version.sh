@@ -61,7 +61,7 @@ nfs_max_copy_rate_megabytes=""
 nfs_max_send_rate_megabytes=""
 
 # shellcheck disable=SC2076
-if [[ ($version = ~"1.1.6") || ($version = ~"1.12.2") || ($version = ~"1.12.3") || ($version = ~"2.0.0") || ($version = ~"2.0-write-optim") ]];then
+if [[ ($version =~ "1.1.6") || ($version =~ "1.12.2") || ($version =~ "1.12.3") || ($version =~ "2.0.0") || ($version =~ "2.0-write-optim") ]];then
   echo "" # use default config
 elif [[ ($version =~ "2.1.1") || ($version =~ "2.2.1") || ($version =~ "2.2.2") || ($version =~ "2.2.3") ]];then
   nfs_max_copy_rate_megabytes="nfs.max_copy_rate_megabytes"
