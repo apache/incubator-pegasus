@@ -56,7 +56,6 @@ replica_query_app_envs="replica.query-app-envs"
 replica_query_compact="replica.query-compact"
 replica_trigger_checkpoint="replica.trigger-checkpoint"
 
-# default `server-info` that is supported by all version to avoid some version set no supported command and return error
 nfs_max_copy_rate_megabytes=""
 nfs_max_send_rate_megabytes=""
 
