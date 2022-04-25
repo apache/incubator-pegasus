@@ -148,7 +148,7 @@ function create_checkpoint()
 
     echo "Start to create checkpoint..."
     chkpt_log_file="/tmp/$UID.$PID.pegasus.trigger_checkpoint.${app_id}"
-    echo "remote_command -t replica-server ${replica_query_compact} ${app_id}" | ./run.sh shell --cluster ${cluster} &>${chkpt_log_file}
+    echo "remote_command -t replica-server ${replica_trigger_checkpoint} ${app_id}" | ./run.sh shell --cluster ${cluster} &>${chkpt_log_file}
     not_found_count=`grep '^    .*not found' ${chkpt_log_file} | wc -l`
     triggered_count=`grep '^    .*triggered' ${chkpt_log_file} | wc -l`
     ignored_count=`grep '^    .*ignored' ${chkpt_log_file} | wc -l`

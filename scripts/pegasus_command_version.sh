@@ -54,7 +54,7 @@ meta_lb_add_secondary_max_count_for_one_node="meta.lb.add_secondary_max_count_fo
 replica_kill_partition="replica.kill_partition"
 replica_query_app_envs="replica.query-app-envs"
 replica_query_compact="replica.query-compact"
-replica_query_compact="replica.trigger-checkpoint"
+replica_trigger_checkpoint="replica.trigger-checkpoint"
 
 # default `server-info` that is supported by all version to avoid some version set no supported command and return error
 nfs_max_copy_rate_megabytes=""
