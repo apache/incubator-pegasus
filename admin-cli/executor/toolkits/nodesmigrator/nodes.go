@@ -26,6 +26,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	migrator "github.com/apache/incubator-pegasus/admin-cli/client"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 )
 
@@ -57,7 +58,7 @@ func (m *MigratorNode) downgradeAllReplicaToSecondary(client *executor.Client) {
 	for {
 		err := migrator.MigratePrimariesOut(client.Meta, m.node)
 		if err != nil {
-			logDebug(fmt.Sprintf("migrate primary out of %s is invalid now, err = %s\n", m.String(), err))
+			toolkits.LogDebug(fmt.Sprintf("migrate primary out of %s is invalid now, err = %s\n", m.String(), err))
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -75,23 +76,23 @@ func (m *MigratorNode) downgradeAllReplicaToSecondary(client *executor.Client) {
 func (m *MigratorNode) checkIfNoPrimary(client *executor.Client) bool {
 	tables, err := client.Meta.ListAvailableApps()
 	if err != nil {
-		logDebug(fmt.Sprintf("migrate primary out of %s is invalid when list app, err = %s", m.String(), err))
+		toolkits.LogDebug(fmt.Sprintf("migrate primary out of %s is invalid when list app, err = %s", m.String(), err))
 		return false
 	}
 
 	for _, tb := range tables {
 		partitions, err := migrator.ListPrimariesOnNode(client.Meta, m.node, tb.AppName)
 		if err != nil {
-			logDebug(fmt.Sprintf("migrate primary out of %s is invalid when list primaries, err = %s", m.String(), err))
+			toolkits.LogDebug(fmt.Sprintf("migrate primary out of %s is invalid when list primaries, err = %s", m.String(), err))
 			return false
 		}
 		if len(partitions) > 0 {
-			logDebug(fmt.Sprintf("migrate primary out of %s is not completed, current count = %d", m.String(), len(partitions)))
+			toolkits.LogDebug(fmt.Sprintf("migrate primary out of %s is not completed, current count = %d", m.String(), len(partitions)))
 			return false
 		}
 	}
 
-	logInfo(fmt.Sprintf("migrate primary out of %s successfully", m.String()))
+	toolkits.LogInfo(fmt.Sprintf("migrate primary out of %s successfully", m.String()))
 	return true
 }
 

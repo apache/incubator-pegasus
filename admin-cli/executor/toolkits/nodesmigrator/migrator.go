@@ -32,6 +32,7 @@ import (
 	"github.com/XiaoMi/pegasus-go-client/session"
 	migrator "github.com/apache/incubator-pegasus/admin-cli/client"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 )
 
@@ -52,7 +53,7 @@ func (m *Migrator) run(client *executor.Client, table string, balanceFactor int,
 	for {
 		target := m.selectNextTargetNode(targets)
 		if target.String() == origin.String() {
-			logInfo(fmt.Sprintf("completed for origin and target is same: %s", origin.String()))
+			toolkits.LogInfo(fmt.Sprintf("completed for origin and target is same: %s", origin.String()))
 			return m.getTotalRemainingReplicaCount()
 		}
 
@@ -60,7 +61,7 @@ func (m *Migrator) run(client *executor.Client, table string, balanceFactor int,
 		m.updateOngoingActionList()
 		remainingCount := m.getRemainingReplicaCount(origin)
 		if remainingCount <= 0 || len(balanceTargets)+len(invalidTargets) >= len(targets) {
-			logInfo(fmt.Sprintf("[%s]completed(remaining=%d, balance=%d, invalid=%d, running_target=%d, final_target=%d) for no replicas can be migrated",
+			toolkits.LogInfo(fmt.Sprintf("[%s]completed(remaining=%d, balance=%d, invalid=%d, running_target=%d, final_target=%d) for no replicas can be migrated",
 				table, remainingCount, len(balanceTargets), len(invalidTargets), len(targets), len(m.targets)))
 			return m.getTotalRemainingReplicaCount()
 		}
@@ -69,7 +70,7 @@ func (m *Migrator) run(client *executor.Client, table string, balanceFactor int,
 		currentCount := m.getCurrentReplicaCount(target)
 		if currentCount >= expectCount {
 			balanceTargets[target.String()] = 1
-			logDebug(fmt.Sprintf("[%s]balance: no need migrate replicas to %s, current=%d, expect=max(%d), total_balance=%d",
+			toolkits.LogDebug(fmt.Sprintf("[%s]balance: no need migrate replicas to %s, current=%d, expect=max(%d), total_balance=%d",
 				table, target.String(), currentCount, expectCount, len(balanceTargets)))
 			if len(m.ongoingActions.actionList) > 0 {
 				time.Sleep(10 * time.Second)
@@ -79,7 +80,7 @@ func (m *Migrator) run(client *executor.Client, table string, balanceFactor int,
 
 		if !m.existValidReplica(origin, target) {
 			invalidTargets[target.String()] = 1
-			logDebug(fmt.Sprintf("[%s]invalid: no invalid migrate replicas to %s, total_invalid=%d",
+			toolkits.LogDebug(fmt.Sprintf("[%s]invalid: no invalid migrate replicas to %s, total_invalid=%d",
 				table, target.String(), len(invalidTargets)))
 			if len(m.ongoingActions.actionList) > 0 {
 				time.Sleep(10 * time.Second)
@@ -89,7 +90,7 @@ func (m *Migrator) run(client *executor.Client, table string, balanceFactor int,
 
 		currentConcurrentCount := target.concurrent(m.ongoingActions)
 		if currentConcurrentCount == maxConcurrent {
-			logDebug(fmt.Sprintf("[%s] %s has excceed the max concurrent = %d", table, target.String(),
+			toolkits.LogDebug(fmt.Sprintf("[%s] %s has excceed the max concurrent = %d", table, target.String(),
 				currentConcurrentCount))
 			time.Sleep(10 * time.Second)
 			continue
@@ -118,7 +119,7 @@ func (m *Migrator) selectNextTargetNode(targets []*util.PegasusNode) *MigratorNo
 func (m *Migrator) updateNodesReplicaInfo(client *executor.Client, table string) {
 	for {
 		if err := m.syncNodesReplicaInfo(client, table); err != nil {
-			logDebug(fmt.Sprintf("[%s]table may be unhealthy: %s", table, err.Error()))
+			toolkits.LogDebug(fmt.Sprintf("[%s]table may be unhealthy: %s", table, err.Error()))
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -240,7 +241,7 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 	from := m.nodes[origin.String()]
 	to := m.nodes[target.String()]
 	if len(from.replicas) == 0 {
-		logDebug(fmt.Sprintf("the node[%s] has no replica to migrate", target.node.String()))
+		toolkits.LogDebug(fmt.Sprintf("the node[%s] has no replica to migrate", target.node.String()))
 		return
 	}
 
@@ -255,12 +256,12 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 		}
 
 		if to.contain(replica.gpid) {
-			logDebug(fmt.Sprintf("actions[%s] target has existed the replica", action.toString()))
+			toolkits.LogDebug(fmt.Sprintf("actions[%s] target has existed the replica", action.toString()))
 			continue
 		}
 
 		if m.totalActions.exist(action) {
-			logDebug(fmt.Sprintf("action[%s] has assgin other task", action.toString()))
+			toolkits.LogDebug(fmt.Sprintf("action[%s] has assgin other task", action.toString()))
 			continue
 		}
 
@@ -270,10 +271,10 @@ func (m *Migrator) sendMigrateRequest(client *executor.Client, table string, ori
 		if err != nil {
 			m.totalActions.delete(action)
 			m.ongoingActions.delete(action)
-			logWarn(fmt.Sprintf("send failed: %s", err.Error()))
+			toolkits.LogWarn(fmt.Sprintf("send failed: %s", err.Error()))
 			continue
 		}
-		logInfo(fmt.Sprintf("[%s]send %s success, ongiong task = %d", table, action.toString(), target.concurrent(m.ongoingActions)))
+		toolkits.LogInfo(fmt.Sprintf("[%s]send %s success, ongiong task = %d", table, action.toString(), target.concurrent(m.ongoingActions)))
 		return
 	}
 }
@@ -290,10 +291,10 @@ func (m *Migrator) updateOngoingActionList() {
 	for name, act := range m.ongoingActions.actionList {
 		node := m.nodes[act.to.String()]
 		if node.contain(act.replica.gpid) {
-			logInfo(fmt.Sprintf("%s has completed", name))
+			toolkits.LogInfo(fmt.Sprintf("%s has completed", name))
 			m.ongoingActions.delete(act)
 		} else {
-			logInfo(fmt.Sprintf("%s is running", name))
+			toolkits.LogInfo(fmt.Sprintf("%s is running", name))
 		}
 	}
 }
