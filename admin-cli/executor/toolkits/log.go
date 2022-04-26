@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package nodesmigrator
+package toolkits
 
 import (
 	"fmt"
@@ -25,21 +25,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func logInfo(log string) {
+func LogInfo(log string) {
 	fmt.Printf("INFO: %s\n", log)
 	logrus.Info(log)
 }
 
-func logWarn(log string) {
+func LogWarn(log string) {
 	fmt.Printf("WARN: %s\n", log)
 	logrus.Warn(log)
 }
 
-func logDebug(log string) {
+func LogDebug(log string) {
 	logrus.Debug(log)
 }
 
-func logPanic(log string) {
+func LogPanic(log string) {
 	fmt.Println(log)
 	logrus.Panic(log)
 }
