@@ -39,8 +39,9 @@
 namespace dsn {
 namespace replication {
 
-struct replica_stub_test_base : ::testing::Test
+class replica_stub_test_base : public ::testing::Test
 {
+public:
     replica_stub_test_base() { stub = make_unique<mock_replica_stub>(); }
 
     ~replica_stub_test_base() { stub.reset(); }
@@ -48,8 +49,9 @@ struct replica_stub_test_base : ::testing::Test
     std::unique_ptr<mock_replica_stub> stub;
 };
 
-struct replica_test_base : replica_stub_test_base
+class replica_test_base : public replica_stub_test_base
 {
+public:
     std::unique_ptr<mock_replica> _replica;
     const std::string _log_dir{"./test-log"};
 

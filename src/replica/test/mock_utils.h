@@ -226,7 +226,6 @@ public:
 
 private:
     decree _max_gced_decree{invalid_decree - 1};
-    decree _last_durable_decree{0};
 };
 typedef dsn::ref_ptr<mock_replica> mock_replica_ptr;
 
