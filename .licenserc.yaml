@@ -22,6 +22,7 @@ header:
   paths-ignore:
     - 'LICENSE'
     - 'NOTICE'
+    - '.github/pull_request_template.md'
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
     - 'src/.clang-format'
@@ -35,5 +36,6 @@ header:
     - 'src/shell/sds/sds.c'
     - 'src/shell/sds/sds.h'
     - 'src/shell/sds/sdsalloc.h'
+    - 'admin-cli/go.sum'
 
   comment: on-failure

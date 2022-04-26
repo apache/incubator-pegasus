@@ -21,14 +21,14 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: Code Lint and Unit Test
+name: CPP Lint and Unit Test
 
 on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
     paths:
-      - src
+      - src/**
       - rdsn
       - run.sh
     branches:

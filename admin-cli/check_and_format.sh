@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,30 +19,14 @@
 # under the License.
 #
 
-github:
-  description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
-  homepage: https://pegasus.apache.org/
-  labels:
-    - pegasus
-    - key-value-store
-    - nosql
-    - distributed-database
-  features:
-    # Enable wiki for documentation
-    wiki: false
-    # Enable issues management
-    issues: true
-    # Enable projects for project management boards
-    projects: true
-  enabled_merge_buttons:
-    # enable squash button:
-    squash:  true
-    # enable merge button:
-    merge:   true
-    # enable rebase button:
-    rebase:  true
+PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
+cd "${PROJECT_DIR}" || exit 1
 
-notifications:
-  commits: commits@pegasus.apache.org
-  issues: dev@pegasus.apache.org
-  pullrequests: dev@pegasus.apache.org
+if [ ! -f "${PROJECT_DIR}"/golangci-lint-1.35.2-linux-amd64/golangci-lint ]; then
+    wget https://github.com/golangci/golangci-lint/releases/download/v1.35.2/golangci-lint-1.35.2-linux-amd64.tar.gz
+    tar -xzvf golangci-lint-1.35.2-linux-amd64.tar.gz
+fi
+
+gofmt -l -w .
+go mod tidy
+golangci-lint-1.35.2-linux-amd64/golangci-lint run -v -E gofmt -E golint

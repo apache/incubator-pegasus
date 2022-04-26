@@ -106,6 +106,7 @@ LOG
 
 .vscode/
 .history/
+.admin-cli-history
 
 .shell-history
 PACKAGE
@@ -118,3 +119,6 @@ config-shell.ini.*
 *.tar.gz
 pegasus-server*
 *.log
+
+admin-cli/bin/
+golangci-*

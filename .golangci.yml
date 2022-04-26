@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,32 +14,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+---
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - golint
+    - bodyclose
+    - exhaustive
+    - exportloopref
 
-github:
-  description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
-  homepage: https://pegasus.apache.org/
-  labels:
-    - pegasus
-    - key-value-store
-    - nosql
-    - distributed-database
-  features:
-    # Enable wiki for documentation
-    wiki: false
-    # Enable issues management
-    issues: true
-    # Enable projects for project management boards
-    projects: true
-  enabled_merge_buttons:
-    # enable squash button:
-    squash:  true
-    # enable merge button:
-    merge:   true
-    # enable rebase button:
-    rebase:  true
-
-notifications:
-  commits: commits@pegasus.apache.org
-  issues: dev@pegasus.apache.org
-  pullrequests: dev@pegasus.apache.org
+linters-settings:
+  exhaustive:
+    # indicates that switch statements are to be considered exhaustive if a
+    # 'default' case is present, even if all enum members aren't listed in the
+    # switch
+    default-signifies-exhaustive: true

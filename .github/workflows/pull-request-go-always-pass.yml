@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,32 +14,36 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+---
+# workflow name
+name: Golang Lint and Unit Test
 
-github:
-  description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
-  homepage: https://pegasus.apache.org/
-  labels:
-    - pegasus
-    - key-value-store
-    - nosql
-    - distributed-database
-  features:
-    # Enable wiki for documentation
-    wiki: false
-    # Enable issues management
-    issues: true
-    # Enable projects for project management boards
-    projects: true
-  enabled_merge_buttons:
-    # enable squash button:
-    squash:  true
-    # enable merge button:
-    merge:   true
-    # enable rebase button:
-    rebase:  true
+# on events
+on:
+  # run on each pull request
+  pull_request:
+    types: [ synchronize, opened, reopened ]
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+      - ci-test # testing branch for github action
+      - '*dev'
+    paths:
+      - admin-cli/**
 
-notifications:
-  commits: commits@pegasus.apache.org
-  issues: dev@pegasus.apache.org
-  pullrequests: dev@pegasus.apache.org
+  # for manually triggering workflow
+  workflow_dispatch:
+
+# workflow tasks
+jobs:
+  lint:
+    name: Golang Lint
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "No build required" '
+
+  build:
+    name: Golang Test
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "No build required" '

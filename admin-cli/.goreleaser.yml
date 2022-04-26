@@ -1,4 +1,3 @@
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,32 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-
-github:
-  description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
-  homepage: https://pegasus.apache.org/
-  labels:
-    - pegasus
-    - key-value-store
-    - nosql
-    - distributed-database
-  features:
-    # Enable wiki for documentation
-    wiki: false
-    # Enable issues management
-    issues: true
-    # Enable projects for project management boards
-    projects: true
-  enabled_merge_buttons:
-    # enable squash button:
-    squash:  true
-    # enable merge button:
-    merge:   true
-    # enable rebase button:
-    rebase:  true
-
-notifications:
-  commits: commits@pegasus.apache.org
-  issues: dev@pegasus.apache.org
-  pullrequests: dev@pegasus.apache.org
+---
+builds:
+  - goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 7
+    main: ./main.go
+    binary: admin-cli
