@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/desertbit/grumble"
 	"github.com/apache/incubator-pegasus/pegic/executor/util"
 	"github.com/apache/incubator-pegasus/pegic/interactive"
+	"github.com/desertbit/grumble"
 )
 
 var supportedEncodings = []string{

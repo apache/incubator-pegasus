@@ -25,8 +25,8 @@ import (
 	"strings"
 
 	"github.com/XiaoMi/pegasus-go-client/session"
-	"github.com/desertbit/grumble"
 	"github.com/apache/incubator-pegasus/pegic/executor"
+	"github.com/desertbit/grumble"
 )
 
 var globalContext *executor.Context
