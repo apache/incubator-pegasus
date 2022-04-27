@@ -24,8 +24,8 @@ import (
 	"strings"
 
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/pegic/executor/util"
-	"github.com/pegasus-kv/pegic/interactive"
+	"github.com/apache/incubator-pegasus/pegic/executor/util"
+	"github.com/apache/incubator-pegasus/pegic/interactive"
 )
 
 func init() {

@@ -23,8 +23,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pegasus-kv/pegic/interactive"
-	"github.com/pegasus-kv/pegic/interactive/cmd"
+	"github.com/apache/incubator-pegasus/pegic/interactive"
+	"github.com/apache/incubator-pegasus/pegic/interactive/cmd"
 	"github.com/spf13/cobra"
 )
 

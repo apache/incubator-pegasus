@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/pegic/interactive"
+	"github.com/apache/incubator-pegasus/pegic/interactive"
 )
 
 func init() {

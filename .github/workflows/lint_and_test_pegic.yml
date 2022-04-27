@@ -16,20 +16,20 @@
 # under the License.
 ---
 # workflow name
-name: Golang Lint and Unit Test
+name: Golang Lint and Unit Test - pegic
 
 # on events
 on:
   # run on each pull request
   pull_request:
-    types: [ synchronize, opened, reopened ]
+    types: [ synchronize, reopened, opened ]
     branches:
       - master
       - 'v[0-9]+.*' # release branch
       - ci-test # testing branch for github action
       - '*dev'
     paths:
-      - admin-cli/**
+      - pegic/**
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -37,13 +37,30 @@ on:
 # workflow tasks
 jobs:
   lint:
-    name: Golang Lint
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "No build required" '
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./pegic
 
   build:
-    name: Golang Test
+    name: Test
     runs-on: ubuntu-latest
     steps:
-      - run: 'echo "No build required" '
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+      - name: Compile 
+        working-directory: ./pegic
+        run: make

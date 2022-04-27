@@ -22,9 +22,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/apache/incubator-pegasus/pegic/executor"
+	"github.com/apache/incubator-pegasus/pegic/interactive"
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/pegic/executor"
-	"github.com/pegasus-kv/pegic/interactive"
 )
 
 func init() {

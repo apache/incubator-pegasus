@@ -24,7 +24,7 @@ import (
 	"os"
 
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"github.com/pegasus-kv/pegic/shell"
+	"github.com/apache/incubator-pegasus/pegic/shell"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 )

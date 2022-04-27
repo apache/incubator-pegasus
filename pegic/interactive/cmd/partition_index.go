@@ -23,8 +23,8 @@ import (
 	"fmt"
 
 	"github.com/desertbit/grumble"
-	"github.com/pegasus-kv/pegic/executor"
-	"github.com/pegasus-kv/pegic/interactive"
+	"github.com/apache/incubator-pegasus/pegic/executor"
+	"github.com/apache/incubator-pegasus/pegic/interactive"
 )
 
 func init() {
