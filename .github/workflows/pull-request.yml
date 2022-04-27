@@ -5,13 +5,13 @@ name: Pull Request
 on:
   # run on each pull request
   pull_request:
-    types: [ synchronize, reopened ]
+    types: [ synchronize, reopened, opened ]
     branches:
-      - main
-      - ci-test # testing branch for github action
+      - master
+      - commit_history_rebased
   push:
     branches:
-      - main
+      - master
 
 # workflow tasks
 jobs:
@@ -23,22 +23,22 @@ jobs:
         with:
           fetch-depth: 1
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           version: v1.29
+          working-directory: ./pegic
 
   build:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      -
-        name: Set up Go
+      - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: 1.14
       - name: Compile 
+        working-directory: ./pegic
         run: make
