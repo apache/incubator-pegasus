@@ -106,9 +106,8 @@ LOG
 
 .vscode/
 .history/
-.admin-cli-history
+.*-history
 
-.shell-history
 PACKAGE
 scripts/py_utils/*.pyc
 cmake-build-debug
@@ -121,4 +120,5 @@ pegasus-server*
 *.log
 
 admin-cli/bin/
+pegic/bin/
 golangci-*
