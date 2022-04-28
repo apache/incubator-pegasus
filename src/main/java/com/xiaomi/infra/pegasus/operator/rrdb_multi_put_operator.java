@@ -34,7 +34,7 @@ public class rrdb_multi_put_operator extends client_operator {
   }
 
   public void recv_data(TProtocol iprot) throws TException {
-    rrdb.put_result result = new rrdb.put_result();
+    rrdb.multi_put_result result = new rrdb.multi_put_result();
     result.read(iprot);
     if (result.isSetSuccess()) resp = result.success;
     else
