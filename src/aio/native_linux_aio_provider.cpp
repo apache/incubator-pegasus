@@ -72,16 +72,16 @@ error_code native_linux_aio_provider::flush(dsn_handle_t fh)
 }
 
 error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
-                                            /*out*/ uint32_t *processed_bytes)
+                                            /*out*/ uint64_t *processed_bytes)
 {
     dsn::error_code resp = ERR_OK;
-    uint32_t buffer_offset = 0;
+    uint64_t buffer_offset = 0;
     do {
         // ret is the written data size
-        uint32_t ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
-                              (char *)aio_ctx.buffer + buffer_offset,
-                              aio_ctx.buffer_size - buffer_offset,
-                              aio_ctx.file_offset + buffer_offset);
+        auto ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
+                          (char *)aio_ctx.buffer + buffer_offset,
+                          aio_ctx.buffer_size - buffer_offset,
+                          aio_ctx.file_offset + buffer_offset);
         if (dsn_unlikely(ret < 0)) {
             if (errno == EINTR) {
                 dwarn_f("write failed with errno={} and will retry it.", strerror(errno));
@@ -114,7 +114,7 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
 }
 
 error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
-                                           /*out*/ uint32_t *processed_bytes)
+                                           /*out*/ uint64_t *processed_bytes)
 {
     ssize_t ret = pread(static_cast<int>((ssize_t)aio_ctx.file),
                         aio_ctx.buffer,
@@ -126,7 +126,7 @@ error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
     if (ret == 0) {
         return ERR_HANDLE_EOF;
     }
-    *processed_bytes = static_cast<uint32_t>(ret);
+    *processed_bytes = static_cast<uint64_t>(ret);
     return ERR_OK;
 }
 
@@ -148,7 +148,7 @@ error_code native_linux_aio_provider::aio_internal(aio_task *aio_tsk)
     ADD_POINT(aio_tsk->_tracer);
     aio_context *aio_ctx = aio_tsk->get_aio_context();
     error_code err = ERR_UNKNOWN;
-    uint32_t processed_bytes = 0;
+    uint64_t processed_bytes = 0;
     switch (aio_ctx->type) {
     case AIO_Read:
         err = read(*aio_ctx, &processed_bytes);

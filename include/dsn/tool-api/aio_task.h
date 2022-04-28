@@ -55,7 +55,7 @@ public:
     // filled by apps
     dsn_handle_t file;
     void *buffer;
-    uint32_t buffer_size;
+    uint64_t buffer_size;
     uint64_t file_offset;
 
     // filled by frameworks

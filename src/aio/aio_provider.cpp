@@ -31,7 +31,7 @@ namespace dsn {
 
 aio_provider::aio_provider(disk_engine *disk) : _engine(disk) {}
 
-void aio_provider::complete_io(aio_task *aio, error_code err, uint32_t bytes)
+void aio_provider::complete_io(aio_task *aio, error_code err, uint64_t bytes)
 {
     _engine->complete_io(aio, err, bytes);
 }

@@ -79,8 +79,8 @@ private:
     disk_engine();
     ~disk_engine() = default;
 
-    void process_write(aio_task *wk, uint32_t sz);
-    void complete_io(aio_task *aio, error_code err, uint32_t bytes);
+    void process_write(aio_task *wk, uint64_t sz);
+    void complete_io(aio_task *aio, error_code err, uint64_t bytes);
 
     std::unique_ptr<aio_provider> _provider;
 

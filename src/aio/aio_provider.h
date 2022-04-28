@@ -59,8 +59,8 @@ public:
 
     virtual error_code close(dsn_handle_t fh) = 0;
     virtual error_code flush(dsn_handle_t fh) = 0;
-    virtual error_code write(const aio_context &aio_ctx, /*out*/ uint32_t *processed_bytes) = 0;
-    virtual error_code read(const aio_context &aio_ctx, /*out*/ uint32_t *processed_bytes) = 0;
+    virtual error_code write(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) = 0;
+    virtual error_code read(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) = 0;
 
     // Submits the aio_task to the underlying disk-io executor.
     // This task may not be executed immediately, call `aio_task::wait`
@@ -69,7 +69,7 @@ public:
 
     virtual aio_context *prepare_aio_context(aio_task *) = 0;
 
-    void complete_io(aio_task *aio, error_code err, uint32_t bytes);
+    void complete_io(aio_task *aio, error_code err, uint64_t bytes);
 
 private:
     disk_engine *_engine;

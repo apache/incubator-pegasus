@@ -39,8 +39,8 @@ public:
     dsn_handle_t open(const char *file_name, int flag, int pmode) override;
     error_code close(dsn_handle_t fh) override;
     error_code flush(dsn_handle_t fh) override;
-    error_code write(const aio_context &aio_ctx, /*out*/ uint32_t *processed_bytes) override;
-    error_code read(const aio_context &aio_ctx, /*out*/ uint32_t *processed_bytes) override;
+    error_code write(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) override;
+    error_code read(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) override;
 
     void submit_aio_task(aio_task *aio) override;
     aio_context *prepare_aio_context(aio_task *tsk) override { return new aio_context; }

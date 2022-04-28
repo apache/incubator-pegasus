@@ -53,7 +53,7 @@ static disk_engine_initializer disk_engine_init;
 aio_task *disk_write_queue::unlink_next_workload(void *plength)
 {
     uint64_t next_offset = 0;
-    uint32_t &sz = *(uint32_t *)plength;
+    uint64_t &sz = *(uint64_t *)plength;
     sz = 0;
 
     aio_task *first = _hdr._first, *current = first, *last = first;
@@ -125,11 +125,7 @@ aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err,
 
         if (err == ERR_OK) {
             size_t this_size = (size_t)wk->get_aio_context()->buffer_size;
-            dassert(size >= this_size,
-                    "written buffer size does not equal to input buffer's size: %d vs %d",
-                    (int)size,
-                    (int)this_size);
-
+            dcheck_ge(size, this_size);
             wk->enqueue(err, this_size);
             size -= this_size;
         } else {
@@ -167,7 +163,7 @@ public:
     virtual void exec() override
     {
         auto df = (disk_file *)_tasks->get_aio_context()->file_object;
-        uint32_t sz;
+        uint64_t sz;
 
         auto wk = df->on_write_completed(_tasks, (void *)&sz, error(), get_transferred_size());
         if (wk) {
@@ -193,14 +189,14 @@ void disk_engine::write(aio_task *aio)
     dio->engine = this;
     dio->type = AIO_Write;
 
-    uint32_t sz;
+    uint64_t sz;
     auto wk = df->write(aio, &sz);
     if (wk) {
         process_write(wk, sz);
     }
 }
 
-void disk_engine::process_write(aio_task *aio, uint32_t sz)
+void disk_engine::process_write(aio_task *aio, uint64_t sz)
 {
     aio_context *dio = aio->get_aio_context();
 
@@ -243,7 +239,7 @@ void disk_engine::process_write(aio_task *aio, uint32_t sz)
     }
 }
 
-void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes)
+void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
 {
     if (err != ERR_OK) {
         dinfo("disk operation failure with code %s, err = %s, aio_task_id = %016" PRIx64,
@@ -270,7 +266,7 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint32_t bytes)
 
         // write
         else {
-            uint32_t sz;
+            uint64_t sz;
             auto wk = df->on_write_completed(aio, (void *)&sz, err, (size_t)bytes);
             if (wk) {
                 process_write(wk, sz);
