@@ -134,7 +134,7 @@ func DiskBeforeSplit(client *Client, tableName string) error {
 	for address, resp := range respMap {
 		for _, diskInfo := range resp.GetDiskInfos() {
 			diskTag := diskInfo.GetTag()
-			rCapacityList, err := convertReplicaCapacityStruct(queryDiskCapacity(client, address, resp, diskTag, false))
+			rCapacityList, err := ConvertReplicaCapacityStruct(fillDiskCapacity(client, address, resp, diskTag, false))
 			if err != nil {
 				return fmt.Errorf("%s [hint: failed to get info for node(%s) disk(%s) when disk check before split]", err, address, diskTag)
 			}

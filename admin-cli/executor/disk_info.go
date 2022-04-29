@@ -40,11 +40,11 @@ const (
 
 // QueryDiskInfo command
 func QueryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string) error {
-	_, err := queryDiskInfo(client, infoType, replicaServer, tableName, diskTag, true)
+	_, err := GetDiskInfo(client, infoType, replicaServer, tableName, diskTag, true)
 	return err
 }
 
-func queryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, print bool) ([]interface{}, error) {
+func GetDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, tableName string, diskTag string, print bool) ([]interface{}, error) {
 	resp, err := sendQueryDiskInfoRequest(client, replicaServer, tableName)
 	if err != nil {
 		return nil, err
@@ -52,9 +52,9 @@ func queryDiskInfo(client *Client, infoType DiskInfoType, replicaServer string, 
 
 	switch infoType {
 	case CapacitySize:
-		return queryDiskCapacity(client, replicaServer, resp, diskTag, print), nil
+		return fillDiskCapacity(client, replicaServer, resp, diskTag, print), nil
 	case ReplicaCount:
-		return queryDiskReplicaCount(client, resp, print), nil
+		return fillDiskReplicaCount(client, resp, print), nil
 	default:
 		return nil, fmt.Errorf("not support query this disk info: %s", infoType)
 	}
@@ -110,7 +110,7 @@ type ReplicaCapacityStruct struct {
 	Size   int64  `json:"size"`
 }
 
-func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, print bool) []interface{} {
+func fillDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryDiskInfoResponse, diskTag string, print bool) []interface{} {
 	var diskCapacityInfos []interface{}
 	var replicaCapacityInfos []interface{}
 
@@ -155,7 +155,7 @@ func queryDiskCapacity(client *Client, replicaServer string, resp *radmin.QueryD
 	return diskCapacityInfos
 }
 
-func queryDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, print bool) []interface{} {
+func fillDiskReplicaCount(client *Client, resp *radmin.QueryDiskInfoResponse, print bool) []interface{} {
 	type ReplicaCountStruct struct {
 		Disk      string `json:"disk"`
 		Primary   int    `json:"primary"`
@@ -212,4 +212,20 @@ func AddDisk(client *Client, replicaServer string, diskStr string) error {
 	}
 	fmt.Printf("Node[%s] add new disk succeed\n", replicaServer)
 	return nil
+}
+
+func ConvertReplicaCapacityStruct(replicaCapacityInfos []interface{}) ([]ReplicaCapacityStruct, error) {
+	util.SortStructsByField(replicaCapacityInfos, "Size")
+	var replicas []ReplicaCapacityStruct
+	for _, replica := range replicaCapacityInfos {
+		if r, ok := replica.(ReplicaCapacityStruct); ok {
+			replicas = append(replicas, r)
+		} else {
+			return nil, fmt.Errorf("can't covert to ReplicaCapacityStruct")
+		}
+	}
+	if replicas == nil {
+		return nil, fmt.Errorf("the disk has no replica")
+	}
+	return replicas, nil
 }

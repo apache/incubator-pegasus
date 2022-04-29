@@ -28,6 +28,7 @@ import (
 
 	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 )
 
@@ -39,11 +40,11 @@ func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []strin
 	GlobalBatchTable = batchTable
 	GlobalBatchTarget = batchTarget
 	if len(to) != targetCount {
-		logPanic(fmt.Sprintf("please make sure the targets count == `--final_target` value： %d vs %d", len(to),
+		toolkits.LogPanic(fmt.Sprintf("please make sure the targets count == `--final_target` value： %d vs %d", len(to),
 			targetCount))
 	}
 
-	logWarn(fmt.Sprintf("you now migrate to target count assign to be %d in final, "+
+	toolkits.LogWarn(fmt.Sprintf("you now migrate to target count assign to be %d in final, "+
 		"please make sure it is ok! sleep 10s and then start", targetCount))
 	time.Sleep(time.Second * 10)
 
@@ -75,14 +76,14 @@ func MigrateAllReplicaToNodes(client *executor.Client, from []string, to []strin
 	balanceFactor := 0
 	for {
 		if totalRemainingReplica <= 0 {
-			logInfo("\n\n==============completed for all origin nodes has been migrated================")
+			toolkits.LogInfo("\n\n==============completed for all origin nodes has been migrated================")
 			return executor.ListNodes(client)
 		}
 
 		if currentOriginNode.String() == firstOrigin.String() {
 			originRound++
 		}
-		logInfo(fmt.Sprintf("\n\n*******************[%d|%s]start migrate replicas, remainingReplica=%d*****************",
+		toolkits.LogInfo(fmt.Sprintf("\n\n*******************[%d|%s]start migrate replicas, remainingReplica=%d*****************",
 			balanceFactor, currentOriginNode.String(), totalRemainingReplica))
 
 		currentOriginNode.downgradeAllReplicaToSecondary(client)

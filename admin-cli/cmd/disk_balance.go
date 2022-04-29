@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits/diskbalancer"
 	"github.com/apache/incubator-pegasus/admin-cli/shell"
 
 	"github.com/desertbit/grumble"
@@ -60,7 +61,7 @@ func init() {
 			f.Int("i", "interval", 650, "wait disk clean garbage replica interval")
 		},
 		Run: func(c *grumble.Context) error {
-			return executor.DiskBalance(pegasusClient, c.Flags.String("node"), c.Flags.Int64("size"), c.Flags.Int("interval"), c.Flags.Bool("auto"))
+			return diskbalancer.BalanceDiskCapacity(pegasusClient, c.Flags.String("node"), c.Flags.Int64("size"), c.Flags.Int("interval"), c.Flags.Bool("auto"))
 		},
 	})
 
