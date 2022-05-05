@@ -1,5 +1,5 @@
 # pegasus-nodejs-client
-Official NodeJS client for [xiaomi/pegasus](https://github.com/XiaoMi/pegasus)
+Official NodeJS client for [apache/incubator-pegasus](https://github.com/apache/incubator-pegasus)
 
 ## Installation
 `npm install pegasus-nodejs-client --save`
@@ -206,7 +206,7 @@ Each exception has an error type to indicate reason of failure, here are some co
 * ERR_OBJECT_NOT_FOUND - caused by wrong table name or server reconfiguration
 
 ## Test
-Tests rely on pegasus onebox cluster, referring to [Using pegasus onebox](https://github.com/XiaoMi/pegasus/wiki/%E4%BD%93%E9%AA%8Conebox%E9%9B%86%E7%BE%A4)  
+Tests rely on pegasus onebox cluster, referring to [Using pegasus onebox](https://pegasus.apache.org/overview/onebox/)  
 Before test, you should start onebox cluster.
 ```
 npm test
