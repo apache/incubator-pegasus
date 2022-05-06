@@ -24,8 +24,8 @@ sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck
 git clone https://github.com/XiaoMi/pegasus-java-client.git
 cd pegasus-java-client
 git checkout v2.2.0
-mvn clean package -DskipTests
-mvn clean install -DskipTests
+mvn clean package -DskipTests -Dcheckstyle.skip=true
+mvn clean install -DskipTests -Dcheckstyle.skip=true
 cd ..
 
 # start pegasus onebox environment
