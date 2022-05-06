@@ -49,4 +49,5 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
       - name: ci
+        working-directory: ./java-client
         run: ./scripts/ci-test.sh
