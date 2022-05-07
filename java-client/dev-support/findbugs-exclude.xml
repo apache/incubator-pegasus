@@ -1,0 +1,23 @@
+<FindBugsFilter>
+
+    <Match>
+        <Or>
+            <!-- thrift generated files -->
+            <Package name="com.xiaomi.infra.pegasus.apps"/>
+            <Package name="com.xiaomi.infra.pegasus.base"/>
+            <Package name="com.xiaomi.infra.pegasus.replication"/>
+
+            <!--
+             TODO(wutao1): The following packages should be removed from
+             the exclusion list after their bugs are fixed.
+            -->
+            <Package name="com.xiaomi.infra.pegasus.rpc.async"/>
+            <Package name="com.xiaomi.infra.pegasus.client"/>
+            <Package name="com.xiaomi.infra.pegasus.metrics"/>
+            <Package name="com.xiaomi.infra.pegasus.tools"/>
+            <Package name="com.xiaomi.infra.pegasus.client.request"/>
+            <Package name="com.xiaomi.infra.pegasus.example"/>
+        </Or>
+    </Match>
+
+</FindBugsFilter>
