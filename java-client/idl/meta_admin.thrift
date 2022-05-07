@@ -16,11 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 include "base.thrift"
 
 namespace cpp dsn.replication
-namespace java com.xiaomi.infra.pegasus.replication
+namespace java org.apache.pegasus.replication
 
 struct create_app_options
 {

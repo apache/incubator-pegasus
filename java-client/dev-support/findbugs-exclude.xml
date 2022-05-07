@@ -1,22 +1,41 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 <FindBugsFilter>
 
     <Match>
         <Or>
             <!-- thrift generated files -->
-            <Package name="com.xiaomi.infra.pegasus.apps"/>
-            <Package name="com.xiaomi.infra.pegasus.base"/>
-            <Package name="com.xiaomi.infra.pegasus.replication"/>
+            <Package name="org.apache.pegasus.apps"/>
+            <Package name="org.apache.pegasus.base"/>
+            <Package name="org.apache.pegasus.replication"/>
 
             <!--
              TODO(wutao1): The following packages should be removed from
              the exclusion list after their bugs are fixed.
             -->
-            <Package name="com.xiaomi.infra.pegasus.rpc.async"/>
-            <Package name="com.xiaomi.infra.pegasus.client"/>
-            <Package name="com.xiaomi.infra.pegasus.metrics"/>
-            <Package name="com.xiaomi.infra.pegasus.tools"/>
-            <Package name="com.xiaomi.infra.pegasus.client.request"/>
-            <Package name="com.xiaomi.infra.pegasus.example"/>
+            <Package name="org.apache.pegasus.rpc.async"/>
+            <Package name="org.apache.pegasus.client"/>
+            <Package name="org.apache.pegasus.metrics"/>
+            <Package name="org.apache.pegasus.tools"/>
+            <Package name="org.apache.pegasus.client.request"/>
+            <Package name="org.apache.pegasus.example"/>
         </Or>
     </Match>
 

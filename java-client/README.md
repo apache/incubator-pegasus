@@ -1,6 +1,25 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
 # Pegasus Java Client
 
-[![Build Status](https://travis-ci.org/XiaoMi/pegasus-java-client.svg?branch=thrift-0.11.0-inlined)](https://travis-ci.org/XiaoMi/pegasus-java-client)
+[![Test - java client](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml)
 
 ## Build
 
@@ -72,7 +91,9 @@ For each type of request(get, set, multiset, etc.), we collect 8 metrics:
 
 We use io.dropwizard.metrics library to calculate the request count.
 
-Currently, metrics are integrated with open-falcon(http://open-falcon.com/),
+Currently, metrics are integrated with open-falcon(https://open-falcon.org/),
+<!-- markdown-link-check-disable -->
 which push counters to local http agent http://127.0.0.1:1988/push/v1.
+<!-- markdown-link-check-enable-->
 
 If you'd like to integrate pegasus client with other monitor system, please let us know ASAP.
