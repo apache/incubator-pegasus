@@ -365,6 +365,7 @@ TEST_F(FDSClientTest, test_basic_operation)
                 ->wait();
             ASSERT_EQ(dsn::ERR_OK, d_resp.err);
             ASSERT_EQ(cf_resp.file_handle->get_size(), d_resp.downloaded_size);
+            ASSERT_EQ(cf_resp.file_handle->get_md5sum(), d_resp.file_md5);
             file_eq_compare(f1.filename, local_file_for_download);
         }
 

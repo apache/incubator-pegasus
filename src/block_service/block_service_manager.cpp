@@ -175,8 +175,10 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
         return resp.err;
     }
 
-    ddebug_f(
-        "download file({}) succeed, file_size = {}", local_file_name.c_str(), resp.downloaded_size);
+    ddebug_f("download file({}) succeed, file_size = {}, md5 = {}",
+             local_file_name.c_str(),
+             resp.downloaded_size,
+             resp.file_md5);
     download_file_size = resp.downloaded_size;
     download_file_md5 = resp.file_md5;
     return ERR_OK;

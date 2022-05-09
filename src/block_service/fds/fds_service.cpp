@@ -699,6 +699,10 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
                      _fds_path,
                      req.output_local_name);
             dsn::utils::filesystem::remove_path(req.output_local_name);
+        } else if ((resp.err = dsn::utils::filesystem::md5sum(req.output_local_name,
+                                                              resp.file_md5)) != ERR_OK) {
+            derror_f("download failed when calculate the md5sum of local file {}",
+                     req.output_local_name);
         }
         t->enqueue_with(resp);
         release_ref();

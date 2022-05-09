@@ -548,6 +548,7 @@ dsn::task_ptr local_file_object::download(const download_request &req,
                           target_file.c_str());
                 } else {
                     _has_meta_synced = true;
+                    resp.file_md5 = _md5_value;
                 }
             }
         }
