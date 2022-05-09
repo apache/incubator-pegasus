@@ -17,4 +17,23 @@
  * under the License.
  */
 
-addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "1.5.1")
+package org.apache.pegasus.scalaclient
+
+import org.apache.pegasus.client.{ClientOptions, PegasusClient}
+
+/**
+  * [Copyright]
+  * Author: oujinliang
+  * 3/15/18 12:05 AM
+  */
+object ScalaPegasusClientFactory {
+
+  def createClient(configPath: String): ScalaPegasusClient = {
+    new ScalaPegasusClientImpl(new PegasusClient(configPath))
+  }
+
+  def createClient(options: ClientOptions): ScalaPegasusClient = {
+    new ScalaPegasusClientImpl(new PegasusClient(options))
+  }
+
+}

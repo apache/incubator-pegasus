@@ -78,7 +78,7 @@ Pegasus has support for several languages:
 - [Go](https://github.com/xiaomi/pegasus-go-client)
 - [Python](https://github.com/xiaomi/pegasus-python-client)
 - [Node.js](https://github.com/xiaomi/pegasus-nodejs-client)
-- [Scala](https://github.com/xiaomi/pegasus-scala-client)
+- [Scala](https://github.com/apache/incubator-pegasus/blob/master/scala-client)
 
 ## Contact us
 

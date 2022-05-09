@@ -17,12 +17,15 @@
 # under the License.
 #
 
-name: CI - Test
+name: Test - scala client
 on:
   pull_request:
     branches:
         - master
         - 'v[0-9]+.*' # release branch
+    paths:
+        - scala-client/**
+
   workflow_dispatch:
 
 defaults:
