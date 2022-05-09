@@ -137,3 +137,17 @@ java-client/.vscode/
 java-client/google-java-format-*
 java-client/pegasus-*
 java-client/dependency-reduced-pom.xml
+
+# Created by .ignore support plugin (hsz.mobi)
+### SBT template
+# Simple Build Tool
+# http://www.scala-sbt.org/release/docs/Getting-Started/Directories.html#configuring-version-control
+
+scala-client/target/
+### Scala template
+scala-client/*.class
+scala-client/*.log
+
+scala-client/.idea/
+scala-client/.iml
+scala-client/rolling_log/
