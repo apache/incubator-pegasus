@@ -4,6 +4,7 @@ import (
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits/diskbalancer"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"golang.org/x/text/date"
 	"math"
 )
 
@@ -18,9 +19,26 @@ type NodesCapacity struct {
 type Migrator struct {
 	CapacityLoad []*NodesCapacity
 	Total int64
+	Average int64
+	BalancedCount int64
 }
 
-func (m *Migrator) updateNodesCapacityLoad(client *executor.Client) error {
+func BalanceNodeCapacity(client *executor.Client, auto bool) error {
+	migrater := &Migrator{
+
+	}
+	for {
+		err, completed := migrater.updateNodesCapacityLoad(client)
+		if err != nil {
+			return err
+		}
+		if completed || auto {
+			return nil
+		}
+	}
+}
+
+func (m *Migrator) updateNodesCapacityLoad(client *executor.Client) (error, bool) {
 	nodes, err := client.Meta.ListNodes()
 	if err != nil {
 		return err
@@ -51,38 +69,46 @@ func (m *Migrator) updateNodesCapacityLoad(client *executor.Client) error {
 		m.CapacityLoad = append(m.CapacityLoad, node.(*NodesCapacity))
 		m.Total += node.(*NodesCapacity).Total
 	}
+	m.Average = m.Total / int64(len(nodesLoad))
+
+	for _, node := range m.CapacityLoad {
+		if int64(math.Abs(float64(node.Usage - m.Average))) * 100 / m.Total <= 5 {
+			m.BalancedCount++
+		}
+	}
 
 	return nil
 }
 
 type ActionProposal struct {
 	replica executor.ReplicaCapacityStruct
-
+	from *util.PegasusNode
+	to *util.PegasusNode
 }
 
-func (m *Migrator) selectNextAction(client *executor.Client) {
+func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProposal){
 	highNode := m.CapacityLoad[len(m.CapacityLoad) - 1]
 	lowNode := m.CapacityLoad[0]
 
 	averageCapacity := m.Total / int64(len(m.CapacityLoad))
 	sizeCanMoved := math.Min(float64(highNode.Total - averageCapacity), float64(averageCapacity - lowNode.Total))
 	if (lowNode.Available * 100 / lowNode.Total) - (highNode.Available * 100 / highNode.Total) <= 5 {
-		return
+		return nil,nil
 	}
 
 	highDisk := highNode.Disks[len(highNode.Disks) - 1]
 	highDiskInfo, err := executor.GetDiskInfo(client, executor.CapacitySize, highNode.Node.TCPAddr(), "", highDisk.Disk, false)
 	if err != nil {
-		return
+		return nil, nil
 	}
 	replicas, err := executor.ConvertReplicaCapacityStruct(highDiskInfo)
 	if err != nil {
-		return
+		return nil, nil
 	}
 
 	targetNodeReplicas, err := getNodeReplica(client, lowNode)
 	if err != nil {
-		return
+		return nil, nil
 	}
 
 	var selectReplica executor.ReplicaCapacityStruct
@@ -98,6 +124,11 @@ func (m *Migrator) selectNextAction(client *executor.Client) {
 		selectReplica = replica
 	}
 
+	return nil, &ActionProposal{
+		replica: selectReplica,
+		from: highNode.Node,
+		to: lowNode.Node,
+	}
 }
 
 type replicas []executor.ReplicaCapacityStruct
