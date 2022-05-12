@@ -1,0 +1,4 @@
+{
+    "project_id" : "Pegasus-python-client",
+    "conduit_uri" : "https://phabricator.d.xiaomi.net/"
+}
