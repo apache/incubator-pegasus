@@ -271,7 +271,8 @@ bool rdb_value_hex2str(command_executor *e, shell_context *sc, arguments args)
     std::string pegasus_value = rocksdb::LDBCommand::HexToString(hex_rdb_value);
     auto expire_ts = static_cast<int64_t>(pegasus::pegasus_extract_expire_ts(0, pegasus_value)) +
                      pegasus::utils::epoch_begin; // TODO(wutao): pass user specified version
-    fmt::print(stderr, "\nWhen to expire:\n  {:%Y-%m-%d %H:%M:%S}\n", *std::localtime(&expire_ts));
+    std::time_t tm(expire_ts);
+    fmt::print(stderr, "\nWhen to expire:\n  {:%Y-%m-%d %H:%M:%S}\n", *std::localtime(&tm));
 
     dsn::blob user_data;
     pegasus::pegasus_extract_user_data(0, std::move(pegasus_value), user_data);

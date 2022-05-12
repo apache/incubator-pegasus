@@ -20,6 +20,7 @@
 #include "capacity_unit_calculator.h"
 
 #include <dsn/utility/config_api.h>
+#include <dsn/utils/token_bucket_throttling_controller.h>
 #include <rocksdb/status.h>
 #include "hotkey_collector.h"
 
@@ -29,13 +30,17 @@ namespace server {
 capacity_unit_calculator::capacity_unit_calculator(
     replica_base *r,
     std::shared_ptr<hotkey_collector> read_hotkey_collector,
-    std::shared_ptr<hotkey_collector> write_hotkey_collector)
+    std::shared_ptr<hotkey_collector> write_hotkey_collector,
+    std::shared_ptr<throttling_controller> read_size_throttling_controller)
     : replica_base(r),
       _read_hotkey_collector(read_hotkey_collector),
-      _write_hotkey_collector(write_hotkey_collector)
+      _write_hotkey_collector(write_hotkey_collector),
+      _read_size_throttling_controller(read_size_throttling_controller)
 {
     dassert(_read_hotkey_collector != nullptr, "read hotkey collector is a nullptr");
     dassert(_write_hotkey_collector != nullptr, "write hotkey collector is a nullptr");
+    dassert(_read_size_throttling_controller != nullptr,
+            "_read_size_throttling_controller is a nullptr");
 
     _read_capacity_unit_size =
         dsn_config_get_value_uint64("pegasus.server",
@@ -75,6 +80,10 @@ capacity_unit_calculator::capacity_unit_calculator(
     _pfc_multi_get_bytes.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the multi get bytes");
 
+    snprintf(name, 255, "batch_get_bytes@%s", str_gpid.c_str());
+    _pfc_batch_get_bytes.init_app_counter(
+        "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the batch get bytes");
+
     snprintf(name, 255, "scan_bytes@%s", str_gpid.c_str());
     _pfc_scan_bytes.init_app_counter(
         "app.pegasus", name, COUNTER_TYPE_RATE, "statistic the scan bytes");
@@ -106,6 +115,7 @@ int64_t capacity_unit_calculator::add_read_cu(int64_t read_data_size)
                           ? (read_data_size + _read_capacity_unit_size - 1) >> _log_read_cu_size
                           : 1;
     _pfc_recent_read_cu->add(read_cu);
+    _read_size_throttling_controller->consume_token(read_data_size);
     return read_cu;
 }
 
@@ -167,6 +177,32 @@ void capacity_unit_calculator::add_multi_get_cu(dsn::message_ex *req,
     }
     add_read_cu(data_size);
     _read_hotkey_collector->capture_hash_key(hash_key, key_count);
+}
+
+void capacity_unit_calculator::add_batch_get_cu(dsn::message_ex *req,
+                                                int32_t status,
+                                                const std::vector<::dsn::apps::full_data> &datas)
+{
+    int64_t data_size = 0;
+    for (const auto &data : datas) {
+        data_size += data.hash_key.size() + data.sort_key.size() + data.value.size();
+        _read_hotkey_collector->capture_hash_key(data.hash_key, 1);
+    }
+
+    _pfc_batch_get_bytes->add(data_size);
+    add_backup_request_bytes(req, data_size);
+
+    if (status != rocksdb::Status::kOk && status != rocksdb::Status::kNotFound &&
+        status != rocksdb::Status::kIncomplete && status != rocksdb::Status::kInvalidArgument) {
+        return;
+    }
+
+    if (status == rocksdb::Status::kNotFound) {
+        add_read_cu(1);
+        return;
+    }
+
+    add_read_cu(data_size);
 }
 
 void capacity_unit_calculator::add_scan_cu(dsn::message_ex *req,

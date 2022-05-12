@@ -110,16 +110,10 @@ cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
 
 mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/DSN_ROOT/lib/
+copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/DSN_ROOT/lib
-copy_file ./rdsn/thirdparty/output/lib/libsasl2.so.3 ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libcom_err.so.3 ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libgssapi_krb5.so.2 ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libkrb5support.so.0 ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libkrb5.so.3 ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libk5crypto.so.3 ${pack}/DSN_ROOT/lib/
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
 
 pack_tools_lib() {
@@ -151,7 +145,7 @@ echo "Pegasus Tools $version ($commit_id) $platform $build_type" >${pack}/VERSIO
 
 tar cfz ${pack}.tar.gz ${pack}
 
-if [ -f $pack_template ]; then
+if [ -f "$pack_template" ]; then
     echo "Modifying $pack_template ..."
     sed -i "/^version:/c version: \"$pack_version\"" $pack_template
     sed -i "/^build:/c build: \"\.\/run.sh pack_tools\"" $pack_template

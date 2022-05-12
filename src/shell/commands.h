@@ -63,10 +63,12 @@ struct list_nodes_helper
     double get_qps;
     double put_qps;
     double multi_get_qps;
+    double batch_get_qps;
     double multi_put_qps;
     double get_p99;
     double put_p99;
     double multi_get_p99;
+    double batch_get_p99;
     double multi_put_p99;
     double read_cu;
     double write_cu;

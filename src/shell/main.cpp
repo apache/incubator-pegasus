@@ -275,9 +275,9 @@ static command_executor commands[] = {
         "[-s|--sort_key_filter_type anywhere|prefix|postfix|exact] "
         "[-y|--sort_key_filter_pattern str] "
         "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
-        "[-z|--value_filter_pattern str] "
-        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data] "
-        "[-e|--no_ttl]",
+        "[-z|--value_filter_pattern str] [-m|--max_multi_set_concurrency] "
+        "[-o|--scan_option_batch_size] [-e|--no_ttl] "
+        "[-n|--no_overwrite] [-i|--no_value] [-g|--geo_data] [-u|--use_multi_set]",
         data_operations,
     },
     {
@@ -449,7 +449,7 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
-    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-f|--freezed]", add_dup},
+    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-s|--sst]", add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
@@ -462,7 +462,7 @@ static command_executor commands[] = {
         "start_bulk_load",
         "start app bulk load",
         "<-a --app_name str> <-c --cluster_name str> <-p --file_provider_type str> <-r "
-        "--root_path>",
+        "--root_path> [-i --ingest_behind]",
         start_bulk_load,
     },
     {

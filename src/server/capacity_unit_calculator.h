@@ -23,6 +23,13 @@
 #include <dsn/perf_counter/perf_counter_wrapper.h>
 #include <rrdb/rrdb_types.h>
 
+namespace dsn {
+namespace utils {
+class token_bucket_throttling_controller;
+} // namespace utils
+} // namespace dsn
+typedef dsn::utils::token_bucket_throttling_controller throttling_controller;
+
 namespace pegasus {
 namespace server {
 
@@ -31,9 +38,11 @@ class hotkey_collector;
 class capacity_unit_calculator : public dsn::replication::replica_base
 {
 public:
-    capacity_unit_calculator(replica_base *r,
-                             std::shared_ptr<hotkey_collector> read_hotkey_collector,
-                             std::shared_ptr<hotkey_collector> write_hotkey_collector);
+    capacity_unit_calculator(
+        replica_base *r,
+        std::shared_ptr<hotkey_collector> read_hotkey_collector,
+        std::shared_ptr<hotkey_collector> write_hotkey_collector,
+        std::shared_ptr<throttling_controller> _read_size_throttling_controller);
 
     virtual ~capacity_unit_calculator() = default;
 
@@ -43,6 +52,9 @@ public:
                           int32_t status,
                           const dsn::blob &hash_key,
                           const std::vector<::dsn::apps::key_value> &kvs);
+    void add_batch_get_cu(dsn::message_ex *req,
+                          int32_t status,
+                          const std::vector<::dsn::apps::full_data> &rows);
     void add_scan_cu(dsn::message_ex *req,
                      int32_t status,
                      const std::vector<::dsn::apps::key_value> &kvs);
@@ -92,6 +104,7 @@ private:
 
     ::dsn::perf_counter_wrapper _pfc_get_bytes;
     ::dsn::perf_counter_wrapper _pfc_multi_get_bytes;
+    ::dsn::perf_counter_wrapper _pfc_batch_get_bytes;
     ::dsn::perf_counter_wrapper _pfc_scan_bytes;
     ::dsn::perf_counter_wrapper _pfc_put_bytes;
     ::dsn::perf_counter_wrapper _pfc_multi_put_bytes;
@@ -119,6 +132,8 @@ private:
     */
     std::shared_ptr<hotkey_collector> _read_hotkey_collector;
     std::shared_ptr<hotkey_collector> _write_hotkey_collector;
+
+    std::shared_ptr<throttling_controller> _read_size_throttling_controller;
 };
 
 } // namespace server

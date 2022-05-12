@@ -20,10 +20,11 @@
 #pragma once
 
 #include <stdint.h>
-#include <string.h>
+#include <string>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/blob.h>
+#include <dsn/utility/endians.h>
 #include <dsn/utility/utils.h>
 #include <dsn/utility/crc.h>
 #include <dsn/c/api_utilities.h>
@@ -46,7 +47,7 @@ void pegasus_generate_key(::dsn::blob &key, const T &hash_key, const T &sort_key
 
     // hash_key_len is in big endian
     uint16_t hash_key_len = hash_key.length();
-    *((int16_t *)buf.get()) = htobe16((int16_t)hash_key_len);
+    *((int16_t *)buf.get()) = ::dsn::endian::hton((uint16_t)hash_key_len);
 
     ::memcpy(buf.get() + 2, hash_key.data(), hash_key_len);
 
@@ -68,7 +69,7 @@ void pegasus_generate_next_blob(::dsn::blob &next, const T &hash_key)
     int hash_key_len = hash_key.length();
     std::shared_ptr<char> buf(::dsn::utils::make_shared_array<char>(hash_key_len + 2));
 
-    *((int16_t *)buf.get()) = htobe16((int16_t)hash_key_len);
+    *((int16_t *)buf.get()) = ::dsn::endian::hton((uint16_t)hash_key_len);
     ::memcpy(buf.get() + 2, hash_key.data(), hash_key_len);
 
     unsigned char *p = (unsigned char *)(buf.get() + hash_key_len + 1);
@@ -104,7 +105,7 @@ pegasus_restore_key(const ::dsn::blob &key, ::dsn::blob &hash_key, ::dsn::blob &
     dassert(key.length() >= 2, "key length must be no less than 2");
 
     // hash_key_len is in big endian
-    uint16_t hash_key_len = be16toh(*(int16_t *)(key.data()));
+    uint16_t hash_key_len = ::dsn::endian::ntoh(*(uint16_t *)(key.data()));
 
     if (hash_key_len > 0) {
         dassert(key.length() >= 2 + hash_key_len,
@@ -129,7 +130,7 @@ pegasus_restore_key(const ::dsn::blob &key, std::string &hash_key, std::string &
     dassert(key.length() >= 2, "key length must be no less than 2");
 
     // hash_key_len is in big endian
-    uint16_t hash_key_len = be16toh(*(int16_t *)(key.data()));
+    uint16_t hash_key_len = ::dsn::endian::ntoh(*(uint16_t *)(key.data()));
 
     if (hash_key_len > 0) {
         dassert(key.length() >= 2 + hash_key_len,
@@ -153,7 +154,7 @@ inline uint64_t pegasus_key_hash(const T &key)
     dassert(key.size() >= 2, "key length must be no less than 2");
 
     // hash_key_len is in big endian
-    uint16_t hash_key_len = be16toh(*(int16_t *)(key.data()));
+    uint16_t hash_key_len = ::dsn::endian::ntoh(*(uint16_t *)(key.data()));
 
     if (hash_key_len > 0) {
         // hash_key_len > 0, compute hash from hash_key

@@ -22,10 +22,10 @@
 PID=$$
 
 if [ $# -le 2 ]; then
-  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_copy_rate_megabytes>(default 200)"
+  echo "USAGE: $0 <cluster-name> <cluster-meta-list> <replica-task-id-list> <nfs_rate_megabytes_per_disk>(default 100)"
   echo
   echo "For example:"
-  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 200"
+  echo "  $0 onebox 127.0.0.1:34601,127.0.0.1:34602 1,2,3 100"
   echo
   exit 1
 fi
@@ -41,9 +41,9 @@ meta_list=$2
 replica_task_id_list=$3
 
 if [ -z $4 ]; then
-  nfs_copy_rate_megabytes=200
+  nfs_rate_megabytes_per_disk=100
 else
-  nfs_copy_rate_megabytes=$4
+  nfs_rate_megabytes_per_disk=$4
 fi
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
@@ -77,7 +77,7 @@ do
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 done
 
-./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true $nfs_copy_rate_megabytes
+./scripts/pegasus_rebalance_cluster.sh $cluster $meta_list true $nfs_rate_megabytes_per_disk
 
 echo "Finish time: `date`"
 add_node_finish_time=$((`date +%s`))

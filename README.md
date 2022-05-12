@@ -1,5 +1,26 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
 [github-release]: https://github.com/apache/incubator-pegasus/releases
+<!-- markdown-link-check-disable -->
 [PacificA]: https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/
+<!-- markdown-link-check-enable-->
 [pegasus-rocksdb]: https://github.com/xiaomi/pegasus-rocksdb
 [facebook-rocksdb]: https://github.com/facebook/rocksdb
 [hbase]: https://hbase.apache.org/
@@ -50,12 +71,14 @@ See our documentation on the [Pegasus Website][website].
 
 Pegasus has support for several languages:
 
-- [Java](https://github.com/xiaomi/pegasus-java-client)
+<!-- markdown-link-check-disable -->
+- [Java](https://github.com/apache/incubator-pegasus/blob/master/java-client)
+<!-- markdown-link-check-enable-->
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
 - [Go](https://github.com/xiaomi/pegasus-go-client)
 - [Python](https://github.com/xiaomi/pegasus-python-client)
 - [Node.js](https://github.com/xiaomi/pegasus-nodejs-client)
-- [Scala](https://github.com/xiaomi/pegasus-scala-client)
+- [Scala](https://github.com/apache/incubator-pegasus/blob/master/scala-client)
 
 ## Contact us
 

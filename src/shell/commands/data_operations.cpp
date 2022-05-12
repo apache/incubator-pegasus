@@ -18,6 +18,7 @@
  */
 
 #include "shell/commands.h"
+#include <fmt/printf.h>
 #include "idl_utils.h"
 
 static void
@@ -115,7 +116,7 @@ bool set_value(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
     return true;
 }
@@ -149,7 +150,7 @@ bool multi_set_value(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
     return true;
 }
@@ -403,7 +404,7 @@ bool delete_value(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
     return true;
 }
@@ -433,7 +434,7 @@ bool multi_del_value(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
     return true;
 }
@@ -664,7 +665,7 @@ bool incr(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
     return true;
 }
@@ -819,7 +820,7 @@ bool check_and_set(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
     return true;
 }
@@ -983,7 +984,7 @@ bool check_and_mutate(command_executor *e, shell_context *sc, arguments args)
     fprintf(stderr, "\n");
     fprintf(stderr, "app_id          : %d\n", info.app_id);
     fprintf(stderr, "partition_index : %d\n", info.partition_index);
-    fprintf(stderr, "decree          : %ld\n", info.decree);
+    fmt::fprintf(stderr, "decree          : %lld\n", info.decree);
     fprintf(stderr, "server          : %s\n", info.server.c_str());
 
     return true;
@@ -1537,6 +1538,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                                            {"sort_key_filter_pattern", required_argument, 0, 'y'},
                                            {"value_filter_type", required_argument, 0, 'v'},
                                            {"value_filter_pattern", required_argument, 0, 'z'},
+                                           {"max_multi_set_concurrency", required_argument, 0, 'm'},
                                            {"no_overwrite", no_argument, 0, 'n'},
                                            {"no_value", no_argument, 0, 'i'},
                                            {"geo_data", no_argument, 0, 'g'},
@@ -1548,9 +1550,11 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
     std::string target_geo_app_name;
     int32_t partition = -1;
     int max_batch_count = 500;
+    int max_multi_set_concurrency = 20;
     int timeout_ms = sc->timeout_ms;
     bool is_geo_data = false;
     bool no_overwrite = false;
+    bool use_multi_set = false;
     std::string hash_key_filter_type_name("no_filter");
     std::string sort_key_filter_type_name("no_filter");
     pegasus::pegasus_client::filter_type sort_key_filter_type =
@@ -1567,7 +1571,7 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:nige", long_options, &option_index);
+            args.argc, args.argv, "c:a:p:b:t:h:x:s:y:v:z:m:o:nigeu", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -1633,6 +1637,18 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         case 'z':
             value_filter_pattern = unescape_str(optarg);
             break;
+        case 'm':
+            if (!dsn::buf2int32(optarg, max_multi_set_concurrency)) {
+                fprintf(stderr, "ERROR: parse %s as max_multi_set_concurrency failed\n", optarg);
+                return false;
+            }
+            break;
+        case 'o':
+            if (!dsn::buf2int32(optarg, options.batch_size)) {
+                fprintf(stderr, "ERROR: parse %s as scan_option_batch_size failed\n", optarg);
+                return false;
+            }
+            break;
         case 'n':
             no_overwrite = true;
             break;
@@ -1644,6 +1660,9 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
             break;
         case 'e':
             options.return_expire_ts = false;
+            break;
+        case 'u':
+            use_multi_set = true;
             break;
         default:
             return false;
@@ -1675,12 +1694,27 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
+    if (max_multi_set_concurrency <= 0) {
+        fprintf(stderr, "ERROR: max_multi_set_concurrency should be greater than 0\n");
+        return false;
+    }
+
+    if (use_multi_set && no_overwrite) {
+        fprintf(stderr, "ERROR: copy with multi_set not support no_overwrite!\n");
+        return false;
+    }
+
     fprintf(stderr, "INFO: source_cluster_name = %s\n", sc->pg_client->get_cluster_name());
     fprintf(stderr, "INFO: source_app_name = %s\n", sc->pg_client->get_app_name());
     fprintf(stderr, "INFO: target_cluster_name = %s\n", target_cluster_name.c_str());
     fprintf(stderr, "INFO: target_app_name = %s\n", target_app_name.c_str());
     if (is_geo_data) {
         fprintf(stderr, "INFO: target_geo_app_name = %s\n", target_geo_app_name.c_str());
+    }
+    if (use_multi_set) {
+        fprintf(stderr,
+                "INFO: copy use asyncer_multi_set, max_multi_set_concurrency = %d\n",
+                max_multi_set_concurrency);
     }
     fprintf(stderr,
             "INFO: partition = %s\n",
@@ -1775,21 +1809,50 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
 
     std::atomic_bool error_occurred(false);
     std::vector<std::unique_ptr<scan_data_context>> contexts;
+
+    scan_data_operator op = SCAN_COPY;
+    if (is_geo_data) {
+        op = SCAN_GEN_GEO;
+    } else if (use_multi_set) {
+        fprintf(stderr,
+                "WARN: used multi_set will lose accurate ttl time per value! "
+                "ttl time will be assign the max value of this batch data.\n");
+        op = SCAN_AND_MULTI_SET;
+        // threadpool worker_count should greater than source app scanner count
+        int worker_count = dsn_config_get_value_int64("threadpool.THREAD_POOL_DEFAULT",
+                                                      "worker_count",
+                                                      0,
+                                                      "get THREAD_POOL_DEFAULT worker_count.");
+        fprintf(stderr, "INFO: THREAD_POOL_DEFAULT worker_count = %d\n", worker_count);
+        if (worker_count <= split_count) {
+            fprintf(stderr,
+                    "INFO: THREAD_POOL_DEFAULT worker_count should greater than source app scanner "
+                    "count %d",
+                    split_count);
+            return true;
+        }
+    }
+
     for (int i = 0; i < split_count; i++) {
-        scan_data_context *context = new scan_data_context(is_geo_data ? SCAN_GEN_GEO : SCAN_COPY,
+        scan_data_context *context = new scan_data_context(op,
                                                            i,
                                                            max_batch_count,
                                                            timeout_ms,
                                                            scanners[i],
                                                            target_client,
                                                            target_geo_client.get(),
-                                                           &error_occurred);
+                                                           &error_occurred,
+                                                           max_multi_set_concurrency);
         context->set_sort_key_filter(sort_key_filter_type, sort_key_filter_pattern);
         context->set_value_filter(value_filter_type, value_filter_pattern);
         if (no_overwrite)
             context->set_no_overwrite();
         contexts.emplace_back(context);
-        dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
+        if (op == SCAN_AND_MULTI_SET) {
+            dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_multi_data_next, context));
+        } else {
+            dsn::tasking::enqueue(LPC_SCAN_DATA, nullptr, std::bind(scan_data_next, context));
+        }
     }
 
     // wait thread complete
@@ -1802,8 +1865,11 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
         long cur_total_rows = 0;
         for (int i = 0; i < split_count; i++) {
             cur_total_rows += contexts[i]->split_rows.load();
-            if (contexts[i]->split_request_count.load() == 0)
+            if (op != SCAN_AND_MULTI_SET && contexts[i]->split_request_count.load() == 0) {
                 completed_split_count++;
+            } else if (contexts[i]->split_completed.load()) {
+                completed_split_count++;
+            }
         }
         if (error_occurred.load()) {
             fprintf(stderr,
@@ -2369,6 +2435,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
                                                            sc->pg_client,
                                                            nullptr,
                                                            &error_occurred,
+                                                           0,
                                                            stat_size,
                                                            statistics,
                                                            top_count,

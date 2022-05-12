@@ -23,7 +23,6 @@
 
 #include <dsn/cpp/message_utils.h>
 #include <dsn/utility/chrono_literals.h>
-#include <dsn/dist/replication/duplication_common.h>
 #include <rrdb/rrdb.client.h>
 
 namespace dsn {
@@ -146,9 +145,9 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         // errors are acceptable.
         // TODO(wutao1): print the entire request for future debugging.
         if (dsn::rand::next_double01() <= 0.01) {
-            derror_replica("duplicate_rpc failed: {} [timestamp:{}]",
+            derror_replica("duplicate_rpc failed: {} [size:{}]",
                            err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
-                           rpc.request().timestamp);
+                           rpc.request().entries.size());
         }
         // duplicating an illegal write to server is unacceptable, fail fast.
         dassert_replica(perr != PERR_INVALID_ARGUMENT, rpc.response().error_hint);
@@ -184,9 +183,12 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
 {
     _total_shipped_size = 0;
 
+    auto batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
+    uint batch_count = 0;
+    uint batch_bytes = 0;
     for (auto mut : muts) {
         // mut: 0=timestamp, 1=rpc_code, 2=raw_message
-
+        batch_count++;
         dsn::task_code rpc_code = std::get<1>(mut);
         dsn::blob raw_message = std::get<2>(mut);
         auto dreq = dsn::make_unique<dsn::apps::duplicate_request>();
@@ -197,18 +199,29 @@ void pegasus_mutation_duplicator::duplicate(mutation_tuple_set muts, callback cb
             // destinations. A DUPLICATE is meant to be targeting only one cluster.
             continue;
         } else {
-            dreq->__set_raw_message(raw_message);
-            dreq->__set_task_code(rpc_code);
-            dreq->__set_timestamp(std::get<0>(mut));
-            dreq->__set_cluster_id(get_current_cluster_id());
+            dsn::apps::duplicate_entry entry;
+            entry.__set_raw_message(raw_message);
+            entry.__set_task_code(rpc_code);
+            entry.__set_timestamp(std::get<0>(mut));
+            entry.__set_cluster_id(get_current_cluster_id());
+            batch_request->entries.emplace_back(std::move(entry));
+            batch_bytes += raw_message.length();
         }
 
-        uint64_t hash = get_hash_from_request(rpc_code, raw_message);
-        duplicate_rpc rpc(std::move(dreq),
-                          dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
-                          10_s, // TODO(wutao1): configurable timeout.
-                          hash);
-        _inflights[hash].push_back(std::move(rpc));
+        if (batch_count == muts.size() ||
+            batch_bytes >= dsn::replication::FLAGS_duplicate_log_batch_bytes) {
+            // since all the plog's mutations of replica belong to same gpid though the hash of
+            // mutation is different, use the last mutation of one batch to get and represents the
+            // current hash value, it will still send to remote correct replica
+            uint64_t hash = get_hash_from_request(rpc_code, raw_message);
+            duplicate_rpc rpc(std::move(batch_request),
+                              dsn::apps::RPC_RRDB_RRDB_DUPLICATE,
+                              100_s, // TODO(wutao1): configurable timeout.
+                              hash);
+            _inflights[hash].push_back(std::move(rpc));
+            batch_request = dsn::make_unique<dsn::apps::duplicate_request>();
+            batch_bytes = 0;
+        }
     }
 
     if (_inflights.empty()) {

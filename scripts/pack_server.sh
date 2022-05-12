@@ -101,17 +101,10 @@ copy_file ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_utils.so ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.48 ${pack}/bin
+copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.* ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libsasl2.so.3 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libcom_err.so.3 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libgssapi_krb5.so.2 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libkrb5support.so.0 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libkrb5.so.3 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libk5crypto.so.3 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/sasl2 ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin
@@ -174,7 +167,7 @@ echo "Pegasus Server $version ($commit_id) $platform $build_type" >${pack}/VERSI
 
 tar cfz ${pack}.tar.gz ${pack}
 
-if [ -f $pack_template ]; then
+if [ -f "$pack_template" ]; then
     echo "Modifying $pack_template ..."
     sed -i "/^version:/c version: \"$pack_version\"" $pack_template
     sed -i "/^build:/c build: \"\.\/run.sh pack\"" $pack_template
