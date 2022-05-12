@@ -380,13 +380,16 @@ void replica::on_prepare(dsn::message_ex *request)
 
     replica_configuration rconfig;
     mutation_ptr mu;
+    bool pop_all_committed_mutations = false;
 
     {
         rpc_read_stream reader(request);
         unmarshall(reader, rconfig, DSF_THRIFT_BINARY);
         mu = mutation::read_from(reader, request);
         mu->set_is_sync_to_child(rconfig.split_sync_to_child);
+        pop_all_committed_mutations = rconfig.pop_all;
         rconfig.split_sync_to_child = false;
+        rconfig.pop_all = false;
     }
 
     decree decree = mu->data.header.decree;
@@ -494,7 +497,7 @@ void replica::on_prepare(dsn::message_ex *request)
         return;
     }
 
-    error_code err = _prepare_list->prepare(mu, status(), false, false);
+    error_code err = _prepare_list->prepare(mu, status(), pop_all_committed_mutations);
     dassert(err == ERR_OK, "prepare mutation failed, err = %s", err.to_string());
 
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||

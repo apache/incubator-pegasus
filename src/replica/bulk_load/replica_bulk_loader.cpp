@@ -631,6 +631,13 @@ void replica_bulk_loader::handle_bulk_load_succeed()
     _replica->_app->set_ingestion_status(ingestion_status::IS_INVALID);
     _status = bulk_load_status::BLS_SUCCEED;
     _stub->_counter_bulk_load_succeed_count->increment();
+
+    // send an empty prepare again to gurantee that learner should learn from checkpoint
+    if (status() == partition_status::PS_PRIMARY) {
+        mutation_ptr mu = _replica->new_mutation(invalid_decree);
+        mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
+        _replica->init_prepare(mu, false, true);
+    }
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
