@@ -18,4 +18,4 @@
  */
 
 #pragma once
-#define PEGASUS_VERSION "2.3.0"
+#define PEGASUS_VERSION "2.1.SNAPSHOT"
