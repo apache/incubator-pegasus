@@ -101,6 +101,20 @@ public:
         return rpc.response().err;
     }
 
+    error_code
+    clear_bulk_load(int32_t app_id, const std::string &app_name, bulk_load_status::type app_status)
+    {
+        bulk_svc()._app_bulk_load_info[app_id].status = app_status;
+
+        auto request = dsn::make_unique<clear_bulk_load_state_request>();
+        request->app_name = app_name;
+
+        clear_bulk_load_rpc rpc(std::move(request), RPC_CM_CLEAR_BULK_LOAD);
+        bulk_svc().on_clear_bulk_load(rpc);
+        wait_all();
+        return rpc.response().err;
+    }
+
     void mock_meta_bulk_load_context(int32_t app_id,
                                      int32_t in_progress_partition_count,
                                      bulk_load_status::type status,
@@ -661,6 +675,35 @@ TEST_F(bulk_load_service_test, query_bulk_load_status_success)
     auto app = find_app(APP_NAME);
     app->is_bulk_loading = true;
     ASSERT_EQ(query_bulk_load(APP_NAME), ERR_OK);
+}
+
+/// clear bulk load unit tests
+TEST_F(bulk_load_service_test, clear_bulk_load_test)
+{
+    create_app(APP_NAME);
+    std::shared_ptr<app_state> app = find_app(APP_NAME);
+    mock_meta_bulk_load_context(app->app_id, app->partition_count, bulk_load_status::BLS_INVALID);
+    fail::setup();
+    fail::cfg("meta_do_clear_app_bulk_load_result", "return()");
+
+    struct clear_test
+    {
+        std::string app_name;
+        bool is_bulk_loading;
+        bulk_load_status::type app_status;
+        error_code expected_err;
+    } tests[] = {{"not_exist_app", false, bulk_load_status::BLS_INVALID, ERR_APP_NOT_EXIST},
+                 {APP_NAME, true, bulk_load_status::BLS_DOWNLOADING, ERR_INVALID_STATE},
+                 {APP_NAME, false, bulk_load_status::BLS_SUCCEED, ERR_OK},
+                 {APP_NAME, false, bulk_load_status::BLS_FAILED, ERR_OK},
+                 {APP_NAME, false, bulk_load_status::BLS_CANCELED, ERR_OK}};
+
+    for (auto test : tests) {
+        app->is_bulk_loading = test.is_bulk_loading;
+        ASSERT_EQ(clear_bulk_load(app->app_id, test.app_name, test.app_status), test.expected_err);
+    }
+    reset_local_bulk_load_states(app->app_id, APP_NAME);
+    fail::teardown();
 }
 
 /// bulk load process unit tests

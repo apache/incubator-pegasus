@@ -1610,6 +1610,14 @@ replication_ddl_client::query_bulk_load(const std::string &app_name)
     return call_rpc_sync(query_bulk_load_rpc(std::move(req), RPC_CM_QUERY_BULK_LOAD_STATUS));
 }
 
+error_with<clear_bulk_load_state_response>
+replication_ddl_client::clear_bulk_load(const std::string &app_name)
+{
+    auto req = make_unique<clear_bulk_load_state_request>();
+    req->app_name = app_name;
+    return call_rpc_sync(clear_bulk_load_rpc(std::move(req), RPC_CM_CLEAR_BULK_LOAD));
+}
+
 error_code replication_ddl_client::detect_hotkey(const dsn::rpc_address &target,
                                                  detect_hotkey_request &req,
                                                  detect_hotkey_response &resp)

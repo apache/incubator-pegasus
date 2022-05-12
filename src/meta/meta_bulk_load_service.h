@@ -122,6 +122,8 @@ public:
     void on_control_bulk_load(control_bulk_load_rpc rpc);
     // client -> meta server to query bulk load status
     void on_query_bulk_load_status(query_bulk_load_rpc rpc);
+    // client -> meta server to clear bulk load state
+    void on_clear_bulk_load(clear_bulk_load_rpc rpc);
 
     // Called by `sync_apps_from_remote_storage`, check bulk load state consistency
     // Handle inconsistent conditions below:
@@ -145,6 +147,8 @@ private:
                                               std::string &hint_msg);
 
     void do_start_app_bulk_load(std::shared_ptr<app_state> app, start_bulk_load_rpc rpc);
+
+    void do_clear_app_bulk_load_result(int32_t app_id, clear_bulk_load_rpc rpc);
 
     // Called by `partition_bulk_load` and `partition_ingestion`
     // check partition status before sending partition_bulk_load_request and

@@ -545,6 +545,8 @@ void meta_service::register_rpc_handlers()
                                          "query_bulk_load_status",
                                          &meta_service::on_query_bulk_load_status);
     register_rpc_handler_with_rpc_holder(
+        RPC_CM_CLEAR_BULK_LOAD, "clear_bulk_load", &meta_service::on_clear_bulk_load);
+    register_rpc_handler_with_rpc_holder(
         RPC_CM_START_BACKUP_APP, "start_backup_app", &meta_service::on_start_backup_app);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_QUERY_BACKUP_STATUS, "query_backup_status", &meta_service::on_query_backup_status);
@@ -1199,6 +1201,23 @@ void meta_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
         return;
     }
     _bulk_load_svc->on_query_bulk_load_status(std::move(rpc));
+}
+
+void meta_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+
+    if (_bulk_load_svc == nullptr) {
+        derror_f("meta doesn't support bulk load");
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     [this, rpc]() { _bulk_load_svc->on_clear_bulk_load(std::move(rpc)); },
+                     server_state::sStateHash);
 }
 
 void meta_service::on_start_backup_app(start_backup_app_rpc rpc)

@@ -27,6 +27,8 @@ typedef rpc_holder<start_bulk_load_request, start_bulk_load_response> start_bulk
 typedef rpc_holder<bulk_load_request, bulk_load_response> bulk_load_rpc;
 typedef rpc_holder<control_bulk_load_request, control_bulk_load_response> control_bulk_load_rpc;
 typedef rpc_holder<query_bulk_load_request, query_bulk_load_response> query_bulk_load_rpc;
+typedef rpc_holder<clear_bulk_load_state_request, clear_bulk_load_state_response>
+    clear_bulk_load_rpc;
 
 class bulk_load_constant
 {

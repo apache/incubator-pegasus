@@ -1572,6 +1572,47 @@ void bulk_load_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
              dsn::enum_to_string(response.app_status));
 }
 
+void bulk_load_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
+{
+    const auto &request = rpc.request();
+    const std::string &app_name = request.app_name;
+    clear_bulk_load_state_response &response = rpc.response();
+
+    std::shared_ptr<app_state> app = get_app(app_name);
+    if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
+        response.err = (app == nullptr) ? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
+        response.hint_msg = fmt::format("app({}) is not existed or not available", app_name);
+        derror_f("{}", response.hint_msg);
+        return;
+    }
+
+    if (app->is_bulk_loading) {
+        response.err = ERR_INVALID_STATE;
+        response.hint_msg = fmt::format("app({}) is executing bulk load", app_name);
+        derror_f("{}", response.hint_msg);
+        return;
+    }
+
+    do_clear_app_bulk_load_result(app->app_id, rpc);
+}
+
+void bulk_load_service::do_clear_app_bulk_load_result(int32_t app_id, clear_bulk_load_rpc rpc)
+{
+    FAIL_POINT_INJECT_F("meta_do_clear_app_bulk_load_result",
+                        [rpc](dsn::string_view) { rpc.response().err = ERR_OK; });
+    std::string bulk_load_path = get_app_bulk_load_path(app_id);
+    _meta_svc->get_meta_storage()->delete_node_recursively(
+        std::move(bulk_load_path), [this, app_id, bulk_load_path, rpc]() {
+            clear_bulk_load_state_response &response = rpc.response();
+            response.err = ERR_OK;
+            response.hint_msg =
+                fmt::format("clear app({}) bulk load result succeed, remove bulk load dir succeed",
+                            rpc.request().app_name);
+            reset_local_bulk_load_states(app_id, rpc.request().app_name, true);
+            ddebug_f("{}", response.hint_msg);
+        });
+}
+
 // ThreadPool: THREAD_POOL_META_SERVER
 void bulk_load_service::create_bulk_load_root_dir()
 {

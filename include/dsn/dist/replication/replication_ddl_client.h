@@ -195,6 +195,8 @@ public:
 
     error_with<query_bulk_load_response> query_bulk_load(const std::string &app_name);
 
+    error_with<clear_bulk_load_state_response> clear_bulk_load(const std::string &app_name);
+
     error_code detect_hotkey(const dsn::rpc_address &target,
                              detect_hotkey_request &req,
                              detect_hotkey_response &resp);
