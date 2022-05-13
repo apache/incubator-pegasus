@@ -1,7 +1,24 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
 pegasus-python-client
 =====================
-
-This is the official python client for [xiaomi/pegasus](https://github.com/XiaoMi/pegasus).
 
 It uses [Twisted](http://twistedmatrix.com) for the asynchronous communication with pegasus server.
 
@@ -11,8 +28,8 @@ Python 3.8+
 
 pypegasus can be installed via pip as follows:
 
-`git clone https://git.n.xiaomi.com/pegasus/pegasus-python-client`
-`cd pegasus-python-client && python setup.py install`
+`git clone https://github.com/apache/incubator-pegasus`
+`cd inclubator-pegasus/python-client && python3 setup.py install`
 
 Usage
 -----
@@ -20,21 +37,23 @@ There are some basic guide in  [`sample.py`](sample.py).
 
 Test
 ----
-Before testing, you should firstly start an onebox cluster, referring to [`how to start an onebox cluster`](https://github.com/XiaoMi/pegasus/wiki/%E4%BD%93%E9%AA%8Conebox%E9%9B%86%E7%BE%A4).
+Before testing, you should firstly start an onebox cluster, referring to [`how to start an onebox cluster`](https://pegasus.apache.org/overview/onebox/).
 
 ## Basic interfaces test:
 
-`cd tests && python -m unittest test_basics.TestBasics`
+`cd tests && python3 -m unittest test_basics.TestBasics`
 
 ## Integration test:
 
-`cd tests && python -m twisted.trial test_integration.py`
-
+`cd tests && python3 -m twisted.trial test_integration.py`
+<!-- markdown-link-check-disable -->
 ATTENTION: you should firstly set proper pegasus shell path in [`test_integration.py`](test_integration.py#L10).
+<!-- markdown-link-check-enable-->
+
 
 ## Benchmark test:
 
-`cd tests && python -m unittest test_benchmark.TestBasics`
+`cd tests && python3 -m unittest test_benchmark.TestBasics`
 
 The test result on my personal PC (CPU: Intel i7-7700 3.60GHz, mem: 8G) is:
 ```
