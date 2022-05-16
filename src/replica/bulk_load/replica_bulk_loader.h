@@ -70,7 +70,7 @@ private:
     // download sst files from remote provider
     void download_sst_file(const std::string &remote_dir,
                            const std::string &local_dir,
-                           const file_meta &f_meta,
+                           int32_t file_index,
                            dist::block_service::block_filesystem *fs);
 
     // \return ERR_FILE_OPERATION_FAILED: file not exist, get size failed, open file failed

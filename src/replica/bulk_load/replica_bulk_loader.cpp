@@ -437,21 +437,22 @@ void replica_bulk_loader::download_files(const std::string &provider_name,
     }
 
     // download sst files asynchronously
-    for (const auto &f_meta : _metadata.files) {
+    if (!_metadata.files.empty()) {
+        const file_meta &f_meta = _metadata.files[0];
         _download_files_task[f_meta.name] = tasking::enqueue(
             LPC_BACKGROUND_BULK_LOAD,
             tracker(),
-            std::bind(
-                &replica_bulk_loader::download_sst_file, this, remote_dir, local_dir, f_meta, fs));
+            std::bind(&replica_bulk_loader::download_sst_file, this, remote_dir, local_dir, 0, fs));
     }
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
                                             const std::string &local_dir,
-                                            const file_meta &f_meta,
+                                            int32_t file_index,
                                             dist::block_service::block_filesystem *fs)
 {
+    const file_meta &f_meta = _metadata.files[file_index];
     uint64_t f_size = 0;
     std::string f_md5;
     error_code ec = _stub->_block_service_manager.download_file(
@@ -503,6 +504,20 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
     update_bulk_load_download_progress(f_size, f_meta.name);
     _stub->_counter_bulk_load_download_file_succ_count->increment();
     _stub->_counter_bulk_load_download_file_size->add(f_size);
+
+    // download next file
+    if (file_index + 1 < _metadata.files.size()) {
+        const file_meta &f_meta = _metadata.files[file_index + 1];
+        _download_files_task[f_meta.name] =
+            tasking::enqueue(LPC_BACKGROUND_BULK_LOAD,
+                             tracker(),
+                             std::bind(&replica_bulk_loader::download_sst_file,
+                                       this,
+                                       remote_dir,
+                                       local_dir,
+                                       file_index + 1,
+                                       fs));
+    }
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
