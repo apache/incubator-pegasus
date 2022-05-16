@@ -113,7 +113,7 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 		return fmt.Errorf("get low node[%s] replicas err: %s", lowNode.Node.String(), err.Error()), nil
 	}
 
-	var selectReplica executor.ReplicaCapacityStruct
+	var selectReplica *executor.ReplicaCapacityStruct
 	for _, replica := range highDiskReplicasOfHighNode {
 		if replica.Size > int64(sizeAllowMoved) {
 			toolkits.LogDebug(fmt.Sprintf("select next replica for the replica is too large(replica_size > allow_size): %d > %f", replica.Size, sizeAllowMoved))
@@ -129,7 +129,11 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 			return fmt.Errorf("please downgrade origin node total replica as primary"), nil
 		}
 
-		selectReplica = replica
+		selectReplica = &replica
+	}
+
+	if selectReplica == nil {
+		return fmt.Errorf("can't find valid replica to balance"), nil
 	}
 
 	gpid, err := util.Str2Gpid(selectReplica.Gpid)
