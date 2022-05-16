@@ -61,7 +61,7 @@ func (m *Migrator) updateNodesLoad(client *executor.Client) error {
 	util.SortStructsByField(nodesLoad, "Usage")
 	for _, node := range nodesLoad {
 		m.CapacityLoad = append(m.CapacityLoad, node.(NodesCapacity))
-		m.Total += node.(*NodesCapacity).Total
+		m.Total += node.(NodesCapacity).Total
 	}
 	m.Average = m.Total / int64(len(nodesLoad))
 	return nil
