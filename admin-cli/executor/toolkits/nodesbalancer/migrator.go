@@ -198,7 +198,7 @@ func checkCompleted(client *executor.Client, action *ActionProposal) {
 			continue
 		}
 
-		if !replicas.contain(action.replica.Gpid.String()) {
+		if !replicas.contain(fmt.Sprintf("%d.%d", action.replica.Gpid.Appid, action.replica.Gpid.PartitionIndex)) {
 			toolkits.LogInfo(fmt.Sprintf("%s is running", action.toString()))
 			time.Sleep(time.Second * 10)
 			continue
