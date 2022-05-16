@@ -27,7 +27,7 @@ type NodesReplica struct {
 }
 
 type Migrator struct {
-	CapacityLoad []*NodesCapacity
+	CapacityLoad []NodesCapacity
 	Total        int64
 	Average      int64
 }
@@ -60,7 +60,7 @@ func (m *Migrator) updateNodesLoad(client *executor.Client) error {
 
 	util.SortStructsByField(nodesLoad, "Usage")
 	for _, node := range nodesLoad {
-		m.CapacityLoad = append(m.CapacityLoad, node.(*NodesCapacity))
+		m.CapacityLoad = append(m.CapacityLoad, node.(NodesCapacity))
 		m.Total += node.(*NodesCapacity).Total
 	}
 	m.Average = m.Total / int64(len(nodesLoad))
@@ -98,12 +98,12 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 	sizeAllowMoved := math.Min(float64(highNode.Total-m.Average), float64(m.Average-lowNode.Total))
 
 	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
-	highDiskReplicasOfHighNode, err := getDiskReplicas(client, highNode, highDiskOfHighNode.Disk)
+	highDiskReplicasOfHighNode, err := getDiskReplicas(client, &highNode, highDiskOfHighNode.Disk)
 	if err != nil {
 		return err, nil
 	}
 
-	totalReplicasOfLowNode, err := getNodeReplicas(client, lowNode)
+	totalReplicasOfLowNode, err := getNodeReplicas(client, &lowNode)
 	if err != nil {
 		return err, nil
 	}
@@ -136,8 +136,8 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 			Gpid:   gpid,
 			Status: migrator.BalanceCopySec,
 		},
-		from: highNode,
-		to:   lowNode,
+		from: &highNode,
+		to:   &lowNode,
 	}
 }
 
