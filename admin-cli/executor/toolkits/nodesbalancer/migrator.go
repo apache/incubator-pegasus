@@ -29,6 +29,7 @@ type NodesReplica struct {
 type Migrator struct {
 	CapacityLoad []NodesCapacity
 	Total        int64
+	Usage        int64
 	Average      int64
 }
 
@@ -62,8 +63,9 @@ func (m *Migrator) updateNodesLoad(client *executor.Client) error {
 	for _, node := range nodesLoad {
 		m.CapacityLoad = append(m.CapacityLoad, node.(NodesCapacity))
 		m.Total += node.(NodesCapacity).Total
+		m.Usage += node.(NodesCapacity).Usage
 	}
-	m.Average = m.Total / int64(len(nodesLoad))
+	m.Average = m.Usage / int64(len(nodesLoad))
 	return nil
 }
 
