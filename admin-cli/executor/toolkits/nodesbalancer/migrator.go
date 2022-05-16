@@ -90,8 +90,8 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 	highNode := m.CapacityLoad[len(m.CapacityLoad)-1]
 	lowNode := m.CapacityLoad[0]
 
-	fmt.Printf("ave = %d, high node = %s[usage=%d], low node = %s[usage=%d]\n",
-		m.Average, highNode.Node.String(), highNode.Usage, lowNode.Node.String(), lowNode.Usage)
+	toolkits.LogInfo(fmt.Sprintf("expect_average = %d, high node = %s[usage=%dMB], low node = %s[usage=%dMB]\n",
+		m.Average/1024, highNode.Node.String(), highNode.Usage, lowNode.Node.String(), lowNode.Usage))
 
 	lowUsageRatio := lowNode.Usage * 100 / lowNode.Total
 	highUsageRatio := highNode.Usage * 100 / highNode.Total
