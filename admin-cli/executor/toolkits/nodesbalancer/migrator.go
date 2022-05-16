@@ -52,7 +52,7 @@ func (m *Migrator) updateNodesLoad(client *executor.Client) error {
 			Usage:     totalUsage,
 			Available: totalCapacity - totalUsage,
 		}
-		nodesLoad = append(nodesLoad, &diskCapacity)
+		nodesLoad = append(nodesLoad, diskCapacity)
 	}
 	if nodesLoad == nil {
 		return err
