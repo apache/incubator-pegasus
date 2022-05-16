@@ -19,6 +19,9 @@ func BalanceNodeCapacity(client *executor.Client, auto bool) error {
 		}
 
 		err, action := balancer.selectNextAction(client)
+		if err != nil {
+			return err
+		}
 		err = client.Meta.Balance(action.replica.Gpid, action.replica.Status, action.from.Node, action.to.Node)
 		if err != nil {
 			return fmt.Errorf("migrate action[%s] now is invalid: %s", action.toString(), err.Error())
