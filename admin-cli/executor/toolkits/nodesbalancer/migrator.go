@@ -14,11 +14,11 @@ import (
 )
 
 type NodesCapacity struct {
-	Node      *util.PegasusNode
+	Node      *util.PegasusNode `json:"node"`
 	Disks     []executor.DiskCapacityStruct
-	Total     int64
-	Usage     int64
-	Available int64
+	Total     int64 `json:"total"`
+	Usage     int64 `json:"usage"`
+	Available int64 `json:"available"`
 }
 
 type NodesReplica struct {
