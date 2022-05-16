@@ -100,12 +100,12 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
 	highDiskReplicasOfHighNode, err := getDiskReplicas(client, &highNode, highDiskOfHighNode.Disk)
 	if err != nil {
-		return err, nil
+		return fmt.Errorf("get high node disk replicas err = %s", err.Error()), nil
 	}
 
 	totalReplicasOfLowNode, err := getNodeReplicas(client, &lowNode)
 	if err != nil {
-		return err, nil
+		return fmt.Errorf("get low node replicas err = %s", err.Error()), nil
 	}
 
 	var selectReplica executor.ReplicaCapacityStruct
