@@ -46,9 +46,10 @@ func BalanceNodeCapacity(client *executor.Client, auto bool) error {
 }
 
 func initClusterEnv(client *executor.Client) error {
-	// set meta level as steady
 	toolkits.LogWarn("This cluster will be balanced based capacity, please don't open count-balance in later")
 	time.Sleep(time.Second * 3)
+
+	// set meta level as steady
 	err := executor.SetMetaLevel(client, "steady")
 	if err != nil {
 		return err
@@ -59,7 +60,6 @@ func initClusterEnv(client *executor.Client) error {
 	if err != nil {
 		return err
 	}
-
 	toolkits.LogInfo("set meta.lb.only_primary_balancer true")
 	err = executor.RemoteCommand(client, session.NodeTypeMeta, "", "meta.lb.only_primary_balancer", []string{"true"})
 	if err != nil {
