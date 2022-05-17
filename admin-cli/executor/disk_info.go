@@ -225,7 +225,7 @@ func ConvertReplicaCapacityStruct(replicaCapacityInfos []interface{}) ([]Replica
 		}
 	}
 	if replicas == nil {
-		return nil, fmt.Errorf("the disk has no replica")
+		return []ReplicaCapacityStruct{}, nil
 	}
 	return replicas, nil
 }
