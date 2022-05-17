@@ -101,6 +101,7 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 	}
 
 	sizeAllowMoved := math.Min(float64(highNode.Usage-m.Average), float64(m.Average-lowNode.Usage))
+	fmt.Printf("%d - %d = %d, %d - %d = %d", highNode.Usage, m.Average, highNode.Usage-m.Average, m.Average, lowNode.Usage, m.Average-lowNode.Usage)
 
 	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
 	highDiskReplicasOfHighNode, err := getDiskReplicas(client, &highNode, highDiskOfHighNode.Disk)
