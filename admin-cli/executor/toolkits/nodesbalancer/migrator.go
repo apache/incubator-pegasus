@@ -140,10 +140,15 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 	if err != nil {
 		return nil, err
 	}
+
+	status := migrator.BalanceCopySec
+	if selectReplica.Status == "primary" {
+		status = migrator.BalanceCopyPri
+	}
 	return &ActionProposal{
 		replica: &partition{
 			Gpid:   gpid,
-			Status: migrator.BalanceCopySec,
+			Status: status,
 		},
 		from: &highNode,
 		to:   &lowNode,
