@@ -54,19 +54,24 @@ func initClusterEnv(client *executor.Client) error {
 		return err
 	}
 	// disable migrate replica base `lively`
+	toolkits.LogInfo("set meta.lb.only_move_primary true")
 	err = executor.RemoteCommand(client, session.NodeTypeMeta, "", "meta.lb.only_move_primary", []string{"true"})
 	if err != nil {
 		return err
 	}
+
+	toolkits.LogInfo("set meta.lb.only_primary_balancer true")
 	err = executor.RemoteCommand(client, session.NodeTypeMeta, "", "meta.lb.only_primary_balancer", []string{"true"})
 	if err != nil {
 		return err
 	}
 	// reset garbage replica clear interval
+	toolkits.LogInfo("set gc_disk_error_replica_interval_seconds 10")
 	err = executor.ConfigCommand(client, session.NodeTypeReplica, "", "gc_disk_error_replica_interval_seconds", "set", "10")
 	if err != nil {
 		return err
 	}
+	toolkits.LogInfo("set gc_disk_garbage_replica_interval_seconds 10")
 	err = executor.ConfigCommand(client, session.NodeTypeReplica, "", "gc_disk_garbage_replica_interval_seconds", "set", "10")
 	if err != nil {
 		return err
