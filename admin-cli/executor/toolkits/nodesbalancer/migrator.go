@@ -219,7 +219,7 @@ func waitCompleted(client *executor.Client, action *ActionProposal) error {
 			time.Sleep(time.Second * 10)
 			continue
 		}
-		toolkits.LogInfo(fmt.Sprintf("%s is completed\n", action.toString()))
+		toolkits.LogInfo(fmt.Sprintf("%s is completed and wait 60s to wait gc garbage...\n", action.toString()))
 		break
 	}
 
