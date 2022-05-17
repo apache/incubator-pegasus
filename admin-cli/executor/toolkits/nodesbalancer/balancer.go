@@ -54,11 +54,11 @@ func initClusterEnv(client *executor.Client) error {
 		return err
 	}
 	// disable migrate replica base `lively`
-	err = executor.RemoteCommand(client, session.NodeTypeReplica, "", "meta.lb.only_move_primary", []string{"true"})
+	err = executor.RemoteCommand(client, session.NodeTypeMeta, "", "meta.lb.only_move_primary", []string{"true"})
 	if err != nil {
 		return err
 	}
-	err = executor.RemoteCommand(client, session.NodeTypeReplica, "", "meta.lb.only_primary_balancer", []string{"true"})
+	err = executor.RemoteCommand(client, session.NodeTypeMeta, "", "meta.lb.only_primary_balancer", []string{"true"})
 	if err != nil {
 		return err
 	}
