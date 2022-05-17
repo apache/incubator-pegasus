@@ -210,14 +210,14 @@ func waitCompleted(client *executor.Client, action *ActionProposal) error {
 		}
 		break
 	}
-	toolkits.LogInfo(fmt.Sprintf("%s is completed and wait 60s to wait gc garbage", action.toString()))
+	toolkits.LogInfo(fmt.Sprintf("%s is completed and wait 100s to wait gc garbage", action.toString()))
 	// set meta level as lively to clean garbage
 	err := executor.SetMetaLevel(client, "lively")
 	if err != nil {
 		return err
 	}
 	// recover  meta level as steady to next action
-	time.Sleep(time.Second * 60)
+	time.Sleep(time.Second * 100)
 	err = executor.SetMetaLevel(client, "steady")
 	if err != nil {
 		return err
