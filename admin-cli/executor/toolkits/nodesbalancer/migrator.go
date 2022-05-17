@@ -199,12 +199,6 @@ func getNodeReplicas(client *executor.Client, replicaServer *NodesCapacity) (rep
 }
 
 func waitCompleted(client *executor.Client, action *ActionProposal) error {
-	// set meta level as lively to clean garbage
-	err := executor.SetMetaLevel(client, "lively")
-	if err != nil {
-		return err
-	}
-
 	for {
 		replicas, err := getNodeReplicas(client, action.to)
 		if err != nil {
@@ -223,6 +217,11 @@ func waitCompleted(client *executor.Client, action *ActionProposal) error {
 		break
 	}
 
+	// set meta level as lively to clean garbage
+	err := executor.SetMetaLevel(client, "lively")
+	if err != nil {
+		return err
+	}
 	// recover  meta level as steady to next action
 	time.Sleep(time.Second * 60)
 	err = executor.SetMetaLevel(client, "steady")
