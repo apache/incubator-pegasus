@@ -90,8 +90,9 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 	highNode := m.CapacityLoad[len(m.CapacityLoad)-1]
 	lowNode := m.CapacityLoad[0]
 
-	toolkits.LogInfo(fmt.Sprintf("expect_average = %dGB, high node = %s[usage=%dGB], low node = %s[usage=%dGB]\n",
-		m.Average/1024, highNode.Node.String(), highNode.Usage/1024, lowNode.Node.String(), lowNode.Usage/1024))
+	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
+	toolkits.LogInfo(fmt.Sprintf("expect_average = %dGB, high node = %s[%s][usage=%dGB], low node = %s[usage=%dGB]\n",
+		m.Average/1024, highNode.Node.String(), highDiskOfHighNode.Disk, highNode.Usage/1024, lowNode.Node.String(), lowNode.Usage/1024))
 
 	lowUsageRatio := lowNode.Usage * 100 / lowNode.Total
 	highUsageRatio := highNode.Usage * 100 / highNode.Total
@@ -101,8 +102,6 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 	}
 
 	sizeAllowMoved := math.Min(float64(highNode.Usage-m.Average), float64(m.Average-lowNode.Usage))
-
-	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
 	highDiskReplicasOfHighNode, err := getDiskReplicas(client, &highNode, highDiskOfHighNode.Disk)
 	if err != nil {
 		return nil, fmt.Errorf("get high node[%s] high disk[%s] replicas err: %s", highNode.Node.String(), highDiskOfHighNode.Disk, err.Error())
@@ -123,10 +122,6 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 		if totalReplicasOfLowNode.contain(replica.Gpid) {
 			toolkits.LogDebug(fmt.Sprintf("select next replica for the replica(%s) is has existed target node(%s)", replica.Gpid, lowNode.Node.String()))
 			continue
-		}
-
-		if selectReplica.Status == "primary" {
-			return nil, fmt.Errorf("please downgrade origin node total replica as primary")
 		}
 
 		selectReplica = replica
