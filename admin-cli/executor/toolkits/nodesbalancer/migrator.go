@@ -223,6 +223,7 @@ func waitCompleted(client *executor.Client, action *ActionProposal) error {
 	}
 
 	// recover  meta level as steady to next action
+	time.Sleep(time.Second * 60)
 	err = executor.SetMetaLevel(client, "steady")
 	if err != nil {
 		return err
