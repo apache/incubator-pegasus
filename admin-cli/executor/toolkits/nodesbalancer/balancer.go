@@ -28,6 +28,18 @@ import (
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 )
 
+// By default, the node capacity of the server needs to be updated every 10 minutes.
+// Therefore, after a partition is migrated completed, the tool cannot immediately
+// obtain the latest capacity distribution. Please adjust the node capacity update
+// interval of the server to speed up the equalization speed. Relevant configurations
+// are as follows:
+//
+//- disk_stat_interval_seconds = 600
+//+ disk_stat_interval_seconds = 60 # or less
+//
+//- gc_memory_replica_interval_ms = 600000
+//+ gc_memory_replica_interval_ms = 60000 # or less
+
 func BalanceNodeCapacity(client *executor.Client, auto bool) error {
 	err := initClusterEnv(client)
 	if err != nil {
