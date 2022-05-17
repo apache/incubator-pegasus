@@ -86,7 +86,7 @@ func (act *ActionProposal) toString() string {
 		act.from.Node.String(), act.to.Node.String())
 }
 
-func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProposal) {
+func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, error) {
 	highNode := m.CapacityLoad[len(m.CapacityLoad)-1]
 	lowNode := m.CapacityLoad[0]
 
@@ -97,7 +97,7 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 	highUsageRatio := highNode.Usage * 100 / highNode.Total
 
 	if highUsageRatio-lowUsageRatio <= 5 {
-		return fmt.Errorf("high node and low node has little diff: %d vs %d", highUsageRatio, lowUsageRatio), nil
+		return nil, fmt.Errorf("high node and low node has little diff: %d vs %d", highUsageRatio, lowUsageRatio)
 	}
 
 	sizeAllowMoved := math.Min(float64(highNode.Usage-m.Average), float64(m.Average-lowNode.Usage))
@@ -105,15 +105,15 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
 	highDiskReplicasOfHighNode, err := getDiskReplicas(client, &highNode, highDiskOfHighNode.Disk)
 	if err != nil {
-		return fmt.Errorf("get high node[%s] high disk[%s] replicas err: %s", highNode.Node.String(), highDiskOfHighNode.Disk, err.Error()), nil
+		return nil, fmt.Errorf("get high node[%s] high disk[%s] replicas err: %s", highNode.Node.String(), highDiskOfHighNode.Disk, err.Error())
 	}
 
 	totalReplicasOfLowNode, err := getNodeReplicas(client, &lowNode)
 	if err != nil {
-		return fmt.Errorf("get low node[%s] replicas err: %s", lowNode.Node.String(), err.Error()), nil
+		return nil, fmt.Errorf("get low node[%s] replicas err: %s", lowNode.Node.String(), err.Error())
 	}
 
-	var selectReplica *executor.ReplicaCapacityStruct
+	var selectReplica executor.ReplicaCapacityStruct
 	for _, replica := range highDiskReplicasOfHighNode {
 		if replica.Size > int64(sizeAllowMoved) {
 			toolkits.LogDebug(fmt.Sprintf("select next replica for the replica is too large(replica_size > allow_size): %d > %f", replica.Size, sizeAllowMoved))
@@ -126,28 +126,28 @@ func (m *Migrator) selectNextAction(client *executor.Client) (error, *ActionProp
 		}
 
 		if selectReplica.Status == "primary" {
-			return fmt.Errorf("please downgrade origin node total replica as primary"), nil
+			return nil, fmt.Errorf("please downgrade origin node total replica as primary")
 		}
 
-		selectReplica = &replica
+		selectReplica = replica
 	}
 
-	if selectReplica == nil {
-		return fmt.Errorf("can't find valid replica to balance"), nil
+	if selectReplica.Gpid == "" {
+		return nil, fmt.Errorf("can't find valid replica to balance")
 	}
 
 	gpid, err := util.Str2Gpid(selectReplica.Gpid)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
-	return nil, &ActionProposal{
+	return &ActionProposal{
 		replica: &partition{
 			Gpid:   gpid,
 			Status: migrator.BalanceCopySec,
 		},
 		from: &highNode,
 		to:   &lowNode,
-	}
+	}, err
 }
 
 type replicas []executor.ReplicaCapacityStruct

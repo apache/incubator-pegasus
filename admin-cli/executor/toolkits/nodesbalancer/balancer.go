@@ -24,7 +24,7 @@ func BalanceNodeCapacity(client *executor.Client, auto bool) error {
 			continue
 		}
 
-		err, action := balancer.selectNextAction(client)
+		action, err := balancer.selectNextAction(client)
 		if err != nil {
 			return err
 		}
