@@ -33,6 +33,12 @@ type Migrator struct {
 	Average      int64
 }
 
+func (m *Migrator) reset() {
+	m.Total = 0
+	m.Average = 0
+	m.Usage = 0
+}
+
 func (m *Migrator) updateNodesLoad(client *executor.Client) error {
 	nodes, err := client.Meta.ListNodes()
 	if err != nil {
@@ -59,6 +65,7 @@ func (m *Migrator) updateNodesLoad(client *executor.Client) error {
 		return err
 	}
 
+	m.reset()
 	util.SortStructsByField(nodesLoad, "Usage")
 	for _, node := range nodesLoad {
 		m.CapacityLoad = append(m.CapacityLoad, node.(NodesCapacity))
