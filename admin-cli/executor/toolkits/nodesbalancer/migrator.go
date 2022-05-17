@@ -90,7 +90,7 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 	highNode := m.CapacityLoad[len(m.CapacityLoad)-1]
 	lowNode := m.CapacityLoad[0]
 
-	toolkits.LogInfo(fmt.Sprintf("expect_average = %dMB, high node = %s[usage=%dMB], low node = %s[usage=%dMB]\n",
+	toolkits.LogInfo(fmt.Sprintf("expect_average = %dGB, high node = %s[usage=%dGB], low node = %s[usage=%dGB]\n",
 		m.Average/1024, highNode.Node.String(), highNode.Usage/1024, lowNode.Node.String(), lowNode.Usage/1024))
 
 	lowUsageRatio := lowNode.Usage * 100 / lowNode.Total
@@ -100,7 +100,7 @@ func (m *Migrator) selectNextAction(client *executor.Client) (*ActionProposal, e
 		return nil, fmt.Errorf("high node and low node has little diff: %d vs %d", highUsageRatio, lowUsageRatio)
 	}
 
-	sizeAllowMoved := math.Min(float64(highNode.Usage-m.Average), float64(m.Average-lowNode.Usage)) / 1000
+	sizeAllowMoved := math.Min(float64(highNode.Usage-m.Average), float64(m.Average-lowNode.Usage))
 
 	highDiskOfHighNode := highNode.Disks[len(highNode.Disks)-1]
 	highDiskReplicasOfHighNode, err := getDiskReplicas(client, &highNode, highDiskOfHighNode.Disk)
