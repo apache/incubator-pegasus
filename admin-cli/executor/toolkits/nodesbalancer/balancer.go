@@ -2,9 +2,9 @@ package nodesbalancer
 
 import (
 	"fmt"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"time"
 
+	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 )
@@ -32,7 +32,10 @@ func BalanceNodeCapacity(client *executor.Client, auto bool) error {
 		if err != nil {
 			return fmt.Errorf("migrate action[%s] now is invalid: %s", action.toString(), err.Error())
 		}
-		waitCompleted(client, action)
+		err = waitCompleted(client, action)
+		if err != nil {
+			return fmt.Errorf("wait replica migrate err: %s", err.Error())
+		}
 		if !auto {
 			break
 		}
