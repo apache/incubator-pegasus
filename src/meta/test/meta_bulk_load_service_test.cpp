@@ -502,6 +502,7 @@ TEST_F(bulk_load_service_test, start_bulk_load_succeed)
     fail::setup();
     fail::cfg("meta_check_bulk_load_request_params", "return()");
     fail::cfg("meta_bulk_load_partition_bulk_load", "return()");
+    FLAGS_enable_concurrent_bulk_load = false;
 
     auto resp = start_bulk_load(APP_NAME);
     ASSERT_EQ(resp.err, ERR_OK);
@@ -527,9 +528,6 @@ TEST_F(bulk_load_service_test, check_partition_status_app_wrong_test)
     app->status = app_status::AS_DROPPED;
     ASSERT_FALSE(check_partition_status(table_name, false, false, gpid(app->app_id, 0), false));
     ASSERT_TRUE(is_app_bulk_load_states_reset(app->app_id));
-    meta_op_status st = get_op_status();
-    ASSERT_EQ(st, meta_op_status::BULKLOAD);
-    unlock_meta_op_status();
 }
 
 TEST_F(bulk_load_service_test, check_partition_status_test)
@@ -726,7 +724,6 @@ public:
         _app_id = app->app_id;
         _partition_count = app->partition_count;
         ASSERT_EQ(app->is_bulk_loading, true);
-        ASSERT_EQ(get_op_status(), meta_op_status::BULKLOAD);
     }
 
     void TearDown()

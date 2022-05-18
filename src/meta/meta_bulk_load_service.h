@@ -25,6 +25,7 @@ namespace dsn {
 namespace replication {
 
 DSN_DECLARE_uint32(bulk_load_max_rollback_times);
+DSN_DECLARE_bool(enable_concurrent_bulk_load);
 
 ///
 /// bulk load path on remote storage:
