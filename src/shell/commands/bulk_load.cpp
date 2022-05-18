@@ -417,3 +417,40 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
 
     return true;
 }
+
+bool clear_bulk_load(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"app_name", required_argument, 0, 'a'}, {0, 0, 0, 0}};
+    std::string app_name;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "a:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            app_name = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    auto err_resp = sc->ddl_client->clear_bulk_load(app_name);
+    dsn::error_s err = err_resp.get_error();
+    std::string hint_msg;
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+        hint_msg = err_resp.get_value().hint_msg;
+    }
+    if (!err.is_ok()) {
+        fmt::print(stderr, "clear bulk load failed, error={} [hint:\"{}\"]\n", err, hint_msg);
+    } else {
+        fmt::print(stdout, "{}\n", hint_msg);
+    }
+
+    return true;
+}
