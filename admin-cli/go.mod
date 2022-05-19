@@ -20,7 +20,7 @@ module github.com/apache/incubator-pegasus/admin-cli
 go 1.14
 
 require (
-	github.com/XiaoMi/pegasus-go-client v0.0.0-20211220102249-0e7f49437ffe
+	github.com/XiaoMi/pegasus-go-client v0.0.0-20220519103347-ba0e68465cd5
 	github.com/cheggaaa/pb/v3 v3.0.6
 	github.com/desertbit/grumble v1.1.1
 	github.com/dustin/go-humanize v1.0.0
