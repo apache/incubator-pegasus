@@ -3462,30 +3462,46 @@ void server_state::update_app_max_replica_count(std::shared_ptr<app_state> &app,
              app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
 
     auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
-    // TODO: update app-level max_replica_count
+    ainfo.max_replica_count = new_max_replica_count;
     ainfo.envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
     auto app_path = get_app_path(*app);
     do_update_app_info(app_path, ainfo, [this, app, rpc](error_code ec) mutable {
         const auto new_max_replica_count = rpc.request().max_replica_count;
+        const auto old_max_replica_count = rpc.response().old_max_replica_count;
 
         zauto_write_lock l(_lock);
 
         dassert_f(ec == ERR_OK,
                   "An error that can't be handled occurs while updating remote app-level "
                   "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                  "new_max_replica_count={}, {}={}",
+                  "old_max_replica_count={}, new_max_replica_count={}, {}={}",
                   ec.to_string(),
                   app->app_name,
                   app->app_id,
+                  old_max_replica_count,
                   new_max_replica_count,
                   replica_envs::UPDATE_MAX_REPLICA_COUNT,
                   app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
 
+        dassert_f(old_max_replica_count == app->max_replica_count,
+                  "app-level max_replica_count has been updated to remote storage, however "
+                  "old_max_replica_count from response is not consistent with current local "
+                  "max_replica_count: app_name={}, app_id={}, old_max_replica_count={}, "
+                  "local_max_replica_count={}, new_max_replica_count={}",
+                  app->app_name,
+                  app->app_id,
+                  old_max_replica_count,
+                  app->max_replica_count,
+                  new_max_replica_count);
+
+        app->max_replica_count = new_max_replica_count;
         app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
         ddebug_f("both remote and local app-level max_replica_count have been updated "
-                 "successfully: app_name={}, app_id={}, new_max_replica_count={}, {}={}",
+                 "successfully: app_name={}, app_id={}, old_max_replica_count={}, "
+                 "new_max_replica_count={}, {}={}",
                  app->app_name,
                  app->app_id,
+                 old_max_replica_count,
                  new_max_replica_count,
                  replica_envs::UPDATE_MAX_REPLICA_COUNT,
                  app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
