@@ -297,11 +297,12 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     dsn::utils::multi_table_printer mtp;
 
     bool all_partitions = (pidx == -1);
-    bool print_progress = (resp.app_status == bulk_load_status::BLS_DOWNLOADING);
+    bool print_ingestion_progress = (resp.app_status == bulk_load_status::BLS_INGESTING);
+    bool print_download_progress = (resp.app_status == bulk_load_status::BLS_DOWNLOADING);
 
     std::unordered_map<int32_t, int32_t> partitions_progress;
-    auto total_progress = 0;
-    if (print_progress) {
+    auto total_download_progress = 0, total_ingestion_progress = 0;
+    if (print_download_progress) {
         for (auto i = 0; i < partition_count; ++i) {
             auto progress = 0;
             for (const auto &kv : resp.bulk_load_states[i]) {
@@ -309,9 +310,9 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
             }
             progress /= resp.max_replica_count;
             partitions_progress.insert(std::make_pair(i, progress));
-            total_progress += progress;
+            total_download_progress += progress;
         }
-        total_progress /= partition_count;
+        total_download_progress /= partition_count;
     }
 
     // print all partitions
@@ -322,7 +323,7 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
         dsn::utils::table_printer tp_all("all partitions");
         tp_all.add_title("partition_index");
         tp_all.add_column("partition_status");
-        if (print_progress) {
+        if (print_download_progress) {
             tp_all.add_column("download_progress(%)");
         }
         if (print_cleanup_flag) {
@@ -333,8 +334,12 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
             auto states = resp.bulk_load_states[i];
             tp_all.add_row(i);
             tp_all.append_data(get_short_status(resp.partitions_status[i]));
-            if (print_progress) {
+            if (print_download_progress) {
                 tp_all.append_data(partitions_progress[i]);
+            }
+            if (print_ingestion_progress &&
+                resp.partitions_status[i] == bulk_load_status::BLS_SUCCEED) {
+                total_ingestion_progress += 1;
             }
             if (print_cleanup_flag) {
                 bool is_cleanup = (states.size() == resp.max_replica_count);
@@ -409,8 +414,12 @@ bool query_bulk_load_status(command_executor *e, shell_context *sc, arguments ar
     if (bulk_load_status::BLS_FAILED == resp.app_status) {
         tp_summary.add_row_name_and_data("bulk_load_err", resp.err.to_string());
     }
-    if (print_progress) {
-        tp_summary.add_row_name_and_data("app_total_download_progress", total_progress);
+    if (print_download_progress) {
+        tp_summary.add_row_name_and_data("app_total_download_progress", total_download_progress);
+    }
+    if (print_ingestion_progress) {
+        tp_summary.add_row_name_and_data("app_total_ingestion_progress",
+                                         total_ingestion_progress * 100 / partition_count);
     }
     mtp.add(std::move(tp_summary));
     mtp.output(std::cout, tp_output_format::kTabular);
