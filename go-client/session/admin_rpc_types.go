@@ -584,6 +584,31 @@ func (m *MetaManager) ControlBulkLoad(ctx context.Context, req *admin.ControlBul
 	return nil, err
 }
 
+func (ms *metaSession) clearBulkLoad(ctx context.Context, req *admin.ClearBulkLoadStateRequest) (*admin.ClearBulkLoadStateResponse, error) {
+	arg := admin.NewAdminClientClearBulkLoadArgs()
+	arg.Req = req
+	result, err := ms.call(ctx, arg, "RPC_CM_CLEAR_BULK_LOAD")
+	if err != nil {
+		return nil, fmt.Errorf("RPC to session %s failed: %s", ms, err)
+	}
+	ret, _ := result.(*admin.AdminClientClearBulkLoadResult)
+	return ret.GetSuccess(), nil
+}
+
+// ClearBulkLoad is auto-generated
+func (m *MetaManager) ClearBulkLoad(ctx context.Context, req *admin.ClearBulkLoadStateRequest) (*admin.ClearBulkLoadStateResponse, error) {
+	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
+		return ms.clearBulkLoad(rpcCtx, req)
+	})
+	if err == nil {
+		if resp.GetErr().Errno != base.ERR_OK.String() {
+			return resp.(*admin.ClearBulkLoadStateResponse), fmt.Errorf("ClearBulkLoad failed: %s", resp.GetErr().String())
+		}
+		return resp.(*admin.ClearBulkLoadStateResponse), nil
+	}
+	return nil, err
+}
+
 func (ms *metaSession) startManualCompact(ctx context.Context, req *admin.StartAppManualCompactRequest) (*admin.StartAppManualCompactResponse, error) {
 	arg := admin.NewAdminClientStartManualCompactArgs()
 	arg.Req = req

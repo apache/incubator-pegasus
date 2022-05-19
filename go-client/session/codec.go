@@ -276,6 +276,11 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 			Success: admin.NewControlBulkLoadResponse(),
 		}
 	},
+	"RPC_CM_CLEAR_BULK_LOAD_ACK": func() RpcResponseResult {
+		return &admin.AdminClientClearBulkLoadResult{
+			Success: admin.NewClearBulkLoadStateResponse(),
+		}
+	},
 	"RPC_CM_START_MANUAL_COMPACT_ACK": func() RpcResponseResult {
 		return &admin.AdminClientStartManualCompactResult{
 			Success: admin.NewStartAppManualCompactResponse(),

@@ -672,6 +672,21 @@ struct query_bulk_load_response
     7:optional string                                           hint_msg;
 }
 
+struct clear_bulk_load_state_request
+{
+    1:string                    app_name;
+}
+
+struct clear_bulk_load_state_response
+{
+    // Possible error:
+    // - ERR_APP_NOT_EXIST: app not exist
+    // - ERR_APP_DROPPED: app has been dropped
+    // - ERR_INVALID_STATE: app is executing bulk load
+    1:base.error_code    err;
+    2:string            hint_msg;
+}
+
 // A client to MetaServer's administration API.
 service admin_client 
 {
@@ -720,6 +735,8 @@ service admin_client
     query_bulk_load_response query_bulk_load_status(1: query_bulk_load_request req);
 
     control_bulk_load_response control_bulk_load(1: control_bulk_load_request req);
+
+    clear_bulk_load_state_response clear_bulk_load(1: clear_bulk_load_state_request req);
 
     start_app_manual_compact_response start_manual_compact(1: start_app_manual_compact_request req);
 

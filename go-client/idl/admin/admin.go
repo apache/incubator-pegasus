@@ -12997,6 +12997,253 @@ func (p *QueryBulkLoadResponse) String() string {
 	return fmt.Sprintf("QueryBulkLoadResponse(%+v)", *p)
 }
 
+// Attributes:
+//  - AppName
+type ClearBulkLoadStateRequest struct {
+	AppName string `thrift:"app_name,1" db:"app_name" json:"app_name"`
+}
+
+func NewClearBulkLoadStateRequest() *ClearBulkLoadStateRequest {
+	return &ClearBulkLoadStateRequest{}
+}
+
+func (p *ClearBulkLoadStateRequest) GetAppName() string {
+	return p.AppName
+}
+func (p *ClearBulkLoadStateRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppName = v
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("clear_bulk_load_state_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_name", thrift.STRING, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.AppName)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_name (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *ClearBulkLoadStateRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ClearBulkLoadStateRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - HintMsg
+type ClearBulkLoadStateResponse struct {
+	Err     *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
+	HintMsg string          `thrift:"hint_msg,2" db:"hint_msg" json:"hint_msg"`
+}
+
+func NewClearBulkLoadStateResponse() *ClearBulkLoadStateResponse {
+	return &ClearBulkLoadStateResponse{}
+}
+
+var ClearBulkLoadStateResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *ClearBulkLoadStateResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return ClearBulkLoadStateResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+func (p *ClearBulkLoadStateResponse) GetHintMsg() string {
+	return p.HintMsg
+}
+func (p *ClearBulkLoadStateResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *ClearBulkLoadStateResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateResponse) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.HintMsg = v
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("clear_bulk_load_state_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ClearBulkLoadStateResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *ClearBulkLoadStateResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("hint_msg", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:hint_msg: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.HintMsg)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.hint_msg (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:hint_msg: ", p), err)
+	}
+	return err
+}
+
+func (p *ClearBulkLoadStateResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ClearBulkLoadStateResponse(%+v)", *p)
+}
+
 type AdminClient interface {
 	// Parameters:
 	//  - Req
@@ -13067,6 +13314,9 @@ type AdminClient interface {
 	// Parameters:
 	//  - Req
 	ControlBulkLoad(ctx context.Context, req *ControlBulkLoadRequest) (r *ControlBulkLoadResponse, err error)
+	// Parameters:
+	//  - Req
+	ClearBulkLoad(ctx context.Context, req *ClearBulkLoadStateRequest) (r *ClearBulkLoadStateResponse, err error)
 	// Parameters:
 	//  - Req
 	StartManualCompact(ctx context.Context, req *StartAppManualCompactRequest) (r *StartAppManualCompactResponse, err error)
@@ -13379,11 +13629,11 @@ func (p *AdminClientClient) ControlBulkLoad(ctx context.Context, req *ControlBul
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) StartManualCompact(ctx context.Context, req *StartAppManualCompactRequest) (r *StartAppManualCompactResponse, err error) {
-	var _args74 AdminClientStartManualCompactArgs
+func (p *AdminClientClient) ClearBulkLoad(ctx context.Context, req *ClearBulkLoadStateRequest) (r *ClearBulkLoadStateResponse, err error) {
+	var _args74 AdminClientClearBulkLoadArgs
 	_args74.Req = req
-	var _result75 AdminClientStartManualCompactResult
-	if err = p.Client_().Call(ctx, "start_manual_compact", &_args74, &_result75); err != nil {
+	var _result75 AdminClientClearBulkLoadResult
+	if err = p.Client_().Call(ctx, "clear_bulk_load", &_args74, &_result75); err != nil {
 		return
 	}
 	return _result75.GetSuccess(), nil
@@ -13391,14 +13641,26 @@ func (p *AdminClientClient) StartManualCompact(ctx context.Context, req *StartAp
 
 // Parameters:
 //  - Req
-func (p *AdminClientClient) QueryManualCompact(ctx context.Context, req *QueryAppManualCompactRequest) (r *QueryAppManualCompactResponse, err error) {
-	var _args76 AdminClientQueryManualCompactArgs
+func (p *AdminClientClient) StartManualCompact(ctx context.Context, req *StartAppManualCompactRequest) (r *StartAppManualCompactResponse, err error) {
+	var _args76 AdminClientStartManualCompactArgs
 	_args76.Req = req
-	var _result77 AdminClientQueryManualCompactResult
-	if err = p.Client_().Call(ctx, "query_manual_compact", &_args76, &_result77); err != nil {
+	var _result77 AdminClientStartManualCompactResult
+	if err = p.Client_().Call(ctx, "start_manual_compact", &_args76, &_result77); err != nil {
 		return
 	}
 	return _result77.GetSuccess(), nil
+}
+
+// Parameters:
+//  - Req
+func (p *AdminClientClient) QueryManualCompact(ctx context.Context, req *QueryAppManualCompactRequest) (r *QueryAppManualCompactResponse, err error) {
+	var _args78 AdminClientQueryManualCompactArgs
+	_args78.Req = req
+	var _result79 AdminClientQueryManualCompactResult
+	if err = p.Client_().Call(ctx, "query_manual_compact", &_args78, &_result79); err != nil {
+		return
+	}
+	return _result79.GetSuccess(), nil
 }
 
 type AdminClientProcessor struct {
@@ -13421,33 +13683,34 @@ func (p *AdminClientProcessor) ProcessorMap() map[string]thrift.TProcessorFuncti
 
 func NewAdminClientProcessor(handler AdminClient) *AdminClientProcessor {
 
-	self78 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self78.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
-	self78.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
-	self78.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
-	self78.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
-	self78.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
-	self78.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
-	self78.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
-	self78.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
-	self78.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
-	self78.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
-	self78.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
-	self78.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
-	self78.processorMap["query_backup_policy"] = &adminClientProcessorQueryBackupPolicy{handler: handler}
-	self78.processorMap["balance"] = &adminClientProcessorBalance{handler: handler}
-	self78.processorMap["start_backup_app"] = &adminClientProcessorStartBackupApp{handler: handler}
-	self78.processorMap["query_backup_status"] = &adminClientProcessorQueryBackupStatus{handler: handler}
-	self78.processorMap["restore_app"] = &adminClientProcessorRestoreApp{handler: handler}
-	self78.processorMap["start_partition_split"] = &adminClientProcessorStartPartitionSplit{handler: handler}
-	self78.processorMap["query_split_status"] = &adminClientProcessorQuerySplitStatus{handler: handler}
-	self78.processorMap["control_partition_split"] = &adminClientProcessorControlPartitionSplit{handler: handler}
-	self78.processorMap["start_bulk_load"] = &adminClientProcessorStartBulkLoad{handler: handler}
-	self78.processorMap["query_bulk_load_status"] = &adminClientProcessorQueryBulkLoadStatus{handler: handler}
-	self78.processorMap["control_bulk_load"] = &adminClientProcessorControlBulkLoad{handler: handler}
-	self78.processorMap["start_manual_compact"] = &adminClientProcessorStartManualCompact{handler: handler}
-	self78.processorMap["query_manual_compact"] = &adminClientProcessorQueryManualCompact{handler: handler}
-	return self78
+	self80 := &AdminClientProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self80.processorMap["create_app"] = &adminClientProcessorCreateApp{handler: handler}
+	self80.processorMap["drop_app"] = &adminClientProcessorDropApp{handler: handler}
+	self80.processorMap["recall_app"] = &adminClientProcessorRecallApp{handler: handler}
+	self80.processorMap["list_apps"] = &adminClientProcessorListApps{handler: handler}
+	self80.processorMap["add_duplication"] = &adminClientProcessorAddDuplication{handler: handler}
+	self80.processorMap["query_duplication"] = &adminClientProcessorQueryDuplication{handler: handler}
+	self80.processorMap["modify_duplication"] = &adminClientProcessorModifyDuplication{handler: handler}
+	self80.processorMap["query_app_info"] = &adminClientProcessorQueryAppInfo{handler: handler}
+	self80.processorMap["update_app_env"] = &adminClientProcessorUpdateAppEnv{handler: handler}
+	self80.processorMap["list_nodes"] = &adminClientProcessorListNodes{handler: handler}
+	self80.processorMap["query_cluster_info"] = &adminClientProcessorQueryClusterInfo{handler: handler}
+	self80.processorMap["meta_control"] = &adminClientProcessorMetaControl{handler: handler}
+	self80.processorMap["query_backup_policy"] = &adminClientProcessorQueryBackupPolicy{handler: handler}
+	self80.processorMap["balance"] = &adminClientProcessorBalance{handler: handler}
+	self80.processorMap["start_backup_app"] = &adminClientProcessorStartBackupApp{handler: handler}
+	self80.processorMap["query_backup_status"] = &adminClientProcessorQueryBackupStatus{handler: handler}
+	self80.processorMap["restore_app"] = &adminClientProcessorRestoreApp{handler: handler}
+	self80.processorMap["start_partition_split"] = &adminClientProcessorStartPartitionSplit{handler: handler}
+	self80.processorMap["query_split_status"] = &adminClientProcessorQuerySplitStatus{handler: handler}
+	self80.processorMap["control_partition_split"] = &adminClientProcessorControlPartitionSplit{handler: handler}
+	self80.processorMap["start_bulk_load"] = &adminClientProcessorStartBulkLoad{handler: handler}
+	self80.processorMap["query_bulk_load_status"] = &adminClientProcessorQueryBulkLoadStatus{handler: handler}
+	self80.processorMap["control_bulk_load"] = &adminClientProcessorControlBulkLoad{handler: handler}
+	self80.processorMap["clear_bulk_load"] = &adminClientProcessorClearBulkLoad{handler: handler}
+	self80.processorMap["start_manual_compact"] = &adminClientProcessorStartManualCompact{handler: handler}
+	self80.processorMap["query_manual_compact"] = &adminClientProcessorQueryManualCompact{handler: handler}
+	return self80
 }
 
 func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -13460,12 +13723,12 @@ func (p *AdminClientProcessor) Process(ctx context.Context, iprot, oprot thrift.
 	}
 	iprot.Skip(thrift.STRUCT)
 	iprot.ReadMessageEnd()
-	x79 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	x81 := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
 	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
-	x79.Write(oprot)
+	x81.Write(oprot)
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
-	return false, x79
+	return false, x81
 
 }
 
@@ -14556,6 +14819,54 @@ func (p *adminClientProcessorControlBulkLoad) Process(ctx context.Context, seqId
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("control_bulk_load", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type adminClientProcessorClearBulkLoad struct {
+	handler AdminClient
+}
+
+func (p *adminClientProcessorClearBulkLoad) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := AdminClientClearBulkLoadArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("clear_bulk_load", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	result := AdminClientClearBulkLoadResult{}
+	var retval *ClearBulkLoadStateResponse
+	var err2 error
+	if retval, err2 = p.handler.ClearBulkLoad(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing clear_bulk_load: "+err2.Error())
+		oprot.WriteMessageBegin("clear_bulk_load", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("clear_bulk_load", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -19643,6 +19954,222 @@ func (p *AdminClientControlBulkLoadResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("AdminClientControlBulkLoadResult(%+v)", *p)
+}
+
+// Attributes:
+//  - Req
+type AdminClientClearBulkLoadArgs struct {
+	Req *ClearBulkLoadStateRequest `thrift:"req,1" db:"req" json:"req"`
+}
+
+func NewAdminClientClearBulkLoadArgs() *AdminClientClearBulkLoadArgs {
+	return &AdminClientClearBulkLoadArgs{}
+}
+
+var AdminClientClearBulkLoadArgs_Req_DEFAULT *ClearBulkLoadStateRequest
+
+func (p *AdminClientClearBulkLoadArgs) GetReq() *ClearBulkLoadStateRequest {
+	if !p.IsSetReq() {
+		return AdminClientClearBulkLoadArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *AdminClientClearBulkLoadArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *AdminClientClearBulkLoadArgs) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientClearBulkLoadArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req = &ClearBulkLoadStateRequest{}
+	if err := p.Req.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
+	}
+	return nil
+}
+
+func (p *AdminClientClearBulkLoadArgs) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("clear_bulk_load_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientClearBulkLoadArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:req: ", p), err)
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Req), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:req: ", p), err)
+	}
+	return err
+}
+
+func (p *AdminClientClearBulkLoadArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientClearBulkLoadArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type AdminClientClearBulkLoadResult struct {
+	Success *ClearBulkLoadStateResponse `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewAdminClientClearBulkLoadResult() *AdminClientClearBulkLoadResult {
+	return &AdminClientClearBulkLoadResult{}
+}
+
+var AdminClientClearBulkLoadResult_Success_DEFAULT *ClearBulkLoadStateResponse
+
+func (p *AdminClientClearBulkLoadResult) GetSuccess() *ClearBulkLoadStateResponse {
+	if !p.IsSetSuccess() {
+		return AdminClientClearBulkLoadResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *AdminClientClearBulkLoadResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *AdminClientClearBulkLoadResult) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField0(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *AdminClientClearBulkLoadResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = &ClearBulkLoadStateResponse{}
+	if err := p.Success.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Success), err)
+	}
+	return nil
+}
+
+func (p *AdminClientClearBulkLoadResult) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("clear_bulk_load_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *AdminClientClearBulkLoadResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Success), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *AdminClientClearBulkLoadResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AdminClientClearBulkLoadResult(%+v)", *p)
 }
 
 // Attributes:
