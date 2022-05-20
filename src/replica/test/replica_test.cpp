@@ -185,6 +185,44 @@ public:
         return false;
     }
 
+    void test_update_app_max_replica_count()
+    {
+        const auto reserved_max_replica_count = _app_info.max_replica_count;
+        const int32_t target_max_replica_count = 5;
+        dassert_f(target_max_replica_count != reserved_max_replica_count,
+                  "target_max_replica_count should not be equal to reserved_max_replica_count:"
+                  "target_max_replica_count={}, reserved_max_replica_count={}",
+                  target_max_replica_count,
+                  reserved_max_replica_count);
+
+        // store new max_replica_count into file
+        _mock_replica->update_app_max_replica_count(target_max_replica_count);
+        _app_info.max_replica_count = target_max_replica_count;
+
+        dsn::app_info info;
+        replica_app_info replica_info(&info);
+
+        auto path = dsn::utils::filesystem::path_combine(_mock_replica->_dir,
+                                                         dsn::replication::replica::kAppInfo);
+        std::cout << "the path of .app-info file is " << path << std::endl;
+
+        // load new max_replica_count from file
+        auto err = replica_info.load(path);
+        ASSERT_EQ(err, ERR_OK);
+        ASSERT_EQ(info, _mock_replica->_app_info);
+        std::cout << "the loaded new app_info is " << info << std::endl;
+
+        // recover original max_replica_count
+        _mock_replica->update_app_max_replica_count(reserved_max_replica_count);
+        _app_info.max_replica_count = reserved_max_replica_count;
+
+        // load original max_replica_count from file
+        err = replica_info.load(path);
+        ASSERT_EQ(err, ERR_OK);
+        ASSERT_EQ(info, _mock_replica->_app_info);
+        std::cout << "the loaded original app_info is " << info << std::endl;
+    }
+
 public:
     dsn::app_info _app_info;
     dsn::gpid pid;
@@ -435,5 +473,8 @@ TEST_F(replica_test, update_deny_client_test)
         ASSERT_EQ(update_deny_client(test.env_name, test.env_value), test.expected);
     }
 }
+
+TEST_F(replica_test, test_update_app_max_replica_count) { test_update_app_max_replica_count(); }
+
 } // namespace replication
 } // namespace dsn
