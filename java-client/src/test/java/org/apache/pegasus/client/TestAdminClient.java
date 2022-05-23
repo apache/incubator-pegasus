@@ -27,7 +27,11 @@ import org.junit.*;
 
 public class TestAdminClient {
   PegasusAdminClientInterface toolsClient;
+  PegasusClientInterface pClient;
   final String metaServerList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
+  final int tablePartitionCount = 8;
+  final int tableReplicaCount = 3;
+  final int tableOpTimeoutMs = 66000;
 
   @Before
   public void Setup() throws PException {
@@ -38,26 +42,30 @@ public class TestAdminClient {
             .enablePerfCounter(false)
             .build();
 
+    pClient = PegasusClientFactory.createClient(clientOptions);
     toolsClient = PegasusAdminClientFactory.createClient(clientOptions);
   }
 
   @After
   public void after() {
+    pClient.close();
     toolsClient.close();
   }
 
   private void testOneCreateApp(String appName) throws PException {
-    int partitionCount = 8;
-    int replicaCount = 3;
-    int opTimeoutMs = 66000;
-    toolsClient.createApp(appName, partitionCount, replicaCount, new HashMap<>(), opTimeoutMs);
+    toolsClient.createApp(
+        appName,
+        this.tablePartitionCount,
+        this.tableReplicaCount,
+        new HashMap<>(),
+        this.tableOpTimeoutMs);
 
-    boolean isAppHealthy = toolsClient.isAppHealthy(appName, replicaCount);
+    boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
 
     Assert.assertTrue(isAppHealthy);
 
-    replicaCount = 5;
-    isAppHealthy = toolsClient.isAppHealthy(appName, replicaCount);
+    int fakeReplicaCount = 5;
+    isAppHealthy = toolsClient.isAppHealthy(appName, fakeReplicaCount);
     Assert.assertFalse(isAppHealthy);
   }
 
@@ -88,11 +96,34 @@ public class TestAdminClient {
     int replicaCount = 3;
 
     try {
-      toolsClient.isAppHealthy(appName, replicaCount);
+      toolsClient.isAppHealthy(appName, this.tableReplicaCount);
     } catch (PException e) {
       return;
     }
 
     Assert.fail();
+  }
+
+  @Test
+  public void testDropApp() throws PException {
+    String appName = "testDropApp";
+
+    toolsClient.createApp(
+        appName,
+        this.tablePartitionCount,
+        this.tableReplicaCount,
+        new HashMap<>(),
+        this.tableOpTimeoutMs);
+    boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
+    Assert.assertTrue(isAppHealthy);
+
+    toolsClient.dropApp(appName, tableOpTimeoutMs);
+
+    try {
+      pClient.openTable(appName);
+    } catch (PException e) {
+      String msg = e.getMessage();
+      Assert.assertTrue(msg.contains("ERR_OBJECT_NOT_FOUND") && msg.contains("No such table"));
+    }
   }
 }

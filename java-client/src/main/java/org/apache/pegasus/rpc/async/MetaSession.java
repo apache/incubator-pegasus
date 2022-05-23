@@ -29,6 +29,7 @@ import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.operator.client_operator;
 import org.apache.pegasus.operator.create_app_operator;
+import org.apache.pegasus.operator.drop_app_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
 import org.apache.pegasus.replication.partition_configuration;
 
@@ -79,6 +80,8 @@ public class MetaSession extends HostNameResolver {
       return ((query_cfg_operator) (metaQueryOp)).get_response().getErr().errno;
     } else if (metaQueryOp instanceof create_app_operator) {
       return ((create_app_operator) (metaQueryOp)).get_response().getErr().errno;
+    } else if (metaQueryOp instanceof drop_app_operator) {
+      return ((drop_app_operator) (metaQueryOp)).get_response().getErr().errno;
     } else {
       assert (false);
       return null;

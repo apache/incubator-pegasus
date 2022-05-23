@@ -44,3 +44,20 @@ struct configuration_create_app_response
     1:base.error_code  err;
     2:i32              appid;
 }
+
+struct drop_app_options
+{
+    1:bool             success_if_not_exist;
+    2:optional i64     reserve_seconds;
+}
+
+struct configuration_drop_app_request
+{
+    1:string                   app_name;
+    2:drop_app_options         options;
+}
+
+struct configuration_drop_app_response
+{
+    1:base.error_code   err;
+}
