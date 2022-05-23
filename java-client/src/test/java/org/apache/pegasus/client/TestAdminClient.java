@@ -19,11 +19,17 @@
 
 package org.apache.pegasus.client;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.assertThat;
+
 import java.util.HashMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.pegasus.rpc.async.MetaHandler;
 import org.apache.pegasus.rpc.async.MetaSession;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestAdminClient {
   PegasusAdminClientInterface toolsClient;
@@ -116,14 +122,16 @@ public class TestAdminClient {
     Assert.assertTrue(isAppHealthy);
 
     toolsClient.dropApp(appName, tableOpTimeoutMs);
-    PegasusClientInterface pClient = PegasusClientFactory.createClient(this.clientOptions);
 
+    PegasusClientInterface pClient = PegasusClientFactory.createClient(this.clientOptions);
     try {
       pClient.openTable(appName);
     } catch (PException e) {
-      String msg = e.getMessage();
-      Assert.assertTrue(msg.contains("ERR_OBJECT_NOT_FOUND") && msg.contains("No such table"));
+      assertThat(e.getMessage(), containsString("No such table"));
+      pClient.close();
+      return;
     }
     pClient.close();
+    Assert.fail("expected PException for openTable");
   }
 }
