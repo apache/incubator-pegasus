@@ -27,28 +27,26 @@ import org.junit.*;
 
 public class TestAdminClient {
   PegasusAdminClientInterface toolsClient;
-  PegasusClientInterface pClient;
   final String metaServerList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
   final int tablePartitionCount = 8;
   final int tableReplicaCount = 3;
   final int tableOpTimeoutMs = 66000;
+  ClientOptions clientOptions;
 
   @Before
   public void Setup() throws PException {
-    ClientOptions clientOptions =
+    this.clientOptions =
         ClientOptions.builder()
             .metaServers(this.metaServerList)
             .asyncWorkers(6)
             .enablePerfCounter(false)
             .build();
 
-    pClient = PegasusClientFactory.createClient(clientOptions);
-    toolsClient = PegasusAdminClientFactory.createClient(clientOptions);
+    toolsClient = PegasusAdminClientFactory.createClient(this.clientOptions);
   }
 
   @After
   public void after() {
-    pClient.close();
     toolsClient.close();
   }
 
@@ -118,6 +116,7 @@ public class TestAdminClient {
     Assert.assertTrue(isAppHealthy);
 
     toolsClient.dropApp(appName, tableOpTimeoutMs);
+    PegasusClientInterface pClient = PegasusClientFactory.createClient(this.clientOptions);
 
     try {
       pClient.openTable(appName);
@@ -125,5 +124,6 @@ public class TestAdminClient {
       String msg = e.getMessage();
       Assert.assertTrue(msg.contains("ERR_OBJECT_NOT_FOUND") && msg.contains("No such table"));
     }
+    pClient.close();
   }
 }
