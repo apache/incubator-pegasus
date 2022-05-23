@@ -24,6 +24,7 @@ import java.util.Properties;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.operator.create_app_operator;
+import org.apache.pegasus.operator.drop_app_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
 import org.apache.pegasus.replication.*;
 import org.apache.pegasus.rpc.Meta;
@@ -193,5 +194,28 @@ public class PegasusAdminClient extends PegasusAbstractClient
             appName, response.partition_count, readyCount));
 
     return readyCount == response.partition_count;
+  }
+
+  @Override
+  public void dropApp(String appName, int reserveSeconds) throws PException {
+    if (appName.isEmpty()) {
+      throw new PException(new IllegalArgumentException("dropApp failed: empty appName"));
+    }
+
+    drop_app_options options = new drop_app_options();
+    options.setSuccess_if_not_exist(true);
+    options.setReserve_seconds(reserveSeconds);
+
+    configuration_drop_app_request request = new configuration_drop_app_request();
+    request.setApp_name(appName);
+    request.setOptions(options);
+
+    drop_app_operator app_operator = new drop_app_operator(appName, request);
+    error_code.error_types error = this.meta.operate(app_operator, META_RETRY_MIN_COUNT);
+
+    if (error != error_code.error_types.ERR_OK) {
+      throw new PException(
+          String.format("Drop app:%s failed! error: %s.", appName, error.toString()));
+    }
   }
 }
