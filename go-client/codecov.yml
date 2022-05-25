@@ -1,0 +1,4 @@
+ignore:
+  - "session/admin_rpc_types.go"
+  - "session/radmin_rpc_types.go"
+  - "idl/**"
