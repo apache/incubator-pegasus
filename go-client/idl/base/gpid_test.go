@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"github.com/pegasus-kv/thrift/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
 )
 

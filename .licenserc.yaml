@@ -36,7 +36,9 @@ header:
     - 'src/shell/sds/sds.c'
     - 'src/shell/sds/sds.h'
     - 'src/shell/sds/sdsalloc.h'
-    - 'admin-cli/go.sum'
-    - 'pegic/go.sum'
+    - '**/go.sum'
+    - '**/*.csv'
+    - '**/*.json'
+    - 'go-client/idl/**/*.go'
 
   comment: on-failure

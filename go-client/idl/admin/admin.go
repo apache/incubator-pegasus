@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/pegasus-kv/thrift/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	"reflect"
 )
 
