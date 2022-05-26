@@ -18,9 +18,7 @@ under the License.
 -->
 # pegasus-go-client
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/XiaoMi/pegasus-go-client)](https://goreportcard.com/report/github.com/XiaoMi/pegasus-go-client)
-
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/xiaomi/pegasus-go-client)](https://pkg.go.dev/github.com/xiaomi/pegasus-go-client)
+[![Go Report Card](https://goreportcard.com/badge/github.com/apache/incubator-pegasus/go-client)](https://goreportcard.com/report/github.com/apache/incubator-pegasus/go-client)
 
 ## Requirement
 
