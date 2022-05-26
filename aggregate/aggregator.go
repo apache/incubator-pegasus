@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"

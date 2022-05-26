@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/admin"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/admin"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/tidwall/gjson"
 )
 

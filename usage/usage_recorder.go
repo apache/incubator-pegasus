@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/pegasus-kv/collector/aggregate"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"

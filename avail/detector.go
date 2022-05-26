@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	log "github.com/sirupsen/logrus"
 )
 

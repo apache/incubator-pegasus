@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	log "github.com/sirupsen/logrus"
 	batchErr "k8s.io/apimachinery/pkg/util/errors"
 )

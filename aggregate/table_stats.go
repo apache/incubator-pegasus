@@ -3,8 +3,8 @@ package aggregate
 import (
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 // PartitionStats is a set of metrics retrieved from this partition.
