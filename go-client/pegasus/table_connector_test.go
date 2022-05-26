@@ -30,10 +30,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"github.com/XiaoMi/pegasus-go-client/rpc"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
+	"github.com/apache/incubator-pegasus/go-client/rpc"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"
 )

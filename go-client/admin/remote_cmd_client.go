@@ -20,9 +20,9 @@ package admin
 import (
 	"context"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/cmd"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/cmd"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 // RemoteCmdClient is a client to call remote command to a PegasusServer.

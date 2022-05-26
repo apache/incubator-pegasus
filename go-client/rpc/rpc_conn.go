@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 )
 
 // TODO(wutao1): make these parameters configurable

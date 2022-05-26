@@ -23,8 +23,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/radmin"
 )
 
 // QueryDiskInfo is auto-generated

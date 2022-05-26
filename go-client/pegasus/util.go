@@ -23,7 +23,7 @@ import (
 	"encoding/binary"
 	"hash/crc64"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 func encodeHashKeySortKey(hashKey []byte, sortKey []byte) *base.Blob {

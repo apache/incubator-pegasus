@@ -23,9 +23,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 // Set inherits op.Request.

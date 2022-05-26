@@ -23,8 +23,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 func (ms *metaSession) dropApp(ctx context.Context, req *admin.DropAppRequest) (*admin.DropAppResponse, error) {

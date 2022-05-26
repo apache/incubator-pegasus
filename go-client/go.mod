@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-module github.com/XiaoMi/pegasus-go-client
+module github.com/apache/incubator-pegasus/go-client
 
 go 1.13
 

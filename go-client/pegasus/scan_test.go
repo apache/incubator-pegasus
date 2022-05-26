@@ -27,9 +27,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/agiledragon/gomonkey"
 	"github.com/fortytw2/leaktest"
 	"github.com/stretchr/testify/assert"

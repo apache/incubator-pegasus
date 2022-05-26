@@ -64,6 +64,6 @@ jobs:
     - name: Run Test
       run: ./test.sh
       working-directory: ./go-client
-    - uses: codecov/codecov-action@v1
+    - uses: codecov/codecov-action@v2
       with:
         working-directory: ./go-client

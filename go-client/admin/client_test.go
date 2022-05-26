@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/apache/incubator-pegasus/go-client/pegasus"
 	"github.com/stretchr/testify/assert"
 )
 
