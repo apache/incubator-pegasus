@@ -22,9 +22,9 @@ package session
 import (
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
 	"github.com/stretchr/testify/assert"
 )
 

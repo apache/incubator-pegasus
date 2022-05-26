@@ -29,12 +29,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/idl/rrdb"
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"github.com/XiaoMi/pegasus-go-client/pegasus/op"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
+	"github.com/apache/incubator-pegasus/go-client/pegasus/op"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"gopkg.in/tomb.v2"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 )

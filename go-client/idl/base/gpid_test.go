@@ -3,7 +3,7 @@ package base
 import (
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/stretchr/testify/assert"
 )

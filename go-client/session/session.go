@@ -27,9 +27,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
-	"github.com/XiaoMi/pegasus-go-client/rpc"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
+	"github.com/apache/incubator-pegasus/go-client/rpc"
 	"gopkg.in/tomb.v2"
 )
 

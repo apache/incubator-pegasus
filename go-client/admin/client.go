@@ -24,9 +24,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 // Client provides the administration API to a specific cluster.

@@ -25,7 +25,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 func validateHashKey(hashKey []byte) error {

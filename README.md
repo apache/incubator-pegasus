@@ -75,7 +75,7 @@ Pegasus has support for several languages:
 - [Java](https://github.com/apache/incubator-pegasus/blob/master/java-client)
 <!-- markdown-link-check-enable-->
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
-- [Go](https://github.com/xiaomi/pegasus-go-client)
+- [Go](https://github.com/apache/incubator-pegasus/go-client)
 - [Python](https://github.com/xiaomi/pegasus-python-client)
 - [Node.js](https://github.com/xiaomi/pegasus-nodejs-client)
 - [Scala](https://github.com/apache/incubator-pegasus/blob/master/scala-client)

@@ -9,7 +9,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/apache/thrift/lib/go/thrift"
 	"reflect"
 )

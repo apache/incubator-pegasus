@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 type metaCallFunc func(context.Context, *metaSession) (metaResponse, error)

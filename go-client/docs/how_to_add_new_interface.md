@@ -40,7 +40,7 @@ you can follow [the building manual of thrift](https://thrift.apache.org/docs/Bu
 3. Compile thrift files to generate go code.
 
 ```sh
-thrift -I idl -out idl --gen go:thrift_import='github.com/apache/thrift/lib/go/thrift',package_prefix='github.com/XiaoMi/pegasus-go-client/idl/' idl/admin.thrift
+thrift -I idl -out idl --gen go:thrift_import='github.com/apache/thrift/lib/go/thrift',package_prefix='github.com/apache/incubator-pegasus/go-client/idl/' idl/admin.thrift
 gofmt -w **/*.go
 goimports -w */**.go
 ```
