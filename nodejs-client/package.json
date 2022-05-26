@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/XiaoMi/pegasus-nodejs-client"
+    "url": "git+https://github.com/apache/incubator-pegasus/nodejs-client"
   },
   "keywords": [
     "pegasus"
@@ -16,9 +16,9 @@
   "author": "heyuchen",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/XiaoMi/pegasus-nodejs-client/issues"
+    "url": "https://github.com/apache/incubator-pegasus/issues"
   },
-  "homepage": "https://github.com/XiaoMi/pegasus-nodejs-client#readme",
+  "homepage": "https://github.com/apache/incubator-pegasus/nodejs-client#readme",
   "dependencies": {
     "bunyan": "^1.8.12",
     "deasync": "^0.1.14",
