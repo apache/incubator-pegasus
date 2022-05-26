@@ -23,11 +23,11 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/stretchr/testify/assert"
 )
 

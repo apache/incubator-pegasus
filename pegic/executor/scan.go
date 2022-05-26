@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
+	"github.com/apache/incubator-pegasus/go-client/pegasus"
 )
 
 // ScanCommand wraps scan command input.

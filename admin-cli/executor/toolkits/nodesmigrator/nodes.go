@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	migrator "github.com/apache/incubator-pegasus/admin-cli/client"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 type Replica struct {

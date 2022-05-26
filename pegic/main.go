@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/XiaoMi/pegasus-go-client/pegalog"
+	"github.com/apache/incubator-pegasus/go-client/pegalog"
 	"github.com/apache/incubator-pegasus/pegic/shell"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"

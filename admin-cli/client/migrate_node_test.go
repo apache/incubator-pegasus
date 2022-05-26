@@ -21,7 +21,7 @@ package client
 import (
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 	"github.com/stretchr/testify/assert"
 )
 
