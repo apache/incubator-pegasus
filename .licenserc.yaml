@@ -40,5 +40,7 @@ header:
     - '**/*.csv'
     - '**/*.json'
     - 'go-client/idl/**/*.go'
+    - 'nodejs-client/src/dsn/*.js'
+    - '**/.npmigonre'
 
   comment: on-failure
