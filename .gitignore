@@ -253,3 +253,8 @@ python-client/site
 
 # mypy
 python-client/.mypy_cache/
+
+.arcconfig
+*.log*
+node_modules
+package-lock.json
