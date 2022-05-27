@@ -910,10 +910,7 @@ bool get_max_replica_count(command_executor *e, shell_context *sc, arguments arg
                    escaped_app_name,
                    resp.max_replica_count);
     } else {
-        fmt::print(stdout,
-                   "get replica count of app({}) failed: {}\n",
-                   escaped_app_name,
-                   err);
+        fmt::print(stdout, "get replica count of app({}) failed: {}\n", escaped_app_name, err);
     }
 
     return true;
