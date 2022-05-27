@@ -484,6 +484,9 @@ static command_executor commands[] = {
         cancel_bulk_load,
     },
     {
+        "clear_bulk_load", "clear app bulk load result", "<-a --app_name str>", clear_bulk_load,
+    },
+    {
         "detect_hotkey",
         "start or stop hotkey detection on a replica of a replica server",
         "<-a|--app_id num> "

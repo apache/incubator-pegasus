@@ -22,6 +22,7 @@ header:
   paths-ignore:
     - 'LICENSE'
     - 'NOTICE'
+    - '.github/pull_request_template.md'
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
     - 'src/.clang-format'
@@ -35,5 +36,11 @@ header:
     - 'src/shell/sds/sds.c'
     - 'src/shell/sds/sds.h'
     - 'src/shell/sds/sdsalloc.h'
+    - '**/go.sum'
+    - '**/*.csv'
+    - '**/*.json'
+    - 'go-client/idl/**/*.go'
+    - 'nodejs-client/src/dsn/*.js'
+    - '**/.npmigonre'
 
   comment: on-failure

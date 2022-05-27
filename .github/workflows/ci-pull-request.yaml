@@ -21,14 +21,14 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: Code Lint and Unit Test
+name: CPP Lint and Unit Test
 
 on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
     paths:
-      - src
+      - src/**
       - rdsn
       - run.sh
     branches:
@@ -49,7 +49,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     container:
-      image: apachepegasus/clang-format-3.9
+      image: apache/pegasus:clang-format-3.9
     steps:
       - uses: actions/checkout@v2
         with:
@@ -63,7 +63,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/pegasus-kv/thirdparties-bin:ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
     defaults:
       run:
         shell: bash
@@ -75,11 +75,9 @@ jobs:
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
         run: ./run.sh build -c --skip_thirdparty
-      -
-        name: Packaging Server
+      - name: Packaging Server
         run: ./run.sh pack_server
-      -
-        name: Packaging Tools
+      - name: Packaging Tools
         run: ./run.sh pack_tools
       - name: Unit Testing
         run: |

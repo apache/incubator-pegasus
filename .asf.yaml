@@ -42,4 +42,5 @@ github:
 
 notifications:
   commits: commits@pegasus.apache.org
-  pullrequests: commits@pegasus.apache.org
+  issues: dev@pegasus.apache.org
+  pullrequests: dev@pegasus.apache.org
