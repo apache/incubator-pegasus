@@ -22,7 +22,7 @@ package executor
 import (
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 func UseTable(client *Client, table string) error {

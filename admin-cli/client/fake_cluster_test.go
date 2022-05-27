@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/rand"
 )

@@ -23,12 +23,12 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	adminClient "github.com/apache/incubator-pegasus/admin-cli/client"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 type DiskStats struct {

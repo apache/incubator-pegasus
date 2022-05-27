@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 )
 
 // QueryDuplication command
