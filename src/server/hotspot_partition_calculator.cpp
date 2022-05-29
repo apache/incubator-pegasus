@@ -96,7 +96,8 @@ void hotspot_partition_calculator::init_perf_counter(int partition_count)
 void hotspot_partition_calculator::stat_histories_analyse(uint32_t data_type,
                                                           std::vector<int> &hot_points)
 {
-    hot_points.assign(_hot_points.size(), 0);
+    int hot_point_size = _hot_points.size();
+    hot_points.assign(hot_point_size, 0);
     double table_qps_sum = 0, standard_deviation = 0, table_qps_avg = 0;
     int sample_count = 0;
     for (const auto &one_partition_stat_histories : _partitions_stat_histories) {
