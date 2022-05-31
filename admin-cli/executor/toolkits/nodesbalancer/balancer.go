@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 // By default, the node capacity of the server needs to be updated every 10 minutes.
