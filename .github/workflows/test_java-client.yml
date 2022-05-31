@@ -38,21 +38,22 @@ jobs:
   java-checkstyle:
     name: 'CheckStyle'
     runs-on: ubuntu-latest
-    - name: Check out Git repository
-      uses: actions/checkout@v2
-      with:
-        persist-credentials: false
-        submodules: recursive
-    - name: 'RunJavaCheckstyle'
-      uses: ./.github/actions/action-checkstyle
-      with:
-        checkstyle_config: ./java-client/check/checkstyle/checkstyle.xml
-        checkstyle_version: 9.3
-        workdir: './java-client'
-        reporter: 'github-pr-check'
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        fail_on_error: true
-        level: error
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+          submodules: recursive
+      - name: 'RunJavaCheckstyle'
+        uses: ./.github/actions/action-checkstyle
+        with:
+          checkstyle_config: ./java-client/check/checkstyle/checkstyle.xml
+          checkstyle_version: 9.3
+          workdir: './java-client'
+          reporter: 'github-pr-check'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_error: true
+          level: error
   test:
     name: test
     runs-on: ubuntu-latest
