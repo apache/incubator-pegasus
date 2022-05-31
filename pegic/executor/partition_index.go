@@ -25,7 +25,7 @@ import (
 	"hash/crc64"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 var crc64Table = crc64.MakeTable(0x9a6c9329ac4bc9b5)

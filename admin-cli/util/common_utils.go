@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 func Str2Gpid(gpid string) (*base.Gpid, error) {

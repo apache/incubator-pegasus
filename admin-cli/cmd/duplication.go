@@ -22,9 +22,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/shell"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/desertbit/grumble"
 )
 

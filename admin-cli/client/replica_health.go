@@ -20,8 +20,8 @@
 package client
 
 import (
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 )
 
 // TableHealthInfo is a report of replica health within the table.

@@ -37,7 +37,7 @@ range.`
 	shell.AddCommand(&grumble.Command{
 		Name:     "create",
 		Help:     "create a table",
-		Usage:    "create <table> [-p|--partitions <NUM>] [-r|--replica <NUM>]",
+		Usage:    "create [-p|--partitions <NUM>] [-r|--replica <NUM>] <table>",
 		LongHelp: longHelp,
 		Run: func(c *grumble.Context) error {
 			partitionCount := c.Flags.Int("partitions")

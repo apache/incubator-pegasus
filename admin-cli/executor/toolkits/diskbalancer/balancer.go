@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
 )
 
 var WaitRunning = time.Second * 10  // time for wait migrate complete

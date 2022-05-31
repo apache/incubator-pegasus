@@ -22,9 +22,9 @@ package executor
 import (
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -79,6 +79,8 @@ func QueryBulkLoad(client *Client, tableName string, partitionIndex int, detaile
 		switch tableStatus {
 		case admin.BulkLoadStatus_BLS_DOWNLOADING:
 			PrintAllDownloading(client, resp, detailed)
+		case admin.BulkLoadStatus_BLS_INGESTING:
+			PrintAllIngestion(client, resp, detailed)
 		case admin.BulkLoadStatus_BLS_SUCCEED, admin.BulkLoadStatus_BLS_FAILED, admin.BulkLoadStatus_BLS_CANCELED:
 			PrintAllCleanupFlag(client, resp, detailed)
 		default:
@@ -150,6 +152,51 @@ func PrintAllDownloading(client *Client, resp *admin.QueryBulkLoadResponse, deta
 	tabular.New(client, aList, func(tbWriter *tablewriter.Table) {
 		tbWriter.SetFooter([]string{
 			fmt.Sprintf("Name(%s)", resp.GetAppName()),
+			fmt.Sprintf("Table(%s)", resp.GetAppStatus().String()),
+			fmt.Sprintf("%d", totalProgress),
+		})
+	}).Render()
+}
+
+func PrintAllIngestion(client *Client, resp *admin.QueryBulkLoadResponse, detailed bool) {
+	partitionCount := len(resp.GetPartitionsStatus())
+
+	var aList []interface{}
+	type allStruct struct {
+		Pidx     int32  `json:"PartitionIndex"`
+		Status   string `json:"PartitionStatus"`
+		Progress string `json:"Progress"`
+	}
+	var totalProgress int32 = 0
+	for i := 0; i < partitionCount; i++ {
+		aList = append(aList, allStruct{
+			Pidx:     int32(i),
+			Status:   resp.GetPartitionsStatus()[i].String(),
+			Progress: "",
+		})
+		if resp.GetPartitionsStatus()[i] == admin.BulkLoadStatus_BLS_SUCCEED {
+			totalProgress++
+		}
+	}
+	totalProgress = totalProgress * 100 / int32(partitionCount)
+	if !detailed {
+		var tList []interface{}
+		type summaryStruct struct {
+			TName    string `json:"TableName"`
+			TStatus  string `json:"TableStatus"`
+			Progress int32  `json:"TotalIngestionProgress"`
+		}
+		tList = append(tList, summaryStruct{
+			TName:    resp.GetAppName(),
+			TStatus:  resp.GetAppStatus().String(),
+			Progress: totalProgress,
+		})
+		tabular.Print(client, tList)
+		return
+	}
+	tabular.New(client, aList, func(tbWriter *tablewriter.Table) {
+		tbWriter.SetFooter([]string{
+			fmt.Sprintf("TableName(%s)", resp.GetAppName()),
 			fmt.Sprintf("Table(%s)", resp.GetAppStatus().String()),
 			fmt.Sprintf("%d", totalProgress),
 		})

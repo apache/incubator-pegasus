@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/go-resty/resty/v2"
 )
 

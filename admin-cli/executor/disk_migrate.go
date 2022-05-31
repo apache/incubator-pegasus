@@ -24,9 +24,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/radmin"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 func DiskMigrate(client *Client, replicaServer string, pidStr string, from string, to string) error {
