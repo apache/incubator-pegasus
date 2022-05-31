@@ -10,8 +10,7 @@ func init() {
 	shell.AddCommand(&grumble.Command{
 		Name: "nodes-balancer",
 		Help: "migrate replica among the replica server to balance the capacity of cluster, please " +
-			// todo(jiashuo)  update the link of master after merging into master
-			"make sure the server config is right, detail see https://..",
+			"make sure the server config is right, detail see https://github.com/apache/incubator-pegasus/pull/969",
 		Flags: func(a *grumble.Flags) {
 			a.BoolL("auto", false, "whether to migrate replica until all nodes is balanced, false "+
 				"by default, which means it just migrate one replica")

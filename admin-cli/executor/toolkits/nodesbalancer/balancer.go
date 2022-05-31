@@ -109,3 +109,20 @@ func initClusterEnv(client *executor.Client) error {
 	}
 	return nil
 }
+
+func resetClusterEnv(client *executor.Client) error {
+	toolkits.LogWarn("This cluster garbage interval will be reset default")
+
+	// reset garbage replica clear interval
+	toolkits.LogInfo("set gc_disk_error_replica_interval_seconds 3600")
+	err := executor.ConfigCommand(client, session.NodeTypeReplica, "", "gc_disk_error_replica_interval_seconds", "set", "3600")
+	if err != nil {
+		return err
+	}
+	toolkits.LogInfo("set gc_disk_garbage_replica_interval_seconds 3600")
+	err = executor.ConfigCommand(client, session.NodeTypeReplica, "", "gc_disk_garbage_replica_interval_seconds", "set", "3600")
+	if err != nil {
+		return err
+	}
+	return nil
+}
