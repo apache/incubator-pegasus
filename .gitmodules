@@ -18,6 +18,3 @@
 [submodule "rdsn"]
   path = rdsn
   url = https://github.com/XiaoMi/rdsn.git
-[submodule ".github/workflows/actions/action-checkstyle"]
-	path = .github/workflows/actions/action-checkstyle
-	url = https://github.com/dbelyaev/action-checkstyle.git
