@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
           submodules: recursive
       - name: 'RunJavaCheckstyle'
-        uses: ./.github/actions/action-checkstyle
+        uses: ./.github/workflows/actions/action-checkstyle
         with:
           checkstyle_config: ./java-client/check/checkstyle/checkstyle.xml
           checkstyle_version: 9.3
