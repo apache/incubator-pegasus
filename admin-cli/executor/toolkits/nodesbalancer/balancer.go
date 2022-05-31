@@ -73,6 +73,10 @@ func BalanceNodeCapacity(client *executor.Client, auto bool) error {
 		}
 		time.Sleep(time.Second * 10)
 	}
+	err = resetClusterEnv(client)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
