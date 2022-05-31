@@ -41,12 +41,6 @@ shellcheck_must_pass ./scripts/ci-test.sh
 PEGASUS_PKG="pegasus-tools-2.1.SNAPSHOT-dc4c710-glibc2.17-release"
 PEGASUS_PKG_URL="https://github.com/levy5307/pegasus-tools/raw/master/pegasus-tools-2.1.SNAPSHOT-dc4c710-glibc2.17-release.tar.gz"
 
-# check format
-if ! mvn spotless:check
-then
-    exit 1
-fi
-
 # start pegasus onebox environment
 if [ ! -f $PEGASUS_PKG.tar.gz ]; then
     wget $PEGASUS_PKG_URL
