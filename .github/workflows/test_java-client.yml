@@ -35,29 +35,19 @@ defaults:
     shell: bash
 
 jobs:
-  java-checkstyle:
-    name: 'CheckStyle'
+  google-java-format:
+    name: java-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: changes
+      - uses: actions/checkout@v2 # v2 minimum required
+      - uses: axel-op/googlejavaformat-action@v3.6.0
         with:
-          filters: |
-            java-client:
-              - 'java-client/src/**'
-      - if: steps.changes.outputs.java-client == 'true'
-        uses: dbelyaev/action-checkstyle@v0.6.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          workdir: 'java-client/src'
-          reporter: 'github-pr-check'
-          fail_on_error: true
-          level: error
+          version: 1.7
+          args: "--set-exit-if-changed --dry-run"
   test:
     name: test
     runs-on: ubuntu-latest
-    needs: java-checkstyle
+    needs: google-java-format
     strategy:
       matrix:
         java: [ '8', '11']
