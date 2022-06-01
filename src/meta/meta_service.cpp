@@ -463,6 +463,8 @@ error_code meta_service::start()
                err.to_string());
     }
 
+    _state->recover_from_max_replica_count_env();
+
     initialize_duplication_service();
     recover_duplication_from_meta_state();
 

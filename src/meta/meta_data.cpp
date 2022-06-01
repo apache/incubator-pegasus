@@ -64,13 +64,14 @@ namespace replication {
 // another option `max_reserved_dropped_replicas` representing the max reserved number allowed for
 // dropped replicas.
 //
-// If `max_reserved_dropped_replicas` is set to 1, there is at most one dropped replicas reserved;
-// If it's set to 0, however, none of dropped replicas can be reserved.
+// If `max_reserved_dropped_replicas` is set to 1, there is at most one dropped replicas reserved,
+// which means, once the number of alive replicas reaches max_replica_count, at most one dropped
+// replica can be reserved and others will be eliminated; If `max_reserved_dropped_replicas` is
+// set to 0, however, none of dropped replicas can be reserved.
 //
-// Thus the default value of `max_reserved_dropped_replicas` is set to 1 so that the unit tests
-// can be passed. For production environments, it should be set to 0 to be consistent with
-// `max_replicas_in_group`, which also means, once the number of alive replicas reaches
-// max_replica_count, at most one dropped replica can be reserved and others will be eliminated.
+// To be consistent with `max_replicas_in_group`, default value of `max_reserved_dropped_replicas`
+// is set to 1 so that the unit tests can be passed. For production environments, it should be set
+// to 0.
 DSN_DEFINE_uint32("meta_server",
                   max_reserved_dropped_replicas,
                   1,

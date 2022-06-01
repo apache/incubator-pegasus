@@ -140,6 +140,18 @@ public:
         } else {
             app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT] = env;
         }
+
+        // set remote env of app
+        auto app_path = _ss->get_app_path(*app);
+        auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
+        auto json_config = dsn::json::json_forwarder<app_info>::encode(ainfo);
+        dsn::task_tracker tracker;
+        _ms->get_remote_storage()->set_data(app_path,
+                                            json_config,
+                                            LPC_META_STATE_HIGH,
+                                            [](dsn::error_code ec) { ASSERT_EQ(ec, ERR_OK); },
+                                            &tracker);
+        tracker.wait_outstanding_tasks();
     }
 
     configuration_set_max_replica_count_response set_max_replica_count(const std::string &app_name,
@@ -239,6 +251,8 @@ public:
 
         // verify local max_replica_count of the app
         ASSERT_EQ(app->max_replica_count, expected_max_replica_count);
+        // env of max_replica_count should have been removed under normal circumstances
+        ASSERT_EQ(app->envs.find(replica_envs::UPDATE_MAX_REPLICA_COUNT), app->envs.end());
 
         // verify remote max_replica_count of the app
         auto app_path = _ss->get_app_path(*app);
@@ -255,6 +269,9 @@ public:
                 ASSERT_EQ(ainfo.app_name, app->app_name);
                 ASSERT_EQ(ainfo.app_id, app->app_id);
                 ASSERT_EQ(ainfo.max_replica_count, expected_max_replica_count);
+                // env of max_replica_count should have been removed under normal circumstances
+                ASSERT_EQ(ainfo.envs.find(replica_envs::UPDATE_MAX_REPLICA_COUNT),
+                          ainfo.envs.end());
             },
             &tracker);
         tracker.wait_outstanding_tasks();
@@ -764,6 +781,21 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
 
         _ms->set_node_state(nodes, true);
     }
+}
+
+TEST_F(meta_app_operation_test, recover_from_max_replica_count_env)
+{
+    const uint32_t partition_count = 4;
+    create_app(APP_NAME, partition_count);
+
+    const int32_t new_max_replica_count = 5;
+    const auto env = fmt::format("updating;{}", new_max_replica_count);
+    set_max_replica_count_env(APP_NAME, env);
+
+    _ss->recover_from_max_replica_count_env();
+
+    verify_all_partitions_max_replica_count(APP_NAME, new_max_replica_count);
+    verify_app_max_replica_count(APP_NAME, new_max_replica_count);
 }
 
 } // namespace replication

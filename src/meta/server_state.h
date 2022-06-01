@@ -178,6 +178,7 @@ public:
     // get/set max_replica_count of an app
     void get_max_replica_count(configuration_get_max_replica_count_rpc rpc) const;
     void set_max_replica_count(configuration_set_max_replica_count_rpc rpc);
+    void recover_from_max_replica_count_env();
 
     // return true if no need to do any actions
     bool check_all_partitions();
@@ -336,6 +337,13 @@ private:
     void
     update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
                                                const partition_configuration &new_partition_config);
+
+    void recover_all_partitions_max_replica_count(std::shared_ptr<app_state> &app,
+                                                  int32_t max_replica_count,
+                                                  dsn::task_tracker &tracker);
+    void recover_app_max_replica_count(std::shared_ptr<app_state> &app,
+                                       int32_t max_replica_count,
+                                       dsn::task_tracker &tracker);
 
     // Used for `on_start_manual_compaction`
     bool parse_compaction_envs(start_manual_compact_rpc rpc,

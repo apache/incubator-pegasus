@@ -3498,13 +3498,11 @@ void server_state::update_app_max_replica_count(std::shared_ptr<app_state> &app,
         app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
         ddebug_f("both remote and local app-level max_replica_count have been updated "
                  "successfully: app_name={}, app_id={}, old_max_replica_count={}, "
-                 "new_max_replica_count={}, {}={}",
+                 "new_max_replica_count={}",
                  app->app_name,
                  app->app_id,
                  old_max_replica_count,
-                 new_max_replica_count,
-                 replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                 app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
+                 new_max_replica_count);
 
         auto &response = rpc.response();
         response.err = ERR_OK;
@@ -3746,6 +3744,198 @@ void server_state::update_partition_max_replica_count_locally(
              partition_index,
              old_config_str,
              new_config_str);
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void server_state::recover_from_max_replica_count_env()
+{
+    std::vector<std::pair<std::shared_ptr<app_state>, int32_t>> tasks;
+    {
+        zauto_read_lock l(_lock);
+        for (auto &e : _exist_apps) {
+            auto &app = e.second;
+            if (app->status != app_status::AS_AVAILABLE) {
+                continue;
+            }
+
+            auto iter = app->envs.find(replica_envs::UPDATE_MAX_REPLICA_COUNT);
+            if (iter == app->envs.end()) {
+                continue;
+            }
+
+            std::vector<std::string> args;
+            utils::split_args(iter->second.c_str(), args, ';');
+            if (args.empty() || args[0] != "updating") {
+                continue;
+            }
+
+            int32_t max_replica_count = 0;
+            if (args.size() < 2 || !dsn::buf2int32(args[1], max_replica_count) ||
+                max_replica_count <= 0) {
+                dassert_f(false,
+                          "invalid max_replica_count_env: app_name={}, app_id={}, "
+                          "max_replica_count={}, {}={}",
+                          app->app_name,
+                          app->app_id,
+                          app->max_replica_count,
+                          replica_envs::UPDATE_MAX_REPLICA_COUNT,
+                          iter->second);
+            }
+
+            tasks.emplace_back(app, max_replica_count);
+        }
+    }
+
+    dsn::task_tracker tracker;
+
+    for (auto &task : tasks) {
+        recover_all_partitions_max_replica_count(task.first, task.second, tracker);
+    }
+    tracker.wait_outstanding_tasks();
+
+    for (auto &task : tasks) {
+        recover_app_max_replica_count(task.first, task.second, tracker);
+    }
+    tracker.wait_outstanding_tasks();
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void server_state::recover_all_partitions_max_replica_count(std::shared_ptr<app_state> &app,
+                                                            int32_t new_max_replica_count,
+                                                            dsn::task_tracker &tracker)
+{
+    for (int i = 0; i < app->partition_count; ++i) {
+        zauto_read_lock l(_lock);
+
+        auto new_pc = app->partitions[i];
+        if (new_pc.max_replica_count == new_max_replica_count) {
+            dwarn_f("no need to recover partition-level max_replica_count since it has been "
+                    "updated before: app_name={}, app_id={}, partition_index={}, "
+                    "partition_count={}, new_max_replica_count={}",
+                    app->app_name,
+                    app->app_id,
+                    i,
+                    app->partition_count,
+                    new_max_replica_count);
+            continue;
+        }
+
+        ddebug_f("ready to recover partition-level max_replica_count: app_name={}, app_id={}, "
+                 "partition_index={}, partition_count={}, old_max_replica_count={}, "
+                 "new_max_replica_count={}",
+                 app->app_name,
+                 app->app_id,
+                 i,
+                 app->partition_count,
+                 app->max_replica_count,
+                 new_max_replica_count);
+
+        new_pc.max_replica_count = new_max_replica_count;
+        ++(new_pc.ballot);
+        auto partition_path = get_partition_path(new_pc.pid);
+        auto value = dsn::json::json_forwarder<partition_configuration>::encode(new_pc);
+        _meta_svc->get_remote_storage()->set_data(
+            partition_path,
+            value,
+            LPC_META_CALLBACK,
+            [this, app, i, new_pc](error_code ec) mutable {
+                zauto_write_lock l(_lock);
+
+                auto &old_pc = app->partitions[i];
+                std::string old_pc_str(boost::lexical_cast<std::string>(old_pc));
+                std::string new_pc_str(boost::lexical_cast<std::string>(new_pc));
+
+                dassert_f(ec == ERR_OK,
+                          "An error that can't be handled occurs while recovering remote "
+                          "partition-level max_replica_count: error_code={}, app_name={}, "
+                          "app_id={}, partition_index={}, partition_count={}, "
+                          "old_partition_config={}, new_partition_config={}",
+                          ec.to_string(),
+                          app->app_name,
+                          app->app_id,
+                          i,
+                          app->partition_count,
+                          old_pc_str,
+                          new_pc_str);
+
+                dassert_f(old_pc.ballot + 1 == new_pc.ballot,
+                          "invalid ballot while recovering max_replica_count: app_name={}, "
+                          "app_id={}, partition_index={}, partition_count={}, "
+                          "old_partition_config={}, new_partition_config={}",
+                          app->app_name,
+                          app->app_id,
+                          i,
+                          app->partition_count,
+                          old_pc_str,
+                          new_pc_str);
+
+                old_pc = new_pc;
+
+                ddebug_f("partition-level max_replica_count has been recovered successfully: "
+                         "app_name={}, app_id={}, partition_index={}, partition_count={}, "
+                         "old_partition_config={}, new_partition_config={}",
+                         app->app_name,
+                         app->app_id,
+                         i,
+                         app->partition_count,
+                         old_pc_str,
+                         new_pc_str);
+            },
+            &tracker);
+    }
+}
+
+// ThreadPool: THREAD_POOL_META_SERVER
+void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app,
+                                                 int32_t new_max_replica_count,
+                                                 dsn::task_tracker &tracker)
+{
+    zauto_read_lock l(_lock);
+
+    ddebug_f("ready to recover app-level max_replica_count: app_name={}, app_id={}, "
+             "old_max_replica_count={}, new_max_replica_count={}, {}={}",
+             app->app_name,
+             app->app_id,
+             app->max_replica_count,
+             new_max_replica_count,
+             replica_envs::UPDATE_MAX_REPLICA_COUNT,
+             app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
+
+    auto ainfo = *(reinterpret_cast<app_info *>(app.get()));
+    ainfo.max_replica_count = new_max_replica_count;
+    ainfo.envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
+    auto app_path = get_app_path(*app);
+    auto value = dsn::json::json_forwarder<app_info>::encode(ainfo);
+    _meta_svc->get_remote_storage()->set_data(
+        app_path,
+        value,
+        LPC_META_CALLBACK,
+        [this, app, new_max_replica_count](error_code ec) mutable {
+            zauto_write_lock l(_lock);
+
+            auto old_max_replica_count = app->max_replica_count;
+            dassert_f(ec == ERR_OK,
+                      "An error that can't be handled occurs while recovering remote "
+                      "app-level max_replica_count: error_code={}, app_name={}, app_id={}, "
+                      "old_max_replica_count={}, new_max_replica_count={}",
+                      ec.to_string(),
+                      app->app_name,
+                      app->app_id,
+                      old_max_replica_count,
+                      new_max_replica_count);
+
+            app->max_replica_count = new_max_replica_count;
+            app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
+
+            ddebug_f("app-level max_replica_count has been recovered successfully: "
+                     "app_name={}, app_id={}, old_max_replica_count={}, "
+                     "new_max_replica_count={}",
+                     app->app_name,
+                     app->app_id,
+                     old_max_replica_count,
+                     app->max_replica_count);
+        },
+        &tracker);
 }
 
 } // namespace replication
