@@ -68,7 +68,7 @@ func changeDiskCleanerInterval(client *executor.Client, replicaServer string, cl
 }
 
 func getNextMigrateAction(client *executor.Client, replicaServer string, minSize int64) (*MigrateAction, error) {
-	disks, totalUsage, totalCapacity, err := queryDiskCapacityInfo(client, replicaServer)
+	disks, totalUsage, totalCapacity, err := QueryDiskCapacityInfo(client, replicaServer)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func getNextMigrateAction(client *executor.Client, replicaServer string, minSize
 	return migrateAction, nil
 }
 
-func queryDiskCapacityInfo(client *executor.Client, replicaServer string) ([]executor.DiskCapacityStruct, int64, int64, error) {
+func QueryDiskCapacityInfo(client *executor.Client, replicaServer string) ([]executor.DiskCapacityStruct, int64, int64, error) {
 	diskCapacityOnNode, err := executor.GetDiskInfo(client, executor.CapacitySize, replicaServer, "", "", false)
 	if err != nil {
 		return nil, 0, 0, err
