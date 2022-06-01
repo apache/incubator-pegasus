@@ -51,9 +51,9 @@ public class TestRpcAddress {
 
   @Test
   public void testFromString() throws Exception {
-    rpc_address addr = new rpc_address();
+    rpc_address addr =new rpc_address()   ;
     Assert.assertTrue(addr.fromString("127.0.0.1:34601"));
     Assert.assertEquals(addr.get_ip(), "127.0.0.1");
-    Assert.assertEquals(addr.get_port(), 34601);
+       Assert.assertEquals(addr.get_port(), 34601);
   }
 }
