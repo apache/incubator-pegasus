@@ -96,11 +96,6 @@
       <artifactId>zkclient</artifactId>
       <version>0.2</version>
     </dependency>
-<!--    <dependency>-->
-<!--      <groupId>io.netty</groupId>-->
-<!--      <artifactId>netty-all</artifactId>-->
-<!--      <version>4.1.42.Final</version>-->
-<!--    </dependency>-->
     <!-- https://mvnrepository.com/artifact/io.netty/netty-buffer -->
     <dependency>
       <groupId>io.netty</groupId>
