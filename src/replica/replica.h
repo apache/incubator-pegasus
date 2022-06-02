@@ -494,7 +494,7 @@ private:
     // clear replica if open failed
     static replica *
     clear_on_failure(replica_stub *stub, replica *rep, const std::string &path, const gpid &pid);
-    
+
     void update_app_max_replica_count(int32_t max_replica_count);
 
 private:
