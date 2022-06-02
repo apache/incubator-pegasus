@@ -106,4 +106,4 @@ EnumType type_from_string(const std::map<int, const char *> &type_maps,
     return default_type;
 }
 
-bool confirm_unsafe_command(const char *action);
+bool confirm_unsafe_command(const std::string &action);

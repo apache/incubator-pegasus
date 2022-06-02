@@ -19,6 +19,8 @@
 
 #include "shell/commands.h"
 
+#include <dsn/utility/ports.h>
+
 double convert_to_ratio(double hit, double total)
 {
     return std::abs(total) < 1e-6 ? 0 : hit / total;
@@ -937,7 +939,7 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     std::string escaped_app_name(pegasus::utils::c_escape_string(app_name));
     std::string action(fmt::format(
         "set the replica count of app({}) to {}", escaped_app_name, new_max_replica_count));
-    if (!confirm_unsafe_command(action.c_str())) {
+    if (!confirm_unsafe_command(action)) {
         return true;
     }
 
@@ -945,7 +947,7 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     auto err = err_resp.get_error();
     const auto &resp = err_resp.get_value();
 
-    if (err.is_ok()) {
+    if (dsn_likely(err.is_ok())) {
         err = dsn::error_s::make(resp.err);
     }
 

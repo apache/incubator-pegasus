@@ -46,7 +46,7 @@ bool validate_ip(shell_context *sc,
     return false;
 }
 
-bool confirm_unsafe_command(const char *action)
+bool confirm_unsafe_command(const std::string &action)
 {
     const int max_attempts = 5;
     int attempts = 0;
