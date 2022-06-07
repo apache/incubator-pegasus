@@ -49,11 +49,10 @@ bool validate_ip(shell_context *sc,
 bool confirm_unsafe_command(const std::string &action)
 {
     const int max_attempts = 5;
-    int attempts = 0;
-    for (; attempts < max_attempts; ++attempts) {
+    for (int attempts = 0; attempts < max_attempts; ++attempts) {
         fmt::print(stdout,
                    "PLEASE be CAUTIOUS with this operation ! "
-                   "Are you sure to {} ? [Y/n]: ",
+                   "Are you sure to {} ? [y/n]: ",
                    action);
 
         int choice = fgetc(stdin);
@@ -65,7 +64,7 @@ bool confirm_unsafe_command(const std::string &action)
             continue;
         }
 
-        if (choice == 'Y') {
+        if (choice == 'y') {
             fmt::print(stdout, "you've chosen YES, we will continue ...\n");
             return true;
         } else if (choice == 'n') {

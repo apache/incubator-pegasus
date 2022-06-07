@@ -499,7 +499,7 @@ static command_executor commands[] = {
     {
         "get_replica_count",
         "get the max replica count of an app",
-        "<app_name>",
+        "<app_name> [-j|--json]",
         get_max_replica_count,
     },
     {

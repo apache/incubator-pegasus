@@ -891,11 +891,31 @@ bool clear_app_envs(command_executor *e, shell_context *sc, arguments args)
 
 bool get_max_replica_count(command_executor *e, shell_context *sc, arguments args)
 {
+    static struct option long_options[] = {{"json", no_argument, 0, 'j'}, {0, 0, 0, 0}};
+
     if (args.argc < 2) {
         return false;
     }
 
     std::string app_name(args.argv[1]);
+
+    bool json = false;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c = getopt_long(args.argc, args.argv, "j", long_options, &option_index);
+        if (c == -1) {
+            break;
+        }
+
+        switch (c) {
+        case 'j':
+            json = true;
+            break;
+        default:
+            return false;
+        }
+    }
 
     auto err_resp = sc->ddl_client->get_max_replica_count(app_name);
     auto err = err_resp.get_error();
@@ -906,13 +926,24 @@ bool get_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     }
 
     std::string escaped_app_name(pegasus::utils::c_escape_string(app_name));
-    if (err.is_ok()) {
+    if (!err.is_ok()) {
+        fmt::print(stderr, "get replica count of app({}) failed: {}\n", escaped_app_name, err);
+        return true;
+    }
+
+    if (json) {
+        rapidjson::OStreamWrapper wrapper(std::cout);
+        dsn::json::PrettyJsonWriter writer(wrapper);
+        writer.StartObject();
+        writer.Key("max_replica_count");
+        writer.Int(resp.max_replica_count);
+        writer.EndObject();
+        std::cout << std::endl;
+    } else {
         fmt::print(stdout,
                    "the replica count of app({}) is {}\n",
                    escaped_app_name,
                    resp.max_replica_count);
-    } else {
-        fmt::print(stdout, "get replica count of app({}) failed: {}\n", escaped_app_name, err);
     }
 
     return true;
@@ -926,7 +957,7 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
 
     int new_max_replica_count;
     if (!dsn::buf2int32(args.argv[2], new_max_replica_count)) {
-        fmt::print(stderr, "parse {} as replica count failed\n", args.argv[2]);
+        fmt::print(stderr, "parse '{}' as replica count failed\n", args.argv[2]);
         return false;
     }
 
@@ -952,20 +983,12 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
     }
 
     if (err.is_ok()) {
-        if (new_max_replica_count == resp.old_max_replica_count) {
-            fmt::print(stdout,
-                       "set replica count of app({}) from {} to {}: {}\n",
-                       escaped_app_name,
-                       resp.old_max_replica_count,
-                       new_max_replica_count,
-                       resp.hint_message);
-        } else {
-            fmt::print(stdout,
-                       "set replica count of app({}) from {} to {} successfully\n",
-                       escaped_app_name,
-                       resp.old_max_replica_count,
-                       new_max_replica_count);
-        }
+        fmt::print(stdout,
+                   "set replica count of app({}) from {} to {}: {}\n",
+                   escaped_app_name,
+                   resp.old_max_replica_count,
+                   new_max_replica_count,
+                   resp.hint_message.empty() ? "success" : resp.hint_message);
     } else {
         std::string error_message(resp.err.to_string());
         if (!resp.hint_message.empty()) {
@@ -974,14 +997,14 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
         }
 
         if (resp.old_max_replica_count > 0) {
-            fmt::print(stdout,
+            fmt::print(stderr,
                        "set replica count of app({}) from {} to {} failed: {}\n",
                        escaped_app_name,
                        resp.old_max_replica_count,
                        new_max_replica_count,
                        error_message);
         } else {
-            fmt::print(stdout,
+            fmt::print(stderr,
                        "set replica count of app({}) failed: {}\n",
                        escaped_app_name,
                        error_message);
