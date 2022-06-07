@@ -996,19 +996,8 @@ bool set_max_replica_count(command_executor *e, shell_context *sc, arguments arg
             error_message += resp.hint_message;
         }
 
-        if (resp.old_max_replica_count > 0) {
-            fmt::print(stderr,
-                       "set replica count of app({}) from {} to {} failed: {}\n",
-                       escaped_app_name,
-                       resp.old_max_replica_count,
-                       new_max_replica_count,
-                       error_message);
-        } else {
-            fmt::print(stderr,
-                       "set replica count of app({}) failed: {}\n",
-                       escaped_app_name,
-                       error_message);
-        }
+        fmt::print(
+            stderr, "set replica count of app({}) failed: {}\n", escaped_app_name, error_message);
     }
 
     return true;
