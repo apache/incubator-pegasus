@@ -15,21 +15,28 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
-name: Issue Check
-
+name: License Check
 on:
   pull_request:
-    types: ['opened', 'edited', 'reopened', 'synchronize']
-
+  push:
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+      - ci-test # testing branch for github action
+      - '*dev' # developing branch
 jobs:
-  title:
-    name: Issue check
+  license-check:
+    name: Check License Header
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check for ticket
-        uses: neofinancial/ticket-check-action@v1.3.0
+      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+        uses: actions/checkout@v2
+      - name: Check License Header
+        uses: apache/skywalking-eyes@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # needed only when you want License-Eye to comment on the pull request.
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ticketPrefix: '#'
-          bodyURLRegex: 'http(s?):\/\/(github.com)(\/apache)(\/incubator-pegasus)(\/issues)\/\d+'
+            # Optional: set the log level. The default value is `info`.
+            # log: debug
+            # Optional: set the config file. The default value is `.licenserc.yaml`.
+          config: .licenserc.yaml
