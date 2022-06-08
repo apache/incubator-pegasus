@@ -931,20 +931,9 @@ bool get_max_replica_count(command_executor *e, shell_context *sc, arguments arg
         return true;
     }
 
-    if (json) {
-        rapidjson::OStreamWrapper wrapper(std::cout);
-        dsn::json::PrettyJsonWriter writer(wrapper);
-        writer.StartObject();
-        writer.Key("max_replica_count");
-        writer.Int(resp.max_replica_count);
-        writer.EndObject();
-        std::cout << std::endl;
-    } else {
-        fmt::print(stdout,
-                   "the replica count of app({}) is {}\n",
-                   escaped_app_name,
-                   resp.max_replica_count);
-    }
+    dsn::utils::table_printer tp("max_replica_count");
+    tp.add_row_name_and_data("max_replica_count", resp.max_replica_count);
+    tp.output(std::cout, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
 
     return true;
 }
