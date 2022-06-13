@@ -26,6 +26,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-resty/resty/v2 v2.6.0
+	github.com/go-zookeeper/zk v1.0.2
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/magiconair/properties v1.8.4 // indirect
