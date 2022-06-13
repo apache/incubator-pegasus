@@ -40,7 +40,7 @@ PEGASUS_ERR_CODE(PERR_DISK_INSUFFICIENT, -107, "disk insufficient");
 PEGASUS_ERR_CODE(PERR_INVALID_APP_NAME,
                  -201,
                  "app name is invalid, only letters, digits or underscore is valid");
-PEGASUS_ERR_CODE(PERR_INVALID_HASH_KEY, -202, "hash key can't be empty");
+PEGASUS_ERR_CODE(PERR_INVALID_HASH_KEY, -202, "hash key can't be larger than UINT16_MAX");
 PEGASUS_ERR_CODE(PERR_INVALID_VALUE, -203, "value can't be empty");
 PEGASUS_ERR_CODE(PERR_INVALID_PAR_COUNT, -204, "partition count must be a power of 2");
 PEGASUS_ERR_CODE(PERR_INVALID_REP_COUNT, -205, "replication count must be 3");
