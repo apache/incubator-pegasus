@@ -3,6 +3,7 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/apache/incubator-pegasus/go-client/session"
@@ -33,32 +34,34 @@ func QueryReplicaDataVersion(client *Client, table string) (*TableDataVersion, e
 
 	args := util.Arguments{
 		Name:  "app_id",
-		Value: string(resp.AppID),
+		Value: strconv.Itoa(int(resp.AppID)),
 	}
 	results := util.BatchCallHTTP(nodes, getTableDataVersion, args)
 
-	var finalVersion string
-	var version TableDataVersion
+	var finalVersion TableDataVersion
+	versions := make(map[string]TableDataVersion)
 	for _, result := range results {
 		if result.Err != nil {
 			return nil, result.Err
 		}
-		err := json.Unmarshal([]byte(result.Resp), &version)
+		err := json.Unmarshal([]byte(result.Resp), &versions)
 		if err != nil {
 			return nil, err
 		}
 
-		if finalVersion == "" {
-			finalVersion = version.DataVersion
-		} else {
-			if version.DataVersion == finalVersion {
-				continue
+		for _, version := range versions {
+			if finalVersion.DataVersion == "" {
+				finalVersion = version
 			} else {
-				return nil, fmt.Errorf("replica versions are not consistent")
+				if version.DataVersion == finalVersion.DataVersion {
+					continue
+				} else {
+					return nil, fmt.Errorf("replica versions are not consistent")
+				}
 			}
 		}
 	}
-	return &version, nil
+	return &finalVersion, nil
 }
 
 func getTableDataVersion(addr string, args util.Arguments) (string, error) {

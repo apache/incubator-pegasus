@@ -15,19 +15,19 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	//1. check data version
 	version, err := executor.QueryReplicaDataVersion(client, table)
 	if err != nil {
-		return nil
+		return err
 	}
 	if version.DataVersion != "1" {
-		return fmt.Errorf("not support data version = 0 to migrate by duplication")
+		return fmt.Errorf("not support migrate table with data_version = %s by duplication", version.DataVersion)
 	}
 
-	//2. create data version
+	//2. create table duplication
 	err = executor.AddDuplication(client, table, targetCluster, false)
 	if err != nil {
 		return err
 	}
 
-	//3. check un-confirm decree is less 5k
+	//3. check un-confirm decree if less 5k
 	nodes := client.Nodes.GetAllNodes(session.NodeTypeReplica)
 	var perfSessions []*aggregate.PerfSession
 	for _, n := range nodes {
