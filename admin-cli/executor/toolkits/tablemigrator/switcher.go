@@ -1,71 +1,15 @@
-package metaproxy
+package tablemigrator
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/go-zookeeper/zk"
 )
-
-func getTableAddrInMetaProxy(client *executor.Client, zkAddr string, zkRoot string, tableName string) error {
-	cluster, err := client.Meta.QueryClusterInfo()
-	if err != nil {
-		return err
-	}
-
-	if zkAddr == "" {
-		zkAddr = cluster["zookeeper_hosts"]
-	}
-	zkConn, _, err := zk.Connect([]string{zkAddr}, time.Duration(1000*1000*1000))
-	if err != nil {
-		return err
-	}
-	defer zkConn.Close()
-
-	currentRemoteZKInfo, err := ReadZkData(zkConn, zkRoot, tableName)
-	if err != nil {
-		return err
-	}
-	// formats into JSON
-	outputBytes, _ := json.MarshalIndent(currentRemoteZKInfo, "", "  ")
-	fmt.Fprintln(client, string(outputBytes))
-	return nil
-}
-
-func addTableAddrInMetaProxy(client *executor.Client, zkAddr string, zkRoot string, tableName string) error {
-	cluster, err := client.Meta.QueryClusterInfo()
-	if err != nil {
-		return err
-	}
-
-	if zkAddr == "" {
-		zkAddr = cluster["zookeeper_hosts"]
-	}
-	zkConn, _, err := zk.Connect([]string{zkAddr}, time.Duration(1000*1000*1000))
-	if err != nil {
-		return err
-	}
-	defer zkConn.Close()
-
-	clusterName := cluster["cluster_name"]
-	clusterAddr := cluster["meta_servers"]
-	_, _, err = WriteZkData(zkConn, zkRoot, tableName, clusterName, clusterAddr)
-	if err != nil {
-		return err
-	}
-	// formats into JSON
-	tableInfo := MetaProxyTable{
-		ClusterName: clusterName,
-		MetaAddrs:   clusterAddr,
-	}
-
-	outputBytes, _ := json.MarshalIndent(tableInfo, "", "  ")
-	fmt.Fprintln(client, string(outputBytes))
-	return nil
-}
 
 func SwitchMetaAddrs(client *executor.Client, zkAddr string, zkRoot string, tableName string, targetAddrs string) error {
 	cluster, err := client.Meta.QueryClusterInfo()
@@ -94,7 +38,8 @@ func SwitchMetaAddrs(client *executor.Client, zkAddr string, zkRoot string, tabl
 	}
 
 	originMeta := client.Meta
-	targetMeta := executor.NewClient(os.Stdout, []string{}).Meta
+	targetAddrList := strings.Split(targetAddrs, ",")
+	targetMeta := executor.NewClient(os.Stdout, targetAddrList).Meta
 	env := map[string]string{
 		"replica.deny_client_request": "reconfig*all",
 	}
@@ -103,7 +48,7 @@ func SwitchMetaAddrs(client *executor.Client, zkAddr string, zkRoot string, tabl
 	if err != nil {
 		return err
 	}
-	_, _, err = WriteZkData(zkConn, zkRoot, tableName, targetCluster["cluster_name"], targetAddrs)
+	_, updatedZkInfo, err := WriteZkData(zkConn, zkRoot, tableName, targetCluster["cluster_name"], targetAddrs)
 	if err != nil {
 		return err
 	}
@@ -112,6 +57,7 @@ func SwitchMetaAddrs(client *executor.Client, zkAddr string, zkRoot string, tabl
 	if err != nil {
 		return err
 	}
+	fmt.Printf("%s has updated metaproxy addr from %v to %v, current table env is %v", tableName, currentRemoteZKInfo, updatedZkInfo, env)
 	return nil
 }
 

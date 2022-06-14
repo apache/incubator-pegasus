@@ -3,9 +3,10 @@ package util
 import (
 	"context"
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"sync"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type Arguments struct {
@@ -18,9 +19,9 @@ type Result struct {
 	Err  error
 }
 
-type HttpRequest func(addr string, args Arguments) (string, error)
+type HTTPRequestFunc func(addr string, args Arguments) (string, error)
 
-func BatchCallHTTP(nodes []*PegasusNode, request HttpRequest, args Arguments) map[string]*Result {
+func BatchCallHTTP(nodes []*PegasusNode, request HTTPRequestFunc, args Arguments) map[string]*Result {
 	results := make(map[string]*Result)
 
 	var mu sync.Mutex

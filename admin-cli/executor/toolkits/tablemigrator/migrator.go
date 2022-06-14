@@ -2,25 +2,16 @@ package tablemigrator
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
 	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
-	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits/metaproxy"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/pegasus-kv/collector/aggregate"
-	"time"
 )
 
-/**
-1. check data version
-2. create table duplication
-3. check confirm decree if < 5k
-4. set env config deny write request
-5. check duplicate qps decree if == 0
-6. switch table env addrs
-*/
-
-func MigrateTable(client *executor.Client, table string, toCluster string) error {
+func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string, metaProxyZkRoot string, targetCluster string, targetAddrs string) error {
 	//1. check data version
 	version, err := executor.QueryReplicaDataVersion(client, table)
 	if err != nil {
@@ -31,7 +22,7 @@ func MigrateTable(client *executor.Client, table string, toCluster string) error
 	}
 
 	//2. create data version
-	err = executor.AddDuplication(client, table, toCluster, false)
+	err = executor.AddDuplication(client, table, targetCluster, false)
 	if err != nil {
 		return err
 	}
@@ -59,12 +50,16 @@ func MigrateTable(client *executor.Client, table string, toCluster string) error
 	if err != nil {
 		return err
 	}
-	err = checkDuplicateQPS(perfSessions, resp.AppID)
+	err = checkDuplicatingQPS(perfSessions, resp.AppID)
 	if err != nil {
 		return err
 	}
 	//6. switch table addrs in metaproxy
-	err = metaproxy.SwitchMetaAddrs(client, "", "", "", "")
+	if metaProxyZkRoot == "" {
+		toolkits.LogWarn("you don't specify enough meta proxy info, please manual-switch the table cluster!")
+		return nil
+	}
+	err = SwitchMetaAddrs(client, metaProxyZkAddrs, metaProxyZkRoot, table, targetAddrs)
 	if err != nil {
 		return err
 	}
@@ -92,10 +87,11 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 			}
 		}
 	}
+	toolkits.LogDebug(fmt.Sprintf("all the node pending_mutations_count has less %f", threshold))
 	return nil
 }
 
-func checkDuplicateQPS(perfSessions []*aggregate.PerfSession, tableID int32) error {
+func checkDuplicatingQPS(perfSessions []*aggregate.PerfSession, tableID int32) error {
 	completed := false
 	counter := fmt.Sprintf("duplicate_qps@%d", tableID)
 	for !completed {
@@ -112,5 +108,6 @@ func checkDuplicateQPS(perfSessions []*aggregate.PerfSession, tableID int32) err
 			}
 		}
 	}
+	toolkits.LogDebug("all the node has stop duplicate the pending wal")
 	return nil
 }

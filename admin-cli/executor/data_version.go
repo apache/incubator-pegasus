@@ -3,6 +3,7 @@ package executor
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/apache/incubator-pegasus/admin-cli/util"
 	"github.com/apache/incubator-pegasus/go-client/session"
 )
@@ -53,7 +54,7 @@ func QueryReplicaDataVersion(client *Client, table string) (*TableDataVersion, e
 			if version.DataVersion == finalVersion {
 				continue
 			} else {
-				return nil, fmt.Errorf("replica versions are not consistent!")
+				return nil, fmt.Errorf("replica versions are not consistent")
 			}
 		}
 	}
@@ -61,6 +62,6 @@ func QueryReplicaDataVersion(client *Client, table string) (*TableDataVersion, e
 }
 
 func getTableDataVersion(addr string, args util.Arguments) (string, error) {
-	url := fmt.Sprintf("http://%s/replica/data_version?%s=%s", args.Name, args.Value)
+	url := fmt.Sprintf("http://%s/replica/data_version?%s=%s", addr, args.Name, args.Value)
 	return util.CallHTTPGet(url)
 }

@@ -33,7 +33,7 @@ import (
 type printResponse func(nodeType session.NodeType, sortedNodeList []string, resp map[string]*util.Result)
 
 type action struct {
-	request util.HttpRequest
+	request util.HTTPRequestFunc
 	print   printResponse
 }
 
