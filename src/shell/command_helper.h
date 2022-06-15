@@ -63,6 +63,7 @@ using namespace dsn::replication;
 #endif
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+const int multi_set_concurrency_ratio = 100;
 enum scan_data_operator
 {
     SCAN_COPY,
@@ -164,7 +165,7 @@ struct scan_data_context
                       pegasus::pegasus_client *client_,
                       pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
-                      int max_multi_set_concurrency = 100,
+                      int max_multi_set_concurrency = 20,
                       bool stat_size_ = false,
                       std::shared_ptr<rocksdb::Statistics> statistics_ = nullptr,
                       int top_count_ = 0,
@@ -191,7 +192,7 @@ struct scan_data_context
           split_hash_key_count(0),
           data_count(0),
           multi_ttl_seconds(0),
-          sema(max_multi_set_concurrency)
+          sema(max_multi_set_concurrency * multi_set_concurrency_ratio)
     {
         // max_batch_count should > 1 because scan may be terminated
         // when split_request_count = 1
@@ -287,7 +288,7 @@ inline void batch_execute_multi_set(scan_data_context *context)
 {
     for (const auto &kv : context->multi_kvs) {
         // wait for satisfied with max_multi_set_concurrency
-        context->sema.wait();
+        context->sema.wait(multi_set_concurrency_ratio);
         int multi_size = kv.second.size();
         context->client->async_multi_set(
             kv.first,
@@ -304,7 +305,7 @@ inline void batch_execute_multi_set(scan_data_context *context)
                 } else {
                     context->split_rows += multi_size;
                 }
-                context->sema.signal();
+                context->sema.signal(multi_set_concurrency_ratio);
             },
             context->timeout_ms,
             context->multi_ttl_seconds);
@@ -328,6 +329,48 @@ inline void scan_multi_data_next(scan_data_context *context)
                     int ttl_seconds = 0;
                     ttl_seconds = compute_ttl_seconds(expire_ts_seconds, ts_expired);
                     if (!ts_expired) {
+                        // empty hashkey should get hashkey by sortkey
+                        if (hash_key == "") {
+                            // wait for satisfied with max_multi_set_concurrency
+                            context->sema.wait();
+
+                            auto callback = [context](
+                                int err,
+                                pegasus::pegasus_client::check_and_set_results &&results,
+                                pegasus::pegasus_client::internal_info &&info) {
+                                if (err != pegasus::PERR_OK) {
+                                    if (!context->split_completed.exchange(true)) {
+                                        fprintf(stderr,
+                                                "ERROR: split[%d] async check and set failed: %s\n",
+                                                context->split_id,
+                                                context->client->get_error_string(err));
+                                        context->error_occurred->store(true);
+                                    }
+                                } else {
+                                    if (results.set_succeed) {
+                                        context->split_rows++;
+                                    }
+                                }
+                                context->sema.signal();
+                            };
+
+                            pegasus::pegasus_client::check_and_set_options options;
+                            options.set_value_ttl_seconds = ttl_seconds;
+                            context->client->async_check_and_set(
+                                hash_key,
+                                sort_key,
+                                pegasus::pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
+                                "",
+                                sort_key,
+                                value,
+                                options,
+                                std::move(callback),
+                                context->timeout_ms);
+
+                            scan_multi_data_next(context);
+                            return;
+                        }
+
                         context->data_count++;
                         if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
                             context->multi_kvs.emplace(hash_key,
