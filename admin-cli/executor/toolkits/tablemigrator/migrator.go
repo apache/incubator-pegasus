@@ -35,7 +35,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 		if perf == nil {
 			return fmt.Errorf("get perf-node failed, node=%s", n.TCPAddr())
 		}
-		perfSessions = append(perfSessions, client.Nodes.GetPerfSession(n.TCPAddr(), session.NodeTypeReplica))
+		perfSessions = append(perfSessions, perf)
 	}
 	err = checkUnConfirmedDecree(perfSessions, 5000)
 	if err != nil {
@@ -74,8 +74,14 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 	completed := false
 	for !completed {
 		completed = true
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 		for _, perf := range perfSessions {
+			if perf == nil {
+				return fmt.Errorf("perf err")
+			}
+			if perf.NodeSession == nil {
+				return fmt.Errorf("session err")
+			}
 			stats, err := perf.GetPerfCounters("pending_mutations_count")
 			if err != nil {
 				return err
