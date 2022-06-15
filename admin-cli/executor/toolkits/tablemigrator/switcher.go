@@ -57,7 +57,7 @@ func SwitchMetaAddrs(client *executor.Client, zkAddr string, zkRoot string, tabl
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s has updated metaproxy addr from %v to %v, current table env is %v", tableName, currentRemoteZKInfo, updatedZkInfo, env)
+	fmt.Printf("%s has updated metaproxy addr from %v to %v, current table env is %v\n", tableName, currentRemoteZKInfo, updatedZkInfo, env)
 	return nil
 }
 
