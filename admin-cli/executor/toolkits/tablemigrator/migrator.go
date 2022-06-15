@@ -23,11 +23,11 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	}
 
 	//2. create table duplication
-	toolkits.LogInfo(" create table duplication")
-/*	 err = executor.AddDuplication(client, table, targetCluster, true)
+	toolkits.LogInfo("create table duplication")
+	err = executor.AddDuplication(client, table, targetCluster, true)
 	if err != nil {
 		return err
-	}*/
+	}
 
 	//3. check un-confirm decree if less 5k
 	toolkits.LogInfo("check un-confirm decree if less 5k")
@@ -86,7 +86,7 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 	completed := false
 	for !completed {
 		completed = true
-		time.Sleep(1 * time.Second)
+		time.Sleep(10 * time.Second)
 		for _, perf := range perfSessions {
 			stats, err := perf.GetPerfCounters("pending_mutations_count")
 			if err != nil {
@@ -104,6 +104,7 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 		}
 	}
 	toolkits.LogInfo(fmt.Sprintf("all the node pending_mutations_count has less %f", threshold))
+	time.Sleep(10 * time.Second)
 	return nil
 }
 
@@ -125,5 +126,6 @@ func checkDuplicatingQPS(perfSessions []*aggregate.PerfSession, tableID int32) e
 		}
 	}
 	toolkits.LogInfo("all the node has stop duplicate the pending wal")
+	time.Sleep(10 * time.Second)
 	return nil
 }
