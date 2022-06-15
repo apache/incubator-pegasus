@@ -22,10 +22,10 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	}
 
 	//2. create table duplication
-	err = executor.AddDuplication(client, table, targetCluster, true)
+	/** err = executor.AddDuplication(client, table, targetCluster, true)
 	if err != nil {
 		return err
-	}
+	}**/
 
 	//3. check un-confirm decree if less 5k
 	nodes := client.Nodes.GetAllNodes(session.NodeTypeReplica)
