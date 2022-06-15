@@ -36,7 +36,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 			return fmt.Errorf("get perf-node failed, node=%s", n.TCPAddr())
 		}
 		if perf.NodeSession == nil {
-			return fmt.Errorf("session err")
+			return fmt.Errorf("session err, node=%s", n.TCPAddr())
 		}
 		perfSessions = append(perfSessions, perf)
 	}
