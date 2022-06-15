@@ -13,7 +13,7 @@ import (
 
 func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string, metaProxyZkRoot string, targetCluster string, targetAddrs string) error {
 	//1. check data version
-	toolkits.LogDebug("check data version")
+	toolkits.LogInfo("check data version")
 	version, err := executor.QueryReplicaDataVersion(client, table)
 	if err != nil {
 		return err
@@ -23,14 +23,14 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	}
 
 	//2. create table duplication
-	toolkits.LogDebug(" create table duplication")
+	toolkits.LogInfo(" create table duplication")
 /*	 err = executor.AddDuplication(client, table, targetCluster, true)
 	if err != nil {
 		return err
 	}*/
 
 	//3. check un-confirm decree if less 5k
-	toolkits.LogDebug("check un-confirm decree if less 5k")
+	toolkits.LogInfo("check un-confirm decree if less 5k")
 	nodes := client.Nodes.GetAllNodes(session.NodeTypeReplica)
 	var perfSessions []*aggregate.PerfSession
 	for _, n := range nodes {
@@ -51,7 +51,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 		return err
 	}
 	//4. set env config deny write request
-	toolkits.LogDebug("set env config deny write request")
+	toolkits.LogInfo("set env config deny write request")
 	var envs = map[string]string{
 		"replica.deny_client_request": "timeout*write",
 	}
@@ -60,7 +60,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 		return err
 	}
 	//5. check duplicate qps if equal 0
-	toolkits.LogDebug("check duplicate qps if equal 0")
+	toolkits.LogInfo("check duplicate qps if equal 0")
 	resp, err := client.Meta.QueryConfig(table)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 		return err
 	}
 	//6. switch table addrs in metaproxy
-	toolkits.LogDebug("switch table addrs in metaproxy")
+	toolkits.LogInfo("switch table addrs in metaproxy")
 	if metaProxyZkRoot == "" {
 		toolkits.LogWarn("you don't specify enough meta proxy info, please manual-switch the table cluster!")
 		return nil
@@ -98,12 +98,12 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 
 			if stats[0].Value > threshold {
 				completed = false
-				toolkits.LogDebug(fmt.Sprintf("%s has pending_mutations_count %f", perf.Address, stats[0].Value))
+				toolkits.LogInfo(fmt.Sprintf("%s has pending_mutations_count %f", perf.Address, stats[0].Value))
 				break
 			}
 		}
 	}
-	toolkits.LogDebug(fmt.Sprintf("all the node pending_mutations_count has less %f", threshold))
+	toolkits.LogInfo(fmt.Sprintf("all the node pending_mutations_count has less %f", threshold))
 	return nil
 }
 
@@ -118,12 +118,12 @@ func checkDuplicatingQPS(perfSessions []*aggregate.PerfSession, tableID int32) e
 			for gpid, qps := range stats {
 				if qps > 0 {
 					completed = false
-					toolkits.LogDebug(fmt.Sprintf("%s[%s] still sending pending mutation %f", perf.Address, gpid, qps))
+					toolkits.LogInfo(fmt.Sprintf("%s[%s] still sending pending mutation %f", perf.Address, gpid, qps))
 					break
 				}
 			}
 		}
 	}
-	toolkits.LogDebug("all the node has stop duplicate the pending wal")
+	toolkits.LogInfo("all the node has stop duplicate the pending wal")
 	return nil
 }
