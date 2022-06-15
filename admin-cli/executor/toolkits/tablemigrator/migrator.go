@@ -22,7 +22,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	}
 
 	//2. create table duplication
-	err = executor.AddDuplication(client, table, targetCluster, false)
+	err = executor.AddDuplication(client, table, targetCluster, true)
 	if err != nil {
 		return err
 	}
