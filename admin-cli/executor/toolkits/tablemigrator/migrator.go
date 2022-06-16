@@ -130,7 +130,7 @@ func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID
 			}
 		}
 	}
-	toolkits.LogInfo("all the node has stop duplicate the pending wal and wait 60s to switch cluster")
-	time.Sleep(60 * time.Second)
+	toolkits.LogInfo("all the node has stop duplicate the pending wal and wait 30s to switch cluster")
+	time.Sleep(30 * time.Second)
 	return nil
 }
