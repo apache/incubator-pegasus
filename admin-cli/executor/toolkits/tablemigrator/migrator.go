@@ -15,7 +15,7 @@ var pendingMutationThreshold = 100000.0
 
 func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string, metaProxyZkRoot string, targetCluster string, targetAddrs string, threshold float64) error {
 	pendingMutationThreshold = threshold
-	toolkits.LogInfo(fmt.Sprintf("set pendingMutationThreshold = %d means that server will reject all write " +
+	toolkits.LogInfo(fmt.Sprintf("set pendingMutationThreshold = %d means that server will reject all write "+
 		"and ready to switch cluster if the pending less the value", int64(pendingMutationThreshold)))
 	//1. check data version
 	toolkits.LogInfo("check data version")
@@ -108,7 +108,7 @@ func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession) erro
 			}
 		}
 	}
-	toolkits.LogInfo(fmt.Sprintf("all the node pending_mutations_count has less %d",  int64(pendingMutationThreshold)))
+	toolkits.LogInfo(fmt.Sprintf("all the node pending_mutations_count has less %d", int64(pendingMutationThreshold)))
 	time.Sleep(10 * time.Second)
 	return nil
 }
@@ -130,7 +130,7 @@ func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID
 			}
 		}
 	}
-	toolkits.LogInfo("all the node has stop duplicate the pending wal")
-	time.Sleep(10 * time.Second)
+	toolkits.LogInfo("all the node has stop duplicate the pending wal and wait 60s to switch cluster")
+	time.Sleep(60 * time.Second)
 	return nil
 }
