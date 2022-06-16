@@ -58,19 +58,10 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	nodes := client.Nodes.GetAllNodes(session.NodeTypeReplica)
 	perfSessions := make(map[string]*aggregate.PerfSession)
 	for _, n := range nodes {
-		if n.Session() == nil {
-			return fmt.Errorf("init node failed = %s", n.TCPAddr())
-		}
 		perf := client.Nodes.GetPerfSession(n.TCPAddr(), session.NodeTypeReplica)
-		if perf == nil {
-			return fmt.Errorf("get perf-node failed, node=%s", n.TCPAddr())
-		}
-		if perf.NodeSession == nil {
-			return fmt.Errorf("session err, node=%s", n.TCPAddr())
-		}
 		perfSessions[n.CombinedAddr()] = perf
 	}
-	err = checkUnConfirmedDecree(perfSessions)
+	err = checkPendingMutationCount(perfSessions)
 	if err != nil {
 		return err
 	}
@@ -89,7 +80,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	if err != nil {
 		return err
 	}
-	err = checkDuplicatingQPS(perfSessions, resp.AppID)
+	err = checkDuplicationCompleted(perfSessions, resp.AppID)
 	if err != nil {
 		return err
 	}
@@ -106,7 +97,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	return nil
 }
 
-func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession) error {
+func checkPendingMutationCount(perfSessions map[string]*aggregate.PerfSession) error {
 	completed := false
 	for !completed {
 		completed = true
@@ -132,7 +123,7 @@ func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession) erro
 	return nil
 }
 
-func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID int32) error {
+func checkDuplicationCompleted(perfSessions map[string]*aggregate.PerfSession, tableID int32) error {
 	completed := false
 	counter := fmt.Sprintf("dup_shipped_ops@%d", tableID)
 	for !completed {
