@@ -18,7 +18,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	toolkits.LogInfo(fmt.Sprintf("set pendingMutationThreshold = %d means that server will reject all write "+
 		"and ready to switch cluster if the pending less the value", int64(pendingMutationThreshold)))
 	//1. check data version
-	toolkits.LogInfo("check data version")
+	toolkits.LogInfo("check the table data version")
 	version, err := executor.QueryReplicaDataVersion(client, table)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	}
 
 	//2. create table duplication
-	toolkits.LogInfo("create table duplication")
+	toolkits.LogInfo(fmt.Sprintf("create the table duplication to %s", targetCluster))
 	err = executor.AddDuplication(client, table, targetCluster, true)
 	if err != nil {
 		return err
