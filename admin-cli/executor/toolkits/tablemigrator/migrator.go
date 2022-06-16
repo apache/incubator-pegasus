@@ -15,8 +15,8 @@ var pendingMutationThreshold = 100000.0
 
 func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string, metaProxyZkRoot string, targetCluster string, targetAddrs string, threshold float64) error {
 	pendingMutationThreshold = threshold
-	toolkits.LogInfo(fmt.Sprintf("set pendingMutationThreshold = %f means if the pending less the value will "+
-		"reject all write and ready to switch cluster", pendingMutationThreshold))
+	toolkits.LogInfo(fmt.Sprintf("set pendingMutationThreshold = %d means that server will reject all write " +
+		"and ready to switch cluster if the pending less the value", int64(pendingMutationThreshold)))
 	//1. check data version
 	toolkits.LogInfo("check data version")
 	version, err := executor.QueryReplicaDataVersion(client, table)
@@ -103,12 +103,12 @@ func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession) erro
 
 			if stats[0].Value > pendingMutationThreshold {
 				completed = false
-				toolkits.LogInfo(fmt.Sprintf("%s has pending_mutations_count %f", addr, stats[0].Value))
+				toolkits.LogInfo(fmt.Sprintf("%s has pending_mutations_count %d", addr, int64(stats[0].Value)))
 				break
 			}
 		}
 	}
-	toolkits.LogInfo(fmt.Sprintf("all the node pending_mutations_count has less %f", pendingMutationThreshold))
+	toolkits.LogInfo(fmt.Sprintf("all the node pending_mutations_count has less %d",  int64(pendingMutationThreshold)))
 	time.Sleep(10 * time.Second)
 	return nil
 }
@@ -124,7 +124,7 @@ func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID
 			for gpid, qps := range stats {
 				if qps > 0 {
 					completed = false
-					toolkits.LogInfo(fmt.Sprintf("%s[%s] still sending pending mutation %f", addr, gpid, qps))
+					toolkits.LogInfo(fmt.Sprintf("%s[%s] still sending pending mutation %d", addr, gpid, int64(qps)))
 					break
 				}
 			}
