@@ -39,8 +39,8 @@ func QueryDuplication(c *Client, tableName string) error {
 }
 
 // AddDuplication command
-func AddDuplication(c *Client, tableName string, remoteCluster string, sst bool) error {
-	resp, err := c.Meta.AddDuplication(tableName, remoteCluster, sst)
+func AddDuplication(c *Client, tableName string, remoteCluster string, freezed bool) error {
+	resp, err := c.Meta.AddDuplication(tableName, remoteCluster, freezed)
 	if err != nil {
 		return err
 	}

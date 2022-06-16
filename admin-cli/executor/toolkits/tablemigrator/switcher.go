@@ -22,12 +22,12 @@ package tablemigrator
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/apache/incubator-pegasus/admin-cli/executor"
+	"github.com/apache/incubator-pegasus/admin-cli/executor/toolkits"
 	"github.com/go-zookeeper/zk"
 )
 

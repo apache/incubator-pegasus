@@ -49,11 +49,11 @@ func init() {
 			if c.Flags.String("cluster") == "" {
 				return fmt.Errorf("cluster cannot be empty")
 			}
-			return executor.AddDuplication(pegasusClient, c.UseTable, c.Flags.String("cluster"), c.Flags.Bool("sst"))
+			return executor.AddDuplication(pegasusClient, c.UseTable, c.Flags.String("cluster"), c.Flags.Bool("freezed"))
 		}),
 		Flags: func(f *grumble.Flags) {
 			f.String("c", "cluster", "", "the destination where the source data is duplicated")
-			f.Bool("s", "sst", false, "whether to duplicate sst file")
+			f.Bool("f", "freezed", false, "whether to freeze replica GC when duplication created")
 		},
 	})
 	rootCmd.AddCommand(&grumble.Command{
