@@ -32,7 +32,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	//3. check un-confirm decree if less 5k
 	toolkits.LogInfo("check un-confirm decree if less 5k")
 	nodes := client.Nodes.GetAllNodes(session.NodeTypeReplica)
-	var perfSessions []*aggregate.PerfSession
+	perfSessions := make(map[string]*aggregate.PerfSession)
 	for _, n := range nodes {
 		if n.Session() == nil {
 			return fmt.Errorf("init node failed = %s", n.TCPAddr())
@@ -44,7 +44,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 		if perf.NodeSession == nil {
 			return fmt.Errorf("session err, node=%s", n.TCPAddr())
 		}
-		perfSessions = append(perfSessions, perf)
+		perfSessions[n.CombinedAddr()] = perf
 	}
 	err = checkUnConfirmedDecree(perfSessions, 5000)
 	if err != nil {
@@ -82,12 +82,12 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	return nil
 }
 
-func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold float64) error {
+func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession, threshold float64) error {
 	completed := false
 	for !completed {
 		completed = true
 		time.Sleep(10 * time.Second)
-		for _, perf := range perfSessions {
+		for addr, perf := range perfSessions {
 			stats, err := perf.GetPerfCounters("pending_mutations_count")
 			if err != nil {
 				return err
@@ -98,7 +98,7 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 
 			if stats[0].Value > threshold {
 				completed = false
-				toolkits.LogInfo(fmt.Sprintf("%s has pending_mutations_count %f", perf.Address, stats[0].Value))
+				toolkits.LogInfo(fmt.Sprintf("%s has pending_mutations_count %f", addr, stats[0].Value))
 				break
 			}
 		}
@@ -108,18 +108,18 @@ func checkUnConfirmedDecree(perfSessions []*aggregate.PerfSession, threshold flo
 	return nil
 }
 
-func checkDuplicatingQPS(perfSessions []*aggregate.PerfSession, tableID int32) error {
+func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID int32) error {
 	completed := false
 	counter := fmt.Sprintf("duplicate_qps@%d", tableID)
 	for !completed {
 		completed = true
 		time.Sleep(10 * time.Second)
-		for _, perf := range perfSessions {
+		for addr, perf := range perfSessions {
 			stats := util.GetPartitionStat(perf, counter)
 			for gpid, qps := range stats {
 				if qps > 0 {
 					completed = false
-					toolkits.LogInfo(fmt.Sprintf("%s[%s] still sending pending mutation %f", perf.Address, gpid, qps))
+					toolkits.LogInfo(fmt.Sprintf("%s[%s] still sending pending mutation %f", addr, gpid, qps))
 					break
 				}
 			}
