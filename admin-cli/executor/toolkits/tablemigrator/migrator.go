@@ -72,7 +72,7 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 	//6. switch table addrs in metaproxy
 	toolkits.LogInfo("switch table addrs in metaproxy")
 	if metaProxyZkRoot == "" {
-		toolkits.LogWarn("you don't specify enough meta proxy info, please manual-switch the table cluster!")
+		toolkits.LogWarn("can't switch cluster via metaproxy for you don't specify enough meta proxy info, please manual-switch the table cluster!")
 		return nil
 	}
 	err = SwitchMetaAddrs(client, metaProxyZkAddrs, metaProxyZkRoot, table, targetAddrs)
