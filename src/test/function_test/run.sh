@@ -68,6 +68,8 @@ GTEST_OUTPUT="xml:$REPORT_DIR/recall.xml" GTEST_FILTER="drop_and_recall.*" ./$te
 exit_if_fail $? "run test recall failed: $test_case $config_file $table_name"
 GTEST_OUTPUT="xml:$REPORT_DIR/batch_get.xml" GTEST_FILTER="batch_get.*" ./$test_case $config_file $table_name
 exit_if_fail $? "run test batch_get failed: $test_case $config_file $table_name"
+GTEST_OUTPUT="xml:$REPORT_DIR/copy_data.xml" GTEST_FILTER="copy_data_test.*" ./$test_case $config_file $table_name
+exit_if_fail $? "run test copy_data_test failed: $test_case $config_file $table_name"
 if [ $on_travis == "NO" ]; then
     GTEST_OUTPUT="xml:$REPORT_DIR/restore.xml" GTEST_FILTER="restore_test.*" ./$test_case $config_file $table_name
     exit_if_fail $? "run test restore_test failed: $test_case $config_file $table_name"
