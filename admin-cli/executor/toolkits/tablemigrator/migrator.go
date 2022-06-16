@@ -103,7 +103,7 @@ func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession) erro
 
 			if stats[0].Value > pendingMutationThreshold {
 				completed = false
-				toolkits.LogInfo(fmt.Sprintf("%s has pending_mutations_count %d", addr, int64(stats[0].Value)))
+				toolkits.LogWarn(fmt.Sprintf("%s has pending_mutations_count %d", addr, int64(stats[0].Value)))
 				break
 			}
 		}
@@ -124,7 +124,7 @@ func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID
 			for gpid, qps := range stats {
 				if qps > 0 {
 					completed = false
-					toolkits.LogInfo(fmt.Sprintf("%s[%s] still sending pending mutation %d", addr, gpid, int64(qps)))
+					toolkits.LogWarn(fmt.Sprintf("%s[%s] still sending pending mutation %d", addr, gpid, int64(qps)))
 					break
 				}
 			}
