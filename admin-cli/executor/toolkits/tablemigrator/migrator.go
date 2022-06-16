@@ -34,8 +34,8 @@ func MigrateTable(client *executor.Client, table string, metaProxyZkAddrs string
 		return err
 	}
 
-	//3. check un-confirm decree if less 5k
-	toolkits.LogInfo(fmt.Sprintf("check un-confirm decree if less %f", pendingMutationThreshold))
+	//3. check pending mutation count if less `pendingMutationThreshold`
+	toolkits.LogInfo(fmt.Sprintf("check pending mutation count if less %d", int64(pendingMutationThreshold)))
 	nodes := client.Nodes.GetAllNodes(session.NodeTypeReplica)
 	perfSessions := make(map[string]*aggregate.PerfSession)
 	for _, n := range nodes {
