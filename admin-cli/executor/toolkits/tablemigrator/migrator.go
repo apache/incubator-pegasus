@@ -115,7 +115,7 @@ func checkUnConfirmedDecree(perfSessions map[string]*aggregate.PerfSession) erro
 
 func checkDuplicatingQPS(perfSessions map[string]*aggregate.PerfSession, tableID int32) error {
 	completed := false
-	counter := fmt.Sprintf("duplicate_qps@%d", tableID)
+	counter := fmt.Sprintf("dup_shipped_ops@%d", tableID)
 	for !completed {
 		completed = true
 		time.Sleep(10 * time.Second)
