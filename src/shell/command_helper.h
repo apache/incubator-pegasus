@@ -68,8 +68,9 @@ DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT
 //
 // Empty hashkey row will be assign partition by sortkey, we should deal with it in addition.
 //
-// So we first apply a semaphore with a total of oncurrency_amplification_factor * max_multi_set_concurrency
-// 
+// So we first apply a semaphore with a total of oncurrency_amplification_factor *
+// max_multi_set_concurrency
+//
 // And 2 way consume it:
 // 1) empty hashkey row --> async_set
 //    consume 1 count semaphore

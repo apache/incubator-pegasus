@@ -123,12 +123,13 @@ static void create_table_and_get_client()
     dsn::error_code err;
     err = ddl_client->create_app(srouce_app_name, "pegasus", default_partitions, 3, {}, false);
     ASSERT_EQ(dsn::ERR_OK, err);
-    
+
     err = ddl_client->create_app(destination_app_name, "pegasus", default_partitions, 3, {}, false);
     ASSERT_EQ(dsn::ERR_OK, err);
 
     srouce_client = pegasus_client_factory::get_client("mycluster", srouce_app_name.c_str());
-    destination_client = pegasus_client_factory::get_client("mycluster", destination_app_name.c_str());
+    destination_client =
+        pegasus_client_factory::get_client("mycluster", destination_app_name.c_str());
 }
 
 // REQUIRED: 'buffer' has been filled with random chars.
@@ -214,7 +215,8 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
     ASSERT_EQ(pegasus::PERR_OK, ret) << "Error occurred when getting scanner. error="
                                      << srouce_client->get_error_string(ret);
 
-    ddebug("INFO: open source app scanner succeed, partition_count = %d\n", (int)raw_scanners.size());
+    ddebug("INFO: open source app scanner succeed, partition_count = %d\n",
+           (int)raw_scanners.size());
 
     std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
@@ -288,7 +290,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
 
     ASSERT_EQ(5990, total_rows) << "Copy total " << total_rows << " rows. Not 5990 !!!";
 
-    verify_data(); 
+    verify_data();
 
     ddebug("finished copy data test..");
 }
@@ -333,12 +335,13 @@ static void create_table_and_get_client()
     dsn::error_code err;
     err = ddl_client->create_app(srouce_app_name, "pegasus", default_partitions, 3, {}, false);
     ASSERT_EQ(dsn::ERR_OK, err);
-    
+
     err = ddl_client->create_app(destination_app_name, "pegasus", default_partitions, 3, {}, false);
     ASSERT_EQ(dsn::ERR_OK, err);
 
     srouce_client = pegasus_client_factory::get_client("mycluster", srouce_app_name.c_str());
-    destination_client = pegasus_client_factory::get_client("mycluster", destination_app_name.c_str());
+    destination_client =
+        pegasus_client_factory::get_client("mycluster", destination_app_name.c_str());
 }
 
 // REQUIRED: 'buffer' has been filled with random chars.
@@ -424,7 +427,8 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
     ASSERT_EQ(pegasus::PERR_OK, ret) << "Error occurred when getting scanner. error="
                                      << srouce_client->get_error_string(ret);
 
-    ddebug("INFO: open source app scanner succeed, partition_count = %d\n", (int)raw_scanners.size());
+    ddebug("INFO: open source app scanner succeed, partition_count = %d\n",
+           (int)raw_scanners.size());
 
     std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
@@ -498,6 +502,5 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
 
     ASSERT_EQ(5990, total_rows) << "Copy total " << total_rows << " rows. Not 5990 !!!";
 
-    verify_data(); 
-}
+    verify_data();
 }
