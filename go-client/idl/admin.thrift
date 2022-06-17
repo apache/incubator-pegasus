@@ -62,18 +62,6 @@ struct drop_app_response
     1:base.error_code err;
 }
 
-struct recall_app_request
-{
-    1:i32 app_id;
-    2:string new_app_name;
-}
-
-struct recall_app_response
-{
-    1:base.error_code err;
-    2:app_info info;
-}
-
 enum app_status
 {
     AS_INVALID,
@@ -116,6 +104,18 @@ struct app_info
     // New fields for bulk load
     // Whether this app is executing bulk load
     14:optional bool    is_bulk_loading = false;
+}
+
+struct recall_app_request
+{
+    1:i32 app_id;
+    2:string new_app_name;
+}
+
+struct recall_app_response
+{
+    1:base.error_code err;
+    2:app_info info;
 }
 
 struct list_apps_request
@@ -269,15 +269,19 @@ struct meta_control_response
 
 /////////////////// duplication-related structs ////////////////////
 
-//  - INIT  -> START
-//  - START -> PAUSE
-//  - START -> REMOVED
-//  - PAUSE -> START
-//  - PAUSE -> REMOVED
+//  - INIT  -> PREPARE
+//  - PREPARE -> APP
+//  - APP -> LOG
+//  NOTE: Just LOG and PAUSE can be transferred states to each other
+//  - LOG -> PAUSE
+//  - PAUSE -> LOG
+//  - ALL -> REMOVED
 enum duplication_status
 {
     DS_INIT = 0,
-    DS_START,
+    DS_PREPARE,// replica prepare latest checkpoint for follower
+    DS_APP,// follower start duplicate checkpoint
+    DS_LOG,// master start batch send plog to follower
     DS_PAUSE,
     DS_REMOVED,
 }
@@ -304,8 +308,8 @@ struct duplication_add_request
     1:string  app_name;
     2:string  remote_cluster_name;
 
-    // True means to initialize the duplication in DS_PAUSE.
-    3:bool    freezed;
+    // True means to duplicate checkpoint.
+    3:optional bool is_duplicating_checkpoint = true;
 }
 
 struct duplication_add_response
