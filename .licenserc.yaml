@@ -44,6 +44,7 @@ header:
       THE SOFTWARE.
 
   paths-ignore:
+    # All the type of licenses of this project should be added to LICENSE.
     - 'LICENSE'
     # Apache license 2.0
     - 'src/common/backup.thrift'
