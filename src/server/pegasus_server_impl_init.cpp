@@ -95,6 +95,40 @@ DSN_DEFINE_uint64(
     "batch-get operation iterate count exceed this threshold will be logged, 0 means no check");
 DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_count_threshold, FT_MUTABLE);
 
+// In production environment, it has been observed that an instance of rocksdb about 20GB in total
+// size which has run beyond 199 days, generated a big log file sized 96MB, with 492KB for each
+// day.
+//
+// Accordingly, default value for `rocksdb_log_file_time_to_roll` can be set to one day, and
+// that for `rocksdb_keep_log_file_num` can be set to 32, which means log files for recent one
+// month will be reserved.
+//
+// On the other hand, the max size of a log file is also be restricted to 8MB. In practice, the
+// size of logs over a day tends to be less than 1MB; however, once errors are reported very
+// frequently, the log file will grow larger and go far beyond several hundreds of KB.
+DSN_DEFINE_uint64("pegasus.server",
+                  rocksdb_max_log_file_size,
+                  8 * 1024 * 1024,
+                  "specify the maximal size of the info log file: once the log file is larger "
+                  "than this option, a new info log file will be created; if this option is set "
+                  "to 0, all logs will be written to one log file.");
+DSN_TAG_VARIABLE(rocksdb_max_log_file_size, FT_MUTABLE);
+
+DSN_DEFINE_uint64("pegasus.server",
+                  rocksdb_log_file_time_to_roll,
+                  24 * 60 * 60,
+                  "specify time for the info log file to roll (in seconds): if this option is "
+                  "specified with non-zero value, log file will be rolled if it has been active "
+                  "longer than this option; it this options is set to 0, log file will never be "
+                  "rolled by life time");
+DSN_TAG_VARIABLE(rocksdb_log_file_time_to_roll, FT_MUTABLE);
+
+DSN_DEFINE_uint64("pegasus.server",
+                  rocksdb_keep_log_file_num,
+                  32,
+                  "specify the maximal numbers of info log files to be kept.");
+DSN_TAG_VARIABLE(rocksdb_keep_log_file_num, FT_MUTABLE);
+
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
         {"binary_search", rocksdb::BlockBasedTableOptions::IndexType::kBinarySearch},
@@ -403,6 +437,15 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "number of opened files that can be used by a replica(namely a DB instance)");
     _db_opts.max_open_files = static_cast<int>(max_open_files);
     ddebug_replica("rocksdb_max_open_files = {}", _db_opts.max_open_files);
+
+    _db_opts.max_log_file_size = static_cast<size_t>(FLAGS_rocksdb_max_log_file_size);
+    ddebug_replica("rocksdb_max_log_file_size = {}", _db_opts.max_log_file_size);
+
+    _db_opts.log_file_time_to_roll = static_cast<size_t>(FLAGS_rocksdb_log_file_time_to_roll);
+    ddebug_replica("rocksdb_log_file_time_to_roll = {}", _db_opts.log_file_time_to_roll);
+
+    _db_opts.keep_log_file_num = static_cast<size_t>(FLAGS_rocksdb_keep_log_file_num);
+    ddebug_replica("rocksdb_keep_log_file_num = {}", _db_opts.keep_log_file_num);
 
     std::string index_type =
         dsn_config_get_value_string("pegasus.server",
