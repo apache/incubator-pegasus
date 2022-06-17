@@ -126,7 +126,8 @@ DSN_TAG_VARIABLE(rocksdb_log_file_time_to_roll, FT_MUTABLE);
 DSN_DEFINE_uint64("pegasus.server",
                   rocksdb_keep_log_file_num,
                   32,
-                  "specify the maximal numbers of info log files to be kept.");
+                  "specify the maximal numbers of info log files to be kept: once the number of "
+                  "info logs goes beyond this option, stale log files will be cleaned.");
 DSN_TAG_VARIABLE(rocksdb_keep_log_file_num, FT_MUTABLE);
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
