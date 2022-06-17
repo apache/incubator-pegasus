@@ -119,7 +119,7 @@ DSN_DEFINE_uint64("pegasus.server",
                   24 * 60 * 60,
                   "specify time for the info log file to roll (in seconds): if this option is "
                   "specified with non-zero value, log file will be rolled if it has been active "
-                  "longer than this option; it this options is set to 0, log file will never be "
+                  "longer than this option; if this options is set to 0, log file will never be "
                   "rolled by life time");
 DSN_TAG_VARIABLE(rocksdb_log_file_time_to_roll, FT_MUTABLE);
 
