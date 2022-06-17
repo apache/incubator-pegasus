@@ -53,7 +53,7 @@ func init() {
 		}),
 		Flags: func(f *grumble.Flags) {
 			f.String("c", "cluster", "", "the destination where the source data is duplicated")
-			f.Bool("s", "sst", false, "whether to duplicate checkpoint when duplication created")
+			f.Bool("s", "sst", true, "whether to duplicate checkpoint when duplication created")
 		},
 	})
 	rootCmd.AddCommand(&grumble.Command{
