@@ -112,7 +112,6 @@ DSN_DEFINE_uint64("pegasus.server",
                   "specify the maximal size of the info log file: once the log file is larger "
                   "than this option, a new info log file will be created; if this option is set "
                   "to 0, all logs will be written to one log file.");
-DSN_TAG_VARIABLE(rocksdb_max_log_file_size, FT_MUTABLE);
 
 DSN_DEFINE_uint64("pegasus.server",
                   rocksdb_log_file_time_to_roll,
@@ -121,14 +120,12 @@ DSN_DEFINE_uint64("pegasus.server",
                   "specified with non-zero value, log file will be rolled if it has been active "
                   "longer than this option; otherwise, if this options is set to 0, log file will "
                   "never be rolled by life time");
-DSN_TAG_VARIABLE(rocksdb_log_file_time_to_roll, FT_MUTABLE);
 
 DSN_DEFINE_uint64("pegasus.server",
                   rocksdb_keep_log_file_num,
                   32,
                   "specify the maximal numbers of info log files to be kept: once the number of "
                   "info logs goes beyond this option, stale log files will be cleaned.");
-DSN_TAG_VARIABLE(rocksdb_keep_log_file_num, FT_MUTABLE);
 
 static const std::unordered_map<std::string, rocksdb::BlockBasedTableOptions::IndexType>
     INDEX_TYPE_STRING_MAP = {
