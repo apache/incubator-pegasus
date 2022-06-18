@@ -103,9 +103,9 @@ DSN_TAG_VARIABLE(rocksdb_abnormal_batch_get_count_threshold, FT_MUTABLE);
 // that for `rocksdb_keep_log_file_num` can be set to 32, which means log files for recent one
 // month will be reserved.
 //
-// On the other hand, the max size of a log file is also be restricted to 8MB. In practice, the
-// size of logs over a day tends to be less than 1MB; however, once errors are reported very
-// frequently, the log file will grow larger and go far beyond several hundreds of KB.
+// On the other hand, the max size of a log file is restricted to 8MB. In practice, the size of
+// logs over a day tends to be less than 1MB; however, once errors are reported very frequently,
+// the log file will grow larger and go far beyond several hundreds of KB.
 DSN_DEFINE_uint64("pegasus.server",
                   rocksdb_max_log_file_size,
                   8 * 1024 * 1024,
