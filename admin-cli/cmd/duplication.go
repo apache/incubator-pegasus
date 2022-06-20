@@ -49,11 +49,11 @@ func init() {
 			if c.Flags.String("cluster") == "" {
 				return fmt.Errorf("cluster cannot be empty")
 			}
-			return executor.AddDuplication(pegasusClient, c.UseTable, c.Flags.String("cluster"), c.Flags.Bool("freezed"))
+			return executor.AddDuplication(pegasusClient, c.UseTable, c.Flags.String("cluster"), c.Flags.Bool("checkpoint"))
 		}),
 		Flags: func(f *grumble.Flags) {
 			f.String("c", "cluster", "", "the destination where the source data is duplicated")
-			f.Bool("f", "freezed", false, "whether to freeze replica GC when duplication created")
+			f.Bool("p", "checkpoint", true, "whether to duplicate checkpoint when duplication created")
 		},
 	})
 	rootCmd.AddCommand(&grumble.Command{
@@ -72,7 +72,7 @@ func init() {
 	})
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "pause",
-		Help: "pause a duplication",
+		Help: "pause a duplication, it only support pause from `DS_LOG`",
 		Run: shell.RequireUseTable(func(c *shell.Context) error {
 			if c.Flags.Int("dupid") == -1 {
 				return fmt.Errorf("dupid cannot be empty")
@@ -85,12 +85,12 @@ func init() {
 	})
 	rootCmd.AddCommand(&grumble.Command{
 		Name: "start",
-		Help: "start a duplication",
+		Help: "start a duplication, it only support start from `DS_PAUSE`",
 		Run: shell.RequireUseTable(func(c *shell.Context) error {
 			if c.Flags.Int("dupid") == -1 {
 				return fmt.Errorf("dupid cannot be empty")
 			}
-			return executor.ModifyDuplication(pegasusClient, c.UseTable, c.Flags.Int("dupid"), admin.DuplicationStatus_DS_START)
+			return executor.ModifyDuplication(pegasusClient, c.UseTable, c.Flags.Int("dupid"), admin.DuplicationStatus_DS_LOG)
 		}),
 		Flags: func(f *grumble.Flags) {
 			f.Int("d", "dupid", -1, "the dupid")
