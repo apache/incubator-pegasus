@@ -223,7 +223,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
         }
     }
 
-    ASSERT_EQ(false, error_occurred.load()) << "error occurred, processing terminated or timeout!";
+    ASSERT_FALSE(error_occurred.load()) << "error occurred, processing terminated or timeout!";
 
     verify_data();
 
