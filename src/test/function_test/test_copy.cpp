@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/service_api_c.h>
 #include <gtest/gtest.h>
@@ -77,7 +78,7 @@ static void verify_data()
 
     compare(data, base_data);
 
-    ddebug("Data and base_data are the same.");
+    ddebug_f("Data and base_data are the same.");
 }
 
 static void create_table_and_get_client()
@@ -110,7 +111,7 @@ static const string random_string()
 
 static void fill_data()
 {
-    ddebug("FILLING_DATA...");
+    ddebug_f("FILLING_DATA...");
 
     srandom((unsigned int)time(nullptr));
     for (auto &c : buffer) {
@@ -143,7 +144,7 @@ static void fill_data()
         }
     }
 
-    ddebug("Data filled.");
+    ddebug_f("Data filled.");
 }
 
 class copy_data_test : public testing::Test
@@ -151,14 +152,14 @@ class copy_data_test : public testing::Test
 public:
     static void SetUpTestCase()
     {
-        ddebug("SetUp...");
+        ddebug_f("SetUp...");
         create_table_and_get_client();
         fill_data();
     }
 
     static void TearDownTestCase()
     {
-        ddebug("TearDown...");
+        ddebug_f("TearDown...");
         chdir(global_env::instance()._pegasus_root.c_str());
         system("./run.sh clear_onebox");
         system("./run.sh start_onebox -w");
@@ -168,7 +169,7 @@ public:
 
 TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 {
-    ddebug("TESTING_COPY_DATA, EMPTY HASH_KEY COPY ....");
+    ddebug_f("TESTING_COPY_DATA, EMPTY HAS_HKEY COPY ....");
 
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
@@ -177,8 +178,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     ASSERT_EQ(pegasus::PERR_OK, ret) << "Error occurred when getting scanner. error="
                                      << srouce_client->get_error_string(ret);
 
-    ddebug("INFO: open source app scanner succeed, partition_count = %d\n",
-           (int)raw_scanners.size());
+    ddebug_f("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 
     vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
@@ -188,7 +188,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     raw_scanners.clear();
 
     int split_count = scanners.size();
-    ddebug("INFO: prepare scanners succeed, split_count = %d\n", split_count);
+    ddebug_f("prepare scanners succeed, split_count = {}", split_count);
 
     std::atomic_bool error_occurred(false);
     vector<std::unique_ptr<scan_data_context>> contexts;
@@ -227,5 +227,5 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 
     verify_data();
 
-    ddebug("finished copy data test..");
+    ddebug_f("finished copy data test..");
 }
