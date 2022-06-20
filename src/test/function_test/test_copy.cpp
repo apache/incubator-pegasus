@@ -168,7 +168,7 @@ public:
 
 TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 {
-    ddebug("TESTING_COPY_DATA, EMPTY HAS_HKEY COPY ....");
+    ddebug("TESTING_COPY_DATA, EMPTY HASH_KEY COPY ....");
 
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
