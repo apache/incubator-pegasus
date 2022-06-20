@@ -24,7 +24,6 @@
 
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/service_api_c.h>
-#include <geo/lib/geo_client.h>
 #include <gtest/gtest.h>
 #include <pegasus/client.h>
 #include <unistd.h>
@@ -36,6 +35,9 @@
 #include "utils.h"
 
 using namespace ::pegasus;
+using std::map;
+using std::string;
+using std::vector;
 
 extern std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client;
 static const char CCH[] = "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -43,26 +45,26 @@ static const int max_batch_count = 500;
 static const int timeout_ms = 5000;
 static const int max_multi_set_concurrency = 20;
 static const int default_partitions = 4;
-static const std::string empty_hash_key = "";
-static const std::string srouce_app_name = "copy_data_source";
-static const std::string destination_app_name = "copy_data_destination";
+static const string empty_hash_key = "";
+static const string srouce_app_name = "copy_data_source_table";
+static const string destination_app_name = "copy_data_destination_table";
 static char buffer[256];
-static std::map<std::string, std::map<std::string, std::string>> base_data;
+static map<string, map<string, string>> base_data;
 static pegasus_client *srouce_client;
 static pegasus_client *destination_client;
 
 static void verify_data()
 {
     pegasus_client::scan_options options;
-    std::vector<pegasus_client::pegasus_scanner *> scanners;
+    vector<pegasus_client::pegasus_scanner *> scanners;
     int ret = destination_client->get_unordered_scanners(INT_MAX, options, scanners);
     ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
                       << destination_client->get_error_string(ret);
 
-    std::string hash_key;
-    std::string sort_key;
-    std::string value;
-    std::map<std::string, std::map<std::string, std::string>> data;
+    string hash_key;
+    string sort_key;
+    string value;
+    map<string, map<string, string>> data;
     for (auto scanner : scanners) {
         ASSERT_NE(nullptr, scanner);
         while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value)))) {
@@ -93,16 +95,16 @@ static void create_table_and_get_client()
 }
 
 // REQUIRED: 'buffer' has been filled with random chars.
-static const std::string random_string()
+static const string random_string()
 {
     int pos = random() % sizeof(buffer);
     buffer[pos] = CCH[random() % sizeof(CCH)];
     unsigned int length = random() % sizeof(buffer) + 1;
     if (pos + length < sizeof(buffer)) {
-        return std::string(buffer + pos, length);
+        return string(buffer + pos, length);
     } else {
-        return std::string(buffer + pos, sizeof(buffer) - pos) +
-               std::string(buffer, length + pos - sizeof(buffer));
+        return string(buffer + pos, sizeof(buffer) - pos) +
+               string(buffer, length + pos - sizeof(buffer));
     }
 }
 
@@ -115,9 +117,9 @@ static void fill_data()
         c = CCH[random() % sizeof(CCH)];
     }
 
-    std::string hash_key;
-    std::string sort_key;
-    std::string value;
+    string hash_key;
+    string sort_key;
+    string value;
     while (base_data[empty_hash_key].size() < 1000) {
         sort_key = random_string();
         value = random_string();
@@ -164,13 +166,13 @@ public:
     }
 };
 
-TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
+TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 {
-    ddebug("TESTING_COPY_DATA, EMPTY HAS_HKEY COPOY ....");
+    ddebug("TESTING_COPY_DATA, EMPTY HAS_HKEY COPY ....");
 
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
-    std::vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
+    vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
     int ret = srouce_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     ASSERT_EQ(pegasus::PERR_OK, ret) << "Error occurred when getting scanner. error="
                                      << srouce_client->get_error_string(ret);
@@ -178,7 +180,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
     ddebug("INFO: open source app scanner succeed, partition_count = %d\n",
            (int)raw_scanners.size());
 
-    std::vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
+    vector<pegasus::pegasus_client::pegasus_scanner_wrapper> scanners;
     for (auto raw_scanner : raw_scanners) {
         ASSERT_NE(nullptr, raw_scanner);
         scanners.push_back(raw_scanner->get_smart_wrapper());
@@ -189,8 +191,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
     ddebug("INFO: prepare scanners succeed, split_count = %d\n", split_count);
 
     std::atomic_bool error_occurred(false);
-    std::vector<std::unique_ptr<scan_data_context>> contexts;
-    std::unique_ptr<pegasus::geo::geo_client> geo_client;
+    vector<std::unique_ptr<scan_data_context>> contexts;
 
     for (int i = 0; i < split_count; i++) {
         scan_data_context *context = new scan_data_context(SCAN_AND_MULTI_SET,
@@ -199,7 +200,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
                                                            timeout_ms,
                                                            scanners[i],
                                                            destination_client,
-                                                           geo_client.get(),
+                                                           nullptr,
                                                            &error_occurred,
                                                            max_multi_set_concurrency);
         contexts.emplace_back(context);
@@ -208,48 +209,20 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPOY)
 
     // wait thread complete
     int sleep_seconds = 0;
-    long last_total_rows = 0;
-    while (true) {
+    while (sleep_seconds < 120) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         sleep_seconds++;
         int completed_split_count = 0;
-        long cur_total_rows = 0;
         for (int i = 0; i < split_count; i++) {
-            cur_total_rows += contexts[i]->split_rows.load();
-            completed_split_count++;
-        }
-        if (error_occurred.load()) {
-            ddebug("processed for %d seconds, (%d/%d) splits, total %ld rows, last second "
-                   "%ld rows, error occurred, terminating..",
-                   sleep_seconds,
-                   completed_split_count,
-                   split_count,
-                   cur_total_rows,
-                   cur_total_rows - last_total_rows);
-        } else {
-            ddebug("processed for %d seconds, (%d/%d) splits, total %ld rows, last second "
-                   "%ld rows",
-                   sleep_seconds,
-                   completed_split_count,
-                   split_count,
-                   cur_total_rows,
-                   cur_total_rows - last_total_rows);
+            if (contexts[i]->split_completed.load()) {
+                completed_split_count++;
+            }
         }
         if (completed_split_count == split_count)
             break;
-        last_total_rows = cur_total_rows;
     }
 
-    ASSERT_EQ(false, error_occurred.load()) << "error occurred, processing terminated";
-
-    long total_rows = 0;
-    for (int i = 0; i < split_count; i++) {
-        ddebug("split[%d]: %ld rows", i, contexts[i]->split_rows.load());
-        total_rows += contexts[i]->split_rows.load();
-    }
-
-    // fill_data count = 1000 + (500 - 1) * 10
-    ASSERT_EQ(5990, total_rows) << "Copy total " << total_rows << " rows. Not 5990 !!!";
+    ASSERT_EQ(false, error_occurred.load()) << "error occurred, processing terminated or timeout!";
 
     verify_data();
 
