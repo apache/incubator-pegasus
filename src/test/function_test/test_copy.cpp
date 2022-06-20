@@ -218,8 +218,9 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
                 completed_split_count++;
             }
         }
-        if (completed_split_count == split_count)
+        if (completed_split_count == split_count) {
             break;
+        }
     }
 
     ASSERT_EQ(false, error_occurred.load()) << "error occurred, processing terminated or timeout!";
