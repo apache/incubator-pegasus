@@ -270,8 +270,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
             zauto_write_lock l(_config_lock);
 
             if (_app_id != -1 && _app_id != resp.app_id) {
-                dassert(false,
-                        "app id is changed (mostly the app was removed and created with the same "
+                dwarn_f("app id is changed (mostly the app was removed and created with the same "
                         "name), local Vs remote: %u vs %u ",
                         _app_id,
                         resp.app_id);
@@ -279,8 +278,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
             if (_app_partition_count != -1 && _app_partition_count != resp.partition_count &&
                 _app_partition_count * 2 != resp.partition_count &&
                 _app_partition_count != resp.partition_count * 2) {
-                dassert(false,
-                        "partition count is changed (mostly the app was removed and created with "
+                dwarn_f("partition count is changed (mostly the app was removed and created with "
                         "the same name), local Vs remote: %u vs %u ",
                         _app_partition_count,
                         resp.partition_count);
