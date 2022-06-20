@@ -324,17 +324,23 @@ type DuplicationStatus int64
 
 const (
 	DuplicationStatus_DS_INIT    DuplicationStatus = 0
-	DuplicationStatus_DS_START   DuplicationStatus = 1
-	DuplicationStatus_DS_PAUSE   DuplicationStatus = 2
-	DuplicationStatus_DS_REMOVED DuplicationStatus = 3
+	DuplicationStatus_DS_PREPARE DuplicationStatus = 1
+	DuplicationStatus_DS_APP     DuplicationStatus = 2
+	DuplicationStatus_DS_LOG     DuplicationStatus = 3
+	DuplicationStatus_DS_PAUSE   DuplicationStatus = 4
+	DuplicationStatus_DS_REMOVED DuplicationStatus = 5
 )
 
 func (p DuplicationStatus) String() string {
 	switch p {
 	case DuplicationStatus_DS_INIT:
 		return "DS_INIT"
-	case DuplicationStatus_DS_START:
-		return "DS_START"
+	case DuplicationStatus_DS_PREPARE:
+		return "DS_PREPARE"
+	case DuplicationStatus_DS_APP:
+		return "DS_APP"
+	case DuplicationStatus_DS_LOG:
+		return "DS_LOG"
 	case DuplicationStatus_DS_PAUSE:
 		return "DS_PAUSE"
 	case DuplicationStatus_DS_REMOVED:
@@ -347,8 +353,12 @@ func DuplicationStatusFromString(s string) (DuplicationStatus, error) {
 	switch s {
 	case "DS_INIT":
 		return DuplicationStatus_DS_INIT, nil
-	case "DS_START":
-		return DuplicationStatus_DS_START, nil
+	case "DS_PREPARE":
+		return DuplicationStatus_DS_PREPARE, nil
+	case "DS_APP":
+		return DuplicationStatus_DS_APP, nil
+	case "DS_LOG":
+		return DuplicationStatus_DS_LOG, nil
 	case "DS_PAUSE":
 		return DuplicationStatus_DS_PAUSE, nil
 	case "DS_REMOVED":
@@ -2024,306 +2034,6 @@ func (p *DropAppResponse) String() string {
 }
 
 // Attributes:
-//  - AppID
-//  - NewAppName_
-type RecallAppRequest struct {
-	AppID       int32  `thrift:"app_id,1" db:"app_id" json:"app_id"`
-	NewAppName_ string `thrift:"new_app_name,2" db:"new_app_name" json:"new_app_name"`
-}
-
-func NewRecallAppRequest() *RecallAppRequest {
-	return &RecallAppRequest{}
-}
-
-func (p *RecallAppRequest) GetAppID() int32 {
-	return p.AppID
-}
-
-func (p *RecallAppRequest) GetNewAppName_() string {
-	return p.NewAppName_
-}
-func (p *RecallAppRequest) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.I32 {
-				if err := p.ReadField1(iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(fieldTypeId); err != nil {
-					return err
-				}
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err := p.ReadField2(iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(fieldTypeId); err != nil {
-					return err
-				}
-			}
-		default:
-			if err := iprot.Skip(fieldTypeId); err != nil {
-				return err
-			}
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	return nil
-}
-
-func (p *RecallAppRequest) ReadField1(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadI32(); err != nil {
-		return thrift.PrependError("error reading field 1: ", err)
-	} else {
-		p.AppID = v
-	}
-	return nil
-}
-
-func (p *RecallAppRequest) ReadField2(iprot thrift.TProtocol) error {
-	if v, err := iprot.ReadString(); err != nil {
-		return thrift.PrependError("error reading field 2: ", err)
-	} else {
-		p.NewAppName_ = v
-	}
-	return nil
-}
-
-func (p *RecallAppRequest) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("recall_app_request"); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-	}
-	if p != nil {
-		if err := p.writeField1(oprot); err != nil {
-			return err
-		}
-		if err := p.writeField2(oprot); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return thrift.PrependError("write field stop error: ", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return thrift.PrependError("write struct stop error: ", err)
-	}
-	return nil
-}
-
-func (p *RecallAppRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_id: ", p), err)
-	}
-	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.app_id (1) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_id: ", p), err)
-	}
-	return err
-}
-
-func (p *RecallAppRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("new_app_name", thrift.STRING, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:new_app_name: ", p), err)
-	}
-	if err := oprot.WriteString(string(p.NewAppName_)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.new_app_name (2) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:new_app_name: ", p), err)
-	}
-	return err
-}
-
-func (p *RecallAppRequest) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("RecallAppRequest(%+v)", *p)
-}
-
-// Attributes:
-//  - Err
-//  - Info
-type RecallAppResponse struct {
-	Err  *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
-	Info *AppInfo        `thrift:"info,2" db:"info" json:"info"`
-}
-
-func NewRecallAppResponse() *RecallAppResponse {
-	return &RecallAppResponse{}
-}
-
-var RecallAppResponse_Err_DEFAULT *base.ErrorCode
-
-func (p *RecallAppResponse) GetErr() *base.ErrorCode {
-	if !p.IsSetErr() {
-		return RecallAppResponse_Err_DEFAULT
-	}
-	return p.Err
-}
-
-var RecallAppResponse_Info_DEFAULT *AppInfo
-
-func (p *RecallAppResponse) GetInfo() *AppInfo {
-	if !p.IsSetInfo() {
-		return RecallAppResponse_Info_DEFAULT
-	}
-	return p.Info
-}
-func (p *RecallAppResponse) IsSetErr() bool {
-	return p.Err != nil
-}
-
-func (p *RecallAppResponse) IsSetInfo() bool {
-	return p.Info != nil
-}
-
-func (p *RecallAppResponse) Read(iprot thrift.TProtocol) error {
-	if _, err := iprot.ReadStructBegin(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
-		if err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				if err := p.ReadField1(iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(fieldTypeId); err != nil {
-					return err
-				}
-			}
-		case 2:
-			if fieldTypeId == thrift.STRUCT {
-				if err := p.ReadField2(iprot); err != nil {
-					return err
-				}
-			} else {
-				if err := iprot.Skip(fieldTypeId); err != nil {
-					return err
-				}
-			}
-		default:
-			if err := iprot.Skip(fieldTypeId); err != nil {
-				return err
-			}
-		}
-		if err := iprot.ReadFieldEnd(); err != nil {
-			return err
-		}
-	}
-	if err := iprot.ReadStructEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-	}
-	return nil
-}
-
-func (p *RecallAppResponse) ReadField1(iprot thrift.TProtocol) error {
-	p.Err = &base.ErrorCode{}
-	if err := p.Err.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
-	}
-	return nil
-}
-
-func (p *RecallAppResponse) ReadField2(iprot thrift.TProtocol) error {
-	p.Info = &AppInfo{
-		Status: 0,
-
-		InitPartitionCount: -1,
-	}
-	if err := p.Info.Read(iprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Info), err)
-	}
-	return nil
-}
-
-func (p *RecallAppResponse) Write(oprot thrift.TProtocol) error {
-	if err := oprot.WriteStructBegin("recall_app_response"); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-	}
-	if p != nil {
-		if err := p.writeField1(oprot); err != nil {
-			return err
-		}
-		if err := p.writeField2(oprot); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteFieldStop(); err != nil {
-		return thrift.PrependError("write field stop error: ", err)
-	}
-	if err := oprot.WriteStructEnd(); err != nil {
-		return thrift.PrependError("write struct stop error: ", err)
-	}
-	return nil
-}
-
-func (p *RecallAppResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
-	}
-	if err := p.Err.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
-	}
-	return err
-}
-
-func (p *RecallAppResponse) writeField2(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("info", thrift.STRUCT, 2); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:info: ", p), err)
-	}
-	if err := p.Info.Write(oprot); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Info), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:info: ", p), err)
-	}
-	return err
-}
-
-func (p *RecallAppResponse) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("RecallAppResponse(%+v)", *p)
-}
-
-// Attributes:
 //  - Status
 //  - AppType
 //  - AppName
@@ -3007,6 +2717,306 @@ func (p *AppInfo) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("AppInfo(%+v)", *p)
+}
+
+// Attributes:
+//  - AppID
+//  - NewAppName_
+type RecallAppRequest struct {
+	AppID       int32  `thrift:"app_id,1" db:"app_id" json:"app_id"`
+	NewAppName_ string `thrift:"new_app_name,2" db:"new_app_name" json:"new_app_name"`
+}
+
+func NewRecallAppRequest() *RecallAppRequest {
+	return &RecallAppRequest{}
+}
+
+func (p *RecallAppRequest) GetAppID() int32 {
+	return p.AppID
+}
+
+func (p *RecallAppRequest) GetNewAppName_() string {
+	return p.NewAppName_
+}
+func (p *RecallAppRequest) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) ReadField1(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadI32(); err != nil {
+		return thrift.PrependError("error reading field 1: ", err)
+	} else {
+		p.AppID = v
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) ReadField2(iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(); err != nil {
+		return thrift.PrependError("error reading field 2: ", err)
+	} else {
+		p.NewAppName_ = v
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("recall_app_request"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RecallAppRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("app_id", thrift.I32, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:app_id: ", p), err)
+	}
+	if err := oprot.WriteI32(int32(p.AppID)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.app_id (1) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:app_id: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("new_app_name", thrift.STRING, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:new_app_name: ", p), err)
+	}
+	if err := oprot.WriteString(string(p.NewAppName_)); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T.new_app_name (2) field write error: ", p), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:new_app_name: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RecallAppRequest(%+v)", *p)
+}
+
+// Attributes:
+//  - Err
+//  - Info
+type RecallAppResponse struct {
+	Err  *base.ErrorCode `thrift:"err,1" db:"err" json:"err"`
+	Info *AppInfo        `thrift:"info,2" db:"info" json:"info"`
+}
+
+func NewRecallAppResponse() *RecallAppResponse {
+	return &RecallAppResponse{}
+}
+
+var RecallAppResponse_Err_DEFAULT *base.ErrorCode
+
+func (p *RecallAppResponse) GetErr() *base.ErrorCode {
+	if !p.IsSetErr() {
+		return RecallAppResponse_Err_DEFAULT
+	}
+	return p.Err
+}
+
+var RecallAppResponse_Info_DEFAULT *AppInfo
+
+func (p *RecallAppResponse) GetInfo() *AppInfo {
+	if !p.IsSetInfo() {
+		return RecallAppResponse_Info_DEFAULT
+	}
+	return p.Info
+}
+func (p *RecallAppResponse) IsSetErr() bool {
+	return p.Err != nil
+}
+
+func (p *RecallAppResponse) IsSetInfo() bool {
+	return p.Info != nil
+}
+
+func (p *RecallAppResponse) Read(iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin()
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField1(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err := p.ReadField2(iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) ReadField1(iprot thrift.TProtocol) error {
+	p.Err = &base.ErrorCode{}
+	if err := p.Err.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Err), err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) ReadField2(iprot thrift.TProtocol) error {
+	p.Info = &AppInfo{
+		Status: 0,
+
+		InitPartitionCount: -1,
+	}
+	if err := p.Info.Read(iprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Info), err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) Write(oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin("recall_app_response"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField1(oprot); err != nil {
+			return err
+		}
+		if err := p.writeField2(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *RecallAppResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("err", thrift.STRUCT, 1); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:err: ", p), err)
+	}
+	if err := p.Err.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Err), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 1:err: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if err := oprot.WriteFieldBegin("info", thrift.STRUCT, 2); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field begin error 2:info: ", p), err)
+	}
+	if err := p.Info.Write(oprot); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.Info), err)
+	}
+	if err := oprot.WriteFieldEnd(); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write field end error 2:info: ", p), err)
+	}
+	return err
+}
+
+func (p *RecallAppResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RecallAppResponse(%+v)", *p)
 }
 
 // Attributes:
@@ -5757,15 +5767,17 @@ func (p *MetaControlResponse) String() string {
 // Attributes:
 //  - AppName
 //  - RemoteClusterName
-//  - Freezed
+//  - IsDuplicatingCheckpoint
 type DuplicationAddRequest struct {
-	AppName           string `thrift:"app_name,1" db:"app_name" json:"app_name"`
-	RemoteClusterName string `thrift:"remote_cluster_name,2" db:"remote_cluster_name" json:"remote_cluster_name"`
-	Freezed           bool   `thrift:"freezed,3" db:"freezed" json:"freezed"`
+	AppName                 string `thrift:"app_name,1" db:"app_name" json:"app_name"`
+	RemoteClusterName       string `thrift:"remote_cluster_name,2" db:"remote_cluster_name" json:"remote_cluster_name"`
+	IsDuplicatingCheckpoint bool   `thrift:"is_duplicating_checkpoint,3" db:"is_duplicating_checkpoint" json:"is_duplicating_checkpoint"`
 }
 
 func NewDuplicationAddRequest() *DuplicationAddRequest {
-	return &DuplicationAddRequest{}
+	return &DuplicationAddRequest{
+		IsDuplicatingCheckpoint: true,
+	}
 }
 
 func (p *DuplicationAddRequest) GetAppName() string {
@@ -5776,9 +5788,15 @@ func (p *DuplicationAddRequest) GetRemoteClusterName() string {
 	return p.RemoteClusterName
 }
 
-func (p *DuplicationAddRequest) GetFreezed() bool {
-	return p.Freezed
+var DuplicationAddRequest_IsDuplicatingCheckpoint_DEFAULT bool = true
+
+func (p *DuplicationAddRequest) GetIsDuplicatingCheckpoint() bool {
+	return p.IsDuplicatingCheckpoint
 }
+func (p *DuplicationAddRequest) IsSetIsDuplicatingCheckpoint() bool {
+	return p.IsDuplicatingCheckpoint != DuplicationAddRequest_IsDuplicatingCheckpoint_DEFAULT
+}
+
 func (p *DuplicationAddRequest) Read(iprot thrift.TProtocol) error {
 	if _, err := iprot.ReadStructBegin(); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
@@ -5860,7 +5878,7 @@ func (p *DuplicationAddRequest) ReadField3(iprot thrift.TProtocol) error {
 	if v, err := iprot.ReadBool(); err != nil {
 		return thrift.PrependError("error reading field 3: ", err)
 	} else {
-		p.Freezed = v
+		p.IsDuplicatingCheckpoint = v
 	}
 	return nil
 }
@@ -5916,14 +5934,16 @@ func (p *DuplicationAddRequest) writeField2(oprot thrift.TProtocol) (err error) 
 }
 
 func (p *DuplicationAddRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err := oprot.WriteFieldBegin("freezed", thrift.BOOL, 3); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:freezed: ", p), err)
-	}
-	if err := oprot.WriteBool(bool(p.Freezed)); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T.freezed (3) field write error: ", p), err)
-	}
-	if err := oprot.WriteFieldEnd(); err != nil {
-		return thrift.PrependError(fmt.Sprintf("%T write field end error 3:freezed: ", p), err)
+	if p.IsSetIsDuplicatingCheckpoint() {
+		if err := oprot.WriteFieldBegin("is_duplicating_checkpoint", thrift.BOOL, 3); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 3:is_duplicating_checkpoint: ", p), err)
+		}
+		if err := oprot.WriteBool(bool(p.IsDuplicatingCheckpoint)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.is_duplicating_checkpoint (3) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 3:is_duplicating_checkpoint: ", p), err)
+		}
 	}
 	return err
 }
@@ -15910,7 +15930,9 @@ func (p *AdminClientAddDuplicationArgs) Read(iprot thrift.TProtocol) error {
 }
 
 func (p *AdminClientAddDuplicationArgs) ReadField1(iprot thrift.TProtocol) error {
-	p.Req = &DuplicationAddRequest{}
+	p.Req = &DuplicationAddRequest{
+		IsDuplicatingCheckpoint: true,
+	}
 	if err := p.Req.Read(iprot); err != nil {
 		return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.Req), err)
 	}

@@ -258,3 +258,6 @@ python-client/.mypy_cache/
 *.log*
 node_modules
 package-lock.json
+
+#go
+go-client/bin
