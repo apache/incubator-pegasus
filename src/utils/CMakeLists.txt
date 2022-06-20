@@ -18,4 +18,5 @@ else()
     dsn_add_shared_library()
 endif()
 
+add_subdirectory(long_adder_bench)
 add_subdirectory(test)

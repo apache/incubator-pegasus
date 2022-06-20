@@ -19,6 +19,7 @@
 #include <dsn/perf_counter/perf_counters.h>
 #include <dsn/service_api_c.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/config_api.h>
 #include <dsn/utility/flags.h>
 
 #include <utility>

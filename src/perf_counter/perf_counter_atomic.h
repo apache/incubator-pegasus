@@ -210,7 +210,8 @@ public:
                                           const char *section,
                                           const char *name,
                                           dsn_perf_counter_type_t type,
-                                          const char *dsptr)
+                                          const char *dsptr,
+                                          bool use_timer = true)
         : perf_counter(app, section, name, type, dsptr), _tail(0)
     {
         _results[COUNTER_PERCENTILE_50] = 0;
@@ -218,6 +219,10 @@ public:
         _results[COUNTER_PERCENTILE_95] = 0;
         _results[COUNTER_PERCENTILE_99] = 0;
         _results[COUNTER_PERCENTILE_999] = 0;
+
+        if (!use_timer) {
+            return;
+        }
 
         _counter_computation_interval_seconds = (int)dsn_config_get_value_uint64(
             "components.pegasus_perf_counter_number_percentile_atomic",
@@ -227,12 +232,17 @@ public:
             "pegasus_perf_counter_number_percentile_atomic counters");
         _timer.reset(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios));
         _timer->expires_from_now(
-            boost::posix_time::seconds(rand() % _counter_computation_interval_seconds + 1));
+            boost::posix_time::seconds(::rand() % _counter_computation_interval_seconds + 1));
         _timer->async_wait(std::bind(
             &perf_counter_number_percentile_atomic::on_timer, this, _timer, std::placeholders::_1));
     }
 
-    ~perf_counter_number_percentile_atomic(void) { _timer->cancel(); }
+    ~perf_counter_number_percentile_atomic(void)
+    {
+        if (_timer) {
+            _timer->cancel();
+        }
+    }
 
     virtual void increment() { dassert(false, "invalid execution flow"); }
     virtual void decrement() { dassert(false, "invalid execution flow"); }
@@ -290,6 +300,8 @@ public:
     }
 
 private:
+    friend class perf_counter_nth_element_finder;
+
     struct compute_context
     {
         int64_t ask[COUNTER_PERCENTILE_COUNT];

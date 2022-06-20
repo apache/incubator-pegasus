@@ -36,10 +36,10 @@
 #pragma once
 
 #include <thread>
-#include <memory>
 #include <vector>
+
 #include <boost/asio.hpp>
-#include <dsn/utility/config_api.h>
+
 #include <dsn/utility/singleton.h>
 
 namespace dsn {
@@ -54,32 +54,13 @@ public:
     boost::asio::io_service ios;
 
 private:
-    shared_io_service()
-    {
-        _io_service_worker_count =
-            (int)dsn_config_get_value_uint64("core",
-                                             "timer_service_worker_count",
-                                             2,
-                                             "thread number for timer service for core itself");
-        for (int i = 0; i < _io_service_worker_count; i++) {
-            _workers.push_back(std::shared_ptr<std::thread>(new std::thread([this]() {
-                boost::asio::io_service::work work(ios);
-                ios.run();
-            })));
-        }
-    }
-    ~shared_io_service()
-    {
-        ios.stop();
-        for (auto worker : _workers) {
-            worker->join();
-        }
-    }
-
-    int _io_service_worker_count;
-    std::vector<std::shared_ptr<std::thread>> _workers;
-
     friend class utils::singleton<shared_io_service>;
+
+    shared_io_service();
+    ~shared_io_service();
+
+    std::vector<std::thread> _workers;
 };
+
 } // namespace tools
 } // namespace dsn

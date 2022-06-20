@@ -25,5 +25,6 @@ set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config-bad-section.ini"
         "${CMAKE_CURRENT_SOURCE_DIR}/run.sh"
         "${CMAKE_CURRENT_SOURCE_DIR}/clear.sh"
         )
+add_subdirectory(nth_element_bench)
 add_definitions(-Wno-dangling-else)
 dsn_add_test()

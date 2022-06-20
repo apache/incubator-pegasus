@@ -78,3 +78,34 @@
 #include <machine/endian.h> // NOLINT(build/include)
 
 #endif
+
+// Cache line alignment
+#if defined(__i386__) || defined(__x86_64__)
+#define CACHELINE_SIZE 64
+#elif defined(__powerpc64__)
+// TODO(user) This is the L1 D-cache line size of our Power7 machines.
+// Need to check if this is appropriate for other PowerPC64 systems.
+#define CACHELINE_SIZE 128
+#elif defined(__aarch64__)
+#define CACHELINE_SIZE 64
+#elif defined(__arm__)
+// Cache line sizes for ARM: These values are not strictly correct since
+// cache line sizes depend on implementations, not architectures.  There
+// are even implementations with cache line sizes configurable at boot
+// time.
+#if defined(__ARM_ARCH_5T__)
+#define CACHELINE_SIZE 32
+#elif defined(__ARM_ARCH_7A__)
+#define CACHELINE_SIZE 64
+#endif
+#endif
+
+// This is a NOP if CACHELINE_SIZE is not defined.
+#ifdef CACHELINE_SIZE
+static_assert((CACHELINE_SIZE & (CACHELINE_SIZE - 1)) == 0 &&
+                  (CACHELINE_SIZE & (sizeof(void *) - 1)) == 0,
+              "CACHELINE_SIZE must be a power of 2 and a multiple of sizeof(void *)");
+#define CACHELINE_ALIGNED __attribute__((aligned(CACHELINE_SIZE)))
+#else
+#define CACHELINE_ALIGNED
+#endif
