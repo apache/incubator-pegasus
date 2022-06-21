@@ -1,0 +1,92 @@
+# The MIT License (MIT)
+#
+# Copyright (c) 2015 Microsoft Corporation
+#
+# -=- Robust Distributed System Nucleus (rDSN) -=-
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Case Description: test reject 2pc when there aren't enough members
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+# check config is not enough but check state instead
+# to ensure primary is setup on replica but only only on meta
+# server.
+# the reason is that the next only RPC_CONFIG_PROPOSAL (due to
+# set:disable_load_balance=1 later) can be skipped if the
+# replica is not in primary status yet, which leads to failure
+# of r2 becomes potential secondary.
+#
+# config:{1,r1,[]}
+state:{{r1,pri,1,0}}
+
+#
+# on_rpc_request_enqueue may happen before the above state instruction, so
+#
+# wait:on_rpc_request_enqueue:rpc_name=RPC_CONFIG_PROPOSAL,from=m,to=r1
+wait:on_task_begin:node=r1,task_code=RPC_CONFIG_PROPOSAL
+
+set:disable_load_balance=1
+
+state:{{r1,pri,1,0},{r2,pot,1,0}}
+
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+client:begin_write:id=11,key=k11,value=v11,timeout=0
+
+inject:on_rpc_call:rpc_name=rpc_prepare,from=r1,to=r2
+
+# primary will remove r2 from config
+config:{3,r1,[]}
+
+# part of requests will commit in primary
+state:{{r1,pri,3,5}}
+
+# enable load balancer again:
+set:disable_load_balance=0
+
+config:{5,r1,[r2,r3]}
+
+# some requests are in prepare list, after add secondary, then will be prepared again.
+state:{{r1,pri,5,5,5},{r2,sec,5,5,5},{r3,sec,5,5,5}}
+
+# write some new requests
+client:begin_write:id=12,key=k12,value=v12,timeout=0
+client:begin_write:id=13,key=k13,value=v13,timeout=0
+client:begin_write:id=14,key=k14,value=v14,timeout=0
+client:begin_write:id=15,key=k15,value=v15,timeout=0
+
+# all write will be succeed
+client:end_write:id=15,err=ERR_OK,resp=0
+
+# all requests will be committed
+state:{{r1,pri,5,9,9},{r2,sec,5,9,9},{r3,sec,5,9,9}}
+

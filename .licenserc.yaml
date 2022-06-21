@@ -20,6 +20,7 @@ header:
     copyright-owner: Apache Software Foundation
 
   paths-ignore:
+    # All the type of licenses of this project should be added to LICENSE.
     - 'LICENSE'
     - 'NOTICE'
     - '.github/pull_request_template.md'
@@ -42,5 +43,51 @@ header:
     - 'go-client/idl/**/*.go'
     - 'nodejs-client/src/dsn/*.js'
     - '**/.npmigonre'
+    # Copyright (c) Facebook, Inc
+    - 'rdsn/include/dsn/utility/TokenBucket.h'
+    - 'rdsn/src/utils/test/TokenBucketTest.cpp'
+    - 'rdsn/src/utils/test/TokenBucketTest.h'
+    # https://github.com/preshing/cpp11-on-multicore/blob/master/LICENSE
+    - 'rdsn/include/dsn/utility/hpc_locks/autoreseteventcondvar.h'
+    - 'rdsn/include/dsn/utility/hpc_locks/rwlock.h'
+    - 'rdsn/include/dsn/utility/hpc_locks/autoresetevent.h'
+    - 'rdsn/include/dsn/utility/hpc_locks/sema.h'
+    - 'rdsn/include/dsn/utility/hpc_locks/bitfield.h'
+    - 'rdsn/include/dsn/utility/hpc_locks/benaphore.h'
+    # Copyright (c) xxxx The Chromium Authors
+    - 'rdsn/src/runtime/build_config.h'
+    - 'rdsn/src/utils/test/autoref_ptr_test.cpp'
+    - 'rdsn/include/dsn/utility/safe_strerror_posix.h'
+    - 'rdsn/src/runtime/build_config.h'
+    - 'rdsn/src/utils/test/autoref_ptr_test.cpp'
+    - 'rdsn/src/utils/safe_strerror_posix.cpp'
+    # Copyright 2017 The Abseil Authors
+    - 'rdsn/include/dsn/utility/absl/base/internal/invoke.h'
+    - 'rdsn/include/dsn/utility/absl/utility/utility.h'
+    - 'rdsn/include/dsn/utility/smart_pointers.h'
+    - 'rdsn/include/dsn/utility/string_view.h'
+    - 'rdsn/src/utils/test/memutil_test.cpp'
+    - 'rdsn/src/utils/test/string_view_test.cpp'
+    - 'rdsn/src/utils/test/smart_pointers_test.cpp'
+    - 'rdsn/src/utils/memutil.h'
+    - 'rdsn/src/utils/string_view.cpp'
+    # Copyright (c) 2010-2011, Rob Jansen
+    - 'rdsn/bin/FindRT.cmake'
+    - 'rdsn/bin/FindDL.cmake'
+    # Copyright (c) 2017 Guillaume Papin
+    - 'rdsn/scripts/linux/run-clang-format.py'
+    # need manual fix
+    - 'rdsn/src/failure_detector/test/gtest.filter'
+    - 'rdsn/src/meta/test/meta_state/gtest.filter'
+    - 'rdsn/src/meta/test/suite1'
+    - 'rdsn/src/meta/test/suite2'
+    - 'rdsn/src/nfs/test/nfs_test_file1'
+    - 'rdsn/src/nfs/test/nfs_test_file2'
+    - 'rdsn/src/runtime/test/gtest.filter'
+    - 'rdsn/thirdparty/fix_fds_for_macos.patch'
+    - 'rdsn/thirdparty/fix_s2_for_aarch64.patch'
+    - 'rdsn/thirdparty/fix_thrift_for_cpp11.patch'
+    # should be empty, or ignore all comment lines
+    - 'rdsn/src/utils/test/config-empty.ini'
 
   comment: on-failure
