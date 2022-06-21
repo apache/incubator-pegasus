@@ -37,7 +37,7 @@ func init() {
 				"the path of meatproxy, if you don't specify it, that is means user need manual-switch the table addrs")
 			f.String("c", "cluster", "", "target cluster name")
 			f.String("m", "meta", "", "target meta list")
-			f.Float64("p", "threshold", 100000, "pending mutation throshold when server will reject all write request")
+			f.Float64("p", "threshold", 100000, "pending mutation threshold when server will reject all write request")
 		},
 		Run: func(c *grumble.Context) error {
 			return tablemigrator.MigrateTable(pegasusClient, c.Flags.String("table"),
