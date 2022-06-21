@@ -21,7 +21,7 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: CPP Lint and Unit Test
+name: Pegasus cpp Lint and Unit Test
 
 on:
   # run on each pull request

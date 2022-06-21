@@ -23,8 +23,8 @@ RUN yum -y install ccache zip nmap-ncat; \
     yum clean all; \
     rm -rf /var/cache/yum;
 
-RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git; \
-    cd rdsn/thirdparty; \
+RUN git clone --depth=1 https://github.com/apache/incubator-pegasus.git; \
+    cd incubator-pegasus/rdsn/thirdparty; \
     mkdir -p build; \
     cmake -DCMAKE_BUILD_TYPE=Release -B build/ .; \
     cmake --build build/ -j $(($(nproc)/2+1)); \

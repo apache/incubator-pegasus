@@ -25,6 +25,7 @@ on:
       - ci-test # testing branch for github action
       - '*dev' # developing branch
 
+jobs:
   license-check:
     name: "License Check"
     runs-on: ubuntu-latest
@@ -36,8 +37,7 @@ on:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # needed only when you want License-Eye to comment on the pull request.
         with:
-            # Optional: set the log level. The default value is `info`.
-            # log: debug
-            # Optional: set the config file. The default value is `.licenserc.yaml`.
-            config: .licenserc.yaml
-
+          # Optional: set the log level. The default value is `info`.
+          # log: debug
+          # Optional: set the config file. The default value is `.licenserc.yaml`.
+          config: .licenserc.yaml

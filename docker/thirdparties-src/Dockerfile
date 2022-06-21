@@ -24,9 +24,9 @@ WORKDIR /root
 
 ARG TAGNAME=master
 
-RUN git clone --depth=1 --branch=${TAGNAME} https://github.com/XiaoMi/rdsn.git
+RUN git clone --depth=1 --branch=${TAGNAME} https://github.com/apache/incubator-pegasus.git
 
-RUN cd rdsn/thirdparty \
+RUN cd incubator-pegasus/rdsn/thirdparty \
     && mkdir -p build \
     && cmake -DCMAKE_BUILD_TYPE=Release -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1))
