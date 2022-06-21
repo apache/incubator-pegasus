@@ -61,11 +61,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Unpack prebuilt third-parties
+        working-directory: rdsn
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Compilation on GCC
+        working-directory: rdsn
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: ./run.sh build -c --skip_thirdparty
       - name: Compilation on Clang
+        working-directory: rdsn
         if: ${{ matrix.compiler-family == 'clang' }}
         env:
           COMPILER: ${{ matrix.compiler }}

@@ -12,14 +12,14 @@ on:
     types: [ synchronize, opened, reopened ]
     paths:
       - .github/workflows/cpp_actions.yaml
-      - CMakeLists.txt
-      - bin/**
-      - compile_thrift.py
-      - include/**
-      - run.sh
-      - scripts/**
-      - src/**
-      - thirdparty/**
+      - rdsn/CMakeLists.txt
+      - rdsn/bin/**
+      - rdsn/compile_thrift.py
+      - rdsn/include/**
+      - rdsn/run.sh
+      - rdsn/scripts/**
+      - rdsn/src/**
+      - rdsn/thirdparty/**
     branches:
       - master
       - 'v[0-9]+.*' # release branch
@@ -44,6 +44,7 @@ jobs:
         with:
           fetch-depth: 1
       - name: clang-format
+        working-directory: rdsn
         run: ./scripts/linux/run-clang-format.py --clang-format-executable=clang-format-3.9 -r src include
 
   test:
@@ -67,20 +68,23 @@ jobs:
         with:
           filters: |
             thirdparty:
-              - 'thirdparty/**'
+              - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
+        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
+        working-directory: rdsn/thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
+        working-directory: rdsn
         run: ./run.sh build -c --skip_thirdparty
       - name: Unit Testing
+        working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
@@ -107,20 +111,23 @@ jobs:
         with:
           filters: |
             thirdparty:
-              - 'thirdparty/**'
+              - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
+        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
+        working-directory: rdsn/thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
+        working-directory: rdsn
         run: ./run.sh build -c --sanitizer address --skip_thirdparty --disable_gperf
       - name: Unit Testing
+        working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
@@ -147,20 +154,23 @@ jobs:
         with:
           filters: |
             thirdparty:
-              - 'thirdparty/**'
+              - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
+        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
+        working-directory: rdsn/thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
+        working-directory: rdsn
         run: ./run.sh build -c --sanitizer leak --skip_thirdparty --disable_gperf
       - name: Unit Testing
+        working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
@@ -187,20 +197,23 @@ jobs:
         with:
           filters: |
             thirdparty:
-              - 'thirdparty/**'
+              - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
+        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
+        working-directory: rdsn/thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
+        working-directory: rdsn
         run: ./run.sh build -c --sanitizer undefined --skip_thirdparty --disable_gperf
       - name: Unit Testing
+        working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
