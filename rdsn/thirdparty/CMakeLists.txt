@@ -182,8 +182,6 @@ ExternalProject_Add(cyrus-sasl
         INSTALL_COMMAND make install
         BUILD_IN_SOURCE 1
         )
-add_dependencies(cyrus-sasl krb5)
-
 
 check_cxx_compiler_flag(-Wformat-overflow COMPILER_SUPPORTS_FORMAT_OVERFLOW)
 if (COMPILER_SUPPORTS_FORMAT_OVERFLOW)
@@ -202,6 +200,7 @@ ExternalProject_Add(zookeeper
         INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
         )
+add_dependencies(zookeeper cyrus-sasl krb5)
 
 ExternalProject_Add(libevent
         URL ${OSS_URL_PREFIX}/libevent-release-2.1.8-stable.tar.gz
