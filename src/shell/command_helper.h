@@ -64,21 +64,6 @@ using namespace dsn::replication;
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 
-// for copy_data by multi_set
-//
-// Empty hashkey row will be assign partition by sortkey, we should deal with it in addition.
-//
-// So we first apply a semaphore with a total of oncurrency_amplification_factor *
-// max_multi_set_concurrency
-//
-// And 2 way consume it:
-// 1) empty hashkey row --> async_set
-//    consume 1 count semaphore
-//
-// 2) not empty hashkey rows --> async_multi_set (when you have got max_multi_set_concurrency rows)
-//    consume 1 * concurrency_amplification_factor count semaphore
-const int concurrency_amplification_factor = 100;
-
 enum scan_data_operator
 {
     SCAN_COPY,
@@ -207,7 +192,7 @@ struct scan_data_context
           split_hash_key_count(0),
           data_count(0),
           multi_ttl_seconds(0),
-          sema(max_multi_set_concurrency * concurrency_amplification_factor)
+          sema(max_multi_set_concurrency)
     {
         // max_batch_count should > 1 because scan may be terminated
         // when split_request_count = 1
@@ -303,7 +288,7 @@ inline void batch_execute_multi_set(scan_data_context *context)
 {
     for (const auto &kv : context->multi_kvs) {
         // wait for satisfied with max_multi_set_concurrency
-        context->sema.wait(concurrency_amplification_factor * 1);
+        context->sema.wait();
         int multi_size = kv.second.size();
         context->client->async_multi_set(
             kv.first,
@@ -320,7 +305,7 @@ inline void batch_execute_multi_set(scan_data_context *context)
                 } else {
                     context->split_rows += multi_size;
                 }
-                context->sema.signal(concurrency_amplification_factor * 1);
+                context->sema.signal();
             },
             context->timeout_ms,
             context->multi_ttl_seconds);
@@ -350,9 +335,7 @@ inline void scan_multi_data_next(scan_data_context *context)
                             context->sema.wait();
 
                             auto callback = [context](
-                                int err,
-                                pegasus::pegasus_client::check_and_set_results &&results,
-                                pegasus::pegasus_client::internal_info &&info) {
+                                int err, pegasus::pegasus_client::internal_info &&info) {
                                 if (err != pegasus::PERR_OK) {
                                     if (!context->split_completed.exchange(true)) {
                                         fprintf(stderr,
@@ -362,42 +345,32 @@ inline void scan_multi_data_next(scan_data_context *context)
                                         context->error_occurred->store(true);
                                     }
                                 } else {
-                                    if (results.set_succeed) {
-                                        context->split_rows++;
-                                    }
+                                    context->split_rows++;
                                 }
                                 context->sema.signal();
                             };
 
-                            pegasus::pegasus_client::check_and_set_options options;
-                            options.set_value_ttl_seconds = ttl_seconds;
-                            context->client->async_check_and_set(
-                                hash_key,
-                                sort_key,
-                                pegasus::pegasus_client::cas_check_type::CT_VALUE_NOT_EXIST,
-                                "",
-                                sort_key,
-                                value,
-                                options,
-                                std::move(callback),
-                                context->timeout_ms);
+                            context->client->async_set(hash_key,
+                                                       sort_key,
+                                                       value,
+                                                       std::move(callback),
+                                                       context->timeout_ms,
+                                                       ttl_seconds);
+                        } else {
+                            context->data_count++;
+                            if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
+                                context->multi_kvs.emplace(hash_key,
+                                                           std::map<std::string, std::string>());
+                            }
+                            if (context->multi_ttl_seconds < ttl_seconds || ttl_seconds == 0) {
+                                context->multi_ttl_seconds = ttl_seconds;
+                            }
+                            context->multi_kvs[hash_key].emplace(std::move(sort_key),
+                                                                 std::move(value));
 
-                            scan_multi_data_next(context);
-                            return;
-                        }
-
-                        context->data_count++;
-                        if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
-                            context->multi_kvs.emplace(hash_key,
-                                                       std::map<std::string, std::string>());
-                        }
-                        if (context->multi_ttl_seconds < ttl_seconds || ttl_seconds == 0) {
-                            context->multi_ttl_seconds = ttl_seconds;
-                        }
-                        context->multi_kvs[hash_key].emplace(std::move(sort_key), std::move(value));
-
-                        if (context->data_count >= context->max_batch_count) {
-                            batch_execute_multi_set(context);
+                            if (context->data_count >= context->max_batch_count) {
+                                batch_execute_multi_set(context);
+                            }
                         }
                     }
                 }
