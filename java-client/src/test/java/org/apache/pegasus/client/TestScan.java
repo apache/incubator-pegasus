@@ -112,8 +112,8 @@ public class TestScan {
     ScanOptions options = new ScanOptions();
     TreeMap<String, String> data = new TreeMap<String, String>();
     PegasusScannerInterface scanner =
-            client.getScanner(
-                    tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
+        client.getScanner(
+            tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
     Assert.assertNotNull(scanner);
     Pair<Pair<byte[], byte[]>, byte[]> item;
     int count = 0;
@@ -122,19 +122,19 @@ public class TestScan {
       count++;
       Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
-              data,
-              expectedHashKey,
-              new String(item.getLeft().getRight()),
-              new String(item.getRight()));
+          data,
+          expectedHashKey,
+          new String(item.getLeft().getRight()),
+          new String(item.getRight()));
       if ((item = scanner.next()) != null) {
         count++;
       }
       Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
       checkAndPutSortMap(
-              data,
-              expectedHashKey,
-              new String(item.getLeft().getRight()),
-              new String(item.getRight()));
+          data,
+          expectedHashKey,
+          new String(item.getLeft().getRight()),
+          new String(item.getRight()));
     }
     Assert.assertEquals(1000, count);
     scanner.close();
