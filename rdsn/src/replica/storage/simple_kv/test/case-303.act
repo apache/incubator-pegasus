@@ -1,0 +1,67 @@
+# The MIT License (MIT)
+#
+# Copyright (c) 2015 Microsoft Corporation
+#
+# -=- Robust Distributed System Nucleus (rDSN) -=-
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Case Description:
+# occasionally loss of rpc message have no impact on meta server
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+# initial config
+config:{0,-,[]}
+
+# at time 15 (fd_grace_seconds=15), start to do load balance
+wait:on_rpc_call:rpc_name=rpc_config_proposal,from=m,to=r1
+
+set:disable_load_balance=1
+
+# after create new replica, r1 try to update_partition_configuration on meta_server
+wait:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+
+# meta-server receive update_partition_configuration, apply the config change,
+# and try to send reply, but the reply message is lost
+wait:on_task_begin:node=m,task_code=rpc_cm_update_partition_configuration
+config:{1,r1,[]}
+inject:on_rpc_reply:rpc_name=rpc_cm_update_partition_configuration_ack,from=m,to=r1
+
+# the message loss of update_partition_configuration reply will lead to resend of the msg,
+# we inject some resending, and the resending will continue and continue, and finally succeed
+inject:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+inject:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+inject:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+inject:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+inject:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+inject:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+wait:on_rpc_call:rpc_name=rpc_cm_update_partition_configuration,from=r1,to=m
+
+# meta-server receive the duplicate request, and reply with err=ERR_INVALID_VERSION
+wait:on_task_begin:node=m,task_code=rpc_cm_update_partition_configuration
+
+# then r1 will be the primary
+state:{{r1,pri,1,0}}
+
+set:disable_load_balance=0
+
+# at last the state will be normal
+config:{3,r1,[r2,r3]}
+

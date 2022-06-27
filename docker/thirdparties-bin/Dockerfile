@@ -28,8 +28,8 @@ WORKDIR /root
 COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
 
 # NOTE: the rocksdb lib is built in portable mode.
-RUN git clone --depth=1 https://github.com/XiaoMi/rdsn.git \
-    && cd rdsn/thirdparty \
+RUN git clone --depth=1 https://github.com/apache/incubator-pegasus.git \
+    && cd incubator-pegasus/rdsn/thirdparty \
     && unzip /root/thirdparties-src.zip -d . \
     && cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1)) \
