@@ -52,6 +52,9 @@ set(OSS_URL_PREFIX "http://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.co
 
 message(STATUS "Setting up third-parties...")
 
+file(MAKE_DIRECTORY ${TP_OUTPUT}/include)
+file(MAKE_DIRECTORY ${TP_OUTPUT}/lib)
+
 ExternalProject_Add(boost
         URL ${OSS_URL_PREFIX}/boost_1_69_0.tar.bz2
         https://dl.bintray.com/boostorg/release/1.69.0/source/boost_1_69_0.tar.bz2
