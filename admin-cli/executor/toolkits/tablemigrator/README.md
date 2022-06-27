@@ -40,8 +40,13 @@ The entire table migration process includes the following steps:
 # Usage
 
 `-t | --table`: name of the table to be migrated
+
 `-n | --node`: the zookeeper address configured by the metaproxy. If it is not specified, the zookeeper address configured by the current cluster will be used by default. Please check the metaproxy service to confirm the correct address
+
 `-r | -- root`: the zookeeper root path of the metaproxy configuration. If it is not specified, it means that you are not going to use metaproxy to complete the automatic switching of the client cluster
+
 `-c | --cluster`: name of the target cluster
+
 `-m | --meta`: meta address of the target cluster
+
 `-p | --threshold`: the threshold value of the number of remaining incremental data pieces. When the threshold value is reached, write prohibition will be enabled for the source cluster. The default value is 10K
