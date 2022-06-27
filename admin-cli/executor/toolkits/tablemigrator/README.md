@@ -24,16 +24,16 @@ the server side can complete the migration of the entire table and continue to p
 
 
 - Table Migrator depends on the [duplication](https://pegasus.apache.org/administration/duplication) feature of the server, so please upgrade to pegasus-server 2.4
-- Since the `duplication ` only supports pegasus-data with v1, only tables with v1 are supported table migration. Otherwise, an 'not support' error will be returned
+- Since the `duplication ` only supports pegasus-data with v1, only tables with v1 are supported table migration. Otherwise,  `not support` error will be returned
 - There will be a short write reject time (in minutes level) when migrating data. Please evaluate whether this restrictive measure is tolerated
 - **After the table migration is completed, the tool supports triggering the client to automatically switch to a new cluster. However, this function requires that the client must 
-   access the cluster through metaproxy. Of course, this function is optional. Users can also manually change the client configuration and restart the client after migration**
+   access the cluster through [metaproxy](https://github.com/pegasus-kv/meta-proxy). Of course, this function is optional. Users can also manually change the client configuration and restart the client after migration**
 
 The entire table migration process includes the following steps:
-- Check the data version number of the current table. Only v1 supports table data migration. Otherwise, an error is returned.
+- Check the data version  of the current table. Only v1 supports table data migration. Otherwise, an error is returned.
 - Create `duplication` task for the target cluster. The task will first migrate the chekpoint data, and then start to migrate the incremental data via plog
 - Block waiting until the unsynchronized incremental data drops to a lower level, and then prohibit the write request of the source cluster to fully synchronize all the remaining incremental data
-- Continue to block and wait until the number of synchronization requests decreases to 0, indicating that all incremental data has been synchronized
+- Continue to block and wait until the value of synchronization requests decreases to 0, indicating that all incremental data has been synchronized
 - **If you configure metaproxy, the tool will automatically switch the target cluster of the client to a new cluster. Otherwise, it will end directly**
 
 
