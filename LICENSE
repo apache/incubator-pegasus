@@ -558,7 +558,7 @@ RESULTING FROM THE USE OF THIS SOFTWARE.
 
 --------------------------------------------------------------------------------
 
-rdsn/scripts/linux/run-clang-format.py - MIT License
+scripts/run-clang-format.py - MIT License
 
 MIT License
 

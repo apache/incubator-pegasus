@@ -24,7 +24,7 @@
   ~ THE SOFTWARE.
 -->
 
-[![rdsn Lint and Unit Test](https://github.com/apache/incubator-pegasus/actions/workflows/lint_and_test_rdsn.yaml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/lint_and_test_rdsn.yaml)
+[![rdsn Unit Test](https://github.com/apache/incubator-pegasus/actions/workflows/test_rdsn.yaml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/test_rdsn.yaml)
 
 All pull requests please now go to https://github.com/imzhenyu/rdsn for automatic integration with latest version. We will periodically update this repo. Thank you.
 

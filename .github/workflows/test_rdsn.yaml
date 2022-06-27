@@ -21,14 +21,14 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: rdsn Lint and Unit Test
+name: rdsn Unit Test
 
 on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
     paths:
-      - .github/workflows/lint_and_test_rdsn.yaml
+      - .github/workflows/test_rdsn.yaml
       - rdsn/CMakeLists.txt
       - rdsn/bin/**
       - rdsn/compile_thrift.py
@@ -51,22 +51,8 @@ defaults:
     shell: bash
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: clang-format
-        working-directory: rdsn
-        run: ./scripts/linux/run-clang-format.py --clang-format-executable=clang-format-3.9 -r src include
-
   test:
     name: Test
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -109,7 +95,6 @@ jobs:
 
   test-with-sanitizer-address:
     name: Test With Sanitizer Address
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -152,7 +137,6 @@ jobs:
 
   test-with-sanitizer-leak:
     name: Test With Sanitizer Leak
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -195,7 +179,6 @@ jobs:
 
   test-with-sanitizer-undefined:
     name: Test With Sanitizer Undefined
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
