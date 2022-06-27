@@ -123,6 +123,8 @@ class scan_response;
 
 class duplicate_request;
 
+class duplicate_entry;
+
 class duplicate_response;
 
 typedef struct _update_request__isset
@@ -2074,7 +2076,53 @@ inline std::ostream &operator<<(std::ostream &out, const scan_response &obj)
 
 typedef struct _duplicate_request__isset
 {
-    _duplicate_request__isset()
+    _duplicate_request__isset() : entries(false) {}
+    bool entries : 1;
+} _duplicate_request__isset;
+
+class duplicate_request
+{
+public:
+    duplicate_request(const duplicate_request &);
+    duplicate_request(duplicate_request &&);
+    duplicate_request &operator=(const duplicate_request &);
+    duplicate_request &operator=(duplicate_request &&);
+    duplicate_request() {}
+
+    virtual ~duplicate_request() throw();
+    std::vector<duplicate_entry> entries;
+
+    _duplicate_request__isset __isset;
+
+    void __set_entries(const std::vector<duplicate_entry> &val);
+
+    bool operator==(const duplicate_request &rhs) const
+    {
+        if (!(entries == rhs.entries))
+            return false;
+        return true;
+    }
+    bool operator!=(const duplicate_request &rhs) const { return !(*this == rhs); }
+
+    bool operator<(const duplicate_request &) const;
+
+    uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
+    uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
+
+    virtual void printTo(std::ostream &out) const;
+};
+
+void swap(duplicate_request &a, duplicate_request &b);
+
+inline std::ostream &operator<<(std::ostream &out, const duplicate_request &obj)
+{
+    obj.printTo(out);
+    return out;
+}
+
+typedef struct _duplicate_entry__isset
+{
+    _duplicate_entry__isset()
         : timestamp(false),
           task_code(false),
           raw_message(false),
@@ -2087,25 +2135,25 @@ typedef struct _duplicate_request__isset
     bool raw_message : 1;
     bool cluster_id : 1;
     bool verify_timetag : 1;
-} _duplicate_request__isset;
+} _duplicate_entry__isset;
 
-class duplicate_request
+class duplicate_entry
 {
 public:
-    duplicate_request(const duplicate_request &);
-    duplicate_request(duplicate_request &&);
-    duplicate_request &operator=(const duplicate_request &);
-    duplicate_request &operator=(duplicate_request &&);
-    duplicate_request() : timestamp(0), cluster_id(0), verify_timetag(0) {}
+    duplicate_entry(const duplicate_entry &);
+    duplicate_entry(duplicate_entry &&);
+    duplicate_entry &operator=(const duplicate_entry &);
+    duplicate_entry &operator=(duplicate_entry &&);
+    duplicate_entry() : timestamp(0), cluster_id(0), verify_timetag(0) {}
 
-    virtual ~duplicate_request() throw();
+    virtual ~duplicate_entry() throw();
     int64_t timestamp;
     ::dsn::task_code task_code;
     ::dsn::blob raw_message;
     int8_t cluster_id;
     bool verify_timetag;
 
-    _duplicate_request__isset __isset;
+    _duplicate_entry__isset __isset;
 
     void __set_timestamp(const int64_t val);
 
@@ -2117,7 +2165,7 @@ public:
 
     void __set_verify_timetag(const bool val);
 
-    bool operator==(const duplicate_request &rhs) const
+    bool operator==(const duplicate_entry &rhs) const
     {
         if (__isset.timestamp != rhs.__isset.timestamp)
             return false;
@@ -2141,9 +2189,9 @@ public:
             return false;
         return true;
     }
-    bool operator!=(const duplicate_request &rhs) const { return !(*this == rhs); }
+    bool operator!=(const duplicate_entry &rhs) const { return !(*this == rhs); }
 
-    bool operator<(const duplicate_request &) const;
+    bool operator<(const duplicate_entry &) const;
 
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;
@@ -2151,9 +2199,9 @@ public:
     virtual void printTo(std::ostream &out) const;
 };
 
-void swap(duplicate_request &a, duplicate_request &b);
+void swap(duplicate_entry &a, duplicate_entry &b);
 
-inline std::ostream &operator<<(std::ostream &out, const duplicate_request &obj)
+inline std::ostream &operator<<(std::ostream &out, const duplicate_entry &obj)
 {
     obj.printTo(out);
     return out;

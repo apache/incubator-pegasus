@@ -449,7 +449,7 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
-    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-f|--freezed]", add_dup},
+    {"add_dup", "add duplication", "<app_name> <remote_cluster_name> [-s|--sst]", add_dup},
     {"query_dup", "query duplication info", "<app_name> [-d|--detail]", query_dup},
     {"remove_dup", "remove duplication", "<app_name> <dup_id>", remove_dup},
     {"start_dup", "start duplication", "<app_name> <dup_id>", start_dup},
@@ -484,6 +484,9 @@ static command_executor commands[] = {
         cancel_bulk_load,
     },
     {
+        "clear_bulk_load", "clear app bulk load result", "<-a --app_name str>", clear_bulk_load,
+    },
+    {
         "detect_hotkey",
         "start or stop hotkey detection on a replica of a replica server",
         "<-a|--app_id num> "
@@ -492,6 +495,18 @@ static command_executor commands[] = {
         "<-c|--detect_action start|stop|query> "
         "<-d|--address str>",
         detect_hotkey,
+    },
+    {
+        "get_replica_count",
+        "get the max replica count of an app",
+        "<app_name> [-j|--json]",
+        get_max_replica_count,
+    },
+    {
+        "set_replica_count",
+        "set the max replica count of an app",
+        "<app_name> <replica_count>",
+        set_max_replica_count,
     },
     {
         "exit", "exit shell", "", exit_shell,

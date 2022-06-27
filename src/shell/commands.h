@@ -153,6 +153,10 @@ bool del_app_envs(command_executor *e, shell_context *sc, arguments args);
 
 bool clear_app_envs(command_executor *e, shell_context *sc, arguments args);
 
+bool get_max_replica_count(command_executor *e, shell_context *sc, arguments args);
+
+bool set_max_replica_count(command_executor *e, shell_context *sc, arguments args);
+
 // == data operations (see 'commands/data_operations.cpp') == //
 
 bool data_operations(command_executor *e, shell_context *sc, arguments args);
@@ -272,6 +276,8 @@ bool pause_bulk_load(command_executor *e, shell_context *sc, arguments args);
 bool restart_bulk_load(command_executor *e, shell_context *sc, arguments args);
 
 bool cancel_bulk_load(command_executor *e, shell_context *sc, arguments args);
+
+bool clear_bulk_load(command_executor *e, shell_context *sc, arguments args);
 
 // == detect hotkey (see 'commands/detect_hotkey.cpp') == //
 

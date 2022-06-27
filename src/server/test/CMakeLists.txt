@@ -49,7 +49,6 @@ set(MY_PROJ_LIBS
         pegasus_reporter
         RocksDB::rocksdb
         pegasus_client_static
-        zookeeper_mt
         event
         galaxy-fds-sdk-cpp
         PocoNet
@@ -58,6 +57,8 @@ set(MY_PROJ_LIBS
         PocoJSON
         pegasus_base
         gtest
+        gmock
+        hashtable
         )
 add_definitions(-DPEGASUS_UNIT_TEST)
 add_definitions(-DENABLE_FAIL)

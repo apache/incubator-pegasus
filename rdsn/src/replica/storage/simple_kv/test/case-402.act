@@ -1,0 +1,214 @@
+# The MIT License (MIT)
+#
+# Copyright (c) 2015 Microsoft Corporation
+#
+# -=- Robust Distributed System Nucleus (rDSN) -=-
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Case Description:
+# - inject aio_call of secondary
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+config:{3,r1,[r2,r3]}
+state:{{r1,pri,3,0},{r2,sec,3,0},{r3,sec,3,0}}
+
+set:disable_load_balance=1
+
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+client:begin_write:id=11,key=k11,value=v11,timeout=0
+client:begin_write:id=12,key=k12,value=v12,timeout=0
+client:begin_write:id=13,key=k13,value=v13,timeout=0
+client:begin_write:id=14,key=k14,value=v14,timeout=0
+client:begin_write:id=15,key=k15,value=v15,timeout=0
+client:begin_write:id=16,key=k16,value=v16,timeout=0
+client:begin_write:id=17,key=k17,value=v17,timeout=0
+client:begin_write:id=18,key=k18,value=v18,timeout=0
+client:begin_write:id=19,key=k19,value=v19,timeout=0
+client:begin_write:id=20,key=k20,value=v20,timeout=0
+client:begin_write:id=21,key=k21,value=v21,timeout=0
+client:begin_write:id=22,key=k22,value=v22,timeout=0
+client:begin_write:id=23,key=k23,value=v23,timeout=0
+client:begin_write:id=24,key=k24,value=v24,timeout=0
+client:begin_write:id=25,key=k25,value=v25,timeout=0
+client:begin_write:id=26,key=k26,value=v26,timeout=0
+client:begin_write:id=27,key=k27,value=v27,timeout=0
+client:begin_write:id=28,key=k28,value=v28,timeout=0
+client:begin_write:id=29,key=k29,value=v29,timeout=0
+client:begin_write:id=30,key=k30,value=v30,timeout=0
+client:begin_write:id=31,key=k31,value=v31,timeout=0
+client:begin_write:id=32,key=k32,value=v32,timeout=0
+client:begin_write:id=33,key=k33,value=v33,timeout=0
+client:begin_write:id=34,key=k34,value=v34,timeout=0
+client:begin_write:id=35,key=k35,value=v35,timeout=0
+client:begin_write:id=36,key=k36,value=v36,timeout=0
+client:begin_write:id=37,key=k37,value=v37,timeout=0
+client:begin_write:id=38,key=k38,value=v38,timeout=0
+client:begin_write:id=39,key=k39,value=v39,timeout=0
+client:begin_write:id=40,key=k40,value=v40,timeout=0
+client:begin_write:id=41,key=k41,value=v41,timeout=0
+client:begin_write:id=42,key=k42,value=v42,timeout=0
+client:begin_write:id=43,key=k43,value=v43,timeout=0
+client:begin_write:id=44,key=k44,value=v44,timeout=0
+client:begin_write:id=45,key=k45,value=v45,timeout=0
+client:begin_write:id=46,key=k46,value=v46,timeout=0
+client:begin_write:id=47,key=k47,value=v47,timeout=0
+client:begin_write:id=48,key=k48,value=v48,timeout=0
+client:begin_write:id=49,key=k49,value=v49,timeout=0
+client:begin_write:id=50,key=k50,value=v50,timeout=0
+client:begin_write:id=51,key=k51,value=v51,timeout=0
+client:begin_write:id=52,key=k52,value=v52,timeout=0
+client:begin_write:id=53,key=k53,value=v53,timeout=0
+client:begin_write:id=54,key=k54,value=v54,timeout=0
+client:begin_write:id=55,key=k55,value=v55,timeout=0
+client:begin_write:id=56,key=k56,value=v56,timeout=0
+client:begin_write:id=57,key=k57,value=v57,timeout=0
+client:begin_write:id=58,key=k58,value=v58,timeout=0
+client:begin_write:id=59,key=k59,value=v59,timeout=0
+client:begin_write:id=60,key=k60,value=v60,timeout=0
+client:begin_write:id=61,key=k61,value=v61,timeout=0
+client:begin_write:id=62,key=k62,value=v62,timeout=0
+client:begin_write:id=63,key=k63,value=v63,timeout=0
+client:begin_write:id=64,key=k64,value=v64,timeout=0
+client:begin_write:id=65,key=k65,value=v65,timeout=0
+client:begin_write:id=66,key=k66,value=v66,timeout=0
+client:begin_write:id=67,key=k67,value=v67,timeout=0
+client:begin_write:id=68,key=k68,value=v68,timeout=0
+client:begin_write:id=69,key=k69,value=v69,timeout=0
+client:begin_write:id=70,key=k70,value=v70,timeout=0
+client:begin_write:id=71,key=k71,value=v71,timeout=0
+client:begin_write:id=72,key=k72,value=v72,timeout=0
+client:begin_write:id=73,key=k73,value=v73,timeout=0
+client:begin_write:id=74,key=k74,value=v74,timeout=0
+client:begin_write:id=75,key=k75,value=v75,timeout=0
+client:begin_write:id=76,key=k76,value=v76,timeout=0
+client:begin_write:id=77,key=k77,value=v77,timeout=0
+client:begin_write:id=78,key=k78,value=v78,timeout=0
+client:begin_write:id=79,key=k79,value=v79,timeout=0
+client:begin_write:id=80,key=k80,value=v80,timeout=0
+client:begin_write:id=81,key=k81,value=v81,timeout=0
+client:begin_write:id=82,key=k82,value=v82,timeout=0
+client:begin_write:id=83,key=k83,value=v83,timeout=0
+client:begin_write:id=84,key=k84,value=v84,timeout=0
+client:begin_write:id=85,key=k85,value=v85,timeout=0
+client:begin_write:id=86,key=k86,value=v86,timeout=0
+client:begin_write:id=87,key=k87,value=v87,timeout=0
+client:begin_write:id=88,key=k88,value=v88,timeout=0
+client:begin_write:id=89,key=k89,value=v89,timeout=0
+client:begin_write:id=90,key=k90,value=v90,timeout=0
+client:begin_write:id=91,key=k91,value=v91,timeout=0
+client:begin_write:id=92,key=k92,value=v92,timeout=0
+client:begin_write:id=93,key=k93,value=v93,timeout=0
+client:begin_write:id=94,key=k94,value=v94,timeout=0
+client:begin_write:id=95,key=k95,value=v95,timeout=0
+client:begin_write:id=96,key=k96,value=v96,timeout=0
+client:begin_write:id=97,key=k97,value=v97,timeout=0
+client:begin_write:id=98,key=k98,value=v98,timeout=0
+client:begin_write:id=99,key=k99,value=v99,timeout=0
+client:begin_write:id=100,key=k100,value=v100,timeout=0
+client:begin_write:id=101,key=k101,value=v101,timeout=0
+client:begin_write:id=102,key=k102,value=v102,timeout=0
+client:begin_write:id=103,key=k103,value=v103,timeout=0
+client:begin_write:id=104,key=k104,value=v104,timeout=0
+client:begin_write:id=105,key=k105,value=v105,timeout=0
+client:begin_write:id=106,key=k106,value=v106,timeout=0
+client:begin_write:id=107,key=k107,value=v107,timeout=0
+client:begin_write:id=108,key=k108,value=v108,timeout=0
+client:begin_write:id=109,key=k109,value=v109,timeout=0
+client:begin_write:id=110,key=k110,value=v110,timeout=0
+client:begin_write:id=111,key=k111,value=v111,timeout=0
+client:begin_write:id=112,key=k112,value=v112,timeout=0
+client:begin_write:id=113,key=k113,value=v113,timeout=0
+client:begin_write:id=114,key=k114,value=v114,timeout=0
+client:begin_write:id=115,key=k115,value=v115,timeout=0
+client:begin_write:id=116,key=k116,value=v116,timeout=0
+client:begin_write:id=117,key=k117,value=v117,timeout=0
+client:begin_write:id=118,key=k118,value=v118,timeout=0
+client:begin_write:id=119,key=k119,value=v119,timeout=0
+client:begin_write:id=120,key=k120,value=v120,timeout=0
+client:begin_write:id=121,key=k121,value=v121,timeout=0
+client:begin_write:id=122,key=k122,value=v122,timeout=0
+client:begin_write:id=123,key=k123,value=v123,timeout=0
+client:begin_write:id=124,key=k124,value=v124,timeout=0
+client:begin_write:id=125,key=k125,value=v125,timeout=0
+client:begin_write:id=126,key=k126,value=v126,timeout=0
+client:begin_write:id=127,key=k127,value=v127,timeout=0
+client:begin_write:id=128,key=k128,value=v128,timeout=0
+client:begin_write:id=129,key=k129,value=v129,timeout=0
+client:begin_write:id=130,key=k130,value=v130,timeout=0
+client:begin_write:id=131,key=k131,value=v131,timeout=0
+client:begin_write:id=132,key=k132,value=v132,timeout=0
+client:begin_write:id=133,key=k133,value=v133,timeout=0
+client:begin_write:id=134,key=k134,value=v134,timeout=0
+client:begin_write:id=135,key=k135,value=v135,timeout=0
+client:begin_write:id=136,key=k136,value=v136,timeout=0
+client:begin_write:id=137,key=k137,value=v137,timeout=0
+client:begin_write:id=138,key=k138,value=v138,timeout=0
+client:begin_write:id=139,key=k139,value=v139,timeout=0
+client:begin_write:id=140,key=k140,value=v140,timeout=0
+client:begin_write:id=141,key=k141,value=v141,timeout=0
+client:begin_write:id=142,key=k142,value=v142,timeout=0
+client:begin_write:id=143,key=k143,value=v143,timeout=0
+client:begin_write:id=144,key=k144,value=v144,timeout=0
+client:begin_write:id=145,key=k145,value=v145,timeout=0
+client:begin_write:id=146,key=k146,value=v146,timeout=0
+client:begin_write:id=147,key=k147,value=v147,timeout=0
+client:begin_write:id=148,key=k148,value=v148,timeout=0
+client:begin_write:id=149,key=k149,value=v149,timeout=0
+client:begin_write:id=150,key=k150,value=v150,timeout=0
+client:begin_write:id=151,key=k151,value=v151,timeout=0
+client:begin_write:id=152,key=k152,value=v152,timeout=0
+client:begin_write:id=153,key=k153,value=v153,timeout=0
+client:begin_write:id=154,key=k154,value=v154,timeout=0
+client:begin_write:id=155,key=k155,value=v155,timeout=0
+client:begin_write:id=156,key=k156,value=v156,timeout=0
+client:begin_write:id=157,key=k157,value=v157,timeout=0
+client:begin_write:id=158,key=k158,value=v158,timeout=0
+client:begin_write:id=159,key=k159,value=v159,timeout=0
+client:begin_write:id=160,key=k160,value=v160,timeout=0
+client:begin_write:id=161,key=k161,value=v161,timeout=0
+client:begin_write:id=162,key=k162,value=v162,timeout=0
+client:begin_write:id=163,key=k163,value=v163,timeout=0
+client:begin_write:id=164,key=k164,value=v164,timeout=0
+client:begin_write:id=165,key=k165,value=v165,timeout=0
+client:begin_write:id=166,key=k166,value=v166,timeout=0
+client:begin_write:id=167,key=k167,value=v167,timeout=0
+client:begin_write:id=168,key=k168,value=v168,timeout=0
+client:begin_write:id=169,key=k169,value=v169,timeout=0
+
+inject:on_aio_call:node=r2,task_code=LPC_WRITE_REPLICATION_LOG_PRIVATE
+config:{4,r1,[r3]}
+
+state:{{r1,pri,4,20},{r3,sec,4,11}}
+
+set:disable_load_balance=0
+
+config:{5,r1,[r2,r3]}
+state:{{r1,pri,5,169},{r2,sec,5,169},{r3,sec,5,169}}
+

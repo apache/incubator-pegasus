@@ -1,0 +1,75 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package session
+
+import (
+	"testing"
+
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/idl/rrdb"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCodec_Marshal(t *testing.T) {
+	expected := []byte{
+		0x54, 0x48, 0x46, 0x54, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x80, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x26,
+		0x52, 0x50, 0x43, 0x5f, 0x43, 0x4d, 0x5f, 0x51,
+		0x55, 0x45, 0x52, 0x59, 0x5f, 0x50, 0x41, 0x52,
+		0x54, 0x49, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x43,
+		0x4f, 0x4e, 0x46, 0x49, 0x47, 0x5f, 0x42, 0x59,
+		0x5f, 0x49, 0x4e, 0x44, 0x45, 0x58, 0x00, 0x00,
+		0x00, 0x01, 0x0c, 0x00, 0x01, 0x0b, 0x00, 0x01,
+		0x00, 0x00, 0x00, 0x04, 0x74, 0x65, 0x6d, 0x70,
+		0x0f, 0x00, 0x02, 0x08, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00,
+	}
+	arg := rrdb.NewMetaQueryCfgArgs()
+	arg.Query = replication.NewQueryCfgRequest()
+	arg.Query.AppName = "temp"
+	arg.Query.PartitionIndices = []int32{}
+
+	r := &PegasusRpcCall{
+		Args:  arg,
+		Name:  "RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX",
+		Gpid:  &base.Gpid{0, 0},
+		SeqId: 1,
+	}
+
+	actual, _ := new(PegasusCodec).Marshal(r)
+	assert.Equal(t, expected, actual)
+}
+
+func TestCodec_UnmarshalErrorCode(t *testing.T) {
+	recvBytes := []byte{
+		0x54, 0x48, 0x46,
+	}
+
+	r := &PegasusRpcCall{}
+
+	err := new(PegasusCodec).Unmarshal(recvBytes, r)
+	assert.NotNil(t, err)
+}

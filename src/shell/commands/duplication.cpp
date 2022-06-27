@@ -38,8 +38,9 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         fmt::print(stderr, "too many params\n");
         return false;
     }
+
     for (const auto &flag : cmd.flags()) {
-        if (flag != "f" && flag != "freeze") {
+        if (dsn_unlikely(flag != "s" && flag != "sst")) {
             fmt::print(stderr, "unknown flag {}\n", flag);
             return false;
         }
@@ -63,9 +64,9 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
         return true;
     }
 
-    bool freeze = cmd[{"-f", "--freeze"}];
-
-    auto err_resp = sc->ddl_client->add_dup(app_name, remote_cluster_name, freeze);
+    bool is_duplicating_checkpoint = cmd[{"-s", "--sst"}];
+    auto err_resp =
+        sc->ddl_client->add_dup(app_name, remote_cluster_name, is_duplicating_checkpoint);
     dsn::error_s err = err_resp.get_error();
     std::string hint;
     if (err.is_ok()) {
@@ -74,10 +75,10 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     }
     if (!err.is_ok()) {
         fmt::print(stderr,
-                   "adding duplication failed [app: {}, remote: {}, freeze: {}, error: {}]\n",
+                   "adding duplication failed [app: {}, remote: {}, checkpoint: {}, error: {}]\n",
                    app_name,
                    remote_cluster_name,
-                   freeze,
+                   is_duplicating_checkpoint,
                    err.description());
         if (!hint.empty()) {
             fmt::print(stderr, "detail:\n  {}\n", hint);
@@ -85,12 +86,12 @@ bool add_dup(command_executor *e, shell_context *sc, arguments args)
     } else {
         const auto &resp = err_resp.get_value();
         fmt::print("adding duplication succeed [app: {}, remote: {}, appid: {}, dupid: "
-                   "{}, freeze: {}]\n",
+                   "{}], checkpoint: {}\n",
                    app_name,
                    remote_cluster_name,
                    resp.appid,
                    resp.dupid,
-                   freeze);
+                   is_duplicating_checkpoint);
     }
     return true;
 }
@@ -205,7 +206,7 @@ bool change_dup_status(command_executor *e,
 
     std::string operation;
     switch (status) {
-    case duplication_status::DS_START:
+    case duplication_status::DS_LOG:
         operation = "starting duplication";
         break;
     case duplication_status::DS_PAUSE:
@@ -215,7 +216,7 @@ bool change_dup_status(command_executor *e,
         operation = "removing duplication";
         break;
     default:
-        dfatal("unexpected duplication status %d", status);
+        dfatal("can't change duplication under status %d", status);
     }
 
     auto err_resp = sc->ddl_client->change_dup_status(app_name, dup_id, status);
@@ -231,7 +232,7 @@ bool remove_dup(command_executor *e, shell_context *sc, arguments args)
 
 bool start_dup(command_executor *e, shell_context *sc, arguments args)
 {
-    return change_dup_status(e, sc, args, duplication_status::DS_START);
+    return change_dup_status(e, sc, args, duplication_status::DS_LOG);
 }
 
 bool pause_dup(command_executor *e, shell_context *sc, arguments args)

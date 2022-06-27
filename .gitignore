@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 src/.matchfile
 src/builder
 onebox/
@@ -89,8 +106,8 @@ LOG
 
 .vscode/
 .history/
+.*-history
 
-.shell-history
 PACKAGE
 scripts/py_utils/*.pyc
 cmake-build-debug
@@ -101,3 +118,146 @@ config-shell.ini.*
 *.tar.gz
 pegasus-server*
 *.log
+
+admin-cli/bin/
+pegic/bin/
+golangci-*
+
+java-client/bin/
+java-client/release/
+java-client/target/
+java-client/.settings
+java-client/.project
+java-client/.classpath
+java-client/.idea
+java-client/pegasus-client.iml
+java-client/log.txt
+java-client/rolling_log/
+java-client/.vscode/
+java-client/google-java-format-*
+java-client/pegasus-*
+java-client/dependency-reduced-pom.xml
+
+# Created by .ignore support plugin (hsz.mobi)
+### SBT template
+# Simple Build Tool
+# http://www.scala-sbt.org/release/docs/Getting-Started/Directories.html#configuring-version-control
+
+scala-client/target/
+### Scala template
+scala-client/*.class
+scala-client/*.log
+
+scala-client/.idea/
+scala-client/.iml
+scala-client/rolling_log/
+
+# Byte-compiled / optimized / DLL files
+python-client/__pycache__/
+python-client/*.py[cod]
+python-client/*$py.class
+
+# C extensions
+python-client/*.so
+
+# Distribution / packaging
+python-client/.Python
+python-client/env/
+python-client/build/
+python-client/develop-eggs/
+python-client/dist/
+python-client/downloads/
+python-client/eggs/
+python-client/.eggs/
+python-client/lib/
+python-client/lib64/
+python-client/parts/
+python-client/sdist/
+python-client/var/
+python-client/wheels/
+python-client/*.egg-info/
+python-client/.installed.cfg
+python-client/*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+python-client/*.manifest
+python-client/*.spec
+
+# Installer logs
+python-client/pip-log.txt
+python-client/pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+python-client/htmlcov/
+python-client/.tox/
+python-client/.coverage
+python-client/.coverage.*
+python-client/.cache
+python-client/nosetests.xml
+python-client/coverage.xml
+python-client/*.cover
+python-client/.hypothesis/
+
+# Translations
+python-client/*.mo
+python-client/*.pot
+
+# Django stuff:
+python-client/*.log
+python-client/local_settings.py
+
+# Flask stuff:
+python-client/instance/
+python-client/.webassets-cache
+
+python-client/# Scrapy stuff:
+python-client/.scrapy
+
+# Sphinx documentation
+python-client/docs/_build/
+
+# PyBuilder
+python-client/target/
+
+# Jupyter Notebook
+python-client/.ipynb_checkpoints
+
+# pyenv
+python-client/.python-version
+
+# celery beat schedule file
+python-client/celerybeat-schedule
+
+# SageMath parsed files
+python-client/*.sage.py
+
+# dotenv
+python-client/.env
+
+# virtualenv
+python-client/.venv
+python-client/venv/
+python-client/ENV/
+
+# Spyder project settings
+python-client/.spyderproject
+python-client/.spyproject
+
+# Rope project settings
+python-client/.ropeproject
+
+# mkdocs documentation
+python-client/site
+
+# mypy
+python-client/.mypy_cache/
+
+.arcconfig
+*.log*
+node_modules
+package-lock.json
+
+#go
+go-client/bin
