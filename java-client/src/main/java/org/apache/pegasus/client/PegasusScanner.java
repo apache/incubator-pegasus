@@ -369,7 +369,7 @@ public class PegasusScanner implements PegasusScannerInterface {
   Throwable _cause;
 
   private boolean _needCheckHash;
-    // whether scan operation got incomplete error
+  // whether scan operation got incomplete error
   private boolean _incomplete;
 
   private boolean _fullScan;
