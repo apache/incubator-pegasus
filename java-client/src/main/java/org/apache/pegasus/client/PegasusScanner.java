@@ -92,6 +92,11 @@ public class PegasusScanner implements PegasusScannerInterface {
   }
 
   public boolean hasNext() throws PException {
+    synchronized (_promisesLock) {
+      if (_nextItem != null) {
+        return true;
+      }
+    }
     _nextItem = next();
     return _nextItem != null;
   }
