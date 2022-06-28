@@ -31,6 +31,7 @@ import (
 var predefinedAppEnvKeys = []string{
 	"rocksdb.usage_scenario",
 	"replica.deny_client_write",
+	"replica.deny_client_request",
 	"replica.write_throttling",
 	"replica.write_throttling_by_size",
 	"default_ttl",
