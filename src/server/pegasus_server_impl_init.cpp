@@ -586,6 +586,12 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     _key_ttl_compaction_filter_factory = std::make_shared<KeyWithTTLCompactionFilterFactory>();
     _data_cf_opts.compaction_filter_factory = _key_ttl_compaction_filter_factory;
 
+    _data_cf_opts.periodic_compaction_seconds =
+        dsn_config_get_value_uint64("pegasus.server",
+                                    "rocksdb_periodic_compaction_seconds",
+                                    0,
+                                    "periodic_compaction_seconds, 0 means no periodic compaction");
+
     // get the checkpoint reserve options.
     _checkpoint_reserve_min_count_in_config = (uint32_t)dsn_config_get_value_uint64(
         "pegasus.server", "checkpoint_reserve_min_count", 2, "checkpoint_reserve_min_count");
