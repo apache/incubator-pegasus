@@ -356,14 +356,13 @@ public:
 
         { // writing logs
             mutation_log_ptr mlog = create_private_log();
-            task_tracker tracker;
+
             for (int i = 0; i < num_entries; i++) {
                 mutation_ptr mu = create_test_mutation(2 + i, "hello!");
                 mutations.push_back(mu);
-                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, &tracker, nullptr, 0);
+                mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
-            tracker.wait_outstanding_tasks();
-            mlog->flush();
+            mlog->tracker()->wait_outstanding_tasks();
         }
 
         { // replaying logs
