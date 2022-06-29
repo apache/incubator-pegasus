@@ -92,13 +92,13 @@ public class PegasusScanner implements PegasusScannerInterface {
   }
 
   public boolean hasNext() throws PException {
-    synchronized (_promisesLock) {
+    synchronized (_nextItemLock) {
       if (_nextItem != null) {
         return true;
       }
+      _nextItem = next();
+      return _nextItem != null;
     }
-    _nextItem = next();
-    return _nextItem != null;
   }
 
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException {
@@ -377,6 +377,7 @@ public class PegasusScanner implements PegasusScannerInterface {
 
   private boolean _fullScan;
 
+  private final Object _nextItemLock = new Object();
   private Pair<Pair<byte[], byte[]>, byte[]> _nextItem;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(PegasusScanner.class);
