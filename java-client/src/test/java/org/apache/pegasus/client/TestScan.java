@@ -107,6 +107,41 @@ public class TestScan {
   }
 
   @Test
+  public void testHasNext() throws PException {
+    System.out.println("TESTING_HAS_NEXT, ALL SORT_KEYS ....");
+    ScanOptions options = new ScanOptions();
+    TreeMap<String, String> data = new TreeMap<String, String>();
+    PegasusScannerInterface scanner =
+        client.getScanner(
+            tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
+    Assert.assertNotNull(scanner);
+    Pair<Pair<byte[], byte[]>, byte[]> item;
+    int count = 0;
+    while (scanner.hasNext()) {
+      item = scanner.next();
+      count++;
+      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      checkAndPutSortMap(
+          data,
+          expectedHashKey,
+          new String(item.getLeft().getRight()),
+          new String(item.getRight()));
+      if ((item = scanner.next()) != null) {
+        count++;
+      }
+      Assert.assertEquals(expectedHashKey, new String(item.getLeft().getLeft()));
+      checkAndPutSortMap(
+          data,
+          expectedHashKey,
+          new String(item.getLeft().getRight()),
+          new String(item.getRight()));
+    }
+    Assert.assertEquals(1000, count);
+    scanner.close();
+    compareSortMap(data, base.get(expectedHashKey), expectedHashKey);
+  }
+
+  @Test
   public void testInclusive() throws PException {
     /** ** [start, stop] *** */
     System.out.println("TESTING_HASH_SCAN, [start, stop]...");

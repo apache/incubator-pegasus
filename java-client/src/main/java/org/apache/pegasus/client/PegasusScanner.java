@@ -88,9 +88,27 @@ public class PegasusScanner implements PegasusScannerInterface {
     _needCheckHash = needCheckHash;
     _incomplete = false;
     _fullScan = fullScan;
+    _nextItem = null;
+  }
+
+  public boolean hasNext() throws PException {
+    synchronized (_nextItemLock) {
+      if (_nextItem != null) {
+        return true;
+      }
+      _nextItem = next();
+      return _nextItem != null;
+    }
   }
 
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException {
+    synchronized (_nextItemLock) {
+      if (_nextItem != null) {
+        Pair<Pair<byte[], byte[]>, byte[]> item = _nextItem;
+        _nextItem = null;
+        return item;
+      }
+    }
     try {
       return asyncNext().get(_options.timeoutMillis, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
@@ -358,6 +376,9 @@ public class PegasusScanner implements PegasusScannerInterface {
   private boolean _incomplete;
 
   private boolean _fullScan;
+
+  private final Object _nextItemLock = new Object();
+  private Pair<Pair<byte[], byte[]>, byte[]> _nextItem;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(PegasusScanner.class);
 }
