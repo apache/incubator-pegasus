@@ -99,13 +99,13 @@ jobs:
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
         working-directory: rdsn
-        run: ./run.sh build -c --skip_thirdparty
+        run: ./run.sh build -c --skip_thirdparty -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --skip_thirdparty
+          ./run.sh test --skip_thirdparty -j $(($(nproc)/2+1))
 
   test-with-sanitizer-address:
     name: Test With Sanitizer Address
@@ -142,13 +142,13 @@ jobs:
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
         working-directory: rdsn
-        run: ./run.sh build -c --sanitizer address --skip_thirdparty --disable_gperf
+        run: ./run.sh build -c --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --sanitizer address --skip_thirdparty --disable_gperf
+          ./run.sh test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
 
   test-with-sanitizer-leak:
     name: Test With Sanitizer Leak
@@ -185,13 +185,13 @@ jobs:
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
         working-directory: rdsn
-        run: ./run.sh build -c --sanitizer leak --skip_thirdparty --disable_gperf
+        run: ./run.sh build -c --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --sanitizer leak --skip_thirdparty --disable_gperf
+          ./run.sh test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
 
   test-with-sanitizer-undefined:
     name: Test With Sanitizer Undefined
@@ -228,10 +228,10 @@ jobs:
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
         working-directory: rdsn
-        run: ./run.sh build -c --sanitizer undefined --skip_thirdparty --disable_gperf
+        run: ./run.sh build -c --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --sanitizer undefined --skip_thirdparty --disable_gperf
+          ./run.sh test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
