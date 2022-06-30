@@ -67,7 +67,7 @@ jobs:
   test:
     name: Test
     needs: lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
@@ -110,7 +110,7 @@ jobs:
   test-with-sanitizer-address:
     name: Test With Sanitizer Address
     needs: lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
@@ -153,7 +153,7 @@ jobs:
   test-with-sanitizer-leak:
     name: Test With Sanitizer Leak
     needs: lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
@@ -196,7 +196,7 @@ jobs:
   test-with-sanitizer-undefined:
     name: Test With Sanitizer Undefined
     needs: lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
       env:
