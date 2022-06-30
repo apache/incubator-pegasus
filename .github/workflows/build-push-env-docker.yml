@@ -42,8 +42,8 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
-          - centos7
           - centos6
+          - centos7
     steps:
       - name: Checkout
         uses: actions/checkout@v2
