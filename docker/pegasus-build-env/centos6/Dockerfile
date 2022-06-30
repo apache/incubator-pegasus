@@ -19,22 +19,24 @@ FROM centos:6.10
 
 LABEL maintainer=jiashuo
 
-RUN yum -y install centos-release-scl \
-scl-utils \
-epel-release; \
-yum -y install devtoolset-7-gcc \
+RUN yum -y install \
+devtoolset-7-gcc \
 devtoolset-7-gcc-c++ \
-java-1.8.0-openjdk-devel.x86_64 \
-python3 \
+java-1.8.0-openjdk-devel \
+git \
+gettext \
+curl-devel \
+rh-maven33 \
+python27 \
+python34 \
 automake \
 autoconf \
 make \
 libtool \
-git \
 file \
 wget \
 ccache \
-nmap-ncat \
+nc \
 zip \
 gdb \
 vim \
@@ -50,21 +52,19 @@ libzstd-devel \
 lz4-devel \
 bison \
 flex \
-krb5-devel \
-cyrus-sasl-devel \
 patch; \
 yum clean all; \
 rm -rf /var/cache/yum;
 
-RUN pip3 install --no-cache-dir cmake
+RUN pip install --no-cache-dir cmake
 
-RUN wget --progress=dot:giga https://archive.apache.org/dist/maven/maven-3/3.8.3/binaries/apache-maven-3.8.3-bin.tar.gz -P /opt/maven \
-    && cd /opt/maven \
-    && tar -zxf apache-maven-3.8.3-bin.tar.gz \
-    && rm apache-maven-3.8.3-bin.tar.gz
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64/
+ENV GCC_HOME=/opt/rh/devtoolset-7/root/usr/
+ENV PYTHON2_HOME=/opt/rh/python27/root/usr/
+ENV MAVEN_HOME=/opt/rh/rh-maven33/root/usr/
 
-ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.322.b06-1.el7_9.x86_64
-ENV PATH="/opt/rh/devtoolset-7/root/bin/:${PATH}"
-ENV PATH="/opt/maven/apache-maven-3.8.3/bin:${PATH}"
+ENV PATH=$MAVEN_HOME/bin:$JAVA_HOME/bin:$GCC_HOME/bin:$PYTHON2_HOME/bin/:$PATH
+ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$PYTHON2_HOME/lib64/:$LD_LIBRARY_PATH
+
 
 WORKDIR /root/apache
