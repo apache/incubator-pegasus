@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM centos:6.10
+FROM apachepegasus/centos6:6.10
 
 LABEL maintainer=jiashuo
 
