@@ -56,8 +56,6 @@ patch; \
 yum clean all; \
 rm -rf /var/cache/yum;
 
-RUN pip install --no-cache-dir cmake
-
 ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64/
 ENV GCC_HOME=/opt/rh/devtoolset-7/root/usr/
 ENV PYTHON2_HOME=/opt/rh/python27/root/usr/
@@ -65,6 +63,8 @@ ENV MAVEN_HOME=/opt/rh/rh-maven33/root/usr/
 
 ENV PATH=$MAVEN_HOME/bin:$JAVA_HOME/bin:$GCC_HOME/bin:$PYTHON2_HOME/bin/:$PATH
 ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$PYTHON2_HOME/lib64/:$LD_LIBRARY_PATH
+
+RUN pip install --no-cache-dir cmake
 
 
 WORKDIR /root/apache
