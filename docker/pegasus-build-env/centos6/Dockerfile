@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# use the centos with valid yum repo url
 FROM apachepegasus/centos-vault:6.10
 
 LABEL maintainer=jiashuo
