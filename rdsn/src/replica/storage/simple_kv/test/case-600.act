@@ -1,0 +1,114 @@
+# The MIT License (MIT)
+#
+# Copyright (c) 2015 Microsoft Corporation
+#
+# -=- Robust Distributed System Nucleus (rDSN) -=-
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Case Description:
+#   http://wiki.n.miui.com/pages/viewpage.action?pageId=33947601
+
+set:load_balance_for_test=1,not_exit_on_log_failure=1
+
+state:{{r1,pri,1,0}}
+
+wait:on_task_begin:node=r1,task_code=RPC_CONFIG_PROPOSAL
+
+set:disable_load_balance=1
+
+state:{{r1,pri,1,0},{r2,pot,1,0}}
+
+config:{2,r1,[r2]}
+state:{{r1,pri,2,0},{r2,sec,2,0}}
+
+client:begin_write:id=1,key=k1,value=v1,timeout=0
+client:begin_write:id=2,key=k2,value=v2,timeout=0
+client:begin_write:id=3,key=k3,value=v3,timeout=0
+client:begin_write:id=4,key=k4,value=v4,timeout=0
+client:begin_write:id=5,key=k5,value=v5,timeout=0
+client:begin_write:id=6,key=k6,value=v6,timeout=0
+client:begin_write:id=7,key=k7,value=v7,timeout=0
+client:begin_write:id=8,key=k8,value=v8,timeout=0
+client:begin_write:id=9,key=k9,value=v9,timeout=0
+client:begin_write:id=10,key=k10,value=v10,timeout=0
+client:begin_write:id=11,key=k11,value=v11,timeout=0
+
+state:{{r1,pri,2,11},{r2,sec,2,11}}
+
+client:begin_read:id=1,key=k1,timeout=0
+client:end_read:id=1,err=err_ok,resp=v1
+client:begin_read:id=2,key=k2,timeout=0
+client:end_read:id=2,err=err_ok,resp=v2
+client:begin_read:id=3,key=k3,timeout=0
+client:end_read:id=3,err=err_ok,resp=v3
+client:begin_read:id=4,key=k4,timeout=0
+client:end_read:id=4,err=err_ok,resp=v4
+client:begin_read:id=5,key=k5,timeout=0
+client:end_read:id=5,err=err_ok,resp=v5
+client:begin_read:id=6,key=k6,timeout=0
+client:end_read:id=6,err=err_ok,resp=v6
+client:begin_read:id=7,key=k7,timeout=0
+client:end_read:id=7,err=err_ok,resp=v7
+client:begin_read:id=8,key=k8,timeout=0
+client:end_read:id=8,err=err_ok,resp=v8
+client:begin_read:id=9,key=k9,timeout=0
+client:end_read:id=9,err=err_ok,resp=v9
+client:begin_read:id=10,key=k10,timeout=0
+client:end_read:id=10,err=err_ok,resp=v10
+client:begin_read:id=11,key=k11,timeout=0
+client:end_read:id=11,err=err_ok,resp=v11
+
+set:disable_load_balance=0
+
+wait:on_task_begin:node=r1,task_code=RPC_CONFIG_PROPOSAL
+
+set:disable_load_balance=1
+
+state:{{r1,pri,2,11},{r2,sec,2,11},{r3,pot,2,0}}
+
+# learn LT_APP
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
+
+# learn LT_CACHE, delay RPC_LEARN_ACK
+wait:on_rpc_call:rpc_name=RPC_LEARN,from=r3,to=r1
+wait:on_rpc_reply:rpc_name=RPC_LEARN_ACK,from=r1,to=r3
+modify:on_rpc_response_enqueue:node=r3,task_code=RPC_LEARN_ACK,delay=10,rpc_name=RPC_LEARN_ACK,from=r1,to=r3,modify_delay=10000
+
+# write new data before RPC_LEARN_ACK processed by learner
+client:begin_write:id=12,key=k12,value=v12,timeout=0
+state:{{r1,pri,2,12},{r2,sec,2,11},{r3,pot,2,11}}
+client:end_write:id=12,err=err_ok,resp=0
+
+# process RPC_LEARN_ACK
+wait:on_task_begin:node=r3,task_code=RPC_LEARN_ACK
+state:{{r1,pri,2,12},{r2,sec,2,11},{r3,pot,2,11}}
+
+# notify LEARN_COMPLETION
+wait:on_rpc_call:rpc_name=RPC_LEARN_COMPLETION_NOTIFY,from=r3,to=r1
+wait:on_rpc_reply:rpc_name=RPC_LEARN_COMPLETION_NOTIFY_ACK,from=r1,to=r3
+
+# process RPC_LEARN_COMPLETION_NOTIFY_ACK
+wait:on_task_begin:node=r3,task_code=RPC_LEARN_COMPLETION_NOTIFY_ACK
+state:{{r1,pri,2,12},{r2,sec,2,11},{r3,ina,2,11}}
+
+# replica on r3 will be closed finally
+state:{{r1,pri,2,12},{r2,sec,2,12}}
+

@@ -35,6 +35,14 @@ public interface PegasusScannerInterface {
   public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException;
 
   /**
+   * Judge whether scan completed
+   *
+   * @return Return false if no data left, return true means some data left.
+   * @throws PException
+   */
+  public boolean hasNext() throws PException;
+
+  /**
    * Get the next item asynchronously.
    *
    * @return A future for current op.

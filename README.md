@@ -88,10 +88,6 @@ Pegasus has support for several languages:
 
 ## Related Projects
 
-Submodules:
-
-- [rDSN](https://github.com/xiaomi/rdsn)
-
 Test tools:
 
 - [Java YCSB](https://github.com/xiaomi/pegasus-YCSB)
