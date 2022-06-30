@@ -363,6 +363,7 @@ public:
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, &tracker, nullptr, 0);
             }
             tracker.wait_outstanding_tasks();
+            mlog->flush();
         }
 
         { // replaying logs
