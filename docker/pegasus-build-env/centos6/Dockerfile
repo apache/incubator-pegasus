@@ -67,5 +67,4 @@ ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$PYTHON2_HOME/lib64/:$LD_LIB
 
 RUN pip install --no-cache-dir cmake
 
-
 WORKDIR /root/apache
