@@ -26,6 +26,8 @@ RUN curl https://www.getpagespeed.com/files/centos6-scl-eol.repo --output /etc/y
 RUN curl https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 
 # diable gpgcheck, otherwise the repo check will be failed.
+RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g  /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/epel.repo
 RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl.repo
 
