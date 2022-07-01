@@ -17,6 +17,7 @@
 # under the License.
 #
 
+# https://cwiki.apache.org/confluence/display/INFRA/Git+-+.asf.yaml+features
 github:
   description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
   homepage: https://pegasus.apache.org/
@@ -39,6 +40,10 @@ github:
     merge:   true
     # enable rebase button:
     rebase:  true
+  protected_branches:
+    master:
+      # squash or rebase must be allowed in the repo for this setting to be set to true.
+      required_linear_history: false
 
 notifications:
   commits: commits@pegasus.apache.org
