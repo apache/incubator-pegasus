@@ -32,43 +32,43 @@ RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl-rh.rep
 RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl.repo
 
 RUN yum -y install \
-devtoolset-7-gcc \
-devtoolset-7-gcc-c++ \
-java-1.8.0-openjdk-devel \
-git \
-gettext \
-curl-devel \
-rh-maven33 \
-python27 \
-python34 \
-automake \
-autoconf \
-make \
-libtool \
-file \
-wget \
-ccache \
-nc \
-zip \
-gdb \
-vim \
-unzip \
-which \
-openssl-devel \
-libaio-devel \
-snappy-devel \
-bzip2-devel \
-zlib \
-zlib-devel \
-libzstd-devel \
-lz4-devel \
-bison \
-flex \
-patch; \
-yum clean all; \
-rm -rf /var/cache/yum;
+                devtoolset-7-gcc \
+                devtoolset-7-gcc-c++ \
+                java-1.8.0-openjdk-devel \
+                git \
+                gettext \
+                curl-devel \
+                rh-maven33 \
+                python27 \
+                python34 \
+                automake \
+                autoconf \ 
+                make \
+                libtool \
+                file \
+                wget \
+                ccache \
+                nc \
+                zip \
+                gdb \
+                vim \
+                unzip \
+                which \
+                openssl-devel \
+                libaio-devel \
+                snappy-devel \
+                bzip2-devel \
+                zlib \
+                zlib-devel \
+                libzstd-devel \
+                lz4-devel \
+                bison \
+                flex \
+                patch; \
+                yum clean all; \
+                rm -rf /var/cache/yum;
 
-ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk.x86_64/
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0/
 ENV GCC_HOME=/opt/rh/devtoolset-7/root/usr/
 ENV PYTHON2_HOME=/opt/rh/python27/root/usr/
 ENV MAVEN_HOME=/opt/rh/rh-maven33/root/usr/
