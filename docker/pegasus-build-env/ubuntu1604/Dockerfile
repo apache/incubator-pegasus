@@ -49,8 +49,6 @@ RUN apt-get update -y; \
                        libtool \
                        libssl-dev \
                        bison \
-                       libkrb5-dev \
-                       libsasl2-dev \
                        maven \
                        flex; \
     rm -rf /var/lib/apt/lists/*
