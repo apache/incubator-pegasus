@@ -49,7 +49,7 @@ github:
         dismiss_stale_reviews: true
         require_code_owner_reviews: false
         required_approving_review_count: 2
-      required_signatures: true
+      required_signatures: false
       required_linear_history: true
     ci-test:
       required_status_checks:
@@ -59,7 +59,7 @@ github:
         dismiss_stale_reviews: true
         require_code_owner_reviews: false
         required_approving_review_count: 2
-      required_signatures: true
+      required_signatures: false
       required_linear_history: true
 
 notifications:
