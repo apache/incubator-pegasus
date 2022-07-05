@@ -2009,7 +2009,7 @@ case $cmd in
         ;;
     pack_server)
         shift
-        PEGASUS_ROOT=$ROOT ./scripts/pack_server.sh $*
+        PEGASUS_ROOT=$ROOT  ./scripts/pack_server.sh $*
         ;;
     pack_client)
         shift
