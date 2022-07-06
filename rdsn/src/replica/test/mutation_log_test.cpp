@@ -362,6 +362,7 @@ public:
                 mutations.push_back(mu);
                 mlog->append(mu, LPC_AIO_IMMEDIATE_CALLBACK, nullptr, nullptr, 0);
             }
+            mlog->tracker()->wait_outstanding_tasks();
         }
 
         { // replaying logs

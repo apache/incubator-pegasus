@@ -1701,6 +1701,7 @@ void bulk_load_service::do_sync_partition(const gpid &pid, std::string &partitio
 void bulk_load_service::try_to_continue_bulk_load()
 {
     FAIL_POINT_INJECT_F("meta_try_to_continue_bulk_load", [](dsn::string_view) {});
+    zauto_read_lock l(_lock);
     for (const auto app_id : _bulk_load_app_id) {
         app_bulk_load_info ainfo = _app_bulk_load_info[app_id];
         // <partition_index, partition_bulk_load_info>

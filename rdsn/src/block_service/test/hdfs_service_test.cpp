@@ -376,15 +376,3 @@ TEST_F(HDFSClientTest, test_rename_path_while_writing)
     ASSERT_TRUE(dsn::utils::filesystem::rename_path(local_test_dir, rename_dir));
     tracker.cancel_outstanding_tasks();
 }
-
-#ifndef SANITIZER
-TEST_F(HDFSClientTest, test_remove_path_while_writing)
-{
-    task_tracker tracker;
-    write_test_files_async(&tracker);
-    usleep(100);
-    // couldn't remove the directory while writing files in it.
-    ASSERT_FALSE(dsn::utils::filesystem::remove_path(local_test_dir));
-    tracker.cancel_outstanding_tasks();
-}
-#endif
