@@ -74,7 +74,7 @@ jobs:
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
-        run: ./run.sh build -c --skip_thirdparty
+        run: ./run.sh build -c -j $(($(nproc)/2+1))
       - name: Packaging Server
         run: ./run.sh pack_server
       - name: Packaging Tools
