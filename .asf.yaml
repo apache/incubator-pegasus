@@ -17,6 +17,7 @@
 # under the License.
 #
 
+# https://cwiki.apache.org/confluence/display/INFRA/Git+-+.asf.yaml+features
 github:
   description: "Apache Pegasus - A horizontally scalable, strongly consistent and high-performance key-value store"
   homepage: https://pegasus.apache.org/
@@ -39,6 +40,27 @@ github:
     merge:   true
     # enable rebase button:
     rebase:  true
+  protected_branches:
+    master:
+      required_status_checks:
+        # strict means "Require branches to be up to date before merging".
+        strict: false
+      required_pull_request_reviews:
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+        required_approving_review_count: 2
+      required_signatures: false
+      required_linear_history: true
+    ci-test:
+      required_status_checks:
+        # strict means "Require branches to be up to date before merging".
+        strict: false
+      required_pull_request_reviews:
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: false
+        required_approving_review_count: 2
+      required_signatures: false
+      required_linear_history: true
 
 notifications:
   commits: commits@pegasus.apache.org
