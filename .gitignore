@@ -261,3 +261,10 @@ package-lock.json
 
 #go
 go-client/bin
+
+# rdsn
+rdsn/builder
+rdsn/thirdparty/build
+rdsn/thirdparty/src
+rdsn/thirdparty/output
+rdsn/cmake-build-debug/

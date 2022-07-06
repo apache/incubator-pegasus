@@ -497,6 +497,8 @@ private:
 
     void update_app_max_replica_count(int32_t max_replica_count);
 
+    int32_t mutation_2pc_min_replica_count();
+
 private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::mutation_queue;

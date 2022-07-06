@@ -144,7 +144,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     }
 
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
-        _options->mutation_2pc_min_replica_count) {
+        mutation_2pc_min_replica_count()) {
         response_client_write(request, ERR_NOT_ENOUGH_MEMBER);
         return;
     }
@@ -223,7 +223,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     // for reconciliation, we should ensure every prepared mutation to be committed
     // please refer to PacificA paper
     if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
-            _options->mutation_2pc_min_replica_count &&
+            mutation_2pc_min_replica_count() &&
         !reconciliation) {
         err = ERR_NOT_ENOUGH_MEMBER;
         goto ErrOut;

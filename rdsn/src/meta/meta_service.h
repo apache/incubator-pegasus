@@ -174,6 +174,8 @@ public:
         return metas.substr(0, metas.length() - 1);
     }
 
+    int32_t mutation_2pc_min_replica_count(int32_t app_max_replica_count);
+
 private:
     void register_rpc_handlers();
     void register_ctrl_commands();

@@ -1446,7 +1446,7 @@ void server_state::update_configuration_locally(
     partition_configuration &old_cfg = app.partitions[gpid.get_partition_index()];
     partition_configuration &new_cfg = config_request->config;
 
-    int min_2pc_count = _meta_svc->get_options().mutation_2pc_min_replica_count;
+    int min_2pc_count = _meta_svc->mutation_2pc_min_replica_count(old_cfg.max_replica_count);
     health_status old_health_status = partition_health_status(old_cfg, min_2pc_count);
     health_status new_health_status = partition_health_status(new_cfg, min_2pc_count);
 
@@ -2375,8 +2375,8 @@ void server_state::update_partition_perf_counter()
 {
     int counters[HS_MAX_VALUE];
     ::memset(counters, 0, sizeof(counters));
-    int min_2pc_count = _meta_svc->get_options().mutation_2pc_min_replica_count;
     auto func = [&](const std::shared_ptr<app_state> &app) {
+        int min_2pc_count = _meta_svc->mutation_2pc_min_replica_count(app->max_replica_count);
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             health_status st = partition_health_status(app->partitions[i], min_2pc_count);
             counters[st]++;

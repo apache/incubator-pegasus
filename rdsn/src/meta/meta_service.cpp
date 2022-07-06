@@ -1306,5 +1306,10 @@ void meta_service::on_set_max_replica_count(configuration_set_max_replica_count_
                      server_state::sStateHash);
 }
 
+int32_t meta_service::mutation_2pc_min_replica_count(int32_t app_max_replica_count)
+{
+    return std::min(_opts.mutation_2pc_min_replica_count, app_max_replica_count) - 1;
+}
+
 } // namespace replication
 } // namespace dsn

@@ -91,7 +91,6 @@ private:
     // ]
     dsn_handle_t _ctrl_assign_secondary_black_list = nullptr;
 
-    int32_t _mutation_2pc_min_replica_count;
     dsn_handle_t _ctrl_assign_delay_ms = nullptr;
     uint64_t _replica_assign_delay_ms_for_dropouts;
 
