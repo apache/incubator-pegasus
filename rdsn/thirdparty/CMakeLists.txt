@@ -159,6 +159,33 @@ ExternalProject_Add(thrift
         DEPENDS boost
         )
 
+# kerberos
+ExternalProject_Add(krb5
+        URL ${OSS_URL_PREFIX}/krb5-1.16.1.tar.gz
+        http://web.mit.edu/kerberos/dist/krb5/1.16/krb5-1.16.1.tar.gz
+        URL_MD5 848e9b80d6aaaa798e3f3df24b83c407
+        CONFIGURE_COMMAND cd src && ./configure --prefix=${TP_OUTPUT}
+        BUILD_COMMAND cd src && make
+        INSTALL_COMMAND cd src && make install
+        BUILD_IN_SOURCE 1
+        )
+
+# cyrus-sasl
+ExternalProject_Add(cyrus-sasl
+        URL ${OSS_URL_PREFIX}/cyrus-sasl-2.1.27.tar.gz
+        http://www.cyrusimap.org/releases/cyrus-sasl-2.1.27.tar.gz
+        URL_MD5 a33820c66e0622222c5aefafa1581083
+        CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT}
+        --enable-gssapi=${TP_OUTPUT}
+        --enable-scram=no
+        --enable-digest=no
+        --enable-cram=no
+        --enable-otp=no
+        BUILD_COMMAND make
+        INSTALL_COMMAND make install
+        BUILD_IN_SOURCE 1
+        )
+
 check_cxx_compiler_flag(-Wformat-overflow COMPILER_SUPPORTS_FORMAT_OVERFLOW)
 if (COMPILER_SUPPORTS_FORMAT_OVERFLOW)
     set(ZOOKEEPER_CFLAGS -Wno-error=format-overflow)
@@ -176,6 +203,7 @@ ExternalProject_Add(zookeeper
         INSTALL_COMMAND ""
         BUILD_IN_SOURCE 1
         )
+add_dependencies(zookeeper cyrus-sasl krb5)
 
 ExternalProject_Add(libevent
         URL ${OSS_URL_PREFIX}/libevent-release-2.1.8-stable.tar.gz
