@@ -106,6 +106,14 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_latest_options)
     ASSERT_EQ(opts.disable_auto_compactions, _server->_db->GetOptions().disable_auto_compactions);
 }
 
+TEST_F(pegasus_server_impl_test, test_open_db_with_comparator)
+{
+    // TODO(shenxingwuying)
+
+    // open a new db
+    start();
+}
+
 TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
 {
     std::map<std::string, std::string> envs;

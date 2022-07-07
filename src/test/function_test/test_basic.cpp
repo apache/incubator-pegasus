@@ -1852,3 +1852,14 @@ TEST(basic, full_scan_with_filter)
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(8, deleted_count);
 }
+
+TEST(basic, TestCreateTable)
+{
+    // TODO(shenxingwuying)
+    static const std::string table_with_default_comparator = "table_with_default_comparator";
+    static const std::string table_with_pegasus_comparator = "table_with_pegasus_comparator";
+
+    client = pegasus_client_factory::get_client("mycluster", table_with_default_comparator.c_str());
+
+    client = pegasus_client_factory::get_client("mycluster", table_with_pegasus_comparator.c_str());
+}

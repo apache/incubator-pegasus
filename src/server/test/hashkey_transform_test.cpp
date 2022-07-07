@@ -23,6 +23,7 @@
 #include <rocksdb/comparator.h>
 
 #include "base/pegasus_key_schema.h"
+#include "server/pegasus_comparator.h"
 
 // User define SliceTransform must obey the 4 rules of ColumnFamilyOptions.prefix_extractor:
 // 1) key.starts_with(prefix(key))
@@ -76,4 +77,21 @@ TEST(HashkeyTransformTest, Basic)
               prefix_extractor.Transform(skey3));
     ASSERT_EQ(prefix_extractor.Transform(prefix_extractor.Transform(skey4)),
               prefix_extractor.Transform(skey4));
+}
+
+TEST(HashkeyTransformTest, PegasusComparator)
+{
+    rocksdb::Comparator *comp = new pegasus::server::PegasusComparator();
+    const rocksdb::Comparator *bytes_comp = rocksdb::BytewiseComparator();
+
+    dsn::blob bkey1, bkey2, bkey3, bkey4;
+    pegasus::pegasus_generate_key(bkey1, std::string("z"), std::string(""));
+    pegasus::pegasus_generate_key(bkey2, std::string("aaa"), std::string(""));
+    rocksdb::Slice skey1(bkey1.data(), bkey1.size());
+    rocksdb::Slice skey2(bkey2.data(), bkey2.size());
+
+    ASSERT_TRUE(bytes_comp->Compare(skey1, skey2) < 0);
+    ASSERT_TRUE(comp->Compare(skey1, skey2) > 0);
+
+    delete comp;
 }
