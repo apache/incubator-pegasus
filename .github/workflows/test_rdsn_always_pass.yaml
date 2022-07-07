@@ -20,7 +20,7 @@
 # 'always pass' action to resolve it, see more details:
 # https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 
-name: rdsn Lint and Unit Test
+name: rdsn Unit Test
 
 on:
   # run on each pull request
@@ -46,12 +46,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'echo "No build required" '
-
   test:
     name: Test
     runs-on: ubuntu-latest

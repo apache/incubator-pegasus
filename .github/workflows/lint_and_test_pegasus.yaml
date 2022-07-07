@@ -56,7 +56,7 @@ jobs:
             fetch-depth: 1
             submodules: true
       - name: clang-format
-        run: ./rdsn/scripts/linux/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn -r ./src
+        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn/thirdparty -r .
 
   test:
     name: Test
@@ -74,7 +74,7 @@ jobs:
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
-        run: ./run.sh build -c --skip_thirdparty
+        run: ./run.sh build -c -j $(($(nproc)/2+1))
       - name: Packaging Server
         run: ./run.sh pack_server
       - name: Packaging Tools
