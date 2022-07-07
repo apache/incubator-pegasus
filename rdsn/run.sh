@@ -23,7 +23,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 os=linux
 scripts_dir=`pwd`/scripts/$os
 
@@ -78,7 +77,6 @@ function usage_build()
     echo "                         to enable valgrind memcheck, default no"
     echo "   --use_jemalloc        build with jemalloc"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
-    echo "   --check               whether to perform code check before building"
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     if [ "$ONLY_BUILD" == "NO" ]; then
@@ -107,7 +105,6 @@ function run_build()
     DISABLE_GPERF=NO
     USE_JEMALLOC=NO
     SKIP_THIRDPARTY=NO
-    CHECK=NO
     SANITIZER=""
     TEST_MODULE=""
     ROCKSDB_PORTABLE=OFF
@@ -163,9 +160,6 @@ function run_build()
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
                 ;;
-            --check)
-                CHECK=YES
-                ;;
             --sanitizer)
                 IS_SANITIZERS=`echo ${SANITIZERS[@]} | grep -w $2`
                 if [[ -z ${IS_SANITIZERS} ]]; then
@@ -198,11 +192,6 @@ function run_build()
         esac
         shift
     done
-
-    if [[ ${CHECK} == "YES" ]]; then
-        ${scripts_dir}/run-clang-format.sh
-        exit_if_fail $?
-    fi
 
     if [ "$(uname)" == "Darwin" ]; then
         MACOS_OPENSSL_ROOT_DIR="/usr/local/opt/openssl"

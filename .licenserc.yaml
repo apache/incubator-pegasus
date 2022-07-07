@@ -26,7 +26,6 @@ header:
     - '.github/pull_request_template.md'
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
-    - 'src/.clang-format'
     # TODO(yingchun): rrdb_types.* files can be automatic generated when build, we can remove them later.
     - 'src/base/rrdb_types.cpp'
     - 'src/include/rrdb/rrdb_types.h'
@@ -75,7 +74,7 @@ header:
     - 'rdsn/bin/FindRT.cmake'
     - 'rdsn/bin/FindDL.cmake'
     # Copyright (c) 2017 Guillaume Papin
-    - 'rdsn/scripts/linux/run-clang-format.py'
+    - 'scripts/run-clang-format.py'
     # need manual fix
     - 'rdsn/src/failure_detector/test/gtest.filter'
     - 'rdsn/src/meta/test/meta_state/gtest.filter'
@@ -90,7 +89,6 @@ header:
     # should be empty, or ignore all comment lines
     - 'rdsn/src/utils/test/config-empty.ini'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
-    - 'rdsn/.clang-format'
     - 'rdsn/.gitignore'
     - 'rdsn/.licenserc.yaml'
     - 'rdsn/README.md'
@@ -209,7 +207,6 @@ header:
     - 'rdsn/scripts/linux/clear_zk.sh'
     - 'rdsn/scripts/linux/install.sh'
     - 'rdsn/scripts/linux/learn_stat.py'
-    - 'rdsn/scripts/linux/run-clang-format.sh'
     - 'rdsn/scripts/linux/start_zk.sh'
     - 'rdsn/scripts/linux/stop_zk.sh'
     - 'rdsn/src/aio/aio_provider.cpp'
