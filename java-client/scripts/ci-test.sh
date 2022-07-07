@@ -57,6 +57,12 @@ cd $PEGASUS_PKG
 ./run.sh start_onebox -w
 cd ../
 
+
+pushd idl
+sh recompile_thrift.sh
+popd
+mvn spotless:apply
+
 if ! mvn clean test
 then
     cd $PEGASUS_PKG

@@ -21,6 +21,16 @@ under the License.
 
 [![Test - java client](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml)
 
+Basicly you can use build.sh and run it. eg:
+```
+sh build.sh build/install/test
+```
+or you can run
+```
+cd idl && sh recompile_thrift.sh && cd -
+```
+first and then run command as blow.
+
 ## Build
 
 ```

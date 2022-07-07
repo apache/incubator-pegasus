@@ -78,4 +78,11 @@ ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$PYTHON2_HOME/lib64/:$LD_LIB
 
 RUN pip install --no-cache-dir cmake
 
+RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
+    cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
+    ./configure --with-csharp=no --with-java=no --with-python=no --with-erlang=no --with-perl=no \
+        --with-php=no --with-ruby=no --with-haskell=no --with-php_extension=no --with-rs=no --with-go=no && \
+    make -j$(($(nproc)/2+1)) && make install && cd - && \
+    rm -rf thrift-0.11.0 0.11.0.tar.gz
+
 WORKDIR /root/apache
