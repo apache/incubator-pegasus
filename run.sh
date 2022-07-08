@@ -111,7 +111,9 @@ function run_build()
     SKIP_THIRDPARTY=NO
     SANITIZER=""
     TEST_MODULE=""
-    ENABLE_ROCKSDB_PORTABLE=NO
+    ENABLE_ROCKSDB_PORTABLE=OFF
+    USE_JEMALLOC=NO
+    NO_TEST=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -173,7 +175,24 @@ function run_build()
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ENABLE_ROCKSDB_PORTABLE=YES
+                ENABLE_ROCKSDB_PORTABLE=ON
+                ;;
+            --use_jemalloc)
+                DISABLE_GPERF=YES
+                USE_JEMALLOC=YES
+                ;;
+            -m|--test_module)
+                if [ "$ONLY_BUILD" == "YES" ]; then
+                    echo "ERROR: unknown option \"$key\""
+                    echo
+                    usage_build
+                    exit 1
+                fi
+                TEST_MODULE="$2"
+                shift
+                ;;
+            --notest)
+                NO_TEST=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -184,6 +203,12 @@ function run_build()
         esac
         shift
     done
+
+    if [ "$(uname)" == "Darwin" ]; then
+        MACOS_OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
+        CMAKE_OPTIONS="-DMACOS_OPENSSL_ROOT_DIR=${MACOS_OPENSSL_ROOT_DIR}"
+    fi
+
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo
@@ -207,39 +232,50 @@ function run_build()
 
     echo "INFO: start build rdsn..."
     cd $ROOT/rdsn
-    OPT="-t $BUILD_TYPE -j $JOB_NUM --compiler $C_COMPILER,$CXX_COMPILER"
-    if [ "$CLEAR" == "YES" ]; then
-        OPT="$OPT -c"
+    if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
+        echo "Skip building third-parties..."
+    else
+        cd thirdparty
+        if [[ "$CLEAR_THIRDPARTY" == "YES" ]]; then
+            echo "Clear third-parties..."
+            rm -rf build
+            rm -rf output
+        fi
+        echo "Start building third-parties..."
+        mkdir -p build
+        pushd build
+        CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                       -DCMAKE_C_COMPILER=${C_COMPILER}
+                       -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+                       -DCMAKE_BUILD_TYPE=Release
+                       -DROCKSDB_PORTABLE=${ENABLE_ROCKSDB_PORTABLE}
+                       -DUSE_JEMALLOC=${USE_JEMALLOC}"
+        cmake .. ${CMAKE_OPTIONS}
+        make -j$JOB_NUM
+        exit_if_fail $?
+        popd
+        cd ..
     fi
-    if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
-        OPT="$OPT --clear_thirdparty"
-    fi
-    if [ "$WARNING_ALL" == "YES" ]; then
-        OPT="$OPT -w"
-    fi
-    if [ "$RUN_VERBOSE" == "YES" ]; then
-        OPT="$OPT -v"
-    fi
-    if [ "$ENABLE_GCOV" == "YES" ]; then
-        OPT="$OPT --enable_gcov"
-    fi
-    if [ "$DISABLE_GPERF" == "YES" ]; then
-        OPT="$OPT --disable_gperf"
-    fi
-    if [ "$SKIP_THIRDPARTY" == "YES" ]; then
-        OPT="$OPT --skip_thirdparty"
-    fi
-    if [ ! -z $SANITIZER ]; then
-        OPT="$OPT --sanitizer $SANITIZER"
-    fi
-    if [ "$ENABLE_ROCKSDB_PORTABLE" == "YES" ]; then
-        OPT="$OPT --enable_rocksdb_portable"
-    fi
-    ./run.sh build $OPT --notest
-    if [ $? -ne 0 ]; then
-        echo "ERROR: build rdsn failed"
+
+    if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
+        echo "ERROR: invalid build type \"$BUILD_TYPE\""
+        echo
+        usage_build
         exit 1
     fi
+    if [ "$ONLY_BUILD" == "NO" ]; then
+        run_start_zk
+        if [ $? -ne 0 ]; then
+            echo "ERROR: start zk failed"
+            exit 1
+        fi
+    fi
+    C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
+        ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+        ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
+        DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \
+        MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" $scripts_dir/build.sh
 
     echo "INFO: start build pegasus..."
     cd $ROOT/src
