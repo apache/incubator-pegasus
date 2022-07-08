@@ -117,7 +117,6 @@ public:
     ~replication_options();
 
     void initialize();
-
     static bool get_data_dir_and_tag(const std::string &config_dirs_str,
                                      const std::string &default_dir,
                                      const std::string &app_name,
