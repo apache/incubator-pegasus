@@ -202,7 +202,6 @@ header:
     - 'rdsn/include/dsn/utility/utils.h'
     - 'rdsn/include/dsn/utility/work_queue.h'
     - 'rdsn/include/dsn/utils/time_utils.h'
-    - 'rdsn/run.sh'
     - 'rdsn/scripts/linux/build.sh'
     - 'rdsn/scripts/linux/clear_zk.sh'
     - 'rdsn/scripts/linux/install.sh'

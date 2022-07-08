@@ -33,7 +33,6 @@ on:
       - rdsn/bin/**
       - rdsn/compile_thrift.py
       - rdsn/include/**
-      - rdsn/run.sh
       - rdsn/scripts/**
       - rdsn/src/**
       - rdsn/thirdparty/**
@@ -84,7 +83,6 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        working-directory: rdsn
         run: ./run.sh build -c --skip_thirdparty -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
@@ -126,7 +124,6 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        working-directory: rdsn
         run: ./run.sh build -c --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
@@ -168,7 +165,6 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        working-directory: rdsn
         run: ./run.sh build -c --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
         working-directory: rdsn
@@ -210,10 +206,8 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        working-directory: rdsn
         run: ./run.sh build -c --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
-        working-directory: rdsn
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited

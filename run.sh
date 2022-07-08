@@ -120,8 +120,7 @@ function run_build()
     TEST_MODULE=""
     ENABLE_ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=NO
-    NO_TEST=NO
-    ONLY_BUILD=YES
+    NO_TEST=YES
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -190,7 +189,7 @@ function run_build()
                 USE_JEMALLOC=YES
                 ;;
             -m|--test_module)
-                if [ "$ONLY_BUILD" == "YES" ]; then
+                if [ "$$NO_TEST" == "YES" ]; then
                     echo "ERROR: unknown option \"$key\""
                     echo
                     usage_build
@@ -271,7 +270,7 @@ function run_build()
         usage_build
         exit 1
     fi
-    if [ "$ONLY_BUILD" == "NO" ]; then
+    if [ "$NO_TEST" == "NO" ]; then
         run_start_zk
         if [ $? -ne 0 ]; then
             echo "ERROR: start zk failed"
@@ -279,7 +278,7 @@ function run_build()
         fi
     fi
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
-        ONLY_BUILD="$ONLY_BUILD" CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+        CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
         DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \

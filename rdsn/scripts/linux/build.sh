@@ -31,7 +31,6 @@
 #    BUILD_TYPE     debug|release
 #    C_COMPILER     <str>
 #    CXX_COMPILER   <str>
-#    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
 #    ENABLE_GCOV    YES|NO
 #    TEST_MODULE    "<module1> <module2> ..."
@@ -68,13 +67,6 @@ then
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_BUILD_TYPE=Debug"
 else
     echo "BUILD_TYPE=release"
-fi
-
-if [ "$ONLY_BUILD" == "YES" ]
-then
-    echo "ONLY_BUILD=YES"
-else
-    echo "ONLY_BUILD=NO"
 fi
 
 if [ "$RUN_VERBOSE" == "YES" ]
@@ -175,7 +167,7 @@ else
 fi
 cd ..
 
-if [ "$ONLY_BUILD" == "YES" ]
+if [ "$NO_TEST" == "YES" ]
 then
     exit 0
 fi
