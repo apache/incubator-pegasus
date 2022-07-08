@@ -267,4 +267,5 @@ rdsn/builder
 rdsn/thirdparty/build
 rdsn/thirdparty/src
 rdsn/thirdparty/output
-rdsn/cmake-build-debug/
+rdsn/cmake-build-debug
+rdsn/test_reports
