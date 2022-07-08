@@ -91,6 +91,13 @@ function usage_build()
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
 }
+
+function exit_if_fail() {
+    if [ $1 != 0 ]; then
+        exit $1
+    fi
+}
+
 function run_build()
 {
     # Note(jiashuo1): No "memory" check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
@@ -114,6 +121,7 @@ function run_build()
     ENABLE_ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=NO
     NO_TEST=NO
+    ONLY_BUILD=YES
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -275,7 +283,7 @@ function run_build()
         ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
         DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \
-        MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" $scripts_dir/build.sh
+        MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" ./scripts/linux/build.sh
 
     echo "INFO: start build pegasus..."
     cd $ROOT/src

@@ -23,14 +23,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-os=linux
-scripts_dir=`pwd`/scripts/$os
 
-function exit_if_fail() {
-    if [ $1 != 0 ]; then
-        exit $1
-    fi
-}
 
 function usage()
 {
