@@ -85,12 +85,12 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
-if [ "$NO_TEST" == "YES" ]
+if [ "$TEST" == "NO" ]
 then
-    echo "NO_TEST=YES"
+    echo "TEST=NO"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DBUILD_TEST=OFF"
 else
-    echo "NO_TEST=NO"
+    echo "TEST=YES"
 fi
 
 # valgrind can not work together with gpertools
@@ -167,7 +167,7 @@ else
 fi
 cd ..
 
-if [ "$NO_TEST" == "YES" ]
+if [ "$TEST" == "NO" ]
 then
     exit 0
 fi

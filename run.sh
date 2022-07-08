@@ -120,7 +120,8 @@ function run_build()
     TEST_MODULE=""
     ENABLE_ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=NO
-    NO_TEST=YES
+    TEST=NO
+    ONLY_RDSN=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -189,17 +190,14 @@ function run_build()
                 USE_JEMALLOC=YES
                 ;;
             -m|--test_module)
-                if [ "$$NO_TEST" == "YES" ]; then
-                    echo "ERROR: unknown option \"$key\""
-                    echo
-                    usage_build
-                    exit 1
-                fi
                 TEST_MODULE="$2"
                 shift
                 ;;
-            --notest)
-                NO_TEST=YES
+            --test)
+                TEST=YES
+                ;;
+            --rdsn)
+                ONLY_RDSN=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -210,6 +208,13 @@ function run_build()
         esac
         shift
     done
+
+    if [ "$TEST" == "NO" -a "$TEST_MODULE" != "" ]; then
+        echo "ERROR: invalid option: --test is off but -m|--test_module is on"
+        echo
+        usage_build
+        exit 1
+    fi
 
     if [ "$(uname)" == "Darwin" ]; then
         MACOS_OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
@@ -270,7 +275,7 @@ function run_build()
         usage_build
         exit 1
     fi
-    if [ "$NO_TEST" == "NO" ]; then
+    if [ "$TEST" == "YES" ]; then
         run_start_zk
         if [ $? -ne 0 ]; then
             echo "ERROR: start zk failed"
@@ -280,9 +285,13 @@ function run_build()
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" NO_TEST="$NO_TEST" \
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" TEST="$TEST" \
         DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \
         MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" ./scripts/linux/build.sh
+
+    if [ "$ONLY_RDSN" == "YES" ]; then
+      exit 0
+    fi
 
     echo "INFO: start build pegasus..."
     cd $ROOT/src
@@ -439,7 +448,7 @@ function run_start_zk()
         shift
     done
     
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" ./scripts/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
     if [ $? -ne 0 ]; then
         exit 1
     fi
@@ -479,7 +488,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" ./scripts/stop_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/stop_zk.sh
 }
 
 #####################
@@ -516,7 +525,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" ./scripts/clear_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/clear_zk.sh
 }
 
 #####################
