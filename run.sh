@@ -119,7 +119,7 @@ function run_build()
     SANITIZER=""
     TEST_MODULE=""
     ENABLE_ROCKSDB_PORTABLE=OFF
-    USE_JEMALLOC=NO
+    USE_JEMALLOC=OFF
     TEST=NO
     ONLY_RDSN=NO
     while [[ $# > 0 ]]; do
@@ -187,7 +187,7 @@ function run_build()
                 ;;
             --use_jemalloc)
                 DISABLE_GPERF=YES
-                USE_JEMALLOC=YES
+                USE_JEMALLOC=ON
                 ;;
             -m|--test_module)
                 TEST_MODULE="$2"

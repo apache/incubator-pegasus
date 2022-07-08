@@ -103,7 +103,7 @@ else
     echo "DISABLE_GPERF=NO"
 fi
 
-if [ "$USE_JEMALLOC" == "YES" ]
+if [ "$USE_JEMALLOC" == "ON" ]
 then
     echo "USE_JEMALLOC=YES"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_JEMALLOC=ON"
