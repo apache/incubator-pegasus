@@ -86,10 +86,17 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --use_jemalloc        build with jemalloc"
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
+    echo "   --rdsn                whether to build/test rdsn module only"
+    if [ "$TEST" == "YES" ]; then
+        echo "   -m|--test_module      specify modules to test, split by ',',"
+        echo "                         e.g., \"dsn_runtime_tests,dsn_meta_state_tests\","
+        echo "                         if not set, then run all tests"
+    fi
 }
 
 function exit_if_fail() {
