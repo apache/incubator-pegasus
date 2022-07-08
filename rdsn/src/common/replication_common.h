@@ -118,10 +118,6 @@ public:
 
     void initialize();
 
-    int32_t min_2pc_replica_count(int32_t app_max_replica_count)
-    {
-        return std::min(mutation_2pc_min_replica_count, app_max_replica_count) - 1;
-    }
     static bool get_data_dir_and_tag(const std::string &config_dirs_str,
                                      const std::string &default_dir,
                                      const std::string &app_name,

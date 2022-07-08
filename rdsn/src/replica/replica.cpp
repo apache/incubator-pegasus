@@ -581,7 +581,7 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
     return err;
 }
 
-int32_t replica::mutation_2pc_min_replica_count()
+int32_t replica::mutation_2pc_min_replica_count() const
 {
     return std::min(_options->mutation_2pc_min_replica_count, _app_info.max_replica_count - 1);
 }
