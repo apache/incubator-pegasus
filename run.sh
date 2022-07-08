@@ -295,6 +295,7 @@ function run_build()
         RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" TEST="$TEST" \
         DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \
         MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" ./scripts/linux/build.sh
+    exit_if_fail $?
 
     if [ "$ONLY_RDSN" == "YES" ]; then
       exit 0
