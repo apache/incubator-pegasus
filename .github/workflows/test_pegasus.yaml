@@ -45,8 +45,172 @@ defaults:
     shell: bash
 
 jobs:
-  test:
-    name: Test
+  test_rdsn_Release
+    name: Test rdsn with Release
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      env:
+        CCACHE_DIR: /tmp/ccache/pegasus
+        CCACHE_MAXSIZE: 10G
+      volumes:
+        # Place ccache compilation intermediate results in host memory, that's shared among containers.
+        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
+      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
+      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            rdsn:
+              - 'rdsn/**'
+            thirdparty:
+              - 'rdsn/thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        working-directory: rdsn
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: rdsn/thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
+        run: |
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
+
+  test_rdsn_ASAN:
+    name: Test rdsn with ASAN
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      env:
+        CCACHE_DIR: /tmp/ccache/pegasus
+        CCACHE_MAXSIZE: 10G
+      volumes:
+        # Place ccache compilation intermediate results in host memory, that's shared among containers.
+        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
+      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
+      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            rdsn:
+              - 'rdsn/**'
+            thirdparty:
+              - 'rdsn/thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        working-directory: rdsn
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: rdsn/thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
+        run: |
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+
+  test_rdsn_LSAN:
+    name: Test rdsn with LSAN
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      env:
+        CCACHE_DIR: /tmp/ccache/pegasus
+        CCACHE_MAXSIZE: 10G
+      volumes:
+        # Place ccache compilation intermediate results in host memory, that's shared among containers.
+        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
+      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
+      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            rdsn:
+              - 'rdsn/**'
+            thirdparty:
+              - 'rdsn/thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        working-directory: rdsn
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: rdsn/thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
+        run: |
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+
+  test_rdsn_UBSAN:
+    name: Test rdsn with UBSAN
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      env:
+        CCACHE_DIR: /tmp/ccache/pegasus
+        CCACHE_MAXSIZE: 10G
+      volumes:
+        # Place ccache compilation intermediate results in host memory, that's shared among containers.
+        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
+      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
+      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            rdsn:
+              - 'rdsn/**'
+            thirdparty:
+              - 'rdsn/thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        working-directory: rdsn
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: rdsn/thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
+        run: |
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+
+  test_pegasus:
+    name: Test Pegasus
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -55,17 +219,26 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: recursive
+      - uses: dorny/paths-filter@v2
+          id: changes
+          with:
+            filters: |
+              pegasus:
+                - 'src/**'
       - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.pegasus == 'true'
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
+        if: steps.changes.outputs.pegasus == 'true'
         run: ./run.sh build -c -j $(($(nproc)/2+1))
       - name: Packaging Server
+        if: steps.changes.outputs.pegasus == 'true'
         run: ./run.sh pack_server
       - name: Packaging Tools
+        if: steps.changes.outputs.pegasus == 'true'
         run: ./run.sh pack_tools
       - name: Unit Testing
+        if: steps.changes.outputs.pegasus == 'true'
         run: |
           source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
