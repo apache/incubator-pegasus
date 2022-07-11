@@ -190,8 +190,7 @@ bool register_tool(const char *name)
 }
 template <typename T>
 T *get_toollet(const char *name)
-{
-    return (T *)internal_use_only::get_toollet(name, ::dsn::PROVIDER_TYPE_MAIN);
+{return (T *)internal_use_only::get_toollet(name, ::dsn::PROVIDER_TYPE_MAIN);
 }
 DSN_API tool_app *get_current_tool();
 DSN_API const service_spec &spec();
