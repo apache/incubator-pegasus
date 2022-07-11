@@ -86,16 +86,3 @@ jobs:
           # log: debug
           # Optional: set the config file. The default value is `.licenserc.yaml`.
           config: .licenserc.yaml
-
-  cpp_clang_format_linter:
-    name: Lint Cpp code
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-          submodules: true
-      - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn/thirdparty -r .

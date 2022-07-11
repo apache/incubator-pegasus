@@ -21,16 +21,12 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: Pegasus cpp Unit Test
+name: Lint and Unit Test for Cpp
 
 on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
-    paths:
-      - src/**
-      - rdsn
-      - run.sh
     branches:
       - master
       - 'v[0-9]+.*' # release branch
@@ -45,8 +41,22 @@ defaults:
     shell: bash
 
 jobs:
-  test_rdsn_Release
+  cpp_clang_format_linter:
+    name: Lint Cpp code
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:clang-format-3.9
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          submodules: true
+      - name: clang-format
+        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn/thirdparty -r .
+
+  test_rdsn_Release:
     name: Test rdsn with Release
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -88,6 +98,7 @@ jobs:
 
   test_rdsn_ASAN:
     name: Test rdsn with ASAN
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -129,6 +140,7 @@ jobs:
 
   test_rdsn_LSAN:
     name: Test rdsn with LSAN
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -170,6 +182,7 @@ jobs:
 
   test_rdsn_UBSAN:
     name: Test rdsn with UBSAN
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -211,6 +224,7 @@ jobs:
 
   test_pegasus:
     name: Test Pegasus
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
