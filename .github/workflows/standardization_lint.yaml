@@ -20,7 +20,7 @@ name: Standardization Lint
 on:
   # run on each pull request
   pull_request:
-    types: [ edited， synchronize, opened, reopened ]
+    types: [ edited，synchronize, opened, reopened ]
     branches:
       - master
       - 'v[0-9]+.*' # release branch
