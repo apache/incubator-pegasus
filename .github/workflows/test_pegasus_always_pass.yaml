@@ -15,12 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 ---
-# There are 'paths' filters for lint_and_test_pegasus.yaml,
+# There are 'paths' filters for test_pegasus.yaml,
 # it can be skipped, but lead CI pending, we add this
 # 'always pass' action to resolve it, see more details:
 # https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 
-name: Pegasus cpp Lint and Unit Test
+name: Pegasus cpp Unit Test
 
 on:
   # run on each pull request
@@ -40,15 +40,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'echo "No build required" '
-
   test:
     name: Test
-    needs: lint
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "No build required" '

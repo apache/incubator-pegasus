@@ -21,7 +21,7 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: Pegasus cpp Lint and Unit Test
+name: Pegasus cpp Unit Test
 
 on:
   # run on each pull request
@@ -45,22 +45,8 @@ defaults:
     shell: bash
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:clang-format-3.9
-    steps:
-      - uses: actions/checkout@v2
-        with:
-            fetch-depth: 1
-            submodules: true
-      - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn/thirdparty -r .
-
   test:
     name: Test
-    needs: lint
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
