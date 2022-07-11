@@ -21,27 +21,17 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: rdsn Unit Test
+name: Lint and Unit Test for Cpp
 
 on:
   # run on each pull request
   pull_request:
     types: [ synchronize, opened, reopened ]
-    paths:
-      - .github/workflows/test_rdsn.yaml
-      - rdsn/CMakeLists.txt
-      - rdsn/bin/**
-      - rdsn/compile_thrift.py
-      - rdsn/include/**
-      - rdsn/run.sh
-      - rdsn/scripts/**
-      - rdsn/src/**
-      - rdsn/thirdparty/**
     branches:
       - master
       - 'v[0-9]+.*' # release branch
       - ci-test # testing branch for github action
-      - '*dev' # developing branch
+      - '*dev'
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -51,50 +41,22 @@ defaults:
     shell: bash
 
 jobs:
-  test:
-    name: Test
+  cpp_clang_format_linter:
+    name: Lint Cpp code
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
-      env:
-        CCACHE_DIR: /tmp/ccache/pegasus
-        CCACHE_MAXSIZE: 10G
-      volumes:
-        # Place ccache compilation intermediate results in host memory, that's shared among containers.
-        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
-      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
-      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+      image: apache/pegasus:clang-format-3.9
     steps:
       - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: changes
         with:
-          filters: |
-            thirdparty:
-              - 'rdsn/thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        working-directory: rdsn
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: rdsn/thirdparty
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
-          cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --skip_thirdparty -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
-          ulimit -s unlimited
-          ./run.sh test --skip_thirdparty -j $(($(nproc)/2+1))
+          fetch-depth: 1
+          submodules: true
+      - name: clang-format
+        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn/thirdparty -r .
 
-  test-with-sanitizer-address:
-    name: Test With Sanitizer Address
+  test_rdsn_Release:
+    name: Test rdsn with Release
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -112,6 +74,8 @@ jobs:
         id: changes
         with:
           filters: |
+            rdsn:
+              - 'rdsn/**'
             thirdparty:
               - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
@@ -125,18 +89,16 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
         run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
 
-  test-with-sanitizer-leak:
-    name: Test With Sanitizer Leak
+  test_rdsn_ASAN:
+    name: Test rdsn with ASAN
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -154,6 +116,8 @@ jobs:
         id: changes
         with:
           filters: |
+            rdsn:
+              - 'rdsn/**'
             thirdparty:
               - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
@@ -167,18 +131,16 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
         run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
 
-  test-with-sanitizer-undefined:
-    name: Test With Sanitizer Undefined
+  test_rdsn_LSAN:
+    name: Test rdsn with LSAN
+    needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
@@ -196,6 +158,8 @@ jobs:
         id: changes
         with:
           filters: |
+            rdsn:
+              - 'rdsn/**'
             thirdparty:
               - 'rdsn/thirdparty/**'
       - name: Unpack prebuilt third-parties
@@ -209,12 +173,86 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
         run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+
+  test_rdsn_UBSAN:
+    name: Test rdsn with UBSAN
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      env:
+        CCACHE_DIR: /tmp/ccache/pegasus
+        CCACHE_MAXSIZE: 10G
+      volumes:
+        # Place ccache compilation intermediate results in host memory, that's shared among containers.
+        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
+      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
+      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            rdsn:
+              - 'rdsn/**'
+            thirdparty:
+              - 'rdsn/thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        working-directory: rdsn
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: rdsn/thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
+      - name: Compilation and Unit Testing
+        if: steps.changes.outputs.rdsn == 'true'
+        run: |
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+
+  test_pegasus:
+    name: Test Pegasus
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            pegasus:
+              - 'src/**'
+      - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.pegasus == 'true'
+        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+      - name: Compilation
+        if: steps.changes.outputs.pegasus == 'true'
+        run: ./run.sh build -c -j $(($(nproc)/2+1))
+      - name: Packaging Server
+        if: steps.changes.outputs.pegasus == 'true'
+        run: ./run.sh pack_server
+      - name: Packaging Tools
+        if: steps.changes.outputs.pegasus == 'true'
+        run: ./run.sh pack_tools
+      - name: Unit Testing
+        if: steps.changes.outputs.pegasus == 'true'
+        run: |
+          source ./scripts/config_hdfs.sh
+          ./run.sh test --on_travis

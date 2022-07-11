@@ -31,7 +31,6 @@
 #    BUILD_TYPE     debug|release
 #    C_COMPILER     <str>
 #    CXX_COMPILER   <str>
-#    ONLY_BUILD     YES|NO
 #    RUN_VERBOSE    YES|NO
 #    ENABLE_GCOV    YES|NO
 #    TEST_MODULE    "<module1> <module2> ..."
@@ -70,13 +69,6 @@ else
     echo "BUILD_TYPE=release"
 fi
 
-if [ "$ONLY_BUILD" == "YES" ]
-then
-    echo "ONLY_BUILD=YES"
-else
-    echo "ONLY_BUILD=NO"
-fi
-
 if [ "$RUN_VERBOSE" == "YES" ]
 then
     echo "RUN_VERBOSE=YES"
@@ -93,12 +85,12 @@ else
     echo "ENABLE_GCOV=NO"
 fi
 
-if [ "$NO_TEST" == "YES" ]
+if [ "$TEST" == "NO" ]
 then
-    echo "NO_TEST=YES"
+    echo "TEST=NO"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DBUILD_TEST=OFF"
 else
-    echo "NO_TEST=NO"
+    echo "TEST=YES"
 fi
 
 # valgrind can not work together with gpertools
@@ -111,7 +103,7 @@ else
     echo "DISABLE_GPERF=NO"
 fi
 
-if [ "$USE_JEMALLOC" == "YES" ]
+if [ "$USE_JEMALLOC" == "ON" ]
 then
     echo "USE_JEMALLOC=YES"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_JEMALLOC=ON"
@@ -175,7 +167,7 @@ else
 fi
 cd ..
 
-if [ "$ONLY_BUILD" == "YES" ]
+if [ "$TEST" == "NO" ]
 then
     exit 0
 fi
