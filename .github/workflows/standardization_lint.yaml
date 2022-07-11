@@ -66,10 +66,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        uses: hadolint/hadolint-action@v2.1.0
+      - uses: hadolint/hadolint-action@v2.1.0
         with:
           recursive: true
           ignore: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006'
+
+  license_check:
+    name: Check License
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
+        uses: actions/checkout@v2
+      - name: Check License Header
+        uses: apache/skywalking-eyes@v0.3.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # needed only when you want License-Eye to comment on the pull request.
+        with:
+          # Optional: set the log level. The default value is `info`.
+          # log: debug
+          # Optional: set the config file. The default value is `.licenserc.yaml`.
+          config: .licenserc.yaml
 
   cpp_clang_format_linter:
     name: Lint Cpp code
