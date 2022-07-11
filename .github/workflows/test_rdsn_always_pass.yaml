@@ -32,7 +32,6 @@ on:
       - rdsn/bin/**
       - rdsn/compile_thrift.py
       - rdsn/include/**
-      - rdsn/run.sh
       - rdsn/scripts/**
       - rdsn/src/**
       - rdsn/thirdparty/**

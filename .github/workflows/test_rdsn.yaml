@@ -33,7 +33,6 @@ on:
       - rdsn/bin/**
       - rdsn/compile_thrift.py
       - rdsn/include/**
-      - rdsn/run.sh
       - rdsn/scripts/**
       - rdsn/src/**
       - rdsn/thirdparty/**
@@ -83,15 +82,11 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --skip_thirdparty -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --skip_thirdparty -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
 
   test-with-sanitizer-address:
     name: Test With Sanitizer Address
@@ -125,15 +120,11 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
 
   test-with-sanitizer-leak:
     name: Test With Sanitizer Leak
@@ -167,15 +158,11 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
 
   test-with-sanitizer-undefined:
     name: Test With Sanitizer Undefined
@@ -209,12 +196,8 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        working-directory: rdsn
-        run: ./run.sh build -c --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        working-directory: rdsn
+      - name: Compilation and Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server          
           ulimit -s unlimited
-          ./run.sh test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
