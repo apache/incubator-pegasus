@@ -583,7 +583,12 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
 
 int32_t replica::mutation_2pc_min_replica_count() const
 {
-    return std::min(_options->mutation_2pc_min_replica_count, _app_info.max_replica_count - 1);
+    dassert_f(_app_info.max_replica_count > 0);
+if (_options->mutation_2pc_min_replica_count > 0) {//  >0 means use the user config
+    return _options->mutation_2pc_min_replica_count;
+} else {// otherwise based on the table max_replica_count
+    return _app_info.max_replica_count <=2 ? 1 :  _app_info.max_replica_count / 2 + 1;
+}
 }
 
 } // namespace replication
