@@ -37,7 +37,7 @@ bool mutation_log_tool::dump(
     std::function<void(int64_t decree, int64_t timestamp, dsn::message_ex **requests, int count)>
         callback)
 {
-mutation_log_ptr mlog = new mutation_log_shared(log_dir, 32, false);
+    mutation_log_ptr mlog = new mutation_log_shared(log_dir, 32, false);
     error_code err = mlog->open(
         [mlog, &output, callback](int log_length, mutation_ptr &mu) -> bool {
             if (mlog->max_decree(mu->data.header.pid) == 0) {
