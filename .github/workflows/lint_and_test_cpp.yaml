@@ -234,11 +234,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: dorny/paths-filter@v2
-          id: changes
-          with:
-            filters: |
-              pegasus:
-                - 'src/**'
+        id: changes
+        with:
+          filters: |
+            pegasus:
+              - 'src/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.pegasus == 'true'
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
