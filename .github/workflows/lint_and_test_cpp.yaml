@@ -237,22 +237,24 @@ jobs:
         id: changes
         with:
           filters: |
+            rdsn:
+              - 'rdsn/**'
             pegasus:
               - 'src/**'
       - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
         run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
       - name: Compilation
-        if: steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
         run: ./run.sh build -c -j $(($(nproc)/2+1))
       - name: Packaging Server
-        if: steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
         run: ./run.sh pack_server
       - name: Packaging Tools
-        if: steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
         run: ./run.sh pack_tools
       - name: Unit Testing
-        if: steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
         run: |
           source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
