@@ -117,6 +117,7 @@ public:
     ~replication_options();
 
     void initialize();
+    int32_t app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const;
     static bool get_data_dir_and_tag(const std::string &config_dirs_str,
                                      const std::string &default_dir,
                                      const std::string &app_name,

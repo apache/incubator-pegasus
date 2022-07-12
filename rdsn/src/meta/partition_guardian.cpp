@@ -24,13 +24,11 @@ namespace replication {
 partition_guardian::partition_guardian(meta_service *svc) : _svc(svc)
 {
     if (svc != nullptr) {
-        _mutation_2pc_min_replica_count = svc->get_options().mutation_2pc_min_replica_count;
         _replica_assign_delay_ms_for_dropouts =
             svc->get_meta_options()._lb_opts.replica_assign_delay_ms_for_dropouts;
         config_context::MAX_REPLICA_COUNT_IN_GRROUP =
             svc->get_meta_options()._lb_opts.max_replicas_in_group;
     } else {
-        _mutation_2pc_min_replica_count = 0;
         _replica_assign_delay_ms_for_dropouts = 0;
     }
 
@@ -477,8 +475,10 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
 
     configuration_proposal_action action;
     bool is_emergency = false;
-    if (cc.config_owner->max_replica_count > _mutation_2pc_min_replica_count &&
-        replica_count(pc) < _mutation_2pc_min_replica_count) {
+    if (cc.config_owner->max_replica_count >
+            _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count) &&
+        replica_count(pc) <
+            _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count)) {
         // ATTENTION:
         // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
         // wait for replica_assign_delay_ms_for_dropouts before recover the second replica.
