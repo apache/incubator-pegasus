@@ -230,7 +230,8 @@ void replication_options::initialize()
         "replication",
         "mutation_2pc_min_replica_count",
         mutation_2pc_min_replica_count,
-        "minimum number of alive replicas under which write is allowed");
+        "minimum number of alive replicas under which write is allowed. it's valid if larger than "
+        "0, otherwise, the final value based app max replica count");
 
     group_check_disabled = dsn_config_get_value_bool("replication",
                                                      "group_check_disabled",
@@ -419,6 +420,16 @@ void replication_options::sanity_check()
             "%d VS %d",
             max_mutation_count_in_prepare_list,
             staleness_for_commit);
+}
+
+int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
+{
+    dcheck_gt(app_max_replica_count, 0);
+    if (mutation_2pc_min_replica_count > 0) { //  >0 means use the user config
+        return mutation_2pc_min_replica_count;
+    } else { // otherwise, the value based on the table max_replica_count
+        return app_max_replica_count <= 2 ? 1 : app_max_replica_count / 2 + 1;
+    }
 }
 
 /*static*/ bool replica_helper::remove_node(::dsn::rpc_address node,

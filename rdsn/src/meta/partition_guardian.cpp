@@ -476,8 +476,9 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
     configuration_proposal_action action;
     bool is_emergency = false;
     if (cc.config_owner->max_replica_count >
-            _svc->mutation_2pc_min_replica_count(pc.max_replica_count) &&
-        replica_count(pc) < _svc->mutation_2pc_min_replica_count(pc.max_replica_count)) {
+            _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count) &&
+        replica_count(pc) <
+            _svc->get_options().app_mutation_2pc_min_replica_count(pc.max_replica_count)) {
         // ATTENTION:
         // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
         // wait for replica_assign_delay_ms_for_dropouts before recover the second replica.

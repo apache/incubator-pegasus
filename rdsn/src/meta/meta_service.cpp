@@ -1306,15 +1306,5 @@ void meta_service::on_set_max_replica_count(configuration_set_max_replica_count_
                      server_state::sStateHash);
 }
 
-int32_t meta_service::mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
-{
-    dassert_f(app_max_replica_count > 0, "max_replica_count > 0");
-    if (_opts.mutation_2pc_min_replica_count > 0) { //  >0 means use the user config
-        return _opts.mutation_2pc_min_replica_count;
-    } else { // otherwise, the value based on the table max_replica_count
-        return app_max_replica_count <= 2 ? 1 : app_max_replica_count / 2 + 1;
-    }
-}
-
 } // namespace replication
 } // namespace dsn
