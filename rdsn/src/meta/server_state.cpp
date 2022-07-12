@@ -2379,7 +2379,6 @@ void server_state::update_partition_perf_counter()
     auto func = [&](const std::shared_ptr<app_state> &app) {
         int min_2pc_count =
             _meta_svc->get_options().app_mutation_2pc_min_replica_count(app->max_replica_count);
-        ;
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             health_status st = partition_health_status(app->partitions[i], min_2pc_count);
             counters[st]++;
