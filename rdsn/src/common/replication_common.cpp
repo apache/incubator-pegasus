@@ -231,7 +231,7 @@ void replication_options::initialize()
         "mutation_2pc_min_replica_count",
         mutation_2pc_min_replica_count,
         "minimum number of alive replicas under which write is allowed. it's valid if larger than "
-        "0, otherwise, the final value based app max replica count");
+        "0, otherwise, the final value is based on app_max_replica_count");
 
     group_check_disabled = dsn_config_get_value_bool("replication",
                                                      "group_check_disabled",
