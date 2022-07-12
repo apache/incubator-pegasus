@@ -87,6 +87,7 @@ header:
     - 'thirdparty/fix_libevent_for_macos.patch'
     - 'thirdparty/fix_s2_for_aarch64.patch'
     - 'thirdparty/fix_thrift_for_cpp11.patch'
+    - 'thirdparty/rocksdb_fix_atomic_flush_0879c240.patch'
     # should be empty, or ignore all comment lines
     - 'src/utils/test/config-empty.ini'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
