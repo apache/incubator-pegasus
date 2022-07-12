@@ -1067,7 +1067,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
             init_prepare(next, false);
         }
 
-        if (_primary_states.membership.secondaries.size() + 1 < mutation_2pc_min_replica_count()) {
+        if (_primary_states.membership.secondaries.size() + 1 <
+            _options->app_mutation_2pc_min_replica_count(_app_info.max_replica_count)) {
             std::vector<mutation_ptr> queued;
             _primary_states.write_queue.clear(queued);
             for (auto &m : queued) {
