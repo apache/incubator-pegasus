@@ -76,7 +76,10 @@ bool direct_io_writable_file::initialize()
         return false;
     }
 
-    int flag = O_WRONLY | O_TRUNC | O_CREAT | O_DIRECT;
+    int flag = O_WRONLY | O_TRUNC | O_CREAT;
+#if !defined(__APPLE__)
+    flag |= O_DIRECT;
+#endif
     _fd = open(_file_path.c_str(), flag, S_IRUSR | S_IWUSR | S_IRGRP);
     if (_fd < 0) {
         derror_f("Failed to open {} with flag {}, errno = {}", _file_path, flag, errno);

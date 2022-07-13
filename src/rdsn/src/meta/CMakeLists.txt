@@ -28,6 +28,7 @@ set(MY_PROJ_LIBS
     PocoNetSSL
     PocoJSON
     crypto
+    hashtable
     hdfs
     )
 
