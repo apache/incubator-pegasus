@@ -85,7 +85,7 @@ def fix_include_file(filename, fix_commands):
             add_ok = True
 
         if include_statement == True and ("remove" in fix_commands):
-            if len(filter(lambda x: x in line, fix_commands["remove"])) == 0:
+            if len(list(filter(lambda x: x in line, fix_commands["remove"]))) == 0:
                 to_fd.write(line)
         else:
             to_fd.write(line)
@@ -101,7 +101,7 @@ def fix_include(thrift_name, include_fix_dict):
     # current dir is thrift file dir
     os.chdir("output")
 
-    for pair in include_fix_dict.iteritems():
+    for pair in include_fix_dict.items():
         filename = thrift_name + pair[0]
         fix_include_file(filename, pair[1])
 
@@ -110,7 +110,7 @@ def fix_include(thrift_name, include_fix_dict):
 
 def compile_thrift_file(thrift_info):
     thrift_name = thrift_info["name"]
-    print "\n>>> compiling thrift file %s.thrift ..." % (thrift_name)
+    print("\n>>> compiling thrift file %s.thrift ..." % (thrift_name))
 
     if "path" not in thrift_info:
         raise CompileError("can't find thrift file")
@@ -123,13 +123,13 @@ def compile_thrift_file(thrift_info):
     # create tmp directory: <thrift_info["path"]>/output
     os.system("rm -rf output")
     os.system("mkdir output")
-    print "mkdir {}/output".format(os.getcwd())
+    print("mkdir {}/output".format(os.getcwd()))
 
     # generate files
     cmd = "{} -gen cpp:moveable_types -out output {}.thrift".format(
         thrift_exe, thrift_name)
     os.system(cmd)
-    print cmd
+    print(cmd)
 
     # TODO(wutao1): code format files
     # os.system("clang-format-3.9 -i output/*")
@@ -144,16 +144,16 @@ def compile_thrift_file(thrift_info):
         os.chdir("..")
 
     if "file_move" in thrift_info:
-        for pair in thrift_info["file_move"].iteritems():
+        for pair in thrift_info["file_move"].items():
             dest_path = root_dir + "/" + pair[1]
             for postfix in pair[0].split():
                 src_path = "output/%s%s" % (thrift_name, postfix)
                 cmd = "mv %s %s" % (src_path, dest_path)
                 os.system(cmd)
-                print cmd
+                print(cmd)
 
     os.system("rm -rf output")
-    print "rm -rf {}/output".format(os.getcwd())
+    print("rm -rf {}/output".format(os.getcwd()))
 
     os.chdir(root_dir)
 
@@ -221,11 +221,11 @@ def add_hook(name, path, func, args):
 if __name__ == "__main__":
     thrift_exe = os.getcwd() + "/thirdparty/output/bin/thrift"
     root_dir = os.getcwd()
-    print "thrift_exe = " + thrift_exe
-    print "root_dir = " + root_dir
+    print("thrift_exe = " + thrift_exe)
+    print("root_dir = " + root_dir)
 
     if not os.path.isfile(thrift_exe):
-        print "Error: can't find compiler %s\nPlease build thrift in thirdparty/" % thrift_exe
+        print("Error: can't find compiler %s\nPlease build thrift in thirdparty/" % thrift_exe)
         sys.exit()
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
