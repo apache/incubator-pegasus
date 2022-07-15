@@ -97,6 +97,12 @@ while [[ $# > 0 ]]; do
     -j | --use-jemalloc)
         use_jemalloc="on"
         ;;
+    *)
+        echo "ERROR: unknown option \"$option_key\""
+        echo
+        usage
+        exit 1
+        ;;
     esac
     shift
 done

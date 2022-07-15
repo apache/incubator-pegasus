@@ -98,6 +98,12 @@ while [[ $# > 0 ]]; do
         -j|--use-jemalloc)
             use_jemalloc="on"
             ;;
+        *)
+            echo "ERROR: unknown option \"$option_key\""
+            echo
+            usage
+            exit 1
+            ;;
     esac
     shift
 done
@@ -117,7 +123,7 @@ mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
 copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
 
-if [ "$use_jemalloc" == "yes" ]; then
+if [ "$use_jemalloc" == "on" ]; then
     copy_file ./rdsn/thirdparty/output/lib/libjemalloc.so.2 ${pack}/DSN_ROOT/lib/
     copy_file ./rdsn/thirdparty/output/lib/libprofiler.so.0 ${pack}/DSN_ROOT/lib/
 else
