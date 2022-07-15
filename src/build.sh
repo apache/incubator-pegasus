@@ -111,6 +111,14 @@ else
     echo "DISABLE_GPERF=NO"
 fi
 
+if [ "$USE_JEMALLOC" == "ON" ]
+then
+    echo "USE_JEMALLOC=ON"
+    CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_JEMALLOC=ON"
+else
+    echo "USE_JEMALLOC=OFF"
+fi
+
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/rdsn/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
 
 echo "#############################################################################"

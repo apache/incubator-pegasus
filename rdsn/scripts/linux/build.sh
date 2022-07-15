@@ -105,10 +105,10 @@ fi
 
 if [ "$USE_JEMALLOC" == "ON" ]
 then
-    echo "USE_JEMALLOC=YES"
+    echo "USE_JEMALLOC=ON"
     CMAKE_OPTIONS="$CMAKE_OPTIONS -DUSE_JEMALLOC=ON"
 else
-    echo "USE_JEMALLOC=NO"
+    echo "USE_JEMALLOC=OFF"
 fi
 
 if [ ! -z "$SANITIZER" ]
