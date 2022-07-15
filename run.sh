@@ -289,6 +289,7 @@ function run_build()
             exit 1
         fi
     fi
+    python3 compile_thrift.py
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
         ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
@@ -302,6 +303,12 @@ function run_build()
     fi
 
     echo "INFO: start build pegasus..."
+
+    echo "Gen pegasus thrift"
+    pushd $ROOT/src/idl
+    sh recompile_thrift.sh
+    popd
+
     cd $ROOT/src
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
