@@ -47,6 +47,11 @@ endif()
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
 dsn_common_setup()
 
+message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
+if(USE_JEMALLOC)
+    message(STATUS "jemalloc is enabled")
+endif()
+
 # copy the installed files of rdsn (from rdsn/DSN_ROOT) to pegasus.
 execute_process(COMMAND rm -rf ${PEGASUS_ROOT})
 execute_process(COMMAND cp -rf ${DSN_ROOT} ${PEGASUS_PROJECT_DIR})

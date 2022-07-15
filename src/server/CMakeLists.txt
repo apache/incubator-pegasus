@@ -50,12 +50,6 @@ set(MY_PROJ_LIBS
     hashtable
     )
 
-message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
-if(USE_JEMALLOC)
-    message(STATUS "jemalloc is enabled")
-    set(MY_PROJ_LIBS JeMalloc::JeMalloc ${MY_PROJ_LIBS})
-endif()
-
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 set(MY_BINPLACES "${CMAKE_CURRENT_SOURCE_DIR}/config.ini")
