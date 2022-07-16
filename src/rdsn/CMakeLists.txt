@@ -1,47 +1,29 @@
-cmake_minimum_required(VERSION 3.11.0)
-
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    # require at least gcc 5.4.0
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.4.0)
-        message(FATAL_ERROR "GCC version must be at least 5.4.0!")
-    endif ()
-endif ()
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 project(dsn C CXX)
 
+set(RDSN_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+
+# remove?
 set(DSN_BUILD_RUNTIME TRUE)
-add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
+
 dsn_common_setup()
 
-# add custom target for gcov
-if(ENABLE_GCOV)
-    find_program(GCOV_PATH gcov)
-    find_program(GCOVR_PATH gcovr)
-
-    if(NOT GCOV_PATH)
-        message(FATAL_ERROR "gcov not found! Aborting...")
-    endif() # NOT GCOV_PATH
-
-    if(NOT GCOVR_PATH)
-        message(FATAL_ERROR "gcovr not found! Aborting...")
-    endif() # NOT GCOVR_PATH
-
-    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        message(WARNING "Code coverage results with an optimised (non-Debug) build may be misleading")
-    endif() # NOT CMAKE_BUILD_TYPE STREQUAL "Debug"
-
-    set(COVERAGE_COMPILER_FLAGS "-g -O0 --coverage -fprofile-arcs -ftest-coverage" CACHE INTERNAL "")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COVERAGE_COMPILER_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_COMPILER_FLAGS}")
-    message(STATUS "Appending code coverage compiler flags: ${COVERAGE_COMPILER_FLAGS}")
-
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
-    add_definitions(-DENABLE_GCOV=1)
-endif()
-
-if(SANITIZER)
-    add_definitions(-DSANITIZER=1)
-endif()
 # Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
 # the destination.
 set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
@@ -56,8 +38,10 @@ install(FILES include/dsn/cpp/serialization_helper/dsn_types.h DESTINATION inclu
 # TODO(wutao1): remove this line after dsn.layer2_types.h is removed from repo.
 install(FILES include/dsn/cpp/serialization_helper/dsn.layer2_types.h DESTINATION include)
 
-include_directories(${DSN_PROJECT_DIR}/include)
-include_directories(${DSN_PROJECT_DIR}/include/dsn/cpp/serialization_helper)
-include_directories(${DSN_PROJECT_DIR}/src)
+# TODO FIX
+
+include_directories(${RDSN_PROJECT_ROOT}/include)
+include_directories(${RDSN_PROJECT_ROOT}/include/dsn/cpp/serialization_helper)
+include_directories(${RDSN_PROJECT_ROOT}/src)
 
 add_subdirectory(src)

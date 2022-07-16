@@ -1,46 +1,46 @@
-# The MIT License (MIT)
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
 #
-# Copyright (c) 2015 Microsoft Corporation
+#   http://www.apache.org/licenses/LICENSE-2.0
 #
-# -=- Robust Distributed System Nucleus (rDSN) -=-
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
-include(${CMAKE_CURRENT_LIST_DIR}/compiler_info.cmake)
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR};${CMAKE_MODULE_PATH}) # TODO: move all Find*.cmake into cmake/
+cmake_minimum_required(VERSION 3.11.0)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    # require at least gcc 5.4.0
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.4.0)
+        message(FATAL_ERROR "GCC version must be at least 5.4.0!")
+    endif ()
+endif ()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
+include(CompilerInfo)
 
 # Always generate the compilation database file (compile_commands.json) for use
 # with various development tools, such as IWYU and Vim's YouCompleteMe plugin.
 # See http://clang.llvm.org/docs/JSONCompilationDatabase.html
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
-# Set DSN_PROJECT_DIR to rdsn/
-set(DSN_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR})
-get_filename_component(DSN_PROJECT_DIR ${DSN_PROJECT_DIR} DIRECTORY)
+set(PROJECT_ROOT ${CMAKE_CURRENT_LIST_DIR})
+get_filename_component(PROJECT_ROOT ${PROJECT_ROOT} DIRECTORY)
 
-# Set THIRDPARTY_ROOT to thirdparty
-set(THIRDPARTY_ROOT ${DSN_PROJECT_DIR}/../thirdparty)
-message(STATUS "THIRDPARTY_ROOT = ${THIRDPARTY_ROOT}")
-set(THIRDPARTY_INSTALL_DIR ${DSN_PROJECT_DIR}/../thirdparty/output)
+set(THIRDPARTY_ROOT ${PROJECT_ROOT}/thirdparty)
+set(THIRDPARTY_INSTALL_DIR ${PROJECT_ROOT}/thirdparty/output)
 
-# Set DSN_ROOT to rdsn/DSN_ROOT, this is where rdsn will be installed
-set(DSN_ROOT ${DSN_PROJECT_DIR}/DSN_ROOT)
+# TODO(yingchun): we will remove it later
+# Set DSN_ROOT to ./DSN_ROOT, this is where rdsn will be installed
+set(DSN_ROOT ${PROJECT_ROOT}/DSN_ROOT)
 message(STATUS "DSN_ROOT = ${DSN_ROOT}")
 
 option(BUILD_TEST "build unit test" ON)
@@ -63,6 +63,9 @@ endif()
 if(USE_JEMALLOC)
     set(JEMALLOC_LIB_TYPE "SHARED")
 endif()
+
+option(BUILD_RDSN "Whether to build rdsn project" ON)
+option(BUILD_PEGASUS "Whether to build Pegasus project" ON)
 
 # ================================================================== #
 
@@ -216,6 +219,7 @@ function(dsn_add_object)
 endfunction(dsn_add_object)
 
 function(dsn_add_test)
+    add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
     if(${BUILD_TEST})
         set(MY_EXECUTABLE_IS_TEST TRUE)
         dsn_add_executable()
@@ -429,6 +433,15 @@ function(dsn_common_setup)
     dsn_setup_include_path()
     dsn_setup_thirdparty_libs()
 
-    include(${DSN_PROJECT_DIR}/bin/thrift_utils.cmake)
+    include(${PROJECT_ROOT}/bin/thrift_utils.cmake)
 
 endfunction(dsn_common_setup)
+
+# TODO(yingchun): we will refactor the followng code later
+if(BUILD_RDSN)
+    add_subdirectory(src/rdsn)
+endif()
+
+if(BUILD_PEGASUS)
+    add_subdirectory(src)
+endif()
