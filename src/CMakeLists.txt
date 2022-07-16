@@ -33,9 +33,6 @@ get_filename_component(PEGASUS_PROJECT_DIR ${PEGASUS_PROJECT_DIR} DIRECTORY)
 # set PEGASUS_ROOT to pegasus/DSN_ROOT, this is where targets will be installed
 set(PEGASUS_ROOT ${PEGASUS_PROJECT_DIR}/DSN_ROOT)
 
-
-include("${PEGASUS_PROJECT_DIR}/rdsn/bin/dsn.cmake")
-
 if(NOT EXISTS "${DSN_ROOT}")
     message(FATAL_ERROR "Please make sure that ${DSN_ROOT} is defined and does exists.")
 endif()

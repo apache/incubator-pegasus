@@ -9,8 +9,6 @@ endif ()
 
 project(dsn C CXX)
 
-include(bin/dsn.cmake)
-
 set(DSN_BUILD_RUNTIME TRUE)
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
 dsn_common_setup()
