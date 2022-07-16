@@ -111,7 +111,7 @@ else
     echo "DISABLE_GPERF=NO"
 fi
 
-CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/rdsn/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
 
 echo "#############################################################################"
 

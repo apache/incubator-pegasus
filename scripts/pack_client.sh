@@ -100,7 +100,7 @@ done
 mkdir -p ${pack}/lib
 copy_file ./DSN_ROOT/lib/libpegasus_client_static.a ${pack}/lib
 copy_file ./DSN_ROOT/lib/libpegasus_client_shared.so ${pack}/lib
-copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib
+copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_system` ${pack}/lib/libboost_system.so
 ln -sf `ls ${pack}/lib | grep libboost_filesystem` ${pack}/lib/libboost_filesystem.so
 ln -sf `ls ${pack}/lib | grep libboost_regex` ${pack}/lib/libboost_regex.so
