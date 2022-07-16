@@ -25,8 +25,7 @@ function GenThriftTool() {
     tar xzf thrift-0.11.0.tar.gz
     pushd thrift-0.11.0
     ./bootstrap.sh
-    ./configure --with-csharp=no --with-java=no --with-python=no --with-erlang=no --with-perl=no \
-        --with-php=no --with-ruby=no --with-haskell=no --with-php_extension=no --with-rs=no --with-go=no
+    ./configure --enable-libs=no
     make -j$(($(nproc)/2+1))
     make install
     popd

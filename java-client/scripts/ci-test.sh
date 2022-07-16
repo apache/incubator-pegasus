@@ -59,7 +59,8 @@ cd ../
 
 
 pushd idl
-sh recompile_thrift.sh
+echo "bash recompile_thrift.sh"
+bash recompile_thrift.sh
 popd
 mvn spotless:apply
 

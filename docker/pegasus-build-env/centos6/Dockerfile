@@ -20,16 +20,16 @@ FROM centos:6.10
 LABEL maintainer=jiashuo
 
 # defaut repo url hasn't been supported, use thirdparty repo url
-RUN curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo
-RUN curl https://www.getpagespeed.com/files/centos6-epel-eol.repo --output /etc/yum.repos.d/epel.repo
-RUN curl https://www.getpagespeed.com/files/centos6-scl-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl.repo
-RUN curl https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-eol.repo -O /etc/yum.repos.d/CentOS-Base.repo
+RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-epel-eol.repo -O /etc/yum.repos.d/epel.repo
+RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-scl-eol.repo -O /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo -O /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 
 # diable gpgcheck, otherwise the repo check will be failed.
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g  /etc/yum.repos.d/CentOS-Base.repo
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/epel.repo
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g'  /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g' /etc/yum.repos.d/epel.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
 
 RUN yum -y install \
                 devtoolset-7-gcc \
@@ -42,7 +42,7 @@ RUN yum -y install \
                 python27 \
                 python34 \
                 automake \
-                autoconf \ 
+                autoconf \
                 make \
                 libtool \
                 file \
@@ -80,8 +80,7 @@ RUN pip install --no-cache-dir cmake
 
 RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
     cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
-    ./configure --with-csharp=no --with-java=no --with-python=no --with-erlang=no --with-perl=no \
-        --with-php=no --with-ruby=no --with-haskell=no --with-php_extension=no --with-rs=no --with-go=no && \
+    ./configure --enable-libs=no && \
     make -j$(($(nproc)/2+1)) && make install && cd - && \
     rm -rf thrift-0.11.0 0.11.0.tar.gz
 

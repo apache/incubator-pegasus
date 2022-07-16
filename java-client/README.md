@@ -21,25 +21,19 @@ under the License.
 
 [![Test - java client](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml)
 
-Basicly you can use build.sh and run it. eg:
-```
-sh build.sh build/install/test
-```
-or you can run
-```
-cd idl && sh recompile_thrift.sh && cd -
-```
-first and then run command as blow.
-
 ## Build
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean package -DskipTests
 ```
 
 ## Install
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean install -DskipTests
 ```
 
@@ -48,12 +42,16 @@ mvn clean install -DskipTests
 To run test, you should start pegasus onebox firstly, and run test as:
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean package
 ```
 
 or specify one test:
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean package -Dtest=TestPing
 ```
 
