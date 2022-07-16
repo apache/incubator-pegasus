@@ -37,7 +37,7 @@ add_custom_target(combine_lib
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_runtime.a
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_client.a
     COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_common.a
-    COMMAND ar -x ${DSN_THIRDPARTY_ROOT}/lib/libthrift.a
+    COMMAND ar -x ${THIRDPARTY_INSTALL_DIR}/lib/libthrift.a
     COMMAND ar -x ${CMAKE_BINARY_DIR}/base/libpegasus_base.a
     COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/$<TARGET_NAME:pegasus_client_impl_objects>.dir/*.o .
     COMMAND ar -qcs ${pegasus_client_static_lib} *.o

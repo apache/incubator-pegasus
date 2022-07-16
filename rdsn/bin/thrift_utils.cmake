@@ -21,7 +21,7 @@ find_program(THRIFT_COMPILER
     NAME
         thrift
     PATHS
-        ${DSN_THIRDPARTY_ROOT}/bin
+        ${THIRDPARTY_INSTALL_DIR}/bin
     NO_DEFAULT_PATH
 )
 

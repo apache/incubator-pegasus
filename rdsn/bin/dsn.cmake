@@ -34,9 +34,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(DSN_PROJECT_DIR ${CMAKE_CURRENT_LIST_DIR})
 get_filename_component(DSN_PROJECT_DIR ${DSN_PROJECT_DIR} DIRECTORY)
 
-# Set DSN_THIRDPARTY_ROOT to thirdparty/output
-set(DSN_THIRDPARTY_ROOT ${DSN_PROJECT_DIR}/thirdparty/output)
-message(STATUS "DSN_THIRDPARTY_ROOT = ${DSN_THIRDPARTY_ROOT}")
+# Set THIRDPARTY_ROOT to thirdparty
+set(THIRDPARTY_ROOT ${DSN_PROJECT_DIR}/../thirdparty)
+message(STATUS "THIRDPARTY_ROOT = ${THIRDPARTY_ROOT}")
+set(THIRDPARTY_INSTALL_DIR ${DSN_PROJECT_DIR}/../thirdparty/output)
 
 # Set DSN_ROOT to rdsn/DSN_ROOT, this is where rdsn will be installed
 set(DSN_ROOT ${DSN_PROJECT_DIR}/DSN_ROOT)
@@ -355,30 +356,30 @@ function(dsn_setup_system_libs)
 endfunction(dsn_setup_system_libs)
 
 function(dsn_setup_include_path)#TODO(huangwei5): remove this
-    include_directories(${DSN_THIRDPARTY_ROOT}/include)
+    include_directories(${THIRDPARTY_INSTALL_DIR}/include)
 endfunction(dsn_setup_include_path)
 
 function(dsn_setup_thirdparty_libs)
     set(Boost_USE_MULTITHREADED ON)
     set(Boost_USE_STATIC_LIBS OFF)
     set(Boost_USE_STATIC_RUNTIME OFF)
-    set(BOOST_ROOT ${DSN_THIRDPARTY_ROOT})
+    set(BOOST_ROOT ${THIRDPARTY_INSTALL_DIR})
     set(Boost_NO_SYSTEM_PATHS ON)
     set(Boost_NO_BOOST_CMAKE ON)
 
-    set(CMAKE_PREFIX_PATH ${DSN_THIRDPARTY_ROOT};${CMAKE_PREFIX_PATH})
+    set(CMAKE_PREFIX_PATH ${THIRDPARTY_INSTALL_DIR};${CMAKE_PREFIX_PATH})
     find_package(Boost COMPONENTS system filesystem regex REQUIRED)
     include_directories(${Boost_INCLUDE_DIRS})
 
-    find_library(THRIFT_LIB NAMES libthrift.a PATHS ${DSN_THIRDPARTY_ROOT}/lib NO_DEFAULT_PATH)
+    find_library(THRIFT_LIB NAMES libthrift.a PATHS ${THIRDPARTY_INSTALL_DIR}/lib NO_DEFAULT_PATH)
     if(NOT THRIFT_LIB)
-        message(FATAL_ERROR "thrift library not found in ${DSN_THIRDPARTY_ROOT}/lib")
+        message(FATAL_ERROR "thrift library not found in ${THIRDPARTY_INSTALL_DIR}/lib")
     endif()
     find_package(fmt REQUIRED)
     set(DEFAULT_THIRDPARTY_LIBS ${THRIFT_LIB} fmt::fmt CACHE STRING "default thirdparty libs" FORCE)
 
     # rocksdb
-    file(GLOB ROCKSDB_DEPENDS_MODULE_PATH ${DSN_PROJECT_DIR}/thirdparty/build/Source/rocksdb/cmake/modules)
+    file(GLOB ROCKSDB_DEPENDS_MODULE_PATH ${THIRDPARTY_ROOT}/build/Source/rocksdb/cmake/modules)
     if(NOT ROCKSDB_DEPENDS_MODULE_PATH)
         message(WARNING "Cannot find RocksDB depends cmake modules path, might not find snappy, zstd, lz4")
     endif()
@@ -396,9 +397,9 @@ function(dsn_setup_thirdparty_libs)
     message (STATUS "JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
     link_libraries(${JAVA_JVM_LIBRARY})
 
-    link_directories(${DSN_THIRDPARTY_ROOT}/lib)
+    link_directories(${THIRDPARTY_INSTALL_DIR}/lib)
     if (NOT APPLE)
-        link_directories(${DSN_THIRDPARTY_ROOT}/lib64)
+        link_directories(${THIRDPARTY_INSTALL_DIR}/lib64)
     endif()
 endfunction(dsn_setup_thirdparty_libs)
 

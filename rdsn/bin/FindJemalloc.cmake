@@ -19,19 +19,19 @@
 
 find_path(Jemalloc_INCLUDE_DIRS
     NAMES jemalloc/jemalloc.h
-    PATHS ${DSN_THIRDPARTY_ROOT}/include
+    PATHS ${THIRDPARTY_INSTALL_DIR}/include
     NO_DEFAULT_PATH
 )
 
 find_library(Jemalloc_SHARED_LIBRARIES
     NAMES jemalloc
-    PATHS ${DSN_THIRDPARTY_ROOT}/lib
+    PATHS ${THIRDPARTY_INSTALL_DIR}/lib
     NO_DEFAULT_PATH
 )
 
 find_library(Jemalloc_STATIC_LIBRARIES
     NAMES libjemalloc_pic.a
-    PATHS ${DSN_THIRDPARTY_ROOT}/lib
+    PATHS ${THIRDPARTY_INSTALL_DIR}/lib
     NO_DEFAULT_PATH
 )
 
@@ -47,7 +47,7 @@ if(Jemalloc_FOUND)
     message(STATUS "Found jemalloc static libs: ${Jemalloc_STATIC_LIBRARIES}")
 else()
     if(Jemalloc_FIND_REQUIRED)
-        message(FATAL_ERROR "Not found jemalloc in ${DSN_THIRDPARTY_ROOT}")
+        message(FATAL_ERROR "Not found jemalloc in ${THIRDPARTY_INSTALL_DIR}")
     endif()
 endif()
 

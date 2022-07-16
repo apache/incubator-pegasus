@@ -40,8 +40,8 @@ if(NOT EXISTS "${DSN_ROOT}")
     message(FATAL_ERROR "Please make sure that ${DSN_ROOT} is defined and does exists.")
 endif()
 
-if((DSN_THIRDPARTY_ROOT STREQUAL "") OR (NOT EXISTS "${DSN_THIRDPARTY_ROOT}/"))
-    message(FATAL_ERROR "Please make sure that ${DSN_THIRDPARTY_ROOT} is defined and does exists.")
+if((THIRDPARTY_INSTALL_DIR STREQUAL "") OR (NOT EXISTS "${THIRDPARTY_INSTALL_DIR}/"))
+    message(FATAL_ERROR "Please make sure that ${THIRDPARTY_INSTALL_DIR} is defined and does exists.")
 endif()
 
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)

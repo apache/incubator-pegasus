@@ -15,4 +15,4 @@ set(MY_PROJ_LIBS "")
 set(MY_BINPLACES "")
 
 dsn_add_static_library()
-target_include_directories(dsn.block_service.fds PRIVATE ${DSN_THIRDPARTY_ROOT}/include/fds)
+target_include_directories(dsn.block_service.fds PRIVATE ${THIRDPARTY_INSTALL_DIR}/include/fds)
