@@ -235,16 +235,11 @@ function run_build()
         exit 1
     fi
 
-    if [ ! -d $ROOT/rdsn/include ]; then
-        echo "ERROR: rdsn submodule not fetched"
-        exit 1
-    fi
-
-    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
-    export DSN_ROOT=$ROOT/rdsn/builder/output
-    if [ ! -e $ROOT/DSN_ROOT ]; then
-        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
-    fi
+#    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
+#    export DSN_ROOT=$ROOT/src/rdsn/builder/output
+#    if [ ! -e $ROOT/DSN_ROOT ]; then
+#        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
+#    fi
 
     echo "Build start time: `date`"
     start_time=`date +%s`
@@ -275,7 +270,7 @@ function run_build()
     fi
 
     echo "INFO: start build rdsn..."
-    cd $ROOT/rdsn
+    cd $ROOT/src/rdsn
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo

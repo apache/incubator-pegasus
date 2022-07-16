@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+project(pegasus)
 cmake_minimum_required(VERSION 3.11.0)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -33,8 +34,6 @@ include(CompilerInfo)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 set(PROJECT_ROOT ${CMAKE_CURRENT_LIST_DIR})
-get_filename_component(PROJECT_ROOT ${PROJECT_ROOT} DIRECTORY)
-
 set(THIRDPARTY_ROOT ${PROJECT_ROOT}/thirdparty)
 set(THIRDPARTY_INSTALL_DIR ${PROJECT_ROOT}/thirdparty/output)
 
@@ -372,6 +371,7 @@ function(dsn_setup_thirdparty_libs)
     set(Boost_NO_BOOST_CMAKE ON)
 
     set(CMAKE_PREFIX_PATH ${THIRDPARTY_INSTALL_DIR};${CMAKE_PREFIX_PATH})
+    message(STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
     find_package(Boost COMPONENTS system filesystem regex REQUIRED)
     include_directories(${Boost_INCLUDE_DIRS})
 
@@ -433,7 +433,7 @@ function(dsn_common_setup)
     dsn_setup_include_path()
     dsn_setup_thirdparty_libs()
 
-    include(${PROJECT_ROOT}/bin/thrift_utils.cmake)
+    include(ThriftUtils)
 
 endfunction(dsn_common_setup)
 

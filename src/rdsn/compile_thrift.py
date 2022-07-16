@@ -219,7 +219,7 @@ def add_hook(name, path, func, args):
 
 
 if __name__ == "__main__":
-    thrift_exe = os.getcwd() + "/thirdparty/output/bin/thrift"
+    thrift_exe = os.getcwd() + "/../../thirdparty/output/bin/thrift"
     root_dir = os.getcwd()
     print("thrift_exe = " + thrift_exe)
     print("root_dir = " + root_dir)

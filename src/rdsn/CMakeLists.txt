@@ -38,8 +38,6 @@ install(FILES include/dsn/cpp/serialization_helper/dsn_types.h DESTINATION inclu
 # TODO(wutao1): remove this line after dsn.layer2_types.h is removed from repo.
 install(FILES include/dsn/cpp/serialization_helper/dsn.layer2_types.h DESTINATION include)
 
-# TODO FIX
-
 include_directories(${RDSN_PROJECT_ROOT}/include)
 include_directories(${RDSN_PROJECT_ROOT}/include/dsn/cpp/serialization_helper)
 include_directories(${RDSN_PROJECT_ROOT}/src)
