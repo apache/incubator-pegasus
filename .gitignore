@@ -264,8 +264,7 @@ go-client/bin
 
 # rdsn
 rdsn/builder
-rdsn/thirdparty/build
-rdsn/thirdparty/src
-rdsn/thirdparty/output
+thirdparty/build
+thirdparty/output
 rdsn/cmake-build-debug
 rdsn/test_reports

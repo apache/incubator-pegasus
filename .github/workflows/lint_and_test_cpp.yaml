@@ -52,7 +52,7 @@ jobs:
           fetch-depth: 1
           submodules: true
       - name: clang-format
-        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./rdsn/thirdparty -r .
+        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
   test_rdsn_Release:
     name: Test rdsn with Release
@@ -77,14 +77,14 @@ jobs:
             rdsn:
               - 'rdsn/**'
             thirdparty:
-              - 'rdsn/thirdparty/**'
+              - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: rdsn/thirdparty
+        working-directory: thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
@@ -119,14 +119,14 @@ jobs:
             rdsn:
               - 'rdsn/**'
             thirdparty:
-              - 'rdsn/thirdparty/**'
+              - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: rdsn/thirdparty
+        working-directory: thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
@@ -161,14 +161,14 @@ jobs:
             rdsn:
               - 'rdsn/**'
             thirdparty:
-              - 'rdsn/thirdparty/**'
+              - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: rdsn/thirdparty
+        working-directory: thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
@@ -203,14 +203,14 @@ jobs:
             rdsn:
               - 'rdsn/**'
             thirdparty:
-              - 'rdsn/thirdparty/**'
+              - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
         if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: rdsn/thirdparty
+        working-directory: thirdparty
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
@@ -243,7 +243,7 @@ jobs:
               - 'src/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
-        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Compilation
         if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
         run: ./run.sh build -c -j $(($(nproc)/2+1))

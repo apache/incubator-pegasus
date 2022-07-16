@@ -29,7 +29,7 @@ header:
     # TODO(yingchun): rrdb_types.* files can be automatic generated when build, we can remove them later.
     - 'src/base/rrdb_types.cpp'
     - 'src/include/rrdb/rrdb_types.h'
-    # TODO(yingchun): shell/* files are import from thirdparties, we can move them to rdsn/thirdparty later.
+    # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     - 'src/shell/argh.h'
     - 'src/shell/linenoise/linenoise.c'
     - 'src/shell/linenoise/linenoise.h'
@@ -83,9 +83,9 @@ header:
     - 'rdsn/src/nfs/test/nfs_test_file1'
     - 'rdsn/src/nfs/test/nfs_test_file2'
     - 'rdsn/src/runtime/test/gtest.filter'
-    - 'rdsn/thirdparty/fix_fds_for_macos.patch'
-    - 'rdsn/thirdparty/fix_s2_for_aarch64.patch'
-    - 'rdsn/thirdparty/fix_thrift_for_cpp11.patch'
+    - 'thirdparty/fix_fds_for_macos.patch'
+    - 'thirdparty/fix_s2_for_aarch64.patch'
+    - 'thirdparty/fix_thrift_for_cpp11.patch'
     # should be empty, or ignore all comment lines
     - 'rdsn/src/utils/test/config-empty.ini'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation

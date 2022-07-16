@@ -27,7 +27,7 @@ on:
     paths:
       - 'docker/pegasus-build-env/**'
       - '.github/workflows/build-push-env-docker.yml'
-      - 'rdsn/thirdparty/**'
+      - 'thirdparty/**'
 
   # for manually triggering workflow
   workflow_dispatch:
