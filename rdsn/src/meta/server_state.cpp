@@ -1161,6 +1161,7 @@ void server_state::create_app(dsn::message_ex *msg)
             info.status = app_status::AS_CREATING;
             info.create_second = dsn_now_ms() / 1000;
             info.init_partition_count = request.options.partition_count;
+            info.comparator = dsn::comparator_type::PEGASUS;
 
             app = app_state::create(info);
             app->helpers->pending_response = msg;

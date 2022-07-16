@@ -27,6 +27,7 @@
 #include "capacity_unit_calculator.h"
 #include "hashkey_transform.h"
 #include "meta_store.h"
+#include "pegasus_comparator.h"
 #include "pegasus_event_listener.h"
 #include "pegasus_server_write.h"
 #include "hotkey_collector.h"
@@ -326,6 +327,13 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         "rocksdb_level0_stop_writes_trigger",
                                         60,
                                         "rocksdb options.level0_stop_writes_trigger");
+
+    // user-defined comparator
+    const dsn::app_info *app_info = get_app_info();
+    if (app_info->comparator == dsn::comparator_type::PEGASUS) {
+        // Need not worry about comparator's destruct.
+        _data_cf_opts.comparator = new pegasus::server::PegasusComparator();
+    }
 
     std::string compression_str = dsn_config_get_value_string(
         "pegasus.server",
