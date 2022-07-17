@@ -64,7 +64,6 @@ make_config.mk
 *.vcxproj
 *.vcxproj.filters
 *.sln
-*.cmake
 CMakeCache.txt
 CMakeFiles/
 build/

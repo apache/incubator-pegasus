@@ -89,9 +89,7 @@ header:
     # should be empty, or ignore all comment lines
     - 'src/rdsn/src/utils/test/config-empty.ini'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
-    - 'CMakeLists.txt'
-    - 'src/rdsn/.gitignore'
-    - 'src/rdsn/.licenserc.yaml'
+    - 'cmake_modules/BaseFunctions.cmake'
     - 'src/rdsn/README.md'
     - 'src/rdsn/compile_thrift.py'
     - 'src/rdsn/include/dsn/c/api_common.h'
