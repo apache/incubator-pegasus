@@ -137,7 +137,7 @@ then
     mkdir -p $BUILD_DIR
     cd $BUILD_DIR
     echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
-    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS  -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
+    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"

@@ -36,7 +36,7 @@ link_directories(${DSN_ROOT}/lib)
 set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
 message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
-add_subdirectory(base)ll
+add_subdirectory(base)
 add_subdirectory(reporter)
 add_subdirectory(base/test)
 add_subdirectory(client_lib)
