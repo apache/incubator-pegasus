@@ -1,0 +1,39 @@
+diff --git a/cmake/VersionViaGit.cmake b/cmake/VersionViaGit.cmake
+index a9882d8a..043458d0 100644
+--- a/cmake/VersionViaGit.cmake
++++ b/cmake/VersionViaGit.cmake
+@@ -19,8 +19,6 @@
+ #    message("        stage=${EVENT_GIT___VERSION_STAGE}")
+ # endif()
+ 
+-include(FindGit)
+-
+ macro(event_fuzzy_version_from_git)
+ 	set(EVENT_GIT___VERSION_FOUND FALSE)
+ 
+@@ -29,25 +27,4 @@ macro(event_fuzzy_version_from_git)
+ 	set(EVENT_GIT___VERSION_MINOR 1)
+ 	set(EVENT_GIT___VERSION_PATCH 8)
+ 	set(EVENT_GIT___VERSION_STAGE "beta")
+-
+-	find_package(Git)
+-
+-	if (GIT_FOUND)
+-		execute_process(
+-			COMMAND
+-				${GIT_EXECUTABLE} describe --abbrev=0
+-			WORKING_DIRECTORY
+-				${PROJECT_SOURCE_DIR}
+-			RESULT_VARIABLE
+-				GITRET
+-			OUTPUT_VARIABLE
+-				GITVERSION)
+-
+-			if (GITRET EQUAL 0)
+-				string(REGEX REPLACE "^release-([0-9]+)\\.([0-9]+)\\.([0-9]+)-(.*)"       "\\1" EVENT_GIT___VERSION_MAJOR ${GITVERSION})
+-				string(REGEX REPLACE "^release-([0-9]+)\\.([0-9]+)\\.([0-9]+)-(.*)"       "\\2" EVENT_GIT___VERSION_MINOR ${GITVERSION})
+-				string(REGEX REPLACE "^release-([0-9]+)\\.([0-9]+)\\.([0-9]+)-(.*)"       "\\3" EVENT_GIT___VERSION_PATCH ${GITVERSION})
+-				string(REGEX REPLACE "^release-([0-9]+)\\.([0-9]+)\\.([0-9]+)-([aA-zZ]+)" "\\4" EVENT_GIT___VERSION_STAGE ${GITVERSION})
+-			endif()
+-		endif()
+ endmacro()
