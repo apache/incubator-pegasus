@@ -63,19 +63,9 @@ jobs:
           cd incubator-pegasus
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Compilation rdsn on GCC
-        if: ${{ matrix.compiler-family == 'gcc' }}
-        run: |
-          ./run.sh build -c --rdsn --skip_thirdparty
       - name: Compilation pegasus on GCC
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: ./run.sh build -c --skip_thirdparty
-      - name: Compilation rdsn on Clang
-        if: ${{ matrix.compiler-family == 'clang' }}
-        env:
-          COMPILER: ${{ matrix.compiler }}
-        run: |
-          ./run.sh build --compiler $COMPILER --rdsn --skip_thirdparty
       - name: Compilation pegasus on Clang
         if: ${{ matrix.compiler-family == 'clang' }}
         env:
