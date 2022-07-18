@@ -91,6 +91,7 @@ header:
     - 'src/rdsn/src/utils/test/config-empty.ini'
     # The MIT License (MIT), Copyright (c) 2015 Microsoft Corporation
     - 'cmake_modules/BaseFunctions.cmake'
+    - 'scripts/learn_stat.py'
     - 'src/rdsn/README.md'
     - 'src/rdsn/compile_thrift.py'
     - 'src/rdsn/include/dsn/c/api_common.h'
@@ -201,9 +202,6 @@ header:
     - 'src/rdsn/include/dsn/utility/utils.h'
     - 'src/rdsn/include/dsn/utility/work_queue.h'
     - 'src/rdsn/include/dsn/utils/time_utils.h'
-    - 'src/rdsn/scripts/linux/build.sh'
-    - 'src/rdsn/scripts/linux/install.sh'
-    - 'src/rdsn/scripts/linux/learn_stat.py'
     - 'src/rdsn/src/aio/aio_provider.cpp'
     - 'src/rdsn/src/aio/aio_provider.h'
     - 'src/rdsn/src/aio/disk_engine.cpp'

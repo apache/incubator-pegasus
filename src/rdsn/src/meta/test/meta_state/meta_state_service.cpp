@@ -101,7 +101,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                        [](error_code ec, const dsn::blob &value) {
                            expect_ok(ec);
                            dsn::binary_reader reader(value);
-                           int read_value;
+                           int read_value = 0;
                            reader.read(read_value);
                            dassert(read_value == 0xdeadbeef, "get_value != create_value");
                        })
@@ -118,7 +118,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                        [](error_code ec, const dsn::blob &value) {
                            expect_ok(ec);
                            dsn::binary_reader reader(value);
-                           int read_value;
+                           int read_value = 0;
                            reader.read(read_value);
                            dassert(read_value == 0xbeefdead, "get_value != create_value");
                        })

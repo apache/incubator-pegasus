@@ -37,6 +37,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(PROJECT_ROOT ${CMAKE_CURRENT_LIST_DIR})
 set(THIRDPARTY_ROOT ${PROJECT_ROOT}/thirdparty)
 set(THIRDPARTY_INSTALL_DIR ${PROJECT_ROOT}/thirdparty/output)
+message(STATUS "THIRDPARTY_INSTALL_DIR = ${THIRDPARTY_INSTALL_DIR}")
 
 # TODO(yingchun): we will remove it later
 # Set DSN_ROOT to ./DSN_ROOT, this is where rdsn will be installed

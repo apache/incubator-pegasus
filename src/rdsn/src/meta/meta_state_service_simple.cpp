@@ -246,7 +246,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                 }
                 _offset += sizeof(header) + header.size;
                 binary_reader reader(blob(buffer, (int)header.size));
-                int op_type;
+                int op_type = 0;
                 reader.read(op_type);
 
                 switch (static_cast<operation_type>(op_type)) {

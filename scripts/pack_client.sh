@@ -43,13 +43,13 @@ then
     exit 1
 fi
 
-if [ ! -f src/builder/CMAKE_OPTIONS ]
+if [ ! -f src/builder/CMakeCache.txt ]
 then
-    echo "ERROR: src/builder/CMAKE_OPTIONS not found"
+    echo "ERROR: src/builder/CMakeCache.txt not found"
     exit 1
 fi
 
-if grep -q Debug src/builder/CMAKE_OPTIONS
+if egrep -i "CMAKE_BUILD_TYPE:STRING\=debug" src/builder/CMakeCache.txt;
 then
     build_type=debug
 else
