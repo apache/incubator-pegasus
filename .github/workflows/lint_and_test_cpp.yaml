@@ -75,11 +75,10 @@ jobs:
         with:
           filters: |
             rdsn:
-              - 'rdsn/**'
+              - 'src/rdsn/**'
             thirdparty:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
-        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
@@ -90,7 +89,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation and Unit Testing
-        if: steps.changes.outputs.rdsn == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -117,11 +116,10 @@ jobs:
         with:
           filters: |
             rdsn:
-              - 'rdsn/**'
+              - 'src/rdsn/**'
             thirdparty:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
-        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
@@ -132,7 +130,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation and Unit Testing
-        if: steps.changes.outputs.rdsn == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -159,11 +157,10 @@ jobs:
         with:
           filters: |
             rdsn:
-              - 'rdsn/**'
+              - 'src/rdsn/**'
             thirdparty:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
-        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
@@ -174,7 +171,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation and Unit Testing
-        if: steps.changes.outputs.rdsn == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -201,11 +198,10 @@ jobs:
         with:
           filters: |
             rdsn:
-              - 'rdsn/**'
+              - 'src/rdsn/**'
             thirdparty:
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
-        working-directory: rdsn
         if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Rebuild third-parties
@@ -216,7 +212,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation and Unit Testing
-        if: steps.changes.outputs.rdsn == 'true'
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -237,24 +233,31 @@ jobs:
         id: changes
         with:
           filters: |
-            rdsn:
-              - 'rdsn/**'
             pegasus:
               - 'src/**'
+            thirdparty:
+              - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.thirdparty == 'false'
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh build -c -j $(($(nproc)/2+1))
       - name: Packaging Server
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh pack_server
       - name: Packaging Tools
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh pack_tools
       - name: Unit Testing
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.pegasus == 'true'
+        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
