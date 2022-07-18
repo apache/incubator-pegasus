@@ -20,26 +20,20 @@
 package executor
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
-	"github.com/go-resty/resty/v2"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
-type httpRequest func(addr string, cmd command) (string, error)
-
-// map[*util.PegasusNode]*cmdResult is not sorted, pass nodes is for print sorted result
-type printResponse func(nodeType session.NodeType, sortedNodeList []string, resp map[string]*cmdResult)
+// map[*util.PegasusNode]*util.Result is not sorted, pass nodes is for print sorted result
+type printResponse func(nodeType session.NodeType, sortedNodeList []string, resp map[string]*util.Result)
 
 type action struct {
-	request httpRequest
+	request util.HTTPRequestFunc
 	print   printResponse
 }
 
@@ -55,21 +49,11 @@ var sectionsMap = map[session.NodeType]string{
 	// TODO(jiashuo1) support collector
 }
 
-type command struct {
-	name  string
-	value string
-}
-
 type response struct {
 	Name    string
 	Section string
 	Tags    string
 	Value   string
-}
-
-type cmdResult struct {
-	resp string
-	err  error
 }
 
 //TODO(jiashuo1) not support update collector config
@@ -87,11 +71,11 @@ func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, n
 	}
 
 	if ac, ok := actionsMap[actionType]; ok {
-		cmd := command{
-			name:  name,
-			value: value,
+		cmd := util.Arguments{
+			Name:  name,
+			Value: value,
 		}
-		results := batchCallHTTP(nodes, ac.request, cmd)
+		results := util.BatchCallHTTP(nodes, ac.request, cmd)
 
 		var sortedNodeList []string
 		for _, n := range nodes {
@@ -106,59 +90,22 @@ func ConfigCommand(client *Client, nodeType session.NodeType, nodeAddr string, n
 	return nil
 }
 
-func batchCallHTTP(nodes []*util.PegasusNode, request httpRequest, cmd command) map[string]*cmdResult {
-	results := make(map[string]*cmdResult)
-
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	wg.Add(len(nodes))
-	for _, n := range nodes {
-		go func(node *util.PegasusNode) {
-			_, cancel := context.WithTimeout(context.Background(), time.Second*10)
-			defer cancel()
-			result, err := request(node.TCPAddr(), cmd)
-			mu.Lock()
-			if err != nil {
-				results[node.CombinedAddr()] = &cmdResult{err: err}
-			} else {
-				results[node.CombinedAddr()] = &cmdResult{resp: result}
-			}
-			mu.Unlock()
-			wg.Done()
-		}(n)
-	}
-	wg.Wait()
-
-	return results
-}
-
-func callHTTP(url string) (string, error) {
-	resp, err := resty.New().SetTimeout(time.Second * 10).R().Get(url)
-	if err != nil {
-		return "", fmt.Errorf("failed to call \"%s\": %s", url, err)
-	}
-	if resp.StatusCode() != 200 {
-		return "", fmt.Errorf("failed to call \"%s\": code=%d", url, resp.StatusCode())
-	}
-	return string(resp.Body()), nil
-}
-
-func listConfig(addr string, cmd command) (string, error) {
+func listConfig(addr string, cmd util.Arguments) (string, error) {
 	url := fmt.Sprintf("http://%s/configs", addr)
-	return callHTTP(url)
+	return util.CallHTTPGet(url)
 }
 
-func printConfigList(nodeType session.NodeType, sortedNodeList []string, results map[string]*cmdResult) {
+func printConfigList(nodeType session.NodeType, sortedNodeList []string, results map[string]*util.Result) {
 	fmt.Printf("CMD: list \n")
 	for _, node := range sortedNodeList {
 		cmdRes := results[node]
-		if cmdRes.err != nil {
-			fmt.Printf("[%s] %s\n", node, cmdRes.err)
+		if cmdRes.Err != nil {
+			fmt.Printf("[%s] %s\n", node, cmdRes.Err)
 			continue
 		}
 
 		var respMap map[string]response
-		err := json.Unmarshal([]byte(cmdRes.resp), &respMap)
+		err := json.Unmarshal([]byte(cmdRes.Resp), &respMap)
 		if err != nil {
 			fmt.Printf("[%s] %s\n", node, err)
 			continue
@@ -178,24 +125,24 @@ func printConfigList(nodeType session.NodeType, sortedNodeList []string, results
 	}
 }
 
-func getConfig(addr string, cmd command) (string, error) {
-	url := fmt.Sprintf("http://%s/config?name=%s", addr, cmd.name)
-	return callHTTP(url)
+func getConfig(addr string, cmd util.Arguments) (string, error) {
+	url := fmt.Sprintf("http://%s/config?name=%s", addr, cmd.Name)
+	return util.CallHTTPGet(url)
 }
 
-func printConfigValue(nodeType session.NodeType, sortedNodeList []string, results map[string]*cmdResult) {
+func printConfigValue(nodeType session.NodeType, sortedNodeList []string, results map[string]*util.Result) {
 	fmt.Printf("CMD: get \n")
 	for _, node := range sortedNodeList {
 		cmdRes := results[node]
-		if cmdRes.err != nil {
-			fmt.Printf("[%s] %s\n", node, cmdRes.err)
+		if cmdRes.Err != nil {
+			fmt.Printf("[%s] %s\n", node, cmdRes.Err)
 			continue
 		}
 
 		var resp response
-		err := json.Unmarshal([]byte(cmdRes.resp), &resp)
+		err := json.Unmarshal([]byte(cmdRes.Resp), &resp)
 		if err != nil {
-			fmt.Printf("[%s] %s\n", node, cmdRes.resp)
+			fmt.Printf("[%s] %s\n", node, cmdRes.Resp)
 			continue
 		}
 
@@ -208,22 +155,22 @@ func printConfigValue(nodeType session.NodeType, sortedNodeList []string, result
 	}
 }
 
-func updateConfig(addr string, cmd command) (string, error) {
-	url := fmt.Sprintf("http://%s/updateConfig?%s=%s", addr, cmd.name, cmd.value)
-	return callHTTP(url)
+func updateConfig(addr string, cmd util.Arguments) (string, error) {
+	url := fmt.Sprintf("http://%s/updateConfig?%s=%s", addr, cmd.Name, cmd.Value)
+	return util.CallHTTPGet(url)
 }
 
-func printConfigUpdate(nodeType session.NodeType, sortedNodeList []string, results map[string]*cmdResult) {
+func printConfigUpdate(nodeType session.NodeType, sortedNodeList []string, results map[string]*util.Result) {
 	fmt.Printf("CMD: set \n")
 	for _, node := range sortedNodeList {
 		cmdRes := results[node]
-		if cmdRes.err != nil {
-			fmt.Printf("[%s] %s\n", node, cmdRes.err)
+		if cmdRes.Err != nil {
+			fmt.Printf("[%s] %s\n", node, cmdRes.Err)
 			continue
 		}
 
 		var resMap map[string]string
-		err := json.Unmarshal([]byte(cmdRes.resp), &resMap)
+		err := json.Unmarshal([]byte(cmdRes.Resp), &resMap)
 		if err != nil {
 			fmt.Printf("[%s] %s\n", node, err)
 			continue

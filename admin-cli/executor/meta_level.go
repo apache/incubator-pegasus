@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 )
 
 // GetMetaLevel command

@@ -15,28 +15,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# use dockerhub by default
-ARG REGISTRY_REPO=apache/pegasus
-
-FROM ${REGISTRY_REPO}:build-env-centos7 as builder
+FROM apache/pegasus:build-env-centos7 as builder
 
 WORKDIR /root
 
-ARG TAGNAME=master
+ARG GITHUB_BRANCH=master
+ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
+RUN git clone --depth=1 --branch=${GITHUB_BRANCH} ${GITHUB_REPOSITORY_URL}
 
-RUN git clone --depth=1 --branch=${TAGNAME} https://github.com/XiaoMi/rdsn.git
-
-RUN cd rdsn/thirdparty \
+RUN cd incubator-pegasus/thirdparty \
     && mkdir -p build \
     && cmake -DCMAKE_BUILD_TYPE=Release -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1))
 
-RUN cd rdsn/thirdparty \
+RUN cd incubator-pegasus/thirdparty \
     && zip -r ~/thirdparties-src.zip build/Download \
     && cd ~ \
-    && rm -rf rdsn;
+    && rm -rf incubator-pegasus;
 
-# Unzip thirdparties-src.zip to rdsn/thirdparty, the download will automatically be skipped.
+# Unzip thirdparties-src.zip to thirdparty, the download will automatically be skipped.
 
 FROM alpine
 

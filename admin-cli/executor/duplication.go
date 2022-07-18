@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 )
 
 // QueryDuplication command
@@ -39,8 +39,8 @@ func QueryDuplication(c *Client, tableName string) error {
 }
 
 // AddDuplication command
-func AddDuplication(c *Client, tableName string, remoteCluster string, freezed bool) error {
-	resp, err := c.Meta.AddDuplication(tableName, remoteCluster, freezed)
+func AddDuplication(c *Client, tableName string, remoteCluster string, duplicateCheckpoint bool) error {
+	resp, err := c.Meta.AddDuplication(tableName, remoteCluster, duplicateCheckpoint)
 	if err != nil {
 		return err
 	}

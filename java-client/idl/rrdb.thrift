@@ -318,4 +318,5 @@ service meta
 {
     replication.query_cfg_response query_cfg(1:replication.query_cfg_request query);
     meta_admin.configuration_create_app_response create_app(1:meta_admin.configuration_create_app_request request);
+    meta_admin.configuration_drop_app_response drop_app(1:meta_admin.configuration_drop_app_request request);
 }

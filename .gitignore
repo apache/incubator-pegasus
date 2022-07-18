@@ -64,7 +64,6 @@ make_config.mk
 *.vcxproj
 *.vcxproj.filters
 *.sln
-*.cmake
 CMakeCache.txt
 CMakeFiles/
 build/
@@ -253,3 +252,18 @@ python-client/site
 
 # mypy
 python-client/.mypy_cache/
+
+.arcconfig
+*.log*
+node_modules
+package-lock.json
+
+#go
+go-client/bin
+
+# rdsn
+rdsn/builder
+thirdparty/build
+thirdparty/output
+rdsn/cmake-build-debug
+rdsn/test_reports

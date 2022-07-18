@@ -19,10 +19,16 @@ name:  BuildThirdpartyDockerRegularly - build and publish thirdparty every week
 
 on:
   push:
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+      - ci-test # testing branch for github action
+      - '*dev' # developing branch
     paths:
       - 'docker/thirdparties-src/**'
       - 'docker/thirdparties-bin/**'
       - '.github/workflows/thirdparty-regular-push.yml'
+      - 'thirdparty/**'
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -54,7 +60,7 @@ jobs:
           tags: |
             apache/pegasus:thirdparties-src
           build-args: |
-            REGISTRY_REPO=apache/pegasus
+            GITHUB_BRANCH=${{ github.ref_name }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
@@ -67,7 +73,7 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
-          #- centos6 is EOL
+          - centos6
           - centos7
     steps:
       - uses: actions/checkout@v2
@@ -89,6 +95,7 @@ jobs:
           tags: |
             apache/pegasus:thirdparties-bin-${{ matrix.osversion }}
           build-args: |
+            GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

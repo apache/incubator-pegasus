@@ -20,10 +20,10 @@
 package executor
 
 import (
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/admin-cli/client"
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 )
 
 // ListTables command.

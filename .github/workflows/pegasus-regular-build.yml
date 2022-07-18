@@ -39,6 +39,7 @@ jobs:
           - ubuntu1604
           - ubuntu1804
           - ubuntu2004
+          - centos6
           - centos7
         compiler-family:
           - gcc
@@ -58,10 +59,10 @@ jobs:
       - name: Clone Apache Pegasus Source
         working-directory: /root
         run: |
-          git clone --recursive --depth=1 https://github.com/apache/incubator-pegasus.git
+          git clone --depth=1 https://github.com/apache/incubator-pegasus.git
           cd incubator-pegasus
       - name: Unpack prebuilt third-parties
-        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Compilation rdsn on GCC
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: |

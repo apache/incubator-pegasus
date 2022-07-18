@@ -58,6 +58,8 @@ public interface PegasusAdminClientInterface {
    */
   public boolean isAppHealthy(String appName, int replicaCount) throws PException;
 
+  public void dropApp(String appName, int reserveSeconds) throws PException;
+
   /** close the client */
   public void close();
 }

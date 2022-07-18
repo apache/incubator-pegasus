@@ -25,11 +25,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/admin"
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/replication"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/admin"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 type BalanceType int
@@ -82,7 +82,7 @@ type Meta interface {
 
 	ModifyDuplication(tableName string, dupid int, status admin.DuplicationStatus) error
 
-	AddDuplication(tableName string, remoteCluster string, freezed bool) (*admin.DuplicationAddResponse, error)
+	AddDuplication(tableName string, remoteCluster string, duplicateCheckpoint bool) (*admin.DuplicationAddResponse, error)
 
 	QueryDuplication(tableName string) (*admin.DuplicationQueryResponse, error)
 
@@ -316,12 +316,12 @@ func (m *rpcBasedMeta) ModifyDuplication(tableName string, dupid int, status adm
 	return err
 }
 
-func (m *rpcBasedMeta) AddDuplication(tableName string, remoteCluster string, freezed bool) (*admin.DuplicationAddResponse, error) {
+func (m *rpcBasedMeta) AddDuplication(tableName string, remoteCluster string, duplicateCheckpoint bool) (*admin.DuplicationAddResponse, error) {
 	var result *admin.DuplicationAddResponse
 	req := &admin.DuplicationAddRequest{
-		AppName:           tableName,
-		RemoteClusterName: remoteCluster,
-		Freezed:           freezed,
+		AppName:                 tableName,
+		RemoteClusterName:       remoteCluster,
+		IsDuplicatingCheckpoint: duplicateCheckpoint,
 	}
 	err := m.callMeta("AddDuplication", req, func(resp interface{}) {
 		result = resp.(*admin.DuplicationAddResponse)

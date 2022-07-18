@@ -19,6 +19,8 @@
 
 #include "shell/commands.h"
 
+#include <dsn/utility/ports.h>
+
 double convert_to_ratio(double hit, double total)
 {
     return std::abs(total) < 1e-6 ? 0 : hit / total;
@@ -884,5 +886,108 @@ bool clear_app_envs(command_executor *e, shell_context *sc, arguments args)
     if (ret != dsn::ERR_OK) {
         fprintf(stderr, "clear app envs failed with err = %s\n", ret.to_string());
     }
+    return true;
+}
+
+bool get_max_replica_count(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"json", no_argument, 0, 'j'}, {0, 0, 0, 0}};
+
+    if (args.argc < 2) {
+        return false;
+    }
+
+    std::string app_name(args.argv[1]);
+
+    bool json = false;
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c = getopt_long(args.argc, args.argv, "j", long_options, &option_index);
+        if (c == -1) {
+            break;
+        }
+
+        switch (c) {
+        case 'j':
+            json = true;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    auto err_resp = sc->ddl_client->get_max_replica_count(app_name);
+    auto err = err_resp.get_error();
+    const auto &resp = err_resp.get_value();
+
+    if (err.is_ok()) {
+        err = dsn::error_s::make(resp.err);
+    }
+
+    std::string escaped_app_name(pegasus::utils::c_escape_string(app_name));
+    if (!err.is_ok()) {
+        fmt::print(stderr, "get replica count of app({}) failed: {}\n", escaped_app_name, err);
+        return true;
+    }
+
+    dsn::utils::table_printer tp("max_replica_count");
+    tp.add_row_name_and_data("max_replica_count", resp.max_replica_count);
+    tp.output(std::cout, json ? tp_output_format::kJsonPretty : tp_output_format::kTabular);
+
+    return true;
+}
+
+bool set_max_replica_count(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc < 3) {
+        return false;
+    }
+
+    int new_max_replica_count;
+    if (!dsn::buf2int32(args.argv[2], new_max_replica_count)) {
+        fmt::print(stderr, "parse '{}' as replica count failed\n", args.argv[2]);
+        return false;
+    }
+
+    if (new_max_replica_count < 1) {
+        fmt::print(stderr, "replica count should be >= 1\n");
+        return false;
+    }
+
+    std::string app_name(args.argv[1]);
+    std::string escaped_app_name(pegasus::utils::c_escape_string(app_name));
+    std::string action(fmt::format(
+        "set the replica count of app({}) to {}", escaped_app_name, new_max_replica_count));
+    if (!confirm_unsafe_command(action)) {
+        return true;
+    }
+
+    auto err_resp = sc->ddl_client->set_max_replica_count(app_name, new_max_replica_count);
+    auto err = err_resp.get_error();
+    const auto &resp = err_resp.get_value();
+
+    if (dsn_likely(err.is_ok())) {
+        err = dsn::error_s::make(resp.err);
+    }
+
+    if (err.is_ok()) {
+        fmt::print(stdout,
+                   "set replica count of app({}) from {} to {}: {}\n",
+                   escaped_app_name,
+                   resp.old_max_replica_count,
+                   new_max_replica_count,
+                   resp.hint_message.empty() ? "success" : resp.hint_message);
+    } else {
+        std::string error_message(resp.err.to_string());
+        if (!resp.hint_message.empty()) {
+            error_message += ", ";
+            error_message += resp.hint_message;
+        }
+
+        fmt::print(
+            stderr, "set replica count of app({}) failed: {}\n", escaped_app_name, error_message);
+    }
+
     return true;
 }

@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/XiaoMi/pegasus-go-client/idl/base"
-	"github.com/XiaoMi/pegasus-go-client/idl/radmin"
-	"github.com/XiaoMi/pegasus-go-client/session"
 	"github.com/apache/incubator-pegasus/admin-cli/tabular"
 	"github.com/apache/incubator-pegasus/admin-cli/util"
+	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/radmin"
+	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
 type DiskInfoType string
@@ -225,7 +225,7 @@ func ConvertReplicaCapacityStruct(replicaCapacityInfos []interface{}) ([]Replica
 		}
 	}
 	if replicas == nil {
-		return nil, fmt.Errorf("the disk has no replica")
+		return []ReplicaCapacityStruct{}, nil
 	}
 	return replicas, nil
 }

@@ -80,3 +80,127 @@ generate_sortkey_value_map(const std::vector<std::string> sortkeys,
     }
     return result;
 }
+
+inline void
+check_and_put(std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>> &data,
+              const std::string &hash_key,
+              const std::string &sort_key,
+              const std::string &value,
+              uint32_t expire_ts_seconds)
+{
+    auto it1 = data.find(hash_key);
+    if (it1 != data.end()) {
+        auto it2 = it1->second.find(sort_key);
+        ASSERT_EQ(it1->second.end(), it2)
+            << "Duplicate: hash_key=" << hash_key << ", sort_key=" << sort_key
+            << ", old_value=" << it2->second.first << ", new_value=" << value
+            << ", old_expire_ts_seconds=" << it2->second.second
+            << ", new_expire_ts_seconds=" << expire_ts_seconds;
+    }
+    data[hash_key][sort_key] = std::pair<std::string, uint32_t>(value, expire_ts_seconds);
+}
+
+inline void check_and_put(std::map<std::string, std::map<std::string, std::string>> &data,
+                          const std::string &hash_key,
+                          const std::string &sort_key,
+                          const std::string &value)
+{
+    auto it1 = data.find(hash_key);
+    if (it1 != data.end()) {
+        auto it2 = it1->second.find(sort_key);
+        ASSERT_EQ(it1->second.end(), it2)
+            << "Duplicate: hash_key=" << hash_key << ", sort_key=" << sort_key
+            << ", old_value=" << it2->second << ", new_value=" << value;
+    }
+    data[hash_key][sort_key] = value;
+}
+
+inline void check_and_put(std::map<std::string, std::string> &data,
+                          const std::string &hash_key,
+                          const std::string &sort_key,
+                          const std::string &value)
+{
+    auto it1 = data.find(sort_key);
+    ASSERT_EQ(data.end(), it1) << "Duplicate: hash_key=" << hash_key << ", sort_key=" << sort_key
+                               << ", old_value=" << it1->second << ", new_value=" << value;
+    data[sort_key] = value;
+}
+
+inline void compare(const std::pair<std::string, uint32_t> &data,
+                    const std::pair<std::string, uint32_t> &base,
+                    const std::string &hash_key,
+                    const std::string sort_key)
+{
+    ASSERT_EQ(base.first, data.first)
+        << "Diff value: hash_key=" << hash_key << ", sort_key=" << sort_key
+        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
+        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+
+    ASSERT_TRUE(data.second >= base.second && data.second - base.second <= 1)
+        << "Diff expire_ts_seconds: hash_key=" << hash_key << ", sort_key=" << sort_key
+        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
+        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+}
+
+inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>> &data,
+                    const std::map<std::string, std::pair<std::string, uint32_t>> &base,
+                    const std::string &hash_key)
+{
+    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
+        if (it1 == data.end()) {
+            ASSERT_EQ(base.end(), it2)
+                << "Only in base: hash_key=" << hash_key << ", sort_key=" << it2->first
+                << ", value=" << it2->second.first << ", expire_ts_seconds=" << it2->second.second;
+            break;
+        }
+        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << hash_key
+                                   << ", sort_key=" << it1->first << ", value=" << it1->second.first
+                                   << ", expire_ts_seconds=" << it1->second.second;
+        ASSERT_EQ(it2->first, it1->first)
+            << "Diff sort_key: hash_key=" << hash_key << ", data_sort_key=" << it1->first
+            << ", data_value=" << it1->second.first
+            << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
+            << ", base_value=" << it2->second.first
+            << ", base_expire_ts_seconds=" << it2->second.second;
+        compare(it1->second, it2->second, hash_key, it1->first);
+    }
+
+    dinfo("Data and base are the same.");
+}
+
+inline void compare(const std::map<std::string, std::string> &data,
+                    const std::map<std::string, std::string> &base,
+                    const std::string &hash_key)
+{
+    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
+        if (it1 == data.end()) {
+            ASSERT_EQ(base.end(), it2) << "Only in base: hash_key=" << hash_key
+                                       << ", sort_key=" << it2->first << ", value=" << it2->second;
+            break;
+        }
+        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << hash_key
+                                   << ", sort_key=" << it1->first << ", value=" << it1->second;
+        ASSERT_EQ(*it2, *it1) << "Diff: hash_key=" << hash_key << ", data_sort_key=" << it1->first
+                              << ", data_value=" << it1->second << ", base_sort_key=" << it2->first
+                              << ", base_value=" << it2->second;
+    }
+
+    dinfo("Data and base are the same.");
+}
+
+template <typename T, typename U>
+inline void compare(const T &data, const U &base)
+{
+    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
+        if (it1 == data.end()) {
+            ASSERT_EQ(base.end(), it2) << "Only in base: hash_key=" << it2->first;
+            break;
+        }
+        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << it1->first;
+        ASSERT_EQ(it1->first, it2->first) << "Diff: data_hash_key=" << it1->first
+                                          << ", base_hash_key=" << it2->first;
+        compare(it1->second, it2->second, it1->first);
+    }
+
+    dinfo("Data and base are the same.");
+}

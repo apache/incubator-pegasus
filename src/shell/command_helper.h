@@ -63,6 +63,7 @@ using namespace dsn::replication;
 #endif
 
 DEFINE_TASK_CODE(LPC_SCAN_DATA, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
+
 enum scan_data_operator
 {
     SCAN_COPY,
@@ -164,7 +165,7 @@ struct scan_data_context
                       pegasus::pegasus_client *client_,
                       pegasus::geo::geo_client *geoclient_,
                       std::atomic_bool *error_occurred_,
-                      int max_multi_set_concurrency = 100,
+                      int max_multi_set_concurrency = 20,
                       bool stat_size_ = false,
                       std::shared_ptr<rocksdb::Statistics> statistics_ = nullptr,
                       int top_count_ = 0,
@@ -328,18 +329,48 @@ inline void scan_multi_data_next(scan_data_context *context)
                     int ttl_seconds = 0;
                     ttl_seconds = compute_ttl_seconds(expire_ts_seconds, ts_expired);
                     if (!ts_expired) {
-                        context->data_count++;
-                        if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
-                            context->multi_kvs.emplace(hash_key,
-                                                       std::map<std::string, std::string>());
-                        }
-                        if (context->multi_ttl_seconds < ttl_seconds || ttl_seconds == 0) {
-                            context->multi_ttl_seconds = ttl_seconds;
-                        }
-                        context->multi_kvs[hash_key].emplace(std::move(sort_key), std::move(value));
+                        // empty hashkey should get hashkey by sortkey
+                        if (hash_key == "") {
+                            // wait for satisfied with max_multi_set_concurrency
+                            context->sema.wait();
 
-                        if (context->data_count >= context->max_batch_count) {
-                            batch_execute_multi_set(context);
+                            auto callback = [context](
+                                int err, pegasus::pegasus_client::internal_info &&info) {
+                                if (err != pegasus::PERR_OK) {
+                                    if (!context->split_completed.exchange(true)) {
+                                        fprintf(stderr,
+                                                "ERROR: split[%d] async check and set failed: %s\n",
+                                                context->split_id,
+                                                context->client->get_error_string(err));
+                                        context->error_occurred->store(true);
+                                    }
+                                } else {
+                                    context->split_rows++;
+                                }
+                                context->sema.signal();
+                            };
+
+                            context->client->async_set(hash_key,
+                                                       sort_key,
+                                                       value,
+                                                       std::move(callback),
+                                                       context->timeout_ms,
+                                                       ttl_seconds);
+                        } else {
+                            context->data_count++;
+                            if (context->multi_kvs.find(hash_key) == context->multi_kvs.end()) {
+                                context->multi_kvs.emplace(hash_key,
+                                                           std::map<std::string, std::string>());
+                            }
+                            if (context->multi_ttl_seconds < ttl_seconds || ttl_seconds == 0) {
+                                context->multi_ttl_seconds = ttl_seconds;
+                            }
+                            context->multi_kvs[hash_key].emplace(std::move(sort_key),
+                                                                 std::move(value));
+
+                            if (context->data_count >= context->max_batch_count) {
+                                batch_execute_multi_set(context);
+                            }
                         }
                     }
                 }

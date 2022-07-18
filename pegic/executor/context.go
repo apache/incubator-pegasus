@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/XiaoMi/pegasus-go-client/pegasus"
-	"github.com/XiaoMi/pegasus-go-client/session"
+	"github.com/apache/incubator-pegasus/go-client/pegasus"
+	"github.com/apache/incubator-pegasus/go-client/session"
 	"github.com/apache/incubator-pegasus/pegic/executor/util"
 )
 

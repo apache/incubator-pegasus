@@ -21,8 +21,8 @@ ROOT=`pwd`
 LOCAL_IP=`scripts/get_local_ip`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
-export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$LD_LIBRARY_PATH
+export THIRDPARTY_ROOT=$ROOT/thirdparty
+export LD_LIBRARY_PATH=$DSN_ROOT/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
 
 function usage()
 {
@@ -86,11 +86,25 @@ function usage_build()
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
     echo "                         to enable valgrind memcheck, default no"
+    echo "   --use_jemalloc        build with jemalloc"
     echo "   --sanitizer <type>    build with sanitizer to check potential problems,
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
+    echo "   --rdsn                whether to build/test rdsn module only"
+    if [ "$TEST" == "YES" ]; then
+        echo "   -m|--test_module      specify modules to test, split by ',',"
+        echo "                         e.g., \"dsn_runtime_tests,dsn_meta_state_tests\","
+        echo "                         if not set, then run all tests"
+    fi
 }
+
+function exit_if_fail() {
+    if [ $1 != 0 ]; then
+        exit $1
+    fi
+}
+
 function run_build()
 {
     # Note(jiashuo1): No "memory" check mode, because MemorySanitizer is only available in Clang for Linux x86_64 targets
@@ -111,7 +125,10 @@ function run_build()
     SKIP_THIRDPARTY=NO
     SANITIZER=""
     TEST_MODULE=""
-    ENABLE_ROCKSDB_PORTABLE=NO
+    ENABLE_ROCKSDB_PORTABLE=OFF
+    USE_JEMALLOC=OFF
+    TEST=NO
+    ONLY_RDSN=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -173,7 +190,21 @@ function run_build()
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ENABLE_ROCKSDB_PORTABLE=YES
+                ENABLE_ROCKSDB_PORTABLE=ON
+                ;;
+            --use_jemalloc)
+                DISABLE_GPERF=YES
+                USE_JEMALLOC=ON
+                ;;
+            -m|--test_module)
+                TEST_MODULE="$2"
+                shift
+                ;;
+            --test)
+                TEST=YES
+                ;;
+            --rdsn)
+                ONLY_RDSN=YES
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -184,6 +215,19 @@ function run_build()
         esac
         shift
     done
+
+    if [ "$TEST" == "NO" -a "$TEST_MODULE" != "" ]; then
+        echo "ERROR: invalid option: --test is off but -m|--test_module is on"
+        echo
+        usage_build
+        exit 1
+    fi
+
+    if [ "$(uname)" == "Darwin" ]; then
+        MACOS_OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
+        CMAKE_OPTIONS="-DMACOS_OPENSSL_ROOT_DIR=${MACOS_OPENSSL_ROOT_DIR}"
+    fi
+
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo
@@ -191,57 +235,75 @@ function run_build()
         exit 1
     fi
 
-    if [ ! -d $ROOT/rdsn/include ]; then
-        echo "ERROR: rdsn submodule not fetched"
-        exit 1
-    fi
-
-    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
-    export DSN_ROOT=$ROOT/rdsn/builder/output
-    if [ ! -e $ROOT/DSN_ROOT ]; then
-        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
-    fi
+#    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
+#    export DSN_ROOT=$ROOT/src/rdsn/builder/output
+#    if [ ! -e $ROOT/DSN_ROOT ]; then
+#        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
+#    fi
 
     echo "Build start time: `date`"
     start_time=`date +%s`
 
+    if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
+        echo "Skip building third-parties..."
+    else
+        cd ${THIRDPARTY_ROOT}
+        if [[ "$CLEAR_THIRDPARTY" == "YES" ]]; then
+            echo "Clear third-parties..."
+            rm -rf build
+            rm -rf output
+        fi
+        echo "Start building third-parties..."
+        mkdir -p build
+        pushd build
+        CMAKE_OPTIONS="${CMAKE_OPTIONS}
+                       -DCMAKE_C_COMPILER=${C_COMPILER}
+                       -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+                       -DCMAKE_BUILD_TYPE=Release
+                       -DROCKSDB_PORTABLE=${ENABLE_ROCKSDB_PORTABLE}
+                       -DUSE_JEMALLOC=${USE_JEMALLOC}"
+        cmake .. ${CMAKE_OPTIONS}
+        make -j$JOB_NUM
+        exit_if_fail $?
+        popd
+        cd ..
+    fi
+
     echo "INFO: start build rdsn..."
-    cd $ROOT/rdsn
-    OPT="-t $BUILD_TYPE -j $JOB_NUM --compiler $C_COMPILER,$CXX_COMPILER"
-    if [ "$CLEAR" == "YES" ]; then
-        OPT="$OPT -c"
-    fi
-    if [ "$CLEAR_THIRDPARTY" == "YES" ]; then
-        OPT="$OPT --clear_thirdparty"
-    fi
-    if [ "$WARNING_ALL" == "YES" ]; then
-        OPT="$OPT -w"
-    fi
-    if [ "$RUN_VERBOSE" == "YES" ]; then
-        OPT="$OPT -v"
-    fi
-    if [ "$ENABLE_GCOV" == "YES" ]; then
-        OPT="$OPT --enable_gcov"
-    fi
-    if [ "$DISABLE_GPERF" == "YES" ]; then
-        OPT="$OPT --disable_gperf"
-    fi
-    if [ "$SKIP_THIRDPARTY" == "YES" ]; then
-        OPT="$OPT --skip_thirdparty"
-    fi
-    if [ ! -z $SANITIZER ]; then
-        OPT="$OPT --sanitizer $SANITIZER"
-    fi
-    if [ "$ENABLE_ROCKSDB_PORTABLE" == "YES" ]; then
-        OPT="$OPT --enable_rocksdb_portable"
-    fi
-    ./run.sh build $OPT --notest
-    if [ $? -ne 0 ]; then
-        echo "ERROR: build rdsn failed"
+    cd $ROOT/src/rdsn
+    if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
+        echo "ERROR: invalid build type \"$BUILD_TYPE\""
+        echo
+        usage_build
         exit 1
+    fi
+    if [ "$TEST" == "YES" ]; then
+        run_start_zk
+        if [ $? -ne 0 ]; then
+            echo "ERROR: start zk failed"
+            exit 1
+        fi
+    fi
+    python3 compile_thrift.py
+    C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
+        CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
+        ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
+        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" TEST="$TEST" \
+        DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \
+        MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" ./scripts/linux/build.sh
+    exit_if_fail $?
+
+    if [ "$ONLY_RDSN" == "YES" ]; then
+      exit 0
     fi
 
     echo "INFO: start build pegasus..."
+
+    echo "Gen pegasus thrift"
+    pushd $ROOT/src/idl
+    sh recompile_thrift.sh
+    popd
+
     cd $ROOT/src
     C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
         CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
@@ -396,7 +458,7 @@ function run_start_zk()
         shift
     done
     
-    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" ./scripts/start_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
     if [ $? -ne 0 ]; then
         exit 1
     fi
@@ -436,7 +498,7 @@ function run_stop_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" ./scripts/stop_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/stop_zk.sh
 }
 
 #####################
@@ -473,7 +535,7 @@ function run_clear_zk()
         esac
         shift
     done
-    INSTALL_DIR="$INSTALL_DIR" ./scripts/clear_zk.sh
+    INSTALL_DIR="$INSTALL_DIR" $ROOT/scripts/clear_zk.sh
 }
 
 #####################

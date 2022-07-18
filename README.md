@@ -28,7 +28,7 @@ under the License.
 
 ![pegasus-logo](https://github.com/apache/incubator-pegasus-website/blob/master/assets/images/pegasus-logo-inv.png)
 
-[![Build Status](https://travis-ci.org/apache/incubator-pegasus.svg?branch=master)](https://travis-ci.org/apache/incubator-pegasus)
+[![BuildPegasusRegularly - build pegasus and rdsn on different env every day](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 [![Releases](https://img.shields.io/github/release/apache/incubator-pegasus.svg)][github-release]
 
@@ -75,7 +75,7 @@ Pegasus has support for several languages:
 - [Java](https://github.com/apache/incubator-pegasus/blob/master/java-client)
 <!-- markdown-link-check-enable-->
 - [C++](https://github.com/apache/incubator-pegasus/blob/master/src/include/pegasus/client.h)
-- [Go](https://github.com/xiaomi/pegasus-go-client)
+- [Go](https://github.com/apache/incubator-pegasus/go-client)
 - [Python](https://github.com/xiaomi/pegasus-python-client)
 - [Node.js](https://github.com/xiaomi/pegasus-nodejs-client)
 - [Scala](https://github.com/apache/incubator-pegasus/blob/master/scala-client)
@@ -87,10 +87,6 @@ Pegasus has support for several languages:
 - GitHub Issues: submit an issue when you have any idea to improve Pegasus, and when you encountered some bugs or problems.
 
 ## Related Projects
-
-Submodules:
-
-- [rDSN](https://github.com/xiaomi/rdsn)
 
 Test tools:
 

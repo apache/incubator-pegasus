@@ -19,26 +19,36 @@
 
 package org.apache.pegasus.client;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.junit.Assert.assertThat;
+
 import java.util.HashMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.pegasus.rpc.async.MetaHandler;
 import org.apache.pegasus.rpc.async.MetaSession;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestAdminClient {
   PegasusAdminClientInterface toolsClient;
   final String metaServerList = "127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603";
+  final int tablePartitionCount = 8;
+  final int tableReplicaCount = 3;
+  final int tableOpTimeoutMs = 66000;
+  ClientOptions clientOptions;
 
   @Before
   public void Setup() throws PException {
-    ClientOptions clientOptions =
+    this.clientOptions =
         ClientOptions.builder()
             .metaServers(this.metaServerList)
             .asyncWorkers(6)
             .enablePerfCounter(false)
             .build();
 
-    toolsClient = PegasusAdminClientFactory.createClient(clientOptions);
+    toolsClient = PegasusAdminClientFactory.createClient(this.clientOptions);
   }
 
   @After
@@ -47,17 +57,19 @@ public class TestAdminClient {
   }
 
   private void testOneCreateApp(String appName) throws PException {
-    int partitionCount = 8;
-    int replicaCount = 3;
-    int opTimeoutMs = 66000;
-    toolsClient.createApp(appName, partitionCount, replicaCount, new HashMap<>(), opTimeoutMs);
+    toolsClient.createApp(
+        appName,
+        this.tablePartitionCount,
+        this.tableReplicaCount,
+        new HashMap<>(),
+        this.tableOpTimeoutMs);
 
-    boolean isAppHealthy = toolsClient.isAppHealthy(appName, replicaCount);
+    boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
 
     Assert.assertTrue(isAppHealthy);
 
-    replicaCount = 5;
-    isAppHealthy = toolsClient.isAppHealthy(appName, replicaCount);
+    int fakeReplicaCount = 5;
+    isAppHealthy = toolsClient.isAppHealthy(appName, fakeReplicaCount);
     Assert.assertFalse(isAppHealthy);
   }
 
@@ -88,11 +100,38 @@ public class TestAdminClient {
     int replicaCount = 3;
 
     try {
-      toolsClient.isAppHealthy(appName, replicaCount);
+      toolsClient.isAppHealthy(appName, this.tableReplicaCount);
     } catch (PException e) {
       return;
     }
 
     Assert.fail();
+  }
+
+  @Test
+  public void testDropApp() throws PException {
+    String appName = "testDropApp";
+
+    toolsClient.createApp(
+        appName,
+        this.tablePartitionCount,
+        this.tableReplicaCount,
+        new HashMap<>(),
+        this.tableOpTimeoutMs);
+    boolean isAppHealthy = toolsClient.isAppHealthy(appName, this.tableReplicaCount);
+    Assert.assertTrue(isAppHealthy);
+
+    toolsClient.dropApp(appName, tableOpTimeoutMs);
+
+    PegasusClientInterface pClient = PegasusClientFactory.createClient(this.clientOptions);
+    try {
+      pClient.openTable(appName);
+    } catch (PException e) {
+      assertThat(e.getMessage(), containsString("No such table"));
+      pClient.close();
+      return;
+    }
+    pClient.close();
+    Assert.fail("expected PException for openTable");
   }
 }
