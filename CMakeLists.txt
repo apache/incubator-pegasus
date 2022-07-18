@@ -61,7 +61,7 @@ if(ENABLE_GPERF AND USE_JEMALLOC)
 endif()
 
 if(USE_JEMALLOC)
-    message(STATUS "Jemalloc is enabled")
+    message(STATUS "jemalloc is enabled")
     set(JEMALLOC_LIB_TYPE "SHARED")
 endif()
 
