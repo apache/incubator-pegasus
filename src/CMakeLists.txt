@@ -25,6 +25,7 @@ endif()
 
 dsn_common_setup()
 
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${DSN_ROOT}/include)
