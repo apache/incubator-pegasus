@@ -205,7 +205,7 @@ int main(int argc, char **argv)
         std::vector<std::string> nth_strs;
         dsn::utils::split_args(argv[4], nth_strs, ',');
         for (const auto &s : nth_strs) {
-            size_t nth;
+            uint64_t nth;
             if (!dsn::buf2uint64(s, nth)) {
                 fmt::print(stderr, "Invalid nth number: {}\n\n", s);
 
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
         }
     }
 
-    run_bench(num_operations, array_size, range_size, nths);
+    run_bench(num_operations, static_cast<size_t>(array_size), range_size, nths);
 
     return 0;
 }
