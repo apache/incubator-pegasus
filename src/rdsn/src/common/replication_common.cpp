@@ -477,7 +477,23 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
     ::dsn::utils::split_args(server_list.c_str(), lv, ',');
     for (auto &s : lv) {
         ::dsn::rpc_address addr;
-        if (!addr.from_string_ipv4(s.c_str())) {
+        std::vector<std::string> hostname_port;
+        uint32_t ip = 0;
+        utils::split_args(s.c_str(), hostname_port, ':');
+        dassert(2 == hostname_port.size(),
+                "invalid address '{}' specified in config [{}].{}",
+                s.c_str(),
+                section,
+                key);
+        unsigned int port_num;
+        dassert(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
+                "invalid address '{}' specified in config [{}].{}",
+                s.c_str(),
+                section,
+                key);
+        if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
+            addr.assign_ipv4(ip, (uint16_t)port_num);
+        } else if (!addr.from_string_ipv4(s.c_str())) {
             derror_f("invalid address '{}' specified in config [{}].{}", s, section, key);
             return false;
         }
