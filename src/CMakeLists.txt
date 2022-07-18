@@ -25,11 +25,6 @@ endif()
 
 dsn_common_setup()
 
-message(STATUS "USE_JEMALLOC = ${USE_JEMALLOC}")
-if(USE_JEMALLOC)
-    message(STATUS "jemalloc is enabled")
-endif()
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${DSN_ROOT}/include)
