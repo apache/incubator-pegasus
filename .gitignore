@@ -64,7 +64,6 @@ make_config.mk
 *.vcxproj
 *.vcxproj.filters
 *.sln
-*.cmake
 CMakeCache.txt
 CMakeFiles/
 build/
@@ -264,8 +263,7 @@ go-client/bin
 
 # rdsn
 rdsn/builder
-rdsn/thirdparty/build
-rdsn/thirdparty/src
-rdsn/thirdparty/output
+thirdparty/build
+thirdparty/output
 rdsn/cmake-build-debug
 rdsn/test_reports

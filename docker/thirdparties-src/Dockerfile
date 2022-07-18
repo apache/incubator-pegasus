@@ -23,17 +23,17 @@ ARG GITHUB_BRANCH=master
 ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
 RUN git clone --depth=1 --branch=${GITHUB_BRANCH} ${GITHUB_REPOSITORY_URL}
 
-RUN cd incubator-pegasus/rdsn/thirdparty \
+RUN cd incubator-pegasus/thirdparty \
     && mkdir -p build \
     && cmake -DCMAKE_BUILD_TYPE=Release -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1))
 
-RUN cd incubator-pegasus/rdsn/thirdparty \
+RUN cd incubator-pegasus/thirdparty \
     && zip -r ~/thirdparties-src.zip build/Download \
     && cd ~ \
     && rm -rf incubator-pegasus;
 
-# Unzip thirdparties-src.zip to rdsn/thirdparty, the download will automatically be skipped.
+# Unzip thirdparties-src.zip to thirdparty, the download will automatically be skipped.
 
 FROM alpine
 

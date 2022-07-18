@@ -39,7 +39,7 @@ set(MY_BINPLACES "config.ini")
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 # Avoid megabytes of warnings like:
-# rdsn/thirdparty/output/include/s2/s1angle.h:288:28: error:
+# thirdparty/output/include/s2/s1angle.h:288:28: error:
 # optimization attribute on ‘double sin(S1Angle)’ follows
 # definition but the attribute doesn’t match [-Werror=attributes]
 add_definitions(-Wno-attributes)

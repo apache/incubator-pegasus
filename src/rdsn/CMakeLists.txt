@@ -15,38 +15,31 @@
 # specific language governing permissions and limitations
 # under the License.
 
-project(pegasus C CXX)
+project(dsn C CXX)
 
-set(PEGASUS_PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(RDSN_PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
-if(NOT EXISTS "${DSN_ROOT}")
-    message(FATAL_ERROR "Please make sure that ${DSN_ROOT} is defined and does exists.")
-endif()
+# remove?
+set(DSN_BUILD_RUNTIME TRUE)
 
 dsn_common_setup()
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${DSN_ROOT}/include)
-
-link_directories(${DSN_ROOT}/lib)
 
 # Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
 # the destination.
 set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
-message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
+message (STATUS "dsn Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
-add_subdirectory(base)
-add_subdirectory(reporter)
-add_subdirectory(base/test)
-add_subdirectory(client_lib)
-add_subdirectory(server)
-add_subdirectory(server/test)
-add_subdirectory(shell)
-add_subdirectory(geo)
-add_subdirectory(redis_protocol)
-add_subdirectory(test/function_test)
-add_subdirectory(test/kill_test)
-add_subdirectory(test/upgrade_test)
-add_subdirectory(test/pressure_test)
-add_subdirectory(test/bench_test)
+# install rdsn/include to ${CMAKE_INCLUDE_PREFIX}/include
+install(DIRECTORY include/ DESTINATION include)
+
+# NOTE: dsn_types.h is not actually a thrift-generated file. As pegasus may reference it,
+# we should copy also this file to the path the same as other thrift-generated files.
+install(FILES include/dsn/cpp/serialization_helper/dsn_types.h DESTINATION include)
+# TODO(wutao1): remove this line after dsn.layer2_types.h is removed from repo.
+install(FILES include/dsn/cpp/serialization_helper/dsn.layer2_types.h DESTINATION include)
+
+include_directories(${RDSN_PROJECT_ROOT}/include)
+include_directories(${RDSN_PROJECT_ROOT}/include/dsn/cpp/serialization_helper)
+include_directories(${RDSN_PROJECT_ROOT}/src)
+
+add_subdirectory(src)

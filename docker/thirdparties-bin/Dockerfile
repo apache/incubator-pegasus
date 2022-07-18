@@ -28,7 +28,7 @@ COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
 ARG GITHUB_BRANCH=master
 ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
 RUN git clone --depth=1 --branch=${GITHUB_BRANCH} ${GITHUB_REPOSITORY_URL} \
-    && cd incubator-pegasus/rdsn/thirdparty \
+    && cd incubator-pegasus/thirdparty \
     && unzip /root/thirdparties-src.zip -d . \
     && cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=OFF -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1)) \

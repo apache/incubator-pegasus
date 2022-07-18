@@ -62,7 +62,7 @@ jobs:
           git clone --depth=1 https://github.com/apache/incubator-pegasus.git
           cd incubator-pegasus
       - name: Unpack prebuilt third-parties
-        run: unzip /root/thirdparties-bin.zip -d ./rdsn/thirdparty
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Compilation rdsn on GCC
         if: ${{ matrix.compiler-family == 'gcc' }}
         run: |

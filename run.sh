@@ -21,8 +21,8 @@ ROOT=`pwd`
 LOCAL_IP=`scripts/get_local_ip`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
-export DSN_THIRDPARTY_ROOT=$ROOT/rdsn/thirdparty/output
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$DSN_THIRDPARTY_ROOT/lib:$LD_LIBRARY_PATH
+export THIRDPARTY_ROOT=$ROOT/thirdparty
+export LD_LIBRARY_PATH=$DSN_ROOT/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
 
 function usage()
 {
@@ -235,26 +235,19 @@ function run_build()
         exit 1
     fi
 
-    if [ ! -d $ROOT/rdsn/include ]; then
-        echo "ERROR: rdsn submodule not fetched"
-        exit 1
-    fi
-
-    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
-    export DSN_ROOT=$ROOT/rdsn/builder/output
-    if [ ! -e $ROOT/DSN_ROOT ]; then
-        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
-    fi
+#    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
+#    export DSN_ROOT=$ROOT/src/rdsn/builder/output
+#    if [ ! -e $ROOT/DSN_ROOT ]; then
+#        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
+#    fi
 
     echo "Build start time: `date`"
     start_time=`date +%s`
 
-    echo "INFO: start build rdsn..."
-    cd $ROOT/rdsn
     if [[ ${SKIP_THIRDPARTY} == "YES" ]]; then
         echo "Skip building third-parties..."
     else
-        cd thirdparty
+        cd ${THIRDPARTY_ROOT}
         if [[ "$CLEAR_THIRDPARTY" == "YES" ]]; then
             echo "Clear third-parties..."
             rm -rf build
@@ -276,6 +269,8 @@ function run_build()
         cd ..
     fi
 
+    echo "INFO: start build rdsn..."
+    cd $ROOT/src/rdsn
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo
