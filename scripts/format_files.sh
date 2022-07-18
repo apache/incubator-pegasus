@@ -22,7 +22,7 @@ cd $root_dir
 
 linenoise=./src/shell/linenoise
 sds=./src/shell/sds
-thirdparty=./rdsn/thirdparty
+thirdparty=./thirdparty
 
 if [ $# -eq 0 ]; then
   echo "formating all .h/.cpp files in $root_dir ..."

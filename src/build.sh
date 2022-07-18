@@ -39,7 +39,7 @@ ROOT=`pwd`
 BUILD_DIR="$ROOT/builder"
 
 echo "DSN_ROOT=$DSN_ROOT"
-echo "DSN_THIRDPARTY_ROOT=$DSN_THIRDPARTY_ROOT"
+echo "THIRDPARTY_INSTALL_DIR=$THIRDPARTY_INSTALL_DIR"
 echo "C_COMPILER=$C_COMPILER"
 echo "CXX_COMPILER=$CXX_COMPILER"
 CMAKE_OPTIONS="$CMAKE_OPTIONS -DCMAKE_C_COMPILER=$C_COMPILER -DCMAKE_CXX_COMPILER=$CXX_COMPILER"
@@ -119,7 +119,7 @@ else
     echo "USE_JEMALLOC=OFF"
 fi
 
-CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/rdsn/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
+CMAKE_OPTIONS="$CMAKE_OPTIONS -DBoost_NO_BOOST_CMAKE=ON -DBOOST_ROOT=${ROOT}/thirdparty/output -DBoost_NO_SYSTEM_PATHS=ON"
 
 echo "#############################################################################"
 
@@ -145,7 +145,7 @@ then
     mkdir -p $BUILD_DIR
     cd $BUILD_DIR
     echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
-    cmake .. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
+    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"

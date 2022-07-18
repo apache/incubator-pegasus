@@ -121,17 +121,17 @@ cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
 
 mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
+copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
 
 if [ "$use_jemalloc" == "on" ]; then
-    copy_file ./rdsn/thirdparty/output/lib/libjemalloc.so.2 ${pack}/DSN_ROOT/lib/
-    copy_file ./rdsn/thirdparty/output/lib/libprofiler.so.0 ${pack}/DSN_ROOT/lib/
+    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/DSN_ROOT/lib/
+    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/DSN_ROOT/lib/
 else
-    copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
+    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
 fi
 
-copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
-copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/DSN_ROOT/lib
+copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
+copy_file ./thirdparty/output/lib/libhdfs* ${pack}/DSN_ROOT/lib
 copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
 
 pack_tools_lib() {

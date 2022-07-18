@@ -112,19 +112,19 @@ copy_file ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_utils.so ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libPoco*.so.* ${pack}/bin
+copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/bin
 
 if [ "$use_jemalloc" == "on" ]; then
-    copy_file ./rdsn/thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin
-    copy_file ./rdsn/thirdparty/output/lib/libprofiler.so.0 ${pack}/bin
+    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin
+    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/bin
 else
-    copy_file ./rdsn/thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
+    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
 fi
 
-copy_file ./rdsn/thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libhdfs* ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libsasl*.so.* ${pack}/bin
-copy_file ./rdsn/thirdparty/output/lib/libcom_err*.so.* ${pack}/bin
+copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
+copy_file ./thirdparty/output/lib/libhdfs* ${pack}/bin
+copy_file ./thirdparty/output/lib/libsasl*.so.* ${pack}/bin
+copy_file ./thirdparty/output/lib/libcom_err*.so.* ${pack}/bin
 copy_file ./scripts/sendmail.sh ${pack}/bin
 copy_file ./src/server/config.ini ${pack}/bin
 copy_file ./src/server/config.min.ini ${pack}/bin

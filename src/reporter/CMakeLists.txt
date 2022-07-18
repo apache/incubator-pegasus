@@ -28,7 +28,7 @@ set(MY_PROJ_SRC "")
 set(MY_SRC_SEARCH_MODE "GLOB")
 
 # prometheus
-set(CMAKE_PREFIX_PATH ${DSN_THIRDPARTY_ROOT};${CMAKE_PREFIX_PATH})
+set(CMAKE_PREFIX_PATH ${THIRDPARTY_INSTALL_DIR};${CMAKE_PREFIX_PATH})
 find_package(prometheus-cpp)#TODO(huangwei5): make it optional
 # the INTERFACE_LINK_LIBRARIES of prometheus contains the absolute path of libcurl
 # when we use the compiled prometheus-cpp libs, the path of libcurl should be our own path

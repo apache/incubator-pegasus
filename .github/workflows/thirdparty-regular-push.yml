@@ -28,7 +28,7 @@ on:
       - 'docker/thirdparties-src/**'
       - 'docker/thirdparties-bin/**'
       - '.github/workflows/thirdparty-regular-push.yml'
-      - 'rdsn/thirdparty/**'
+      - 'thirdparty/**'
 
   # for manually triggering workflow
   workflow_dispatch:

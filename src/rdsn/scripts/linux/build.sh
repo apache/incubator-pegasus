@@ -140,13 +140,14 @@ then
     rm -rf $BUILD_DIR
 fi
 
+echo $BUILD_DIR
 if [ ! -d "$BUILD_DIR" ]
 then
     echo "Running cmake..."
-    mkdir -p $BUILD_DIR
+    mkdir -p $BUILD_DIR/output
     cd $BUILD_DIR
     echo "$CMAKE_OPTIONS" >CMAKE_OPTIONS
-    cmake .. -DOPENSSL_ROOT_DIR=$MACOS_OPENSSL_ROOT_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
+    cmake ../../.. -DOPENSSL_ROOT_DIR=$MACOS_OPENSSL_ROOT_DIR -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
     if [ $? -ne 0 ]
     then
         echo "ERROR: cmake failed"
@@ -226,4 +227,3 @@ then
 fi
 
 echo "Test succeed"
-
