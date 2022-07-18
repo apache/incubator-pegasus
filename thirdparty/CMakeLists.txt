@@ -36,7 +36,7 @@ endif()
 include(ExternalProject)
 include(CheckCXXCompilerFlag)
 
-set(TP_DIR ${PROJECT_SOURCE_DIR})
+set( TP_DIR ${PROJECT_SOURCE_DIR})
 set(TP_OUTPUT ${PROJECT_SOURCE_DIR}/output)
 
 # TMP_DIR      = <base>/tmp/<name>
