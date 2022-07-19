@@ -41,10 +41,6 @@ if [ $? -ne 0 ]; then
         echo "---- tail -n 100 log.1.txt ----"
         tail -n 100 `find . -name log.1.txt`
     fi
-    if find . -name zoolog.log; then
-        echo "---- cat zoolog.log ----"
-        cat `find . -name zoolog.log`
-    fi
     if [ -f core ]; then
         echo "---- gdb ./dsn.zookeeper.tests core ----"
         gdb ./dsn.zookeeper.tests core -ex "thread apply all bt" -ex "set pagination 0" -batch
