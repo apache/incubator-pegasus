@@ -392,6 +392,12 @@ function run_test()
     echo "Test start time: `date`"
     start_time=`date +%s`
 
+    run_start_zk
+    if [ $? -ne 0 ]; then
+        echo "ERROR: start zk failed"
+        exit 1
+    fi
+
     if [ ! -d "$REPORT_DIR" ]; then
         mkdir -p $REPORT_DIR
     fi
