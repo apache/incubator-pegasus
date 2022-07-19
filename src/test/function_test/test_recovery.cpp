@@ -271,11 +271,11 @@ TEST_F(recovery_test, recovery)
             start_replica(i);
         }
         std::cout << "sleep for a while to wait the replica to start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(20));
         start_meta(1);
 
         std::cout << "sleep for a while to wait the meta to come to alive" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // then do recovery
         auto nodes = get_rpc_address_list({34801, 34802, 34803});
@@ -300,11 +300,11 @@ TEST_F(recovery_test, recovery)
         for (int i = 1; i <= 3; ++i)
             start_replica(i);
         std::cout << "sleep for a while to wait the replica to start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(20));
         start_meta(1);
 
         std::cout << "sleep for a while to wait the meta to come to alive" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // recovery only from 1 & 2
         std::vector<dsn::rpc_address> nodes = get_rpc_address_list({34801, 34802});
@@ -332,11 +332,11 @@ TEST_F(recovery_test, recovery)
             start_replica(i);
         }
         std::cout << "sleep for a while to wait the replica to start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(20));
         start_meta(1);
 
         std::cout << "sleep for a while to wait the meta to come to alive" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // then do recovery
         auto nodes = get_rpc_address_list({34801, 34802, 34803});
@@ -363,11 +363,11 @@ TEST_F(recovery_test, recovery)
             start_replica(i);
         }
         std::cout << "sleep for a while to wait the replica to start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::this_thread::sleep_for(std::chrono::seconds(20));
         start_meta(1);
 
         std::cout << "sleep for a while to wait the meta to come to alive" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+        std::this_thread::sleep_for(std::chrono::seconds(10));
 
         // then do recovery
         auto nodes = get_rpc_address_list({34801, 34802, 34803});
