@@ -24,6 +24,7 @@ function usage() {
     echo "  -p|--update-package-template <minos-package-template-file-path>"
     echo "  -g|--custom-gcc"
     echo "  -k|--keytab-file"
+    echo "  -j|--use-jemalloc"
     exit 0
 }
 
@@ -74,6 +75,7 @@ fi
 
 custom_gcc="false"
 keytab_file=""
+use_jemalloc="off"
 
 while [[ $# > 0 ]]; do
     option_key="$1"
@@ -92,6 +94,15 @@ while [[ $# > 0 ]]; do
         keytab_file="$2"
         shift
         ;;
+    -j | --use-jemalloc)
+        use_jemalloc="on"
+        ;;
+    *)
+        echo "ERROR: unknown option \"$option_key\""
+        echo
+        usage
+        exit 1
+        ;;
     esac
     shift
 done
@@ -102,7 +113,14 @@ copy_file ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
 copy_file ./DSN_ROOT/lib/libdsn_utils.so ${pack}/bin
 copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/bin
-copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
+
+if [ "$use_jemalloc" == "on" ]; then
+    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/bin
+    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/bin
+else
+    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/bin
+fi
+
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/bin
 copy_file ./thirdparty/output/lib/libhdfs* ${pack}/bin
 copy_file ./thirdparty/output/lib/libsasl*.so.* ${pack}/bin

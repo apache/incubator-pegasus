@@ -93,6 +93,12 @@ while [[ $# > 0 ]]; do
         -h|--help)
             usage
             ;;
+        *)
+            echo "ERROR: unknown option \"$option_key\""
+            echo
+            usage
+            exit 1
+            ;;
     esac
     shift
 done
