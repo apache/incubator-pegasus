@@ -355,34 +355,11 @@ private:
 
     bool app_info_compatible_equal(const app_info &l, const app_info &r) const
     {
-        if (l.status != r.status) {
-            return false;
-        }
-        if (l.app_type != r.app_type) {
-            return false;
-        }
-        if (l.app_name != r.app_name) {
-            return false;
-        }
-        if (l.app_id != r.app_id) {
-            return false;
-        }
-        if (l.partition_count != r.partition_count) {
-            return false;
-        }
-        if (l.is_stateful != r.is_stateful) {
-            return false;
-        }
-        if (l.max_replica_count != r.max_replica_count) {
-            return false;
-        }
-        if (l.expire_second != r.expire_second) {
-            return false;
-        }
-        if (l.create_second != r.create_second) {
-            return false;
-        }
-        if (l.drop_second != r.drop_second) {
+        if (l.status != r.status || l.app_type != r.app_type || l.app_name != r.app_name ||
+            l.app_id != r.app_id || l.partition_count != r.partition_count ||
+            l.is_stateful != r.is_stateful || l.max_replica_count != r.max_replica_count ||
+            l.expire_second != r.expire_second || l.create_second != r.create_second ||
+            l.drop_second != r.drop_second) {
             return false;
         }
         return true;
