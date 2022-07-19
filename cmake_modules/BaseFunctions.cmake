@@ -359,6 +359,11 @@ function(dsn_setup_thirdparty_libs)
   if (NOT APPLE)
     link_directories(${THIRDPARTY_INSTALL_DIR}/lib64)
   endif()
+
+  if (APPLE)
+    include_directories(${MACOS_OPENSSL_ROOT_DIR}/include)
+    link_directories(${MACOS_OPENSSL_ROOT_DIR}/lib)
+  endif()
 endfunction(dsn_setup_thirdparty_libs)
 
 function(dsn_common_setup)

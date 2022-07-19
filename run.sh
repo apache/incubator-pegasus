@@ -215,12 +215,12 @@ function run_build()
                    -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
                    -DBoost_NO_SYSTEM_PATHS=ON"
     if [ ! -z "${SANITIZER}" ]; then
-        $CMAKE_OPTIONS = "${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
     fi
 
-    MAKE_OPTIONS="$MAKE_OPTIONS -j$JOB_NUM"
+    MAKE_OPTIONS="-j$JOB_NUM"
     if [ "$RUN_VERBOSE" == "YES" ]; then
-        MAKE_OPTIONS="$MAKE_OPTIONS VERBOSE=1"
+        MAKE_OPTIONS="${MAKE_OPTIONS} VERBOSE=1"
     fi
 
     echo "Build start time: `date`"
@@ -238,10 +238,9 @@ function run_build()
         echo "Start building third-parties..."
         mkdir -p build
         pushd build
-        $CMAKE_OPTIONS = "${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ENABLE_ROCKSDB_PORTABLE}"
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ENABLE_ROCKSDB_PORTABLE}"
         if [ "$(uname)" == "Darwin" ]; then
-            MACOS_OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
-            CMAKE_OPTIONS="-DMACOS_OPENSSL_ROOT_DIR=${MACOS_OPENSSL_ROOT_DIR}"
+            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
         fi
         cmake .. ${CMAKE_OPTIONS}
         make -j$JOB_NUM

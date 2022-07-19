@@ -85,11 +85,9 @@ static void perf_counter_add(perf_counter_ptr pc, const std::vector<int> &vec)
 
 TEST(perf_counter, perf_counter_atomic)
 {
-    int ans = 0;
     std::vector<int> vec(10000, 0);
     for (int i = 0; i < vec.size(); ++i) {
         vec[i] = rand() % 100;
-        ans += vec[i];
     }
     std::vector<int> gen_numbers{1, 5, 1043};
     int sleep_interval = (int)dsn_config_get_value_uint64(
