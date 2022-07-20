@@ -2036,12 +2036,17 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
                 // created, and it will NEVER change even if the app is dropped/recalled...
                 if (info != *old_info) // app_info::operator !=
                 {
-                    dassert(false,
+                    // compatible for app.duplicating different between primary and secondaries in
+                    // 2.1.x, 2.2.x and 2.3.x release
+                    if (!app_info_compatible_equal(info, *old_info)) {
+                        dassert(
+                            false,
                             "conflict app info from (%s) for id(%d): new_info(%s), old_info(%s)",
                             replica_nodes[i].to_string(),
                             info.app_id,
                             boost::lexical_cast<std::string>(info).c_str(),
                             boost::lexical_cast<std::string>(*old_info).c_str());
+                    }
                 }
             }
         }
@@ -2205,34 +2210,34 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
     for (int i = 0; i < n_replicas; ++i) {
         ddebug("send query app and replica request to node(%s)", replica_nodes[i].to_string());
 
-        query_app_info_request app_query;
-        app_query.meta_server = dsn_primary_address();
-
-        rpc::call(replica_nodes[i],
-                  RPC_QUERY_APP_INFO,
-                  app_query,
-                  &tracker,
-                  [i, &replica_nodes, &query_app_errors, &query_app_responses](
-                      dsn::error_code err, query_app_info_response &&resp) mutable {
-                      ddebug("received query app response from node(%s), err(%s), apps_count(%d)",
+        auto app_query_req = std::make_unique<query_app_info_request>();
+        app_query_req->meta_server = dsn_primary_address();
+        query_app_info_rpc app_rpc(std::move(app_query_req), RPC_QUERY_APP_INFO);
+        app_rpc.call(replica_nodes[i],
+                     &tracker,
+                     [this, app_rpc, i, &replica_nodes, &query_app_errors, &query_app_responses](
+                         error_code err) mutable {
+                         auto resp = app_rpc.response();
+                         ddebug(
+                             "received query app response from node(%s), err(%s), apps_count(%d)",
                              replica_nodes[i].to_string(),
                              err.to_string(),
                              (int)resp.apps.size());
-                      query_app_errors[i] = err;
-                      if (err == dsn::ERR_OK) {
-                          query_app_responses[i] = std::move(resp);
-                      }
-                  });
+                         query_app_errors[i] = err;
+                         if (err == dsn::ERR_OK) {
+                             query_app_responses[i] = std::move(resp);
+                         }
+                     });
 
-        query_replica_info_request replica_query;
-        replica_query.node = replica_nodes[i];
-        rpc::call(
+        auto replica_query_req = std::make_unique<query_replica_info_request>();
+        replica_query_req->node = replica_nodes[i];
+        query_replica_info_rpc replica_rpc(std::move(replica_query_req), RPC_QUERY_REPLICA_INFO);
+        replica_rpc.call(
             replica_nodes[i],
-            RPC_QUERY_REPLICA_INFO,
-            replica_query,
             &tracker,
-            [i, &replica_nodes, &query_replica_errors, &query_replica_responses](
-                dsn::error_code err, query_replica_info_response &&resp) mutable {
+            [this, replica_rpc, i, &replica_nodes, &query_replica_errors, &query_replica_responses](
+                error_code err) mutable {
+                auto resp = replica_rpc.response();
                 ddebug("received query replica response from node(%s), err(%s), replicas_count(%d)",
                        replica_nodes[i].to_string(),
                        err.to_string(),

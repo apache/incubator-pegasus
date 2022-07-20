@@ -53,12 +53,10 @@ typedef rpc_holder<group_check_response, learn_notify_response> learn_completion
 typedef rpc_holder<group_check_request, group_check_response> group_check_rpc;
 typedef rpc_holder<query_replica_decree_request, query_replica_decree_response>
     query_replica_decree_rpc;
-typedef rpc_holder<query_replica_info_request, query_replica_info_response> query_replica_info_rpc;
 typedef rpc_holder<learn_request, learn_response> query_last_checkpoint_info_rpc;
 typedef rpc_holder<query_disk_info_request, query_disk_info_response> query_disk_info_rpc;
 typedef rpc_holder<replica_disk_migrate_request, replica_disk_migrate_response>
     replica_disk_migrate_rpc;
-typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
 typedef rpc_holder<notify_catch_up_request, notify_cacth_up_response> notify_catch_up_rpc;
 typedef rpc_holder<update_child_group_partition_count_request,
                    update_child_group_partition_count_response>

@@ -353,6 +353,18 @@ private:
                                                   const std::vector<std::string> &keys,
                                                   const std::vector<std::string> &values);
 
+    bool app_info_compatible_equal(const app_info &l, const app_info &r) const
+    {
+        if (l.status != r.status || l.app_type != r.app_type || l.app_name != r.app_name ||
+            l.app_id != r.app_id || l.partition_count != r.partition_count ||
+            l.is_stateful != r.is_stateful || l.max_replica_count != r.max_replica_count ||
+            l.expire_second != r.expire_second || l.create_second != r.create_second ||
+            l.drop_second != r.drop_second) {
+            return false;
+        }
+        return true;
+    }
+
 private:
     friend class bulk_load_service;
     friend class bulk_load_service_test;
