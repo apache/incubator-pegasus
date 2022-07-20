@@ -376,16 +376,6 @@ private:
     DISALLOW_COPY_AND_ASSIGN(gauge);
 };
 
-template <>
-gauge<int64_t>::gauge(const metric_prototype *prototype) : gauge(prototype, 0)
-{
-}
-
-template <>
-gauge<double>::gauge(const metric_prototype *prototype) : gauge(prototype, 0.0)
-{
-}
-
 template <typename T>
 using gauge_ptr = ref_ptr<gauge<T>>;
 
@@ -518,14 +508,7 @@ inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
     return kth_percentile_to_nth_index(size, static_cast<size_t>(type));
 }
 
-std::set<kth_percentile_type> get_all_kth_percentile_types()
-{
-    std::set<kth_percentile_type> all_types;
-    for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
-        all_types.insert(static_cast<kth_percentile_type>(i));
-    }
-    return all_types;
-}
+std::set<kth_percentile_type> get_all_kth_percentile_types();
 const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
 
 // `percentile_timer` is a timer class that encapsulates the details how each percentile is
