@@ -24,6 +24,15 @@
 
 namespace dsn {
 
+std::set<kth_percentile_type> get_all_kth_percentile_types()
+{
+    std::set<kth_percentile_type> all_types;
+    for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
+        all_types.insert(static_cast<kth_percentile_type>(i));
+    }
+    return all_types;
+}
+
 metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
     : _id(id), _attrs(std::move(attrs))
 {
@@ -146,6 +155,16 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
 
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+}
+
+template <>
+gauge<int64_t>::gauge(const metric_prototype *prototype) : gauge(prototype, 0)
+{
+}
+
+template <>
+gauge<double>::gauge(const metric_prototype *prototype) : gauge(prototype, 0.0)
+{
 }
 
 } // namespace dsn

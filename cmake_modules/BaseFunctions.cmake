@@ -172,8 +172,8 @@ function(dsn_add_object)
 endfunction(dsn_add_object)
 
 function(dsn_add_test)
-  add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
   if(${BUILD_TEST})
+    add_definitions(-DGTEST_HAS_TR1_TUPLE=0 -DGTEST_USE_OWN_TR1_TUPLE=0)
     set(MY_EXECUTABLE_IS_TEST TRUE)
     dsn_add_executable()
 
@@ -358,6 +358,11 @@ function(dsn_setup_thirdparty_libs)
   link_directories(${THIRDPARTY_INSTALL_DIR}/lib)
   if (NOT APPLE)
     link_directories(${THIRDPARTY_INSTALL_DIR}/lib64)
+  endif()
+
+  if (APPLE)
+    include_directories(${MACOS_OPENSSL_ROOT_DIR}/include)
+    link_directories(${MACOS_OPENSSL_ROOT_DIR}/lib)
   endif()
 endfunction(dsn_setup_thirdparty_libs)
 

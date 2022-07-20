@@ -227,7 +227,7 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
     mutation_ptr mu(new mutation());
     read_mutation_header(reader, mu->data.header);
 
-    int size;
+    int size = 0;
     reader.read_pod(size);
     mu->data.updates.resize(size);
     std::vector<int> lengths(size, 0);
@@ -238,7 +238,7 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
         dassert(code != TASK_CODE_INVALID, "invalid mutation task code: %s", name.c_str());
         mu->data.updates[i].code = code;
 
-        int type;
+        int type = 0;
         reader.read_pod(type);
         mu->data.updates[i].serialization_type = type;
 
@@ -295,9 +295,9 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
     //   - log_offset
     //   - last_committed_decree
     //   - timestamp
-    int64_t version;
+    int64_t version = 0;
     reader.read_pod(version);
-    uint64_t pid_value;
+    uint64_t pid_value = 0;
     reader.read_pod(pid_value);
     header.pid.set_value(pid_value);
     reader.read_pod(header.ballot);

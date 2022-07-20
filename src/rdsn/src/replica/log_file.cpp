@@ -359,7 +359,7 @@ int log_file::read_file_header(binary_reader &reader)
      */
     reader.read_pod(_header);
 
-    int count;
+    int count = 0;
     reader.read(count);
     for (int i = 0; i < count; i++) {
         gpid gpid;

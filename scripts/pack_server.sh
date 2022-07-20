@@ -42,12 +42,12 @@ if [ ! -f DSN_ROOT/bin/pegasus_server/pegasus_server ]; then
     exit 1
 fi
 
-if [ ! -f src/builder/CMAKE_OPTIONS ]; then
-    echo "ERROR: src/builder/CMAKE_OPTIONS not found"
+if [ ! -f src/builder/CMakeCache.txt ]; then
+    echo "ERROR: src/builder/CMakeCache.txt not found"
     exit 1
 fi
 
-if grep -q Debug src/builder/CMAKE_OPTIONS; then
+if egrep -i "CMAKE_BUILD_TYPE:STRING\=debug" src/builder/CMakeCache.txt; then
     build_type=debug
 else
     build_type=release

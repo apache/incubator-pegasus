@@ -75,13 +75,11 @@ function usage_build()
     echo "   -t|--type             build type: debug|release, default is release"
     echo "   -s|--serialize        serialize type: dsn|thrift|proto, default is thrift"
     echo "   -c|--clear            clear rdsn/pegasus before building, not clear thirdparty"
-    echo "   -cc|--half-clear      clear pegasus before building, not clear thirdparty/rdsn"
     echo "   --clear_thirdparty    clear thirdparty/rdsn/pegasus before building"
     echo "   --compiler            specify c and cxx compiler, sperated by ','"
     echo "                         e.g., \"gcc,g++\" or \"clang-3.9,clang++-3.9\""
     echo "                         default is \"gcc,g++\""
     echo "   -j|--jobs <num>       the number of jobs to run simultaneously, default 8"
-    echo "   -w|--warning_all      open all warnings when building, default no"
     echo "   --enable_gcov         generate gcov code coverage report, default no"
     echo "   -v|--verbose          build in verbose mode, default no"
     echo "   --disable_gperf       build without gperftools, this flag is mainly used"
@@ -91,12 +89,8 @@ function usage_build()
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
-    echo "   --rdsn                whether to build/test rdsn module only"
-    if [ "$TEST" == "YES" ]; then
-        echo "   -m|--test_module      specify modules to test, split by ',',"
-        echo "                         e.g., \"dsn_runtime_tests,dsn_meta_state_tests\","
-        echo "                         if not set, then run all tests"
-    fi
+    echo "   --rdsn                whether to build rdsn module only"
+    echo "   --test                whether to build test binaries"
 }
 
 function exit_if_fail() {
@@ -115,19 +109,16 @@ function run_build()
     CXX_COMPILER="g++"
     BUILD_TYPE="release"
     CLEAR=NO
-    PART_CLEAR=NO
     CLEAR_THIRDPARTY=NO
     JOB_NUM=8
-    WARNING_ALL=NO
     ENABLE_GCOV=NO
     RUN_VERBOSE=NO
-    DISABLE_GPERF=NO
+    ENABLE_GPERF=ON
     SKIP_THIRDPARTY=NO
     SANITIZER=""
-    TEST_MODULE=""
-    ENABLE_ROCKSDB_PORTABLE=OFF
+    ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=OFF
-    TEST=NO
+    BUILD_TEST=OFF
     ONLY_RDSN=NO
     while [[ $# > 0 ]]; do
         key="$1"
@@ -142,9 +133,6 @@ function run_build()
                 ;;
             -c|--clear)
                 CLEAR=YES
-                ;;
-            -cc|--part_clear)
-                PART_CLEAR=YES
                 ;;
             --clear_thirdparty)
                 CLEAR_THIRDPARTY=YES
@@ -164,9 +152,6 @@ function run_build()
                 JOB_NUM="$2"
                 shift
                 ;;
-            -w|--warning_all)
-                WARNING_ALL=YES
-                ;;
             --enable_gcov)
                 ENABLE_GCOV=YES
                 ;;
@@ -184,24 +169,20 @@ function run_build()
                 RUN_VERBOSE=YES
                 ;;
             --disable_gperf)
-                DISABLE_GPERF=YES
+                ENABLE_GPERF=OFF
                 ;;
             --skip_thirdparty)
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ENABLE_ROCKSDB_PORTABLE=ON
+                ROCKSDB_PORTABLE=ON
                 ;;
             --use_jemalloc)
-                DISABLE_GPERF=YES
+                ENABLE_GPERF=OFF
                 USE_JEMALLOC=ON
                 ;;
-            -m|--test_module)
-                TEST_MODULE="$2"
-                shift
-                ;;
             --test)
-                TEST=YES
+                BUILD_TEST=ON
                 ;;
             --rdsn)
                 ONLY_RDSN=YES
@@ -216,18 +197,6 @@ function run_build()
         shift
     done
 
-    if [ "$TEST" == "NO" -a "$TEST_MODULE" != "" ]; then
-        echo "ERROR: invalid option: --test is off but -m|--test_module is on"
-        echo
-        usage_build
-        exit 1
-    fi
-
-    if [ "$(uname)" == "Darwin" ]; then
-        MACOS_OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
-        CMAKE_OPTIONS="-DMACOS_OPENSSL_ROOT_DIR=${MACOS_OPENSSL_ROOT_DIR}"
-    fi
-
     if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
         echo "ERROR: invalid build type \"$BUILD_TYPE\""
         echo
@@ -235,11 +204,23 @@ function run_build()
         exit 1
     fi
 
-#    # reset DSN_ROOT env because "$ROOT/DSN_ROOT" is not generated now.
-#    export DSN_ROOT=$ROOT/src/rdsn/builder/output
-#    if [ ! -e $ROOT/DSN_ROOT ]; then
-#        ln -sf $DSN_ROOT $ROOT/DSN_ROOT
-#    fi
+    CMAKE_OPTIONS="-DCMAKE_C_COMPILER=${C_COMPILER}
+                   -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+                   -DUSE_JEMALLOC=${USE_JEMALLOC}
+                   -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+                   -DENABLE_GCOV=${ENABLE_GCOV}
+                   -DENABLE_GPERF=${ENABLE_GPERF}
+                   -DBoost_NO_BOOST_CMAKE=ON
+                   -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
+                   -DBoost_NO_SYSTEM_PATHS=ON"
+    if [ ! -z "${SANITIZER}" ]; then
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
+    fi
+
+    MAKE_OPTIONS="-j$JOB_NUM"
+    if [ "$RUN_VERBOSE" == "YES" ]; then
+        MAKE_OPTIONS="${MAKE_OPTIONS} VERBOSE=1"
+    fi
 
     echo "Build start time: `date`"
     start_time=`date +%s`
@@ -256,12 +237,10 @@ function run_build()
         echo "Start building third-parties..."
         mkdir -p build
         pushd build
-        CMAKE_OPTIONS="${CMAKE_OPTIONS}
-                       -DCMAKE_C_COMPILER=${C_COMPILER}
-                       -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
-                       -DCMAKE_BUILD_TYPE=Release
-                       -DROCKSDB_PORTABLE=${ENABLE_ROCKSDB_PORTABLE}
-                       -DUSE_JEMALLOC=${USE_JEMALLOC}"
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}"
+        if [ "$(uname)" == "Darwin" ]; then
+            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
+        fi
         cmake .. ${CMAKE_OPTIONS}
         make -j$JOB_NUM
         exit_if_fail $?
@@ -269,50 +248,81 @@ function run_build()
         cd ..
     fi
 
-    echo "INFO: start build rdsn..."
+    echo "INFO: Start build rdsn..."
     cd $ROOT/src/rdsn
-    if [ "$BUILD_TYPE" != "debug" -a "$BUILD_TYPE" != "release" ]; then
-        echo "ERROR: invalid build type \"$BUILD_TYPE\""
-        echo
-        usage_build
+    echo "Gen rdsn thrift"
+    python3 compile_thrift.py
+    BUILD_DIR="$ROOT/src/rdsn/builder"
+    if [ "$CLEAR" == "YES" ]; then
+        echo "Clear $BUILD_DIR ..."
+        rm -rf $BUILD_DIR
+    fi
+    echo "Running cmake..."
+    if [ ! -d "$BUILD_DIR" ]; then
+        mkdir -p $BUILD_DIR
+    fi
+    pushd $BUILD_DIR
+    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
+    cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
+    if [ $? -ne 0 ]; then
+        echo "ERROR: cmake rdsn failed"
         exit 1
     fi
-    if [ "$TEST" == "YES" ]; then
-        run_start_zk
-        if [ $? -ne 0 ]; then
-            echo "ERROR: start zk failed"
-            exit 1
-        fi
+    echo "[$(date)] Building..."
+    make install $MAKE_OPTIONS
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: build failed"
+        exit 1
+    else
+        echo "[$(date)] Build succeed"
     fi
-    python3 compile_thrift.py
-    C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
-        CLEAR="$CLEAR" JOB_NUM="$JOB_NUM" \
-        ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" TEST="$TEST" \
-        DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" \
-        MACOS_OPENSSL_ROOT_DIR="$MACOS_OPENSSL_ROOT_DIR" ./scripts/linux/build.sh
-    exit_if_fail $?
+    popd
 
     if [ "$ONLY_RDSN" == "YES" ]; then
       exit 0
     fi
 
     echo "INFO: start build pegasus..."
-
     echo "Gen pegasus thrift"
     pushd $ROOT/src/idl
     sh recompile_thrift.sh
     popd
 
-    cd $ROOT/src
-    C_COMPILER="$C_COMPILER" CXX_COMPILER="$CXX_COMPILER" BUILD_TYPE="$BUILD_TYPE" \
-        CLEAR="$CLEAR" PART_CLEAR="$PART_CLEAR" JOB_NUM="$JOB_NUM" \
-        WARNING_ALL="$WARNING_ALL" ENABLE_GCOV="$ENABLE_GCOV" SANITIZER="$SANITIZER" \
-        RUN_VERBOSE="$RUN_VERBOSE" TEST_MODULE="$TEST_MODULE" \
-        DISABLE_GPERF="$DISABLE_GPERF" USE_JEMALLOC="$USE_JEMALLOC" ./build.sh
+    cd "$ROOT/src"
+    PEGASUS_GIT_COMMIT="non-git-repo"
+    if git rev-parse HEAD; then # this is a git repo
+        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
+    fi
+    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
+    GIT_COMMIT_FILE=include/pegasus/git_commit.h
+    echo "Generating $GIT_COMMIT_FILE..."
+    echo "#pragma once" >$GIT_COMMIT_FILE
+    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+
+    BUILD_DIR="$ROOT/src/builder"
+    if [ "$CLEAR" == "YES" ]; then
+        echo "Clear $BUILD_DIR ..."
+        rm -rf $BUILD_DIR
+    fi
+    echo "Running cmake..."
+    if [ ! -d "$BUILD_DIR" ]; then
+        mkdir -p $BUILD_DIR
+    fi
+    pushd $BUILD_DIR
+    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
     if [ $? -ne 0 ]; then
-        echo "ERROR: build pegasus failed"
+        echo "ERROR: cmake pegasus failed"
         exit 1
+    fi
+    echo "[$(date)] Building..."
+    make install $MAKE_OPTIONS
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: build failed"
+        exit 1
+    else
+        echo "[$(date)] Build succeed"
     fi
 
     cd $ROOT
@@ -331,15 +341,20 @@ function usage_test()
 {
     echo "Options for subcommand 'test':"
     echo "   -h|--help         print the help info"
-    echo "   -m|--modules      set the test modules: pegasus_unit_test pegasus_function_test"
+    echo "   -m|--modules      specify modules to test, split by ',',"
+    echo "                     e.g., \"pegasus_unit_test,pegasus_function_test,dsn_runtime_tests,dsn_meta_state_tests\","
+    echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
     echo "   --on_travis       run tests on travis without some time-cosuming function tests"
+    echo "   --rdsn            whether to test rdsn module only"
 }
 function run_test()
 {
     local test_modules=""
     local clear_flags="1"
     local on_travis=""
+    local only_rdsn="no"
+    local enable_gcov="no"
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -357,6 +372,12 @@ function run_test()
             --on_travis)
                 on_travis="--on_travis"
                 ;;
+            --rdsn)
+                only_rdsn="yes"
+                ;;
+            --enable_gcov)
+                enable_gcov="yes"
+                ;;
             *)
                 echo "Error: unknow option \"$key\""
                 echo
@@ -367,9 +388,54 @@ function run_test()
         shift
     done
 
-    if [ "$test_modules" == "" ]; then
-        test_modules="pegasus_unit_test pegasus_function_test"
+    echo "Test start time: `date`"
+    start_time=`date +%s`
+
+    run_start_zk
+    if [ $? -ne 0 ]; then
+        echo "ERROR: start zk failed"
+        exit 1
     fi
+
+    if [ ! -d "$REPORT_DIR" ]; then
+        mkdir -p $REPORT_DIR
+    fi
+
+    if [ "$only_rdsn" == "yes" ]; then
+        BUILD_DIR=$ROOT/src/rdsn/builder
+        run_rdsn_test
+        exit 0
+    fi
+
+    BUILD_DIR=$ROOT/src/builder
+    run_pegasus_test
+
+    echo "Test finish time: `date`"
+    finish_time=`date +%s`
+    used_time=$((finish_time-start_time))
+    echo "Test elapsed time: $((used_time/60))m $((used_time%60))s"
+
+    if [ "$enable_gcov" == "yes" ]; then
+        echo "Generating gcov report..."
+        cd $ROOT
+        mkdir -p "$ROOT/gcov_report"
+
+        echo "Running gcovr to produce HTML code coverage report."
+        $BUILD_DIR
+        gcovr --html --html-details -r $ROOT --object-directory=$BUILD_DIR \
+              -o $GCOV_DIR/index.html
+        if [ $? -ne 0 ]; then
+            exit 1
+        fi
+    fi
+}
+
+function run_pegasus_test()
+{
+    if [ "$test_modules" == "" ]; then
+        test_modules="pegasus_unit_test,pegasus_function_test"
+    fi
+    echo "test_modules=$test_modules"
 
     if [[ "$test_modules" =~ "pegasus_function_test" && "$on_travis" == "" && ! -d "$ROOT/src/test/function_test/pegasus-bulk-load-function-test-files" ]]; then
         echo "Start to download files used for bulk load function test"
@@ -379,18 +445,16 @@ function run_test()
         echo "Prepare files used for bulk load function test succeed"
     fi
 
-    echo "Test start time: `date`"
-    start_time=`date +%s`
-
     ./run.sh clear_onebox #clear the onebox before test
     if ! ./run.sh start_onebox -w; then
         echo "ERROR: unable to continue on testing because starting onebox failed"
         exit 1
     fi
-    
+
     sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/server/test/config.ini
-    
-    for module in `echo $test_modules`; do
+
+    for module in `echo $test_modules | sed 's/,/ /g'`; do
+        echo "====================== run $module =========================="
         pushd $ROOT/src/builder/bin/$module
         REPORT_DIR=$REPORT_DIR ./run.sh $on_travis
         if [ $? != 0 ]; then
@@ -403,13 +467,27 @@ function run_test()
     if [ "$clear_flags" == "1" ]; then
         ./run.sh clear_onebox
     fi
-
-    echo "Test finish time: `date`"
-    finish_time=`date +%s`
-    used_time=$((finish_time-start_time))
-    echo "Test elapsed time: $((used_time/60))m $((used_time%60))s"
 }
+function run_rdsn_test()
+{
+    if [ "$test_modules" == "" ]; then
+        test_modules="dsn_runtime_tests,dsn_utils_tests,dsn_perf_counter_test,dsn.zookeeper.tests,dsn_aio_test,dsn.failure_detector.tests,dsn_meta_state_tests,dsn_nfs_test,dsn_block_service_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test,dsn_replica_backup_test,dsn_replica_bulk_load_test,dsn_replica_split_test"
+    fi
+    echo "test_modules=$test_modules"
 
+    for module in `echo $test_modules | sed 's/,/ /g'`; do
+        echo "====================== run $module =========================="
+        pushd $ROOT/src/rdsn/builder/bin/$module
+        REPORT_DIR=$REPORT_DIR ./run.sh
+        if [ $? != 0 ]; then
+            echo "run test \"$module\" in `pwd` failed"
+            exit 1
+        fi
+        popd
+    done
+
+    echo "Test succeed"
+}
 #####################
 ## start_zk
 #####################
@@ -458,7 +536,7 @@ function run_start_zk()
         esac
         shift
     done
-    
+
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
     if [ $? -ne 0 ]; then
         exit 1
@@ -2092,4 +2170,3 @@ case $cmd in
         usage
         exit 1
 esac
-

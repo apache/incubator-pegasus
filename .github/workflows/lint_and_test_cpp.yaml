@@ -88,12 +88,15 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation and Unit Testing
+      - name: Compilation
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
+      - name: Unit Testing
         if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
+          ./run.sh test --rdsn
 
   test_rdsn_ASAN:
     name: Test rdsn with ASAN
@@ -129,12 +132,15 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation and Unit Testing
+      - name: Compilation
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+      - name: Unit Testing
         if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh test --rdsn
 
   test_rdsn_LSAN:
     name: Test rdsn with LSAN
@@ -170,12 +176,15 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation and Unit Testing
+      - name: Compilation
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+      - name: Unit Testing
         if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh test --rdsn
 
   test_rdsn_UBSAN:
     name: Test rdsn with UBSAN
@@ -211,13 +220,17 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation and Unit Testing
+      - name: Compilation
+        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+      - name: Unit Testing
         if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
+          ./run.sh test --rdsn
 
+  # TODO(yingchun): also need to test ASAN, LSAN, UBSAN
   test_pegasus:
     name: Test Pegasus
     needs: cpp_clang_format_linter
@@ -249,7 +262,7 @@ jobs:
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
         if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build -c -j $(($(nproc)/2+1))
+        run: ./run.sh build --test -c -j $(($(nproc)/2+1))
       - name: Packaging Server
         if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh pack_server
