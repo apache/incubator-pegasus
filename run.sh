@@ -116,7 +116,7 @@ function run_build()
     ENABLE_GPERF=ON
     SKIP_THIRDPARTY=NO
     SANITIZER=""
-    ENABLE_ROCKSDB_PORTABLE=OFF
+    ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
     ONLY_RDSN=NO
@@ -175,7 +175,7 @@ function run_build()
                 SKIP_THIRDPARTY=YES
                 ;;
             --enable_rocksdb_portable)
-                ENABLE_ROCKSDB_PORTABLE=ON
+                ROCKSDB_PORTABLE=ON
                 ;;
             --use_jemalloc)
                 ENABLE_GPERF=OFF
@@ -237,7 +237,7 @@ function run_build()
         echo "Start building third-parties..."
         mkdir -p build
         pushd build
-        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ENABLE_ROCKSDB_PORTABLE}"
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}"
         if [ "$(uname)" == "Darwin" ]; then
             CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
         fi
