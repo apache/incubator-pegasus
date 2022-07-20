@@ -121,6 +121,8 @@ type Meta interface {
 
 	CancelBulkLoad(tableName string, forced bool) error
 
+	ClearBulkLoad(tableName string) error
+
 	StartManualCompaction(tableName string, targetLevel int, maxRunningCount int, bottommost bool) error
 
 	QueryManualCompaction(tableName string) (*admin.QueryAppManualCompactResponse, error)
@@ -595,6 +597,17 @@ func (m *rpcBasedMeta) CancelBulkLoad(tableName string, forced bool) error {
 	var result *admin.ControlBulkLoadResponse
 	err := m.callMeta("ControlBulkLoad", req, func(resp interface{}) {
 		result = resp.(*admin.ControlBulkLoadResponse)
+	})
+	return wrapHintIntoError(result.GetHintMsg(), err)
+}
+
+func (m *rpcBasedMeta) ClearBulkLoad(tableName string) error {
+	req := &admin.ClearBulkLoadStateRequest{
+		AppName: tableName,
+	}
+	var result *admin.ClearBulkLoadStateResponse
+	err := m.callMeta("ClearBulkLoad", req, func(resp interface{}) {
+		result = resp.(*admin.ClearBulkLoadStateResponse)
 	})
 	return wrapHintIntoError(result.GetHintMsg(), err)
 }

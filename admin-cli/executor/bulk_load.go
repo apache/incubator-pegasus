@@ -64,6 +64,15 @@ func CancelBulkLoad(client *Client, tableName string, forced bool) error {
 	return nil
 }
 
+func ClearBulkLoad(client *Client, tableName string) error {
+	err := client.Meta.ClearBulkLoad(tableName)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Table %s clear bulk load succeed\n", tableName)
+	return nil
+}
+
 func QueryBulkLoad(client *Client, tableName string, partitionIndex int, detailed bool) error {
 	resp, err := client.Meta.QueryBulkLoad(tableName)
 	if err != nil {

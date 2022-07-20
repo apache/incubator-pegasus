@@ -139,5 +139,22 @@ func init() {
 		},
 	})
 
+	rootCmd.AddCommand(&grumble.Command{
+		Name:  "clear",
+		Help:  "clear bulk load for a specific table",
+		Usage: "clear <-a|--tableName TABLE_NAME>",
+		Run: func(c *grumble.Context) error {
+			if c.Flags.String("tableName") == "" {
+				return fmt.Errorf("tableName cannot be empty")
+			}
+			tableName := c.Flags.String("tableName")
+			return executor.ClearBulkLoad(pegasusClient, tableName)
+		},
+		Flags: func(f *grumble.Flags) {
+			/*define the flags*/
+			f.String("a", "tableName", "", "table name")
+		},
+	})
+
 	shell.AddCommand(rootCmd)
 }
