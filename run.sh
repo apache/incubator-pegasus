@@ -208,7 +208,6 @@ function run_build()
                    -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
                    -DUSE_JEMALLOC=${USE_JEMALLOC}
                    -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
-                   -DBUILD_TEST=${BUILD_TEST}
                    -DENABLE_GCOV=${ENABLE_GCOV}
                    -DENABLE_GPERF=${ENABLE_GPERF}
                    -DBoost_NO_BOOST_CMAKE=ON
@@ -263,6 +262,7 @@ function run_build()
         mkdir -p $BUILD_DIR
     fi
     pushd $BUILD_DIR
+    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
     cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
     if [ $? -ne 0 ]; then
         echo "ERROR: cmake rdsn failed"
