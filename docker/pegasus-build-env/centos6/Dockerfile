@@ -20,10 +20,10 @@ FROM centos:6.10
 LABEL maintainer=jiashuo
 
 # defaut repo url hasn't been supported, use thirdparty repo url
-RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-eol.repo -O /etc/yum.repos.d/CentOS-Base.repo
-RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-epel-eol.repo -O /etc/yum.repos.d/epel.repo
-RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-scl-eol.repo -O /etc/yum.repos.d/CentOS-SCLo-scl.repo
-RUN wget --progress=dot:giga https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo -O /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+RUN curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo
+RUN curl https://www.getpagespeed.com/files/centos6-epel-eol.repo --output /etc/yum.repos.d/epel.repo
+RUN curl https://www.getpagespeed.com/files/centos6-scl-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN curl https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 
 # diable gpgcheck, otherwise the repo check will be failed.
 RUN sed -i 's/gpgcheck=1/gpgcheck=0/g'  /etc/yum.repos.d/CentOS-Base.repo
