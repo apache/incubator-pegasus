@@ -302,6 +302,7 @@ void replica_split_manager::child_copy_prepare_list(
         mutation_ptr mu = _replica->_prepare_list->get_mutation_by_decree(d);
         dassert_replica(mu != nullptr, "can not find mutation, dercee={}", d);
         mu->data.header.pid = get_gpid();
+        _stub->_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, tracker(), nullptr);
         _replica->_private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, tracker(), nullptr);
         // set mutation has been logged in private log
         if (!mu->is_logged()) {
@@ -1278,18 +1279,20 @@ void replica_split_manager::on_copy_mutation(mutation_ptr &mu) // on child parti
         if (!mu->is_logged()) {
             mu->set_logged();
         }
-        mu->log_task() = _replica->_private_log->append(
+        mu->log_task() = _stub->_log->append(
             mu, LPC_WRITE_REPLICATION_LOG, tracker(), nullptr, get_gpid().thread_hash());
+        _replica->_private_log->append(
+            mu, LPC_WRITE_REPLICATION_LOG_COMMON, tracker(), nullptr, get_gpid().thread_hash());
     } else { // child sync copy mutation
-        mu->log_task() = _replica->_private_log->append(mu,
-                                                        LPC_WRITE_REPLICATION_LOG,
-                                                        tracker(),
-                                                        std::bind(&replica::on_append_log_completed,
-                                                                  _replica,
-                                                                  mu,
-                                                                  std::placeholders::_1,
-                                                                  std::placeholders::_2),
-                                                        get_gpid().thread_hash());
+        mu->log_task() = _stub->_log->append(mu,
+                                             LPC_WRITE_REPLICATION_LOG,
+                                             tracker(),
+                                             std::bind(&replica::on_append_log_completed,
+                                                       _replica,
+                                                       mu,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2),
+                                             get_gpid().thread_hash());
     }
 }
 

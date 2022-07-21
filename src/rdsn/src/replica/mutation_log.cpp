@@ -38,10 +38,6 @@
 
 namespace dsn {
 namespace replication {
-DSN_DEFINE_bool("replication",
-                plog_force_flush,
-                false,
-                "when write private log, whether to flush file after write done");
 
 ::dsn::task_ptr mutation_log_shared::append(mutation_ptr &mu,
                                             dsn::task_code callback_code,
@@ -203,8 +199,15 @@ void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
 mutation_log_private::mutation_log_private(const std::string &dir,
                                            int32_t max_log_file_mb,
                                            gpid gpid,
-                                           replica *r)
-    : mutation_log(dir, max_log_file_mb, gpid, r), replica_base(r)
+                                           replica *r,
+                                           uint32_t batch_buffer_bytes,
+                                           uint32_t batch_buffer_max_count,
+                                           uint64_t batch_buffer_flush_interval_ms)
+    : mutation_log(dir, max_log_file_mb, gpid, r),
+      replica_base(r),
+      _batch_buffer_bytes(batch_buffer_bytes),
+      _batch_buffer_max_count(batch_buffer_max_count),
+      _batch_buffer_flush_interval_ms(batch_buffer_flush_interval_ms)
 {
     mutation_log_private::init_states();
 }
@@ -216,20 +219,16 @@ mutation_log_private::mutation_log_private(const std::string &dir,
                                              int hash,
                                              int64_t *pending_size)
 {
-    dsn::aio_task_ptr cb =
-        callback ? file::create_aio_task(
-                       callback_code, tracker, std::forward<aio_handler>(callback), hash)
-                 : nullptr;
+    dassert(nullptr == callback, "callback is not needed in private mutation log");
 
     _plock.lock();
-
-    ADD_POINT(mu->_tracer);
 
     // init pending buffer
     if (nullptr == _pending_write) {
         _pending_write = make_unique<log_appender>(mark_new_offset(0, true).second);
+        _pending_write_start_time_ms = dsn_now_ms();
     }
-    _pending_write->append_mutation(mu, cb);
+    _pending_write->append_mutation(mu, nullptr);
 
     // update meta
     _pending_write_max_commit =
@@ -237,7 +236,10 @@ mutation_log_private::mutation_log_private(const std::string &dir,
     _pending_write_max_decree = std::max(_pending_write_max_decree, mu->data.header.decree);
 
     // start to write if possible
-    if (!_is_writing.load(std::memory_order_acquire)) {
+    if (!_is_writing.load(std::memory_order_acquire) &&
+        (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes ||
+         static_cast<uint32_t>(_pending_write->blob_count()) >= _batch_buffer_max_count ||
+         flush_interval_expired())) {
         write_pending_mutations(true);
         if (pending_size) {
             *pending_size = 0;
@@ -248,7 +250,7 @@ mutation_log_private::mutation_log_private(const std::string &dir,
         }
         _plock.unlock();
     }
-    return cb;
+    return nullptr;
 }
 
 bool mutation_log_private::get_learn_state_in_memory(decree start_decree,
@@ -361,6 +363,7 @@ void mutation_log_private::init_states()
     _is_writing.store(false, std::memory_order_release);
     _issued_write.reset();
     _pending_write = nullptr;
+    _pending_write_start_time_ms = 0;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
 }
@@ -381,6 +384,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     // move or reset pending variables
     std::shared_ptr<log_appender> pending = std::move(_pending_write);
     _issued_write = pending;
+    _pending_write_start_time_ms = 0;
     decree max_commit = _pending_write_max_commit;
     _pending_write_max_commit = 0;
     _pending_write_max_decree = 0;
@@ -395,12 +399,6 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                                                     std::shared_ptr<log_appender> &pending,
                                                     decree max_commit)
 {
-    if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
-        for (const auto &mu : pending->mutations()) {
-            ADD_POINT(mu->_tracer);
-        }
-    }
-
     lf->commit_log_blocks(
         *pending,
         LPC_WRITE_REPLICATION_LOG_PRIVATE,
@@ -411,18 +409,6 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
             for (auto &block : pending->all_blocks()) {
                 auto hdr = (log_block_header *)block.front().data();
                 dassert(hdr->magic == 0xdeadbeef, "header magic is changed: 0x%x", hdr->magic);
-            }
-
-            if (dsn_unlikely(utils::FLAGS_enable_latency_tracer)) {
-                for (const auto &mu : pending->mutations()) {
-                    ADD_CUSTOM_POINT(mu->_tracer, "commit_pending_completed");
-                }
-            }
-
-            // notify the callbacks
-            // ATTENTION: callback may be called before this code block executed done.
-            for (auto &c : pending->callbacks()) {
-                c->enqueue(err, sz);
             }
 
             if (err != ERR_OK) {
@@ -439,9 +425,7 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
             // so that we can get all mutations in learning process.
             //
             // FIXME : the file could have been closed
-            if (FLAGS_plog_force_flush) {
-                lf->flush();
-            }
+            lf->flush();
 
             // update _private_max_commit_on_disk after written into log file done
             update_max_commit_on_disk(max_commit);
@@ -451,7 +435,10 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
             // start to write if possible
             _plock.lock();
 
-            if (!_is_writing.load(std::memory_order_acquire) && _pending_write) {
+            if (!_is_writing.load(std::memory_order_acquire) && _pending_write &&
+                (static_cast<uint32_t>(_pending_write->size()) >= _batch_buffer_bytes ||
+                 static_cast<uint32_t>(_pending_write->blob_count()) >= _batch_buffer_max_count ||
+                 flush_interval_expired())) {
                 write_pending_mutations(true);
             } else {
                 _plock.unlock();

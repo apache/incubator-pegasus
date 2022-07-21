@@ -127,7 +127,8 @@ public:
     // and iterates over the mutations, executing the provided `callback` for each
     // mutation entry.
     // Since the logs are packed into multiple blocks, this function retrieves
-    // only one log block at a time.
+    // only one log block at a time. The size of block depends on configuration
+    // `log_private_batch_buffer_kb` and `log_private_batch_buffer_count`.
     //
     // Parameters:
     // - callback: the callback to execute for each mutation.
@@ -438,7 +439,13 @@ public:
     //    The hint of limited size for the write buffer storing the pending mutations.
     //    Note that the actual log block is still possible to be larger than the
     //    hinted size.
-    mutation_log_private(const std::string &dir, int32_t max_log_file_mb, gpid gpid, replica *r);
+    mutation_log_private(const std::string &dir,
+                         int32_t max_log_file_mb,
+                         gpid gpid,
+                         replica *r,
+                         uint32_t batch_buffer_bytes,
+                         uint32_t batch_buffer_max_count,
+                         uint64_t batch_buffer_flush_interval_ms);
 
     ~mutation_log_private() override
     {
@@ -484,6 +491,11 @@ private:
     // if count <= 0, means flush until all data is on disk
     void flush_internal(int max_count);
 
+    bool flush_interval_expired()
+    {
+        return _pending_write_start_time_ms + _batch_buffer_flush_interval_ms <= dsn_now_ms();
+    }
+
 private:
     // bufferring - only one concurrent write is allowed
     typedef std::vector<mutation_ptr> mutations;
@@ -493,9 +505,14 @@ private:
     // `_issued_write.lock() == nullptr`, it means the emitted writes all finished.
     std::weak_ptr<log_appender> _issued_write;
     std::shared_ptr<log_appender> _pending_write;
+    uint64_t _pending_write_start_time_ms;
     decree _pending_write_max_commit;
     decree _pending_write_max_decree;
     mutable zlock _plock;
+
+    uint32_t _batch_buffer_bytes;
+    uint32_t _batch_buffer_max_count;
+    uint64_t _batch_buffer_flush_interval_ms;
 };
 
 } // namespace replication

@@ -280,16 +280,16 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                 mu->data.header.log_offset);
         dassert(mu->log_task() == nullptr, "");
         int64_t pending_size;
-        mu->log_task() = _private_log->append(mu,
-                                              LPC_WRITE_REPLICATION_LOG,
-                                              &_tracker,
-                                              std::bind(&replica::on_append_log_completed,
-                                                        this,
-                                                        mu,
-                                                        std::placeholders::_1,
-                                                        std::placeholders::_2),
-                                              get_gpid().thread_hash(),
-                                              &pending_size);
+        mu->log_task() = _stub->_log->append(mu,
+                                             LPC_WRITE_REPLICATION_LOG,
+                                             &_tracker,
+                                             std::bind(&replica::on_append_log_completed,
+                                                       this,
+                                                       mu,
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2),
+                                             get_gpid().thread_hash(),
+                                             &pending_size);
         dassert(nullptr != mu->log_task(), "");
         if (_options->log_shared_pending_size_throttling_threshold_kb > 0 &&
             _options->log_shared_pending_size_throttling_delay_ms > 0 &&
@@ -523,15 +523,15 @@ void replica::on_prepare(dsn::message_ex *request)
     }
 
     dassert(mu->log_task() == nullptr, "");
-    mu->log_task() = _private_log->append(mu,
-                                          LPC_WRITE_REPLICATION_LOG,
-                                          &_tracker,
-                                          std::bind(&replica::on_append_log_completed,
-                                                    this,
-                                                    mu,
-                                                    std::placeholders::_1,
-                                                    std::placeholders::_2),
-                                          get_gpid().thread_hash());
+    mu->log_task() = _stub->_log->append(mu,
+                                         LPC_WRITE_REPLICATION_LOG,
+                                         &_tracker,
+                                         std::bind(&replica::on_append_log_completed,
+                                                   this,
+                                                   mu,
+                                                   std::placeholders::_1,
+                                                   std::placeholders::_2),
+                                         get_gpid().thread_hash());
     dassert(nullptr != mu->log_task(), "");
 }
 
@@ -593,6 +593,11 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
     if (err != ERR_OK) {
         // mutation log failure, propagate to all replicas
         _stub->handle_log_failure(err);
+    }
+
+    // write local private log if necessary
+    if (err == ERR_OK && status() != partition_status::PS_ERROR) {
+        _private_log->append(mu, LPC_WRITE_REPLICATION_LOG_COMMON, &_tracker, nullptr);
     }
 }
 
@@ -821,9 +826,7 @@ void replica::cleanup_preparing_mutations(bool wait)
             // make sure the buffers from mutations are valid for underlying aio
             //
             if (wait) {
-                if (dsn_unlikely(_private_log != nullptr)) {
-                    _private_log->flush();
-                }
+                _stub->_log->flush();
                 mu->wait_log_task();
             }
         }
