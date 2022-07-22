@@ -26,10 +26,10 @@ RUN curl https://www.getpagespeed.com/files/centos6-scl-eol.repo --output /etc/y
 RUN curl https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 
 # diable gpgcheck, otherwise the repo check will be failed.
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g  /etc/yum.repos.d/CentOS-Base.repo
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/epel.repo
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
-RUN sed -i s/"gpgcheck=1"/"gpgcheck=0"/g /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g'  /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g' /etc/yum.repos.d/epel.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+RUN sed -i 's/gpgcheck=1/gpgcheck=0/g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
 
 RUN yum -y install \
                 devtoolset-7-gcc \
@@ -42,7 +42,7 @@ RUN yum -y install \
                 python27 \
                 python34 \
                 automake \
-                autoconf \ 
+                autoconf \
                 make \
                 libtool \
                 file \
@@ -77,5 +77,11 @@ ENV PATH=$MAVEN_HOME/bin:$JAVA_HOME/bin:$GCC_HOME/bin:$PYTHON2_HOME/bin/:$PATH
 ENV LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/amd64/server:$PYTHON2_HOME/lib64/:$LD_LIBRARY_PATH
 
 RUN pip install --no-cache-dir cmake
+
+RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
+    cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
+    ./configure --enable-libs=no && \
+    make -j$(($(nproc)/2+1)) && make install && cd - && \
+    rm -rf thrift-0.11.0 0.11.0.tar.gz
 
 WORKDIR /root/apache

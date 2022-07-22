@@ -69,7 +69,7 @@ jobs:
       - uses: hadolint/hadolint-action@v2.1.0
         with:
           recursive: true
-          ignore: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006'
+          ignore: 'DL3033,DL3013,DL3059,SC2086,DL3003,SC2164,DL3008,DL3007,DL3006,DL4001'
 
   license_check:
     name: Check License

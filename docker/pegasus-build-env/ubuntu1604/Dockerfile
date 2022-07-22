@@ -60,4 +60,10 @@ RUN add-apt-repository ppa:git-core/ppa -y; \
 
 RUN pip3 install --no-cache-dir cmake
 
+RUN wget --progress=dot:giga https://github.com/apache/thrift/archive/refs/tags/0.11.0.tar.gz -P /opt/thrift && \
+    cd /opt/thrift && tar xzf 0.11.0.tar.gz && cd thrift-0.11.0 && ./bootstrap.sh && \
+    ./configure --enable-libs=no && \
+    make -j$(($(nproc)/2+1)) && make install && cd - && \
+    rm -rf thrift-0.11.0 0.11.0.tar.gz
+
 WORKDIR /root/apache

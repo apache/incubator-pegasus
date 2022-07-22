@@ -18,7 +18,9 @@ under the License.
 -->
 
 [github-release]: https://github.com/apache/incubator-pegasus/releases
+<!-- markdown-link-check-disable -->
 [PacificA]: https://www.microsoft.com/en-us/research/publication/pacifica-replication-in-log-based-distributed-storage-systems/
+<!-- markdown-link-check-enable-->
 [pegasus-rocksdb]: https://github.com/xiaomi/pegasus-rocksdb
 [hbase]: https://hbase.apache.org/
 [website]: https://pegasus.apache.org
