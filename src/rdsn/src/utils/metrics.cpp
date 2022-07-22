@@ -40,6 +40,12 @@ metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
 
 metric_entity::~metric_entity() {}
 
+void metric_entity::execute_cancelable(metric_ptr &m)
+{
+    auto p = down_cast<cancelable_metric *>(m.get());
+    p->cancel();
+}
+
 metric_entity::attr_map metric_entity::attributes() const
 {
     std::lock_guard<std::mutex> guard(_mtx);
@@ -132,14 +138,23 @@ uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
     return (rand::next_u64() % interval_seconds + 1) * 1000 + rand::next_u64() % 1000;
 }
 
-percentile_timer::percentile_timer(uint64_t interval_ms, exec_fn exec)
+percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close)
     : _initial_delay_ms(generate_initial_delay_ms(interval_ms)),
       _interval_ms(interval_ms),
-      _exec(exec),
+      _on_exec(on_exec),
+      _on_close(on_close),
+      _state(state::kRunning),
       _timer(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios))
 {
     _timer->expires_from_now(boost::posix_time::milliseconds(_initial_delay_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+}
+
+void percentile_timer::close()
+{
+    if (_state.compare_exchange_strong(state::kRunning, state::kClosing)) {
+        _timer->cancel();
+    }
 }
 
 void percentile_timer::on_timer(const boost::system::error_code &ec)
@@ -148,10 +163,23 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
         dassert_f(ec == boost::system::errc::operation_canceled,
                   "failed to exec on_timer with an error that cannot be handled: {}",
                   ec.message());
+        dassert_f(_state.compare_exchange_strong(state::kClosing, state::kClosed),
+                  "wrong state for percentile_timer: {}", static_cast<int>(_state.load()));
+        _on_close();
         return;
     }
 
-    _exec();
+    if (_state.compare_exchange_strong(state::kClosing, state::kClosed)) {
+        _on_close();
+        return;
+    }
+
+    _on_exec();
+
+    if (_state.compare_exchange_strong(state::kClosing, state::kClosed)) {
+        _on_close();
+        return;
+    }
 
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
