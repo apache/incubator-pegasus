@@ -136,6 +136,8 @@ java-client/.vscode/
 java-client/google-java-format-*
 java-client/pegasus-*
 java-client/dependency-reduced-pom.xml
+java-client/src/main/java/org/apache/pegasus/apps/*
+java-client/src/main/java/org/apache/pegasus/replication/*
 
 # Created by .ignore support plugin (hsz.mobi)
 ### SBT template
