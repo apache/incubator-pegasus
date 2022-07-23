@@ -230,6 +230,13 @@ enum class metric_type
     kInvalidUnit,
 };
 
+ENUM_BEGIN(metric_type, metric_type::kInvalidUnit)
+ENUM_REG(metric_type::kGauge)
+ENUM_REG(metric_type::kCounter)
+ENUM_REG(metric_type::kVolatileCounter)
+ENUM_REG(metric_type::kPercentile)
+ENUM_END(metric_type)
+
 enum class metric_unit
 {
     kNanoSeconds,
@@ -253,12 +260,15 @@ public:
     struct ctor_args
     {
         const string_view entity_type;
+        const metric_type type;
         const string_view name;
         const metric_unit unit;
         const string_view desc;
     };
 
     string_view entity_type() const { return _args.entity_type; }
+
+    metric_type type() const { return _args.unit; }
 
     string_view name() const { return _args.name; }
 
