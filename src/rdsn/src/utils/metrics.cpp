@@ -44,10 +44,9 @@ void metric_entity::close()
 {
     std::lock_guard<std::mutex> guard(_mtx);
 
-    for (auto &m : _metrics)
-    {
-        if (m->prototype->type() == metric_type::kPercentile) {
-            auto p = down_cast<metric_closeable *>(m.get());
+    for (auto &m : _metrics) {
+        if (m.second->prototype()->type() == metric_type::kPercentile) {
+            auto p = down_cast<closeable_metric *>(m.second.get());
             p->close();
         }
     }
@@ -103,7 +102,7 @@ metric_registry::~metric_registry()
 {
     std::lock_guard<std::mutex> guard(_mtx);
 
-    for (auto &entity: _entities) {
+    for (auto &entity : _entities) {
         entity.second->close();
     }
 }
@@ -140,6 +139,8 @@ metric_prototype::~metric_prototype() {}
 
 metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
+closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
+
 uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
 {
     dcheck_gt(interval_ms, 0);
@@ -166,28 +167,34 @@ percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_
 
 void percentile_timer::close()
 {
-    if (_state.compare_exchange_strong(state::kRunning, state::kClosing)) {
+    auto expected_state = state::kRunning;
+    if (_state.compare_exchange_strong(expected_state, state::kClosing)) {
         _timer->cancel();
     }
 }
 
 void percentile_timer::on_timer(const boost::system::error_code &ec)
 {
-#define TRY_PROCESS_TIMER_CLOSING()                                                             \
-    do {                                                                                        \
-        if (_state.compare_exchange_strong(state::kClosing, state::kClosed)) {                  \
-            _on_close();                                                                        \
-            return;                                                                             \
-        }                                                                                       \
+#define TRY_PROCESS_TIMER_CLOSING()                                                                \
+    do {                                                                                           \
+        auto expected_state = state::kClosing;                                                     \
+        if (_state.compare_exchange_strong(expected_state, state::kClosed)) {                      \
+            _on_close();                                                                           \
+            return;                                                                                \
+        }                                                                                          \
     } while (0)
 
     if (dsn_unlikely(!!ec)) {
         dassert_f(ec == boost::system::errc::operation_canceled,
                   "failed to exec on_timer with an error that cannot be handled: {}",
                   ec.message());
-        dassert_f(_state.compare_exchange_strong(state::kClosing, state::kClosed),
-                  "wrong state for percentile_timer: {}", static_cast<int>(_state.load()));
+
+        auto expected_state = state::kClosing;
+        dassert_f(_state.compare_exchange_strong(expected_state, state::kClosed),
+                  "wrong state for percentile_timer: {}, while expecting closing state",
+                  static_cast<int>(expected_state));
         _on_close();
+
         return;
     }
 

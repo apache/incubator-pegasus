@@ -78,9 +78,11 @@
 // Convenient macros are provided to define entity types and metric prototypes.
 #define METRIC_DEFINE_entity(name) ::dsn::metric_entity_prototype METRIC_ENTITY_##name(#name)
 #define METRIC_DEFINE_gauge_int64(entity_type, name, unit, desc, ...)                              \
-    ::dsn::gauge_prototype<int64_t> METRIC_##name({#entity_type, #name, unit, desc, ##__VA_ARGS__})
+    ::dsn::gauge_prototype<int64_t> METRIC_##name(                                                 \
+        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_gauge_double(entity_type, name, unit, desc, ...)                             \
-    ::dsn::gauge_prototype<double> METRIC_##name({#entity_type, #name, unit, desc, ##__VA_ARGS__})
+    ::dsn::gauge_prototype<double> METRIC_##name(                                                  \
+        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 // There are 2 kinds of counters:
 // - `counter` is the general type of counter that is implemented by striped_long_adder, which can
 //   achieve high performance while consuming less memory if it's not updated very frequently.
@@ -89,24 +91,24 @@
 // See also include/dsn/utility/long_adder.h for details.
 #define METRIC_DEFINE_counter(entity_type, name, unit, desc, ...)                                  \
     dsn::counter_prototype<dsn::striped_long_adder, false> METRIC_##name(                          \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_concurrent_counter(entity_type, name, unit, desc, ...)                       \
     dsn::counter_prototype<dsn::concurrent_long_adder, false> METRIC_##name(                       \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_volatile_counter(entity_type, name, unit, desc, ...)                         \
     dsn::counter_prototype<dsn::striped_long_adder, true> METRIC_##name(                           \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_concurrent_volatile_counter(entity_type, name, unit, desc, ...)              \
     dsn::counter_prototype<dsn::concurrent_long_adder, true> METRIC_##name(                        \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
 
 // The percentile supports both integral and floating types.
 #define METRIC_DEFINE_percentile_int64(entity_type, name, unit, desc, ...)                         \
     dsn::percentile_prototype<int64_t> METRIC_##name(                                              \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_percentile_double(entity_type, name, unit, desc, ...)                        \
     dsn::floating_percentile_prototype<double> METRIC_##name(                                      \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
 
 // The following macros act as forward declarations for entity types and metric prototypes.
 #define METRIC_DECLARE_entity(name) extern ::dsn::metric_entity_prototype METRIC_ENTITY_##name
@@ -270,7 +272,7 @@ public:
 
     string_view entity_type() const { return _args.entity_type; }
 
-    metric_type type() const { return _args.unit; }
+    metric_type type() const { return _args.type; }
 
     string_view name() const { return _args.name; }
 
@@ -332,10 +334,17 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
-class metric_closeable
+class closeable_metric : public metric
 {
 public:
     virtual void close() = 0;
+
+protected:
+    explicit closeable_metric(const metric_prototype *prototype);
+    virtual ~closeable_metric() = default;
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(closeable_metric);
 };
 
 // A gauge is a metric that represents a single numerical value that can arbitrarily go up and
@@ -554,7 +563,7 @@ public:
         kRunning,
         kClosing,
         kClosed,
-    }
+    };
 
     using on_exec_fn = std::function<void()>;
     using on_close_fn = std::function<void()>;
@@ -598,7 +607,7 @@ private:
 template <typename T,
           typename NthElementFinder = stl_nth_element_finder<T>,
           typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-class percentile : public metric, public metric_closeable
+class percentile : public closeable_metric
 {
 public:
     using value_type = T;
@@ -638,7 +647,7 @@ protected:
                uint64_t interval_ms = 10000,
                const std::set<kth_percentile_type> &kth_percentiles = kAllKthPercentileTypes,
                size_type sample_size = kDefaultSampleSize)
-        : metric(prototype),
+        : closeable_metric(prototype),
           _sample_size(sample_size),
           _last_real_sample_size(0),
           _samples(cacheline_aligned_alloc_array<value_type>(sample_size, value_type{})),
