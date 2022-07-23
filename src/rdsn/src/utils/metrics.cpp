@@ -40,10 +40,17 @@ metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
 
 metric_entity::~metric_entity() {}
 
-void metric_entity::execute_cancelable(metric_ptr &m)
+void metric_entity::close()
 {
-    auto p = down_cast<cancelable_metric *>(m.get());
-    p->cancel();
+    std::lock_guard<std::mutex> guard(_mtx);
+
+    for (auto &m : _metrics)
+    {
+        if (m->prototype->type() == metric_type::kPercentile) {
+            auto p = down_cast<metric_closeable *>(m.get());
+            p->close();
+        }
+    }
 }
 
 metric_entity::attr_map metric_entity::attributes() const
@@ -92,7 +99,14 @@ metric_registry::metric_registry()
     tools::shared_io_service::instance();
 }
 
-metric_registry::~metric_registry() {}
+metric_registry::~metric_registry()
+{
+    std::lock_guard<std::mutex> guard(_mtx);
+
+    for (auto &entity: _entities) {
+        entity.second->close();
+    }
+}
 
 metric_registry::entity_map metric_registry::entities() const
 {
@@ -159,6 +173,14 @@ void percentile_timer::close()
 
 void percentile_timer::on_timer(const boost::system::error_code &ec)
 {
+#define TRY_PROCESS_TIMER_CLOSING()                                                             \
+    do {                                                                                        \
+        if (_state.compare_exchange_strong(state::kClosing, state::kClosed)) {                  \
+            _on_close();                                                                        \
+            return;                                                                             \
+        }                                                                                       \
+    } while (0)
+
     if (dsn_unlikely(!!ec)) {
         dassert_f(ec == boost::system::errc::operation_canceled,
                   "failed to exec on_timer with an error that cannot be handled: {}",
@@ -169,18 +191,10 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
         return;
     }
 
-    if (_state.compare_exchange_strong(state::kClosing, state::kClosed)) {
-        _on_close();
-        return;
-    }
-
+    TRY_PROCESS_TIMER_CLOSING();
     _on_exec();
 
-    if (_state.compare_exchange_strong(state::kClosing, state::kClosed)) {
-        _on_close();
-        return;
-    }
-
+    TRY_PROCESS_TIMER_CLOSING();
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
 }

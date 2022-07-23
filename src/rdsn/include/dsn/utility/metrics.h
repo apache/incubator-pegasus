@@ -168,6 +168,8 @@ private:
 
     ~metric_entity();
 
+    void close();
+
     void set_attributes(attr_map &&attrs);
 
     const std::string _id;
