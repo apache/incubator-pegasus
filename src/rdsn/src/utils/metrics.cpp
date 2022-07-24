@@ -167,15 +167,15 @@ percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_
 
 void percentile_timer::close()
 {
-// If the timer has already expired when cancel() is called, then the handlers for asynchronous
-// wait operations will:
-// * have already been invoked; or
-// * have been queued for invocation in the near future.
-//
-// These handlers can no longer be cancelled, and therefore are passed an error code that
-// indicates the successful completion of the wait operation. Thus the state kClosing is set
-// to tell on_timer() that the timer should be closed even if it is not called with
-// operation_canceled.
+    // If the timer has already expired when cancel() is called, then the handlers for asynchronous
+    // wait operations will:
+    // * have already been invoked; or
+    // * have been queued for invocation in the near future.
+    //
+    // These handlers can no longer be cancelled, and therefore are passed an error code that
+    // indicates the successful completion of the wait operation. Thus the state kClosing is set
+    // to tell on_timer() that the timer should be closed even if it is not called with
+    // operation_canceled.
     auto expected_state = state::kRunning;
     if (_state.compare_exchange_strong(expected_state, state::kClosing)) {
         _timer->cancel();
