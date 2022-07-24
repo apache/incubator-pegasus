@@ -225,6 +225,14 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
 };
 
+// metric_type is needed while metrics are collected to monitoring systems. Generally
+// each monitoring system has its own types of metrics: firstly we should know which
+// type our metric belongs to; then we can know how to "translate" it to the specific
+// monitoring system.
+//
+// On the other hand, it is also needed when some special operation should be done
+// for a metric type. For example, percentile should be closed while it's no longer
+// used.
 enum class metric_type
 {
     kGauge,
@@ -334,6 +342,14 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
+// Generally close-related jobs can be done in destructor. However, some necessary steps must
+// be executed before destructor is invoked. For example, since the base class of metric is
+// ref_counter, to extend its lifetime the ref count may be incremented; before it's should
+// be released a close() method should be called to prevent from memory leak.
+//
+// It's guaranteed that close() for each closeable_metric will be called before the metric is
+// destructed. Obviously that close() will be launched by its manager, namely metric_entity or
+// metric_registry.
 class closeable_metric : public metric
 {
 public:
@@ -679,7 +695,14 @@ protected:
         dcheck_gt(interval_ms, 0);
 #endif
 
+        // Increment ref count of percentile, since it will be referenced by timer.
+        // This will extend the lifetime of percentile and prevent from heap-use-after-free
+        // error.
         //
+        // The ref count will be decremented at the moment when the percentile will
+        // never be used by timer, which means the percentile can be destructed safely.
+        // See on_close() for details which is registered in timer and will be called
+        // back once close() is invoked.
         add_ref();
         _timer.reset(new percentile_timer(
             interval_ms,
@@ -704,7 +727,8 @@ private:
 
     void on_close()
     {
-        //
+        // This will be called back after timer is closed, which means the percentile is
+        // no longer needed by timer and can be destructed safely.
         release_ref();
     }
 
