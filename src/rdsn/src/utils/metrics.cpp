@@ -167,6 +167,15 @@ percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_
 
 void percentile_timer::close()
 {
+// If the timer has already expired when cancel() is called, then the handlers for asynchronous
+// wait operations will:
+// * have already been invoked; or
+// * have been queued for invocation in the near future.
+//
+// These handlers can no longer be cancelled, and therefore are passed an error code that
+// indicates the successful completion of the wait operation. Thus the state kClosing is set
+// to tell on_timer() that the timer should be closed even if it is not called with
+// operation_canceled.
     auto expected_state = state::kRunning;
     if (_state.compare_exchange_strong(expected_state, state::kClosing)) {
         _timer->cancel();
@@ -175,6 +184,10 @@ void percentile_timer::close()
 
 void percentile_timer::on_timer(const boost::system::error_code &ec)
 {
+// This macro is defined for the case that handlers for asynchronous wait operations are no
+// longer cancelled. It just checks the internal state atomically (since close() can also be
+// called simultaneously) for kClosing; once it's matched, it will not execute future callbacks
+// to stop the timer.
 #define TRY_PROCESS_TIMER_CLOSING()                                                                \
     do {                                                                                           \
         auto expected_state = state::kClosing;                                                     \
@@ -189,6 +202,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
                   "failed to exec on_timer with an error that cannot be handled: {}",
                   ec.message());
 
+        // Cancel can only be launched by close().
         auto expected_state = state::kClosing;
         dassert_f(_state.compare_exchange_strong(expected_state, state::kClosed),
                   "wrong state for percentile_timer: {}, while expecting closing state",
