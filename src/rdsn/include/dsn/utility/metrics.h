@@ -342,10 +342,11 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
-// Generally close-related jobs can be done in destructor. However, some necessary steps must
-// be executed before destructor is invoked. For example, since the base class of metric is
-// ref_counter, to extend its lifetime the ref count may be incremented; before it's should
-// be released a close() method should be called to prevent from memory leak.
+// closeable_metric is used for sub classes that need implement close() method to execute some
+// necessary steps before destructor is invoked. For example, since the base class of metric
+// is ref_counter, to extend its lifetime the ref count may be incremented (not by ref_ptr);
+// before it's released, a close() method which decrements the ref count should be called to
+// prevent from memory leak.
 //
 // It's guaranteed that close() for each closeable_metric will be called before the metric is
 // destructed. Obviously that close() will be launched by its manager, namely metric_entity or
