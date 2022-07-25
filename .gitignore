@@ -271,3 +271,6 @@ package-lock.json
 go-client/bin
 
 thirdparty/output/
+
+#macOS
+.DS_Store
