@@ -43,6 +43,7 @@
 #include <dsn/utility/ports.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/utility/synchronize.h>
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
@@ -598,6 +599,8 @@ private:
     // same time.
     static uint64_t generate_initial_delay_ms(uint64_t interval_ms);
 
+    void on_close();
+
     void on_timer(const boost::system::error_code &ec);
 
     const uint64_t _initial_delay_ms;
@@ -605,6 +608,7 @@ private:
     const on_exec_fn _on_exec;
     const on_close_fn _on_close;
     std::atomic<state> _state;
+    utils::notify_event _completed;
     std::unique_ptr<boost::asio::deadline_timer> _timer;
 };
 

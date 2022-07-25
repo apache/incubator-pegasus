@@ -159,6 +159,7 @@ percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_
       _on_exec(on_exec),
       _on_close(on_close),
       _state(state::kRunning),
+      _completed(),
       _timer(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios))
 {
     _timer->expires_from_now(boost::posix_time::milliseconds(_initial_delay_ms));
@@ -179,7 +180,14 @@ void percentile_timer::close()
     auto expected_state = state::kRunning;
     if (_state.compare_exchange_strong(expected_state, state::kClosing)) {
         _timer->cancel();
+        _completed.wait();
     }
+}
+
+void percentile_timer::on_close()
+{
+    _on_close();
+    _completed.notify();
 }
 
 void percentile_timer::on_timer(const boost::system::error_code &ec)
@@ -192,7 +200,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
     do {                                                                                           \
         auto expected_state = state::kClosing;                                                     \
         if (_state.compare_exchange_strong(expected_state, state::kClosed)) {                      \
-            _on_close();                                                                           \
+            on_close();                                                                            \
             return;                                                                                \
         }                                                                                          \
     } while (0)
@@ -207,7 +215,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
         dassert_f(_state.compare_exchange_strong(expected_state, state::kClosed),
                   "wrong state for percentile_timer: {}, while expecting closing state",
                   static_cast<int>(expected_state));
-        _on_close();
+        on_close();
 
         return;
     }
