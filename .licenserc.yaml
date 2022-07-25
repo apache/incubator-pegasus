@@ -24,6 +24,9 @@ header:
     - 'LICENSE'
     - 'NOTICE'
     - '.github/pull_request_template.md'
+    - '.github/ISSUE_TEMPLATE/bug_report.md'
+    - '.github/ISSUE_TEMPLATE/feature-request.md'
+    - '.github/ISSUE_TEMPLATE/general_question.md'
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
     # TODO(yingchun): rrdb_types.* files can be automatic generated when build, we can remove them later.
