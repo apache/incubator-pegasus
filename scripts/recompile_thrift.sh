@@ -17,7 +17,7 @@
 # under the License.
 
 cd `dirname $0`
-THIRDPARTY_ROOT=../../thirdparty
+THIRDPARTY_ROOT=../thirdparty
 
 if [ ! -d "$THIRDPARTY_ROOT" ]; then
   echo "ERROR: THIRDPARTY_ROOT not set"
@@ -28,16 +28,12 @@ TMP_DIR=./tmp
 rm -rf $TMP_DIR
 
 mkdir -p $TMP_DIR
-$THIRDPARTY_ROOT/output/bin/thrift --gen cpp:moveable_types -out $TMP_DIR rrdb.thrift
+$THIRDPARTY_ROOT/output/bin/thrift --gen cpp:moveable_types -out $TMP_DIR ../idl/rrdb.thrift
 
-sed 's/#include "dsn_types.h"/#include <dsn\/service_api_cpp.h>/' $TMP_DIR/rrdb_types.h > ../include/rrdb/rrdb_types.h
-sed 's/#include "rrdb_types.h"/#include <rrdb\/rrdb_types.h>/' $TMP_DIR/rrdb_types.cpp > ../base/rrdb_types.cpp
+sed 's/#include "dsn_types.h"/#include <dsn\/service_api_cpp.h>/' $TMP_DIR/rrdb_types.h > ../src/include/rrdb/rrdb_types.h
+sed 's/#include "rrdb_types.h"/#include <rrdb\/rrdb_types.h>/' $TMP_DIR/rrdb_types.cpp > ../src/base/rrdb_types.cpp
 
 rm -rf $TMP_DIR
 
-echo
-echo "You should manually modify these files:"
-echo "  src/include/rrdb/rrdb.code.definition.h"
-echo "  src/include/rrdb/rrdb.client.h"
 echo
 echo "done"

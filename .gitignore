@@ -16,7 +16,14 @@
 # under the License.
 
 src/.matchfile
+src/base/rrdb_types.cpp
+src/include/rrdb/rrdb_types.h
+src/rdsn/builder/
+src/rdsn/include/dsn/cpp/serialization_helper/dsn.layer2_types.h
+src/rdsn/src/runtime/dsn.layer2_types.cpp
+src/runtime
 src/builder
+
 onebox/
 .zk_install/
 *.data/
@@ -263,9 +270,4 @@ package-lock.json
 #go
 go-client/bin
 
-# rdsn
-rdsn/builder
-thirdparty/build
-thirdparty/output
-rdsn/cmake-build-debug
-rdsn/test_reports
+thirdparty/output/

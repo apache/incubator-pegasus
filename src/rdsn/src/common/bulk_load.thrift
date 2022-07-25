@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "../dsn.thrift"
-include "../dsn.layer2.thrift"
+include "../../../../idl/dsn.thrift"
+include "../../../../idl/dsn.layer2.thrift"
 include "metadata.thrift"
 
 namespace cpp dsn.replication
