@@ -38,12 +38,18 @@ metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
 {
 }
 
-metric_entity::~metric_entity() {}
-
-void metric_entity::close()
+metric_entity::~metric_entity()
 {
     std::lock_guard<std::mutex> guard(_mtx);
 
+    // Close all "closeable" metrics owned by this entity. Once an entity is chosen to be
+    // destructed, the metrics owned by it will no longer be needed.
+    //
+    // The reason why each metric is closed in the entity rather than in its destructor is
+    // that close() is asynchronous. To close all metrics owned by an entity, it's more
+    // efficient to firstly close all metrics asynchronously; then, just wait for the close
+    // operations to be finished in destructor of each metric. It's inefficient to wait for
+    // each metric to be closed one by one.
     for (auto &m : _metrics) {
         if (m.second->prototype()->type() == metric_type::kPercentile) {
             auto p = down_cast<closeable_metric *>(m.second.get());
@@ -98,14 +104,7 @@ metric_registry::metric_registry()
     tools::shared_io_service::instance();
 }
 
-metric_registry::~metric_registry()
-{
-    std::lock_guard<std::mutex> guard(_mtx);
-
-    for (auto &entity : _entities) {
-        entity.second->close();
-    }
-}
+metric_registry::~metric_registry() {}
 
 metric_registry::entity_map metric_registry::entities() const
 {
@@ -174,15 +173,16 @@ void percentile_timer::close()
     // * have been queued for invocation in the near future.
     //
     // These handlers can no longer be cancelled, and therefore are passed an error code that
-    // indicates the successful completion of the wait operation. Thus the state kClosing is set
-    // to tell on_timer() that the timer should be closed even if it is not called with
+    // indicates the successful completion of the wait operation. Thus set the state of timer to
+    // kClosing to tell on_timer() that the timer should be closed even if it is not called with
     // operation_canceled.
     auto expected_state = state::kRunning;
     if (_state.compare_exchange_strong(expected_state, state::kClosing)) {
         _timer->cancel();
-        _completed.wait();
     }
 }
+
+void percentile_timer::wait() { _completed.wait(); }
 
 void percentile_timer::on_close()
 {
