@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-include "../dsn.thrift"
+include "../../../../idl/dsn.thrift"
 
 namespace cpp dsn.fd
 

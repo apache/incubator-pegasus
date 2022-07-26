@@ -36,7 +36,7 @@ the default thrift generator
 thrift_description = [
     {
         "name": "dsn.layer2",
-        "path": "src",
+        "path": "idl",
         "include_fix": {
             "_types.h": {
                 "add": ["<dsn/cpp/serialization_helper/dsn_types.h>"],
@@ -48,8 +48,8 @@ thrift_description = [
             }
         },
         "file_move": {
-            "_types.h": "include/dsn/cpp/serialization_helper",
-            "_types.cpp": "src/runtime"
+            "_types.h": "src/rdsn/include/dsn/cpp/serialization_helper",
+            "_types.cpp": "src/rdsn/src/runtime"
         }
     },
 ]
@@ -219,8 +219,8 @@ def add_hook(name, path, func, args):
 
 
 if __name__ == "__main__":
-    thrift_exe = os.getcwd() + "/../../thirdparty/output/bin/thrift"
     root_dir = os.getcwd()
+    thrift_exe = root_dir + "/thirdparty/output/bin/thrift"
     print("thrift_exe = " + thrift_exe)
     print("root_dir = " + root_dir)
 
@@ -230,11 +230,8 @@ if __name__ == "__main__":
 
     ctor_kv_pair = "  kv_pair(const std::string& _key, const std::string& _val): key(_key), value(_val) {\n  }"
     ctor_configuration_proposal_action = "  configuration_proposal_action(::dsn::rpc_address t, ::dsn::rpc_address n, config_type::type tp): target(t), node(n), type(tp) {}"
-    add_hook("simple_kv", "src/replica/storage/simple_kv", constructor_hook,
-             ["simple_kv_types.h", "kv_pair", ctor_kv_pair])
-    add_hook("replication", "src/", constructor_hook,
-             ["replication_types.h", "configuration_proposal_action", ctor_configuration_proposal_action])
-    add_hook("dsn.layer2", "src", replace_hook, ["dsn.layer2_types.h", {
+
+    add_hook("dsn.layer2", "idl", replace_hook, ["dsn.layer2_types.h", {
              r"dsn\.layer2_TYPES_H": 'dsn_layer2_TYPES_H'}])
 
     for i in thrift_description:
