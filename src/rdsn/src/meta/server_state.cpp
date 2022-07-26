@@ -2215,7 +2215,7 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
         query_app_info_rpc app_rpc(std::move(app_query_req), RPC_QUERY_APP_INFO);
         app_rpc.call(replica_nodes[i],
                      &tracker,
-                     [this, app_rpc, i, &replica_nodes, &query_app_errors, &query_app_responses](
+                     [app_rpc, i, &replica_nodes, &query_app_errors, &query_app_responses](
                          error_code err) mutable {
                          auto resp = app_rpc.response();
                          ddebug(
@@ -2235,7 +2235,7 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
         replica_rpc.call(
             replica_nodes[i],
             &tracker,
-            [this, replica_rpc, i, &replica_nodes, &query_replica_errors, &query_replica_responses](
+            [replica_rpc, i, &replica_nodes, &query_replica_errors, &query_replica_responses](
                 error_code err) mutable {
                 auto resp = replica_rpc.response();
                 ddebug("received query replica response from node(%s), err(%s), replicas_count(%d)",
