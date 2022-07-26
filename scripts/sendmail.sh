@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 ### send alert email
 ### usage:
 ###    bash sendmail.sh alert <alert_email_address> <cluster_name> <table_name> <partition_index>

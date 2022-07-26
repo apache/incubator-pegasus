@@ -16,9 +16,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 PID=$$
 ROOT=`pwd`
-LOCAL_IP=`scripts/get_local_ip`
+LOCAL_IP=`python3 scripts/get_local_ip.py`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
@@ -249,81 +251,68 @@ function run_build()
     fi
 
     echo "INFO: Start build rdsn..."
-    echo "Gen rdsn thrift"
-    python3 $ROOT/scripts/compile_thrift.py
     BUILD_DIR="$ROOT/src/rdsn/builder"
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
     fi
-    echo "Running cmake..."
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
+
+        echo "Gen rdsn thrift"
+        python3 $ROOT/scripts/compile_thrift.py
+
+        echo "Running cmake rdsn ..."
+        pushd $BUILD_DIR
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
+        cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
+        exit_if_fail $?
     fi
+
+    echo "[$(date)] Building rdsn ..."
     pushd $BUILD_DIR
-    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
-    cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake rdsn failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
     make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
-    fi
-    popd
+    exit_if_fail $?
 
     if [ "$ONLY_RDSN" == "YES" ]; then
       exit 0
     fi
 
-    echo "INFO: start build pegasus..."
-    echo "Gen pegasus thrift"
-    sh scripts/recompile_thrift.sh
-
-    cd "$ROOT/src"
-    PEGASUS_GIT_COMMIT="non-git-repo"
-    if git rev-parse HEAD; then # this is a git repo
-        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
-    fi
-    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
-    GIT_COMMIT_FILE=include/pegasus/git_commit.h
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
-
+    echo "INFO: start build Pegasus..."
     BUILD_DIR="$ROOT/src/builder"
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
     fi
-    echo "Running cmake..."
+    pushd ${ROOT}
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
-    fi
-    pushd $BUILD_DIR
-    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake pegasus failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
-    make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
+
+        echo "Gen git_commit.h ..."
+        pushd "$ROOT/src"
+        PEGASUS_GIT_COMMIT="non-git-repo"
+        if git rev-parse HEAD; then # this is a git repo
+            PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
+        fi
+        echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
+        GIT_COMMIT_FILE=$ROOT/src/include/pegasus/git_commit.h
+        echo "Generating $GIT_COMMIT_FILE..."
+        echo "#pragma once" >$GIT_COMMIT_FILE
+        echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+
+        echo "Gen pegasus thrift"
+        sh ${ROOT}/scripts/recompile_thrift.sh
+
+        echo "Running cmake Pegasus..."
+        pushd $BUILD_DIR
+        cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
+        exit_if_fail $?
     fi
 
-    cd $ROOT
-    chmod +x scripts/*.sh
+    echo "[$(date)] Building Pegasus ..."
+    pushd $BUILD_DIR
+    make install $MAKE_OPTIONS
+    exit_if_fail $?
 
     echo "Build finish time: `date`"
     finish_time=`date +%s`
@@ -448,7 +437,7 @@ function run_pegasus_test()
         exit 1
     fi
 
-    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/server/test/config.ini
+    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/src/server/test/config.ini
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="

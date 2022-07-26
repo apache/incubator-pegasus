@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,43 +16,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# $1: string
-# print 1 for success, 0 for fail
-function is_ipv4() 
-{
-    if [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "1"
-    else
-        echo "0"
-    fi
-}
+import socket
 
-# $1: an ip_addr
-function is_site_local_addr()
-{
-    # 10.*.*.*
-    if [[ $1 =~ ^10\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "1"
-    # 172.16.*.*
-    elif [[ $1 =~ ^172\.16\.[0-9]+\.[0-9]+$ ]]; then
-        echo "1"
-    # 192.168.*.*
-    elif [[ $1 =~ ^192\.168\.[0-9]+\.[0-9]+$ ]]; then
-        echo "1"
-    else
-        echo "0"
-    fi
-}
 
-got_result="0"
-for ip in `hostname -I`; do 
-    if [ "1" == `is_site_local_addr $ip` ]; then
-        echo $ip
-        got_result="1"
-        break
-    fi
-done
+def get_host_ip():
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect(('8.8.8.8', 80))
+        return s.getsockname()[0]
 
-if [ "0" == $got_result ]; then
-    echo "127.0.0.1"
-fi
+
+print(get_host_ip())

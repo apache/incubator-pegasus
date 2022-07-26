@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 if [ $# -ne 5 ]
 then
     echo "USAGE: $0 <meta-count> <replica-count> <app-name> <kill-type> <sleep-time>"

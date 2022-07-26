@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 #
 # You should set these environment variables:
 #   * MINOS_CONFIG_FILE
