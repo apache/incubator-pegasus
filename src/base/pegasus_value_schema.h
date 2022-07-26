@@ -92,7 +92,7 @@ pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob
 /// Extracts timetag from a v1 value.
 inline uint64_t pegasus_extract_timetag(int version, dsn::string_view value)
 {
-    dassert(version == 1, "data version(%d) must be v1", version);
+    dcheck_eq(version, 1);
 
     dsn::data_input input(value);
     input.skip(sizeof(uint32_t));

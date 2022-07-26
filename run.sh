@@ -249,69 +249,69 @@ function run_build()
     fi
 
     echo "INFO: Start build rdsn..."
-    echo "Gen rdsn thrift"
-    python3 $ROOT/scripts/compile_thrift.py
-    BUILD_DIR="$ROOT/src/rdsn/builder"
-    if [ "$CLEAR" == "YES" ]; then
-        echo "Clear $BUILD_DIR ..."
-        rm -rf $BUILD_DIR
-    fi
-    echo "Running cmake..."
-    if [ ! -d "$BUILD_DIR" ]; then
-        mkdir -p $BUILD_DIR
-    fi
-    pushd $BUILD_DIR
-    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
-    cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake rdsn failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
-    make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
-    fi
-    popd
-
-    if [ "$ONLY_RDSN" == "YES" ]; then
-      exit 0
-    fi
+#    echo "Gen rdsn thrift"
+#    python3 $ROOT/scripts/compile_thrift.py
+#    BUILD_DIR="$ROOT/src/rdsn/builder"
+#    if [ "$CLEAR" == "YES" ]; then
+#        echo "Clear $BUILD_DIR ..."
+#        rm -rf $BUILD_DIR
+#    fi
+#    echo "Running cmake..."
+#    if [ ! -d "$BUILD_DIR" ]; then
+#        mkdir -p $BUILD_DIR
+#    fi
+#    pushd $BUILD_DIR
+#    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
+#    cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
+#    if [ $? -ne 0 ]; then
+#        echo "ERROR: cmake rdsn failed"
+#        exit 1
+#    fi
+#    echo "[$(date)] Building..."
+#    make install $MAKE_OPTIONS
+#    if [ $? -ne 0 ]
+#    then
+#        echo "ERROR: build failed"
+#        exit 1
+#    else
+#        echo "[$(date)] Build succeed"
+#    fi
+#    popd
+#
+#    if [ "$ONLY_RDSN" == "YES" ]; then
+#      exit 0
+#    fi
 
     echo "INFO: start build pegasus..."
-    echo "Gen pegasus thrift"
-    sh scripts/recompile_thrift.sh
-
-    cd "$ROOT/src"
-    PEGASUS_GIT_COMMIT="non-git-repo"
-    if git rev-parse HEAD; then # this is a git repo
-        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
-    fi
-    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
-    GIT_COMMIT_FILE=include/pegasus/git_commit.h
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+#    echo "Gen pegasus thrift"
+#    sh scripts/recompile_thrift.sh
+#
+#    cd "$ROOT/src"
+#    PEGASUS_GIT_COMMIT="non-git-repo"
+#    if git rev-parse HEAD; then # this is a git repo
+#        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
+#    fi
+#    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
+#    GIT_COMMIT_FILE=include/pegasus/git_commit.h
+#    echo "Generating $GIT_COMMIT_FILE..."
+#    echo "#pragma once" >$GIT_COMMIT_FILE
+#    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
 
     BUILD_DIR="$ROOT/src/builder"
-    if [ "$CLEAR" == "YES" ]; then
-        echo "Clear $BUILD_DIR ..."
-        rm -rf $BUILD_DIR
-    fi
-    echo "Running cmake..."
-    if [ ! -d "$BUILD_DIR" ]; then
-        mkdir -p $BUILD_DIR
-    fi
+#    if [ "$CLEAR" == "YES" ]; then
+#        echo "Clear $BUILD_DIR ..."
+#        rm -rf $BUILD_DIR
+#    fi
+#    echo "Running cmake..."
+#    if [ ! -d "$BUILD_DIR" ]; then
+#        mkdir -p $BUILD_DIR
+#    fi
     pushd $BUILD_DIR
-    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake pegasus failed"
-        exit 1
-    fi
+#    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
+#    if [ $? -ne 0 ]; then
+#        echo "ERROR: cmake pegasus failed"
+#        exit 1
+#    fi
     echo "[$(date)] Building..."
     make install $MAKE_OPTIONS
     if [ $? -ne 0 ]

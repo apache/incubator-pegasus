@@ -29,7 +29,9 @@
 #include <memory>
 #include <sys/time.h>
 
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "dsn/dist/fmt_logging.h"
+#include "dsn/dist/replication/replication_ddl_client.h"
+
 #include <pegasus/client.h>
 
 #include "killer_registry.h"
@@ -85,7 +87,7 @@ bool process_kill_testor::verifier_process_alive()
     std::stringstream output;
     int process_count;
 
-    assert(dsn::utils::pipe_execute(command, output) == 0);
+    dcheck_eq(dsn::utils::pipe_execute(command, output), 0);
     output >> process_count;
 
     // one for the verifier, one for command

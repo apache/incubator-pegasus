@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/http/http_server.h>
 #include <dsn/utility/errors.h>
 
@@ -46,9 +47,9 @@ public:
     {
         auto call = std::shared_ptr<http_call>(call_uptr.release());
         std::lock_guard<std::mutex> guard(_mu);
-        dassert(_call_map.find(call->path) == _call_map.end(),
-                "repeatedly register http call \"%s\"",
-                call->path.c_str());
+        dassert_f(_call_map.find(call->path) == _call_map.end(),
+                  "repeatedly register http call \"{}\"",
+                  call->path);
         _call_map[call->path] = call;
     }
 
