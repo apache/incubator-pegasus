@@ -230,7 +230,7 @@ bool upgrader_handler_shell::check(const std::string &job, int index, const std:
     int check_times = 5;
     do {
         sleep(1);
-        dsn::utils::pipe_execute(command.str().c_str(), output);
+        dcheck_eq(dsn::utils::pipe_execute(command.str().c_str(), output), 0);
         output >> process_count;
     } while (check_times-- > 0 and process_count == 1);
 

@@ -47,9 +47,7 @@ public:
     {
         auto call = std::shared_ptr<http_call>(call_uptr.release());
         std::lock_guard<std::mutex> guard(_mu);
-        dassert_f(_call_map.find(call->path) == _call_map.end(),
-                  "repeatedly register http call \"{}\"",
-                  call->path);
+        dcheck_eq(_call_map.count(call->path), 0);
         _call_map[call->path] = call;
     }
 
