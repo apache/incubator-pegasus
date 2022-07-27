@@ -377,12 +377,6 @@ function run_test()
     echo "Test start time: `date`"
     start_time=`date +%s`
 
-    run_start_zk
-    if [ $? -ne 0 ]; then
-        echo "ERROR: start zk failed"
-        exit 1
-    fi
-
     if [ ! -d "$REPORT_DIR" ]; then
         mkdir -p $REPORT_DIR
     fi
@@ -431,8 +425,9 @@ function run_pegasus_test()
         echo "Prepare files used for bulk load function test succeed"
     fi
 
-    ./run.sh clear_onebox #clear the onebox before test
-    if ! ./run.sh start_onebox -w; then
+    # restart onebox
+    run_clear_onebox
+    if ! run_start_onebox -w; then
         echo "ERROR: unable to continue on testing because starting onebox failed"
         exit 1
     fi
@@ -451,7 +446,7 @@ function run_pegasus_test()
     done
 
     if [ "$clear_flags" == "1" ]; then
-        ./run.sh clear_onebox
+        run_clear_onebox
     fi
 }
 function run_rdsn_test()
@@ -460,6 +455,14 @@ function run_rdsn_test()
         test_modules="dsn_runtime_tests,dsn_utils_tests,dsn_perf_counter_test,dsn.zookeeper.tests,dsn_aio_test,dsn.failure_detector.tests,dsn_meta_state_tests,dsn_nfs_test,dsn_block_service_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test,dsn_replica_backup_test,dsn_replica_bulk_load_test,dsn_replica_split_test"
     fi
     echo "test_modules=$test_modules"
+
+    # restart zk
+    run_stop_zk
+    run_start_zk
+    if [ $? -ne 0 ]; then
+        echo "ERROR: start zk failed"
+        exit 1
+    fi
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
@@ -831,7 +834,7 @@ function run_stop_onebox()
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null || true
 }
 
 #####################
@@ -1059,7 +1062,7 @@ function run_stop_onebox_instance()
             echo "INFO: meta@$META_ID is not running"
             exit 1
         fi
-        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: meta@$META_ID stopped"
     fi
     if [ $REPLICA_ID != "0" ]; then
@@ -1072,7 +1075,7 @@ function run_stop_onebox_instance()
             echo "INFO: replica@$REPLICA_ID is not running"
             exit 1
         fi
-        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: replica@$REPLICA_ID stopped"
     fi
     if [ $COLLECTOR_ID != "0" ]; then
@@ -1080,7 +1083,7 @@ function run_stop_onebox_instance()
             echo "INFO: collector is not running"
             exit 1
         fi
-        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: collector stopped"
     fi
 }
@@ -1296,7 +1299,7 @@ function run_stop_kill_test()
         shift
     done
 
-    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
     run_stop_onebox
 }
 
@@ -1526,7 +1529,7 @@ function run_stop_upgrade_test()
         shift
     done
 
-    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
     run_stop_onebox
 }
 
