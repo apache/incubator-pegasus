@@ -173,13 +173,16 @@ private:
 
     // Close all "closeable" metrics owned by this entity.
     //
-    // `async` is used to control if the close operations are asynchronous or not. It is set to
-    // true by default, which means all metrics owned by this entity will be closed asynchronously
-    // without waiting for the close operations to be finished.
-    //
-    // Otherwise, once `async` is set to false, close() will be blocked until the close operations
-    // are finished.
-    void close(bool async = true);
+    // `option` is used to control how the close operations are performed:
+    // * kWait:     close() will be blocked until all of the close operations are finished.
+    // * kNoWait:   once the close requests are issued, close() will return immediately without
+    //              waiting for any close operation to be finished.
+    enum class close_option : int
+    {
+        kWait,
+        kNoWait,
+    };
+    void close(close_option option);
 
     void set_attributes(attr_map &&attrs);
 
@@ -351,9 +354,10 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
-// closeable_metric is a metric that implements close() method to execute some close operations
-// asynchronously before the destructor is invoked. wait() is used to wait for the asynchronous
-// close operations to be finished.
+// closeable_metric is a metric that implements close() method to execute some necessary close
+// operations before the destructor is invoked. close() will return immediately without waiting
+// for any close operation to be finished, while wait() is used to wait for all of the close
+// operations to be finished.
 //
 // It's guaranteed that close() for each metric will be called before it is destructed. Generally
 // both of close() and wait() are invoked by its manager, namely metric_entity.

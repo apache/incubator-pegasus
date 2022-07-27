@@ -40,22 +40,24 @@ metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
 
 metric_entity::~metric_entity()
 {
-    // We have to wait for all metrics to be closed synchronously. Waiting each metric to be closed
-    // in the destructor of each metirc will be detected memory leak in dsn_utils_test since the
-    // percentile is also referenced by shared_io_service which is still active without being
-    // destructed while dsn_utils_test is finished.
-    close(false);
+    // We have to wait for all of close operations to be finished. Waiting for close operations to
+    // be finished in the destructor of each metirc may lead to memory leak detected in ASAN test
+    // for dsn_utils_test, since the percentile is also referenced by shared_io_service which is
+    // still alive without being destructed after ASAN test for dsn_utils_test is finished.
+    close(close_option::kWait);
 }
 
-void metric_entity::close(bool async)
+void metric_entity::close(close_option option)
 {
     std::lock_guard<std::mutex> guard(_mtx);
 
     // The reason why each metric is closed in the entity rather than in the destructor of each
-    // metric is that close() for metric is asynchronous. To close all metrics owned by an entity,
-    // it's more efficient to firstly close all metrics asynchronously; then, just wait for the
-    // close operations to be finished. It's inefficient to wait for each metric to be closed one
-    // by one.
+    // metric is that close() for the metric will return immediately without waiting for any close
+    // operation to be finished.
+    //
+    // Thus, to close all metrics owned by an entity, it's more efficient to firstly issue a close
+    // request for all metrics; then, just wait for all of the close operations to be finished.
+    // It's inefficient to wait for each metric to be closed one by one.
     for (auto &m : _metrics) {
         if (m.second->prototype()->type() == metric_type::kPercentile) {
             auto p = down_cast<closeable_metric *>(m.second.get());
@@ -63,11 +65,11 @@ void metric_entity::close(bool async)
         }
     }
 
-    if (async) {
+    if (option == close_option::kNoWait) {
         return;
     }
 
-    // Wait for the close operations to be finished.
+    // Wait for all of the close operations to be finished.
     for (auto &m : _metrics) {
         if (m.second->prototype()->type() == metric_type::kPercentile) {
             auto p = down_cast<closeable_metric *>(m.second.get());
@@ -130,12 +132,15 @@ metric_registry::~metric_registry()
     // will no longer be needed.
     //
     // The reason why each entity is closed in the registery rather than in the destructor of each
-    // entity is that close(true) for entity is asynchronous. To close all entities owned by a
-    // registery, it's more efficient to firstly close all entities asynchronously; then, just wait
-    // for the close operations to be finished in destructor of each entity. It's inefficient to
-    // wait for each entity to be closed one by one.
+    // entity is that close(kNoWait) for the entity will return immediately without waiting for any
+    // close operation to be finished.
+    //
+    // Thus, to close all entities owned by a registery, it's more efficient to firstly issue a
+    // close request for all entities; then, just wait for all of the close operations to be
+    // finished in the destructor of each entity. It's inefficient to wait for each entity to be
+    // closed one by one.
     for (auto &entity : _entities) {
-        entity.second->close();
+        entity.second->close(metric_entity::close_option::kNoWait);
     }
 }
 
@@ -227,8 +232,8 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
 {
 // This macro is defined for the case that handlers for asynchronous wait operations are no
 // longer cancelled. It just checks the internal state atomically (since close() can also be
-// called simultaneously) for kClosing; once it's matched, it will not execute future callbacks
-// to stop the timer.
+// called simultaneously) for kClosing; once it's matched, it will stop the timer by not executing
+// any future handler.
 #define TRY_PROCESS_TIMER_CLOSING()                                                                \
     do {                                                                                           \
         auto expected_state = state::kClosing;                                                     \
@@ -259,6 +264,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
     TRY_PROCESS_TIMER_CLOSING();
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+#undef TRY_PROCESS_TIMER_CLOSING
 }
 
 template <>
