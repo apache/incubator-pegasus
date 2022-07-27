@@ -26,6 +26,7 @@
 
 include "dsn.thrift"
 
+# TODO(yingchun): reuse the idls for server and all client libs
 namespace cpp dsn
 
 struct partition_configuration

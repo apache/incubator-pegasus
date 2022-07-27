@@ -24,12 +24,16 @@ under the License.
 ## Build
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean package -DskipTests
 ```
 
 ## Install
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean install -DskipTests
 ```
 
@@ -38,12 +42,16 @@ mvn clean install -DskipTests
 To run test, you should start pegasus onebox firstly, and run test as:
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean package
 ```
 
 or specify one test:
 
 ```
+cd idl && sh recompile_thrift.sh && cd -
+mvn spotless:apply
 mvn clean package -Dtest=TestPing
 ```
 

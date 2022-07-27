@@ -249,9 +249,8 @@ function run_build()
     fi
 
     echo "INFO: Start build rdsn..."
-    cd $ROOT/src/rdsn
     echo "Gen rdsn thrift"
-    python3 compile_thrift.py
+    python3 $ROOT/scripts/compile_thrift.py
     BUILD_DIR="$ROOT/src/rdsn/builder"
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
@@ -285,9 +284,7 @@ function run_build()
 
     echo "INFO: start build pegasus..."
     echo "Gen pegasus thrift"
-    pushd $ROOT/src/idl
-    sh recompile_thrift.sh
-    popd
+    sh scripts/recompile_thrift.sh
 
     cd "$ROOT/src"
     PEGASUS_GIT_COMMIT="non-git-repo"
