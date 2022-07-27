@@ -27,8 +27,13 @@ then
     exit 1
 fi
 
-cd $INSTALL_DIR
+if [ ! -d "$INSTALL_DIR" ]
+then
+    # ignore zookeeper INSTALL_DIR not exist when stop zookeeper
+    exit 0
+fi
 
+cd $INSTALL_DIR
 ZOOKEEPER_HOME=`pwd`/apache-zookeeper-3.7.0-bin
 
 if [ -d "$ZOOKEEPER_HOME" ]

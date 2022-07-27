@@ -459,10 +459,6 @@ function run_rdsn_test()
     # restart zk
     run_stop_zk
     run_start_zk
-    if [ $? -ne 0 ]; then
-        echo "ERROR: start zk failed"
-        exit 1
-    fi
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
@@ -527,9 +523,6 @@ function run_start_zk()
     done
 
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
 }
 
 #####################
