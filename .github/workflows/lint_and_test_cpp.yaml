@@ -282,7 +282,7 @@ jobs:
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
         if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build --test -c -j $(($(nproc)/2+1))
+        run: ./run.sh build --test -c -j $(($(nproc)/2+1)) --skip_thirdparty
       - name: Packaging Server
         if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh pack_server
@@ -294,3 +294,44 @@ jobs:
         run: |
           source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
+
+  build_pegasus_on_macos:
+    name: Build Pegasus on macOS
+    needs: cpp_clang_format_linter
+    runs-on: macos-12
+    env:
+      OPENSSL_ROOT_DIR: /usr/local/opt/openssl
+    steps:
+      - name: Install Softwares
+        run: |
+          # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md
+          brew install snappy
+          brew install lz4
+          brew install zstd
+          brew install openssl@1.1
+      - uses: actions/checkout@v2
+      - name: Setup cache
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            thirdparty
+          key: macos-12-thirdparty-bins
+      - name: Build thirdparty
+        working-directory: thirdparty
+        run: |
+          export JAVA_HOME="${JAVA_HOME_8_X64}"
+          mkdir -p build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/ -DMACOS_OPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
+          cmake --build build/ -j $(sysctl -n hw.physicalcpu)
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            pegasus:
+              - 'src/**'
+            thirdparty:
+              - 'thirdparty/**'
+      - name: Compilation
+        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh build --test --skip_thirdparty -c -j $(sysctl -n hw.physicalcpu)

@@ -215,6 +215,11 @@ function run_build()
                    -DBoost_NO_BOOST_CMAKE=ON
                    -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
                    -DBoost_NO_SYSTEM_PATHS=ON"
+
+    if [ "$(uname)" == "Darwin" ]; then
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
+    fi
+
     if [ ! -z "${SANITIZER}" ]; then
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
     fi
@@ -240,9 +245,6 @@ function run_build()
         mkdir -p build
         pushd build
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}"
-        if [ "$(uname)" == "Darwin" ]; then
-            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
-        fi
         cmake .. ${CMAKE_OPTIONS}
         make -j$JOB_NUM
         exit_if_fail $?

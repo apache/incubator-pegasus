@@ -286,10 +286,6 @@ function(dsn_setup_system_libs)
   # for md5 calculation
   find_package(OpenSSL REQUIRED)
   set(DSN_SYSTEM_LIBS ${DSN_SYSTEM_LIBS} ${OPENSSL_CRYPTO_LIBRARY})
-  if (APPLE)
-    include_directories(SYSTEM ${OPENSSL_ROOT_DIR}/include)
-    link_directories("${OPENSSL_ROOT_DIR}/lib")
-  endif()
 
   if (NOT APPLE)
     if(ENABLE_GPERF)
@@ -361,8 +357,9 @@ function(dsn_setup_thirdparty_libs)
   endif()
 
   if (APPLE)
-    include_directories(${MACOS_OPENSSL_ROOT_DIR}/include)
+    include_directories(SYSTEM ${MACOS_OPENSSL_ROOT_DIR}/include)
     link_directories(${MACOS_OPENSSL_ROOT_DIR}/lib)
+    message (STATUS "MACOS_OPENSSL_ROOT_DIR: ${MACOS_OPENSSL_ROOT_DIR}")
   endif()
 endfunction(dsn_setup_thirdparty_libs)
 
