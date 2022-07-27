@@ -35,6 +35,7 @@
 #include <iostream>
 
 #include <boost/lexical_cast.hpp>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/duplication_common.h>
 #include <dsn/dist/replication/replication_other_types.h>
 #include <dsn/tool-api/group_address.h>
@@ -99,7 +100,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
                       << std::endl;
             return query_resp.err;
         }
-        dassert(partition_count == query_resp.partition_count, "partition count not equal");
+        dcheck_eq(partition_count, query_resp.partition_count);
         int ready_count = 0;
         for (int i = 0; i < partition_count; i++) {
             const partition_configuration &pc = query_resp.partitions[i];
@@ -384,11 +385,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                 derror("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
                 return r;
             }
-            dassert(info.app_id == app_id, "invalid app_id, %d VS %d", info.app_id, app_id);
-            dassert(info.partition_count == partition_count,
-                    "invalid partition_count, %d VS %d",
-                    info.partition_count,
-                    partition_count);
+            dcheck_eq(info.app_id, app_id);
+            dcheck_eq(info.partition_count, partition_count);
             int fully_healthy = 0;
             int write_unhealthy = 0;
             int read_unhealthy = 0;

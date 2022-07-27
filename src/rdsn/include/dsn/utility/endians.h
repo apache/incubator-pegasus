@@ -19,6 +19,9 @@
 
 #include <cstdint>
 #include <cassert>
+
+#include <dsn/c/api_utilities.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/string_view.h>
 
@@ -145,7 +148,7 @@ private:
         _size -= sz;
     }
 
-    void ensure(size_t sz) { assert(_size >= sz); }
+    void ensure(size_t sz) { dcheck_ge(_size, sz); }
 
 private:
     const char *_p{nullptr};

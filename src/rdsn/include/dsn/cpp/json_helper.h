@@ -41,6 +41,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <dsn/c/api_utilities.h>
 #include <dsn/utility/autoref_ptr.h>
 #include <dsn/utility/utils.h>
 #include <dsn/tool-api/auto_codes.h>
@@ -495,7 +496,7 @@ inline void json_encode(JsonWriter &out, const dsn::ref_ptr<T> &t)
 {
     // when a smart ptr is encoded, caller should ensure the ptr is not nullptr
     // TODO: encoded to null?
-    assert(t.get() != nullptr);
+    dassert_f(t.get(), "");
     json_encode(out, *t);
 }
 
@@ -511,7 +512,7 @@ inline void json_encode(JsonWriter &out, const std::shared_ptr<T> &t)
 {
     // when a smart ptr is encoded, caller should ensure the ptr is not nullptr
     // TODO: encoded to null?
-    assert(t.get() != nullptr);
+    dassert(t.get(), "");
     json_encode(out, *t);
 }
 

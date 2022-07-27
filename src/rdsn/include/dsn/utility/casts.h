@@ -39,7 +39,7 @@ inline To down_cast(From *from)
     // Use RTTI to do double-check, though in practice the unit tests are seldom built in debug
     // mode. For example, the unit tests of github CI for both rDSN and Pegasus are built in
     // release mode.
-    assert(from == NULL || dynamic_cast<To>(from) != NULL);
+    dassert_f(from == NULL || dynamic_cast<To>(from) != NULL, "");
 
     return static_cast<To>(from);
 }

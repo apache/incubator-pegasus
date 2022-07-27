@@ -17,16 +17,17 @@
  * under the License.
  */
 
+#include "killer_handler_shell.h"
+
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
 #include <sstream>
 #include <fstream>
 
-#include <dsn/utility/config_api.h>
-#include <dsn/c/api_utilities.h>
-
-#include "killer_handler_shell.h"
+#include "dsn/c/api_utilities.h"
+#include "dsn/dist/fmt_logging.h"
+#include "dsn/utility/config_api.h"
 
 namespace pegasus {
 namespace test {
@@ -50,7 +51,7 @@ bool killer_handler_shell::has_meta_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    assert(dsn::utils::pipe_execute(find_core, output) == 0);
+    dcheck_eq(dsn::utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;
@@ -67,7 +68,7 @@ bool killer_handler_shell::has_replica_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    assert(dsn::utils::pipe_execute(find_core, output) == 0);
+    dcheck_eq(dsn::utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;

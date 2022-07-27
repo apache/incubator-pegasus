@@ -21,8 +21,9 @@
 
 #include <unordered_map>
 
-#include "statistics.h"
 #include "config.h"
+#include "pegasus/client.h"
+#include "statistics.h"
 
 namespace pegasus {
 namespace test {

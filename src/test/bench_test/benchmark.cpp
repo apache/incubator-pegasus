@@ -17,12 +17,14 @@
  * under the License.
  */
 
-#include <sstream>
-#include <pegasus/client.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/c/app_model.h>
-
 #include "benchmark.h"
+
+#include <sstream>
+
+#include "dsn/c/api_utilities.h"
+#include "dsn/c/app_model.h"
+#include "dsn/dist/fmt_logging.h"
+#include "dsn/utility/ports.h"
 #include "rand.h"
 
 namespace pegasus {
@@ -31,7 +33,7 @@ benchmark::benchmark()
 {
     _client = pegasus_client_factory::get_client(config::instance().pegasus_cluster_name.c_str(),
                                                  config::instance().pegasus_app_name.c_str());
-    assert(nullptr != _client);
+    dassert_f(_client, "");
 
     // init operation method map
     _operation_method = {{kUnknown, nullptr},
@@ -58,7 +60,7 @@ void benchmark::run_benchmark(int thread_count, operation_type op_type)
 {
     // get method by operation type
     bench_method method = _operation_method[op_type];
-    assert(method != nullptr);
+    dassert_f(method, "");
 
     // create histogram statistic
     std::shared_ptr<rocksdb::Statistics> hist_stats = rocksdb::CreateDBStatistics();

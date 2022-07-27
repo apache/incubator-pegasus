@@ -32,9 +32,9 @@ aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node
 {
     _is_null = (_cb == nullptr);
 
-    dassert(TASK_TYPE_AIO == spec().type,
-            "%s is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
-            spec().name.c_str());
+    dassert_f(TASK_TYPE_AIO == spec().type,
+              "{} is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
+              spec().name);
     set_error_code(ERR_IO_PENDING);
 
     _aio_ctx = file::prepare_aio_context(this);
@@ -51,10 +51,7 @@ void aio_task::collapse()
             ::memcpy(dest, b.buffer, b.size);
             dest += b.size;
         }
-        dassert(dest - buffer.get() == _aio_ctx->buffer_size,
-                "%u VS %u",
-                dest - buffer.get(),
-                _aio_ctx->buffer_size);
+        dcheck_eq(dest - buffer.get(), _aio_ctx->buffer_size);
         _aio_ctx->buffer = buffer.get();
         _merged_write_buffer_holder.assign(std::move(buffer), 0, _aio_ctx->buffer_size);
     }

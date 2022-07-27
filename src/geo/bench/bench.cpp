@@ -26,9 +26,10 @@
 #include <rocksdb/statistics.h>
 #include <rocksdb/env.h>
 
-#include <dsn/utility/errors.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/string_conv.h>
+#include "dsn/dist/fmt_logging.h"
+#include "dsn/utility/errors.h"
+#include "dsn/utility/strings.h"
+#include "dsn/utility/string_conv.h"
 
 static const int data_count = 10000;
 
@@ -85,7 +86,7 @@ int main(int argc, char **argv)
             std::string value;
             S2LatLng latlng(S2Testing::SamplePoint(rect));
             bool ok = codec.encode_to_value(latlng.lat().degrees(), latlng.lng().degrees(), value);
-            assert(ok);
+            dassert_f(ok, "");
             int ret = my_geo.set(std::to_string(i), "", value, 1000);
             if (ret != pegasus::PERR_OK) {
                 std::cerr << "set data failed. error=" << ret << std::endl;
