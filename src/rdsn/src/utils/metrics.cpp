@@ -40,20 +40,38 @@ metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
 
 metric_entity::~metric_entity()
 {
+    // We have to wait for all metrics to be closed synchronously. Waiting each metric to be closed
+    // in the destructor of each metirc will be detected memory leak in dsn_utils_test since the
+    // percentile is also referenced by shared_io_service which is still active without being
+    // destructed while dsn_utils_test is finished.
+    close(false);
+}
+
+void metric_entity::close(bool async)
+{
     std::lock_guard<std::mutex> guard(_mtx);
 
-    // Close all "closeable" metrics owned by this entity. Once an entity is chosen to be
-    // destructed, the metrics owned by it will no longer be needed.
-    //
-    // The reason why each metric is closed in the entity rather than in its destructor is
-    // that close() is asynchronous. To close all metrics owned by an entity, it's more
-    // efficient to firstly close all metrics asynchronously; then, just wait for the close
-    // operations to be finished in destructor of each metric. It's inefficient to wait for
-    // each metric to be closed one by one.
+    // The reason why each metric is closed in the entity rather than in the destructor of each
+    // metric is that close() for metric is asynchronous. To close all metrics owned by an entity,
+    // it's more efficient to firstly close all metrics asynchronously; then, just wait for the
+    // close operations to be finished. It's inefficient to wait for each metric to be closed one
+    // by one.
     for (auto &m : _metrics) {
         if (m.second->prototype()->type() == metric_type::kPercentile) {
             auto p = down_cast<closeable_metric *>(m.second.get());
             p->close();
+        }
+    }
+
+    if (async) {
+        return;
+    }
+
+    // Wait for the close operations to be finished.
+    for (auto &m : _metrics) {
+        if (m.second->prototype()->type() == metric_type::kPercentile) {
+            auto p = down_cast<closeable_metric *>(m.second.get());
+            p->wait();
         }
     }
 }
@@ -104,7 +122,22 @@ metric_registry::metric_registry()
     tools::shared_io_service::instance();
 }
 
-metric_registry::~metric_registry() {}
+metric_registry::~metric_registry()
+{
+    std::lock_guard<std::mutex> guard(_mtx);
+
+    // Once the registery is chosen to be destructed, all of the entities and metrics owned by it
+    // will no longer be needed.
+    //
+    // The reason why each entity is closed in the registery rather than in the destructor of each
+    // entity is that close(true) for entity is asynchronous. To close all entities owned by a
+    // registery, it's more efficient to firstly close all entities asynchronously; then, just wait
+    // for the close operations to be finished in destructor of each entity. It's inefficient to
+    // wait for each entity to be closed one by one.
+    for (auto &entity : _entities) {
+        entity.second->close();
+    }
+}
 
 metric_registry::entity_map metric_registry::entities() const
 {

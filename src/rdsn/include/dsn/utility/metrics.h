@@ -171,6 +171,16 @@ private:
 
     ~metric_entity();
 
+    // Close all "closeable" metrics owned by this entity.
+    //
+    // `async` is used to control if the close operations are asynchronous or not. It is set to
+    // true by default, which means all metrics owned by this entity will be closed asynchronously
+    // without waiting for the close operations to be finished.
+    //
+    // Otherwise, once `async` is set to false, close() will be blocked until the close operations
+    // are finished.
+    void close(bool async = true);
+
     void set_attributes(attr_map &&attrs);
 
     const std::string _id;
@@ -342,14 +352,16 @@ private:
 };
 
 // closeable_metric is a metric that implements close() method to execute some close operations
-// asynchronously before the destructor is invoked.
+// asynchronously before the destructor is invoked. wait() is used to wait for the asynchronous
+// close operations to be finished.
 //
 // It's guaranteed that close() for each metric will be called before it is destructed. Generally
-// close() is invoked by its manager, namely metric_entity. See also ~metric_entity().
+// both of close() and wait() are invoked by its manager, namely metric_entity.
 class closeable_metric : public metric
 {
 public:
     virtual void close() = 0;
+    virtual void wait() = 0;
 
 protected:
     explicit closeable_metric(const metric_prototype *prototype);
@@ -710,11 +722,7 @@ protected:
             std::bind(&percentile<value_type, NthElementFinder>::on_close, this)));
     }
 
-    virtual ~percentile()
-    {
-        close();
-        wait();
-    }
+    virtual ~percentile() = default;
 
 private:
     using nth_container_type = typename NthElementFinder::nth_container_type;
@@ -729,18 +737,18 @@ private:
         }
     }
 
+    virtual void wait() override
+    {
+        if (_timer) {
+            _timer->wait();
+        }
+    }
+
     void on_close()
     {
         // This will be called back after timer is closed, which means the percentile is
         // no longer needed by timer and can be destructed safely.
         release_ref();
-    }
-
-    void wait()
-    {
-        if (_timer) {
-            _timer->wait();
-        }
     }
 
     void find_nth_elements()
