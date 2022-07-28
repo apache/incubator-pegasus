@@ -255,6 +255,11 @@ public:
                  std::string &value,
                  internal_info *info = nullptr) override;
 
+        int next(std::string &hashkey,
+                 std::string &sortkey,
+                 std::string &value,
+                 int32_t &count_number) override;
+
         void async_next(async_scan_next_callback_t &&) override;
 
         bool safe_destructible() const override;
@@ -287,6 +292,7 @@ public:
         std::vector<::dsn::apps::key_value> _kvs;
         internal_info _info;
         int32_t _p;
+        int32_t _kv_count;
 
         int64_t _context;
         mutable ::dsn::zlock _lock;
@@ -319,6 +325,14 @@ private:
         pegasus_scanner_impl_wrapper(pegasus_scanner *p) : _p(p) {}
 
         void async_next(async_scan_next_callback_t &&callback) override;
+
+        int next(std::string &hashkey,
+                 std::string &sortkey,
+                 std::string &value,
+                 int32_t &count_number) override
+        {
+            return _p->next(hashkey, sortkey, value, count_number);
+        }
 
         int next(std::string &hashkey,
                  std::string &sortkey,

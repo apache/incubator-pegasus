@@ -1198,7 +1198,8 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             epoch_now,
             request.no_value,
             request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
-            return_expire_ts);
+            return_expire_ts,
+            request.only_return_count ? false : true);
         switch (state) {
         case range_iteration_state::kNormal:
             count++;
@@ -1220,6 +1221,10 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         }
 
         it->Next();
+    }
+    if (request.only_return_count) {
+        resp.kvs.emplace_back(::dsn::apps::key_value());
+        resp.__set_kv_count(count);
     }
 
     // check iteration time whether exceed limit
@@ -1297,7 +1302,10 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         _pfc_recent_filter_count->add(filter_count);
     }
 
-    _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
+    // abandon calculate capacity unit
+    if (!request.only_return_count) {
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
+    }
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -1365,7 +1373,8 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                                    epoch_now,
                                                    no_value,
                                                    validate_hash,
-                                                   return_expire_ts);
+                                                   return_expire_ts,
+                                                   request.only_return_count ? false : true);
             switch (state) {
             case range_iteration_state::kNormal:
                 count++;
@@ -1387,6 +1396,11 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             }
 
             it->Next();
+        }
+
+        if (request.only_return_count) {
+            resp.kvs.emplace_back(::dsn::apps::key_value());
+            resp.__set_kv_count(count);
         }
 
         // check iteration time whether exceed limit
@@ -1449,7 +1463,10 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         resp.error = rocksdb::Status::Code::kNotFound;
     }
 
-    _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
+    // abandon calculate capacity unit
+    if (request.only_return_count) {
+        _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
+    }
     _pfc_scan_latency->set(dsn_now_ns() - start_time);
 }
 
@@ -2274,7 +2291,8 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
                                                uint32_t epoch_now,
                                                bool no_value,
                                                bool request_validate_hash,
-                                               bool request_expire_ts)
+                                               bool request_expire_ts,
+                                               bool fill_value)
 {
     if (check_if_record_expired(epoch_now, value)) {
         if (_verbose_log) {
@@ -2292,8 +2310,6 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
             return range_iteration_state::kHashInvalid;
         }
     }
-
-    ::dsn::apps::key_value kv;
 
     // extract raw key
     ::dsn::blob raw_key(key.data(), 0, key.size());
@@ -2316,24 +2332,28 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
             return range_iteration_state::kFiltered;
         }
     }
-    std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
-    ::memcpy(key_buf.get(), raw_key.data(), raw_key.length());
-    kv.key.assign(std::move(key_buf), 0, raw_key.length());
+    if (fill_value) {
+        ::dsn::apps::key_value kv;
 
-    // extract expire ts if necessary
-    if (request_expire_ts) {
-        auto expire_ts_seconds =
-            pegasus_extract_expire_ts(_pegasus_data_version, utils::to_string_view(value));
-        kv.__set_expire_ts_seconds(static_cast<int32_t>(expire_ts_seconds));
+        std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
+        ::memcpy(key_buf.get(), raw_key.data(), raw_key.length());
+        kv.key.assign(std::move(key_buf), 0, raw_key.length());
+
+        // extract expire ts if necessary
+        if (request_expire_ts) {
+            auto expire_ts_seconds =
+                pegasus_extract_expire_ts(_pegasus_data_version, utils::to_string_view(value));
+            kv.__set_expire_ts_seconds(static_cast<int32_t>(expire_ts_seconds));
+        }
+
+        // extract value
+        if (!no_value) {
+            std::string value_buf(value.data(), value.size());
+            pegasus_extract_user_data(_pegasus_data_version, std::move(value_buf), kv.value);
+        }
+        kvs.emplace_back(std::move(kv));
     }
 
-    // extract value
-    if (!no_value) {
-        std::string value_buf(value.data(), value.size());
-        pegasus_extract_user_data(_pegasus_data_version, std::move(value_buf), kv.value);
-    }
-
-    kvs.emplace_back(std::move(kv));
     return range_iteration_state::kNormal;
 }
 

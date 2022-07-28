@@ -322,7 +322,8 @@ inline void scan_multi_data_next(scan_data_context *context)
                                                std::string &&sort_key,
                                                std::string &&value,
                                                pegasus::pegasus_client::internal_info &&info,
-                                               uint32_t expire_ts_seconds) {
+                                               uint32_t expire_ts_seconds,
+                                               uint32_t kv_count) {
             if (ret == pegasus::PERR_OK) {
                 if (validate_filter(context, sort_key, value)) {
                     bool ts_expired = false;
@@ -401,9 +402,10 @@ inline void scan_data_next(scan_data_context *context)
                                                std::string &&sort_key,
                                                std::string &&value,
                                                pegasus::pegasus_client::internal_info &&info,
-                                               uint32_t expire_ts_seconds) {
+                                               uint32_t expire_ts_seconds,
+                                               int32_t kv_count) {
             if (ret == pegasus::PERR_OK) {
-                if (validate_filter(context, sort_key, value)) {
+                if (kv_count == -1 || validate_filter(context, sort_key, value)) {
                     bool ts_expired = false;
                     int ttl_seconds = 0;
                     switch (context->op) {
@@ -499,36 +501,40 @@ inline void scan_data_next(scan_data_context *context)
                             context->timeout_ms);
                         break;
                     case SCAN_COUNT:
-                        context->split_rows++;
-                        if (context->stat_size && context->statistics) {
-                            long hash_key_size = hash_key.size();
-                            context->statistics->measureTime(
-                                static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE),
-                                hash_key_size);
+                        if (kv_count == -1) {
+                            context->split_rows++;
+                            if (context->stat_size && context->statistics) {
+                                long hash_key_size = hash_key.size();
+                                context->statistics->measureTime(
+                                    static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE),
+                                    hash_key_size);
 
-                            long sort_key_size = sort_key.size();
-                            context->statistics->measureTime(
-                                static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE),
-                                sort_key_size);
+                                long sort_key_size = sort_key.size();
+                                context->statistics->measureTime(
+                                    static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE),
+                                    sort_key_size);
 
-                            long value_size = value.size();
-                            context->statistics->measureTime(
-                                static_cast<uint32_t>(histogram_type::VALUE_SIZE), value_size);
+                                long value_size = value.size();
+                                context->statistics->measureTime(
+                                    static_cast<uint32_t>(histogram_type::VALUE_SIZE), value_size);
 
-                            long row_size = hash_key_size + sort_key_size + value_size;
-                            context->statistics->measureTime(
-                                static_cast<uint32_t>(histogram_type::ROW_SIZE), row_size);
+                                long row_size = hash_key_size + sort_key_size + value_size;
+                                context->statistics->measureTime(
+                                    static_cast<uint32_t>(histogram_type::ROW_SIZE), row_size);
 
-                            if (context->top_count > 0) {
-                                context->top_rows.push(
-                                    std::move(hash_key), std::move(sort_key), row_size);
+                                if (context->top_count > 0) {
+                                    context->top_rows.push(
+                                        std::move(hash_key), std::move(sort_key), row_size);
+                                }
                             }
-                        }
-                        if (context->count_hash_key) {
-                            if (hash_key != context->last_hash_key) {
-                                context->split_hash_key_count++;
-                                context->last_hash_key = std::move(hash_key);
+                            if (context->count_hash_key) {
+                                if (hash_key != context->last_hash_key) {
+                                    context->split_hash_key_count++;
+                                    context->last_hash_key = std::move(hash_key);
+                                }
                             }
+                        } else {
+                            context->split_rows += kv_count;
                         }
                         scan_data_next(context);
                         break;

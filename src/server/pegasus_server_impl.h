@@ -235,7 +235,8 @@ private:
                               uint32_t epoch_now,
                               bool no_value,
                               bool request_validate_hash,
-                              bool request_expire_ts);
+                              bool request_expire_ts,
+                              bool fill_value);
 
     range_iteration_state
     append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,

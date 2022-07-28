@@ -304,7 +304,8 @@ static command_executor commands[] = {
         "[-y|--sort_key_filter_pattern str] "
         "[-v|--value_filter_type anywhere|prefix|postfix|exact] "
         "[-z|--value_filter_pattern str][-d|--diff_hash_key] "
-        "[-a|--stat_size] [-n|--top_count num] [-r|--run_seconds num]",
+        "[-a|--stat_size] [-n|--top_count num] "
+        "[-o|--only_return_data_count] [-r|--run_seconds num]",
         data_operations,
     },
     {

@@ -168,6 +168,35 @@ public:
     }
 };
 
+TEST_F(scan, OVERALL_COUNT_ONLY)
+{
+    ddebug("TEST OVERALL_SCAN_COUNT_ONLY...");
+    pegasus_client::scan_options options;
+    options.only_return_count = true;
+    std::vector<pegasus_client::pegasus_scanner *> scanners;
+    int ret = client->get_unordered_scanners(3, options, scanners);
+    ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
+                      << client->get_error_string(ret);
+    ASSERT_LE(scanners.size(), 3);
+
+    std::string hash_key;
+    std::string sort_key;
+    std::string value;
+    int32_t data_counts = 0;
+    std::map<std::string, std::map<std::string, std::string>> data;
+    for (auto scanner : scanners) {
+        ASSERT_NE(nullptr, scanner);
+        int32_t kv_count;
+        while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value, kv_count)))) {
+            data_counts += kv_count;
+        }
+        ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
+                                           << client->get_error_string(ret);
+        delete scanner;
+    }
+    ASSERT_EQ(10990, data_counts);
+}
+
 TEST_F(scan, ALL_SORT_KEY)
 {
     ddebug("TESTING_HASH_SCAN, ALL SORT_KEYS ....");
@@ -402,7 +431,8 @@ TEST_F(scan, REQUEST_EXPIRE_TS)
                                     std::string &&sort_key,
                                     std::string &&value,
                                     pegasus::pegasus_client::internal_info &&info,
-                                    uint32_t expire_ts_seconds) {
+                                    uint32_t expire_ts_seconds,
+                                    uint32_t kv_count) {
                 if (err == pegasus::PERR_OK) {
                     check_and_put(data, hash_key, sort_key, value);
                     if (expire_ts_seconds > 0) {

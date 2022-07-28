@@ -2169,6 +2169,7 @@ bool clear_data(command_executor *e, shell_context *sc, arguments args)
 bool count_data(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"precise", no_argument, 0, 'c'},
+                                           {"only_return_data_count", no_argument, 0, 'o'},
                                            {"partition", required_argument, 0, 'p'},
                                            {"max_batch_count", required_argument, 0, 'b'},
                                            {"timeout_ms", required_argument, 0, 't'},
@@ -2211,7 +2212,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         int option_index = 0;
         int c;
         c = getopt_long(
-            args.argc, args.argv, "cp:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
+            args.argc, args.argv, "cop:b:t:h:x:s:y:v:z:dan:r:", long_options, &option_index);
         if (c == -1)
             break;
         // input any valid parameter means you want to get precise count by scanning.
@@ -2219,6 +2220,9 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         switch (c) {
         case 'c':
             precise = true;
+            break;
+        case 'o':
+            options.only_return_count = true;
             break;
         case 'p':
             if (!dsn::buf2int32(optarg, partition)) {
@@ -2397,6 +2401,15 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         options.no_value = false;
     else
         options.no_value = true;
+
+    if (diff_hash_key || stat_size || value_filter_type != pegasus::pegasus_client::FT_NO_FILTER ||
+        sort_key_filter_type != pegasus::pegasus_client::FT_NO_FILTER) {
+        options.only_return_count = false;
+    }
+    if (options.only_return_count) {
+        fprintf(stderr, "INFO: scanner only return kv count, not return value\n");
+    }
+
     int ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(
