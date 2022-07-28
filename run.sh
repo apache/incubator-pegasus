@@ -20,7 +20,7 @@ set -e
 
 PID=$$
 ROOT=`pwd`
-LOCAL_IP=`python3 scripts/get_local_ip.py`
+LOCAL_IP=`hostname -f`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
