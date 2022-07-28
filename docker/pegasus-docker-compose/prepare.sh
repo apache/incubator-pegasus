@@ -39,7 +39,7 @@ cp -f "${ROOT}"/config.min.ini "${DOCKER_DIR}/config.ini"
 sed -i "s/%{cluster.name}/${CLUSTER_NAME}/g" "${DOCKER_DIR}/config.ini"
 sed -i "s/allow_non_idempotent_write = false/allow_non_idempotent_write = ${IDEMPOTENT}/" "${DOCKER_DIR}/config.ini"
 for i in $(seq "${META_COUNT}"); do
-    meta_fqdn=${META_HOSTNAME_PREFIX}.1$((i))
+    meta_fqdn=${META_HOSTNAME_PREFIX}.$((i))
     if [ "${i}" -eq 1 ]; then
         meta_list="${meta_fqdn}:$META_PORT"
     else
@@ -63,7 +63,7 @@ for i in $(seq "${META_COUNT}"); do
     command:
       - meta
     privileged: true
-    hostname: @META_HOSTNAME_PREFIX@.1$((i))
+    hostname: @META_HOSTNAME_PREFIX@.$((i))
     networks:
       frontend:
         ipv4_address: @META_IP_PREFIX@.1$((i))
