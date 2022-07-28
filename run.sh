@@ -20,7 +20,7 @@ set -e
 
 PID=$$
 ROOT=`pwd`
-LOCAL_IP=`hostname -f`
+LOCAL_HOSTNAME=`hostname -f`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
@@ -434,7 +434,7 @@ function run_pegasus_test()
         exit 1
     fi
 
-    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/src/server/test/config.ini
+    sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
@@ -723,19 +723,19 @@ function run_start_onebox()
         do
             meta_port=$((34600+i))
             if [ $i -eq 1 ]; then
-                meta_list="${LOCAL_IP}:$meta_port"
+                meta_list="${LOCAL_HOSTNAME}:$meta_port"
             else
-                meta_list="$meta_list,${LOCAL_IP}:$meta_port"
+                meta_list="$meta_list,${LOCAL_HOSTNAME}:$meta_port"
             fi
         done
         sed -i 's/%{meta.server.list}/'"$meta_list"'/g' ${ROOT}/config-server.ini
-        sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${ROOT}/config-server.ini
+        sed -i 's/%{zk.server.list}/'"${LOCAL_HOSTNAME}"':22181/g' ${ROOT}/config-server.ini
         sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
         sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
     else
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.min.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
-        sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
+        sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/config-server.ini
     fi
 
@@ -1234,7 +1234,7 @@ function run_start_kill_test()
     cd $ROOT
     CONFIG=config-kill-test.ini
 
-    sed "s/@LOCAL_IP@/${LOCAL_IP}/g;\
+    sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;\
 s/@META_COUNT@/${META_COUNT}/g;\
 s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
 s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\
@@ -1463,7 +1463,7 @@ function run_start_upgrade_test()
     cd $ROOT
     CONFIG=config-upgrade-test.ini
 
-    sed "s/@LOCAL_IP@/${LOCAL_IP}/g;\
+    sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;\
 s/@META_COUNT@/${META_COUNT}/g;\
 s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
 s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\
