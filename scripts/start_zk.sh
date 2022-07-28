@@ -42,32 +42,24 @@ fi
 
 cd "$INSTALL_DIR" || exit
 
-ZOOKEEPER_ROOT=apache-zookeeper-3.7.0-bin
-ZOOKEEPER_TAR_NAME=${ZOOKEEPER_ROOT}.tar.gz
-ZOOKEEPER_TAR_MD5_VALUE="8ffa97e7e6b0b2cf1d022e5156a7561a"
-
-if [ ! -f $ZOOKEEPER_TAR_NAME ]; then
-    echo "Downloading zookeeper..."
-    download_url="http://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.com/apache-zookeeper-3.7.0-bin.tar.gz"
-    if ! wget -T 5 -t 1 $download_url; then
-        echo "ERROR: download zookeeper failed"
-        exit 1
-    fi
-    if [ `md5sum $ZOOKEEPER_TAR_NAME | awk '{print$1}'` != $ZOOKEEPER_TAR_MD5_VALUE ]; then
-        echo "check file $ZOOKEEPER_TAR_NAME md5sum failed!"
-        exit 1
-    fi
+ZOOKEEPER_PKG=${PROJECT_DIR}/thirdparty/build/Download/zookeeper/zookeeper-3.4.10.tar.gz
+if [ ! -f ${ZOOKEEPER_PKG} ]; then
+    echo "no such file \"${ZOOKEEPER_PKG}\""
+    echo "please install third-parties first"
+    exit 1
 fi
 
-if [ ! -d $ZOOKEEPER_ROOT ]; then
+if [ ! -d zookeeper-3.4.10 ]; then
     echo "Decompressing zookeeper..."
-    if ! tar xf $ZOOKEEPER_TAR_NAME; then
+    cp ${ZOOKEEPER_PKG} .
+    tar xf zookeeper-3.4.10.tar.gz
+    if [ $? -ne 0 ]; then
         echo "ERROR: decompress zookeeper failed"
         exit 1
     fi
 fi
 
-ZOOKEEPER_HOME=`pwd`/$ZOOKEEPER_ROOT
+ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.10
 ZOOKEEPER_PORT=$PORT
 
 cp $ZOOKEEPER_HOME/conf/zoo_sample.cfg $ZOOKEEPER_HOME/conf/zoo.cfg

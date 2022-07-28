@@ -47,7 +47,6 @@ set(MY_PROJ_LIBS
     PocoFoundation
     PocoNetSSL
     PocoJSON
-    hashtable
     )
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

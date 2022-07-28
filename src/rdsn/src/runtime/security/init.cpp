@@ -68,22 +68,5 @@ bool init(bool is_server)
     return true;
 }
 
-bool init_for_zookeeper_client()
-{
-    error_s err = run_kinit();
-    if (!err.is_ok()) {
-        derror_f("initialize kerberos failed, with err = {}", err.description());
-        return false;
-    }
-    ddebug("initialize kerberos for zookeeper client succeed");
-
-    err = init_sasl(false);
-    if (!err.is_ok()) {
-        derror_f("initialize sasl failed, with err = {}", err.description());
-        return false;
-    }
-    ddebug("initialize sasl for zookeeper client succeed");
-    return true;
-}
 } // namespace security
 } // namespace dsn

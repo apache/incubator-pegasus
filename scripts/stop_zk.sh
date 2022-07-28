@@ -33,7 +33,7 @@ then
 fi
 
 cd $INSTALL_DIR
-ZOOKEEPER_HOME=`pwd`/apache-zookeeper-3.7.0-bin
+ZOOKEEPER_HOME=`pwd`/zookeeper-3.4.10
 
 if [ -d "$ZOOKEEPER_HOME" ]
 then

@@ -21,14 +21,13 @@ set(MY_PROJ_LIBS
     dsn_http
     dsn_runtime
     dsn_aio
-    zookeeper
+    zookeeper_mt
     galaxy-fds-sdk-cpp
     PocoNet
     PocoFoundation
     PocoNetSSL
     PocoJSON
     crypto
-    hashtable
     hdfs
     )
 
