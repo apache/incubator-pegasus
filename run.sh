@@ -16,9 +16,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 PID=$$
 ROOT=`pwd`
-LOCAL_IP=`scripts/get_local_ip`
+LOCAL_IP=`python3 scripts/get_local_ip.py`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
@@ -249,81 +251,68 @@ function run_build()
     fi
 
     echo "INFO: Start build rdsn..."
-    echo "Gen rdsn thrift"
-    python3 $ROOT/scripts/compile_thrift.py
     BUILD_DIR="$ROOT/src/rdsn/builder"
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
     fi
-    echo "Running cmake..."
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
+
+        echo "Gen rdsn thrift"
+        python3 $ROOT/scripts/compile_thrift.py
+
+        echo "Running cmake rdsn ..."
+        pushd $BUILD_DIR
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
+        cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
+        exit_if_fail $?
     fi
+
+    echo "[$(date)] Building rdsn ..."
     pushd $BUILD_DIR
-    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
-    cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake rdsn failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
     make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
-    fi
-    popd
+    exit_if_fail $?
 
     if [ "$ONLY_RDSN" == "YES" ]; then
       exit 0
     fi
 
-    echo "INFO: start build pegasus..."
-    echo "Gen pegasus thrift"
-    sh scripts/recompile_thrift.sh
-
-    cd "$ROOT/src"
-    PEGASUS_GIT_COMMIT="non-git-repo"
-    if git rev-parse HEAD; then # this is a git repo
-        PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
-    fi
-    echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
-    GIT_COMMIT_FILE=include/pegasus/git_commit.h
-    echo "Generating $GIT_COMMIT_FILE..."
-    echo "#pragma once" >$GIT_COMMIT_FILE
-    echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
-
+    echo "INFO: start build Pegasus..."
     BUILD_DIR="$ROOT/src/builder"
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
     fi
-    echo "Running cmake..."
+    pushd ${ROOT}
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
-    fi
-    pushd $BUILD_DIR
-    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake pegasus failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
-    make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
+
+        echo "Gen git_commit.h ..."
+        pushd "$ROOT/src"
+        PEGASUS_GIT_COMMIT="non-git-repo"
+        if git rev-parse HEAD; then # this is a git repo
+            PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
+        fi
+        echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
+        GIT_COMMIT_FILE=$ROOT/src/include/pegasus/git_commit.h
+        echo "Generating $GIT_COMMIT_FILE..."
+        echo "#pragma once" >$GIT_COMMIT_FILE
+        echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
+
+        echo "Gen pegasus thrift"
+        sh ${ROOT}/scripts/recompile_thrift.sh
+
+        echo "Running cmake Pegasus..."
+        pushd $BUILD_DIR
+        cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
+        exit_if_fail $?
     fi
 
-    cd $ROOT
-    chmod +x scripts/*.sh
+    echo "[$(date)] Building Pegasus ..."
+    pushd $BUILD_DIR
+    make install $MAKE_OPTIONS
+    exit_if_fail $?
 
     echo "Build finish time: `date`"
     finish_time=`date +%s`
@@ -388,12 +377,6 @@ function run_test()
     echo "Test start time: `date`"
     start_time=`date +%s`
 
-    run_start_zk
-    if [ $? -ne 0 ]; then
-        echo "ERROR: start zk failed"
-        exit 1
-    fi
-
     if [ ! -d "$REPORT_DIR" ]; then
         mkdir -p $REPORT_DIR
     fi
@@ -442,13 +425,14 @@ function run_pegasus_test()
         echo "Prepare files used for bulk load function test succeed"
     fi
 
-    ./run.sh clear_onebox #clear the onebox before test
-    if ! ./run.sh start_onebox -w; then
+    # restart onebox
+    run_clear_onebox
+    if ! run_start_onebox -w; then
         echo "ERROR: unable to continue on testing because starting onebox failed"
         exit 1
     fi
 
-    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/server/test/config.ini
+    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/src/server/test/config.ini
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
@@ -462,7 +446,7 @@ function run_pegasus_test()
     done
 
     if [ "$clear_flags" == "1" ]; then
-        ./run.sh clear_onebox
+        run_clear_onebox
     fi
 }
 function run_rdsn_test()
@@ -471,6 +455,10 @@ function run_rdsn_test()
         test_modules="dsn_runtime_tests,dsn_utils_tests,dsn_perf_counter_test,dsn.zookeeper.tests,dsn_aio_test,dsn.failure_detector.tests,dsn_meta_state_tests,dsn_nfs_test,dsn_block_service_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test,dsn_replica_backup_test,dsn_replica_bulk_load_test,dsn_replica_split_test"
     fi
     echo "test_modules=$test_modules"
+
+    # restart zk
+    run_stop_zk
+    run_start_zk
 
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
@@ -535,9 +523,6 @@ function run_start_zk()
     done
 
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
 }
 
 #####################
@@ -842,7 +827,7 @@ function run_stop_onebox()
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null || true
 }
 
 #####################
@@ -1070,7 +1055,7 @@ function run_stop_onebox_instance()
             echo "INFO: meta@$META_ID is not running"
             exit 1
         fi
-        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: meta@$META_ID stopped"
     fi
     if [ $REPLICA_ID != "0" ]; then
@@ -1083,7 +1068,7 @@ function run_stop_onebox_instance()
             echo "INFO: replica@$REPLICA_ID is not running"
             exit 1
         fi
-        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: replica@$REPLICA_ID stopped"
     fi
     if [ $COLLECTOR_ID != "0" ]; then
@@ -1091,7 +1076,7 @@ function run_stop_onebox_instance()
             echo "INFO: collector is not running"
             exit 1
         fi
-        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: collector stopped"
     fi
 }
@@ -1307,7 +1292,7 @@ function run_stop_kill_test()
         shift
     done
 
-    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
     run_stop_onebox
 }
 
@@ -1537,7 +1522,7 @@ function run_stop_upgrade_test()
         shift
     done
 
-    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
     run_stop_onebox
 }
 

@@ -74,6 +74,10 @@ jobs:
         id: changes
         with:
           filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
             rdsn:
               - 'src/rdsn/**'
             thirdparty:
@@ -89,10 +93,10 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
       - name: Unit Testing
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -118,6 +122,10 @@ jobs:
         id: changes
         with:
           filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
             rdsn:
               - 'src/rdsn/**'
             thirdparty:
@@ -133,10 +141,10 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -162,6 +170,10 @@ jobs:
         id: changes
         with:
           filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
             rdsn:
               - 'src/rdsn/**'
             thirdparty:
@@ -177,10 +189,10 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -206,6 +218,10 @@ jobs:
         id: changes
         with:
           filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
             rdsn:
               - 'src/rdsn/**'
             thirdparty:
@@ -221,10 +237,10 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
       - name: Unit Testing
-        if: steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
@@ -246,6 +262,10 @@ jobs:
         id: changes
         with:
           filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
             pegasus:
               - 'src/**'
             thirdparty:
@@ -261,16 +281,16 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
           cmake --build build/ -j $(($(nproc)/2+1))
       - name: Compilation
-        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh build --test -c -j $(($(nproc)/2+1))
       - name: Packaging Server
-        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh pack_server
       - name: Packaging Tools
-        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: ./run.sh pack_tools
       - name: Unit Testing
-        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
           source ./scripts/config_hdfs.sh
           ./run.sh test --on_travis
