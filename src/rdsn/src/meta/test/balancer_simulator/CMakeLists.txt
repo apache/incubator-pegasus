@@ -13,7 +13,6 @@ set(MY_PROJ_LIBS
     dsn_meta_server
     dsn_replication_common
     dsn_runtime
-    hashtable
     gtest)
 
 set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)

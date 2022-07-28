@@ -33,7 +33,6 @@
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_auth);
-DSN_DECLARE_bool(enable_zookeeper_kerberos);
 
 #define KRB5_RETURN_NOT_OK(err, msg)                                                               \
     do {                                                                                           \
@@ -54,9 +53,8 @@ DSN_DEFINE_string("security", service_name, "", "service name");
 // will not pass.
 error_s check_configuration()
 {
-    dassert(FLAGS_enable_auth || FLAGS_enable_zookeeper_kerberos,
-            "There is no need to check configuration if FLAGS_enable_auth"
-            " and FLAGS_enable_zookeeper_kerberos both are not true");
+    dassert(FLAGS_enable_auth,
+            "There is no need to check configuration if FLAGS_enable_auth is not true");
 
     if (0 == strlen(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
         return error_s::make(ERR_INVALID_PARAMETERS,
