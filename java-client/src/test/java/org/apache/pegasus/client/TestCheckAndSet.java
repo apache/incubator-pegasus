@@ -203,7 +203,7 @@ public class TestCheckAndSet {
               options);
       Assert.assertFalse(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
+      Assert.assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
       Assert.assertNull(value);
 
@@ -220,7 +220,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
@@ -238,7 +238,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
@@ -270,7 +270,7 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v3".getBytes(), result.getCheckValue());
@@ -350,7 +350,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
@@ -382,7 +382,7 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v3".getBytes(), result.getCheckValue());
@@ -425,7 +425,7 @@ public class TestCheckAndSet {
               options);
       Assert.assertFalse(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
+      Assert.assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
       Assert.assertNull(value);
 
@@ -460,7 +460,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
@@ -478,7 +478,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
@@ -496,7 +496,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v111v".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
@@ -514,7 +514,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
@@ -568,7 +568,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
@@ -600,7 +600,7 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v333v".getBytes(), result.getCheckValue());
@@ -643,7 +643,7 @@ public class TestCheckAndSet {
               options);
       Assert.assertFalse(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
+      Assert.assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
       Assert.assertNull(value);
 
@@ -678,7 +678,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
@@ -696,7 +696,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
@@ -714,7 +714,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v111v".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
@@ -804,7 +804,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
@@ -836,7 +836,7 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v333v".getBytes(), result.getCheckValue());
@@ -879,7 +879,7 @@ public class TestCheckAndSet {
               options);
       Assert.assertFalse(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
+      Assert.assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k1".getBytes());
       Assert.assertNull(value);
 
@@ -914,7 +914,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v1".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("".getBytes(), result.getCheckValue());
@@ -932,7 +932,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v1".getBytes(), result.getCheckValue());
@@ -950,7 +950,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v111v".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
@@ -986,7 +986,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
@@ -1040,7 +1040,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v3".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v2".getBytes(), result.getCheckValue());
