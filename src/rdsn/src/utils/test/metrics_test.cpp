@@ -55,7 +55,8 @@ using my_gauge_ptr = ref_ptr<my_gauge>;
 } // namespace dsn
 
 #define METRIC_DEFINE_my_gauge(entity_type, name, unit, desc, ...)                                 \
-    ::dsn::my_gauge_prototype METRIC_##name({#entity_type, #name, unit, desc, ##__VA_ARGS__})
+    ::dsn::my_gauge_prototype METRIC_##name(                                                       \
+        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 
 METRIC_DEFINE_entity(my_server);
 METRIC_DEFINE_entity(my_table);

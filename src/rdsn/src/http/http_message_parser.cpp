@@ -26,6 +26,7 @@
 
 #include "http_message_parser.h"
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/ports.h>
 #include <dsn/utility/crc.h>
 #include <dsn/tool-api/rpc_message.h>
@@ -218,7 +219,7 @@ void http_message_parser::prepare_on_send(message_ex *msg)
         dsn_size -= buf.length();
         ++dsn_buf_count;
     }
-    dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
+    dcheck_eq(dsn_size, 0);
 
     buffers.resize(dsn_buf_count);
 }

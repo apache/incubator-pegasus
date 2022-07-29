@@ -24,9 +24,11 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/rand.h>
-#include <dsn/dist/block_service.h>
+#include "dsn/dist/block_service.h"
+#include "dsn/dist/fmt_logging.h"
+#include "dsn/utility/filesystem.h"
+#include "dsn/utility/rand.h"
+#include "dsn/utility/utils.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;
@@ -38,17 +40,6 @@ static std::string server_address = "<server-address>";
 static std::string access_key = "<access-key>";
 static std::string access_secret = "<access-secret>";
 static std::string bucket_name = "<test-bucket-name>";
-
-static void pipe_execute(const char *command, std::stringstream &output)
-{
-    std::array<char, 256> buffer;
-
-    std::shared_ptr<FILE> command_pipe(popen(command, "r"), pclose);
-    while (!feof(command_pipe.get())) {
-        if (fgets(buffer.data(), 256, command_pipe.get()) != NULL)
-            output << buffer.data();
-    }
-}
 
 static void file_eq_compare(const std::string &fname1, const std::string &fname2)
 {
@@ -111,7 +102,7 @@ void FDSClientTest::SetUp()
         fclose(fp);
 
         std::stringstream ss;
-        pipe_execute((std::string("md5sum ") + f1.filename).c_str(), ss);
+        dcheck_eq(utils::pipe_execute((std::string("md5sum ") + f1.filename).c_str(), ss), 0);
         ss >> f1.md5;
         // well, the string of each line in _test_file is 32
         f1.length = 32 * lines;
@@ -127,7 +118,7 @@ void FDSClientTest::SetUp()
         fclose(fp);
 
         std::stringstream ss;
-        pipe_execute((std::string("md5sum ") + f2.filename).c_str(), ss);
+        dcheck_eq(utils::pipe_execute((std::string("md5sum ") + f2.filename).c_str(), ss), 0);
         ss >> f2.md5;
         // well, the string of each line in _test_file is 32
         f2.length = 32 * lines;
