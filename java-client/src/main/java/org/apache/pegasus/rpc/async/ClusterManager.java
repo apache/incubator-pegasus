@@ -18,11 +18,16 @@
  */
 package org.apache.pegasus.rpc.async;
 
+import static java.lang.Integer.max;
+
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.metrics.MetricsManager;
@@ -31,12 +36,6 @@ import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import org.slf4j.Logger;
-
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static java.lang.Integer.max;
 
 public class ClusterManager extends Cluster {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ClusterManager.class);
