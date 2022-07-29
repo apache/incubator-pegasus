@@ -31,7 +31,7 @@ public class PegasusClientFactory {
 
   private static volatile PegasusClient singletonClient = null;
   private static String singletonClientConfigPath = null;
-  private static Object singletonClientLock = new Object();
+  private static final Object singletonClientLock = new Object();
 
   private static ClientOptions singletonClientOptions = null;
 

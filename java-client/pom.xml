@@ -317,24 +317,20 @@
           </execution>
         </executions>
       </plugin>
-
-      <!-- FindBugs -->
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>3.0.4</version>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>4.7.0.0</version>
+        <dependencies>
+          <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
+          <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs</artifactId>
+            <version>4.7.1</version>
+          </dependency>
+        </dependencies>
         <configuration>
-          <excludeFilterFile>dev-support/findbugs-exclude.xml</excludeFilterFile>
-          <!--
-              Enables analysis which takes more memory but finds more bugs.
-              If you run out of memory, changes the value of the effort element
-              to 'Low'.
-            -->
-          <effort>Max</effort>
-          <failOnError>true</failOnError>
-          <threshold>Low</threshold>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
-          <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>dev-support/findbugs-exclude.xml</excludeFilterFile>-->
         </configuration>
         <executions>
           <execution>
@@ -346,6 +342,7 @@
           </execution>
         </executions>
       </plugin>
+
 
       <!--License Maven Plugin
       mycila/license-maven-plugin provides a stricter license check compared to apache-rat.

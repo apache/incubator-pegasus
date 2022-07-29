@@ -21,6 +21,9 @@ package org.apache.pegasus.client;
 import java.io.Serializable;
 
 public class SetItem implements Serializable {
+
+  private static final long serialVersionUID = -8889678176839129753L;
+
   public byte[] hashKey = null;
   public byte[] sortKey = null;
   public byte[] value = null;

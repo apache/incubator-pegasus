@@ -20,7 +20,12 @@ package org.apache.pegasus.rpc.async;
 
 import com.google.common.net.InetAddresses;
 import io.netty.channel.EventLoopGroup;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -277,7 +282,7 @@ public class MetaSession extends HostNameResolver {
    */
   void resolveHost(String hostPort) throws IllegalArgumentException {
     rpc_address[] addrs = resolve(hostPort);
-    if (addrs == null) {
+    if (addrs == null || addrs.length == 0) {
       logger.error("failed to resolve address \"{}\" into ip addresses", hostPort);
       return;
     }

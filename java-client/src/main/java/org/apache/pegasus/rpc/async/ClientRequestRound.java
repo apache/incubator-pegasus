@@ -36,7 +36,7 @@ public final class ClientRequestRound {
   boolean enableCounter;
   long createNanoTime;
   long expireNanoTime;
-  boolean isCompleted;
+  volatile boolean isCompleted;
   int tryId;
   ScheduledFuture<?> backupRequestTask;
 

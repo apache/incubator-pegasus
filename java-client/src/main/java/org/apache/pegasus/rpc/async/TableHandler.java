@@ -23,7 +23,11 @@ import io.netty.util.concurrent.EventExecutor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -132,10 +136,10 @@ public class TableHandler extends Table {
 
   public gpid getGpidByHash(long hashValue) {
     int index = (int) remainder_unsigned(hashValue, getPartitionCount());
-    final ReplicaConfiguration replicaConfiguration = tableConfig_.get().replicas.get(index);
+    final ReplicaConfiguration replicaConfiguration = this.getReplicaConfig(index);
     // table is partition split, and child partition is not ready
     // child requests should be redirected to its parent partition
-    if (tableConfig_.get().replicas.get(index).ballot < 0) {
+    if (replicaConfiguration.ballot < 0) {
       logger.info(
           "Table[{}] is executing partition split, partition[{}] is not ready, requests will send to parent partition[{}]",
           tableName_,
@@ -464,10 +468,7 @@ public class TableHandler extends Table {
 
     try {
       syncer.get(timeoutMs, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      logger.info("got exception: " + e);
-      throw new ReplicationException(e);
-    } catch (ExecutionException e) {
+    } catch (InterruptedException | ExecutionException e) {
       logger.info("got exception: " + e);
       throw new ReplicationException(e);
     } catch (TimeoutException e) {
@@ -526,6 +527,10 @@ public class TableHandler extends Table {
         break;
       case ERR_SESSION_RESET:
         message = " Unable to connect to the meta servers!";
+        break;
+      default:
+        message = " Unknown error!";
+        break;
     }
     throw new ReplicationException(err_type, header + message);
   }

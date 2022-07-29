@@ -124,14 +124,14 @@ public class TestBatch {
     MultiGetBatch multiGetBatch = new MultiGetBatch(table, 1000);
     multiGetBatch.commit(multiGets, multiGetResults);
 
-    Assertions.assertEquals(0, multiGetResults.get(0).values.size());
-    Assertions.assertEquals(0, multiGetResults.get(1).values.size());
-    Assertions.assertTrue(multiGetResults.get(2).allFetched);
+    Assertions.assertEquals(0, multiGetResults.get(0).getValues().size());
+    Assertions.assertEquals(0, multiGetResults.get(1).getValues().size());
+    Assertions.assertTrue(multiGetResults.get(2).isAllFetched());
     for (int i = 0; i < 3; i++) {
       Assertions.assertEquals(
-          "sortKeyMultiSet" + i, new String(multiGetResults.get(2).values.get(i).getKey()));
+          "sortKeyMultiSet" + i, new String(multiGetResults.get(2).getValues().get(i).getKey()));
       Assertions.assertEquals(
-          "valueMultiSet" + i, new String(multiGetResults.get(2).values.get(i).getRight()));
+          "valueMultiSet" + i, new String(multiGetResults.get(2).getValues().get(i).getRight()));
     }
 
     List<Pair<PException, MultiGetResult>> multiGetResultsWithExp = new ArrayList<>();
@@ -140,10 +140,10 @@ public class TestBatch {
       Assertions.assertNull(multiGetResultsWithExp.get(2).getLeft());
       Assertions.assertEquals(
           "sortKeyMultiSet" + i,
-          new String(multiGetResultsWithExp.get(2).getRight().values.get(i).getKey()));
+          new String(multiGetResultsWithExp.get(2).getRight().getValues().get(i).getKey()));
       Assertions.assertEquals(
           "valueMultiSet" + i,
-          new String(multiGetResultsWithExp.get(2).getRight().values.get(i).getRight()));
+          new String(multiGetResultsWithExp.get(2).getRight().getValues().get(i).getRight()));
     }
 
     PegasusClientFactory.closeSingletonClient();
