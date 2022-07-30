@@ -54,7 +54,7 @@ public class HostNameResolver {
       }
       return results;
     } catch (UnknownHostException e) {
-      return new rpc_address[0];
+      return null;
     }
   }
 }

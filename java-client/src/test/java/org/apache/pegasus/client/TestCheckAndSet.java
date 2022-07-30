@@ -161,9 +161,9 @@ public class TestCheckAndSet {
               "k4".getBytes(),
               "v4".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
-      Assert.assertTrue(result.isCheckValueExist());
+      Assert.assertFalse(result.isCheckValueExist());
       value = client.get(tableName, hashKey, "k4".getBytes());
       Assert.assertArrayEquals("v4".getBytes(), value);
 
@@ -171,7 +171,7 @@ public class TestCheckAndSet {
       client.del(tableName, hashKey, "k4".getBytes());
     } catch (PException e) {
       e.printStackTrace();
-      Assert.assertTrue(false);
+      Assert.fail();
     }
 
     PegasusClientFactory.closeSingletonClient();
@@ -750,7 +750,7 @@ public class TestCheckAndSet {
               "k1".getBytes(),
               "v2".getBytes(),
               options);
-      Assert.assertFalse(result.isSetSucceed());
+      Assert.assertTrue(result.isSetSucceed());
       Assert.assertTrue(result.isCheckValueReturned());
       Assert.assertTrue(result.isCheckValueExist());
       Assert.assertArrayEquals("v111v".getBytes(), result.getCheckValue());
