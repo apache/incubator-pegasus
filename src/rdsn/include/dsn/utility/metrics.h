@@ -150,7 +150,7 @@ public:
     template <typename MetricType, typename... Args>
     ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args)
     {
-        std::lock_guard<std::mutex> guard(_mtx);
+        utils::auto_write_lock l(_lock);
 
         metric_map::const_iterator iter = _metrics.find(prototype);
         if (iter != _metrics.end()) {
@@ -186,9 +186,11 @@ private:
 
     void set_attributes(attr_map &&attrs);
 
+    void take_snapshot(const std::vector<metric_data_sink *> &sinks);
+
     const std::string _id;
 
-    mutable std::mutex _mtx;
+    mutable utils::rw_lock_nr _lock;
     attr_map _attrs;
     metric_map _metrics;
 
@@ -330,6 +332,37 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
 
+// A snapshot to the metric
+class metric_snapshot
+{
+public:
+    using value_type = double;
+    using attr_map = std::unordered_map<std::string, std::string>;
+
+    metric_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs);
+    virtual ~metric_snapshot() = default;
+
+    const string_view &name() const { return _name; }
+
+    metric_type type() const { return _type; }
+
+    value_type value() const { return _value; }
+
+    const attr_map &attrs() const { return _attrs; }
+
+private:
+    const string_view _name;
+    const metric_type _type;
+    const value_type _value;
+
+    // Additional attributes of the metric value, could be empty.
+    // If a metric emits multiple snapshots per time, each snapshot
+    // will be tagged with an attribute.
+    const attr_map _attrs;
+};
+
+class metric_data_sink;
+
 // Base class for each type of metric.
 // Every metric class should inherit from this class.
 //
@@ -348,9 +381,13 @@ protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) = 0;
+
     const metric_prototype *const _prototype;
 
 private:
+    friend class metric_entity;
+
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
@@ -375,6 +412,18 @@ private:
     DISALLOW_COPY_AND_ASSIGN(closeable_metric);
 };
 
+class metric_snapshots
+{
+public:
+    metric_snapshots();
+    ~metric_snapshots();
+
+private:
+    std::unordered_map<std::string, metric_snapshot> _snapshots;
+
+    DISALLOW_COPY_AND_ASSIGN(metric_snapshots);
+};
+
 // A gauge is a metric that represents a single numerical value that can arbitrarily go up and
 // down. Usually there are 2 scenarios for a guage.
 //
@@ -389,32 +438,34 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 class gauge : public metric
 {
 public:
-    T value() const { return _value.load(std::memory_order_relaxed); }
+    using value_type = T;
 
-    void set(const T &val) { _value.store(val, std::memory_order_relaxed); }
+    value_type value() const { return _value.load(std::memory_order_relaxed); }
 
-    template <typename Int = T,
+    void set(const value_type &val) { _value.store(val, std::memory_order_relaxed); }
+
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void increment_by(Int x)
     {
         _value.fetch_add(x, std::memory_order_relaxed);
     }
 
-    template <typename Int = T,
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void decrement_by(Int x)
     {
         increment_by(-x);
     }
 
-    template <typename Int = T,
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void increment()
     {
         increment_by(1);
     }
 
-    template <typename Int = T,
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void decrement()
     {
@@ -422,20 +473,30 @@ public:
     }
 
 protected:
-    gauge(const metric_prototype *prototype, const T &initial_val)
+    gauge(const metric_prototype *prototype, const value_type &initial_val)
         : metric(prototype), _value(initial_val)
     {
     }
 
     gauge(const metric_prototype *prototype);
+        : gauge(prototype, value_type())
+    {
+    }
 
     virtual ~gauge() = default;
 
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) override
+    {
+        for (auto sink : sinks) {
+            sink->iterate_metric(metric_snapshot(prototype()->name(), prototype()->type(), static_cast<metric_snapshot::value_type>(value()), metric_snapshot::attr_map(attrs)));
+        }
+    }
+
 private:
     friend class metric_entity;
-    friend class ref_ptr<gauge<T>>;
+    friend class ref_ptr<gauge<value_type>>;
 
-    std::atomic<T> _value;
+    std::atomic<value_type> _value;
 
     DISALLOW_COPY_AND_ASSIGN(gauge);
 };
@@ -445,6 +506,19 @@ using gauge_ptr = ref_ptr<gauge<T>>;
 
 template <typename T>
 using gauge_prototype = metric_prototype_with<gauge<T>>;
+
+class counter_snapshot : public metric_snapshot
+{
+public:
+    counter_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs, value_type increase);
+
+    virtual ~counter_snapshot() = default;
+
+    value_type increase() const { return _increase; }
+
+private:
+    const value_type _increase;
+};
 
 // A counter in essence is a 64-bit integer that increases monotonically. It should be noted that
 // the counter does not support to decrease. If decrease is needed, please consider to use the
@@ -503,15 +577,27 @@ public:
     void reset() { _adder.reset(); }
 
 protected:
-    counter(const metric_prototype *prototype) : metric(prototype) {}
+    counter(const metric_prototype *prototype) : metric(prototype), _adder(), _snapshot(metric_snapshot::value_type) {}
 
     virtual ~counter() = default;
+
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) override
+    {
+        auto old_value = _snapshot.load();
+        auto new_value = value();
+        for (auto sink : sinks) {
+            sink->iterate_metric(counter_snapshot(prototype()->name(), prototype()->type(), static_cast<metric_snapshot::value_type>(new_value), metric_snapshot::attr_map(attrs), static_cast<metric_snapshot::value_type>(new_value - old_value)));
+        }
+
+        _snapshot.store(new_value);
+    }
 
 private:
     friend class metric_entity;
     friend class ref_ptr<counter<Adder, IsVolatile>>;
 
     long_adder_wrapper<Adder> _adder;
+    std::atomic<metric_snapshot::value_type> _snapshot;
 
     DISALLOW_COPY_AND_ASSIGN(counter);
 };
@@ -557,6 +643,7 @@ ENUM_REG(kth_percentile_type::P999)
 ENUM_END(kth_percentile_type)
 
 const std::vector<double> kKthDecimals = {0.5, 0.9, 0.95, 0.99, 0.999};
+const std::vector<std::string> kKthLabels = {"50", "90", "95", "99", "999"};
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
@@ -655,10 +742,7 @@ public:
     // otherwise, it will always return true with the value corresponding to `type`.
     bool get(kth_percentile_type type, value_type &val) const
     {
-        const auto index = static_cast<size_t>(type);
-        dcheck_lt(index, static_cast<size_t>(kth_percentile_type::COUNT));
-
-        val = _full_nth_elements[index].load(std::memory_order_relaxed);
+        val = value(type);
         return _kth_percentile_bitset.test(index);
     }
 
@@ -728,6 +812,20 @@ protected:
 
     virtual ~percentile() = default;
 
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) override
+    {
+        for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
+            if (!_kth_percentile_bitset.test(i)) {
+                continue;
+            }
+            for (auto sink : sinks) {
+                auto labels({{"p", kKthLabels[i]}});
+                labels.insert(attrs.begin(), attrs.end());
+                sink->iterate_metric(metric_snapshot(prototype()->name(), prototype()->type(), static_cast<metric_snapshot::value_type>(value(i)), std::move(labels)));
+            }
+        }
+    }
+
 private:
     using nth_container_type = typename NthElementFinder::nth_container_type;
 
@@ -753,6 +851,19 @@ private:
         // This will be called back after timer is closed, which means the percentile is
         // no longer needed by timer and can be destructed safely.
         release_ref();
+    }
+
+    value_type value(kth_percentile_type type) const
+    {
+        const auto index = static_cast<size_t>(type);
+        dcheck_lt(index, static_cast<size_t>(kth_percentile_type::COUNT));
+
+        return value(index);
+    }
+
+    value_type value(size_t index) const
+    {
+        return _full_nth_elements[index].load(std::memory_order_relaxed);
     }
 
     void find_nth_elements()
@@ -836,5 +947,13 @@ template <typename T,
           typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
 using floating_percentile_prototype =
     metric_prototype_with<floating_percentile<T, NthElementFinder>>;
+
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+class metric_data_sink
+{
+public:
+    using value_type = T;
+    virtual void iterate_metric(const metric_snapshot &snap) = 0;
+};
 
 } // namespace dsn

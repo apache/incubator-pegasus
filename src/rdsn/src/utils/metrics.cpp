@@ -49,7 +49,7 @@ metric_entity::~metric_entity()
 
 void metric_entity::close(close_option option)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
 
     // The reason why each metric is closed in the entity rather than in the destructor of each
     // metric is that close() for the metric will return immediately without waiting for any close
@@ -80,20 +80,25 @@ void metric_entity::close(close_option option)
 
 metric_entity::attr_map metric_entity::attributes() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
     return _attrs;
 }
 
 metric_entity::metric_map metric_entity::metrics() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
     return _metrics;
 }
 
 void metric_entity::set_attributes(attr_map &&attrs)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
     _attrs = std::move(attrs);
+}
+
+void metric_entity::take_snapshot(const std::vector<metric_data_sink *> &sinks)
+{
+    utils::auto_read_lock l(_lock);
 }
 
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id,
@@ -177,6 +182,18 @@ metric_prototype::~metric_prototype() {}
 metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
+
+metric_snapshot::metric_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs)
+    : _name(name), _type(type), _value(value), _attrs(std::move(attrs))
+{
+
+}
+
+counter_snapshot::counter_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs, value_type increase)
+    : metric_snapshot(name, type, value, std::move(attrs)), _increase(increase)
+{
+
+}
 
 uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
 {
@@ -265,16 +282,6 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
 #undef TRY_PROCESS_TIMER_CLOSING
-}
-
-template <>
-gauge<int64_t>::gauge(const metric_prototype *prototype) : gauge(prototype, 0)
-{
-}
-
-template <>
-gauge<double>::gauge(const metric_prototype *prototype) : gauge(prototype, 0.0)
-{
 }
 
 } // namespace dsn
