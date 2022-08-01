@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+
 
 source $(dirname $0)/pack_common.sh
 
@@ -124,6 +124,8 @@ cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
 mkdir -p ${pack}/DSN_ROOT/lib
 copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
 copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
+copy_file ./thirdparty/output/lib/libsasl*.so.* ${pack}/DSN_ROOT/lib/
+copy_file ./thirdparty/output/lib/libcom_err*.so.* ${pack}/DSN_ROOT/lib/
 
 if [ "$use_jemalloc" == "on" ]; then
     copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/DSN_ROOT/lib/

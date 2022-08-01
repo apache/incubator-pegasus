@@ -21,8 +21,6 @@
 # Usage:
 # 	./build_docker.sh /your/local/apache-pegasus-source
 
-set -e
-
 if [[ $# -ne 1 ]]; then
 	echo "ERROR: must specify /your/local/apache-pegasus-source"
 	exit 1

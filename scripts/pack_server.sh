@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 source $(dirname $0)/pack_common.sh
 
 function usage() {

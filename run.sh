@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 PID=$$
 ROOT=`pwd`
 LOCAL_IP=`python3 scripts/get_local_ip.py`

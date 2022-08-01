@@ -17,8 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 # This file should be sourced to set up LD_LIBRARY_PATH and CLASSPATH to
 # run Pegasus binaries which use libhdfs in the context of a dev environment.
 

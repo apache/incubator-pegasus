@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 # Check offline_node_list.sh and add_node_list.sh arguments.
 
 PID=$$

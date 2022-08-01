@@ -18,8 +18,6 @@
 # under the License.
 #
 
-set -e
-
 SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
 cd "${PROJECT_DIR}" || exit 1

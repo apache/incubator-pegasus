@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 PID=$$
 
 if [ $# -ne 4 ]

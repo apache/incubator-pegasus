@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 # test pegasus_bench with thread 1~50
 
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
