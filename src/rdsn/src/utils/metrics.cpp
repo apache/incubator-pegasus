@@ -183,16 +183,21 @@ metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 
-metric_snapshot::metric_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs)
+metric_snapshot::metric_snapshot(const string_view &name,
+                                 metric_type type,
+                                 value_type value,
+                                 attr_map &&attrs)
     : _name(name), _type(type), _value(value), _attrs(std::move(attrs))
 {
-
 }
 
-counter_snapshot::counter_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs, value_type increase)
+counter_snapshot::counter_snapshot(const string_view &name,
+                                   metric_type type,
+                                   value_type value,
+                                   attr_map &&attrs,
+                                   value_type increase)
     : metric_snapshot(name, type, value, std::move(attrs)), _increase(increase)
 {
-
 }
 
 uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)

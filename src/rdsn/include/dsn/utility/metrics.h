@@ -381,7 +381,8 @@ protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) = 0;
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+                               const metric_snapshot::attr_map &attrs) = 0;
 
     const metric_prototype *const _prototype;
 
@@ -478,17 +479,18 @@ protected:
     {
     }
 
-    gauge(const metric_prototype *prototype);
-        : gauge(prototype, value_type())
-    {
-    }
+    gauge(const metric_prototype *prototype) : gauge(prototype, value_type()) {}
 
     virtual ~gauge() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) override
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+                               const metric_snapshot::attr_map &attrs) override
     {
         for (auto sink : sinks) {
-            sink->iterate_metric(metric_snapshot(prototype()->name(), prototype()->type(), static_cast<metric_snapshot::value_type>(value()), metric_snapshot::attr_map(attrs)));
+            sink->iterate_metric(metric_snapshot(prototype()->name(),
+                                                 prototype()->type(),
+                                                 static_cast<metric_snapshot::value_type>(value()),
+                                                 metric_snapshot::attr_map(attrs)));
         }
     }
 
@@ -510,7 +512,11 @@ using gauge_prototype = metric_prototype_with<gauge<T>>;
 class counter_snapshot : public metric_snapshot
 {
 public:
-    counter_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs, value_type increase);
+    counter_snapshot(const string_view &name,
+                     metric_type type,
+                     value_type value,
+                     attr_map &&attrs,
+                     value_type increase);
 
     virtual ~counter_snapshot() = default;
 
@@ -577,16 +583,25 @@ public:
     void reset() { _adder.reset(); }
 
 protected:
-    counter(const metric_prototype *prototype) : metric(prototype), _adder(), _snapshot(metric_snapshot::value_type) {}
+    counter(const metric_prototype *prototype)
+        : metric(prototype), _adder(), _snapshot(metric_snapshot::value_type)
+    {
+    }
 
     virtual ~counter() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) override
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+                               const metric_snapshot::attr_map &attrs) override
     {
         auto old_value = _snapshot.load();
         auto new_value = value();
         for (auto sink : sinks) {
-            sink->iterate_metric(counter_snapshot(prototype()->name(), prototype()->type(), static_cast<metric_snapshot::value_type>(new_value), metric_snapshot::attr_map(attrs), static_cast<metric_snapshot::value_type>(new_value - old_value)));
+            sink->iterate_metric(
+                counter_snapshot(prototype()->name(),
+                                 prototype()->type(),
+                                 static_cast<metric_snapshot::value_type>(new_value),
+                                 metric_snapshot::attr_map(attrs),
+                                 static_cast<metric_snapshot::value_type>(new_value - old_value)));
         }
 
         _snapshot.store(new_value);
@@ -812,7 +827,8 @@ protected:
 
     virtual ~percentile() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks, const metric_snapshot::attr_map &attrs) override
+    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+                               const metric_snapshot::attr_map &attrs) override
     {
         for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
             if (!_kth_percentile_bitset.test(i)) {
@@ -821,7 +837,11 @@ protected:
             for (auto sink : sinks) {
                 auto labels({{"p", kKthLabels[i]}});
                 labels.insert(attrs.begin(), attrs.end());
-                sink->iterate_metric(metric_snapshot(prototype()->name(), prototype()->type(), static_cast<metric_snapshot::value_type>(value(i)), std::move(labels)));
+                sink->iterate_metric(
+                    metric_snapshot(prototype()->name(),
+                                    prototype()->type(),
+                                    static_cast<metric_snapshot::value_type>(value(i)),
+                                    std::move(labels)));
             }
         }
     }
