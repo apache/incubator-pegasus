@@ -413,18 +413,6 @@ private:
     DISALLOW_COPY_AND_ASSIGN(closeable_metric);
 };
 
-class metric_snapshots
-{
-public:
-    metric_snapshots();
-    ~metric_snapshots();
-
-private:
-    std::unordered_map<std::string, metric_snapshot> _snapshots;
-
-    DISALLOW_COPY_AND_ASSIGN(metric_snapshots);
-};
-
 // A gauge is a metric that represents a single numerical value that can arbitrarily go up and
 // down. Usually there are 2 scenarios for a guage.
 //
