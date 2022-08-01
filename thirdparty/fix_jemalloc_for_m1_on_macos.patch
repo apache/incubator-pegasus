@@ -1,0 +1,10 @@
+--- configure	2022-02-16 01:43:33.470553518 +0000
++++ configure.new	2022-02-16 01:43:24.149733186 +0000
+@@ -7175,6 +7175,7 @@
+ fi
+
+ fi
++if test "x${je_cv_lg_vaddr}" = "x0" ; then je_cv_lg_vaddr=48 ;fi # For podman/docker/qemu on macos dev build.
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $je_cv_lg_vaddr" >&5
+ $as_echo "$je_cv_lg_vaddr" >&6; }
+       if test "x${je_cv_lg_vaddr}" != "x" ; then
