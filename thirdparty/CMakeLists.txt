@@ -28,7 +28,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif ()
 
 if (APPLE)
-    if (${MACOS_OPENSSL_ROOT_DIR} STREQUAL "")
+    if ("${MACOS_OPENSSL_ROOT_DIR}" STREQUAL "")
         message(FATAL_ERROR "OpenSSL root should be set for MacOS")
     endif()
 endif()
