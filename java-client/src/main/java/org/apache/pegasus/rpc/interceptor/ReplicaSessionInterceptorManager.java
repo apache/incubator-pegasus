@@ -28,7 +28,7 @@ public class ReplicaSessionInterceptorManager {
   private List<ReplicaSessionInterceptor> interceptors = new ArrayList<>();
 
   public ReplicaSessionInterceptorManager(ClientOptions options) {
-    if (!options.getAuthProtocol().isEmpty()) {
+    if (!options.getCredential().getProtocol().name().isEmpty()) {
       ReplicaSessionInterceptor authInterceptor = new AuthReplicaSessionInterceptor(options);
       interceptors.add(authInterceptor);
     }

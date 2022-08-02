@@ -22,6 +22,7 @@ import org.apache.pegasus.rpc.async.ReplicaSession;
 
 /** authentiation protocol */
 public interface AuthProtocol {
+  String name();
   /** start the authentiate process */
   void authenticate(ReplicaSession session);
 
