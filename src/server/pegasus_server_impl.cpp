@@ -1199,7 +1199,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.no_value,
             request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
             return_expire_ts,
-            request.only_return_count ? false : true);
+            !request.only_return_count);
         switch (state) {
         case range_iteration_state::kNormal:
             count++;
@@ -1374,7 +1374,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                                    no_value,
                                                    validate_hash,
                                                    return_expire_ts,
-                                                   request.only_return_count ? false : true);
+                                                   !request.only_return_count);
             switch (state) {
             case range_iteration_state::kNormal:
                 count++;

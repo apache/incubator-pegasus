@@ -501,40 +501,41 @@ inline void scan_data_next(scan_data_context *context)
                             context->timeout_ms);
                         break;
                     case SCAN_COUNT:
-                        if (kv_count == -1) {
-                            context->split_rows++;
-                            if (context->stat_size && context->statistics) {
-                                long hash_key_size = hash_key.size();
-                                context->statistics->measureTime(
-                                    static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE),
-                                    hash_key_size);
-
-                                long sort_key_size = sort_key.size();
-                                context->statistics->measureTime(
-                                    static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE),
-                                    sort_key_size);
-
-                                long value_size = value.size();
-                                context->statistics->measureTime(
-                                    static_cast<uint32_t>(histogram_type::VALUE_SIZE), value_size);
-
-                                long row_size = hash_key_size + sort_key_size + value_size;
-                                context->statistics->measureTime(
-                                    static_cast<uint32_t>(histogram_type::ROW_SIZE), row_size);
-
-                                if (context->top_count > 0) {
-                                    context->top_rows.push(
-                                        std::move(hash_key), std::move(sort_key), row_size);
-                                }
-                            }
-                            if (context->count_hash_key) {
-                                if (hash_key != context->last_hash_key) {
-                                    context->split_hash_key_count++;
-                                    context->last_hash_key = std::move(hash_key);
-                                }
-                            }
-                        } else {
+                        if (kv_count != -1) {
                             context->split_rows += kv_count;
+                            scan_data_next(context);
+                            break;
+                        }
+                        context->split_rows++;
+                        if (context->stat_size && context->statistics) {
+                            long hash_key_size = hash_key.size();
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::HASH_KEY_SIZE),
+                                hash_key_size);
+
+                            long sort_key_size = sort_key.size();
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::SORT_KEY_SIZE),
+                                sort_key_size);
+
+                            long value_size = value.size();
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::VALUE_SIZE), value_size);
+
+                            long row_size = hash_key_size + sort_key_size + value_size;
+                            context->statistics->measureTime(
+                                static_cast<uint32_t>(histogram_type::ROW_SIZE), row_size);
+
+                            if (context->top_count > 0) {
+                                context->top_rows.push(
+                                    std::move(hash_key), std::move(sort_key), row_size);
+                            }
+                        }
+                        if (context->count_hash_key) {
+                            if (hash_key != context->last_hash_key) {
+                                context->split_hash_key_count++;
+                                context->last_hash_key = std::move(hash_key);
+                            }
                         }
                         scan_data_next(context);
                         break;
