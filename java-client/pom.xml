@@ -411,8 +411,8 @@
           </formats>
           <java>
             <excludes>
-              <exclude>src/main/java/org/apache/infra/pegasus/apps/*</exclude>
-              <exclude>src/main/java/org/apache/infra/pegasus/replication/*</exclude>
+              <exclude>src/main/java/org/apache/pegasus/apps/*</exclude>
+              <exclude>src/main/java/org/apache/pegasus/replication/*</exclude>
             </excludes>
             <googleJavaFormat>
               <version>1.7</version>
