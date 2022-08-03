@@ -150,12 +150,10 @@ namespace dsn {
 class metrics_test : public testing::Test
 {
 public:
-    ~metrics_test();
+    metrics_test() = default;
+    virtual ~metrics_test() = default;
 
-    void SetUp() override
-    {
-        metric_registry::instance().register_data_sink<my_data_sink>();
-    }
+    void SetUp() override { metric_registry::instance().register_data_sink<my_data_sink>(); }
 
     void TearDown() override {}
 };
