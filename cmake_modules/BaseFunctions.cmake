@@ -372,6 +372,17 @@ function(dsn_common_setup)
     message(FATAL_ERROR "In-source builds are not allowed.")
   endif()
 
+  find_program(CCACHE "ccache")
+  if(CCACHE)
+    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+    message(STATUS "CCACHE: ${CCACHE}")
+
+    set(ENV{CCACHE_COMPRESS} "true")
+    set(ENV{CCACHE_COMPRESSLEVEL} "6")
+    set(ENV{CCACHE_MAXSIZE} "1024M")
+  endif(CCACHE)
+
   if(NOT DEFINED DSN_BUILD_RUNTIME)
     set(DSN_BUILD_RUNTIME FALSE)
   endif()

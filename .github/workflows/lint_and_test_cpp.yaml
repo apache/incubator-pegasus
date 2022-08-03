@@ -21,7 +21,7 @@
 # it's recommended to create a PR against the ci-test branch to test if it works
 # as expected.
 
-name: Lint and Unit Test for Cpp
+name: Cpp CI
 
 on:
   # run on each pull request
@@ -36,13 +36,9 @@ on:
   # for manually triggering workflow
   workflow_dispatch:
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   cpp_clang_format_linter:
-    name: Lint Cpp code
+    name: Lint
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:clang-format-3.9
@@ -54,22 +50,20 @@ jobs:
       - name: clang-format
         run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
 
-  test_rdsn_Release:
-    name: Test rdsn with Release
+  build_Release:
+    name: Build Release
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
       image: apache/pegasus:thirdparties-bin-ubuntu1804
-      env:
-        CCACHE_DIR: /tmp/ccache/pegasus
-        CCACHE_MAXSIZE: 10G
-      volumes:
-        # Place ccache compilation intermediate results in host memory, that's shared among containers.
-        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
-      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
-      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            /github/home/.ccache
+          key: release_ccache
       - uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -78,195 +72,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
-            rdsn:
-              - 'src/rdsn/**'
-            thirdparty:
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
-          cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build -c --rdsn --test --skip_thirdparty -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --rdsn
-
-  test_rdsn_ASAN:
-    name: Test rdsn with ASAN
-    needs: cpp_clang_format_linter
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
-      env:
-        CCACHE_DIR: /tmp/ccache/pegasus
-        CCACHE_MAXSIZE: 10G
-      volumes:
-        # Place ccache compilation intermediate results in host memory, that's shared among containers.
-        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
-      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
-      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            base:
-              - 'cmake_modules/**'
-              - 'CMakeLists.txt'
-              - 'run.sh'
-            rdsn:
-              - 'src/rdsn/**'
-            thirdparty:
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
-          cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build -c --rdsn --test --sanitizer address --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --rdsn
-
-  test_rdsn_LSAN:
-    name: Test rdsn with LSAN
-    needs: cpp_clang_format_linter
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
-      env:
-        CCACHE_DIR: /tmp/ccache/pegasus
-        CCACHE_MAXSIZE: 10G
-      volumes:
-        # Place ccache compilation intermediate results in host memory, that's shared among containers.
-        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
-      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
-      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            base:
-              - 'cmake_modules/**'
-              - 'CMakeLists.txt'
-              - 'run.sh'
-            rdsn:
-              - 'src/rdsn/**'
-            thirdparty:
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
-          cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build -c --rdsn --test --sanitizer leak --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --rdsn
-
-  test_rdsn_UBSAN:
-    name: Test rdsn with UBSAN
-    needs: cpp_clang_format_linter
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
-      env:
-        CCACHE_DIR: /tmp/ccache/pegasus
-        CCACHE_MAXSIZE: 10G
-      volumes:
-        # Place ccache compilation intermediate results in host memory, that's shared among containers.
-        - /tmp/ccache/pegasus:/tmp/ccache/pegasus
-      # Read docs at https://docs.docker.com/storage/tmpfs/ for more details of using tmpfs in docker.
-      options: --mount type=tmpfs,destination=/tmp/pegasus --cap-add=SYS_PTRACE
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            base:
-              - 'cmake_modules/**'
-              - 'CMakeLists.txt'
-              - 'run.sh'
-            rdsn:
-              - 'src/rdsn/**'
-            thirdparty:
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
-          cmake --build build/ -j $(($(nproc)/2+1))
-      - name: Compilation
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build -c --rdsn --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(($(nproc)/2+1))
-      - name: Unit Testing
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.rdsn == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          ./run.sh test --rdsn
-
-  # TODO(yingchun): also need to test ASAN, LSAN, UBSAN
-  test_pegasus:
-    name: Test Pegasus
-    needs: cpp_clang_format_linter
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            base:
-              - 'cmake_modules/**'
-              - 'CMakeLists.txt'
-              - 'run.sh'
-            pegasus:
+            src:
               - 'src/**'
             thirdparty:
               - 'thirdparty/**'
@@ -279,24 +85,291 @@ jobs:
         run: |
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -B build/
-          cmake --build build/ -j $(($(nproc)/2+1))
+          cmake --build build/ -j $(nproc)
       - name: Compilation
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build --test -c -j $(($(nproc)/2+1)) --skip_thirdparty
-      - name: Packaging Server
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh pack_server
-      - name: Packaging Tools
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh pack_tools
-      - name: Unit Testing
-        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.src == 'true' || steps.changes.outputs.thirdparty == 'true'
         run: |
-          source ./scripts/config_hdfs.sh
-          ./run.sh test --on_travis
+          ccache -p
+          ccache -z
+          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
+          ccache -s
+      - name: Tar files
+        run: tar -cvhf release__builder.tar DSN_ROOT/ src/release__builder/bin src/release__builder/src/server/test/config.ini src/release__builder/src/rdsn/src/utils/libdsn_utils.so src/release__builder/src/rdsn/src/replica/libdsn_replica_server.so src/release__builder/src/rdsn/src/meta/libdsn_meta_server.so src/release__builder/src/client_lib/libpegasus_client_shared.so
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release_artifact_${{ github.sha }}
+          path: release__builder.tar
+
+  test_Release:
+    name: Test Release
+    strategy:
+      fail-fast: false
+      matrix:
+        test_module:
+          - base_test
+          - dsn_aio_test
+          - dsn_block_service_test
+          - dsn.failure_detector.tests
+          - dsn_http_test
+          - dsn_meta_state_tests
+          - dsn.meta.test
+          - dsn_nfs_test
+          - dsn_perf_counter_test
+          - dsn_replica_backup_test
+          - dsn_replica_bulk_load_test
+          - dsn_replica_dup_test
+          - dsn_replica_split_test
+          - dsn.replica.test
+          - dsn_replication_common_test
+          - dsn.replication.simple_kv
+          - dsn.rep_tests.simple_kv
+          - dsn_runtime_tests
+          - dsn_utils_tests
+          - dsn.zookeeper.tests
+          - pegasus_function_test
+          - pegasus_geo_test
+          - pegasus_rproxy_test
+          - pegasus_unit_test
+    needs: build_Release
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      options: --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release_artifact_${{ github.sha }}
+          path: .
+      - name: Tar files
+        run: |
+          tar -xvf release__builder.tar
+      - name: Unit Testing
+        run: |
+          ln -s -f release__builder src/builder
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./scripts/config_hdfs.sh
+          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+
+  build_ASAN:
+    name: Build ASAN
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            /github/home/.ccache
+          key: asan_ccache
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
+            src:
+              - 'src/**'
+            thirdparty:
+              - 'thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(nproc)
+      - name: Compilation
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.src == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: |
+          ccache -p
+          ccache -z
+          ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
+          ccache -s
+      - name: Tar files
+        run: tar -cvhf release_address_builder.tar DSN_ROOT/ src/release_address_builder/bin src/release_address_builder/src/server/test/config.ini src/release_address_builder/src/rdsn/src/utils/libdsn_utils.so src/release_address_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_address_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_address_builder/src/client_lib/libpegasus_client_shared.so
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release_address_artifact_${{ github.sha }}
+          path: release_address_builder.tar
+
+  test_ASAN:
+    name: Test ASAN
+    strategy:
+      fail-fast: false
+      matrix:
+        test_module:
+          - base_test
+          - dsn_aio_test
+          - dsn_block_service_test
+          - dsn.failure_detector.tests
+          - dsn_http_test
+          - dsn_meta_state_tests
+          - dsn.meta.test
+          - dsn_nfs_test
+          - dsn_perf_counter_test
+          - dsn_replica_backup_test
+          - dsn_replica_bulk_load_test
+          - dsn_replica_dup_test
+          - dsn_replica_split_test
+          - dsn.replica.test
+          - dsn_replication_common_test
+          - dsn.replication.simple_kv
+          - dsn.rep_tests.simple_kv
+          - dsn_runtime_tests
+          - dsn_utils_tests
+          - dsn.zookeeper.tests
+          - pegasus_function_test
+          - pegasus_geo_test
+          - pegasus_rproxy_test
+          - pegasus_unit_test
+    needs: build_ASAN
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      options: --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release_address_artifact_${{ github.sha }}
+          path: .
+      - name: Tar files
+        run: |
+          tar -xvf release_address_builder.tar
+      - name: Unit Testing
+        run: |
+          ln -s -f release_address_builder src/builder
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./scripts/config_hdfs.sh
+          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+
+  build_UBSAN:
+    name: Build UBSAN
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            /github/home/.ccache
+          key: ubsan_ccache
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            base:
+              - 'cmake_modules/**'
+              - 'CMakeLists.txt'
+              - 'run.sh'
+            src:
+              - 'src/**'
+            thirdparty:
+              - 'thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake --build build/ -j $(nproc)
+      - name: Compilation
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.src == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: |
+          ccache -p
+          ccache -z
+          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
+          ccache -s
+      - name: Tar files
+        run: tar -cvhf release_undefined_builder.tar DSN_ROOT/ src/release_undefined_builder/bin src/release_undefined_builder/src/server/test/config.ini src/release_undefined_builder/src/rdsn/src/utils/libdsn_utils.so src/release_undefined_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_undefined_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_undefined_builder/src/client_lib/libpegasus_client_shared.so
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release_undefined_artifact_${{ github.sha }}
+          path: release_undefined_builder.tar
+
+  test_UBSAN:
+    name: Test UBSAN
+    strategy:
+      fail-fast: false
+      matrix:
+        test_module:
+          - base_test
+          - dsn_aio_test
+          - dsn_block_service_test
+          - dsn.failure_detector.tests
+          - dsn_http_test
+          - dsn_meta_state_tests
+          - dsn.meta.test
+          - dsn_nfs_test
+          - dsn_perf_counter_test
+          - dsn_replica_backup_test
+          - dsn_replica_bulk_load_test
+          - dsn_replica_dup_test
+          - dsn_replica_split_test
+          - dsn.replica.test
+          - dsn_replication_common_test
+          - dsn.replication.simple_kv
+          - dsn.rep_tests.simple_kv
+          - dsn_runtime_tests
+          - dsn_utils_tests
+          - dsn.zookeeper.tests
+          - pegasus_function_test
+          - pegasus_geo_test
+          - pegasus_rproxy_test
+          - pegasus_unit_test
+    needs: build_UBSAN
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      options: --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release_undefined_artifact_${{ github.sha }}
+          path: .
+      - name: Tar files
+        run: |
+          tar -xvf release_undefined_builder.tar
+      - name: Unit Testing
+        run: |
+          ln -s -f release_undefined_builder src/builder
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./scripts/config_hdfs.sh
+          ./run.sh test --on_travis -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:
-    name: Build Pegasus on macOS
+    name: macOS
     needs: cpp_clang_format_linter
     runs-on: macos-12
     env:
@@ -305,18 +378,21 @@ jobs:
       - name: Install Softwares
         run: |
           # Preinstalled softwares: https://github.com/actions/virtual-environments/blob/main/images/macos/macos-12-Readme.md
+          brew install ccache
           brew install snappy
           brew install lz4
           brew install zstd
           brew install openssl@1.1
       - uses: actions/checkout@v2
       - name: Setup cache
-        id: cache
         uses: actions/cache@v3
         with:
           path: |
-            thirdparty
-          key: macos-12-thirdparty-bins
+            /Users/runner/Library/Caches/ccache
+          key: macos_build_ccache
+          restore-keys: |
+            macos_build_ccache
+            macos-12-thirdparty-bins
       - name: Build thirdparty
         working-directory: thirdparty
         run: |
@@ -328,10 +404,14 @@ jobs:
         id: changes
         with:
           filters: |
-            pegasus:
+            src:
               - 'src/**'
             thirdparty:
               - 'thirdparty/**'
       - name: Compilation
-        if: steps.changes.outputs.pegasus == 'true' || steps.changes.outputs.thirdparty == 'true'
-        run: ./run.sh build --test --skip_thirdparty -c -j $(sysctl -n hw.physicalcpu)
+        if: steps.changes.outputs.src == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: |
+          ccache -p
+          ccache -z
+          ./run.sh build --test --skip_thirdparty -j $(sysctl -n hw.physicalcpu)
+          ccache -s
