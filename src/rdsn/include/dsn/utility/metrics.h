@@ -447,6 +447,9 @@ private:
 class metric_data_sink : public ref_counter
 {
 public:
+    metric_data_sink() = default;
+    virtual ~metric_data_sink() = default;
+
     virtual void iterate(const metric_snapshot &snapshot) = 0;
     virtual void iterate(const counter_snapshot &snapshot) = 0;
 

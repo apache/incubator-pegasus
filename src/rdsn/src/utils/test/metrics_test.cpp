@@ -63,6 +63,20 @@ private:
 using my_gauge_prototype = metric_prototype_with<my_gauge>;
 using my_gauge_ptr = ref_ptr<my_gauge>;
 
+class my_data_sink : public metric_data_sink
+{
+public:
+    my_data_sink() = default;
+    virtual ~my_data_sink() = default;
+
+    virtual void iterate(const metric_snapshot &snapshot) override {}
+
+    virtual void iterate(const counter_snapshot &snapshot) override {}
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(my_data_sink);
+};
+
 } // namespace dsn
 
 #define METRIC_DEFINE_my_gauge(entity_type, name, unit, desc, ...)                                 \
@@ -133,7 +147,20 @@ METRIC_DEFINE_percentile_double(my_server,
 
 namespace dsn {
 
-TEST(metrics_test, create_entity)
+class metrics_test : public testing::Test
+{
+public:
+    ~metrics_test();
+
+    void SetUp() override
+    {
+        metric_registry::instance().register_data_sink<my_data_sink>();
+    }
+
+    void TearDown() override {}
+};
+
+TEST_F(metrics_test, create_entity)
 {
     // Test cases:
     // - create an entity by instantiate(id) without any attribute
@@ -192,7 +219,7 @@ TEST(metrics_test, create_entity)
     ASSERT_EQ(metric_registry::instance().entities(), entities);
 }
 
-TEST(metrics_test, recreate_entity)
+TEST_F(metrics_test, recreate_entity)
 {
     // Test cases:
     // - add an attribute to an emtpy map
@@ -220,7 +247,7 @@ TEST(metrics_test, recreate_entity)
     }
 }
 
-TEST(metrics_test, create_metric)
+TEST_F(metrics_test, create_metric)
 {
     auto my_server_entity = METRIC_ENTITY_my_server.instantiate("server_3");
     auto my_replica_entity =
@@ -274,7 +301,7 @@ TEST(metrics_test, create_metric)
     ASSERT_EQ(actual_entities, expected_entities);
 }
 
-TEST(metrics_test, recreate_metric)
+TEST_F(metrics_test, recreate_metric)
 {
     auto my_server_entity = METRIC_ENTITY_my_server.instantiate("server_4");
 
@@ -285,7 +312,7 @@ TEST(metrics_test, recreate_metric)
     ASSERT_EQ(my_metric->value(), 5);
 }
 
-TEST(metrics_test, gauge_int64)
+TEST_F(metrics_test, gauge_int64)
 {
     // Test cases:
     // - create a gauge of int64 type without initial value, then increase
@@ -326,7 +353,7 @@ TEST(metrics_test, gauge_int64)
     }
 }
 
-TEST(metrics_test, gauge_double)
+TEST_F(metrics_test, gauge_double)
 {
     // Test cases:
     // - create a gauge of double type without initial value, then increase
@@ -501,7 +528,7 @@ void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype)
     run_gauge_increment_cases(prototype, 4);
 }
 
-TEST(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_gauge_int64); }
+TEST_F(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_gauge_int64); }
 
 template <typename Adder>
 void run_counter_cases(dsn::counter_prototype<Adder> *prototype, int64_t num_threads)
@@ -546,7 +573,7 @@ void run_counter_cases(dsn::counter_prototype<Adder> *prototype)
     run_counter_cases(prototype, 4);
 }
 
-TEST(metrics_test, counter)
+TEST_F(metrics_test, counter)
 {
     // Test both kinds of counter
     run_counter_cases<striped_long_adder>(&METRIC_test_counter);
@@ -664,7 +691,7 @@ void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototyp
     run_volatile_counter_cases(prototype, 4, 2);
 }
 
-TEST(metrics_test, volatile_counter)
+TEST_F(metrics_test, volatile_counter)
 {
     // Test both kinds of volatile counter
     run_volatile_counter_cases<striped_long_adder>(&METRIC_test_volatile_counter);
@@ -877,7 +904,7 @@ public:
     }
 };
 
-TEST(metrics_test, percentile_int64)
+TEST_F(metrics_test, percentile_int64)
 {
     using value_type = int64_t;
     run_percentile_cases<value_type,
@@ -905,7 +932,7 @@ public:
     }
 };
 
-TEST(metrics_test, percentile_double)
+TEST_F(metrics_test, percentile_double)
 {
     using value_type = double;
     run_percentile_cases<value_type,
