@@ -18,6 +18,7 @@
 #include <dsn/utility/metrics.h>
 
 #include <dsn/c/api_utilities.h>
+#include <dsn/utility/flags.h>
 #include <dsn/utility/rand.h>
 
 #include "shared_io_service.h"
@@ -106,7 +107,7 @@ void metric_entity::collect_metrics(const std::vector<metric_data_sink_ptr> &sin
     utils::auto_read_lock l(_lock);
 
     for (auto &m : _metrics) {
-        m->take_snapshot(sinks, _attrs);
+        m.second->take_snapshot(sinks, _attrs);
     }
 }
 
@@ -128,8 +129,7 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
-metric_registry::metric_registry()
-    : _lock(), _sinks, _entities(), _timer()
+metric_registry::metric_registry() : _lock(), _sinks(), _entities(), _timer()
 {
     // We should ensure that metric_registry is destructed before shared_io_service is destructed.
     // Once shared_io_service is destructed before metric_registry is destructed,
@@ -138,10 +138,9 @@ metric_registry::metric_registry()
     // metric_registry are still running but the resources they needed have been released.
     tools::shared_io_service::instance();
 
-    _timer.reset(new metric_timer(
-        FLAGS_collect_metrics_interval_ms,
-        std::bind(&metric_registry::collect_metrics, this),
-        std::bind(&metric_registry::on_close, this)));
+    _timer.reset(new metric_timer(FLAGS_collect_metrics_interval_ms,
+                                  std::bind(&metric_registry::collect_metrics, this),
+                                  std::bind(&metric_registry::on_close, this)));
 }
 
 metric_registry::~metric_registry()
@@ -167,9 +166,7 @@ metric_registry::~metric_registry()
     _timer->wait();
 }
 
-void metric_registry::on_close()
-{
-}
+void metric_registry::on_close() {}
 
 metric_registry::entity_map metric_registry::entities() const
 {
