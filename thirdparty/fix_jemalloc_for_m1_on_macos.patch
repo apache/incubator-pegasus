@@ -4,7 +4,7 @@
  fi
 
  fi
-+if test "x${je_cv_lg_vaddr}" = "x0" ; then je_cv_lg_vaddr=48 ;fi # For podman/docker/qemu on macos dev build.
++if test "x${je_cv_lg_vaddr}" = "x0" ; then je_cv_lg_vaddr=48 ;fi # For podman/docker/qemu on macos dev build
  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $je_cv_lg_vaddr" >&5
  $as_echo "$je_cv_lg_vaddr" >&6; }
        if test "x${je_cv_lg_vaddr}" != "x" ; then
