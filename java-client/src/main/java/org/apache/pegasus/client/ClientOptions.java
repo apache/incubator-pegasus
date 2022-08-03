@@ -18,16 +18,15 @@
  */
 package org.apache.pegasus.client;
 
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.configuration2.ConfigurationConverter;
-import org.apache.pegasus.security.Credential;
-import org.apache.pegasus.tools.WriteLimiter;
+import static org.apache.pegasus.client.PConfigUtil.loadConfiguration;
 
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Properties;
-
-import static org.apache.pegasus.client.PConfigUtil.loadConfiguration;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.ConfigurationConverter;
+import org.apache.pegasus.security.Credential;
+import org.apache.pegasus.tools.WriteLimiter;
 
 /**
  * Client Options to control the behavior of {@link PegasusClientInterface}.
