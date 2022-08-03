@@ -31,11 +31,11 @@
 #include "duplication/replica_duplicator_manager.h"
 #include "duplication/replica_follower.h"
 #include "backup/replica_backup_manager.h"
-#include "backup/cold_backup_context.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "split/replica_split_manager.h"
 #include "replica_disk_migrator.h"
 #include "runtime/security/access_controller.h"
+#include "common/backup_common.h"
 
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/cpp/json_helper.h>

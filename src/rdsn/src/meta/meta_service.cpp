@@ -443,8 +443,7 @@ error_code meta_service::start()
         _backup_handler = std::make_shared<backup_service>(
             this,
             meta_options::concat_path_unix_style(_cluster_root, "backup"),
-            _opts.cold_backup_root,
-            [](backup_service *bs) { return std::make_shared<policy_context>(bs); });
+            _opts.cold_backup_root);
     }
 
     _bulk_load_svc = make_unique<bulk_load_service>(
@@ -868,59 +867,14 @@ void meta_service::on_start_restore(dsn::message_ex *req)
         LPC_RESTORE_BACKGROUND, nullptr, std::bind(&server_state::restore_app, _state.get(), req));
 }
 
-void meta_service::on_add_backup_policy(dsn::message_ex *req)
-{
-    configuration_add_backup_policy_response response;
-    if (!check_status_with_msg(req, response)) {
-        return;
-    }
+// TODO(heyuchen): implement it
+void meta_service::on_add_backup_policy(dsn::message_ex *req) {}
 
-    if (_backup_handler == nullptr) {
-        derror("meta doesn't enable backup service");
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-        reply(req, response);
-    } else {
-        req->add_ref();
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         nullptr,
-                         std::bind(&backup_service::add_backup_policy, _backup_handler.get(), req));
-    }
-}
+// TODO(heyuchen): implement it
+void meta_service::on_query_backup_policy(query_backup_policy_rpc policy_rpc) {}
 
-void meta_service::on_query_backup_policy(query_backup_policy_rpc policy_rpc)
-{
-    if (!check_status(policy_rpc)) {
-        return;
-    }
-
-    auto &response = policy_rpc.response();
-    if (_backup_handler == nullptr) {
-        derror("meta doesn't enable backup service");
-        response.err = ERR_SERVICE_NOT_ACTIVE;
-    } else {
-        tasking::enqueue(
-            LPC_DEFAULT_CALLBACK,
-            nullptr,
-            std::bind(&backup_service::query_backup_policy, _backup_handler.get(), policy_rpc));
-    }
-}
-
-void meta_service::on_modify_backup_policy(configuration_modify_backup_policy_rpc rpc)
-{
-    if (!check_status(rpc)) {
-        return;
-    }
-
-    if (_backup_handler == nullptr) {
-        derror("meta doesn't enable backup service");
-        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
-    } else {
-        tasking::enqueue(
-            LPC_DEFAULT_CALLBACK,
-            nullptr,
-            std::bind(&backup_service::modify_backup_policy, _backup_handler.get(), rpc));
-    }
-}
+// TODO(heyuchen): implement it
+void meta_service::on_modify_backup_policy(configuration_modify_backup_policy_rpc rpc) {}
 
 void meta_service::on_report_restore_status(configuration_report_restore_status_rpc rpc)
 {
@@ -1228,31 +1182,11 @@ void meta_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
                      server_state::sStateHash);
 }
 
-void meta_service::on_start_backup_app(start_backup_app_rpc rpc)
-{
-    if (!check_status(rpc)) {
-        return;
-    }
-    if (_backup_handler == nullptr) {
-        derror_f("meta doesn't enable backup service");
-        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
-        return;
-    }
-    _backup_handler->start_backup_app(std::move(rpc));
-}
+// TODO(heyuchen): implement it
+void meta_service::on_start_backup_app(start_backup_app_rpc rpc) {}
 
-void meta_service::on_query_backup_status(query_backup_status_rpc rpc)
-{
-    if (!check_status(rpc)) {
-        return;
-    }
-    if (_backup_handler == nullptr) {
-        derror_f("meta doesn't enable backup service");
-        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
-        return;
-    }
-    _backup_handler->query_backup_status(std::move(rpc));
-}
+// TODO(heyuchen): implement it
+void meta_service::on_query_backup_status(query_backup_status_rpc rpc) {}
 
 size_t meta_service::get_alive_node_count() const
 {

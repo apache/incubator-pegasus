@@ -271,11 +271,12 @@ private:
     bool check_freeze() const;
 
 private:
-    friend class backup_engine_test;
-    friend class backup_service_test;
+    // TODO(heyuchen): update it
+    //    friend class backup_engine_test;
+    //    friend class backup_service_test;
     friend class bulk_load_service_test;
-    friend class meta_backup_service_test;
-    friend class meta_backup_test_base;
+    //    friend class meta_backup_service_test;
+    //    friend class meta_backup_test_base;
     friend class meta_duplication_service;
     friend class meta_http_service;
     friend class meta_http_service_test;

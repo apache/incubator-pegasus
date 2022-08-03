@@ -33,7 +33,6 @@
 
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "replica/backup/cold_backup_context.h"
 
 namespace dsn {
 namespace replication {
@@ -198,19 +197,6 @@ public:
     {
         return (!_primary_states.ingestion_is_empty_prepare_sent &&
                 _primary_states.secondary_bulk_load_states.size() == 0);
-    }
-
-    // mock cold backup related function.
-    void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
-    {
-        if (backup_context->status() != ColdBackupCheckpointing) {
-            ddebug("%s: ignore generating backup checkpoint because backup_status = %s",
-                   backup_context->name,
-                   cold_backup_status_to_string(backup_context->status()));
-            backup_context->ignore_checkpoint();
-            return;
-        }
-        backup_context->complete_checkpoint();
     }
 
     void update_last_durable_decree(decree decree)
