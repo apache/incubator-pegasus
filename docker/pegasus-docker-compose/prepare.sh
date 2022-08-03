@@ -39,11 +39,11 @@ cp -f "${ROOT}"/config.min.ini "${DOCKER_DIR}/config.ini"
 sed -i "s/%{cluster.name}/${CLUSTER_NAME}/g" "${DOCKER_DIR}/config.ini"
 sed -i "s/allow_non_idempotent_write = false/allow_non_idempotent_write = ${IDEMPOTENT}/" "${DOCKER_DIR}/config.ini"
 for i in $(seq "${META_COUNT}"); do
-    meta_ip=${META_IP_PREFIX}.1$((i))
+    meta_fqdn=${META_HOSTNAME_PREFIX}.$((i))
     if [ "${i}" -eq 1 ]; then
-        meta_list="${meta_ip}:$META_PORT"
+        meta_list="${meta_fqdn}:$META_PORT"
     else
-        meta_list="$meta_list,${meta_ip}:$META_PORT"
+        meta_list="$meta_list,${meta_fqdn}:$META_PORT"
     fi
 done
 sed -i "s/%{meta.server.list}/$meta_list/g" "${DOCKER_DIR}/config.ini"
@@ -63,12 +63,13 @@ for i in $(seq "${META_COUNT}"); do
     command:
       - meta
     privileged: true
+    hostname: @META_HOSTNAME_PREFIX@.$((i))
     networks:
       frontend:
         ipv4_address: @META_IP_PREFIX@.1$((i))
     restart: on-failure" >> "${DOCKER_DIR}"/docker-compose.yml
-    meta_ip=$(hostname -I | cut -d' ' -f1)
-    echo "META$((i))_ADDRESS=$meta_ip:$meta_port"
+    meta_hostname=$(hostname -f | cut -d' ' -f1)
+    echo "META$((i))_ADDRESS=$meta_hostname:$meta_port"
 done
 for i in $(seq "${REPLICA_COUNT}"); do
     echo "  replica$((i)):
@@ -87,6 +88,7 @@ for i in $(seq "${REPLICA_COUNT}"); do
       frontend:" >> "${DOCKER_DIR}"/docker-compose.yml
 done
 sed -i "s/@META_IP_PREFIX@/${META_IP_PREFIX}/g" "${DOCKER_DIR}"/docker-compose.yml
+sed -i "s/@META_HOSTNAME_PREFIX@/${META_HOSTNAME_PREFIX}/g" "${DOCKER_DIR}"/docker-compose.yml
 sed -i "s/@IMAGE_NAME@/${IMAGE_NAME}/g" "${DOCKER_DIR}"/docker-compose.yml
 sed -i "s/@META_PORT@/${META_PORT}/g" "${DOCKER_DIR}"/docker-compose.yml
 
