@@ -31,10 +31,10 @@ namespace dsn {
 template <typename To, typename From>
 inline To down_cast(From *from)
 {
-    // Perform a compile-time assertion to check whether <From> class is derived from <To> class.
+    // Perform a compile-time assertion to check whether <To> class is derived from <From> class.
     static_assert(std::is_base_of<typename std::remove_pointer<From>::type,
                                   typename std::remove_pointer<To>::type>::value,
-                  "<From> class is not derived from <To> class");
+                  "<To> class is not derived from <From> class");
 
     // Use RTTI to do double-check, though in practice the unit tests are seldom built in debug
     // mode. For example, the unit tests of github CI for both rDSN and Pegasus are built in

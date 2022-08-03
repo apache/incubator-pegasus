@@ -134,6 +134,9 @@ class metric_prototype;
 class metric;
 using metric_ptr = ref_ptr<metric>;
 
+class metric_data_sink;
+using metric_data_sink_ptr = ref_ptr<metric_data_sink>;
+
 class metric_entity : public ref_counter
 {
 public:
@@ -186,7 +189,7 @@ private:
 
     void set_attributes(attr_map &&attrs);
 
-    void take_snapshot(const std::vector<metric_data_sink *> &sinks);
+    void collect_metrics(const std::vector<metric_data_sink_ptr> &sinks);
 
     const std::string _id;
 
@@ -198,6 +201,8 @@ private:
 };
 
 using metric_entity_ptr = ref_ptr<metric_entity>;
+
+class metric_timer;
 
 class metric_entity_prototype
 {
@@ -222,6 +227,16 @@ class metric_registry : public utils::singleton<metric_registry>
 public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
 
+    template <typename MetricDataSink, typename... Args>
+    void register_data_sink(Args &&... args) {
+        static_assert(std::is_base_of<metric_data_sink,
+                MetricDataSink>::value,
+                "not derived from metric_data_sink");
+
+        utils::auto_write_lock l(_lock);
+        _sinks.emplace_back(new MetricDataSink(std::forward<Args>(args)...));
+    }
+
     entity_map entities() const;
 
 private:
@@ -230,11 +245,16 @@ private:
 
     metric_registry();
     ~metric_registry();
+    void on_close();
 
     metric_entity_ptr find_or_create_entity(const std::string &id, metric_entity::attr_map &&attrs);
 
-    mutable std::mutex _mtx;
+    void collect_metrics();
+
+    mutable utils::rw_lock_nr _lock;
+    std::vector<metric_data_sink_ptr> _sinks;
     entity_map _entities;
+    std::unique_ptr<metric_timer> _timer;
 
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
 };
@@ -381,7 +401,7 @@ protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+    virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) = 0;
 
     const metric_prototype *const _prototype;
@@ -471,11 +491,11 @@ protected:
 
     virtual ~gauge() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+    virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) override
     {
-        for (auto sink : sinks) {
-            sink->iterate_metric(metric_snapshot(prototype()->name(),
+        for (auto &sink : sinks) {
+            sink->iterate(metric_snapshot(prototype()->name(),
                                                  prototype()->type(),
                                                  static_cast<metric_snapshot::value_type>(value()),
                                                  metric_snapshot::attr_map(attrs)));
@@ -578,13 +598,13 @@ protected:
 
     virtual ~counter() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+    virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) override
     {
         auto old_value = _snapshot.load();
         auto new_value = value();
-        for (auto sink : sinks) {
-            sink->iterate_metric(
+        for (auto &sink : sinks) {
+            sink->iterate(
                 counter_snapshot(prototype()->name(),
                                  prototype()->type(),
                                  static_cast<metric_snapshot::value_type>(new_value),
@@ -665,15 +685,15 @@ inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
 std::set<kth_percentile_type> get_all_kth_percentile_types();
 const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
 
-// `percentile_timer` is a timer class that encapsulates the details how each percentile is
-// computed periodically.
+// `metric_timer` is a timer class that runs metric-related computations periodically, such as
+// calculating percentile, collecting snapshots from all metrics to data sinks, etc.
 //
-// To be instantiated, it requires `interval_ms` at which a percentile is computed and `exec`
-// which is used to compute percentile.
+// To be instantiated, it requires `interval_ms` at which computations are run, `on_exec`
+// implementing computations, and `on_close` as the callback for close.
 //
-// In case that all percentiles are computed at the same time and lead to very high load,
-// first computation for percentile will be delayed at a random interval.
-class percentile_timer
+// In case that all metrics (such as percentiles) are computed at the same time and lead to very
+// high load, first calculation will be delayed at a random interval.
+class metric_timer
 {
 public:
     enum class state : int
@@ -686,8 +706,8 @@ public:
     using on_exec_fn = std::function<void()>;
     using on_close_fn = std::function<void()>;
 
-    percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close);
-    ~percentile_timer() = default;
+    metric_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close);
+    ~metric_timer() = default;
 
     void close();
     void wait();
@@ -807,7 +827,7 @@ protected:
         // See on_close() for details which is registered in timer and will be called
         // back once close() is invoked.
         add_ref();
-        _timer.reset(new percentile_timer(
+        _timer.reset(new metric_timer(
             interval_ms,
             std::bind(&percentile<value_type, NthElementFinder>::find_nth_elements, this),
             std::bind(&percentile<value_type, NthElementFinder>::on_close, this)));
@@ -815,17 +835,17 @@ protected:
 
     virtual ~percentile() = default;
 
-    virtual void take_snapshot(const std::vector<metric_data_sink *> &sinks,
+    virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) override
     {
         for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
             if (!_kth_percentile_bitset.test(i)) {
                 continue;
             }
-            for (auto sink : sinks) {
+            for (auto &sink : sinks) {
                 auto labels({{"p", kKthLabels[i]}});
                 labels.insert(attrs.begin(), attrs.end());
-                sink->iterate_metric(
+                sink->iterate(
                     metric_snapshot(prototype()->name(),
                                     prototype()->type(),
                                     static_cast<metric_snapshot::value_type>(value(i)),
@@ -927,7 +947,9 @@ private:
     std::vector<std::atomic<value_type>> _full_nth_elements;
     NthElementFinder _nth_element_finder;
 
-    std::unique_ptr<percentile_timer> _timer;
+    std::unique_ptr<metric_timer> _timer;
+
+    DISALLOW_COPY_AND_ASSIGN(percentile);
 };
 
 template <typename T,
@@ -956,12 +978,14 @@ template <typename T,
 using floating_percentile_prototype =
     metric_prototype_with<floating_percentile<T, NthElementFinder>>;
 
-template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-class metric_data_sink
+class metric_data_sink : public ref_counter
 {
 public:
-    using value_type = T;
-    virtual void iterate_metric(const metric_snapshot &snap) = 0;
+    virtual void iterate(const metric_snapshot &snap) = 0;
+    virtual void iterate(const counter_snapshot &snap) = 0;
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(metric_data_sink);
 };
 
 } // namespace dsn
