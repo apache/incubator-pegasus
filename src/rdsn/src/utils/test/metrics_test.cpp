@@ -40,6 +40,17 @@ protected:
 
     virtual ~my_gauge() = default;
 
+    virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
+                               const metric_snapshot::attr_map &attrs) override
+    {
+        for (auto &sink : sinks) {
+            sink->iterate(metric_snapshot(prototype()->name(),
+                                          prototype()->type(),
+                                          static_cast<metric_snapshot::value_type>(value()),
+                                          metric_snapshot::attr_map(attrs)));
+        }
+    }
+
 private:
     friend class metric_entity;
     friend class ref_ptr<my_gauge>;

@@ -852,7 +852,7 @@ protected:
                 continue;
             }
             for (auto &sink : sinks) {
-                auto labels = {{"p", kKthLabels[i]}};
+                metric_snapshot::attr_map labels({{"p", kKthLabels[i]}});
                 labels.insert(attrs.begin(), attrs.end());
                 sink->iterate(metric_snapshot(prototype()->name(),
                                               prototype()->type(),
