@@ -241,9 +241,11 @@ private:
     int32_t _old_app_id;
 };
 
-TEST_F(backup_restore_test, test_backup_and_restore) { test_backup_and_restore(); }
+// TODO(heyuchen): implement it
 
-TEST_F(backup_restore_test, test_backup_and_restore_with_user_specified_path)
-{
-    test_backup_and_restore("test/path");
-}
+// TEST_F(backup_restore_test, test_backup_and_restore) { test_backup_and_restore(); }
+
+// TEST_F(backup_restore_test, test_backup_and_restore_with_user_specified_path)
+//{
+//    test_backup_and_restore("test/path");
+//}

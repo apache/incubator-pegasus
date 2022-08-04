@@ -69,7 +69,6 @@ class mutation_log;
 namespace test {
 class test_checker;
 }
-class cold_backup_context;
 class replica_split_manager;
 
 typedef std::unordered_map<gpid, replica_ptr> replicas;
@@ -82,7 +81,6 @@ typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
 class replica_bulk_loader;
-class replica_backup_server;
 class replica_split_manager;
 
 class replica_stub : public serverlet<replica_stub>, public ref_counter
@@ -313,7 +311,6 @@ private:
     friend class ::dsn::replication::test::test_checker;
     friend class ::dsn::replication::replica;
     friend class ::dsn::replication::potential_secondary_context;
-    friend class ::dsn::replication::cold_backup_context;
 
     friend class replica_duplicator;
     friend class replica_http_service;
@@ -367,7 +364,6 @@ private:
     ::dsn::task_ptr _mem_release_timer_task;
 
     std::unique_ptr<duplication_sync_timer> _duplication_sync_timer;
-    std::unique_ptr<replica_backup_server> _backup_server;
 
     // command_handlers
     dsn_handle_t _kill_partition_command;

@@ -29,22 +29,6 @@ int gtest_flags = 0;
 int gtest_ret = 0;
 replication_service_test_app *app;
 
-TEST(cold_backup_context, check_backup_on_remote) { app->check_backup_on_remote_test(); }
-
-TEST(cold_backup_context, read_current_chkpt_file) { app->read_current_chkpt_file_test(); }
-
-TEST(cold_backup_context, remote_chkpt_dir_exist) { app->remote_chkpt_dir_exist_test(); }
-
-TEST(cold_backup_context, upload_checkpoint_to_remote) { app->upload_checkpoint_to_remote_test(); }
-
-TEST(cold_backup_context, read_backup_metadata) { app->read_backup_metadata_test(); }
-
-TEST(cold_backup_context, on_upload_chkpt_dir) { app->on_upload_chkpt_dir_test(); }
-
-TEST(cold_backup_context, write_metadata_file) { app->write_backup_metadata_test(); }
-
-TEST(cold_backup_context, write_current_chkpt_file) { app->write_current_chkpt_file_test(); }
-
 error_code replication_service_test_app::start(const std::vector<std::string> &args)
 {
     app = this;

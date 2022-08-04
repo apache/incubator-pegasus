@@ -353,14 +353,15 @@ const std::string restore_test::value_prefix = "value";
 const int restore_test::kv_pair_cnt = 10000;
 const int restore_test::default_partition_cnt = 8;
 
-TEST_F(restore_test, restore)
-{
-    std::cout << "start testing restore..." << std::endl;
-    // step1: wait backup complete
-    ASSERT_TRUE(wait_backup_complete(180));
-    // step2: test restore
-    ASSERT_TRUE(restore());
-    // step3: verify_data
-    ASSERT_TRUE(verify_data());
-    std::cout << "restore passed....." << std::endl;
-}
+// TODO(heyuchen): implement it
+// TEST_F(restore_test, restore)
+//{
+//    std::cout << "start testing restore..." << std::endl;
+//    // step1: wait backup complete
+//    ASSERT_TRUE(wait_backup_complete(180));
+//    // step2: test restore
+//    ASSERT_TRUE(restore());
+//    // step3: verify_data
+//    ASSERT_TRUE(verify_data());
+//    std::cout << "restore passed....." << std::endl;
+//}

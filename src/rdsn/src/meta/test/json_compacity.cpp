@@ -108,57 +108,6 @@ void meta_service_test_app::json_compacity()
     ASSERT_TRUE(result);
     ASSERT_EQ(info2.app_name, "CL769:test");
     ASSERT_EQ(info2.max_replica_count, 3);
-
-    // 7. policy can be decoded correctly
-    const char *json7 = "{\"policy_name\":\"every_day\",\"backup_provider_type\":\"simple\",\"app_"
-                        "ids\":[4,5,6,7,8,9,10,11,14,15,16,17,18,19,21,22,23,24],\"app_names\":{"
-                        "\"4\":\"aaaa\",\"5\":\"aaaa\",\"6\":\"aaaa\",\"7\":\"aaaa\",\"8\":"
-                        "\"aaaa\",\"9\":\"aaaa\",\"10\":\"aaaa\",\"11\":\"aaaa\",\"14\":\"aaaa\","
-                        "\"15\":\"aaaa\",\"16\":\"aaaa\",\"17\":\"aaaa\",\"18\":\"aaaa\",\"19\":"
-                        "\"aaaa\",\"21\":\"aaaa\",\"22\":\"aaaa\",\"23\":\"aaaa\",\"24\":\"aaaa\"},"
-                        "\"backup_interval_seconds\":86400,\"backup_history_count_to_keep\":3,\"is_"
-                        "disable\":0,\"start_time\":{\"hour\":0,\"minute\":30}}";
-    dsn::replication::policy p;
-    result = dsn::json::json_forwarder<dsn::replication::policy>::decode(
-        dsn::blob(json7, 0, strlen(json7)), p);
-    ASSERT_TRUE(result);
-    ASSERT_EQ("every_day", p.policy_name);
-    ASSERT_EQ("simple", p.backup_provider_type);
-
-    std::set<int32_t> app_ids = {4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24};
-    ASSERT_EQ(app_ids, p.app_ids);
-
-    std::map<int32_t, std::string> app_names;
-    for (int32_t i : app_ids) {
-        app_names.emplace(i, "aaaa");
-    }
-    ASSERT_EQ(app_names, p.app_names);
-    ASSERT_EQ(86400, p.backup_interval_seconds);
-    ASSERT_EQ(3, p.backup_history_count_to_keep);
-    ASSERT_EQ(0, p.is_disable);
-    ASSERT_EQ(0, p.start_time.hour);
-    ASSERT_EQ(30, p.start_time.minute);
-
-    // 8. backup info can be decoded correctly
-    const char *json8 =
-        "{\"backup_id\":1528216470578,\"start_time_ms\":1528216470578,\"end_time_"
-        "ms\":1528217091629,\"app_ids\":[4,5,6,7,8,9,10,11,14,15,16,17,18,19,21,22,"
-        "23,24],\"app_names\":{\"4\":\"aaaa\",\"5\":\"aaaa\",\"6\":\"aaaa\",\"7\":\"aaaa\",\"8\":"
-        "\"aaaa\",\"9\":\"aaaa\",\"10\":\"aaaa\",\"11\":\"aaaa\",\"14\":\"aaaa\",\"15\":\"aaaa\","
-        "\"16\":"
-        "\"aaaa\",\"17\":\"aaaa\",\"18\":\"aaaa\",\"19\":\"aaaa\",\"21\":\"aaaa\",\"22\":\"aaaa\","
-        "\"23\":"
-        "\"aaaa\",\"24\":\"aaaa\"},\"info_status\":1}";
-    dsn::replication::backup_info binfo;
-    result = dsn::json::json_forwarder<dsn::replication::backup_info>::decode(
-        dsn::blob(json8, 0, strlen(json8)), binfo);
-    ASSERT_TRUE(result);
-    ASSERT_EQ(1528216470578, binfo.backup_id);
-    ASSERT_EQ(1528216470578, binfo.start_time_ms);
-    ASSERT_EQ(1528217091629, binfo.end_time_ms);
-    ASSERT_EQ(app_ids, binfo.app_ids);
-    ASSERT_EQ(app_names, binfo.app_names);
-    ASSERT_EQ(1, binfo.info_status);
 }
 
 } // namespace replication

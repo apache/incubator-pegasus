@@ -39,10 +39,10 @@
 #include "mutation.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "duplication/duplication_sync_timer.h"
-#include "backup/replica_backup_server.h"
 #include "split/replica_split_manager.h"
 #include "replica_disk_migrator.h"
 #include "disk_cleaner.h"
+#include "common/backup_common.h"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <dsn/cpp/json_helper.h>
@@ -817,8 +817,6 @@ void replica_stub::initialize_start()
         _duplication_sync_timer = dsn::make_unique<duplication_sync_timer>(this);
         _duplication_sync_timer->start();
     }
-
-    _backup_server = dsn::make_unique<replica_backup_server>(this);
 
     // init liveness monitor
     dassert(NS_Disconnected == _state, "");

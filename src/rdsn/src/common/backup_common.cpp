@@ -16,7 +16,6 @@
 // under the License.
 
 #include "backup_common.h"
-#include "replica/backup/cold_backup_context.h"
 
 namespace dsn {
 namespace replication {
