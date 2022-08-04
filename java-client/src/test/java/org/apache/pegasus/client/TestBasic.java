@@ -2783,7 +2783,7 @@ public class TestBasic {
           new String(actuallyRes.results.get(i - startIndex).getRight()));
     }
   }
-  @Test
+  @Test   //To create a timeout condition,need to change configuration/pegasus.properties timeout parameter to 1 in this case
   public void testRequestDetail() throws PException {
     PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
     String tableName = "temp";
@@ -2794,9 +2794,9 @@ public class TestBasic {
     String hashKey = HashPrefix + "_0";
     String sortKey = SortPrefix + "_0";
 
-    // multiSet timeout
-    System.out.println("Test multiSet PException request");
     try {
+      // multiSet timeout
+      System.out.println("Test multiSet PException request");
 
       String multiValue2 = RandomStringUtils.random(5, true, true);
       List<Pair<byte[], byte[]>> multiValues2 = new ArrayList<Pair<byte[], byte[]>>();
