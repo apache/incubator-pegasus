@@ -47,7 +47,6 @@
 #include "common/manual_compact.h"
 #include "meta_rpc_types.h"
 #include "meta_options.h"
-#include "meta_backup_service.h"
 #include "meta_state_service_utils.h"
 #include "block_service/block_service_manager.h"
 #include "partition_guardian.h"
@@ -64,6 +63,7 @@ class server_load_balancer;
 class meta_duplication_service;
 class meta_split_service;
 class bulk_load_service;
+class backup_service;
 namespace test {
 class test_checker;
 }

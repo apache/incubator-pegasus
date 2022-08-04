@@ -48,6 +48,7 @@
 #include "meta_split_service.h"
 #include "meta_bulk_load_service.h"
 #include "runtime/security/access_controller.h"
+#include "meta_backup_service.h"
 
 namespace dsn {
 namespace replication {
