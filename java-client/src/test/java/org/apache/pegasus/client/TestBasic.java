@@ -24,6 +24,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Assert;
@@ -1877,69 +1880,69 @@ public class TestBasic {
     String asyncValuePrefix = "AsyncApiTestValue";
     String key = asyncHashPrefix + "_0";
 
-    // Exist
-    System.out.println("Test exist");
-    try {
-      Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
-      Assert.assertFalse(tb.asyncExist(null, null, 0).await().getNow());
-      Assert.assertFalse(tb.asyncExist(null, key.getBytes(), 0).await().getNow());
-      Assert.assertFalse(tb.asyncExist(key.getBytes(), null, 0).await().getNow());
-    } catch (Throwable e) {
-      e.printStackTrace();
-      Assert.fail();
-    }
-
-    try {
-      Assert.assertNull(
-          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
-      Assert.assertTrue(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
-    } catch (Throwable e) {
-      e.printStackTrace();
-      Assert.fail();
-    }
-
-    // SortKeyCount
-    System.out.println("Test sortkeycount");
-    try {
-      Long ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
-      Assert.assertEquals(1, (long) ans);
-
-      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
-      ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
-      Assert.assertEquals(0, (long) ans);
-
-      Future<Long> future = tb.asyncSortKeyCount(null, 0).await();
-      Assert.assertFalse(future.isSuccess());
-      Assert.assertTrue(future.cause() instanceof PException);
-    } catch (Throwable e) {
-      e.printStackTrace();
-      Assert.fail();
-    }
-
-    // Get
-    System.out.println("Test get");
-    try {
-      Assert.assertNull(tb.asyncGet(null, null, 0).await().getNow());
-      Assert.assertNull(tb.asyncGet(null, key.getBytes(), 0).await().getNow());
-      Assert.assertNull(tb.asyncGet(key.getBytes(), null, 0).await().getNow());
-      Assert.assertNull(tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
-
-      Assert.assertNull(
-          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
-      Assert.assertArrayEquals(
-          key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
-
-      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
-    } catch (Throwable e) {
-      e.printStackTrace();
-      Assert.fail();
-    }
+//    // Exist
+//    System.out.println("Test exist");
+//    try {
+//      Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+//      Assert.assertFalse(tb.asyncExist(null, null, 0).await().getNow());
+//      Assert.assertFalse(tb.asyncExist(null, key.getBytes(), 0).await().getNow());
+//      Assert.assertFalse(tb.asyncExist(key.getBytes(), null, 0).await().getNow());
+//    } catch (Throwable e) {
+//      e.printStackTrace();
+//      Assert.fail();
+//    }
+//
+//    try {
+//      Assert.assertNull(
+//          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
+//      Assert.assertTrue(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+//    } catch (Throwable e) {
+//      e.printStackTrace();
+//      Assert.fail();
+//    }
+//
+//    // SortKeyCount
+//    System.out.println("Test sortkeycount");
+//    try {
+//      Long ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
+//      Assert.assertEquals(1, (long) ans);
+//
+//      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
+//      ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
+//      Assert.assertEquals(0, (long) ans);
+//
+//      Future<Long> future = tb.asyncSortKeyCount(null, 0).await();
+//      Assert.assertFalse(future.isSuccess());
+//      Assert.assertTrue(future.cause() instanceof PException);
+//    } catch (Throwable e) {
+//      e.printStackTrace();
+//      Assert.fail();
+//    }
+//
+//    // Get
+//    System.out.println("Test get");
+//    try {
+//      Assert.assertNull(tb.asyncGet(null, null, 0).await().getNow());
+//      Assert.assertNull(tb.asyncGet(null, key.getBytes(), 0).await().getNow());
+//      Assert.assertNull(tb.asyncGet(key.getBytes(), null, 0).await().getNow());
+//      Assert.assertNull(tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
+//
+//      Assert.assertNull(
+//          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
+//      Assert.assertArrayEquals(
+//          key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
+//
+//      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
+//    } catch (Throwable e) {
+//      e.printStackTrace();
+//      Assert.fail();
+//    }
 
     // Set & ttl
     System.out.println("Test set & ttl");
     try {
       Assert.assertNull(
-          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 5, 0).await().getNow());
+          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 5, 1).await().getNow());
       Assert.assertArrayEquals(
           key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
 
@@ -2780,4 +2783,78 @@ public class TestBasic {
           new String(actuallyRes.results.get(i - startIndex).getRight()));
     }
   }
+  @Test
+  public void testRequestDetail() throws PException {
+    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    String tableName = "temp";
+    PegasusTableInterface tb = client.openTable(tableName);
+
+    String HashPrefix = "TestHash";
+    String SortPrefix = "TestSort";
+    String hashKey = HashPrefix + "_0";
+    String sortKey = SortPrefix + "_0";
+
+    // multiSet timeout
+    System.out.println("Test multiSet PException request");
+    try {
+
+      String multiValue2 = RandomStringUtils.random(5, true, true);
+      List<Pair<byte[], byte[]>> multiValues2 = new ArrayList<Pair<byte[], byte[]>>();
+      int count2 = 500;
+      while (count2-- > 0) {
+        multiValues2.add(Pair.of(sortKey.getBytes(), multiValue2.getBytes()));
+      }
+
+      Throwable exception = Assertions.assertThrows(PException.class,()->{
+        client.multiSet(tableName, hashKey.getBytes(), multiValues2);
+      });
+      System.out.println(exception.getMessage());
+
+      //checkAndMutate timeout
+      System.out.println("Test checkAndMutate PException request");
+      Mutations mutations = new Mutations();
+      mutations.set(sortKey.getBytes(), "2".getBytes());
+
+      CheckAndMutateOptions options = new CheckAndMutateOptions();
+      options.returnCheckValue = true;
+      Throwable exception2 =  Assertions.assertThrows(PException.class,()->{
+        client.checkAndMutate(
+                tableName,
+                hashKey.getBytes(),
+                "k5".getBytes(),
+                CheckType.CT_VALUE_INT_LESS,
+                "2".getBytes(),
+                mutations,
+                options);
+      });
+      System.out.println(exception2.getMessage());
+
+      //multiDel timeout
+      System.out.println("Test multiDel PException request");
+      List<Pair<byte[], byte[]>> multiValues3 = new ArrayList<Pair<byte[], byte[]>>();
+      List<byte[]> sortKeys = new ArrayList<byte[]>();
+      multiValues3.add(Pair.of("basic_test_sort_key_0".getBytes(), "basic_test_value_0".getBytes()));
+      multiValues3.add(Pair.of("basic_test_sort_key_1".getBytes(), "basic_test_value_1".getBytes()));
+      multiValues3.add(Pair.of("basic_test_sort_key_2".getBytes(), "basic_test_value_2".getBytes()));
+      sortKeys.add("basic_test_sort_key_0".getBytes());
+      sortKeys.add("basic_test_sort_key_1".getBytes());
+      sortKeys.add("basic_test_sort_key_2".getBytes());
+
+      tb.multiSet(hashKey.getBytes(),multiValues3,5000);
+      Assertions.assertDoesNotThrow(()->{
+        tb.multiSet(hashKey.getBytes(),multiValues3,5000);
+      });
+
+      Throwable exception3 =  Assertions.assertThrows(PException.class,()->{
+        client.multiDel(tableName,hashKey.getBytes(),sortKeys);
+      });
+      System.out.println(exception3);
+
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+  }
+
 }
