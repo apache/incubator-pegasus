@@ -33,7 +33,6 @@
 
 #include "replica/replica.h"
 #include "replica/replica_stub.h"
-#include "replica/backup/cold_backup_context.h"
 
 DSN_DECLARE_int32(log_private_file_size_mb);
 
@@ -202,18 +201,6 @@ public:
                 _primary_states.secondary_bulk_load_states.size() == 0);
     }
 
-    // mock cold backup related function.
-    void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
-    {
-        if (backup_context->status() != ColdBackupCheckpointing) {
-            LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
-                     backup_context->name,
-                     cold_backup_status_to_string(backup_context->status()));
-            backup_context->ignore_checkpoint();
-            return;
-        }
-        backup_context->complete_checkpoint();
-    }
 
     void update_last_durable_decree(decree decree)
     {
