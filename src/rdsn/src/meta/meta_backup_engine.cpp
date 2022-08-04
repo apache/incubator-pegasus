@@ -102,7 +102,7 @@ void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::typ
 // TODO(heyuchen): update following functions
 
 error_code meta_backup_engine::write_backup_file(const std::string &file_name,
-                                            const dsn::blob &write_buffer)
+                                                 const dsn::blob &write_buffer)
 {
     dist::block_service::create_file_request create_file_req;
     create_file_req.ignore_metadata = true;
@@ -214,7 +214,7 @@ void meta_backup_engine::backup_app_partition(const gpid &pid)
 }
 
 inline void meta_backup_engine::handle_replica_backup_failed(const backup_response &response,
-                                                        const gpid pid)
+                                                             const gpid pid)
 {
     dcheck_eq(response.pid, pid);
     dcheck_eq(response.backup_id, _cur_backup.backup_id);
@@ -239,9 +239,9 @@ inline void meta_backup_engine::retry_backup(const dsn::gpid pid)
 }
 
 void meta_backup_engine::on_backup_reply(const error_code err,
-                                    const backup_response &response,
-                                    const gpid pid,
-                                    const rpc_address &primary)
+                                         const backup_response &response,
+                                         const gpid pid,
+                                         const rpc_address &primary)
 {
     {
         zauto_read_lock l(_lock);

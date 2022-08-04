@@ -114,7 +114,7 @@ private:
     std::map<int32_t, backup_status::type> _backup_status;
     // }
 
-// TODO(heyuchen): remove following functions and vars
+    // TODO(heyuchen): remove following functions and vars
 private:
     error_code backup_app_meta();
 
