@@ -21,6 +21,7 @@
 #include <atomic>
 #include <bitset>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -140,7 +141,7 @@ using metric_data_sink_ptr = ref_ptr<metric_data_sink>;
 class metric_entity : public ref_counter
 {
 public:
-    using attr_map = std::unordered_map<std::string, std::string>;
+    using attr_map = std::map<std::string, std::string>;
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
 
     const std::string &id() const { return _id; }
@@ -273,6 +274,16 @@ class metric_registry : public utils::singleton<metric_registry>
 public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
 
+private:
+    friend class metric_entity_prototype;
+    friend class utils::singleton<metric_registry>;
+    friend class metrics_test;
+
+    metric_registry();
+    ~metric_registry();
+
+    void on_close();
+
     template <typename MetricDataSink, typename... Args>
     void register_data_sink(Args &&... args)
     {
@@ -283,15 +294,13 @@ public:
         _sinks.emplace_back(new MetricDataSink(std::forward<Args>(args)...));
     }
 
+    void unregister_data_sinks()
+    {
+        utils::auto_write_lock l(_lock);
+        std::vector<metric_data_sink_ptr>().swap(_sinks);
+    }
+
     entity_map entities() const;
-
-private:
-    friend class metric_entity_prototype;
-    friend class utils::singleton<metric_registry>;
-
-    metric_registry();
-    ~metric_registry();
-    void on_close();
 
     metric_entity_ptr find_or_create_entity(const std::string &id, metric_entity::attr_map &&attrs);
 
@@ -403,7 +412,7 @@ class metric_snapshot
 {
 public:
     using value_type = double;
-    using attr_map = std::unordered_map<std::string, std::string>;
+    using attr_map = std::map<std::string, std::string>;
 
     metric_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs);
     virtual ~metric_snapshot() = default;
@@ -415,6 +424,9 @@ public:
     value_type value() const { return _value; }
 
     const attr_map &attrs() const { return _attrs; }
+
+    void encode_attrs(std::string &str) const;
+    static void decode_attrs(const std::string &str, attr_map &attrs);
 
 private:
     const string_view _name;

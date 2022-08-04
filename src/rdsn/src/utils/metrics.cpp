@@ -15,11 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+
 #include <dsn/utility/metrics.h>
+
+#include <iterator>
+
+#include <boost/algorithm/string/join.hpp>
 
 #include <dsn/c/api_utilities.h>
 #include <dsn/utility/flags.h>
 #include <dsn/utility/rand.h>
+#include <dsn/utility/strings.h>
 
 #include "shared_io_service.h"
 
@@ -217,6 +223,33 @@ metric_snapshot::metric_snapshot(const string_view &name,
                                  attr_map &&attrs)
     : _name(name), _type(type), _value(value), _attrs(std::move(attrs))
 {
+}
+
+void metric_snapshot::encode_attrs(std::string &str) const
+{
+    std::vector<std::string> kvs;
+    std::transform(attrs.begin(),
+                   attrs.end(),
+                   std::back_inserter(kvs),
+                   [](const attr_map::value_type &kv) {
+                       return fmt::format("{}={}", kv.first, kv.second);
+                   });
+
+    str = boost::join(kvs, "|");
+}
+
+void metric_snapshot::decode_attrs(const std::string &str, attr_map &attrs)
+{
+    std::vector<std::string> kvs;
+    utils::split_args(str.c_str(), kvs, '|');
+
+    for (const auto &elem : kvs) {
+        std::vector<std::string> kv;
+        utils::split_args(elem.c_str(), kv, '=', true);
+        dcheck_eq(kv.size(), 2);
+
+        attrs[kv[0]] = kv[1];
+    }
 }
 
 counter_snapshot::counter_snapshot(const string_view &name,
