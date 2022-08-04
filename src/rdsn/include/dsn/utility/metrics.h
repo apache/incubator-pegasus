@@ -670,7 +670,7 @@ protected:
     virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) override
     {
-        auto old_value = _snapshot.load();
+        auto old_value = _snapshot.load(std::memory_order_relaxed);
         auto new_value = value();
         for (auto &sink : sinks) {
             sink->iterate(
@@ -681,7 +681,7 @@ protected:
                                  static_cast<metric_snapshot::value_type>(new_value - old_value)));
         }
 
-        _snapshot.store(new_value);
+        _snapshot.store(new_value, std::memory_order_relaxed);
     }
 
 private:

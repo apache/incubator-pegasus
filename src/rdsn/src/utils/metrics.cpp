@@ -180,9 +180,30 @@ metric_registry::entity_map metric_registry::entities() const
     return _entities;
 }
 
+namespace {
+
+void check_attribute_valid(const std::string &key, const std::string &value)
+{
+    dassert_f(key.find('|') == std::string::npos, "invalid character '|' in attribute key \"{}\"", key);
+    dassert_f(key.find('=') == std::string::npos, "invalid character '=' in attribute key \"{}\"", key);
+    dassert_f(value.find('|') == std::string::npos, "invalid character '|' in attribute value \"{}\"", value);
+    dassert_f(value.find('=') == std::string::npos, "invalid character '=' in attribute value \"{}\"", value);
+}
+
+void check_attributes_valid(const metric_entity::attr_map &attrs)
+{
+    for (const auto &kv : attrs) {
+        check_attribute_valid(kv.first, kv.second);
+    }
+}
+
+} // anonymous namespace
+
 metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
                                                          metric_entity::attr_map &&attrs)
 {
+    check_attributes_valid(attrs);
+
     utils::auto_write_lock l(_lock);
 
     entity_map::const_iterator iter = _entities.find(id);
