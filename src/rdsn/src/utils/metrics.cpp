@@ -184,10 +184,16 @@ namespace {
 
 void check_attribute_valid(const std::string &key, const std::string &value)
 {
-    dassert_f(key.find('|') == std::string::npos, "invalid character '|' in attribute key \"{}\"", key);
-    dassert_f(key.find('=') == std::string::npos, "invalid character '=' in attribute key \"{}\"", key);
-    dassert_f(value.find('|') == std::string::npos, "invalid character '|' in attribute value \"{}\"", value);
-    dassert_f(value.find('=') == std::string::npos, "invalid character '=' in attribute value \"{}\"", value);
+    dassert_f(
+        key.find('|') == std::string::npos, "invalid character '|' in attribute key \"{}\"", key);
+    dassert_f(
+        key.find('=') == std::string::npos, "invalid character '=' in attribute key \"{}\"", key);
+    dassert_f(value.find('|') == std::string::npos,
+              "invalid character '|' in attribute value \"{}\"",
+              value);
+    dassert_f(value.find('=') == std::string::npos,
+              "invalid character '=' in attribute value \"{}\"",
+              value);
 }
 
 void check_attributes_valid(const metric_entity::attr_map &attrs)
