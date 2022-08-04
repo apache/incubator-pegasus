@@ -1880,63 +1880,63 @@ public class TestBasic {
     String asyncValuePrefix = "AsyncApiTestValue";
     String key = asyncHashPrefix + "_0";
 
-//    // Exist
-//    System.out.println("Test exist");
-//    try {
-//      Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
-//      Assert.assertFalse(tb.asyncExist(null, null, 0).await().getNow());
-//      Assert.assertFalse(tb.asyncExist(null, key.getBytes(), 0).await().getNow());
-//      Assert.assertFalse(tb.asyncExist(key.getBytes(), null, 0).await().getNow());
-//    } catch (Throwable e) {
-//      e.printStackTrace();
-//      Assert.fail();
-//    }
-//
-//    try {
-//      Assert.assertNull(
-//          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
-//      Assert.assertTrue(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
-//    } catch (Throwable e) {
-//      e.printStackTrace();
-//      Assert.fail();
-//    }
-//
-//    // SortKeyCount
-//    System.out.println("Test sortkeycount");
-//    try {
-//      Long ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
-//      Assert.assertEquals(1, (long) ans);
-//
-//      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
-//      ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
-//      Assert.assertEquals(0, (long) ans);
-//
-//      Future<Long> future = tb.asyncSortKeyCount(null, 0).await();
-//      Assert.assertFalse(future.isSuccess());
-//      Assert.assertTrue(future.cause() instanceof PException);
-//    } catch (Throwable e) {
-//      e.printStackTrace();
-//      Assert.fail();
-//    }
-//
-//    // Get
-//    System.out.println("Test get");
-//    try {
-//      Assert.assertNull(tb.asyncGet(null, null, 0).await().getNow());
-//      Assert.assertNull(tb.asyncGet(null, key.getBytes(), 0).await().getNow());
-//      Assert.assertNull(tb.asyncGet(key.getBytes(), null, 0).await().getNow());
-//      Assert.assertNull(tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
-//
-//      Assert.assertNull(
-//          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
-//      Assert.assertArrayEquals(
-//          key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
-//
-//      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
-//    } catch (Throwable e) {
-//      e.printStackTrace();
-//      Assert.fail();
-//    }
+    // Exist
+    System.out.println("Test exist");
+    try {
+      Assert.assertFalse(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+      Assert.assertFalse(tb.asyncExist(null, null, 0).await().getNow());
+      Assert.assertFalse(tb.asyncExist(null, key.getBytes(), 0).await().getNow());
+      Assert.assertFalse(tb.asyncExist(key.getBytes(), null, 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+    try {
+      Assert.assertNull(
+          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
+      Assert.assertTrue(tb.asyncExist(key.getBytes(), key.getBytes(), 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+    // SortKeyCount
+    System.out.println("Test sortkeycount");
+    try {
+      Long ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
+      Assert.assertEquals(1, (long) ans);
+
+      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
+      ans = tb.asyncSortKeyCount(key.getBytes(), 0).await().getNow();
+      Assert.assertEquals(0, (long) ans);
+
+      Future<Long> future = tb.asyncSortKeyCount(null, 0).await();
+      Assert.assertFalse(future.isSuccess());
+      Assert.assertTrue(future.cause() instanceof PException);
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+
+    // Get
+    System.out.println("Test get");
+    try {
+      Assert.assertNull(tb.asyncGet(null, null, 0).await().getNow());
+      Assert.assertNull(tb.asyncGet(null, key.getBytes(), 0).await().getNow());
+      Assert.assertNull(tb.asyncGet(key.getBytes(), null, 0).await().getNow());
+      Assert.assertNull(tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
+
+      Assert.assertNull(
+          tb.asyncSet(key.getBytes(), key.getBytes(), key.getBytes(), 0).await().getNow());
+      Assert.assertArrayEquals(
+          key.getBytes(), tb.asyncGet(key.getBytes(), key.getBytes(), 0).await().getNow());
+
+      Assert.assertNull(tb.asyncDel(key.getBytes(), key.getBytes(), 0).await().getNow());
+    } catch (Throwable e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
 
     // Set & ttl
     System.out.println("Test set & ttl");
