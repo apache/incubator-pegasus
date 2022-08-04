@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-
 #include <dsn/utility/metrics.h>
 
 #include <iterator>
@@ -228,12 +227,10 @@ metric_snapshot::metric_snapshot(const string_view &name,
 void metric_snapshot::encode_attrs(std::string &str) const
 {
     std::vector<std::string> kvs;
-    std::transform(attrs.begin(),
-                   attrs.end(),
-                   std::back_inserter(kvs),
-                   [](const attr_map::value_type &kv) {
-                       return fmt::format("{}={}", kv.first, kv.second);
-                   });
+    std::transform(
+        _attrs.begin(), _attrs.end(), std::back_inserter(kvs), [](const attr_map::value_type &kv) {
+            return fmt::format("{}={}", kv.first, kv.second);
+        });
 
     str = boost::join(kvs, "|");
 }

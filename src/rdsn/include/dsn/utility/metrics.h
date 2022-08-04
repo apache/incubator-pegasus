@@ -274,6 +274,8 @@ class metric_registry : public utils::singleton<metric_registry>
 public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
 
+    entity_map entities() const;
+
 private:
     friend class metric_entity_prototype;
     friend class utils::singleton<metric_registry>;
@@ -299,8 +301,6 @@ private:
         utils::auto_write_lock l(_lock);
         std::vector<metric_data_sink_ptr>().swap(_sinks);
     }
-
-    entity_map entities() const;
 
     metric_entity_ptr find_or_create_entity(const std::string &id, metric_entity::attr_map &&attrs);
 

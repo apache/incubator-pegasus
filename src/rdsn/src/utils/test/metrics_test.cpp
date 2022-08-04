@@ -155,15 +155,9 @@ public:
 
     void SetUp() override {}
 
-    void TearDown() override
-    {
-        metric_registry::instance().unregister_data_sinks();
-    }
+    void TearDown() override { metric_registry::instance().unregister_data_sinks(); }
 
-    void register_my_data_sink()
-    {
-        metric_registry::instance().register_data_sink<my_data_sink>();
-    }
+    void register_my_data_sink() { metric_registry::instance().register_data_sink<my_data_sink>(); }
 };
 
 TEST_F(metrics_test, create_entity)
