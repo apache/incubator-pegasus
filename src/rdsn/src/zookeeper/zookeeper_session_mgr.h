@@ -50,6 +50,7 @@ public:
     const char *zoo_hosts() const { return _zoo_hosts.c_str(); }
     int timeout() const { return _timeout_ms; }
     const char *zoo_logfile() const { return _zoo_logfile.c_str(); }
+    int resolve_delay_ms() const { return _resolve_delay_ms; }
 
 private:
     zookeeper_session_mgr();
@@ -59,6 +60,7 @@ private:
     std::string _zoo_hosts;
     int _timeout_ms;
     std::string _zoo_logfile;
+    int _resolve_delay_ms;
 
     friend class utils::singleton<zookeeper_session_mgr>;
 };

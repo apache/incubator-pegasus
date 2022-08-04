@@ -176,6 +176,9 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
         }
         dassert(_handle != nullptr, "zookeeper session init failed");
     }
+    int ret = zoo_set_servers_resolution_delay(
+        _handle, zookeeper_session_mgr::instance().resolve_delay_ms());
+    dassert(ret == ZOK, "zookeeper set resolve_delay_ms failed.");
 
     _watchers.push_back(watcher_object());
     _watchers.back().watcher_path = "";
