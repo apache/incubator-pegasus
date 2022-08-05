@@ -422,10 +422,7 @@ inline bool operator==(string_view x, string_view y) noexcept
 
 inline bool operator!=(string_view x, string_view y) noexcept { return !(x == y); }
 
-inline bool operator<(string_view x, string_view y) noexcept
-{
-    return x.compare(y) < 0;
-}
+inline bool operator<(string_view x, string_view y) noexcept { return x.compare(y) < 0; }
 
 // IO Insertion Operator
 std::ostream &operator<<(std::ostream &o, string_view piece);

@@ -293,8 +293,9 @@ private:
                       "not derived from metric_data_sink");
 
         utils::auto_write_lock l(_lock);
-        _sinks.emplace_back(new MetricDataSink(std::forward<Args>(args)...));
-        return ref_ptr<MetricDataSink>(_sinks.back());
+        ref_ptr<MetricDataSink> ptr(new MetricDataSink(std::forward<Args>(args)...));
+        _sinks.push_back(ptr);
+        return ptr;
     }
 
     void unregister_data_sinks()
@@ -415,7 +416,10 @@ public:
     using value_type = double;
     using attr_map = std::map<std::string, std::string>;
 
+    metric_snapshot() = default;
+
     metric_snapshot(const string_view &name, metric_type type, value_type value, attr_map &&attrs);
+
     virtual ~metric_snapshot() = default;
 
     const string_view &name() const { return _name; }
@@ -429,20 +433,26 @@ public:
     std::string encode_attributes() const;
     static attr_map decode_attributes(const std::string &str);
 
+    bool operator==(const metric_snapshot &rhs) const;
+
+    bool operator!=(const metric_snapshot &rhs) const;
+
 private:
-    const string_view _name;
-    const metric_type _type;
-    const value_type _value;
+    string_view _name;
+    metric_type _type;
+    value_type _value;
 
     // Additional attributes of the metric value, could be empty.
     // If a metric emits multiple snapshots per time, each snapshot
     // will be tagged with an attribute.
-    const attr_map _attrs;
+    attr_map _attrs;
 };
 
 class counter_snapshot : public metric_snapshot
 {
 public:
+    counter_snapshot() = default;
+
     counter_snapshot(const string_view &name,
                      metric_type type,
                      value_type value,
@@ -453,8 +463,12 @@ public:
 
     value_type increase() const { return _increase; }
 
+    bool operator==(const counter_snapshot &rhs) const;
+
+    bool operator!=(const counter_snapshot &rhs) const;
+
 private:
-    const value_type _increase;
+    value_type _increase;
 };
 
 class metric_data_sink : public ref_counter

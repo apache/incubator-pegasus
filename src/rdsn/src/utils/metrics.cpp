@@ -184,6 +184,7 @@ namespace {
 
 void check_attribute_valid(const std::string &key, const std::string &value)
 {
+    dassert_f(!key.empty(), "attribute key should not be empty()");
     dassert_f(
         key.find('|') == std::string::npos, "invalid character '|' in attribute key \"{}\"", key);
     dassert_f(
@@ -277,6 +278,26 @@ metric_snapshot::attr_map metric_snapshot::decode_attributes(const std::string &
     return attrs;
 }
 
+bool metric_snapshot::operator==(const metric_snapshot &rhs) const
+{
+    if (_name != rhs._name) {
+        return false;
+    }
+
+    if (_type != rhs._type) {
+        return false;
+    }
+
+    floating_comparator<double> comp;
+    if (comp(_value, rhs._value) || comp(rhs._value, _value)) {
+        return false;
+    }
+
+    return _attrs == rhs._attrs;
+}
+
+bool metric_snapshot::operator!=(const metric_snapshot &rhs) const { return !(*this == rhs); }
+
 counter_snapshot::counter_snapshot(const string_view &name,
                                    metric_type type,
                                    value_type value,
@@ -285,6 +306,18 @@ counter_snapshot::counter_snapshot(const string_view &name,
     : metric_snapshot(name, type, value, std::move(attrs)), _increase(increase)
 {
 }
+
+bool counter_snapshot::operator==(const counter_snapshot &rhs) const
+{
+    if (metric_snapshot::operator!=(rhs)) {
+        return false;
+    }
+
+    floating_comparator<double> comp;
+    return !(comp(_increase, rhs._increase) || comp(rhs._increase, _increase));
+}
+
+bool counter_snapshot::operator!=(const counter_snapshot &rhs) const { return !(*this == rhs); }
 
 uint64_t metric_timer::generate_initial_delay_ms(uint64_t interval_ms)
 {
