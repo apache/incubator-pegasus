@@ -1279,7 +1279,8 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             batch_count,
             request.no_value,
             request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
-            return_expire_ts));
+            return_expire_ts,
+            request.only_return_count));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1320,6 +1321,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
+    bool only_return_count = false;
 
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
@@ -1332,6 +1334,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         rocksdb::Iterator *it = context->iterator.get();
         const rocksdb::Slice &stop = context->stop;
         bool stop_inclusive = context->stop_inclusive;
+        only_return_count = context->only_return_count;
         ::dsn::apps::filter_type::type hash_key_filter_type = context->hash_key_filter_type;
         const ::dsn::blob &hash_key_filter_pattern = context->hash_key_filter_pattern;
         ::dsn::apps::filter_type::type sort_key_filter_type = context->sort_key_filter_type;
@@ -1374,7 +1377,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
                                                    no_value,
                                                    validate_hash,
                                                    return_expire_ts,
-                                                   !request.only_return_count);
+                                                   !only_return_count);
             switch (state) {
             case range_iteration_state::kNormal:
                 count++;
@@ -1398,7 +1401,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             it->Next();
         }
 
-        if (request.only_return_count) {
+        if (only_return_count) {
             resp.kvs.emplace_back(::dsn::apps::key_value());
             resp.__set_kv_count(count);
         }
@@ -1464,7 +1467,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     }
 
     // abandon calculate capacity unit
-    if (request.only_return_count) {
+    if (only_return_count) {
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
     }
     _pfc_scan_latency->set(dsn_now_ns() - start_time);

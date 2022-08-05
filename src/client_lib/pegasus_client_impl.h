@@ -253,12 +253,8 @@ public:
         int next(std::string &hashkey,
                  std::string &sortkey,
                  std::string &value,
-                 internal_info *info = nullptr) override;
-
-        int next(std::string &hashkey,
-                 std::string &sortkey,
-                 std::string &value,
-                 int32_t &count_number) override;
+                 internal_info *info = nullptr,
+                 int32_t *count = nullptr) override;
 
         void async_next(async_scan_next_callback_t &&) override;
 
@@ -329,17 +325,10 @@ private:
         int next(std::string &hashkey,
                  std::string &sortkey,
                  std::string &value,
-                 int32_t &count_number) override
+                 internal_info *info,
+                 int32_t *count = nullptr) override
         {
-            return _p->next(hashkey, sortkey, value, count_number);
-        }
-
-        int next(std::string &hashkey,
-                 std::string &sortkey,
-                 std::string &value,
-                 internal_info *info) override
-        {
-            return _p->next(hashkey, sortkey, value, info);
+            return _p->next(hashkey, sortkey, value, info, count);
         }
     };
 

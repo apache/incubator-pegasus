@@ -285,7 +285,6 @@ struct get_scanner_request
 struct scan_request
 {
     1:i64           context_id;
-    2:optional bool only_return_count;
 }
 
 struct scan_response

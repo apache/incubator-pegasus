@@ -55,40 +55,14 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
       _rpc_started(false),
       _validate_partition_hash(validate_partition_hash),
       _full_scan(full_scan)
-
 {
 }
 
 int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
                                                     std::string &sortkey,
                                                     std::string &value,
-                                                    int32_t &count_number)
-{
-    ::dsn::utils::notify_event op_completed;
-    int ret = -1;
-    auto callback = [&](int err,
-                        std::string &&hash,
-                        std::string &&sort,
-                        std::string &&val,
-                        internal_info &&ii,
-                        uint32_t expire_ts_seconds,
-                        int32_t kv_count) {
-        ret = err;
-        hashkey = std::move(hash);
-        sortkey = std::move(sort);
-        value = std::move(val);
-        count_number = kv_count;
-        op_completed.notify();
-    };
-    async_next(std::move(callback));
-    op_completed.wait();
-    return ret;
-}
-
-int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
-                                                    std::string &sortkey,
-                                                    std::string &value,
-                                                    internal_info *info)
+                                                    internal_info *info,
+                                                    int32_t *count)
 {
     ::dsn::utils::notify_event op_completed;
     int ret = -1;
@@ -105,6 +79,9 @@ int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
         value = std::move(val);
         if (info) {
             (*info) = std::move(ii);
+        }
+        if (count) {
+            (*count) = kv_count;
         }
         op_completed.notify();
     };
@@ -191,8 +168,9 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         }
 
         // valid data got
-        std::string hash_key, sort_key, value = "";
+        std::string hash_key, sort_key, value;
         uint32_t expire_ts_seconds = 0;
+        // _kv_count == -1 means req just want to get data counts, not include data value
         if (_kv_count == -1) {
             pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
             value = std::string(_kvs[_p].value.data(), _kvs[_p].value.length());
@@ -228,7 +206,6 @@ void pegasus_client_impl::pegasus_scanner_impl::_next_batch()
 {
     ::dsn::apps::scan_request req;
     req.context_id = _context;
-    req.__set_only_return_count(_options.only_return_count);
 
     dassert(!_rpc_started, "");
     _rpc_started = true;

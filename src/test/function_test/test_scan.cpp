@@ -187,7 +187,7 @@ TEST_F(scan, OVERALL_COUNT_ONLY)
     for (auto scanner : scanners) {
         ASSERT_NE(nullptr, scanner);
         int32_t kv_count;
-        while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value, kv_count)))) {
+        while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value, nullptr, &kv_count)))) {
             data_counts += kv_count;
         }
         ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
@@ -432,7 +432,7 @@ TEST_F(scan, REQUEST_EXPIRE_TS)
                                     std::string &&value,
                                     pegasus::pegasus_client::internal_info &&info,
                                     uint32_t expire_ts_seconds,
-                                    uint32_t kv_count) {
+                                    int32_t kv_count) {
                 if (err == pegasus::PERR_OK) {
                     check_and_put(data, hash_key, sort_key, value);
                     if (expire_ts_seconds > 0) {

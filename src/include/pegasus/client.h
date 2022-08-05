@@ -345,12 +345,8 @@ public:
         virtual int next(std::string &hashkey,
                          std::string &sortkey,
                          std::string &value,
-                         internal_info *info = nullptr) = 0;
-
-        virtual int next(std::string &hashkey,
-                         std::string &sortkey,
-                         std::string &value,
-                         int32_t &count_number) = 0;
+                         internal_info *info = nullptr,
+                         int32_t *count = nullptr) = 0;
 
         ///
         /// \brief async get the next key-value pair of this scanner
