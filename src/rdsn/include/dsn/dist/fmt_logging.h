@@ -56,12 +56,14 @@
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
 #define dcheck_eq(var1, var2) dassert_f(var1 == var2, "{} vs {}", var1, var2)
+#define dcheck_ne(var1, var2) dassert_f(var1 != var2, "{} vs {}", var1, var2)
 #define dcheck_ge(var1, var2) dassert_f(var1 >= var2, "{} vs {}", var1, var2)
 #define dcheck_le(var1, var2) dassert_f(var1 <= var2, "{} vs {}", var1, var2)
 #define dcheck_gt(var1, var2) dassert_f(var1 > var2, "{} vs {}", var1, var2)
 #define dcheck_lt(var1, var2) dassert_f(var1 < var2, "{} vs {}", var1, var2)
 
 #define dcheck_eq_replica(var1, var2) dassert_replica(var1 == var2, "{} vs {}", var1, var2)
+#define dcheck_ne_replica(var1, var2) dassert_replica(var1 != var2, "{} vs {}", var1, var2)
 #define dcheck_ge_replica(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)
 #define dcheck_le_replica(var1, var2) dassert_replica(var1 <= var2, "{} vs {}", var1, var2)
 #define dcheck_gt_replica(var1, var2) dassert_replica(var1 > var2, "{} vs {}", var1, var2)

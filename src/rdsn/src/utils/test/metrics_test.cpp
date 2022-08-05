@@ -66,16 +66,49 @@ using my_gauge_ptr = ref_ptr<my_gauge>;
 class my_data_sink : public metric_data_sink
 {
 public:
-    my_data_sink() = default;
+    using metric_map = std::map<string_view, std::map<std::string, metric_snapshot>>;
+    using counter_map = std::map<string_view, std::map<std::string, counter_snapshot>>;
+
+    my_data_sink(std::set<string_view> &&metric_names)
+        : _mtx(), _metric_names(std::move(metric_names)), _ {}
+
     virtual ~my_data_sink() = default;
 
-    virtual void iterate(const metric_snapshot &snapshot) override {}
+    virtual void iterate(const metric_snapshot &snapshot) override
+    {
+        std::lock_guard<std::mutex> guard(_mtx);
 
-    virtual void iterate(const counter_snapshot &snapshot) override {}
+        if (_metric_names.find(snapshot.name()) != _metric_names.end()) {
+            _actual_metrics[snapshot.name()][snapshot.encode_attributes()] = snapshot;
+        }
+    }
+
+    virtual void iterate(const counter_snapshot &snapshot) override
+    {
+        std::lock_guard<std::mutex> guard(_mtx);
+
+        if (_metric_names.find(snapshot.name()) != _metric_names.end()) {
+            _actual_counters[snapshot.name()][snapshot.encode_attributes()] = snapshot;
+        }
+    }
+
+    void check_snapshots(const my_data_sink::metric_map &expected_metrics) const {
+        ASSERT_EQ(_actual_metrics, expected_metrics);
+    }
+
+    void check_snapshots(const my_data_sink::counter_map &expected_counters) const {
+        ASSERT_EQ(_actual_counters, expected_counters);
+    }
 
 private:
+    mutable std::mutex _mtx;
+    std::set<string_view> _metric_names;
+    metric_map _actual_metrics;
+    counter_map _actual_counters;
+
     DISALLOW_COPY_AND_ASSIGN(my_data_sink);
 };
+using my_data_sink_ptr = ref_ptr<my_data_sink>;
 
 } // namespace dsn
 
@@ -155,9 +188,27 @@ public:
 
     void SetUp() override {}
 
-    void TearDown() override { metric_registry::instance().unregister_data_sinks(); }
+    void TearDown() override {
+        _my_data_sink.reset();
+        metric_registry::instance().unregister_data_sinks();
+    }
 
-    void register_my_data_sink() { metric_registry::instance().register_data_sink<my_data_sink>(); }
+    void register_my_data_sink(std::set<string_view> &&metric_names) {
+        _my_data_sink = metric_registry::instance().register_data_sink<my_data_sink>(std::move(metric_names));
+    }
+
+    void check_snapshots(const my_data_sink::metric_map &expected_metrics) const {
+        dassert_ne(_my_data_sink.get(), nullptr);
+        _my_data_sink->check_snapshots(expected_metrics);
+    }
+
+    void check_snapshots(const my_data_sink::counter_map &expected_counters) const {
+        dassert_ne(_my_data_sink.get(), nullptr);
+        _my_data_sink->check_snapshots(expected_counters);
+    }
+
+private:
+   my_data_sink_ptr _my_data_sink;
 };
 
 TEST_F(metrics_test, create_entity)

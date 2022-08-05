@@ -159,6 +159,11 @@ public:
 
     void swap(ref_ptr<T> &r) noexcept { std::swap(_obj, r._obj); }
 
+    void reset(nullptr_t = nullptr) noexcept
+    {
+        swap(ref_ptr<T>());
+    }
+
     T *get() const { return _obj; }
 
     operator T *() const { return _obj; }

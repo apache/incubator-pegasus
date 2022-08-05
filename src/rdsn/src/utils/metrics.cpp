@@ -251,22 +251,22 @@ metric_snapshot::metric_snapshot(const string_view &name,
 {
 }
 
-void metric_snapshot::encode_attrs(std::string &str) const
+std::string metric_snapshot::encode_attributes() const
 {
     std::vector<std::string> kvs;
     std::transform(
         _attrs.begin(), _attrs.end(), std::back_inserter(kvs), [](const attr_map::value_type &kv) {
             return fmt::format("{}={}", kv.first, kv.second);
         });
-
-    str = boost::join(kvs, "|");
+    return boost::join(kvs, "|");
 }
 
-void metric_snapshot::decode_attrs(const std::string &str, attr_map &attrs)
+metric_snapshot::attr_map metric_snapshot::decode_attributes(const std::string &str)
 {
     std::vector<std::string> kvs;
     utils::split_args(str.c_str(), kvs, '|');
 
+    attr_map attrs;
     for (const auto &elem : kvs) {
         std::vector<std::string> kv;
         utils::split_args(elem.c_str(), kv, '=', true);
@@ -274,6 +274,7 @@ void metric_snapshot::decode_attrs(const std::string &str, attr_map &attrs)
 
         attrs[kv[0]] = kv[1];
     }
+    return attrs;
 }
 
 counter_snapshot::counter_snapshot(const string_view &name,

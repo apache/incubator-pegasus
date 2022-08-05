@@ -287,13 +287,14 @@ private:
     void on_close();
 
     template <typename MetricDataSink, typename... Args>
-    void register_data_sink(Args &&... args)
+    ref_ptr<MetricDataSink> register_data_sink(Args &&... args)
     {
         static_assert(std::is_base_of<metric_data_sink, MetricDataSink>::value,
                       "not derived from metric_data_sink");
 
         utils::auto_write_lock l(_lock);
         _sinks.emplace_back(new MetricDataSink(std::forward<Args>(args)...));
+        return ref_ptr<MetricDataSink>(_sinks.back());
     }
 
     void unregister_data_sinks()
@@ -425,8 +426,8 @@ public:
 
     const attr_map &attrs() const { return _attrs; }
 
-    void encode_attrs(std::string &str) const;
-    static void decode_attrs(const std::string &str, attr_map &attrs);
+    std::string encode_attributes() const;
+    static attr_map decode_attributes(const std::string &str);
 
 private:
     const string_view _name;
