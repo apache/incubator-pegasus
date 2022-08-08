@@ -2236,13 +2236,9 @@ public class PegasusTable implements PegasusTableInterface {
             getSubstring(hashKey), getSubstring(sortKey), sortKeyCount, valueLength);
       }
 
-      if (sortKeyCount > 0) {
-        return String.format(
-            "[hashKey[:32]=\"%s\",sortKeyCount=%d,valueLength = %d]",
-            getSubstring(hashKey), sortKeyCount);
-      }
-
-      return String.format("[hashKey[:32]=\"%s\"]", getSubstring(hashKey));
+      return String.format(
+          "[hashKey[:32]=\"%s\",sortKeyCount=%d,valueLength = %d]",
+          getSubstring(hashKey), sortKeyCount, valueLength);
     }
   }
 }
