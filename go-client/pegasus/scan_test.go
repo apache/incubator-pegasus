@@ -279,7 +279,7 @@ func TestPegasusTableConnector_ScanFailRecover(t *testing.T) {
 	mockRpcFailedErrorTable, err := client.OpenTable(context.Background(), "temp")
 	assert.Nil(t, err)
 	defer tb.Close()
-	// test getScanner rpc error error
+	// test getScanner rpc error
 	scanner, err = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
 	assert.Nil(t, err)
 	rpcGetScannerFailedMocked := false
