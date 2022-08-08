@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -219,6 +220,10 @@ func TestPegasusTableConnector_ScanInclusive(t *testing.T) {
 	clearDatabase(t, tb)
 }
 
+func GetScannerRpcErrorForTest(_ *session.ReplicaSession, ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.GetScannerRequest) (*rrdb.ScanResponse, error) {
+	return nil, base.ERR_INVALID_STATE
+}
+
 func ScanRpcErrorForTest(_ *session.ReplicaSession, ctx context.Context, gpid *base.Gpid, partitionHash uint64, request *rrdb.ScanRequest) (*rrdb.ScanResponse, error) {
 	return nil, base.ERR_INVALID_STATE
 }
@@ -270,28 +275,82 @@ func TestPegasusTableConnector_ScanFailRecover(t *testing.T) {
 	}
 	assert.Equal(t, 1, successCount)
 
+	// test rpc error
 	mockRpcFailedErrorTable, err := client.OpenTable(context.Background(), "temp")
 	assert.Nil(t, err)
 	defer tb.Close()
-	scanner, _ = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
-	rpcFailedMocked := false
+	// test getScanner rpc error error
+	scanner, err = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+	assert.Nil(t, err)
+	rpcGetScannerFailedMocked := false
+	recallGetScanner := true
+	var getScannerFailedMock *gomonkey.Patches
 	successCount = 0
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		complete, _, _, _, error := scanner.Next(ctx)
-		// mock rpc error, follow request will be recovered automatically
-		if !rpcFailedMocked {
-			mock = gomonkey.ApplyMethod(reflect.TypeOf(session), "Scan", ScanRpcErrorForTest)
-			rpcFailedMocked = true
-		} else {
-			mock.Reset()
+		if recallGetScanner && rpcGetScannerFailedMocked { // GetScannerFailedMocked = true, recall GetScanner to trigger the error when execute scanner.Next
+			scanner, err = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+			assert.Nil(t, err)
+		}
+		complete, _, _, _, errNext := scanner.Next(ctx)
+		if !rpcGetScannerFailedMocked { // mock replicaSession.GetScanner rpc error, the next loop request will be failed
+			getScannerFailedMock = gomonkey.ApplyMethod(reflect.TypeOf(session), "GetScanner", GetScannerRpcErrorForTest)
+			rpcGetScannerFailedMocked = true
 		}
 		cancel()
 		if complete {
 			break
 		}
-		if error == nil {
+
+		if errNext == nil {
 			successCount++
+			continue
+		}
+		// error encounter ERR_INVALID_STATE and auto-trigger re-config that means rpcGetScannerFailedMocked can be reset
+		if strings.Contains(errNext.Error(), "ERR_INVALID_STATE") &&
+			strings.Contains(errNext.Error(), "updateConfig=true") {
+			getScannerFailedMock.Reset()
+			recallGetScanner = false
+		} else if strings.Contains(errNext.Error(), "recover after next loop") {
+			continue
+		} else {
+			break
+		}
+	}
+	// since re-call once getScanner, so the successCount = 100 + 1
+	assert.Equal(t, 101, successCount)
+
+	// test scan rpc error
+	rpcScanFailedMocked := false
+	var scanFailedMock *gomonkey.Patches
+	successCount = 0
+	scanner, err = mockRpcFailedErrorTable.GetScanner(context.Background(), []byte("h1"), []byte(""), []byte(""), opts)
+	assert.Nil(t, err)
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*500)
+		complete, _, _, _, errNext := scanner.Next(ctx)
+		if !rpcScanFailedMocked { // mock scan rpc error, the next loop request will be failed but recovered automatically
+			scanFailedMock = gomonkey.ApplyMethod(reflect.TypeOf(session), "Scan", ScanRpcErrorForTest)
+			rpcScanFailedMocked = true
+		}
+		cancel()
+		if complete {
+			break
+		}
+
+		if errNext == nil {
+			successCount++
+			continue
+		}
+
+		// error encounter ERR_INVALID_STATE and auto-trigger re-config that means rpcGetScannerFailedMocked can be reset
+		if strings.Contains(errNext.Error(), "ERR_INVALID_STATE") &&
+			strings.Contains(errNext.Error(), "updateConfig=true") {
+			scanFailedMock.Reset()
+		} else if strings.Contains(errNext.Error(), "recover after next loop") {
+			continue
+		} else {
+			break
 		}
 	}
 	assert.Equal(t, 100, successCount)
