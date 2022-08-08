@@ -321,6 +321,7 @@ func TestPegasusTableConnector_ScanFailRecover(t *testing.T) {
 	assert.Equal(t, 101, successCount)
 
 	// test scan rpc error
+	getScannerFailedMock.Reset()
 	rpcScanFailedMocked := false
 	var scanFailedMock *gomonkey.Patches
 	successCount = 0
