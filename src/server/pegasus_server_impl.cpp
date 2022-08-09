@@ -1704,7 +1704,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     } else {
         // When an old db is opened and the conf is changed, the options related to usage scenario
         // need to be recalculated with new values.
-        recalculate_usage_scenario(_usage_scenario);
+        recalculate_usage_scenario(tmp_data_cf_opts);
     }
 
     dinfo_replica("start the update replica-level rocksdb statistics timer task");
