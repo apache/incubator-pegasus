@@ -28,6 +28,8 @@
 
 namespace dsn {
 
+DSN_DECLARE_uint64(collect_metrics_interval_ms);
+
 class my_gauge : public metric
 {
 public:
@@ -69,8 +71,8 @@ public:
     using metric_map = std::map<string_view, std::map<std::string, metric_snapshot>>;
     using counter_map = std::map<string_view, std::map<std::string, counter_snapshot>>;
 
-    my_data_sink(std::set<string_view> &&metric_names)
-        : _mtx(), _metric_names(std::move(metric_names)), _actual_metrics(), _actual_counters()
+    my_data_sink(const std::string &target_attr_key)
+        : _mtx(), _target_attr_key(target_attr_key), _actual_metrics(), _actual_counters()
     {
     }
 
@@ -78,35 +80,47 @@ public:
 
     virtual void iterate(const metric_snapshot &snapshot) override
     {
-        std::lock_guard<std::mutex> guard(_mtx);
-
-        if (_metric_names.find(snapshot.name()) != _metric_names.end()) {
-            _actual_metrics[snapshot.name()][snapshot.encode_attributes()] = snapshot;
-        }
+        iterate(snapshot, _actual_metrics);
     }
 
     virtual void iterate(const counter_snapshot &snapshot) override
     {
+        iterate(snapshot, _actual_counters);
+    }
+
+    void check_snapshots(const metric_map &expected_metrics, const counter_map &expected_counters) const
+    {
         std::lock_guard<std::mutex> guard(_mtx);
-
-        if (_metric_names.find(snapshot.name()) != _metric_names.end()) {
-            _actual_counters[snapshot.name()][snapshot.encode_attributes()] = snapshot;
-        }
-    }
-
-    void check_snapshots(const my_data_sink::metric_map &expected_metrics) const
-    {
-        ASSERT_EQ(_actual_metrics, expected_metrics);
-    }
-
-    void check_snapshots(const my_data_sink::counter_map &expected_counters) const
-    {
-        ASSERT_EQ(_actual_counters, expected_counters);
+        check_snapshots(_actual_metrics, expected_metrics);
+        check_snapshots(_actual_counters, expected_counters);
     }
 
 private:
+    template <typename SnapshotType, typename SnapshotMap>
+    void iterate(const SnapshotType &snapshot, SnapshotMap &map)
+    {
+        if (snapshot.attributes().find(_target_attr_key) == snapshot.attributes().end()) {
+            return;
+        }
+
+        std::lock_guard<std::mutex> guard(_mtx);
+        map[snapshot.name()][snapshot.encode_attributes()] = snapshot;
+    }
+
+    template <typename SnapshotMap>
+    void check_snapshots(const SnapshotMap &actual_map, const SnapshotMap &expected_map) const
+    {
+        ASSERT_EQ(actual_map, expected_map);
+
+        for (const auto &snapshots : actual_map) {
+            for (const auto &snapshot : snapshots.second) {
+                ASSERT_EQ(metric_snapshot::decode_attributes(snapshot.first), snapshot.second.attributes());
+            }
+        }
+    }
+
     mutable std::mutex _mtx;
-    std::set<string_view> _metric_names;
+    const std::string _target_attr_key;
     metric_map _actual_metrics;
     counter_map _actual_counters;
 
@@ -198,22 +212,16 @@ public:
         metric_registry::instance().unregister_data_sinks();
     }
 
-    void register_my_data_sink(std::set<string_view> &&metric_names)
+    void register_my_data_sink(const std::string &target_attr_key)
     {
         _my_data_sink =
-            metric_registry::instance().register_data_sink<my_data_sink>(std::move(metric_names));
+            metric_registry::instance().register_data_sink<my_data_sink>(target_attr_key);
     }
 
-    void check_snapshots(const my_data_sink::metric_map &expected_metrics) const
+    void check_snapshots(const my_data_sink::metric_map &expected_metrics, const my_data_sink::counter_map &expected_counters) const
     {
         dassert_f(_my_data_sink.get() != nullptr, "_my_data_sink should not be null");
-        _my_data_sink->check_snapshots(expected_metrics);
-    }
-
-    void check_snapshots(const my_data_sink::counter_map &expected_counters) const
-    {
-        dassert_f(_my_data_sink.get() != nullptr, "_my_data_sink should not be null");
-        _my_data_sink->check_snapshots(expected_counters);
+        _my_data_sink->check_snapshots(expected_metrics, expected_counters);
     }
 
 private:
@@ -999,6 +1007,43 @@ TEST_F(metrics_test, percentile_double)
                          floating_percentile_prototype<value_type>,
                          floating_percentile_case_generator<value_type>,
                          floating_checker<value_type>>(METRIC_test_percentile_double);
+}
+
+TEST_F(metrics_test, metric_data_sink)
+{
+    const std::string target_attr_key("_DEDICATED_FOR_DATA_SINK_TEST");
+    register_my_data_sink(target_attr_key);
+
+    struct test_case
+    {
+        std::string entity_id;
+        metric_entity::attr_map entity_attrs;
+        int64_t gauge_int64_value;
+        double gauge_double_value;
+        int64_t counter_increase;
+        uint64_t percentile_interval_ms;
+        std::set<kth_percentile_type> &kth_percentiles;
+        size_t percentile_sample_size;
+    } tests[] = {{"server_60"},
+    };
+
+    my_data_sink::metric_map expected_metrics;
+    my_data_sink::counter_map expected_counters;
+    for (const auto &test : tests) {
+        auto attrs = entity_attrs;
+        attrs[target_attr_key] = std::string();
+        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id, attrs);
+
+        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_server_entity);
+        my_gauge_int64.set(test.gauge_int64_value);
+
+        auto my_gauge_double = METRIC_test_gauge_double.instantiate(my_server_entity);
+        my_gauge_double.set(test.gauge_double_value);
+
+        auto my_counter = METRIC_test_counter.instantiate(my_server_entity);
+    }
+
+    check_snapshots(expected_metrics, expected_counters);
 }
 
 } // namespace dsn

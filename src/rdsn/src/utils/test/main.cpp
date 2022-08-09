@@ -20,6 +20,12 @@
 #include <dsn/tool-api/logging_provider.h>
 #include <dsn/utility/flags.h>
 
+namespace dsn {
+
+DSN_DECLARE_uint64(collect_metrics_interval_ms);
+
+} // namespace dsn
+
 extern void command_manager_module_init();
 
 GTEST_API_ int main(int argc, char **argv)
@@ -31,6 +37,7 @@ GTEST_API_ int main(int argc, char **argv)
     dsn_log_init("dsn::tools::simple_logger", "./", nullptr);
 
     dsn::flags_initialize();
+    FLAGS_collect_metrics_interval_ms = 50;
 
     return RUN_ALL_TESTS();
 }

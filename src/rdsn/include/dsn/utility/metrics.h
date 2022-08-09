@@ -428,7 +428,7 @@ public:
 
     value_type value() const { return _value; }
 
-    const attr_map &attrs() const { return _attrs; }
+    const attr_map &attributes() const { return _attrs; }
 
     std::string encode_attributes() const;
     static attr_map decode_attributes(const std::string &str);
