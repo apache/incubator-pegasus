@@ -1704,7 +1704,8 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     } else {
         // When an old db is opened and the conf is changed, the options related to usage scenario
         // need to be recalculated with new values.
-        recalculate_usage_scenario(tmp_data_cf_opts);
+        // recalculate_usage_scenario(tmp_data_cf_opts);
+        ddebug_replica("wanghao: {}", _usage_scenario);
     }
 
     dinfo_replica("start the update replica-level rocksdb statistics timer task");
@@ -2638,6 +2639,10 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
                            old_usage_scenario,
                            new_usage_scenario);
         }
+    } else {
+        // When an old db is opened and the conf is changed, the options related to usage scenario
+        // need to be recalculated with new values.
+        // recalculate_usage_scenario(tmp_data_cf_opts);
     }
 }
 
