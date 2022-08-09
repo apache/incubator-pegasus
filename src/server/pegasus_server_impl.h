@@ -312,8 +312,8 @@ private:
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
 
-    // return true if need recalculate option value
-    bool recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts);
+    // recalculate option value if necessary
+    void recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts);
 
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);

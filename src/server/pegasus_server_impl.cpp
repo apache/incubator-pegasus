@@ -3011,7 +3011,7 @@ void pegasus_server_impl::reset_usage_scenario_options(
     target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
 }
 
-bool pegasus_server_impl::recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts)
+void pegasus_server_impl::recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts)
 {
     std::unordered_map<std::string, std::string> new_options;
     if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
