@@ -1560,9 +1560,9 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 
     ddebug_replica("start to open rocksDB's rdb({})", rdb_path);
 
-    // Here we create a `tmp_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
+    // Here we create a `_tmp_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
     // will be used elsewhere.
-    rocksdb::ColumnFamilyOptions tmp_data_cf_opts = _data_cf_opts;
+    _tmp_data_cf_opts = _data_cf_opts;
     bool has_incompatible_db_options = false;
     if (db_exist) {
         // When DB exists, meta CF and data CF must be present.
@@ -1609,7 +1609,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
-            reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
+            reset_usage_scenario_options(loaded_data_cf_opts, &_tmp_data_cf_opts);
             _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
         }
     } else {
@@ -1620,7 +1620,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-        {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+        {{DATA_COLUMN_FAMILY_NAME, _tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     auto s = rocksdb::CheckOptionsCompatibility(rdb_path,
                                                 rocksdb::Env::Default(),
                                                 _db_opts,
@@ -1701,11 +1701,6 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     if (!db_exist) {
         // When create a new db, update usage scenario according to app envs.
         update_usage_scenario(envs);
-    } else {
-        // When an old db is opened and the conf is changed, the options related to usage scenario
-        // need to be recalculated with new values.
-        // recalculate_usage_scenario(tmp_data_cf_opts);
-        ddebug_replica("wanghao: {}", _usage_scenario);
     }
 
     dinfo_replica("start the update replica-level rocksdb statistics timer task");
@@ -2642,7 +2637,7 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
     } else {
         // When an old db is opened and the conf is changed, the options related to usage scenario
         // need to be recalculated with new values.
-        // recalculate_usage_scenario(tmp_data_cf_opts);
+        recalculate_usage_scenario(_tmp_data_cf_opts);
     }
 }
 
