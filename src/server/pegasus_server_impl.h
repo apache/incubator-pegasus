@@ -332,7 +332,9 @@ private:
     bool check_value_if_nearby(uint64_t base_value, uint64_t check_value)
     {
         uint64_t gap = base_value / 4;
-        return std::abs(base_value - check_value) <= gap;
+        uint64_t actual_gap =
+            (base_value < check_value) ? check_value - base_value : base_value - check_value;
+        return actual_gap <= gap;
     }
 
     // return true if expired
