@@ -1701,6 +1701,10 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     if (!db_exist) {
         // When create a new db, update usage scenario according to app envs.
         update_usage_scenario(envs);
+    } else {
+        // When an old db is opened and the conf is changed, the options related to usage scenario
+        // need to be recalculated with new values.
+        recalculate_usage_scenario(_usage_scenario);
     }
 
     dinfo_replica("start the update replica-level rocksdb statistics timer task");
@@ -3005,6 +3009,112 @@ void pegasus_server_impl::reset_usage_scenario_options(
     target_opts->max_compaction_bytes = base_opts.max_compaction_bytes;
     target_opts->write_buffer_size = base_opts.write_buffer_size;
     target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
+}
+
+bool recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts)
+{
+    std::unordered_map<std::string, std::string> new_options;
+    if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
+        ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
+        if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
+            if (!check_value_if_nearby(_data_cf_opts.write_buffer_size,
+                                       cur_opts.write_buffer_size)) {
+                new_options["write_buffer_size"] =
+                    std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size));
+            }
+            if (_data_cf_opts.level0_file_num_compaction_trigger !=
+                cur_opts.level0_file_num_compaction_trigger) {
+                new_options["level0_file_num_compaction_trigger"] =
+                    std::to_string(_data_cf_opts.level0_file_num_compaction_trigger);
+            }
+        } else {
+            uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
+                                                       _data_cf_opts.write_buffer_size * 2);
+            if (!(cur_opts.write_buffer_size >= _data_cf_opts.write_buffer_size &&
+                  cur_opts.write_buffer_size <= _data_cf_opts.write_buffer_size * 2)) {
+                new_options["write_buffer_size"] = std::to_string(buffer_size);
+                uint64_t max_size = get_random_nearby(_data_cf_opts.max_bytes_for_level_base);
+                new_options["level0_file_num_compaction_trigger"] =
+                    std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
+            } else if (!check_value_if_nearby(_data_cf_opts.max_bytes_for_level_base,
+                                              cur_opts.max_bytes_for_level_base)) {
+                uint64_t max_size = get_random_nearby(_data_cf_opts.max_bytes_for_level_base);
+                new_options["level0_file_num_compaction_trigger"] =
+                    std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
+            }
+        }
+        if (_data_cf_opts.level0_slowdown_writes_trigger !=
+            cur_opts.level0_slowdown_writes_trigger) {
+            new_options["level0_slowdown_writes_trigger"] =
+                std::to_string(_data_cf_opts.level0_slowdown_writes_trigger);
+        }
+        if (_data_cf_opts.level0_stop_writes_trigger != cur_opts.level0_stop_writes_trigger) {
+            new_options["level0_stop_writes_trigger"] =
+                std::to_string(_data_cf_opts.level0_stop_writes_trigger);
+        }
+        if (_data_cf_opts.soft_pending_compaction_bytes_limit !=
+            cur_opts.soft_pending_compaction_bytes_limit) {
+            new_options["soft_pending_compaction_bytes_limit"] =
+                std::to_string(_data_cf_opts.soft_pending_compaction_bytes_limit);
+        }
+        if (_data_cf_opts.hard_pending_compaction_bytes_limit !=
+            cur_opts.hard_pending_compaction_bytes_limit) {
+            new_options["hard_pending_compaction_bytes_limit"] =
+                std::to_string(_data_cf_opts.hard_pending_compaction_bytes_limit);
+        }
+        if (_data_cf_opts.disable_auto_compactions != cur_opts.disable_auto_compactions) {
+            new_options["disable_auto_compactions"] = "false";
+        }
+        if (_data_cf_opts.max_compaction_bytes != cur_opts.max_compaction_bytes) {
+            new_options["max_compaction_bytes"] =
+                std::to_string(_data_cf_opts.max_compaction_bytes);
+        }
+        if (_data_cf_opts.max_write_buffer_number != cur_opts.max_write_buffer_number) {
+            new_options["max_write_buffer_number"] =
+                std::to_string(_data_cf_opts.max_write_buffer_number);
+        }
+    } else {
+        // ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD
+        if (_data_cf_opts.level0_file_num_compaction_trigger !=
+            cur_opts.level0_file_num_compaction_trigger) {
+            new_options["level0_file_num_compaction_trigger"] = "1000000000";
+        }
+        if (_data_cf_opts.level0_slowdown_writes_trigger !=
+            cur_opts.level0_slowdown_writes_trigger) {
+            new_options["level0_slowdown_writes_trigger"] = "1000000000";
+        }
+        if (_data_cf_opts.level0_stop_writes_trigger != cur_opts.level0_stop_writes_trigger) {
+            new_options["level0_stop_writes_trigger"] = "1000000000";
+        }
+        if (_data_cf_opts.soft_pending_compaction_bytes_limit !=
+            cur_opts.soft_pending_compaction_bytes_limit) {
+            new_options["soft_pending_compaction_bytes_limit"] = "0";
+        }
+        if (_data_cf_opts.hard_pending_compaction_bytes_limit !=
+            cur_opts.hard_pending_compaction_bytes_limit) {
+            new_options["hard_pending_compaction_bytes_limit"] = "0";
+        }
+        if (_data_cf_opts.disable_auto_compactions != cur_opts.disable_auto_compactions) {
+            new_options["disable_auto_compactions"] = "true";
+        }
+        if (_data_cf_opts.max_compaction_bytes != cur_opts.max_compaction_bytes) {
+            new_options["max_compaction_bytes"] = std::to_string(static_cast<uint64_t>(1) << 60);
+        }
+        if (!check_value_if_nearby(_data_cf_opts.write_buffer_size, cur_opts.write_buffer_size)) {
+            new_options["write_buffer_size"] =
+                std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size * 4));
+        }
+        if (cur_opts.max_write_buffer_number !=
+            std::max(_data_cf_opts.max_write_buffer_number, 6)) {
+            new_options["max_write_buffer_number"] =
+                std::to_string(std::max(_data_cf_opts.max_write_buffer_number, 6));
+        }
+    }
+    if (new_options.size() > 0) {
+        ddebug_replica("{}: recalculate the value of the options related to usage scenario",
+                       replica_name());
+        set_options(new_options);
+    }
 }
 
 bool pegasus_server_impl::set_options(

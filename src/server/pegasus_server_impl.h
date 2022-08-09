@@ -312,6 +312,10 @@ private:
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
 
+    // return true if need recalculate option value
+    bool recalculate_usage_scenario(const std::string &usage_scenario,
+                                    const rocksdb::ColumnFamilyOptions &cur_opts);
+
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);
 
@@ -323,6 +327,13 @@ private:
     {
         uint64_t gap = base_value / 4;
         return dsn::rand::next_u64(base_value - gap, base_value + gap);
+    }
+
+    // return true if value in range of [0.75, 1.25] * base_value
+    bool check_value_if_nearby(uint64_t base_value, uint64_t check_value)
+    {
+        uint64_t gap = base_value / 4;
+        return std::abs(base_value - check_value) <= gap;
     }
 
     // return true if expired
