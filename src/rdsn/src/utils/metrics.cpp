@@ -44,6 +44,16 @@ std::set<kth_percentile_type> get_all_kth_percentile_types()
     return all_types;
 }
 
+std::set<std::string> kth_percentiles_to_labels(const std::set<kth_percentile_type> &kth_percentiles)
+{
+    std::set<std::string> labels;
+    std::transform(kth_percentiles.begin(), kth_percentiles.end(), std::inserter(labels, labels.begin()),
+                   [](const kth_percentile_type &type) {
+                       return kKthLabels[static_cast<size_t>(type)];
+                   });
+    return labels;
+}
+
 metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
     : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
 {

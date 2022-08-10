@@ -1009,6 +1009,29 @@ TEST_F(metrics_test, percentile_double)
                          floating_checker<value_type>>(METRIC_test_percentile_double);
 }
 
+void build_expected_snapshots(metric *m, metric_snapshot::value_type value, const metric_entity::attr_map &attrs, my_data_sink::metric_map &expected_metrics)
+{
+    metric_snapshot snapshot(m->prototype()->name(), m->prototype()->type(), value, metric_snapshot::attr_map(attrs));
+    expected_metrics[m->prototype()->name()][snapshot.encode_attributes()] = std::move(snapshot);
+}
+
+void build_expected_snapshots(metric *m, metric_snapshot::value_type value, const metric_entity::attr_map &attrs, metric_snapshot::value_type increase, my_data_sink::counter_map &expected_counters)
+{
+    counter_snapshot snapshot(m->prototype()->name(), m->prototype()->type(), value, metric_snapshot::attr_map(attrs), increase);
+    expected_counters[m->prototype()->name()][snapshot.encode_attributes()] = std::move(snapshot);
+}
+
+void build_expected_snapshots(metric *m, metric_snapshot::value_type value, const metric_entity::attr_map &attrs, const std::set<kth_percentile_type> &kth_percentiles, my_data_sink::metric_map &expected_metrics)
+{
+    auto kth_labels = kth_percentiles_to_labels(kth_percentiles);
+    for (const auto kth_label : kth_labels) {
+        metric_snapshot::attr_map labels({{"p", kth_label}});
+        labels.insert(attrs.begin(), attrs.end());
+        metric_snapshot snapshot(m->prototype()->name(), m->prototype()->type(), value, std::move(labels));
+        expected_metrics[m->prototype()->name()][snapshot.encode_attributes()] = std::move(snapshot);
+    }
+}
+
 TEST_F(metrics_test, metric_data_sink)
 {
     const std::string target_attr_key("_DEDICATED_FOR_DATA_SINK_TEST");
@@ -1035,12 +1058,22 @@ TEST_F(metrics_test, metric_data_sink)
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id, attrs);
 
         auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_server_entity);
-        my_gauge_int64.set(test.gauge_int64_value);
+        my_gauge_int64->set(test.gauge_int64_value);
+        build_expected_snapshots(my_gauge_int64.get(), static_cast<metric_snapshot::value_type>(test.gauge_int64_value), test.entity_attrs, expected_metrics);
 
         auto my_gauge_double = METRIC_test_gauge_double.instantiate(my_server_entity);
-        my_gauge_double.set(test.gauge_double_value);
+        my_gauge_double->set(test.gauge_double_value);
+        build_expected_snapshots(my_gauge_double.get(), static_cast<metric_snapshot::value_type>(test.gauge_double_value), test.entity_attrs, expected_metrics);
 
         auto my_counter = METRIC_test_counter.instantiate(my_server_entity);
+        my_counter->increment_by(test.counter_increase);
+        build_expected_snapshots(my_counter.get(), static_cast<metric_snapshot::value_type>(test.counter_increase), test.entity_attrs, static_cast<metric_snapshot::value_type>(test.counter_increase), expected_counters);
+
+        auto my_concurrent_counter = METRIC_test_concurrent_counter.instantiate(my_server_entity);
+        my_concurrent_counter->increment_by(test.counter_increase);
+        build_expected_snapshots(my_concurrent_counter.get(), static_cast<metric_snapshot::value_type>(test.counter_increase), test.entity_attrs, static_cast<metric_snapshot::value_type>(test.counter_increase), expected_counters);
+
+        auto my_metric = prototype.instantiate(my_entity, interval_ms, kth_percentiles, sample_size);
     }
 
     check_snapshots(expected_metrics, expected_counters);
