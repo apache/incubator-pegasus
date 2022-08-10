@@ -145,7 +145,10 @@ class block_service_mock : public block_filesystem
 {
 public:
     block_service_mock()
-        : block_filesystem(), enable_create_file_fail(false), enable_list_dir_fail(false)
+        : block_filesystem(),
+          enable_create_file_fail(false),
+          enable_list_dir_fail(false),
+          enable_remote_path_fail(false)
     {
     }
     virtual error_code initialize(const std::vector<std::string> &args) { return ERR_OK; }
