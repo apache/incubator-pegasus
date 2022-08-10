@@ -24,8 +24,6 @@
 namespace dsn {
 namespace replication {
 
-meta_backup_engine::meta_backup_engine(meta_service *meta_svc) : _meta_svc(meta_svc) {}
-
 meta_backup_engine::meta_backup_engine(meta_service *meta_svc, bool is_periodic)
     : _meta_svc(meta_svc), _is_periodic_backup(is_periodic)
 {

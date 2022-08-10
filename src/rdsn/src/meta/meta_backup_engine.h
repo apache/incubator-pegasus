@@ -57,7 +57,6 @@ struct app_backup_info
 class meta_backup_engine
 {
 public:
-    explicit meta_backup_engine(meta_service *meta_svc);
     explicit meta_backup_engine(meta_service *meta_svc, bool is_periodic);
     ~meta_backup_engine();
 
