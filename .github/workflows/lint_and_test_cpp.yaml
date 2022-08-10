@@ -94,7 +94,9 @@ jobs:
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
           ccache -s
       - name: Tar files
-        run: tar -cvhf release__builder.tar DSN_ROOT/ src/release__builder/bin src/release__builder/src/server/test/config.ini src/release__builder/src/rdsn/src/utils/libdsn_utils.so src/release__builder/src/rdsn/src/replica/libdsn_replica_server.so src/release__builder/src/rdsn/src/meta/libdsn_meta_server.so src/release__builder/src/client_lib/libpegasus_client_shared.so
+        run: |
+          rm -rf thirdparty
+          tar -zcvhf release__builder.tar DSN_ROOT/ src/release__builder/bin src/release__builder/src/server/test/config.ini src/release__builder/src/rdsn/src/utils/libdsn_utils.so src/release__builder/src/rdsn/src/replica/libdsn_replica_server.so src/release__builder/src/rdsn/src/meta/libdsn_meta_server.so src/release__builder/src/client_lib/libpegasus_client_shared.so --remove-files
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -147,7 +149,7 @@ jobs:
           path: .
       - name: Tar files
         run: |
-          tar -xvf release__builder.tar
+          tar -zxvf release__builder.tar
       - name: Unit Testing
         run: |
           ln -s -f release__builder src/builder
@@ -200,7 +202,9 @@ jobs:
           ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
           ccache -s
       - name: Tar files
-        run: tar -cvhf release_address_builder.tar DSN_ROOT/ src/release_address_builder/bin src/release_address_builder/src/server/test/config.ini src/release_address_builder/src/rdsn/src/utils/libdsn_utils.so src/release_address_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_address_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_address_builder/src/client_lib/libpegasus_client_shared.so
+        run: |
+          rm -rf thirdparty
+          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/release_address_builder/bin src/release_address_builder/src/server/test/config.ini src/release_address_builder/src/rdsn/src/utils/libdsn_utils.so src/release_address_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_address_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_address_builder/src/client_lib/libpegasus_client_shared.so --remove-files
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -253,7 +257,7 @@ jobs:
           path: .
       - name: Tar files
         run: |
-          tar -xvf release_address_builder.tar
+          tar -zxvf release_address_builder.tar
       - name: Unit Testing
         run: |
           ln -s -f release_address_builder src/builder
@@ -306,7 +310,9 @@ jobs:
           ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
           ccache -s
       - name: Tar files
-        run: tar -cvhf release_undefined_builder.tar DSN_ROOT/ src/release_undefined_builder/bin src/release_undefined_builder/src/server/test/config.ini src/release_undefined_builder/src/rdsn/src/utils/libdsn_utils.so src/release_undefined_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_undefined_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_undefined_builder/src/client_lib/libpegasus_client_shared.so
+        run: |
+          rm -rf thirdparty
+          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/release_undefined_builder/bin src/release_undefined_builder/src/server/test/config.ini src/release_undefined_builder/src/rdsn/src/utils/libdsn_utils.so src/release_undefined_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_undefined_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_undefined_builder/src/client_lib/libpegasus_client_shared.so --remove-files
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -359,7 +365,7 @@ jobs:
           path: .
       - name: Tar files
         run: |
-          tar -xvf release_undefined_builder.tar
+          tar -zxvf release_undefined_builder.tar
       - name: Unit Testing
         run: |
           ln -s -f release_undefined_builder src/builder
