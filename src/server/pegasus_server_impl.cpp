@@ -3013,6 +3013,10 @@ void pegasus_server_impl::reset_usage_scenario_options(
 
 void pegasus_server_impl::recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts)
 {
+#define UPDATE_OPTION_IF_NEEDED(option, value)                                                     \
+    if ((value) != cur_opts.option) {                                                              \
+        options["#option"] = std::to_string((value));                                              \
+    }                                                                                              \
     std::unordered_map<std::string, std::string> new_options;
     if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
         ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
@@ -3022,11 +3026,8 @@ void pegasus_server_impl::recalculate_usage_scenario(const rocksdb::ColumnFamily
                 new_options["write_buffer_size"] =
                     std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size));
             }
-            if (_data_cf_opts.level0_file_num_compaction_trigger !=
-                cur_opts.level0_file_num_compaction_trigger) {
-                new_options["level0_file_num_compaction_trigger"] =
-                    std::to_string(_data_cf_opts.level0_file_num_compaction_trigger);
-            }
+            UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger,
+                                    _data_cf_opts.level0_file_num_compaction_trigger);
         } else {
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
                                                        _data_cf_opts.write_buffer_size * 2);
@@ -3043,63 +3044,26 @@ void pegasus_server_impl::recalculate_usage_scenario(const rocksdb::ColumnFamily
                     std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
             }
         }
-        if (_data_cf_opts.level0_slowdown_writes_trigger !=
-            cur_opts.level0_slowdown_writes_trigger) {
-            new_options["level0_slowdown_writes_trigger"] =
-                std::to_string(_data_cf_opts.level0_slowdown_writes_trigger);
-        }
-        if (_data_cf_opts.level0_stop_writes_trigger != cur_opts.level0_stop_writes_trigger) {
-            new_options["level0_stop_writes_trigger"] =
-                std::to_string(_data_cf_opts.level0_stop_writes_trigger);
-        }
-        if (_data_cf_opts.soft_pending_compaction_bytes_limit !=
-            cur_opts.soft_pending_compaction_bytes_limit) {
-            new_options["soft_pending_compaction_bytes_limit"] =
-                std::to_string(_data_cf_opts.soft_pending_compaction_bytes_limit);
-        }
-        if (_data_cf_opts.hard_pending_compaction_bytes_limit !=
-            cur_opts.hard_pending_compaction_bytes_limit) {
-            new_options["hard_pending_compaction_bytes_limit"] =
-                std::to_string(_data_cf_opts.hard_pending_compaction_bytes_limit);
-        }
-        if (_data_cf_opts.disable_auto_compactions != cur_opts.disable_auto_compactions) {
-            new_options["disable_auto_compactions"] = "false";
-        }
-        if (_data_cf_opts.max_compaction_bytes != cur_opts.max_compaction_bytes) {
-            new_options["max_compaction_bytes"] =
-                std::to_string(_data_cf_opts.max_compaction_bytes);
-        }
-        if (_data_cf_opts.max_write_buffer_number != cur_opts.max_write_buffer_number) {
-            new_options["max_write_buffer_number"] =
-                std::to_string(_data_cf_opts.max_write_buffer_number);
-        }
+        UPDATE_OPTION_IF_NEEDED(level0_slowdown_writes_trigger,
+                                _data_cf_opts.level0_slowdown_writes_trigger);
+        UPDATE_OPTION_IF_NEEDED(level0_stop_writes_trigger,
+                                _data_cf_opts.level0_stop_writes_trigger);
+        UPDATE_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit,
+                                _data_cf_opts.soft_pending_compaction_bytes_limit);
+        UPDATE_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit,
+                                _data_cf_opts.hard_pending_compaction_bytes_limit);
+        UPDATE_OPTION_IF_NEEDED(disable_auto_compactions, "false");
+        UPDATE_OPTION_IF_NEEDED(max_compaction_bytes, _data_cf_opts.max_compaction_bytes);
+        UPDATE_OPTION_IF_NEEDED(max_write_buffer_number, _data_cf_opts.max_write_buffer_number);
     } else {
         // ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD
-        if (_data_cf_opts.level0_file_num_compaction_trigger !=
-            cur_opts.level0_file_num_compaction_trigger) {
-            new_options["level0_file_num_compaction_trigger"] = "1000000000";
-        }
-        if (_data_cf_opts.level0_slowdown_writes_trigger !=
-            cur_opts.level0_slowdown_writes_trigger) {
-            new_options["level0_slowdown_writes_trigger"] = "1000000000";
-        }
-        if (_data_cf_opts.level0_stop_writes_trigger != cur_opts.level0_stop_writes_trigger) {
-            new_options["level0_stop_writes_trigger"] = "1000000000";
-        }
-        if (_data_cf_opts.soft_pending_compaction_bytes_limit !=
-            cur_opts.soft_pending_compaction_bytes_limit) {
-            new_options["soft_pending_compaction_bytes_limit"] = "0";
-        }
-        if (_data_cf_opts.hard_pending_compaction_bytes_limit !=
-            cur_opts.hard_pending_compaction_bytes_limit) {
-            new_options["hard_pending_compaction_bytes_limit"] = "0";
-        }
-        if (_data_cf_opts.disable_auto_compactions != cur_opts.disable_auto_compactions) {
-            new_options["disable_auto_compactions"] = "true";
-        }
-        if (_data_cf_opts.max_compaction_bytes != cur_opts.max_compaction_bytes) {
-            new_options["max_compaction_bytes"] = std::to_string(static_cast<uint64_t>(1) << 60);
-        }
+        UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger, 1000000000);
+        UPDATE_OPTION_IF_NEEDED(level0_slowdown_writes_trigger, 1000000000);
+        UPDATE_OPTION_IF_NEEDED(level0_stop_writes_trigger, 1000000000);
+        UPDATE_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit, 0);
+        UPDATE_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit, 0);
+        UPDATE_OPTION_IF_NEEDED(disable_auto_compactions, "true");
+        UPDATE_OPTION_IF_NEEDED(max_compaction_bytes, static_cast<uint64_t>(1) << 60);
         if (!check_value_if_nearby(_data_cf_opts.write_buffer_size, cur_opts.write_buffer_size)) {
             new_options["write_buffer_size"] =
                 std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size * 4));
