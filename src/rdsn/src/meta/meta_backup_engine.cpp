@@ -43,7 +43,7 @@ void meta_backup_engine::init_backup(int32_t app_id,
     zauto_write_lock l(_lock);
     _backup_status.clear();
     for (int i = 0; i < partition_count; ++i) {
-        _backup_status.emplace(i, backup_status::INVALID);
+        _backup_status.emplace_back(backup_status::UNINITIALIZED);
     }
     _cur_backup.app_id = app_id;
     _cur_backup.app_name = app_name;
@@ -51,7 +51,7 @@ void meta_backup_engine::init_backup(int32_t app_id,
     _cur_backup.start_time_ms = _cur_backup.backup_id;
     _cur_backup.backup_provider_type = provider;
     _cur_backup.backup_path = backup_root_path;
-    _cur_backup.status = backup_status::INVALID;
+    _cur_backup.status = backup_status::UNINITIALIZED;
     _is_backup_failed = false;
     _is_backup_canceled = false;
 }
@@ -76,7 +76,7 @@ void meta_backup_engine::start()
     }
     update_backup_item_on_remote_storage(backup_status::CHECKPOINTING);
     FAIL_POINT_INJECT_F("meta_backup_engine_start", [](dsn::string_view) {});
-    for (int i = 0; i < _backup_status.size(); ++i) {
+    for (auto i = 0; i < _backup_status.size(); ++i) {
         zauto_write_lock l(_lock);
         _backup_status[i] = backup_status::CHECKPOINTING;
         tasking::enqueue(LPC_DEFAULT_CALLBACK, &_tracker, [this, i]() {
@@ -336,7 +336,7 @@ void meta_backup_engine::complete_current_backup()
     {
         zauto_read_lock l(_lock);
         for (const auto &status : _backup_status) {
-            if (status.second != backup_status::SUCCEED) {
+            if (status != backup_status::SUCCEED) {
                 // backup for some partition was not finished.
                 return;
             }

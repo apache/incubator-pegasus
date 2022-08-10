@@ -351,7 +351,7 @@ ENUM_TYPE_SERIALIZATION(dsn::app_status::type, dsn::app_status::AS_INVALID)
 ENUM_TYPE_SERIALIZATION(dsn::replication::bulk_load_status::type,
                         dsn::replication::bulk_load_status::BLS_INVALID)
 ENUM_TYPE_SERIALIZATION(dsn::replication::backup_status::type,
-                        dsn::replication::backup_status::INVALID)
+                        dsn::replication::backup_status::UNINITIALIZED)
 
 // json serialization for gpid, we treat it as string: "app_id.partition_id"
 inline void json_encode(JsonWriter &out, const dsn::gpid &pid)

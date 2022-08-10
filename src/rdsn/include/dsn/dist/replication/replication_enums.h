@@ -158,8 +158,10 @@ ENUM_REG(replication::manual_compaction_status::RUNNING)
 ENUM_REG(replication::manual_compaction_status::FINISHED)
 ENUM_END2(replication::manual_compaction_status::type, manual_compaction_status)
 
-ENUM_BEGIN2(replication::backup_status::type, backup_status, replication::backup_status::INVALID)
-ENUM_REG(replication::backup_status::INVALID)
+ENUM_BEGIN2(replication::backup_status::type,
+            backup_status,
+            replication::backup_status::UNINITIALIZED)
+ENUM_REG(replication::backup_status::UNINITIALIZED)
 ENUM_REG(replication::backup_status::CHECKPOINTING)
 ENUM_REG(replication::backup_status::CHECKPOINTED)
 ENUM_REG(replication::backup_status::UPLOADING)

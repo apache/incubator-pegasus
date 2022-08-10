@@ -110,8 +110,7 @@ private:
     bool _is_backup_failed{false};
     bool _is_backup_canceled{false};
     backup_item _cur_backup;
-    // partition_id -> backup_status
-    std::map<int32_t, backup_status::type> _backup_status;
+    std::vector<backup_status::type> _backup_status;
     // }
 
     // TODO(heyuchen): remove following functions and vars

@@ -22,7 +22,7 @@ namespace cpp dsn.replication
 
 enum backup_status
 {
-    INVALID,
+    UNINITIALIZED,
     CHECKPOINTING,
     CHECKPOINTED,
     UPLOADING,
