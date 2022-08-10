@@ -1401,7 +1401,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             it->Next();
         }
 
-        if (only_return_count) {
+        if (!only_return_count) {
             resp.kvs.emplace_back(::dsn::apps::key_value());
             resp.__set_kv_count(count);
         }
