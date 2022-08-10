@@ -201,6 +201,25 @@ public:
                               const remove_path_callback &cb,
                               dsn::task_tracker *tracker)
     {
+        remove_path_response resp;
+        if (enable_remote_path_fail) {
+            resp.err = ERR_MOCK_INTERNAL;
+        } else {
+            resp.err = ERR_OK;
+            std::string path_name = req.path;
+            if (dir_files.find(path_name) == dir_files.end()) {
+                resp.err = ERR_OBJECT_NOT_FOUND;
+            } else {
+                std::vector<ls_entry> files = dir_files[path_name];
+                if (!files.empty() && !req.recursive) {
+                    resp.err = ERR_DIR_NOT_EMPTY;
+                } else {
+                    dir_files.erase(path_name);
+                    resp.err = ERR_OK;
+                }
+            }
+        }
+        cb(resp);
         return task_ptr();
     }
 
@@ -209,6 +228,7 @@ public:
     std::map<std::string, std::pair<int64_t, std::string>> files;
     bool enable_create_file_fail;
     bool enable_list_dir_fail;
+    bool enable_remote_path_fail;
 };
 
 } // namespace block_service

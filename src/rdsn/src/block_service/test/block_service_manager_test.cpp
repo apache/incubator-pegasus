@@ -46,10 +46,25 @@ public:
             PROVIDER, LOCAL_DIR, FILE_NAME, _fs.get(), download_size);
     }
 
+    error_code test_upload_file()
+    {
+        return _block_service_manager.upload_file(PROVIDER, LOCAL_DIR, FILE_NAME, _fs.get());
+    }
+
     error_code test_write_file()
     {
         return _block_service_manager.write_file(
             PROVIDER, FILE_NAME, blob::create_from_bytes("test_value"), _fs.get());
+    }
+
+    error_code test_read_file(blob &value)
+    {
+        return _block_service_manager.read_file(PROVIDER, FILE_NAME, _fs.get(), value);
+    }
+
+    error_code test_remove_path(bool recursive)
+    {
+        return _block_service_manager.remove_path(REMOTE_DIR, recursive, _fs.get());
     }
 
     void create_local_file(const std::string &file_name)
@@ -69,8 +84,27 @@ public:
     void create_remote_file(const std::string &file_name, int64_t size, const std::string &md5)
     {
         std::string whole_file_name = utils::filesystem::path_combine(PROVIDER, file_name);
+
         _fs->files[whole_file_name] = std::make_pair(size, md5);
     }
+
+    void create_remote_dir(bool empty)
+    {
+        std::vector<ls_entry> entries;
+        if (!empty) {
+            ls_entry dir_entry;
+            dir_entry.entry_name = REMOTE_DIR;
+            dir_entry.is_directory = true;
+            entries.emplace_back(dir_entry);
+            ls_entry file_entry;
+            file_entry.entry_name = FILE_NAME;
+            file_entry.is_directory = false;
+            entries.emplace_back(file_entry);
+        }
+        _fs->dir_files[REMOTE_DIR] = entries;
+    }
+
+    void clear_remote_dir() { _fs->dir_files.clear(); }
 
 public:
     block_service_manager _block_service_manager;
@@ -80,6 +114,7 @@ public:
     std::string PROVIDER = "local_service";
     std::string LOCAL_DIR = "test_dir";
     std::string FILE_NAME = "test_file";
+    std::string REMOTE_DIR = "remote_test_dir";
 };
 
 // download_file unit tests
@@ -125,7 +160,41 @@ TEST_F(block_service_manager_test, do_download_succeed)
     ASSERT_EQ(download_size, _file_meta.size);
 }
 
+TEST_F(block_service_manager_test, upload_file_test)
+{
+    create_local_file(FILE_NAME);
+    ASSERT_EQ(test_upload_file(), ERR_OK);
+}
+
 TEST_F(block_service_manager_test, write_file_test) { ASSERT_EQ(test_write_file(), ERR_OK); }
+
+TEST_F(block_service_manager_test, read_file_test)
+{
+    blob value;
+    ASSERT_EQ(test_read_file(value), ERR_OK);
+}
+
+TEST_F(block_service_manager_test, remove_path_test)
+{
+    struct test_struct
+    {
+        bool mock_dir;
+        bool dir_empty;
+        bool recursive;
+        error_code expected_err;
+    } tests[]{{false, false, false, ERR_OBJECT_NOT_FOUND},
+              {true, true, false, ERR_OK},
+              {true, true, true, ERR_OK},
+              {true, false, false, ERR_DIR_NOT_EMPTY},
+              {true, false, true, ERR_OK}};
+    for (const auto &test : tests) {
+        if (test.mock_dir) {
+            create_remote_dir(test.dir_empty);
+        }
+        ASSERT_EQ(test_remove_path(test.recursive), test.expected_err);
+        clear_remote_dir();
+    }
+}
 
 } // namespace block_service
 } // namespace dist

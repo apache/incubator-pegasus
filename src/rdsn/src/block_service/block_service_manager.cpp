@@ -184,6 +184,46 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     return ERR_OK;
 }
 
+static upload_response
+upload_block_file_sync(const std::string &local_file_path, block_file *bf, task_tracker *tracker)
+{
+    upload_response ret;
+    bf->upload(upload_request{local_file_path},
+               TASK_CODE_EXEC_INLINED,
+               [&ret](const upload_response &resp) { ret = resp; },
+               tracker);
+    tracker->wait_outstanding_tasks();
+    return ret;
+}
+
+error_code block_service_manager::upload_file(const std::string &remote_dir,
+                                              const std::string &local_dir,
+                                              const std::string &file_name,
+                                              block_filesystem *fs)
+{
+    task_tracker tracker;
+
+    // Create a block_file object.
+    const auto &remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
+    const auto &create_resp =
+        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
+    const auto &err = create_resp.err;
+    if (err != ERR_OK) {
+        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
+        return err;
+    }
+    block_file_ptr bf = create_resp.file_handle;
+
+    // Upload file
+    const auto &local_file_name = utils::filesystem::path_combine(local_dir, file_name);
+    const upload_response &resp = upload_block_file_sync(local_file_name, bf.get(), &tracker);
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    }
+    ddebug_f("upload file({}) succeed", local_file_name);
+    return ERR_OK;
+}
+
 static write_response
 write_block_file_sync(const blob &value, block_file *bf, task_tracker *tracker)
 {
@@ -220,6 +260,61 @@ error_code block_service_manager::write_file(const std::string &remote_dir,
         return resp.err;
     }
     ddebug_f("write remote file({}) succeed", remote_file_name);
+    return ERR_OK;
+}
+
+error_code
+block_service_manager::remove_path(const std::string &path, bool recursive, block_filesystem *fs)
+{
+    task_tracker tracker;
+    remove_path_response ret;
+    fs->remove_path(remove_path_request{path, recursive},
+                    TASK_CODE_EXEC_INLINED,
+                    [&ret](const remove_path_response &resp) { ret = resp; },
+                    &tracker);
+    tracker.wait_outstanding_tasks();
+    return ret.err;
+}
+
+static read_response read_block_file_sync(block_file *bf,
+                                          const uint64_t remote_pos,
+                                          const int64_t remote_length,
+                                          task_tracker *tracker)
+{
+    read_response ret;
+    bf->read(read_request{remote_pos, remote_length},
+             TASK_CODE_EXEC_INLINED,
+             [&ret](const read_response &resp) { ret = resp; },
+             tracker);
+    tracker->wait_outstanding_tasks();
+    return ret;
+}
+
+error_code block_service_manager::read_file(const std::string &remote_dir,
+                                            const std::string &file_name,
+                                            block_filesystem *fs,
+                                            blob &value)
+{
+    task_tracker tracker;
+
+    // Create a block_file object.
+    const auto &remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
+    const auto &create_resp =
+        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
+    const auto &err = create_resp.err;
+    if (err != ERR_OK) {
+        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
+        return err;
+    }
+    block_file_ptr bf = create_resp.file_handle;
+
+    // Read blob
+    const read_response &resp = read_block_file_sync(bf.get(), 0, -1, &tracker);
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    }
+    ddebug_f("read remote file({}) succeed", remote_file_name);
+    value = resp.buffer;
     return ERR_OK;
 }
 

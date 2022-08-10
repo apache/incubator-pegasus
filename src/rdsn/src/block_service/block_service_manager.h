@@ -69,6 +69,14 @@ public:
                              block_filesystem *fs,
                              /*out*/ uint64_t &download_file_size);
 
+    // upload files from remote file system
+    // \return  ERR_FILE_OPERATION_FAILED: local file system error
+    // \return  ERR_FS_INTERNAL: remote file system error
+    error_code upload_file(const std::string &remote_dir,
+                           const std::string &local_dir,
+                           const std::string &file_name,
+                           block_filesystem *fs);
+
     // write blob value onto remote file system
     // \return  ERR_FILE_OPERATION_FAILED: local file system error
     // \return  ERR_FS_INTERNAL: remote file system error
@@ -76,6 +84,20 @@ public:
                           const std::string &file_name,
                           const blob &value,
                           block_filesystem *fs);
+
+    // remove path on remote file system
+    // \return ERR_OBJECT_NOT_FOUND: remove path not exist
+    // \return ERR_FS_INTERNAL: remote file system error
+    // \return ERR_DIR_NOT_EMPTY: path not empty
+    error_code remove_path(const std::string &path, bool recursive, block_filesystem *fs);
+
+    // read blob value from remote file system
+    // \return  ERR_FILE_OPERATION_FAILED: local file system error
+    // \return  ERR_FS_INTERNAL: remote file system error
+    error_code read_file(const std::string &remote_dir,
+                         const std::string &file_name,
+                         block_filesystem *fs,
+                         /*out*/ blob &value);
 
 private:
     block_service_registry &_registry_holder;
