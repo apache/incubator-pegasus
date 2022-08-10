@@ -96,7 +96,7 @@ jobs:
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar DSN_ROOT/ src/release__builder/bin src/release__builder/src/server/test/config.ini src/release__builder/src/rdsn/src/utils/libdsn_utils.so src/release__builder/src/rdsn/src/replica/libdsn_replica_server.so src/release__builder/src/rdsn/src/meta/libdsn_meta_server.so src/release__builder/src/client_lib/libpegasus_client_shared.so --remove-files
+          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini src/builder/src/rdsn/src/utils/libdsn_utils.so src/builder/src/rdsn/src/replica/libdsn_replica_server.so src/builder/src/rdsn/src/meta/libdsn_meta_server.so src/builder/src/client_lib/libpegasus_client_shared.so --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -152,7 +152,6 @@ jobs:
           tar -zxvf release__builder.tar
       - name: Unit Testing
         run: |
-          ln -s -f release__builder src/builder
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
@@ -204,7 +203,7 @@ jobs:
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/release_address_builder/bin src/release_address_builder/src/server/test/config.ini src/release_address_builder/src/rdsn/src/utils/libdsn_utils.so src/release_address_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_address_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_address_builder/src/client_lib/libpegasus_client_shared.so --remove-files
+          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini src/builder/src/rdsn/src/utils/libdsn_utils.so src/builder/src/rdsn/src/replica/libdsn_replica_server.so src/builder/src/rdsn/src/meta/libdsn_meta_server.so src/builder/src/client_lib/libpegasus_client_shared.so --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -260,7 +259,6 @@ jobs:
           tar -zxvf release_address_builder.tar
       - name: Unit Testing
         run: |
-          ln -s -f release_address_builder src/builder
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
@@ -312,7 +310,7 @@ jobs:
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/release_undefined_builder/bin src/release_undefined_builder/src/server/test/config.ini src/release_undefined_builder/src/rdsn/src/utils/libdsn_utils.so src/release_undefined_builder/src/rdsn/src/replica/libdsn_replica_server.so src/release_undefined_builder/src/rdsn/src/meta/libdsn_meta_server.so src/release_undefined_builder/src/client_lib/libpegasus_client_shared.so --remove-files
+          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini src/builder/src/rdsn/src/utils/libdsn_utils.so src/builder/src/rdsn/src/replica/libdsn_replica_server.so src/builder/src/rdsn/src/meta/libdsn_meta_server.so src/builder/src/client_lib/libpegasus_client_shared.so --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -368,7 +366,6 @@ jobs:
           tar -zxvf release_undefined_builder.tar
       - name: Unit Testing
         run: |
-          ln -s -f release_undefined_builder src/builder
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
