@@ -46,6 +46,12 @@ public:
             PROVIDER, LOCAL_DIR, FILE_NAME, _fs.get(), download_size);
     }
 
+    error_code test_write_file()
+    {
+        return _block_service_manager.write_file(
+            PROVIDER, FILE_NAME, blob::create_from_bytes("test_value"), _fs.get());
+    }
+
     void create_local_file(const std::string &file_name)
     {
         std::string whole_name = utils::filesystem::path_combine(LOCAL_DIR, file_name);
@@ -118,6 +124,8 @@ TEST_F(block_service_manager_test, do_download_succeed)
     ASSERT_EQ(test_download_file(download_size), ERR_OK);
     ASSERT_EQ(download_size, _file_meta.size);
 }
+
+TEST_F(block_service_manager_test, write_file_test) { ASSERT_EQ(test_write_file(), ERR_OK); }
 
 } // namespace block_service
 } // namespace dist

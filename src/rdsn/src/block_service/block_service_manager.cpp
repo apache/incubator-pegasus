@@ -184,6 +184,45 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     return ERR_OK;
 }
 
+static write_response
+write_block_file_sync(const blob &value, block_file *bf, task_tracker *tracker)
+{
+    write_response ret;
+    bf->write(write_request{value},
+              TASK_CODE_EXEC_INLINED,
+              [&ret](const write_response &resp) { ret = resp; },
+              tracker);
+    tracker->wait_outstanding_tasks();
+    return ret;
+}
+
+error_code block_service_manager::write_file(const std::string &remote_dir,
+                                             const std::string &file_name,
+                                             const blob &value,
+                                             block_filesystem *fs)
+{
+    task_tracker tracker;
+
+    // Create a block_file object.
+    const auto &remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
+    const auto &create_resp =
+        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
+    const auto &err = create_resp.err;
+    if (err != ERR_OK) {
+        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
+        return err;
+    }
+    block_file_ptr bf = create_resp.file_handle;
+
+    // Write blob
+    const write_response &resp = write_block_file_sync(value, bf.get(), &tracker);
+    if (resp.err != ERR_OK) {
+        return resp.err;
+    }
+    ddebug_f("write remote file({}) succeed", remote_file_name);
+    return ERR_OK;
+}
+
 } // namespace block_service
 } // namespace dist
 } // namespace dsn

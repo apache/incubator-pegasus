@@ -69,6 +69,14 @@ public:
                              block_filesystem *fs,
                              /*out*/ uint64_t &download_file_size);
 
+    // write blob value onto remote file system
+    // \return  ERR_FILE_OPERATION_FAILED: local file system error
+    // \return  ERR_FS_INTERNAL: remote file system error
+    error_code write_file(const std::string &remote_dir,
+                          const std::string &file_name,
+                          const blob &value,
+                          block_filesystem *fs);
+
 private:
     block_service_registry &_registry_holder;
 
