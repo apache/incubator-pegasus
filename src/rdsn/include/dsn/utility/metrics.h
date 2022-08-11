@@ -769,7 +769,8 @@ inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
 std::set<kth_percentile_type> get_all_kth_percentile_types();
 const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
 
-std::set<std::string> kth_percentiles_to_labels(const std::set<kth_percentile_type> &kth_percentiles = kAllKthPercentileTypes);
+std::set<std::string> kth_percentiles_to_labels(
+    const std::set<kth_percentile_type> &kth_percentiles = kAllKthPercentileTypes);
 
 // The percentile is a metric type that samples observations. The size of samples has an upper
 // bound. Once the maximum size is reached, the earliest observations will be overwritten.
