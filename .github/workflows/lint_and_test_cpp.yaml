@@ -93,10 +93,16 @@ jobs:
           ccache -z
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
           ccache -s
+      - name: Pack Server
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.src == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh pack_server
+      - name: Pack Tools
+        if: steps.changes.outputs.base == 'true' || steps.changes.outputs.src == 'true' || steps.changes.outputs.thirdparty == 'true'
+        run: ./run.sh pack_tools
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini src/builder/src/rdsn/src/utils/libdsn_utils.so src/builder/src/rdsn/src/replica/libdsn_replica_server.so src/builder/src/rdsn/src/meta/libdsn_meta_server.so src/builder/src/client_lib/libpegasus_client_shared.so --exclude='*CMakeFiles*'
+          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini  --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -203,7 +209,7 @@ jobs:
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini src/builder/src/rdsn/src/utils/libdsn_utils.so src/builder/src/rdsn/src/replica/libdsn_replica_server.so src/builder/src/rdsn/src/meta/libdsn_meta_server.so src/builder/src/client_lib/libpegasus_client_shared.so --exclude='*CMakeFiles*'
+          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini  --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -310,7 +316,7 @@ jobs:
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini src/builder/src/rdsn/src/utils/libdsn_utils.so src/builder/src/rdsn/src/replica/libdsn_replica_server.so src/builder/src/rdsn/src/meta/libdsn_meta_server.so src/builder/src/client_lib/libpegasus_client_shared.so --exclude='*CMakeFiles*'
+          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini  --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
