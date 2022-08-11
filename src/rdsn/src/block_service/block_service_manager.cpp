@@ -112,6 +112,20 @@ static create_file_response create_block_file_sync(const std::string &remote_fil
     return ret;
 }
 
+error_code block_service_manager::create_block_file(const std::string &remote_file_name,
+                                                    bool ignore_meta,
+                                                    block_filesystem *fs,
+                                                    task_tracker *tracker,
+                                                    /*out*/ create_file_response &create_resp)
+{
+    create_resp = create_block_file_sync(remote_file_name, ignore_meta, fs, tracker);
+    const auto &err = create_resp.err;
+    if (err != ERR_OK) {
+        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
+    }
+    return err;
+}
+
 static download_response
 download_block_file_sync(const std::string &local_file_path, block_file *bf, task_tracker *tracker)
 {
@@ -150,19 +164,19 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     }
 
     task_tracker tracker;
-
     // Create a block_file object.
-    const std::string remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
-    auto create_resp =
-        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
-    error_code err = create_resp.err;
+    create_file_response create_resp;
+    auto err = create_block_file(utils::filesystem::path_combine(remote_dir, file_name),
+                                 false /*ignore file meta*/,
+                                 fs,
+                                 &tracker,
+                                 create_resp);
     if (err != ERR_OK) {
-        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
         return err;
     }
-    block_file_ptr bf = create_resp.file_handle;
 
-    download_response resp = download_block_file_sync(local_file_name, bf.get(), &tracker);
+    download_response resp =
+        download_block_file_sync(local_file_name, create_resp.file_handle.get(), &tracker);
     if (resp.err != ERR_OK) {
         // during bulk load process, ERR_OBJECT_NOT_FOUND will be considered as a recoverable
         // error, however, if file damaged on remote file provider, bulk load should stop,
@@ -202,21 +216,20 @@ error_code block_service_manager::upload_file(const std::string &remote_dir,
                                               block_filesystem *fs)
 {
     task_tracker tracker;
-
     // Create a block_file object.
-    const auto &remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
-    const auto &create_resp =
-        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
-    const auto &err = create_resp.err;
+    create_file_response create_resp;
+    auto err = create_block_file(utils::filesystem::path_combine(remote_dir, file_name),
+                                 false /*ignore file meta*/,
+                                 fs,
+                                 &tracker,
+                                 create_resp);
     if (err != ERR_OK) {
-        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
         return err;
     }
-    block_file_ptr bf = create_resp.file_handle;
-
     // Upload file
     const auto &local_file_name = utils::filesystem::path_combine(local_dir, file_name);
-    const upload_response &resp = upload_block_file_sync(local_file_name, bf.get(), &tracker);
+    const upload_response &resp =
+        upload_block_file_sync(local_file_name, create_resp.file_handle.get(), &tracker);
     if (resp.err != ERR_OK) {
         return resp.err;
     }
@@ -242,20 +255,17 @@ error_code block_service_manager::write_file(const std::string &remote_dir,
                                              block_filesystem *fs)
 {
     task_tracker tracker;
-
     // Create a block_file object.
+    create_file_response create_resp;
     const auto &remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
-    const auto &create_resp =
-        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
-    const auto &err = create_resp.err;
+    auto err =
+        create_block_file(remote_file_name, false /*ignore file meta*/, fs, &tracker, create_resp);
     if (err != ERR_OK) {
-        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
         return err;
     }
-    block_file_ptr bf = create_resp.file_handle;
-
     // Write blob
-    const write_response &resp = write_block_file_sync(value, bf.get(), &tracker);
+    const write_response &resp =
+        write_block_file_sync(value, create_resp.file_handle.get(), &tracker);
     if (resp.err != ERR_OK) {
         return resp.err;
     }
@@ -296,20 +306,17 @@ error_code block_service_manager::read_file(const std::string &remote_dir,
                                             blob &value)
 {
     task_tracker tracker;
-
     // Create a block_file object.
+    create_file_response create_resp;
     const auto &remote_file_name = utils::filesystem::path_combine(remote_dir, file_name);
-    const auto &create_resp =
-        create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
-    const auto &err = create_resp.err;
+    auto err =
+        create_block_file(remote_file_name, false /*ignore file meta*/, fs, &tracker, create_resp);
     if (err != ERR_OK) {
-        derror_f("create file({}) failed with error({})", remote_file_name, err.to_string());
         return err;
     }
-    block_file_ptr bf = create_resp.file_handle;
-
     // Read blob
-    const read_response &resp = read_block_file_sync(bf.get(), 0, -1, &tracker);
+    const read_response &resp = read_block_file_sync(
+        create_resp.file_handle.get(), 0 /*remote_pos*/, -1 /*remote_length*/, &tracker);
     if (resp.err != ERR_OK) {
         return resp.err;
     }

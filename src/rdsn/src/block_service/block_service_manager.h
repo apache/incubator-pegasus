@@ -45,6 +45,14 @@ public:
     ~block_service_manager();
     block_filesystem *get_or_create_block_filesystem(const std::string &provider);
 
+    // create block file
+    // \return  ERR_FS_INTERNAL: remote file system error
+    error_code create_block_file(const std::string &remote_file_name,
+                                 bool ignore_meta,
+                                 block_filesystem *fs,
+                                 task_tracker *tracker,
+                                 /*out*/ create_file_response &resp);
+
     // download files from remote file system
     // \return  ERR_FILE_OPERATION_FAILED: local file system error
     // \return  ERR_FS_INTERNAL: remote file system error
