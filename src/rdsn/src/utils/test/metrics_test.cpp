@@ -1043,7 +1043,7 @@ void generate_snapshots(MetricType *my_metric,
                               my_metric->prototype()->type(),
                               static_cast<metric_snapshot::value_type>(increase),
                               metric_snapshot::attr_map(entity_attrs),
-                              static_cast<metric_snapshot::value_type>(increase));
+                              static_cast<metric_snapshot::value_type>(0));
     expected_snapshots[my_metric->prototype()->name()][snapshot.encode_attributes()] =
         std::move(snapshot);
 }
@@ -1175,7 +1175,7 @@ TEST_F(metrics_test, metric_data_sink)
                            expected_metrics);
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_collect_metrics_interval_ms * 2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_collect_metrics_interval_ms * 4));
 
     check_snapshots(expected_metrics, expected_counters);
 }

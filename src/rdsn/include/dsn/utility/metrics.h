@@ -679,7 +679,7 @@ protected:
         : metric(prototype),
           _adder(),
           _take_snapshot_for_volatile(take_snapshot_for_volatile),
-          _snapshot(metric_snapshot::value_type())
+          _snapshot(0)
     {
     }
 
@@ -695,12 +695,20 @@ protected:
         auto old_value = _snapshot.load(std::memory_order_relaxed);
         auto new_value = value();
         for (auto &sink : sinks) {
-            sink->iterate(
-                counter_snapshot(prototype()->name(),
-                                 prototype()->type(),
-                                 static_cast<metric_snapshot::value_type>(new_value),
-                                 metric_snapshot::attr_map(attrs),
-                                 static_cast<metric_snapshot::value_type>(new_value - old_value)));
+            if (prototype()->type() == metric_type::kCounter) {
+                dcheck_ge(new_value, old_value);
+                int64_t increase = new_value - old_value;
+                sink->iterate(counter_snapshot(prototype()->name(),
+                                               prototype()->type(),
+                                               static_cast<metric_snapshot::value_type>(new_value),
+                                               metric_snapshot::attr_map(attrs),
+                                               static_cast<metric_snapshot::value_type>(increase)));
+            } else { // kVolatileCounter
+                sink->iterate(metric_snapshot(prototype()->name(),
+                                              prototype()->type(),
+                                              static_cast<metric_snapshot::value_type>(new_value),
+                                              metric_snapshot::attr_map(attrs)));
+            }
         }
 
         _snapshot.store(new_value, std::memory_order_relaxed);
@@ -713,7 +721,7 @@ private:
     long_adder_wrapper<Adder> _adder;
 
     bool _take_snapshot_for_volatile;
-    std::atomic<metric_snapshot::value_type> _snapshot;
+    std::atomic<int64_t> _snapshot;
 
     DISALLOW_COPY_AND_ASSIGN(counter);
 };

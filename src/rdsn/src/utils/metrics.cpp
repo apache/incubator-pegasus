@@ -300,7 +300,7 @@ bool metric_snapshot::operator==(const metric_snapshot &rhs) const
         return false;
     }
 
-    floating_comparator<double> comp;
+    floating_comparator<value_type> comp;
     if (comp(_value, rhs._value) || comp(rhs._value, _value)) {
         return false;
     }
@@ -325,7 +325,7 @@ bool counter_snapshot::operator==(const counter_snapshot &rhs) const
         return false;
     }
 
-    floating_comparator<double> comp;
+    floating_comparator<value_type> comp;
     return !(comp(_increase, rhs._increase) || comp(rhs._increase, _increase));
 }
 
