@@ -303,7 +303,7 @@ TEST_F(metrics_test, recreate_entity)
     {
         metric_entity::attr_map entity_attrs;
     } tests[] = {
-        {{{"name", "test"}}}, {{{"name", "test"}, {"id", "2"}}}, {{{"name", "test"}}}, {{{}}}};
+        {{{"name", "test"}}}, {{{"name", "test"}, {"id", "2"}}}, {{{"name", "test"}}}, {{}}};
 
     const std::string entity_id("test");
     auto expected_entity = METRIC_ENTITY_my_table.instantiate(entity_id);
@@ -736,7 +736,8 @@ void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototyp
     for (const auto &test : tests) {
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
 
-        auto my_metric = prototype->instantiate(my_server_entity);
+        auto my_metric =
+            prototype->instantiate(my_server_entity, false /* take_snapshot_for_volatile */);
 
         run_volatile_counter_write_and_read(
             my_metric, test.num_operations, num_threads_write, num_threads_read);

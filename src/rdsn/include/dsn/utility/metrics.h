@@ -675,8 +675,11 @@ public:
     void reset() { _adder.reset(); }
 
 protected:
-    counter(const metric_prototype *prototype)
-        : metric(prototype), _adder(), _snapshot(metric_snapshot::value_type())
+    counter(const metric_prototype *prototype, bool take_snapshot_for_volatile = true)
+        : metric(prototype),
+          _adder(),
+          _take_snapshot_for_volatile(take_snapshot_for_volatile),
+          _snapshot(metric_snapshot::value_type())
     {
     }
 
@@ -685,6 +688,10 @@ protected:
     virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) override
     {
+        if (prototype()->type() == metric_type::kVolatileCounter && !_take_snapshot_for_volatile) {
+            return;
+        }
+
         auto old_value = _snapshot.load(std::memory_order_relaxed);
         auto new_value = value();
         for (auto &sink : sinks) {
@@ -704,6 +711,8 @@ private:
     friend class ref_ptr<counter<Adder, IsVolatile>>;
 
     long_adder_wrapper<Adder> _adder;
+
+    bool _take_snapshot_for_volatile;
     std::atomic<metric_snapshot::value_type> _snapshot;
 
     DISALLOW_COPY_AND_ASSIGN(counter);
