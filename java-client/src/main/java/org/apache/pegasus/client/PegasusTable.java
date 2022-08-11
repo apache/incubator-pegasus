@@ -51,7 +51,7 @@ public class PegasusTable implements PegasusTableInterface {
   private WriteLimiter writeLimiter;
   private String metaList;
 
-  public static final byte[] defaultByte = "".getBytes();
+  public static final byte[] EMPTY_BYTES = "".getBytes();
 
   public PegasusTable(PegasusClient client, Table table) {
     this.table = table;
@@ -263,7 +263,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, defaultByte, sortKeyBlobs.size(), -1),
+                  new Request(hashKey, EMPTY_BYTES, sortKeyBlobs.size(), -1),
                   promise,
                   op,
                   table,
@@ -359,7 +359,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, defaultByte, maxFetchCount, -1),
+                  new Request(hashKey, EMPTY_BYTES, maxFetchCount, -1),
                   promise,
                   op,
                   table,
@@ -539,7 +539,7 @@ public class PegasusTable implements PegasusTableInterface {
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(
-                      hashKey, defaultByte, values_blob.size(), Request.getValueLength(values)),
+                      hashKey, EMPTY_BYTES, values_blob.size(), Request.getValueLength(values)),
                   promise,
                   op,
                   table,
@@ -630,7 +630,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_multi_remove_operator op2 = (rrdb_multi_remove_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, defaultByte, sortKeyBlobs.size(), -1),
+                  new Request(hashKey, EMPTY_BYTES, sortKeyBlobs.size(), -1),
                   promise,
                   op,
                   table,
@@ -1215,7 +1215,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, defaultByte, maxFetchCount, -1),
+          new Request(hashKey, EMPTY_BYTES, maxFetchCount, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1236,7 +1236,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, defaultByte, count, -1),
+          new Request(hashKey, EMPTY_BYTES, count, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1265,7 +1265,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, defaultByte, maxFetchCount, -1),
+          new Request(hashKey, EMPTY_BYTES, maxFetchCount, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1484,7 +1484,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, defaultByte, count, Request.getValueLength(values)),
+          new Request(hashKey, EMPTY_BYTES, count, Request.getValueLength(values)),
           timeout,
           e);
 
@@ -1506,7 +1506,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, defaultByte, count, Request.getValueLength(values)),
+          new Request(hashKey, EMPTY_BYTES, count, Request.getValueLength(values)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1651,7 +1651,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, defaultByte, count, -1),
+          new Request(hashKey, EMPTY_BYTES, count, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -2179,8 +2179,8 @@ public class PegasusTable implements PegasusTableInterface {
   }
 
   static class Request {
-    byte[] hashKey = defaultByte;
-    byte[] sortKey = defaultByte;
+    byte[] hashKey = EMPTY_BYTES;
+    byte[] sortKey = EMPTY_BYTES;
     int sortKeyCount = 1;
 
     int valueLength = -1;
@@ -2191,12 +2191,12 @@ public class PegasusTable implements PegasusTableInterface {
 
     Request(byte[] hashKey, byte[] sortKey) {
       this.hashKey = hashKey;
-      this.sortKey = sortKey == null ? defaultByte : sortKey;
+      this.sortKey = sortKey == null ? EMPTY_BYTES : sortKey;
     }
 
     Request(byte[] hashKey, byte[] sortKey, int sortKeyCount, int valueLength) {
       this.hashKey = hashKey;
-      this.sortKey = sortKey == null ? defaultByte : sortKey;
+      this.sortKey = sortKey == null ? EMPTY_BYTES : sortKey;
       this.sortKeyCount = sortKeyCount;
       this.valueLength = valueLength;
     }
@@ -2212,7 +2212,7 @@ public class PegasusTable implements PegasusTableInterface {
       }
       int valuesLength = 0;
       for (Pair<byte[], byte[]> pair : values) {
-        byte[] multiValue = pair.getRight() == null ? defaultByte : pair.getRight();
+        byte[] multiValue = pair.getRight() == null ? EMPTY_BYTES : pair.getRight();
         valuesLength += multiValue.length;
       }
       return valuesLength;
@@ -2224,7 +2224,7 @@ public class PegasusTable implements PegasusTableInterface {
       }
       int valuesLength = 0;
       for (mutate mu : mutations.getMutations()) {
-        byte[] MutateValue = mu.value == null ? defaultByte : mu.value.data;
+        byte[] MutateValue = mu.value == null ? EMPTY_BYTES : mu.value.data;
         valuesLength += MutateValue.length;
       }
       return valuesLength;

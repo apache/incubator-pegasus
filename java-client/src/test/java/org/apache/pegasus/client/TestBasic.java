@@ -20,6 +20,8 @@ package org.apache.pegasus.client;
 
 /** @author qinzuoyan */
 import io.netty.util.concurrent.Future;
+
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -2781,10 +2783,15 @@ public class TestBasic {
     }
   }
 
-  @Test // To create a timeout condition,need to change configuration/pegasus.properties timeout
-  // parameter to 1 in this case
+  @Test
   public void testRequestDetail() throws PException {
-    PegasusClientInterface client = PegasusClientFactory.getSingletonClient();
+    Duration caseTimeout = Duration.ofMillis(1);
+    ClientOptions client_opt = ClientOptions.builder()
+            .operationTimeout(caseTimeout)
+            .build();
+
+    PegasusClientFactory.createClient(client_opt);
+    PegasusClientInterface client = PegasusClientFactory.createClient(client_opt);
     String tableName = "temp";
     PegasusTableInterface tb = client.openTable(tableName);
 
