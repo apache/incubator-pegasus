@@ -87,6 +87,7 @@ header:
     - 'src/rdsn/src/nfs/test/nfs_test_file2'
     - 'src/rdsn/src/runtime/test/gtest.filter'
     - 'thirdparty/fix_fds_for_macos.patch'
+    - 'thirdparty/fix_jemalloc_for_m1_on_macos.patch'
     - 'thirdparty/fix_libevent_for_macos.patch'
     - 'thirdparty/fix_s2_for_aarch64.patch'
     - 'thirdparty/fix_thrift_for_cpp11.patch'
