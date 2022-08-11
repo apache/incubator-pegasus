@@ -22,8 +22,6 @@ set -e
 #    INSTALL_DIR    <dir>
 #    PORT           <port>
 
-PROJECT_DIR=$(realpath $(dirname $(dirname $(dirname "${BASH_SOURCE[0]}"))))
-
 if [ -z "$INSTALL_DIR" ]
 then
     echo "ERROR: no INSTALL_DIR specified"
