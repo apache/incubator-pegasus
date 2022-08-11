@@ -151,8 +151,8 @@ error_code meta_backup_engine::backup_app_meta()
 
     std::string backup_root =
         dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
-    std::string file_name = cold_backup::get_app_metadata_file(
-        backup_root, _cur_backup.app_name, _cur_backup.app_id, _cur_backup.backup_id);
+    // TODO(heyuchen): refactor and update it in future
+    std::string file_name = "todo";
     return write_backup_file(file_name, app_info_buffer);
 }
 
@@ -301,7 +301,8 @@ void meta_backup_engine::write_backup_info()
 {
     std::string backup_root =
         dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
-    std::string file_name = cold_backup::get_backup_info_file(backup_root, _cur_backup.backup_id);
+    // TODO(heyuchen): refactor and update it in future
+    std::string file_name = "todo";
     blob buf = dsn::json::json_forwarder<backup_item>::encode(_cur_backup);
     error_code err = write_backup_file(file_name, buf);
     if (err == ERR_FS_INTERNAL) {

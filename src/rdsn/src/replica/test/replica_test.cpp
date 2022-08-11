@@ -21,7 +21,7 @@
 #include <dsn/utility/filesystem.h>
 #include "runtime/rpc/network.sim.h"
 
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 #include "replica_test_base.h"
 #include "replica/replica.h"
 #include "replica/replica_http_service.h"

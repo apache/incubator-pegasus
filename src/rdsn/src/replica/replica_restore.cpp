@@ -30,7 +30,7 @@
 #include "mutation_log.h"
 #include "replica_stub.h"
 #include "block_service/block_service_manager.h"
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 
 using namespace dsn::dist::block_service;
 
@@ -250,8 +250,8 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
     }
     int64_t backup_id = req.time_stamp;
 
-    std::string manifest_file =
-        cold_backup::get_current_chkpt_file(backup_root, req.app_name, old_gpid, backup_id);
+    // TODO(heyuchen): refactor and update it in future
+    std::string manifest_file = "todo";
     block_filesystem *fs =
         _stub->_block_service_manager.get_or_create_block_filesystem(req.backup_provider_name);
     if (fs == nullptr) {
@@ -295,9 +295,8 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
 
     std::string valid_chkpt_entry(r.buffer.data(), r.buffer.length());
     ddebug_f("{}: got a valid chkpt {}", name(), valid_chkpt_entry);
-    remote_chkpt_dir = ::dsn::utils::filesystem::path_combine(
-        cold_backup::get_replica_backup_path(backup_root, req.app_name, old_gpid, backup_id),
-        valid_chkpt_entry);
+    // TODO(heyuchen): refactor and update it in future
+    remote_chkpt_dir = ::dsn::utils::filesystem::path_combine("todo", valid_chkpt_entry);
     return dsn::ERR_OK;
 }
 
