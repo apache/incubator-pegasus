@@ -42,14 +42,14 @@ then
     exit 1
 fi
 
-cd "$INSTALL_DIR" || exit
-
-ZOOKEEPER_PKG=${PROJECT_DIR}/thirdparty/build/Download/zookeeper/zookeeper-3.4.10.tar.gz
+ZOOKEEPER_PKG=`pwd`/thirdparty/build/Download/zookeeper/zookeeper-3.4.10.tar.gz
 if [ ! -f ${ZOOKEEPER_PKG} ]; then
     echo "no such file \"${ZOOKEEPER_PKG}\""
     echo "please install third-parties first"
     exit 1
 fi
+
+cd "$INSTALL_DIR" || exit
 
 if [ ! -d zookeeper-3.4.10 ]; then
     echo "Decompressing zookeeper..."
