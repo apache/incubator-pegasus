@@ -170,7 +170,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         // valid data got
         std::string hash_key, sort_key, value;
         uint32_t expire_ts_seconds = 0;
-        // _kv_count == -1 means req just want to get data counts, not include data value
+        // _kv_count > -1 means req just want to get data counts, not include data value
         if (_kv_count == -1) {
             pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
             value = std::string(_kvs[_p].value.data(), _kvs[_p].value.length());
