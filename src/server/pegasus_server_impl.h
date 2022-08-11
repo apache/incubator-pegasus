@@ -313,7 +313,7 @@ private:
     bool set_usage_scenario(const std::string &usage_scenario);
 
     // recalculate option value if necessary
-    void recalculate_usage_scenario(const rocksdb::ColumnFamilyOptions &cur_opts);
+    void recalculate_data_cf_options(const rocksdb::ColumnFamilyOptions &cur_data_cf_opts);
 
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);
@@ -431,6 +431,9 @@ private:
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
     std::string _user_specified_compaction;
+    // Whether it is necessary to update the current data_cf, it is required when opening the db,
+    // but not later
+    bool _is_need_update_data_cf_opts;
 
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_data_cf;
