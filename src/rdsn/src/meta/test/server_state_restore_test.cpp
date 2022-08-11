@@ -23,6 +23,7 @@
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
 #include "meta_test_base.h"
+#include "meta/meta_backup_service.h"
 
 namespace dsn {
 namespace replication {

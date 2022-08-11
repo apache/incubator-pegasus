@@ -350,6 +350,8 @@ ENUM_TYPE_SERIALIZATION(dsn::replication::partition_status::type,
 ENUM_TYPE_SERIALIZATION(dsn::app_status::type, dsn::app_status::AS_INVALID)
 ENUM_TYPE_SERIALIZATION(dsn::replication::bulk_load_status::type,
                         dsn::replication::bulk_load_status::BLS_INVALID)
+ENUM_TYPE_SERIALIZATION(dsn::replication::backup_status::type,
+                        dsn::replication::backup_status::UNINITIALIZED)
 
 // json serialization for gpid, we treat it as string: "app_id.partition_id"
 inline void json_encode(JsonWriter &out, const dsn::gpid &pid)
@@ -386,6 +388,8 @@ inline void json_encode(JsonWriter &out, const dsn::replication::file_meta &f_me
 inline bool json_decode(const JsonObject &in, dsn::replication::file_meta &f_meta);
 inline void json_encode(JsonWriter &out, const dsn::replication::bulk_load_metadata &metadata);
 inline bool json_decode(const JsonObject &in, dsn::replication::bulk_load_metadata &metadata);
+inline void json_encode(JsonWriter &out, const dsn::replication::backup_item &backup_item);
+inline bool json_decode(const JsonObject &in, dsn::replication::backup_item &backup_item);
 
 template <typename T>
 inline void json_encode_iterable(JsonWriter &out, const T &t)
@@ -655,5 +659,15 @@ NON_MEMBER_JSON_SERIALIZATION(dsn::app_info,
 NON_MEMBER_JSON_SERIALIZATION(dsn::replication::file_meta, name, size, md5)
 
 NON_MEMBER_JSON_SERIALIZATION(dsn::replication::bulk_load_metadata, files, file_total_size)
+
+NON_MEMBER_JSON_SERIALIZATION(dsn::replication::backup_item,
+                              backup_id,
+                              app_id,
+                              app_name,
+                              backup_provider_type,
+                              backup_path,
+                              start_time_ms,
+                              end_time_ms,
+                              status)
 } // namespace json
 } // namespace dsn
