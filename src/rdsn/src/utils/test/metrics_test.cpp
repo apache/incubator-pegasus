@@ -1124,6 +1124,9 @@ TEST_F(metrics_test, metric_data_sink)
 
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id, attrs);
 
+        // Attribute "entity" is reserved by entity.
+        attrs["entity"] = METRIC_ENTITY_my_server.name();
+
         auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_server_entity);
         generate_snapshots(my_gauge_int64.get(), test.gauge_int64_value, attrs, expected_metrics);
 
