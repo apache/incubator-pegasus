@@ -53,6 +53,10 @@ public class PegasusTable implements PegasusTableInterface {
 
   public static final byte[] EMPTY_BYTES = "".getBytes();
 
+  private int getLength(byte[] value){
+    return value == null ? 0 : value.length;
+  }
+
   public PegasusTable(PegasusClient client, Table table) {
     this.table = table;
     this.defaultTimeout = table.getDefaultTimeout();
@@ -761,7 +765,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, setSortKey, 1, setValue == null ? 0 : setValue.length),
+                  new Request(hashKey, setSortKey, 1, getLength(setValue)),
                   promise,
                   op,
                   table,
@@ -1399,7 +1403,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, value == null ? 0 : value.length),
+          new Request(hashKey, sortKey, 1, getLength(value)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1418,7 +1422,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, value == null ? 0 : value.length),
+          new Request(hashKey, sortKey, 1, getLength(value)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1919,7 +1923,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, desiredValue == null ? 0 : desiredValue.length),
+          new Request(hashKey, sortKey, 1, getLength(desiredValue)),
           timeout,
           e);
     } catch (ExecutionException e) {
