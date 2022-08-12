@@ -44,6 +44,9 @@ message(STATUS "THIRDPARTY_INSTALL_DIR = ${THIRDPARTY_INSTALL_DIR}")
 set(DSN_ROOT ${PROJECT_ROOT}/DSN_ROOT)
 message(STATUS "DSN_ROOT = ${DSN_ROOT}")
 
+set(BUILD_DIR ${PROJECT_ROOT}/src/builder)
+message(STATUS "BUILD_DIR = ${BUILD_DIR}")
+
 option(BUILD_TEST "build unit test" ON)
 message(STATUS "BUILD_TEST = ${BUILD_TEST}")
 
@@ -66,14 +69,4 @@ if(USE_JEMALLOC)
     set(JEMALLOC_LIB_TYPE "SHARED")
 endif()
 
-option(BUILD_RDSN "Whether to build rdsn project" ON)
-option(BUILD_PEGASUS "Whether to build Pegasus project" ON)
-
-# TODO(yingchun): we will refactor the followng code later
-if(BUILD_RDSN)
-    add_subdirectory(src/rdsn)
-endif()
-
-if(BUILD_PEGASUS)
-    add_subdirectory(src)
-endif()
+add_subdirectory(src)

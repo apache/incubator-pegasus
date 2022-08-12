@@ -48,19 +48,20 @@ TEST(batch_get, set_and_then_batch_get)
     uint64_t test_partition_hash = 0;
 
     apps::batch_get_request batch_request;
-    std::vector<std::pair<std::string, std::string>> key_pair_list;
-    std::vector<std::string> value_list;
 
+    std::vector<std::string> test_data_hash_keys(test_data_count);
+    std::vector<std::string> test_data_sort_keys(test_data_count);
+    std::vector<std::string> test_data_values(test_data_count);
     for (int i = 0; i < test_data_count; ++i) {
-        std::string hash_key = "hash_key_prefix_" + std::to_string(i);
-        std::string sort_key = "sort_key_prefix_" + std::to_string(i);
-        std::string value = "value_" + std::to_string(i);
+        test_data_hash_keys[i] = "hash_key_prefix_" + std::to_string(i);
+        test_data_sort_keys[i] = "sort_key_prefix_" + std::to_string(i);
+        test_data_values[i] = "value_" + std::to_string(i);
 
         apps::update_request one_request;
         one_request.__isset.key = true;
-        pegasus_generate_key(one_request.key, hash_key, sort_key);
+        pegasus_generate_key(one_request.key, test_data_hash_keys[i], test_data_sort_keys[i]);
         one_request.__isset.value = true;
-        one_request.value.assign(value.c_str(), 0, value.size());
+        one_request.value.assign(test_data_values[i].c_str(), 0, test_data_values[i].size());
         auto put_result = rrdb_client->put_sync(
             one_request, std::chrono::milliseconds(test_timeout_milliseconds), test_partition_hash);
         ASSERT_EQ(ERR_OK, put_result.first);
@@ -68,25 +69,29 @@ TEST(batch_get, set_and_then_batch_get)
 
         apps::full_key one_full_key;
         one_full_key.__isset.hash_key = true;
-        one_full_key.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
+        one_full_key.hash_key.assign(
+            test_data_hash_keys[i].c_str(), 0, test_data_hash_keys[i].size());
         one_full_key.__isset.sort_key = true;
-        one_full_key.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
+        one_full_key.sort_key.assign(
+            test_data_sort_keys[i].c_str(), 0, test_data_sort_keys[i].size());
         batch_request.keys.emplace_back(std::move(one_full_key));
-
-        key_pair_list.emplace_back(std::move(hash_key), std::move(sort_key));
-        value_list.push_back(std::move(value));
     }
 
     int test_no_exist_data_count = 6;
+    std::vector<std::string> no_exist_data_hash_keys(test_no_exist_data_count);
+    std::vector<std::string> no_exist_data_sort_keys(test_no_exist_data_count);
+    std::vector<std::string> no_exist_data_values(test_no_exist_data_count);
     for (int i = 0; i < test_no_exist_data_count; ++i) {
-        std::string hash_key = "hash_key_prefix_no_exist_" + std::to_string(i);
-        std::string sort_key = "sort_key_prefix_no_exist_" + std::to_string(i);
+        no_exist_data_hash_keys[i] = "hash_key_prefix_no_exist_" + std::to_string(i);
+        no_exist_data_sort_keys[i] = "sort_key_prefix_no_exist_" + std::to_string(i);
 
         apps::full_key one_full_key;
         one_full_key.__isset.hash_key = true;
-        one_full_key.hash_key.assign(hash_key.c_str(), 0, hash_key.size());
+        one_full_key.hash_key.assign(
+            no_exist_data_hash_keys[i].c_str(), 0, no_exist_data_hash_keys[i].size());
         one_full_key.__isset.sort_key = true;
-        one_full_key.sort_key.assign(sort_key.c_str(), 0, sort_key.size());
+        one_full_key.sort_key.assign(
+            no_exist_data_sort_keys[i].c_str(), 0, no_exist_data_sort_keys[i].size());
         batch_request.keys.emplace_back(std::move(one_full_key));
     }
 
@@ -97,8 +102,8 @@ TEST(batch_get, set_and_then_batch_get)
     ASSERT_EQ(rocksdb::Status::kOk, response.error);
     ASSERT_EQ(test_data_count, response.data.size());
     for (int i = 0; i < test_data_count; ++i) {
-        ASSERT_EQ(response.data[i].hash_key.to_string(), key_pair_list[i].first);
-        ASSERT_EQ(response.data[i].sort_key.to_string(), key_pair_list[i].second);
-        ASSERT_EQ(response.data[i].value.to_string(), value_list[i]);
+        ASSERT_EQ(response.data[i].hash_key.to_string(), test_data_hash_keys[i]);
+        ASSERT_EQ(response.data[i].sort_key.to_string(), test_data_sort_keys[i]);
+        ASSERT_EQ(response.data[i].value.to_string(), test_data_values[i]);
     }
 }

@@ -79,7 +79,7 @@ struct v1_specific_vars
     std::unique_ptr<thrift_request_meta_v1> _meta_v1;
 };
 
-#define THRIFT_HDR_SIG (*(uint32_t *)"THFT")
+static const uint32_t THRIFT_HDR_SIG = 0x54464854; //"THFT"
 
 DEFINE_CUSTOMIZED_ID(network_header_format, NET_HDR_THRIFT)
 

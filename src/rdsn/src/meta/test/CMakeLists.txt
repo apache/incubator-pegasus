@@ -23,6 +23,7 @@ set(MY_PROJ_LIBS
         dsn.failure_detector
         dsn_dist_cmd
         dsn_http
+        dsn_meta_server
         dsn_runtime
         dsn_aio
         zookeeper_mt
@@ -40,7 +41,6 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 # Extra files that will be installed
 set(MY_BINPLACES clear.sh run.sh config-test.ini suite1 suite2)
 
-add_definitions(-DDSN_MOCK_TEST)
 dsn_add_test()
 
 add_subdirectory(balancer_simulator)
