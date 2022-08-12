@@ -194,6 +194,8 @@ metric_registry::entity_map metric_registry::entities() const
 
 namespace {
 
+// Since attributes may be encoded in some special characters, it's necessary to check if
+// key or value has included these reserved characters.
 void check_attribute_valid(const std::string &key, const std::string &value)
 {
     dassert_f(!key.empty(), "attribute key should not be empty()");
