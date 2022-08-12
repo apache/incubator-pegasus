@@ -860,7 +860,7 @@ void meta_http_service::update_app_env(const std::string &app_name,
     rpc_req->op = app_env_operation::APP_ENV_OP_SET;
     rpc_req->__set_keys(keys);
     rpc_req->__set_values(values);
-    app_env_rpc rpc(std::move(rpc_req), LPC_META_STATE_NORMAL);
+    app_env_rpc rpc(std::move(rpc_req), LPC_DEFAULT_CALLBACK);
     _service->_state->set_app_envs(rpc);
 
     auto rpc_resp = rpc.response();
