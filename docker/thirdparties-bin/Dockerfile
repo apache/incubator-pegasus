@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-ARG OS_VERSION=centos7
 ARG GITHUB_BRANCH=master
 FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
 
@@ -26,6 +25,7 @@ WORKDIR /root
 
 COPY --from=builder /root/thirdparties-src.zip /root/thirdparties-src.zip
 
+ARG GITHUB_BRANCH=master
 ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
 RUN git clone --depth=1 --branch=${GITHUB_BRANCH} ${GITHUB_REPOSITORY_URL} \
     && cd incubator-pegasus/thirdparty \
