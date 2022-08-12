@@ -719,6 +719,12 @@ void meta_http_service::start_compaction_handler(const http_request &req, http_r
         return;
     }
 
+    if (_service->_state == nullptr) {
+        resp.body = "service is not enabled";
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
+
     // validate parameters
     manual_compaction_info info;
     bool ret = json::json_forwarder<manual_compaction_info>::decode(req.body, info);
@@ -788,6 +794,12 @@ void meta_http_service::update_scenario_handler(const http_request &req, http_re
         return;
     }
 
+    if (_service->_state == nullptr) {
+        resp.body = "service is not enabled";
+        resp.status_code = http_status_code::not_found;
+        return;
+    }
+
     // validate paramters
     usage_scenario_info info;
     bool ret = json::json_forwarder<usage_scenario_info>::decode(req.body, info);
@@ -843,14 +855,12 @@ void meta_http_service::update_app_env(const std::string &app_name,
                                        const std::vector<std::string> &values,
                                        http_response &resp)
 {
-    configuration_update_app_env_request request;
-    request.app_name = app_name;
-    request.op = app_env_operation::APP_ENV_OP_SET;
-    request.__set_keys(keys);
-    request.__set_values(values);
-
-    auto rpc_req = dsn::make_unique<configuration_update_app_env_request>(request);
-    update_app_env_rpc rpc(std::move(rpc_req), LPC_META_STATE_NORMAL);
+    auto rpc_req = dsn::make_unique<configuration_update_app_env_request>();
+    rpc_req->app_name = app_name;
+    rpc_req->op = app_env_operation::APP_ENV_OP_SET;
+    rpc_req->__set_keys(keys);
+    rpc_req->__set_values(values);
+    app_env_rpc rpc(std::move(rpc_req), LPC_META_STATE_NORMAL);
     _service->_state->set_app_envs(rpc);
 
     auto rpc_resp = rpc.response();
