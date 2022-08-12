@@ -10,8 +10,7 @@ set(MY_PROJ_LIBS dsn_meta_server
         dsn_replication_common
         dsn.failure_detector
         dsn_utils
-        zookeeper
-        hashtable
+        zookeeper_mt
         gtest
 )
 

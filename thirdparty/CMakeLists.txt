@@ -200,16 +200,12 @@ else ()
 endif ()
 
 ExternalProject_Add(zookeeper
-        URL ${OSS_URL_PREFIX}/apache-zookeeper-3.7.0.tar.gz
-        http://downloads.apache.org/zookeeper/zookeeper-3.7.0/apache-zookeeper-3.7.0.tar.gz
-        URL_MD5 44c2a33e01931aed94ef7f3d39d0963e
-        PATCH_COMMAND ""
-        COMMAND cd zookeeper-jute && mvn compile && cd ../zookeeper-client/zookeeper-client-c && cmake -DCMAKE_BUILD_TYPE=release -DWANT_CPPUNIT=OFF -DWITH_OPENSSL=OFF -DWITH_CYRUS_SASL=${ZOOKEEPER_WITH_CYRUS_SASL} -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
-        COMMAND cd zookeeper-client/zookeeper-client-c && make
-        COMMAND cp -R zookeeper-client/zookeeper-client-c/include/. ${TP_OUTPUT}/include/zookeeper && cp zookeeper-client/zookeeper-client-c/generated/zookeeper.jute.h ${TP_OUTPUT}/include/zookeeper && cp zookeeper-client/zookeeper-client-c/libzookeeper.a ${TP_OUTPUT}/lib && cp zookeeper-client/zookeeper-client-c/libhashtable.a ${TP_OUTPUT}/lib
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND ""
+        URL ${OSS_URL_PREFIX}/zookeeper-3.4.10.tar.gz
+        http://ftp.jaist.ac.jp/pub/apache/zookeeper/zookeeper-3.4.10/zookeeper-3.4.10.tar.gz
+        URL_MD5 e4cf1b1593ca870bf1c7a75188f09678
+        CONFIGURE_COMMAND cd src/c && CFLAGS=${ZOOKEEPER_CFLAGS} ./configure --enable-static=yes --enable-shared=no --prefix=${TP_OUTPUT} --with-pic=yes
+        BUILD_COMMAND cd src/c && make
+        INSTALL_COMMAND cd src/c && make install
         BUILD_IN_SOURCE 1
         )
 if (NOT APPLE)

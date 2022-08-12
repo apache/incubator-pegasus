@@ -8,7 +8,6 @@ set(MY_PROJ_LIBS dsn_meta_server
         dsn_replica_server
         dsn_replication_common
         dsn_runtime
-        hashtable
         gtest
 )
 
