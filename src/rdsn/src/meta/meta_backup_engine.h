@@ -20,7 +20,7 @@
 #include <dsn/cpp/json_helper.h>
 #include <dsn/tool-api/zlocks.h>
 
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 #include "meta_service.h"
 #include "server_state.h"
 #include "meta_backup_service.h"

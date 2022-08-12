@@ -21,7 +21,7 @@
 #include <dsn/utility/filesystem.h>
 
 #include "block_service/block_service_manager.h"
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 #include "meta_service.h"
 #include "server_state.h"
 
@@ -54,8 +54,8 @@ void server_state::sync_app_from_backup_media(
     if (!request.policy_name.empty()) {
         backup_root = dsn::utils::filesystem::path_combine(backup_root, request.policy_name);
     }
-    std::string app_metadata = cold_backup::get_app_metadata_file(
-        backup_root, request.app_name, request.app_id, request.time_stamp);
+    // TODO(heyuchen): refactor and update it in future
+    std::string app_metadata = "todo";
 
     error_code err = ERR_OK;
     block_file_ptr file_handle = nullptr;

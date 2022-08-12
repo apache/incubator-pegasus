@@ -22,7 +22,7 @@
 #include <dsn/utils/time_utils.h>
 
 #include "block_service/block_service_manager.h"
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 #include "meta_backup_service.h"
 #include "meta_service.h"
 #include "server_state.h"

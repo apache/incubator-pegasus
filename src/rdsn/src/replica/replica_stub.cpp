@@ -42,7 +42,7 @@
 #include "split/replica_split_manager.h"
 #include "replica_disk_migrator.h"
 #include "disk_cleaner.h"
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <dsn/cpp/json_helper.h>

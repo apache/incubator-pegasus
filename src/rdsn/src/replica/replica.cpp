@@ -35,7 +35,7 @@
 #include "split/replica_split_manager.h"
 #include "replica_disk_migrator.h"
 #include "runtime/security/access_controller.h"
-#include "common/backup_common.h"
+#include "common/backup_restore_common.h"
 
 #include <dsn/utils/latency_tracer.h>
 #include <dsn/cpp/json_helper.h>
