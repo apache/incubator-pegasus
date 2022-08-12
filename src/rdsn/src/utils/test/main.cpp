@@ -37,6 +37,9 @@ GTEST_API_ int main(int argc, char **argv)
     dsn_log_init("dsn::tools::simple_logger", "./", nullptr);
 
     dsn::flags_initialize();
+
+    // Set a small value to help unit tests that need to collect snapshots periodically from
+    // metrics finish faster.
     dsn::FLAGS_collect_metrics_interval_ms = 50;
 
     return RUN_ALL_TESTS();

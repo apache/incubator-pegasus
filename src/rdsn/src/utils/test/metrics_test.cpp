@@ -124,7 +124,10 @@ private:
     }
 
     mutable std::mutex _mtx;
+
+    // _target_attr_key is used to mark that the snapshot from a metric should be taken for test.
     const std::string _target_attr_key;
+
     metric_map _actual_metrics;
     counter_map _actual_counters;
 
@@ -1039,6 +1042,8 @@ void generate_snapshots(MetricType *my_metric,
 {
     my_metric->increment_by(increase);
 
+    // `increase` will be 0 for the second time the snapshot is taken, since the metric
+    // is just incremented for one time. Thus expected `increase` should be set to 0.
     counter_snapshot snapshot(my_metric->prototype()->name(),
                               my_metric->prototype()->type(),
                               static_cast<metric_snapshot::value_type>(increase),
@@ -1067,7 +1072,7 @@ void generate_snapshots(MetricType *my_metric,
         my_metric->set(elem);
     }
 
-    // Wait a while in order to finish computing all percentiles.
+    // Wait a while in order that computations for all percentiles can be finished.
     std::this_thread::sleep_for(
         std::chrono::milliseconds(my_metric->get_initial_delay_ms() + interval_ms + exec_ms));
 
@@ -1076,6 +1081,7 @@ void generate_snapshots(MetricType *my_metric,
 
     auto val_itr = values.begin();
     for (const auto &kth_label : kth_labels) {
+        // Add label for each percentile type to expected attributes.
         metric_snapshot::attr_map labels({{"p", kth_label}});
         labels.insert(entity_attrs.begin(), entity_attrs.end());
 
@@ -1090,6 +1096,7 @@ void generate_snapshots(MetricType *my_metric,
 
 TEST_F(metrics_test, metric_data_sink)
 {
+    // Mark that all snapshots taken in this test should be verified in by my_data_sink.
     const std::string target_attr_key("_DEDICATED_FOR_DATA_SINK_TEST");
     register_my_data_sink(target_attr_key);
 
@@ -1124,7 +1131,8 @@ TEST_F(metrics_test, metric_data_sink)
 
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id, attrs);
 
-        // Attribute "entity" is reserved by entity.
+        // Attribute "entity" is reserved and created by entity. Thus it should also be added to
+        // expected attributes for comparison with actual ones.
         attrs["entity"] = METRIC_ENTITY_my_server.name();
 
         auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_server_entity);
@@ -1175,8 +1183,11 @@ TEST_F(metrics_test, metric_data_sink)
                            expected_metrics);
     }
 
+    // Wait for a period of time that will be long enough to finish taking snapshots from all
+    // metrics by the timer of registry.
     std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_collect_metrics_interval_ms * 4));
 
+    // Verify if actual snapshots taken from metrics are matched with expected ones.
     check_snapshots(expected_metrics, expected_counters);
 }
 
