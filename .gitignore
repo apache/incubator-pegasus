@@ -18,11 +18,10 @@
 src/.matchfile
 src/base/rrdb_types.cpp
 src/include/rrdb/rrdb_types.h
-src/rdsn/builder/
 src/rdsn/include/dsn/cpp/serialization_helper/dsn.layer2_types.h
 src/rdsn/src/runtime/dsn.layer2_types.cpp
 src/runtime
-src/builder
+src/*builder
 
 onebox/
 .zk_install/

@@ -26,6 +26,10 @@
 #include <dsn/utility/strings.h>
 #include <dsn/utility/string_conv.h>
 #include <base/pegasus_key_schema.h>
+#include <dsn/dist/fmt_logging.h>
+#include <dsn/dist/replication/replication_other_types.h>
+#include <dsn/dist/replication/replication_ddl_client.h>
+#include "base/pegasus_const.h"
 
 namespace pegasus {
 namespace geo {
@@ -35,6 +39,13 @@ class geo_client_test : public ::testing::Test
 public:
     geo_client_test()
     {
+        std::vector<dsn::rpc_address> meta_list;
+        bool ok = dsn::replication::replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "onebox");
+        dassert_f(ok, "load_meta_servers failed");
+        auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
+        dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
+        dcheck_eq(dsn::ERR_OK, error);
         _geo_client.reset(new pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo"));
     }
 

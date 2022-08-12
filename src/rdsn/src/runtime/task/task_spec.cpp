@@ -35,6 +35,7 @@
 
 #include <array>
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/tool-api/task_spec.h>
 #include <dsn/tool-api/command_manager.h>
 #include <dsn/tool-api/threadpool_spec.h>
@@ -58,7 +59,8 @@ void task_spec::register_task_code(task_code code,
                                    dsn_task_priority_t pri,
                                    dsn::threadpool_code pool)
 {
-    dassert(code < TASK_SPEC_STORE_CAPACITY, "code = %d", code);
+    dcheck_ge(code, 0);
+    dcheck_lt(code, TASK_SPEC_STORE_CAPACITY);
     if (!s_task_spec_store[code]) {
         s_task_spec_store[code] = make_unique<task_spec>(code, code.to_string(), type, pri, pool);
         auto &spec = s_task_spec_store[code];
@@ -127,7 +129,9 @@ void task_spec::register_storage_task_code(task_code code,
 
 task_spec *task_spec::get(int code)
 {
-    return code < TASK_SPEC_STORE_CAPACITY ? s_task_spec_store[code].get() : nullptr;
+    dcheck_ge(code, 0);
+    dcheck_lt(code, TASK_SPEC_STORE_CAPACITY);
+    return s_task_spec_store[code].get();
 }
 
 task_spec::task_spec(int code,

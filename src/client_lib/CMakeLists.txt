@@ -31,19 +31,19 @@ target_include_directories(pegasus_client_impl_objects PUBLIC $<TARGET_PROPERTY:
 set(pegasus_client_static_lib ${CMAKE_CURRENT_BINARY_DIR}/libpegasus_client_static.a)
 if (APPLE)
     add_custom_target(pre_combine_lib
-        COMMAND ar -x ${DSN_ROOT}/lib/libdsn_utils.a)
+        COMMAND ar -x ${BUILD_DIR}/src/rdsn/src/util/libdsn_utils.a)
 endif()
 add_custom_target(combine_lib
-    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_runtime.a
-    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_client.a
-    COMMAND ar -x ${DSN_ROOT}/lib/libdsn_replication_common.a
+    COMMAND ar -x ${BUILD_DIR}/src/rdsn/src/runtime/libdsn_runtime.a
+    COMMAND ar -x ${BUILD_DIR}/src/rdsn/src/client/libdsn_client.a
+    COMMAND ar -x ${BUILD_DIR}/src/rdsn/src/common/libdsn_replication_common.a
     COMMAND ar -x ${THIRDPARTY_INSTALL_DIR}/lib/libthrift.a
     COMMAND ar -x ${CMAKE_BINARY_DIR}/src/base/libpegasus_base.a
     COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/$<TARGET_NAME:pegasus_client_impl_objects>.dir/*.o .
     COMMAND ar -qcs ${pegasus_client_static_lib} *.o
     COMMAND rm -rf *.o
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS pegasus_base pegasus_client_impl_objects
+    DEPENDS pegasus_base pegasus_client_impl_objects dsn_runtime dsn_client dsn_replication_common
     COMMENT "generate pegasus client static library"
 )
 add_library(pegasus_client_static STATIC IMPORTED GLOBAL)
