@@ -51,14 +51,14 @@ It packages the downloaded sources into a zip in the container, so that
 other repos can easily extract third-parties from the container (via `docker cp`),
 without downloading from the cloud object storage.
 
-- `apache/pegasus:thirdparties-src`
+- `apache/pegasus:thirdparties-src-<branch>`
 
 ## thirdparties-bin
 
 This is a Docker image for Pegasus unit-testing. It prebuilts the thirdparty libraries,
 so jobs based on this image can skip building third-parties.
 
-- `apache/pegasus:thirdparties-bin-centos7`
-- `apache/pegasus:thirdparties-bin-ubuntu1604`
-- `apache/pegasus:thirdparties-bin-ubuntu1804`
-- `apache/pegasus:thirdparties-bin-ubuntu2004`
+- `apache/pegasus:thirdparties-bin-centos7-master`
+- `apache/pegasus:thirdparties-bin-ubuntu1604-master`
+- `apache/pegasus:thirdparties-bin-ubuntu1804-master`
+- `apache/pegasus:thirdparties-bin-ubuntu2004-master`

@@ -16,7 +16,7 @@
 # under the License.
 
 ARG OS_VERSION=centos7
-FROM apache/pegasus:thirdparties-src as builder
+FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
 
 ARG OS_VERSION=centos7
 FROM apache/pegasus:build-env-${OS_VERSION}
