@@ -16,9 +16,8 @@
 # under the License.
 
 ARG GITHUB_BRANCH=master
-FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
-
 ARG OS_VERSION=centos7
+FROM apache/pegasus:thirdparties-src-${GITHUB_BRANCH} as builder
 FROM apache/pegasus:build-env-${OS_VERSION}
 
 WORKDIR /root
