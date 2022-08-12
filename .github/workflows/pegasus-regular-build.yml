@@ -51,7 +51,7 @@ jobs:
             compiler: "clang-9,clang++-9"
             os: ubuntu1804
     container:
-      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-master
+      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-${{ github.ref_name }}
     defaults:
       run:
         working-directory: /root/incubator-pegasus
