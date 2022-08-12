@@ -409,7 +409,9 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
 
-// A snapshot to the metric
+// Base class for metric snapshot.
+//
+// A metric snapshot can be taken periodically to be collected to the external monitoring systems.
 class metric_snapshot
 {
 public:
@@ -442,12 +444,14 @@ private:
     metric_type _type;
     value_type _value;
 
-    // Additional attributes of the metric value, could be empty.
-    // If a metric emits multiple snapshots per time, each snapshot
-    // will be tagged with an attribute.
+    // Attached attributes for the snapshot representing the dimensions of a metric, typically
+    // used as the labels of monitoring systems such as Prometheus.
     attr_map _attrs;
 };
 
+// The monitoring systems such as Prometheus have Counter type which requires an increase rather
+// than an instantaneous value. Based on `metric_snapshot`, `counter_snapshot` provides an
+// additional field `increase` for this requirement.
 class counter_snapshot : public metric_snapshot
 {
 public:
@@ -471,6 +475,8 @@ private:
     value_type _increase;
 };
 
+// A data sink is typically implemented for each monitoring system. It provides interfaces
+// that accept the snapshot from each metric to be collected to external monitoring systems.
 class metric_data_sink : public ref_counter
 {
 public:
@@ -502,6 +508,8 @@ protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
+    // Take snapshot from the metric to the specified one or multiple data sinks, with given
+    // attached attributes typically from entity.
     virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
                                const metric_snapshot::attr_map &attrs) = 0;
 
@@ -694,6 +702,7 @@ protected:
 
         auto old_value = _snapshot.load(std::memory_order_relaxed);
         auto new_value = value();
+
         for (auto &sink : sinks) {
             if (prototype()->type() == metric_type::kCounter) {
                 dcheck_ge(new_value, old_value);
@@ -703,7 +712,8 @@ protected:
                                                static_cast<metric_snapshot::value_type>(new_value),
                                                metric_snapshot::attr_map(attrs),
                                                static_cast<metric_snapshot::value_type>(increase)));
-            } else { // kVolatileCounter
+            } else {
+                // For volatile counter `increase` is meaningless, thus use base snapshot instead.
                 sink->iterate(metric_snapshot(prototype()->name(),
                                               prototype()->type(),
                                               static_cast<metric_snapshot::value_type>(new_value),
@@ -720,7 +730,12 @@ private:
 
     long_adder_wrapper<Adder> _adder;
 
+    // Sometimes taking snapshots for volatile counter should be disabled, since calling `value()`
+    // will update the state.
     bool _take_snapshot_for_volatile;
+
+    // _snapshot is used to record the last state of counter, since `increase` can be found by
+    // current state minus last state.
     std::atomic<int64_t> _snapshot;
 
     DISALLOW_COPY_AND_ASSIGN(counter);
@@ -902,8 +917,10 @@ protected:
                 continue;
             }
             for (auto &sink : sinks) {
+                // Additional label for each percentile type.
                 metric_snapshot::attr_map labels({{"p", kKthLabels[i]}});
                 labels.insert(attrs.begin(), attrs.end());
+
                 sink->iterate(metric_snapshot(prototype()->name(),
                                               prototype()->type(),
                                               static_cast<metric_snapshot::value_type>(value(i)),
