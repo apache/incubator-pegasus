@@ -51,12 +51,6 @@ public class PegasusTable implements PegasusTableInterface {
   private WriteLimiter writeLimiter;
   private String metaList;
 
-  public static final byte[] EMPTY_BYTES = "".getBytes();
-
-  private int getLength(byte[] value){
-    return value == null ? 0 : value.length;
-  }
-
   public PegasusTable(PegasusClient client, Table table) {
     this.table = table;
     this.defaultTimeout = table.getDefaultTimeout();
@@ -267,7 +261,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, EMPTY_BYTES, sortKeyBlobs.size(), -1),
+                  new Request(hashKey, Request.EMPTY_BYTES, sortKeyBlobs.size(), -1),
                   promise,
                   op,
                   table,
@@ -363,7 +357,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, EMPTY_BYTES, maxFetchCount, -1),
+                  new Request(hashKey, Request.EMPTY_BYTES, maxFetchCount, -1),
                   promise,
                   op,
                   table,
@@ -543,7 +537,10 @@ public class PegasusTable implements PegasusTableInterface {
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(
-                      hashKey, EMPTY_BYTES, values_blob.size(), Request.getValueLength(values)),
+                      hashKey,
+                      Request.EMPTY_BYTES,
+                      values_blob.size(),
+                      Request.getValueLength(values)),
                   promise,
                   op,
                   table,
@@ -634,7 +631,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_multi_remove_operator op2 = (rrdb_multi_remove_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, EMPTY_BYTES, sortKeyBlobs.size(), -1),
+                  new Request(hashKey, Request.EMPTY_BYTES, sortKeyBlobs.size(), -1),
                   promise,
                   op,
                   table,
@@ -765,7 +762,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, setSortKey, 1, getLength(setValue)),
+                  new Request(hashKey, setSortKey, 1, Request.getLength(setValue)),
                   promise,
                   op,
                   table,
@@ -1219,7 +1216,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, EMPTY_BYTES, maxFetchCount, -1),
+          new Request(hashKey, Request.EMPTY_BYTES, maxFetchCount, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1240,7 +1237,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, EMPTY_BYTES, count, -1),
+          new Request(hashKey, Request.EMPTY_BYTES, count, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1269,7 +1266,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, EMPTY_BYTES, maxFetchCount, -1),
+          new Request(hashKey, Request.EMPTY_BYTES, maxFetchCount, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1403,7 +1400,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, getLength(value)),
+          new Request(hashKey, sortKey, 1, Request.getLength(value)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1422,7 +1419,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, getLength(value)),
+          new Request(hashKey, sortKey, 1, Request.getLength(value)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1488,7 +1485,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, EMPTY_BYTES, count, Request.getValueLength(values)),
+          new Request(hashKey, Request.EMPTY_BYTES, count, Request.getValueLength(values)),
           timeout,
           e);
 
@@ -1510,7 +1507,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, EMPTY_BYTES, count, Request.getValueLength(values)),
+          new Request(hashKey, Request.EMPTY_BYTES, count, Request.getValueLength(values)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1655,7 +1652,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, EMPTY_BYTES, count, -1),
+          new Request(hashKey, Request.EMPTY_BYTES, count, -1),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1923,7 +1920,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, getLength(desiredValue)),
+          new Request(hashKey, sortKey, 1, Request.getLength(desiredValue)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -2183,6 +2180,12 @@ public class PegasusTable implements PegasusTableInterface {
   }
 
   static class Request {
+    public static final byte[] EMPTY_BYTES = "".getBytes();
+
+    public static int getLength(byte[] value) {
+      return value == null ? 0 : value.length;
+    }
+
     byte[] hashKey = EMPTY_BYTES;
     byte[] sortKey = EMPTY_BYTES;
     int sortKeyCount = 1;
@@ -2236,9 +2239,9 @@ public class PegasusTable implements PegasusTableInterface {
 
     @Override
     public String toString() {
-        return String.format(
-            "[hashKey[:32]=\"%s\",sortKey[:32]=\"%s\",sortKeyCount=%d,valueLength=%d]",
-            getSubstring(hashKey), getSubstring(sortKey), sortKeyCount, valueLength);
+      return String.format(
+          "[hashKey[:32]=\"%s\",sortKey[:32]=\"%s\",sortKeyCount=%d,valueLength=%d]",
+          getSubstring(hashKey), getSubstring(sortKey), sortKeyCount, valueLength);
     }
   }
 }

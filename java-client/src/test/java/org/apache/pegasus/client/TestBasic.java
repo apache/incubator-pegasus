@@ -20,7 +20,6 @@ package org.apache.pegasus.client;
 
 /** @author qinzuoyan */
 import io.netty.util.concurrent.Future;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -2786,9 +2785,7 @@ public class TestBasic {
   @Test
   public void testRequestDetail() throws PException {
     Duration caseTimeout = Duration.ofMillis(1);
-    ClientOptions client_opt = ClientOptions.builder()
-            .operationTimeout(caseTimeout)
-            .build();
+    ClientOptions client_opt = ClientOptions.builder().operationTimeout(caseTimeout).build();
 
     PegasusClientFactory.createClient(client_opt);
     PegasusClientInterface client = PegasusClientFactory.createClient(client_opt);
@@ -2882,7 +2879,6 @@ public class TestBasic {
                   "request=[hashKey[:32]=\"TestHash_0\",sortKey[:32]=\"\",sortKeyCount=3,valueLength=-1]"));
 
     } catch (Throwable e) {
-      e.printStackTrace();
       Assert.fail();
     }
   }
