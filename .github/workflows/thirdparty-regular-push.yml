@@ -58,7 +58,7 @@ jobs:
           file: ./docker/thirdparties-src/Dockerfile
           push: true
           tags: |
-            apache/pegasus:thirdparties-src-${{ github.ref_name }}
+            apache/pegasus:thirdparties-src-master
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
       - name: Image digest
