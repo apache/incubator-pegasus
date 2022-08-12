@@ -398,9 +398,6 @@ void replication_options::initialize()
                                          learn_app_max_concurrent_count,
                                          "max count of learning app concurrently");
 
-    cold_backup_root = dsn_config_get_value_string(
-        "replication", "cold_backup_root", "", "cold backup remote storage path prefix");
-
     cold_backup_checkpoint_reserve_minutes =
         (int)dsn_config_get_value_uint64("replication",
                                          "cold_backup_checkpoint_reserve_minutes",

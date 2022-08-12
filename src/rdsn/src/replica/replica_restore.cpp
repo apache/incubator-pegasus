@@ -57,9 +57,9 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
         name_to_filepath.erase(f_meta.name);
     }
 
-    // remove useless files execpt cold_backup_constant::BACKUP_METADATA file
+    // remove useless files execpt backup_constant::BACKUP_METADATA file
     for (const auto &pair : name_to_filepath) {
-        if (pair.first == cold_backup_constant::BACKUP_METADATA)
+        if (pair.first == backup_constant::BACKUP_METADATA)
             continue;
         if (::dsn::utils::filesystem::file_exists(pair.second) &&
             !::dsn::utils::filesystem::remove_path(pair.second)) {
@@ -182,23 +182,22 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
 {
     // download metadata file
     uint64_t download_file_size = 0;
-    error_code err =
-        _stub->_block_service_manager.download_file(remote_chkpt_dir,
-                                                    local_chkpt_dir,
-                                                    cold_backup_constant::BACKUP_METADATA,
-                                                    fs,
-                                                    download_file_size);
+    error_code err = _stub->_block_service_manager.download_file(remote_chkpt_dir,
+                                                                 local_chkpt_dir,
+                                                                 backup_constant::BACKUP_METADATA,
+                                                                 fs,
+                                                                 download_file_size);
     if (err != ERR_OK && err != ERR_PATH_ALREADY_EXIST) {
-        derror_replica("download backup_metadata failed, file({}), reason({})",
-                       utils::filesystem::path_combine(remote_chkpt_dir,
-                                                       cold_backup_constant::BACKUP_METADATA),
-                       err);
+        derror_replica(
+            "download backup_metadata failed, file({}), reason({})",
+            utils::filesystem::path_combine(remote_chkpt_dir, backup_constant::BACKUP_METADATA),
+            err);
         return err;
     }
 
     // parse cold_backup_meta from metadata file
     const std::string local_backup_metada_file =
-        utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
+        utils::filesystem::path_combine(local_chkpt_dir, backup_constant::BACKUP_METADATA);
     if (!read_cold_backup_metadata(local_backup_metada_file, backup_metadata)) {
         derror_replica("read cold_backup_metadata from file({}) failed", local_backup_metada_file);
         return ERR_FILE_OPERATION_FAILED;
@@ -224,7 +223,7 @@ void replica::clear_restore_useless_files(const std::string &local_chkpt_dir,
     }
 
     const std::string metadata_file =
-        utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
+        utils::filesystem::path_combine(local_chkpt_dir, backup_constant::BACKUP_METADATA);
     if (!utils::filesystem::remove_path(metadata_file)) {
         dwarn_replica("remove backup_metadata failed, file = {}", metadata_file);
     } else {
@@ -404,7 +403,7 @@ dsn::error_code replica::skip_restore_partition(const std::string &restore_dir)
     if (utils::filesystem::remove_path(restore_dir) &&
         utils::filesystem::create_directory(restore_dir)) {
         ddebug("%s: clear restore_dir(%s) succeed", name(), restore_dir.c_str());
-        _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
+        _restore_progress.store(backup_constant::PROGRESS_FINISHED);
         return ERR_OK;
     } else {
         derror("clear dir %s failed", restore_dir.c_str());

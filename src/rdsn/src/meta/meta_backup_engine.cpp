@@ -86,87 +86,57 @@ void meta_backup_engine::start()
 // ThreadPool: THREAD_POOL_DEFAULT
 error_code meta_backup_engine::write_app_info()
 {
-    // TODO(heyuchen): TBD
-    return ERR_OK;
-}
-
-// ThreadPool: THREAD_POOL_DEFAULT
-void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::type new_status,
-                                                              int64_t end_time)
-{
-    // TODO(heyuchen): TBD
-}
-
-// TODO(heyuchen): update following functions
-
-error_code meta_backup_engine::write_backup_file(const std::string &file_name,
-                                                 const dsn::blob &write_buffer)
-{
-    dist::block_service::create_file_request create_file_req;
-    create_file_req.ignore_metadata = true;
-    create_file_req.file_name = file_name;
-
-    dsn::error_code err;
-    dist::block_service::block_file_ptr remote_file;
-    _block_service
-        ->create_file(create_file_req,
-                      TASK_CODE_EXEC_INLINED,
-                      [&err, &remote_file](const dist::block_service::create_file_response &resp) {
-                          err = resp.err;
-                          remote_file = resp.file_handle;
-                      })
-        ->wait();
-    if (err != dsn::ERR_OK) {
-        ddebug_f("create file {} failed", file_name);
-        return err;
-    }
-    dassert_f(remote_file != nullptr,
-              "create file {} succeed, but can't get handle",
-              create_file_req.file_name);
-    remote_file
-        ->write(dist::block_service::write_request{write_buffer},
-                TASK_CODE_EXEC_INLINED,
-                [&err](const dist::block_service::write_response &resp) { err = resp.err; })
-        ->wait();
-    return err;
-}
-
-error_code meta_backup_engine::backup_app_meta()
-{
-    dsn::blob app_info_buffer;
+    blob app_info_buffer;
     {
         zauto_read_lock l;
-        _backup_service->get_state()->lock_read(l);
-        std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(_cur_backup.app_id);
+        _meta_svc->get_server_state()->lock_read(l);
+        std::shared_ptr<app_state> app = _meta_svc->get_server_state()->get_app(_cur_backup.app_id);
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
             derror_f("app {} is not available, couldn't do backup now.", _cur_backup.app_id);
             return ERR_INVALID_STATE;
         }
         app_state tmp = *app;
-        // Because we don't restore app envs, so no need to write app envs to backup file.
-        // TODO(zhangyifan): backup and restore app envs when needed.
-        tmp.envs.clear();
-        app_info_buffer = dsn::json::json_forwarder<app_info>::encode(tmp);
+        app_info_buffer = json::json_forwarder<app_info>::encode(tmp);
     }
 
-    std::string backup_root =
-        dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
-    // TODO(heyuchen): refactor and update it in future
-    std::string file_name = "todo";
-    return write_backup_file(file_name, app_info_buffer);
+    std::string remote_meta_dir =
+        get_backup_meta_path(get_backup_root(FLAGS_cold_backup_root, _cur_backup.backup_path),
+                             _cur_backup.app_name,
+                             _cur_backup.app_id,
+                             _cur_backup.backup_id);
+    return write_backup_file(remote_meta_dir, backup_constant::APP_METADATA, app_info_buffer);
 }
 
+// ThreadPool: THREAD_POOL_DEFAULT
+error_code meta_backup_engine::write_backup_file(const std::string &remote_dir,
+                                                 const std::string &file_name,
+                                                 const blob &write_buffer)
+{
+    FAIL_POINT_INJECT_F("meta_write_backup_file", [](string_view str) {
+        if (str.find("error") != string_view::npos) {
+            return ERR_FS_INTERNAL;
+        }
+        return ERR_OK;
+    });
+
+    dist::block_service::block_service_manager &block_manager =
+        _meta_svc->get_block_service_manager();
+    dist::block_service::block_filesystem *fs =
+        block_manager.get_or_create_block_filesystem(_cur_backup.backup_provider_type);
+    return block_manager.write_file(remote_dir, file_name, write_buffer, fs);
+}
+
+// ThreadPool: THREAD_POOL_DEFAULT
 void meta_backup_engine::backup_app_partition(const gpid &pid)
 {
-    dsn::rpc_address partition_primary;
+    rpc_address partition_primary;
     {
         zauto_read_lock l;
-        _backup_service->get_state()->lock_read(l);
-        std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(pid.get_app_id());
+        _meta_svc->get_server_state()->lock_read(l);
+        std::shared_ptr<app_state> app = _meta_svc->get_server_state()->get_app(pid.get_app_id());
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
             derror_f("app {} is not available, couldn't do backup now.", pid.get_app_id());
-
-            zauto_write_lock lock(_lock);
+            zauto_write_lock l(_lock);
             _is_backup_failed = true;
             return;
         }
@@ -176,7 +146,7 @@ void meta_backup_engine::backup_app_partition(const gpid &pid)
     if (partition_primary.is_invalid()) {
         dwarn_f("backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
                 _cur_backup.backup_id,
-                pid.to_string());
+                pid);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, pid]() { backup_app_partition(pid); },
@@ -187,29 +157,54 @@ void meta_backup_engine::backup_app_partition(const gpid &pid)
 
     auto req = std::make_unique<backup_request>();
     req->pid = pid;
-    policy_info backup_policy_info;
-    backup_policy_info.__set_backup_provider_type(_provider_type);
-    backup_policy_info.__set_policy_name(get_policy_name());
-    req->policy = backup_policy_info;
-    req->backup_id = _cur_backup.backup_id;
     req->app_name = _cur_backup.app_name;
-    if (!_backup_path.empty()) {
-        req->__set_backup_path(_backup_path);
+    req->backup_id = _cur_backup.backup_id;
+    req->backup_provider_type = _cur_backup.backup_provider_type;
+    if (!_cur_backup.backup_path.empty()) {
+        req->__set_backup_root_path(_cur_backup.backup_path);
     }
-
+    {
+        zauto_read_lock l(_lock);
+        req->status = _backup_status[pid.get_partition_index()];
+    }
     ddebug_f("backup_id({}): send backup request to partition {}, target_addr = {}",
              _cur_backup.backup_id,
              pid.to_string(),
              partition_primary.to_string());
+
     backup_rpc rpc(std::move(req), RPC_COLD_BACKUP, 10000_ms, 0, pid.thread_hash());
     rpc.call(
         partition_primary, &_tracker, [this, rpc, pid, partition_primary](error_code err) mutable {
             on_backup_reply(err, rpc.response(), pid, partition_primary);
         });
-
-    zauto_write_lock l(_lock);
-    _backup_status[pid.get_partition_index()] = backup_status::CHECKPOINTING;
 }
+
+// ThreadPool: THREAD_POOL_DEFAULT
+void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::type new_status,
+                                                              int64_t end_time)
+{
+    FAIL_POINT_INJECT_F("meta_update_backup_item", [=](dsn::string_view) {
+        _cur_backup.status = new_status;
+        if (end_time > 0) {
+            _cur_backup.end_time_ms = end_time;
+        }
+    });
+
+    auto item = _cur_backup;
+    item.status = new_status;
+    if (end_time > 0) {
+        item.end_time_ms = end_time;
+    }
+
+    blob value = json::json_forwarder<backup_item>::encode(item);
+    std::string path = get_remote_backup_path();
+    _meta_svc->get_meta_storage()->set_data(std::move(path), std::move(value), [this, item]() {
+        zauto_write_lock l(_lock);
+        _cur_backup = item;
+    });
+}
+
+// TODO(heyuchen): update following functions
 
 inline void meta_backup_engine::handle_replica_backup_failed(const backup_response &response,
                                                              const gpid pid)
@@ -250,7 +245,7 @@ void meta_backup_engine::on_backup_reply(const error_code err,
     }
 
     // if backup completed, receive ERR_OK and
-    // resp.progress=cold_backup_constant::PROGRESS_FINISHED;
+    // resp.progress=backup_constant::PROGRESS_FINISHED;
     // if backup failed, receive ERR_LOCAL_APP_FAILURE;
     // backup not completed in other cases.
     // see replica::on_cold_backup() for details.
@@ -272,7 +267,7 @@ void meta_backup_engine::on_backup_reply(const error_code err,
         return;
     };
 
-    if (response.progress == cold_backup_constant::PROGRESS_FINISHED) {
+    if (response.upload_progress == backup_constant::PROGRESS_FINISHED) {
         dcheck_eq(response.pid, pid);
         dcheck_eq(response.backup_id, _cur_backup.backup_id);
         ddebug_f("backup_id({}): backup for partition {} completed.",
@@ -292,7 +287,7 @@ void meta_backup_engine::on_backup_reply(const error_code err,
              _cur_backup.backup_id,
              pid.to_string(),
              primary.to_string(),
-             response.progress);
+             response.upload_progress);
 
     retry_backup(pid);
 }
@@ -302,9 +297,10 @@ void meta_backup_engine::write_backup_info()
     std::string backup_root =
         dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
     // TODO(heyuchen): refactor and update it in future
+    std::string remote_dir = "todo";
     std::string file_name = "todo";
     blob buf = dsn::json::json_forwarder<backup_item>::encode(_cur_backup);
-    error_code err = write_backup_file(file_name, buf);
+    error_code err = write_backup_file(remote_dir, file_name, buf);
     if (err == ERR_FS_INTERNAL) {
         derror_f(
             "backup_id({}): write backup info failed, error {}, do not try again for this error.",

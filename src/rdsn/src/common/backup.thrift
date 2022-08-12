@@ -64,24 +64,28 @@ struct configuration_restore_request
     9:optional string   restore_path;
 }
 
+// meta -> replica
 struct backup_request
 {
-    1:dsn.gpid              pid;
-    2:policy_info           policy;
-    3:string                app_name;
-    4:i64                   backup_id;
+    1:dsn.gpid          pid;
+    2:string            app_name;
+    3:i64               backup_id;
+    4:backup_status     status;
+    5:string            backup_provider_type;
     // user specified backup_path.
-    5:optional string       backup_path;
+    6:optional string   backup_root_path;
 }
 
 struct backup_response
 {
     1:dsn.error_code    err;
     2:dsn.gpid          pid;
-    3:i32               progress;  // the progress of the cold_backup
-    4:string            policy_name;
-    5:i64               backup_id;
-    6:i64               checkpoint_total_size;
+    3:i64               backup_id;
+    4:backup_status     status;
+    5:optional dsn.error_code   checkpoint_err;
+    6:optional dsn.error_code   upload_err;
+    7:optional i32      upload_progress;
+    8:optional i64      checkpoint_total_size;
 }
 
 // clear all backup resources (including backup contexts and checkpoint dirs) of this policy.

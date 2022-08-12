@@ -223,7 +223,7 @@ void server_state::on_query_restore_status(configuration_query_restore_rpc rpc)
             response.err = ERR_APP_DROPPED;
         } else {
             response.restore_progress.resize(app->partition_count,
-                                             cold_backup_constant::PROGRESS_FINISHED);
+                                             backup_constant::PROGRESS_FINISHED);
             response.restore_status.resize(app->partition_count, ERR_OK);
             for (int32_t i = 0; i < app->partition_count; i++) {
                 const auto &r_state = app->helpers->restore_states[i];

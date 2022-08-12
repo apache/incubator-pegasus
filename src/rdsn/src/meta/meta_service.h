@@ -117,6 +117,8 @@ public:
     }
     bulk_load_service *get_bulk_load_service() { return _bulk_load_svc.get(); }
 
+    std::string get_cluster_root() const { return _cluster_root; }
+
     meta_function_level::type get_function_level()
     {
         meta_function_level::type level = _function_level.load();
