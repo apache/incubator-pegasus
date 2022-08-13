@@ -16,7 +16,7 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <boost/lexical_cast.hpp>
 
 #include <dsn/dist/replication/replication_ddl_client.h>
@@ -32,6 +32,7 @@ class partition_split_test : public testing::Test
 public:
     void prepare(const std::string &table_name)
     {
+        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         std::vector<rpc_address> meta_list;
         replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");

@@ -20,16 +20,14 @@
 #include <thread>
 
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
+#include "test/function_test/utils/test_util.h"
 
 using namespace ::dsn;
 using namespace ::pegasus;
-
-extern pegasus_client *client;
-extern std::shared_ptr<replication::replication_ddl_client> ddl_client;
 
 std::string ttl_hash_key = "ttl_test_hash_key";
 std::string ttl_test_sort_key_0 = "ttl_test_sort_key_0";
@@ -45,24 +43,28 @@ int sleep_for_envs_effect = 65;
 int error_allow = 2;
 int timeout = 5000;
 
-void set_default_ttl(int ttl)
+class ttl : public test_util
 {
-    std::map<std::string, std::string> envs;
-    ddl_client->get_app_envs(client->get_app_name(), envs);
+public:
+    void set_default_ttl(int ttl)
+    {
+        std::map<std::string, std::string> envs;
+        ddl_client->get_app_envs(client->get_app_name(), envs);
 
-    std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
-    if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
-        auto response = ddl_client->set_app_envs(
-            client->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
-        ASSERT_EQ(true, response.is_ok());
-        ASSERT_EQ(ERR_OK, response.get_value().err);
+        std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
+        if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
+            auto response = ddl_client->set_app_envs(
+                client->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
+            ASSERT_EQ(true, response.is_ok());
+            ASSERT_EQ(ERR_OK, response.get_value().err);
 
-        // wait envs to be synced.
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_for_envs_effect));
+            // wait envs to be synced.
+            std::this_thread::sleep_for(std::chrono::seconds(sleep_for_envs_effect));
+        }
     }
-}
+};
 
-TEST(ttl, set_without_default_ttl)
+TEST_F(ttl, set_without_default_ttl)
 {
     // unset default_ttl
     set_default_ttl(0);
@@ -141,7 +143,7 @@ TEST(ttl, set_without_default_ttl)
     ASSERT_EQ(ttl_test_value_2, value);
 }
 
-TEST(ttl, set_with_default_ttl)
+TEST_F(ttl, set_with_default_ttl)
 {
     // unset default_ttl
     set_default_ttl(0);

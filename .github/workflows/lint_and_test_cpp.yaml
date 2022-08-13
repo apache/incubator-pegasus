@@ -119,7 +119,11 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - backup_restore_test
+          - base_api_test
           - base_test
+          - bulk_load_test
+          - detect_hotspot_test
           - dsn_aio_test
           - dsn_block_service_test
           - dsn.failure_detector.tests
@@ -139,10 +143,13 @@ jobs:
           - dsn_runtime_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
-          - pegasus_function_test
+          - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
+          - recovery_test
+          - restore_test
+          - throttle_test
     needs: build_Release
     runs-on: ubuntu-latest
     container:
@@ -165,7 +172,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
-          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+          ./run.sh test -m ${{ matrix.test_module }}
 
   build_ASAN:
     name: Build ASAN
@@ -222,7 +229,11 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - backup_restore_test
+          - base_api_test
           - base_test
+          - bulk_load_test
+          - detect_hotspot_test
           - dsn_aio_test
           - dsn_block_service_test
           - dsn.failure_detector.tests
@@ -242,10 +253,13 @@ jobs:
           - dsn_runtime_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
-          - pegasus_function_test
+          - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
+          - recovery_test
+          - restore_test
+          - throttle_test
     needs: build_ASAN
     runs-on: ubuntu-latest
     container:
@@ -268,7 +282,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
-          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+          ./run.sh test -m ${{ matrix.test_module }}
 
   build_UBSAN:
     name: Build UBSAN
@@ -325,7 +339,11 @@ jobs:
       fail-fast: false
       matrix:
         test_module:
+          - backup_restore_test
+          - base_api_test
           - base_test
+          - bulk_load_test
+          - detect_hotspot_test
           - dsn_aio_test
           - dsn_block_service_test
           - dsn.failure_detector.tests
@@ -345,10 +363,13 @@ jobs:
           - dsn_runtime_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
-          - pegasus_function_test
+          - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
+          - recovery_test
+          - restore_test
+          - throttle_test
     needs: build_UBSAN
     runs-on: ubuntu-latest
     container:
@@ -371,7 +392,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
-          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+          ./run.sh test -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:
     name: macOS

@@ -305,17 +305,48 @@ function usage_test()
     echo "Options for subcommand 'test':"
     echo "   -h|--help         print the help info"
     echo "   -m|--modules      specify modules to test, split by ',',"
-    echo "                     e.g., \"pegasus_unit_test,pegasus_function_test,dsn_runtime_tests,dsn_meta_state_tests\","
+    echo "                     e.g., \"pegasus_unit_test,dsn_runtime_tests,dsn_meta_state_tests\","
     echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
-    echo "   --on_travis       run tests on travis without some time-cosuming function tests"
 }
 function run_test()
 {
     local test_modules=""
     local clear_flags="1"
-    local on_travis=""
     local enable_gcov="no"
+    local all_tests=(
+      backup_restore_test
+      base_api_test
+      base_test
+      bulk_load_test
+      detect_hotspot_test
+      dsn_aio_test
+      dsn_block_service_test
+      dsn.failure_detector.tests
+      dsn_http_test
+      dsn_meta_state_tests
+      dsn.meta.test
+      dsn_nfs_test
+      dsn_perf_counter_test
+      dsn_replica_backup_test
+      dsn_replica_bulk_load_test
+      dsn_replica_dup_test
+      dsn_replica_split_test
+      dsn.replica.test
+      dsn_replication_common_test
+      dsn.replication.simple_kv
+      dsn.rep_tests.simple_kv
+      dsn_runtime_tests
+      dsn_utils_tests
+      dsn.zookeeper.tests
+      partition_split_test
+      pegasus_geo_test
+      pegasus_rproxy_test
+      pegasus_unit_test
+      recovery_test
+      restore_test
+      throttle_test
+    )
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -329,9 +360,6 @@ function run_test()
                 ;;
             -k|--keep_onebox)
                 clear_flags=""
-                ;;
-            --on_travis)
-                on_travis="--on_travis"
                 ;;
             --enable_gcov)
                 enable_gcov="yes"
@@ -355,54 +383,56 @@ function run_test()
 
     BUILD_DIR=$ROOT/src/builder
     if [ "$test_modules" == "" ]; then
-        test_modules="dsn_runtime_tests,dsn_utils_tests,dsn_perf_counter_test,dsn.zookeeper.tests,dsn_aio_test,dsn.failure_detector.tests,dsn_meta_state_tests,dsn_nfs_test,dsn_block_service_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test,dsn_replica_backup_test,dsn_replica_bulk_load_test,dsn_replica_split_test,pegasus_unit_test,pegasus_function_test"
+        test_modules=$(IFS=,; echo "${all_tests[*]}")
     fi
     echo "test_modules=$test_modules"
 
     # download bulk load test data
-    if [[ "$test_modules" =~ "pegasus_function_test" && "$on_travis" == "" && ! -d "$ROOT/src/test/function_test/pegasus-bulk-load-function-test-files" ]]; then
+    if [[ "$test_modules" =~ "bulk_load_test" && ! -d "$ROOT/src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files" ]]; then
         echo "Start to download files used for bulk load function test"
         wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
-        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test"
+        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test/bulk_load_test"
         rm "pegasus-bulk-load-function-test-files.zip"
         echo "Prepare files used for bulk load function test succeed"
     fi
 
-    # restart zk
-    run_stop_zk
-    run_start_zk
-
-    # restart onebox when test pegasus
-    if [[ "$test_modules" =~ "pegasus" ]]; then
-        run_clear_onebox
-        if ! run_start_onebox -w; then
-            echo "ERROR: unable to continue on testing because starting onebox failed"
-            exit 1
-        fi
-        sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
-    fi
-
     for module in `echo $test_modules | sed 's/,/ /g'`; do
         echo "====================== run $module =========================="
-        pushd $ROOT/src/builder/bin/$module
-        parms=""
-        if [[ "$module" =~ "pegasus" ]]; then
-          parms=$on_travis
+        # restart onebox when test pegasus
+        local need_onebox_tests=(
+          base_api_test
+          bulk_load_test
+          partition_split_test
+          pegasus_geo_test
+          pegasus_rproxy_test
+          recovery_test
+          throttle_test
+        )
+        if [[ "${need_onebox_tests[@]}" =~ "${test_modules}" ]]; then
+            run_clear_onebox
+            if ! run_start_onebox -w; then
+                echo "ERROR: unable to continue on testing because starting onebox failed"
+                exit 1
+            fi
+            sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
+        else
+            run_stop_zk
+            run_start_zk
         fi
-        REPORT_DIR=$REPORT_DIR ./run.sh $parms
+        pushd $ROOT/src/builder/bin/$module
+        REPORT_DIR=$REPORT_DIR TEST_BIN=$module ./run.sh
         if [ $? != 0 ]; then
             echo "run test \"$module\" in `pwd` failed"
             exit 1
         fi
+        # clear onebox if needed
+        if [[ "${need_onebox_tests[@]}"  =~ "${test_modules}" ]]; then
+            if [ "$clear_flags" == "1" ]; then
+                run_clear_onebox
+            fi
+        fi
         popd
     done
-
-    # clear onebox if needed
-    if [[ "$test_modules" =~ "pegasus" ]]; then
-        if [ "$clear_flags" == "1" ]; then
-            run_clear_onebox
-        fi
-    fi
 
     echo "Test finish time: `date`"
     finish_time=`date +%s`

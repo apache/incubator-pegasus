@@ -19,12 +19,12 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/utility/filesystem.h>
 
-#include <pegasus/client.h>
-#include <pegasus/error.h>
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/global_env.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -48,7 +48,7 @@ using namespace pegasus;
 class bulk_load_test : public testing::Test
 {
 protected:
-    virtual void SetUp()
+    void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
         working_root_dir = global_env::instance()._working_dir;
@@ -60,19 +60,15 @@ protected:
 
         // initialize the clients
         std::vector<rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
+        ASSERT_FALSE(meta_list.empty());
 
+        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
         pg_client = pegasus::pegasus_client_factory::get_client("mycluster", APP_NAME.c_str());
-    }
-
-    virtual void TearDown()
-    {
-        chdir(pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(working_root_dir.c_str());
+        ASSERT_TRUE(pg_client != nullptr);
     }
 
 public:
@@ -96,8 +92,8 @@ public:
         system("mkdir onebox/block_service");
         system("mkdir onebox/block_service/local_service");
         std::string copy_file_cmd =
-            "cp -r src/test/function_test/pegasus-bulk-load-function-test-files/" + LOCAL_ROOT +
-            " onebox/block_service/local_service";
+            "cp -r src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/" +
+            LOCAL_ROOT + " onebox/block_service/local_service";
         system(copy_file_cmd.c_str());
     }
 
@@ -117,10 +113,11 @@ public:
     void replace_bulk_load_info()
     {
         chdir(pegasus_root_dir.c_str());
-        std::string cmd = "cp -R "
-                          "src/test/function_test/pegasus-bulk-load-function-test-files/"
-                          "mock_bulk_load_info/. " +
-                          bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/";
+        std::string cmd =
+            "cp -R "
+            "src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/"
+            "mock_bulk_load_info/. " +
+            bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/";
         system(cmd.c_str());
     }
 

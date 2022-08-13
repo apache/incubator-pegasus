@@ -42,7 +42,9 @@ void global_env::get_dirs()
 {
     const char *cmd1 = "ps aux | grep '/meta1/pegasus_server' | grep -v grep | awk '{print $2}'";
     std::stringstream ss1;
-    dcheck_eq(dsn::utils::pipe_execute(cmd1, ss1), 0);
+    int ret = dsn::utils::pipe_execute(cmd1, ss1);
+    std::cout << cmd1 << " output: " << ss1.str() << std::endl;
+    dcheck_eq(ret, 0);
     int meta1_pid;
     ss1 >> meta1_pid;
     std::cout << "meta1 pid: " << meta1_pid << std::endl;
@@ -51,7 +53,9 @@ void global_env::get_dirs()
     char cmd2[512] = {0};
     sprintf(cmd2, "readlink /proc/%d/cwd", meta1_pid);
     std::stringstream ss2;
-    dcheck_eq(dsn::utils::pipe_execute(cmd2, ss2), 0);
+    ret = dsn::utils::pipe_execute(cmd2, ss2);
+    std::cout << cmd2 << " output: " << ss2.str() << std::endl;
+    dcheck_eq(ret, 0);
     std::string meta1_dir;
     ss2 >> meta1_dir;
     std::cout << "meta1 dir: " << meta1_dir << std::endl;

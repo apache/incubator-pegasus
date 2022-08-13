@@ -19,7 +19,7 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 #include <dsn/utility/TokenBucket.h>
 #include <dsn/service_api_cpp.h>
@@ -27,8 +27,8 @@
 #include <fstream>
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
-#include "utils.h"
+#include "test/function_test/utils/global_env.h"
+#include "test/function_test/utils/utils.h"
 
 using namespace dsn;
 using namespace dsn::replication;
@@ -153,11 +153,12 @@ const int test_hashkey_len = 50;
 const int test_sortkey_len = 50;
 
 // read/write throttle function test
-// the details of records are saved in `./src/builder/test/function_test/throttle_test_result.txt`
-class test_throttle : public testing::Test
+// the details of records are saved in
+// `./src/builder/test/function_test/throttle_test/throttle_test_result.txt`
+class throttle_test : public testing::Test
 {
 public:
-    virtual void SetUp() override
+    void SetUp() override
     {
         chdir(global_env::instance()._pegasus_root.c_str());
         system("pwd");
@@ -168,24 +169,20 @@ public:
         system("./run.sh start_onebox -c -w --config_path config-server-test-hotspot.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
+        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster");
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));
+        ASSERT_FALSE(meta_list.empty());
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
         pg_client =
             pegasus::pegasus_client_factory::get_client("single_master_cluster", app_name.c_str());
+        ASSERT_TRUE(pg_client != nullptr);
 
         auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 4, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
-    }
-
-    virtual void TearDown() override
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
     void set_throttle(throttle_type type, uint64_t value)
@@ -355,7 +352,7 @@ public:
             sleep(1);
         }
 
-        r.print_results("./src/builder/test/function_test/throttle_test_result.txt");
+        r.print_results("./src/builder/test/function_test/throttle_test/throttle_test_result.txt");
         return r;
     }
 
@@ -364,7 +361,7 @@ public:
     pegasus::pegasus_client *pg_client;
 };
 
-TEST_F(test_throttle, test)
+TEST_F(throttle_test, test)
 {
     throttle_test_plan plan;
     throttle_test_recorder result;

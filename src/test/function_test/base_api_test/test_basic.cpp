@@ -25,16 +25,21 @@
 
 #include <dsn/service_api_c.h>
 #include <unistd.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 #include <atomic>
 
+#include "test/function_test/utils/test_util.h"
+
 using namespace ::pegasus;
 
-extern pegasus_client *client;
 typedef pegasus_client::internal_info internal_info;
 
-TEST(basic, set_get_del)
+class basic : public test_util
+{
+};
+
+TEST_F(basic, set_get_del)
 {
     ASSERT_STREQ("mycluster", client->get_cluster_name());
 
@@ -82,7 +87,7 @@ TEST(basic, set_get_del)
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 }
 
-TEST(basic, multi_get)
+TEST_F(basic, multi_get)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -597,7 +602,7 @@ TEST(basic, multi_get)
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, multi_get_reverse)
+TEST_F(basic, multi_get_reverse)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -1142,7 +1147,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, multi_set_get_del)
+TEST_F(basic, multi_set_get_del)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -1313,7 +1318,7 @@ TEST(basic, multi_set_get_del)
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, set_get_del_async)
+TEST_F(basic, set_get_del_async)
 {
     std::atomic<bool> callbacked(false);
     int ret = 0;
@@ -1405,7 +1410,7 @@ TEST(basic, set_get_del_async)
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 }
 
-TEST(basic, multi_set_get_del_async)
+TEST_F(basic, multi_set_get_del_async)
 {
     std::atomic<bool> callbacked(false);
     int ret = 0;
@@ -1640,7 +1645,7 @@ TEST(basic, multi_set_get_del_async)
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, scan_with_filter)
+TEST_F(basic, scan_with_filter)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -1746,7 +1751,7 @@ TEST(basic, scan_with_filter)
     ASSERT_EQ(8, deleted_count);
 }
 
-TEST(basic, full_scan_with_filter)
+TEST_F(basic, full_scan_with_filter)
 {
     // multi_set
     std::map<std::string, std::string> kvs;

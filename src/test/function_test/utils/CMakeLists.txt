@@ -1,4 +1,3 @@
-#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -6,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -16,14 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+set(MY_PROJ_NAME "function_test_utils")
+set(MY_SRC_SEARCH_MODE "GLOB")
+set(MY_PROJ_SRC "")
+set(MY_PROJ_LIBS
+        dsn_client
+        dsn_replication_common
+        pegasus_client_static
+        gtest
+        )
 
-if [ -z ${REPORT_DIR} ]; then
-    REPORT_DIR="./"
-fi
-
-if [ -z ${TEST_BIN} ]; then
-    exit 1
-fi
-
-GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN}
+dsn_add_static_library()

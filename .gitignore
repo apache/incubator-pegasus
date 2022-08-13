@@ -118,7 +118,7 @@ scripts/py_utils/*.pyc
 cmake-build-debug
 packages
 
-src/test/function_test/pegasus-bulk-load-function-test-files/
+src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/
 config-shell.ini.*
 *.tar.gz
 pegasus-server*

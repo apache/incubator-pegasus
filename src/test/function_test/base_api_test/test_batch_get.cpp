@@ -20,27 +20,31 @@
 #include <vector>
 #include <string>
 
-#include <base/pegasus_const.h>
-#include <base/pegasus_key_schema.h>
+#include "base/pegasus_const.h"
+#include "base/pegasus_key_schema.h"
 #include <dsn/service_api_c.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <gtest/gtest.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <rrdb/rrdb_types.h>
-#include <rrdb/rrdb.client.h>
+#include "include/rrdb/rrdb.client.h"
 #include <rocksdb/status.h>
+
+#include "test/function_test/utils/test_util.h"
 
 using namespace ::pegasus;
 using namespace ::dsn;
 using namespace ::replication;
 
-extern pegasus_client *client;
-extern std::shared_ptr<replication_ddl_client> ddl_client;
+class batch_get : public test_util
+{
+};
 
-TEST(batch_get, set_and_then_batch_get)
+TEST_F(batch_get, set_and_then_batch_get)
 {
     std::vector<rpc_address> meta_list;
-    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
+    ASSERT_TRUE(replica_helper::load_meta_servers(
+        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
     auto rrdb_client = new ::dsn::apps::rrdb_client("mycluster", meta_list, client->get_app_name());
 
     int test_data_count = 100;

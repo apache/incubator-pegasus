@@ -20,11 +20,11 @@
 #include <dsn/utility/filesystem.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
-#include <pegasus/client.h>
-#include <pegasus/error.h>
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/global_env.h"
 
 using namespace dsn;
 using namespace dsn::replication;
@@ -46,6 +46,7 @@ public:
 
     void SetUp() override
     {
+        dassert(pegasus_client_factory::initialize("config.ini"), "");
         // initialize root dirs
         _pegasus_root_dir = global_env::instance()._pegasus_root;
         _working_root_dir = global_env::instance()._working_dir;
@@ -76,14 +77,6 @@ public:
         int32_t partition_count;
         std::vector<partition_configuration> partitions;
         _ddl_client->list_app(_old_app_name, _old_app_id, partition_count, partitions);
-    }
-
-    void TearDown() override
-    {
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(_working_root_dir.c_str());
     }
 
     bool write_data()

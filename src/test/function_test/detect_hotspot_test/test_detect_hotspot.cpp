@@ -21,12 +21,12 @@
 
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
-#include "utils.h"
+#include "test/function_test/utils/global_env.h"
+#include "test/function_test/utils/utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -43,11 +43,12 @@ enum key_type
     hotspot_dataset
 };
 
-class test_detect_hotspot : public testing::Test
+class detect_hotspot_test : public testing::Test
 {
 public:
-    virtual void SetUp() override
+    void SetUp() override
     {
+        // TODO(yingchun): all the commands should be run in shell, not in C++ code.
         chdir(global_env::instance()._pegasus_root.c_str());
         system("pwd");
         system("./run.sh clear_onebox");
@@ -57,26 +58,22 @@ public:
         system("./run.sh start_onebox -c -w --config_path config-server-test-hotspot.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
+        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster");
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));
+        ASSERT_FALSE(meta_list.empty());
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
         pg_client =
             pegasus::pegasus_client_factory::get_client("single_master_cluster", app_name.c_str());
+        ASSERT_TRUE(pg_client != nullptr);
 
         auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
 
         ddl_client->list_app(app_name, app_id, partition_count, partitions);
-    }
-
-    virtual void TearDown() override
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
     void generate_dataset(int64_t time_duration, detection_type dt, key_type kt)
@@ -219,7 +216,7 @@ public:
     pegasus::pegasus_client *pg_client;
 };
 
-TEST_F(test_detect_hotspot, write_hotspot_data)
+TEST_F(detect_hotspot_test, write_hotspot_data)
 {
     std::cout << "start testing write hotspot data..." << std::endl;
     write_hotspot_data();

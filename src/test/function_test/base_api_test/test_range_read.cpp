@@ -19,8 +19,8 @@
 
 #include <dsn/service_api_c.h>
 #include <gtest/gtest.h>
-#include <pegasus/client.h>
-#include <pegasus/error.h>
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
 
 using namespace ::dsn;
 using namespace pegasus;

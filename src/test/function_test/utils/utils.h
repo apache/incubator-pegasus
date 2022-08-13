@@ -191,6 +191,7 @@ inline void compare(const std::map<std::string, std::string> &data,
 template <typename T, typename U>
 inline void compare(const T &data, const U &base)
 {
+    ASSERT_EQ(data.size(), base.size());
     for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
         if (it1 == data.end()) {
             ASSERT_EQ(base.end(), it2) << "Only in base: hash_key=" << it2->first;

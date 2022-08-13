@@ -22,12 +22,12 @@
 #include <dsn/utility/filesystem.h>
 #include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 #include <boost/lexical_cast.hpp>
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/global_env.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
@@ -36,7 +36,7 @@ using namespace pegasus;
 class restore_test : public testing::Test
 {
 public:
-    virtual void SetUp() override
+    void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
 
@@ -65,17 +65,20 @@ public:
         cmd = "grep -A 5 block_service." + backup_provider_name +
               " config-server-test-restore.ini | grep args | cut -f2,3 -d'/'";
         std::stringstream ss;
-        dcheck_eq(dsn::utils::pipe_execute(cmd.c_str(), ss), 0);
+        int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+        std::cout << cmd << " output: " << ss.str() << std::endl;
+        dcheck_eq(ret, 0);
         std::string provider_dir = ss.str().substr(0, ss.str().length() - 1);
         policy_dir = "onebox/" + provider_dir + '/' +
                      dsn::utils::filesystem::path_combine(cluster_name, policy_name);
         backup_dir = "onebox/" + provider_dir + '/' + cluster_name;
 
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name.c_str());
-
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name.c_str()));
+        ASSERT_FALSE(meta_list.empty());
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
         error_code err =
             ddl_client->create_app(app_name, "pegasus", default_partition_cnt, 3, {}, false);
         ASSERT_EQ(err, ERR_OK);
@@ -104,14 +107,6 @@ public:
                                             start_time);
         std::cout << "add backup policy complete with err = " << err.to_string() << std::endl;
         ASSERT_EQ(err, ERR_OK);
-    }
-
-    virtual void TearDown() override
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
     void write_data()
@@ -274,7 +269,9 @@ public:
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
                                                "rm restore_app_from_backup_test_tmp";
         std::stringstream ss;
-        dcheck_eq(dsn::utils::pipe_execute(cmd.c_str(), ss), 0);
+        int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+        std::cout << cmd << " output: " << ss.str() << std::endl;
+        dcheck_eq(ret, 0);
         std::string result = ss.str();
         // should remove \n character
         int32_t index = result.size();

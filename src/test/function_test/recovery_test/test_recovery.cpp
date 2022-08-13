@@ -29,11 +29,11 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/utility/rand.h>
 
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/global_env.h"
 
 using namespace dsn::replication;
 using namespace pegasus;
@@ -41,7 +41,7 @@ using namespace pegasus;
 class recovery_test : public testing::Test
 {
 protected:
-    virtual void SetUp()
+    void SetUp() override
     {
         // THREAD_POOL_META_SERVER worker count should be greater than 1
         // This function test update 'distributed_lock_service_type' to
@@ -58,25 +58,29 @@ protected:
                "meta_state_service_simple\" config-server-test-recovery.ini");
         system("sed -i \"/^\\s*distributed_lock_service_type/c distributed_lock_service_type = "
                "distributed_lock_service_simple\" config-server-test-recovery.ini");
-        system("sed -i \"/^\\s*server_list/c server_list = @LOCAL_IP@:34601\" "
+        system("sed -i \"/^\\s*server_list/c server_list = @LOCAL_HOSTNAME@:34601\" "
                "config-server-test-recovery.ini");
         system("sed -i \"/^\\s*perf_counter_enable_logging/c perf_counter_enable_logging = false\" "
                "config-server-test-recovery.ini");
 
-        system("./run.sh start_onebox -m 1 -r 3 --config_path config-server-test-recovery.ini");
+        system("./run.sh start_onebox -w -m 1 -r 3 --config_path config-server-test-recovery.ini");
         std::cout << "sleep for a while to wait the new onebox start" << std::endl;
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         chdir(global_env::instance()._working_dir.c_str());
 
         // 2. initialize the clients
+        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         std::vector<dsn::rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster");
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));
+        ASSERT_FALSE(meta_list.empty());
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
         pg_client = pegasus::pegasus_client_factory::get_client("single_master_cluster",
                                                                 table_name.c_str());
+        ASSERT_TRUE(pg_client != nullptr);
 
         // 3. write some data to the app
         dsn::error_code err;
@@ -96,14 +100,6 @@ protected:
             ASSERT_EQ(0, ans);
             ASSERT_TRUE(info.partition_index < default_partitions);
         }
-    }
-
-    virtual void TearDown()
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
 public:
