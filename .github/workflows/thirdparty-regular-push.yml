@@ -93,7 +93,7 @@ jobs:
           file: ./docker/thirdparties-bin/Dockerfile
           push: true
           tags: |
-            apache/pegasus:thirdparties-bin-${{ matrix.osversion }}-master
+            apache/pegasus:thirdparties-bin-${{ matrix.osversion }}-${{ github.ref_name }}
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
