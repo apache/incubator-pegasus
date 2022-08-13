@@ -72,6 +72,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
+              - '.github/workflows/lint_and_test_cpp.yaml'
             src:
               - 'src/**'
             thirdparty:
@@ -185,6 +186,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
+              - '.github/workflows/lint_and_test_cpp.yaml'
             src:
               - 'src/**'
             thirdparty:
@@ -292,6 +294,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
+              - '.github/workflows/lint_and_test_cpp.yaml'
             src:
               - 'src/**'
             thirdparty:
