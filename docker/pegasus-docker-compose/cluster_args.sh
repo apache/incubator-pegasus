@@ -25,6 +25,8 @@
 # For exmaple, Meta1's address is 172.21.0.11:34601.
 export META_IP_PREFIX=172.21.0
 
+export META_HOSTNAME_PREFIX=onebox.pegasus.apache.test
+
 # The exported port of pegasus meta-server.
 # Please ensure this port is not occupied by other programs.
 export META_PORT=34601

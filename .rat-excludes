@@ -7,7 +7,6 @@ argh.h
 git_commit.h
 ssh-no-interactive
 scp-no-interactive
-get_local_ip
 DISCLAIMER-WIP
 .rat-excludes
 apache-rat-0.13.jar

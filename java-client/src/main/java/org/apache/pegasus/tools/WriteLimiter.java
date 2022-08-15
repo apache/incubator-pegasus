@@ -18,6 +18,7 @@
  */
 package org.apache.pegasus.tools;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.pegasus.apps.mutate;
@@ -62,8 +63,10 @@ public class WriteLimiter {
 
     int valuesLength = 0;
     for (Pair<byte[], byte[]> value : values) {
-      byte[] sortKey = value.getLeft() == null ? "".getBytes() : value.getLeft();
-      byte[] multiValue = value.getRight() == null ? "".getBytes() : value.getRight();
+      byte[] sortKey =
+          value.getLeft() == null ? "".getBytes(StandardCharsets.UTF_8) : value.getLeft();
+      byte[] multiValue =
+          value.getRight() == null ? "".getBytes(StandardCharsets.UTF_8) : value.getRight();
       checkSingleSortKey(hashKey, sortKey);
       checkSingleValue(hashKey, sortKey, multiValue);
       valuesLength += multiValue.length;
@@ -82,8 +85,8 @@ public class WriteLimiter {
 
     int valuesLength = 0;
     for (mutate mu : mutations.getMutations()) {
-      byte[] sortKey = mu.sort_key == null ? "".getBytes() : mu.sort_key.data;
-      byte[] MutateValue = mu.value == null ? "".getBytes() : mu.value.data;
+      byte[] sortKey = mu.sort_key == null ? "".getBytes(StandardCharsets.UTF_8) : mu.sort_key.data;
+      byte[] MutateValue = mu.value == null ? "".getBytes(StandardCharsets.UTF_8) : mu.value.data;
       checkSingleSortKey(hashKey, sortKey);
       checkSingleValue(hashKey, sortKey, MutateValue);
       valuesLength += MutateValue.length;
@@ -93,7 +96,7 @@ public class WriteLimiter {
 
   private void checkSingleHashKey(byte[] hashKey) throws IllegalArgumentException {
     if (hashKey == null) {
-      hashKey = "".getBytes();
+      hashKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (hashKey.length > SINGLE_KEY_SIZE) {
@@ -103,17 +106,17 @@ public class WriteLimiter {
               + ",hashKeyLength = "
               + hashKey.length
               + ",hashKey(head 100) = "
-              + subString(new String(hashKey)));
+              + subString(new String(hashKey, StandardCharsets.UTF_8)));
     }
   }
 
   private void checkSingleSortKey(byte[] hashKey, byte[] sortKey) throws IllegalArgumentException {
     if (hashKey == null) {
-      hashKey = "".getBytes();
+      hashKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (sortKey == null) {
-      sortKey = "".getBytes();
+      sortKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (sortKey.length > SINGLE_KEY_SIZE) {
@@ -123,24 +126,24 @@ public class WriteLimiter {
               + ",sortKeyLength = "
               + sortKey.length
               + ",hashKey(head 100) = "
-              + subString(new String(hashKey))
+              + subString(new String(hashKey, StandardCharsets.UTF_8))
               + ",sortKey(head 100) = "
-              + subString(new String(sortKey)));
+              + subString(new String(sortKey, StandardCharsets.UTF_8)));
     }
   }
 
   private void checkSingleValue(byte[] hashKey, byte[] sortKey, byte[] value)
       throws IllegalArgumentException {
     if (hashKey == null) {
-      hashKey = "".getBytes();
+      hashKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (sortKey == null) {
-      sortKey = "".getBytes();
+      sortKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (value == null) {
-      value = "".getBytes();
+      value = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (value.length > SINGLE_VALUE_SIZE) {
@@ -150,15 +153,15 @@ public class WriteLimiter {
               + ",valueLength = "
               + value.length
               + ",hashKey(head 100) = "
-              + subString(new String(hashKey))
+              + subString(new String(hashKey, StandardCharsets.UTF_8))
               + ",sortKey(head 100) = "
-              + subString(new String(sortKey)));
+              + subString(new String(sortKey, StandardCharsets.UTF_8)));
     }
   }
 
   private void checkMultiValueCount(byte[] hashKey, int count) throws IllegalArgumentException {
     if (hashKey == null) {
-      hashKey = "".getBytes();
+      hashKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (count > MULTI_VALUE_COUNT) {
@@ -168,13 +171,13 @@ public class WriteLimiter {
               + ",valueCount = "
               + count
               + ",hashKey(head 100) = "
-              + subString(new String(hashKey)));
+              + subString(new String(hashKey, StandardCharsets.UTF_8)));
     }
   }
 
   private void checkMultiValueSize(byte[] hashKey, int length) throws IllegalArgumentException {
     if (hashKey == null) {
-      hashKey = "".getBytes();
+      hashKey = "".getBytes(StandardCharsets.UTF_8);
     }
 
     if (length > MULTI_VALUE_SIZE) {
@@ -182,7 +185,7 @@ public class WriteLimiter {
           "Exceed the multi value length threshold = "
               + MULTI_VALUE_SIZE
               + ",hashKey(head 100) = "
-              + subString(new String(hashKey)));
+              + subString(new String(hashKey, StandardCharsets.UTF_8)));
     }
   }
 

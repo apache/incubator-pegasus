@@ -58,7 +58,7 @@ void extract_indices(const std::string &line,
 
 bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng) const
 {
-    assert(_sorted_indices.size() == 2);
+    dcheck_eq(_sorted_indices.size(), 2);
     std::vector<std::string> data;
     extract_indices(value, _sorted_indices, data, '|');
     if (data.size() != 2) {
@@ -79,7 +79,7 @@ bool latlng_codec::decode_from_value(const std::string &value, S2LatLng &latlng)
 
 bool latlng_codec::encode_to_value(double lat_degrees, double lng_degrees, std::string &value) const
 {
-    assert(_sorted_indices.size() == 2);
+    dcheck_eq(_sorted_indices.size(), 2);
     S2LatLng latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
     if (!latlng.is_valid()) {
         derror_f("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);

@@ -39,6 +39,6 @@ set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
 
 add_definitions(-Wno-attributes)
 
-set(MY_BINPLACES "config.ini")
+set(MY_BINPLACES config.ini run.sh)
 
 dsn_add_test()

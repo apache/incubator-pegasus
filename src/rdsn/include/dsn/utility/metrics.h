@@ -43,6 +43,7 @@
 #include <dsn/utility/ports.h>
 #include <dsn/utility/singleton.h>
 #include <dsn/utility/string_view.h>
+#include <dsn/utility/synchronize.h>
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
@@ -78,9 +79,11 @@
 // Convenient macros are provided to define entity types and metric prototypes.
 #define METRIC_DEFINE_entity(name) ::dsn::metric_entity_prototype METRIC_ENTITY_##name(#name)
 #define METRIC_DEFINE_gauge_int64(entity_type, name, unit, desc, ...)                              \
-    ::dsn::gauge_prototype<int64_t> METRIC_##name({#entity_type, #name, unit, desc, ##__VA_ARGS__})
+    ::dsn::gauge_prototype<int64_t> METRIC_##name(                                                 \
+        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_gauge_double(entity_type, name, unit, desc, ...)                             \
-    ::dsn::gauge_prototype<double> METRIC_##name({#entity_type, #name, unit, desc, ##__VA_ARGS__})
+    ::dsn::gauge_prototype<double> METRIC_##name(                                                  \
+        {#entity_type, dsn::metric_type::kGauge, #name, unit, desc, ##__VA_ARGS__})
 // There are 2 kinds of counters:
 // - `counter` is the general type of counter that is implemented by striped_long_adder, which can
 //   achieve high performance while consuming less memory if it's not updated very frequently.
@@ -89,24 +92,24 @@
 // See also include/dsn/utility/long_adder.h for details.
 #define METRIC_DEFINE_counter(entity_type, name, unit, desc, ...)                                  \
     dsn::counter_prototype<dsn::striped_long_adder, false> METRIC_##name(                          \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_concurrent_counter(entity_type, name, unit, desc, ...)                       \
     dsn::counter_prototype<dsn::concurrent_long_adder, false> METRIC_##name(                       \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_volatile_counter(entity_type, name, unit, desc, ...)                         \
     dsn::counter_prototype<dsn::striped_long_adder, true> METRIC_##name(                           \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_concurrent_volatile_counter(entity_type, name, unit, desc, ...)              \
     dsn::counter_prototype<dsn::concurrent_long_adder, true> METRIC_##name(                        \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kVolatileCounter, #name, unit, desc, ##__VA_ARGS__})
 
 // The percentile supports both integral and floating types.
 #define METRIC_DEFINE_percentile_int64(entity_type, name, unit, desc, ...)                         \
     dsn::percentile_prototype<int64_t> METRIC_##name(                                              \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
 #define METRIC_DEFINE_percentile_double(entity_type, name, unit, desc, ...)                        \
     dsn::floating_percentile_prototype<double> METRIC_##name(                                      \
-        {#entity_type, #name, unit, desc, ##__VA_ARGS__})
+        {#entity_type, dsn::metric_type::kPercentile, #name, unit, desc, ##__VA_ARGS__})
 
 // The following macros act as forward declarations for entity types and metric prototypes.
 #define METRIC_DECLARE_entity(name) extern ::dsn::metric_entity_prototype METRIC_ENTITY_##name
@@ -168,6 +171,19 @@ private:
 
     ~metric_entity();
 
+    // Close all "closeable" metrics owned by this entity.
+    //
+    // `option` is used to control how the close operations are performed:
+    // * kWait:     close() will be blocked until all of the close operations are finished.
+    // * kNoWait:   once the close requests are issued, close() will return immediately without
+    //              waiting for any close operation to be finished.
+    enum class close_option : int
+    {
+        kWait,
+        kNoWait,
+    };
+    void close(close_option option);
+
     void set_attributes(attr_map &&attrs);
 
     const std::string _id;
@@ -221,6 +237,30 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
 };
 
+// metric_type is needed while metrics are collected to monitoring systems. Generally
+// each monitoring system has its own types of metrics: firstly we should know which
+// type our metric belongs to; then we can know how to "translate" it to the specific
+// monitoring system.
+//
+// On the other hand, it is also needed when some special operation should be done
+// for a metric type. For example, percentile should be closed while it's no longer
+// used.
+enum class metric_type
+{
+    kGauge,
+    kCounter,
+    kVolatileCounter,
+    kPercentile,
+    kInvalidUnit,
+};
+
+ENUM_BEGIN(metric_type, metric_type::kInvalidUnit)
+ENUM_REG(metric_type::kGauge)
+ENUM_REG(metric_type::kCounter)
+ENUM_REG(metric_type::kVolatileCounter)
+ENUM_REG(metric_type::kPercentile)
+ENUM_END(metric_type)
+
 enum class metric_unit
 {
     kNanoSeconds,
@@ -244,12 +284,15 @@ public:
     struct ctor_args
     {
         const string_view entity_type;
+        const metric_type type;
         const string_view name;
         const metric_unit unit;
         const string_view desc;
     };
 
     string_view entity_type() const { return _args.entity_type; }
+
+    metric_type type() const { return _args.type; }
 
     string_view name() const { return _args.name; }
 
@@ -309,6 +352,27 @@ protected:
 
 private:
     DISALLOW_COPY_AND_ASSIGN(metric);
+};
+
+// closeable_metric is a metric that implements close() method to execute some necessary close
+// operations before the destructor is invoked. close() will return immediately without waiting
+// for any close operation to be finished, while wait() is used to wait for all of the close
+// operations to be finished.
+//
+// It's guaranteed that close() for each metric will be called before it is destructed. Generally
+// both of close() and wait() are invoked by its manager, namely metric_entity.
+class closeable_metric : public metric
+{
+public:
+    virtual void close() = 0;
+    virtual void wait() = 0;
+
+protected:
+    explicit closeable_metric(const metric_prototype *prototype);
+    virtual ~closeable_metric() = default;
+
+private:
+    DISALLOW_COPY_AND_ASSIGN(closeable_metric);
 };
 
 // A gauge is a metric that represents a single numerical value that can arbitrarily go up and
@@ -522,12 +586,21 @@ const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percent
 class percentile_timer
 {
 public:
-    using exec_fn = std::function<void()>;
+    enum class state : int
+    {
+        kRunning,
+        kClosing,
+        kClosed,
+    };
 
-    percentile_timer(uint64_t interval_ms, exec_fn exec);
+    using on_exec_fn = std::function<void()>;
+    using on_close_fn = std::function<void()>;
+
+    percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close);
     ~percentile_timer() = default;
 
-    void cancel() { _timer->cancel(); }
+    void close();
+    void wait();
 
     // Get the initial delay that is randomly generated by `generate_initial_delay_ms()`.
     uint64_t get_initial_delay_ms() const { return _initial_delay_ms; }
@@ -537,11 +610,16 @@ private:
     // same time.
     static uint64_t generate_initial_delay_ms(uint64_t interval_ms);
 
+    void on_close();
+
     void on_timer(const boost::system::error_code &ec);
 
     const uint64_t _initial_delay_ms;
     const uint64_t _interval_ms;
-    const exec_fn _exec;
+    const on_exec_fn _on_exec;
+    const on_close_fn _on_close;
+    std::atomic<state> _state;
+    utils::notify_event _completed;
     std::unique_ptr<boost::asio::deadline_timer> _timer;
 };
 
@@ -561,7 +639,7 @@ private:
 template <typename T,
           typename NthElementFinder = stl_nth_element_finder<T>,
           typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-class percentile : public metric
+class percentile : public closeable_metric
 {
 public:
     using value_type = T;
@@ -601,7 +679,7 @@ protected:
                uint64_t interval_ms = 10000,
                const std::set<kth_percentile_type> &kth_percentiles = kAllKthPercentileTypes,
                size_type sample_size = kDefaultSampleSize)
-        : metric(prototype),
+        : closeable_metric(prototype),
           _sample_size(sample_size),
           _last_real_sample_size(0),
           _samples(cacheline_aligned_alloc_array<value_type>(sample_size, value_type{})),
@@ -633,23 +711,49 @@ protected:
         dcheck_gt(interval_ms, 0);
 #endif
 
+        // Increment ref count of percentile, since it will be referenced by timer.
+        // This will extend the lifetime of percentile and prevent from heap-use-after-free
+        // error.
+        //
+        // The ref count will be decremented at the moment when the percentile will
+        // never be used by timer, which means the percentile can be destructed safely.
+        // See on_close() for details which is registered in timer and will be called
+        // back once close() is invoked.
+        add_ref();
         _timer.reset(new percentile_timer(
             interval_ms,
-            std::bind(&percentile<value_type, NthElementFinder>::find_nth_elements, this)));
+            std::bind(&percentile<value_type, NthElementFinder>::find_nth_elements, this),
+            std::bind(&percentile<value_type, NthElementFinder>::on_close, this)));
     }
 
-    virtual ~percentile()
-    {
-        if (_timer) {
-            _timer->cancel();
-        }
-    }
+    virtual ~percentile() = default;
 
 private:
     using nth_container_type = typename NthElementFinder::nth_container_type;
 
     friend class metric_entity;
     friend class ref_ptr<percentile<value_type, NthElementFinder>>;
+
+    virtual void close() override
+    {
+        if (_timer) {
+            _timer->close();
+        }
+    }
+
+    virtual void wait() override
+    {
+        if (_timer) {
+            _timer->wait();
+        }
+    }
+
+    void on_close()
+    {
+        // This will be called back after timer is closed, which means the percentile is
+        // no longer needed by timer and can be destructed safely.
+        release_ref();
+    }
 
     void find_nth_elements()
     {

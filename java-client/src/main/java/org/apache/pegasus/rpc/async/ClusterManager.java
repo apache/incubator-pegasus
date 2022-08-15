@@ -50,11 +50,11 @@ public class ClusterManager extends Cluster {
   private EventLoopGroup replicaGroup; // group used for handle io with replica servers
   private EventLoopGroup timeoutTaskGroup; // group used for handle timeout task in replica servers
   private EventLoopGroup tableGroup; // group used for handle table logic
-  private String[] metaList;
+  private final String[] metaList;
   private MetaSession metaSession;
   private ReplicaSessionInterceptorManager sessionInterceptorManager;
 
-  private MetaHandler metaHandler = null;
+  private volatile MetaHandler metaHandler = null;
 
   private static final String osName;
 
@@ -81,7 +81,7 @@ public class ClusterManager extends Cluster {
     sessionInterceptorManager = new ReplicaSessionInterceptorManager(opts);
 
     metaList = opts.getMetaServers().split(",");
-    // the constructor of meta session is depend on the replicaSessions,
+    // the constructor of meta session is depended on the replicaSessions,
     // so the replicaSessions should be initialized earlier
     metaSession =
         new MetaSession(this, metaList, (int) opts.getMetaQueryTimeout().toMillis(), 10, metaGroup);

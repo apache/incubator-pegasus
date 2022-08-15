@@ -21,6 +21,7 @@ package org.apache.pegasus.client;
 import static org.apache.pegasus.client.PConfigUtil.loadConfiguration;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Properties;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ConfigurationConverter;
@@ -48,7 +49,6 @@ import org.apache.pegasus.tools.WriteLimiter;
  *          .falconPerfCounterTags("")
  *          .falconPushInterval(Duration.ofSeconds(10))
  *          .metaQueryTimeout(Duration.ofMillis(5000))
- *          .authProtocol("")
  *          .credential(null)
  *          .build();
  * }</pre>
@@ -88,7 +88,6 @@ public class ClientOptions {
   private final Duration falconPushInterval;
   private final boolean enableWriteLimit;
   private final Duration metaQueryTimeout;
-  private final String authProtocol;
   private final Credential credential;
   private final long sessionResetTimeWindowSecs;
 
@@ -101,7 +100,6 @@ public class ClientOptions {
     this.falconPushInterval = builder.falconPushInterval;
     this.enableWriteLimit = builder.enableWriteLimit;
     this.metaQueryTimeout = builder.metaQueryTimeout;
-    this.authProtocol = builder.authProtocol;
     this.credential = builder.credential;
     this.sessionResetTimeWindowSecs = builder.sessionResetTimeWindowSecs;
   }
@@ -115,7 +113,6 @@ public class ClientOptions {
     this.falconPushInterval = original.getFalconPushInterval();
     this.enableWriteLimit = original.isWriteLimitEnabled();
     this.metaQueryTimeout = original.getMetaQueryTimeout();
-    this.authProtocol = original.getAuthProtocol();
     this.credential = original.getCredential();
     this.sessionResetTimeWindowSecs = original.getSessionResetTimeWindowSecs();
   }
@@ -199,7 +196,6 @@ public class ClientOptions {
         .falconPerfCounterTags(perfCounterTags)
         .falconPushInterval(pushIntervalSecs)
         .metaQueryTimeout(metaQueryTimeout)
-        .authProtocol(authProtocol)
         .credential(credential)
         .sessionResetTimeWindowSecs(sessionResetTimeWindowSecs)
         .build();
@@ -220,11 +216,27 @@ public class ClientOptions {
           && this.falconPushInterval.toMillis() == clientOptions.falconPushInterval.toMillis()
           && this.enableWriteLimit == clientOptions.enableWriteLimit
           && this.metaQueryTimeout.toMillis() == clientOptions.metaQueryTimeout.toMillis()
-          && this.authProtocol.equals(clientOptions.authProtocol)
           && this.credential == clientOptions.credential
           && this.sessionResetTimeWindowSecs == clientOptions.sessionResetTimeWindowSecs;
     }
     return false;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = 20;
+    result = 31 * result + metaServers.hashCode();
+    result = 31 * result + Objects.hashCode(operationTimeout.toMillis());
+    result = 31 * result + asyncWorkers;
+    result = 31 * result + (enablePerfCounter ? 1 : 0);
+    result = 31 * result + falconPerfCounterTags.hashCode();
+    result = 31 * result + Objects.hashCode(falconPushInterval.toMillis());
+    result = 31 * result + (enableWriteLimit ? 1 : 0);
+    result = 31 * result + Objects.hashCode(metaQueryTimeout.toMillis());
+    result = 31 * result + authProtocol.hashCode();
+    result = 31 * result + credential.hashCode();
+    result = 31 * result + Objects.hashCode(sessionResetTimeWindowSecs);
+    return result;
   }
 
   @Override
@@ -249,8 +261,6 @@ public class ClientOptions {
             + enableWriteLimit
             + ", metaQueryTimeout(ms)="
             + metaQueryTimeout.toMillis()
-            + ", authProtocol="
-            + authProtocol
             + ", sessionResetTimeWindowSecs="
             + sessionResetTimeWindowSecs;
     if (credential != null) {
@@ -269,7 +279,6 @@ public class ClientOptions {
     private Duration falconPushInterval = DEFAULT_FALCON_PUSH_INTERVAL;
     private boolean enableWriteLimit = DEFAULT_ENABLE_WRITE_LIMIT;
     private Duration metaQueryTimeout = DEFAULT_META_QUERY_TIMEOUT;
-    private String authProtocol = DEFAULT_AUTH_PROTOCOL;
     private Credential credential = null;
     private long sessionResetTimeWindowSecs = DEFAULT_SESSION_RESET_SECS_WINDOW;
 
@@ -379,21 +388,6 @@ public class ClientOptions {
     }
 
     /**
-     * The authentiation protocol to use. Available protocols are: 1. kerberos; 2.""
-     *
-     * <p>"" means the authentiation is disabled
-     *
-     * <p>Defaults to {@literal ""}, See {@link #DEFAULT_AUTH_PROTOCOL}
-     *
-     * @param authProtocol authentiation protocol.
-     * @return {@code this}
-     */
-    public Builder authProtocol(String authProtocol) {
-      this.authProtocol = authProtocol;
-      return this;
-    }
-
-    /**
      * credential info. Defaults to {@literal null}
      *
      * @param credential credential
@@ -450,7 +444,6 @@ public class ClientOptions {
         .falconPushInterval(getFalconPushInterval())
         .enableWriteLimit(isWriteLimitEnabled())
         .metaQueryTimeout(getMetaQueryTimeout())
-        .authProtocol(getAuthProtocol())
         .credential(getCredential());
     return builder;
   }
@@ -530,19 +523,6 @@ public class ClientOptions {
    */
   public Duration getMetaQueryTimeout() {
     return metaQueryTimeout;
-  }
-
-  /**
-   * The authentiation protocol to use. Available protocols are: 1. kerberos; 2.""
-   *
-   * <p>"" means the authentiation is disabled
-   *
-   * <p>Defaults to {@literal ""}, See {@link #DEFAULT_AUTH_PROTOCOL}
-   *
-   * @return authentiation protocol.
-   */
-  public String getAuthProtocol() {
-    return authProtocol;
   }
 
   /**

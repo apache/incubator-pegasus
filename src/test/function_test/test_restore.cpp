@@ -20,6 +20,7 @@
 #include <libgen.h>
 
 #include <dsn/utility/filesystem.h>
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <pegasus/client.h>
 #include <gtest/gtest.h>
@@ -64,7 +65,7 @@ public:
         cmd = "grep -A 5 block_service." + backup_provider_name +
               " config-server-test-restore.ini | grep args | cut -f2,3 -d'/'";
         std::stringstream ss;
-        assert(dsn::utils::pipe_execute(cmd.c_str(), ss) == 0);
+        dcheck_eq(dsn::utils::pipe_execute(cmd.c_str(), ss), 0);
         std::string provider_dir = ss.str().substr(0, ss.str().length() - 1);
         policy_dir = "onebox/" + provider_dir + '/' +
                      dsn::utils::filesystem::path_combine(cluster_name, policy_name);
@@ -273,7 +274,7 @@ public:
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
                                                "rm restore_app_from_backup_test_tmp";
         std::stringstream ss;
-        assert(dsn::utils::pipe_execute(cmd.c_str(), ss) == 0);
+        dcheck_eq(dsn::utils::pipe_execute(cmd.c_str(), ss), 0);
         std::string result = ss.str();
         // should remove \n character
         int32_t index = result.size();

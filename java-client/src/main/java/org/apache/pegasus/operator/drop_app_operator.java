@@ -28,7 +28,7 @@ import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
 public class drop_app_operator extends client_operator {
-  public drop_app_operator(String appName, configuration_drop_app_request reqeust) {
+  public drop_app_operator(String appName, final configuration_drop_app_request reqeust) {
     super(new gpid(), appName, 0);
     this.request = reqeust;
   }

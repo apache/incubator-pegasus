@@ -57,7 +57,7 @@ public class rrdb_multi_remove_operator extends client_operator {
   }
 
   public multi_remove_response get_response() {
-    return resp;
+    return this.resp;
   }
 
   private multi_remove_request request;

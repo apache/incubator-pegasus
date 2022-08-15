@@ -28,7 +28,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif ()
 
 if (APPLE)
-    if (${MACOS_OPENSSL_ROOT_DIR} STREQUAL "")
+    if ("${MACOS_OPENSSL_ROOT_DIR}" STREQUAL "")
         message(FATAL_ERROR "OpenSSL root should be set for MacOS")
     endif()
 endif()
@@ -381,6 +381,7 @@ ExternalProject_Add(jemalloc
         URL ${OSS_URL_PREFIX}/jemalloc-5.2.1.tar.bz2
         https://github.com/jemalloc/jemalloc/releases/download/5.2.1/jemalloc-5.2.1.tar.bz2
         URL_MD5 3d41fbf006e6ebffd489bdb304d009ae
+        PATCH_COMMAND patch -p0 < ${TP_DIR}/fix_jemalloc_for_m1_on_macos.patch
         CONFIGURE_COMMAND ./configure --prefix=${TP_OUTPUT} --enable-cxx --enable-stats --enable-prof
         BUILD_COMMAND make
         INSTALL_COMMAND make install

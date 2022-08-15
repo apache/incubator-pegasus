@@ -289,7 +289,7 @@ message_ex *message_ex::create_request(dsn::task_code rpc_code,
     // init header
     auto &hdr = *msg->header;
     memset(static_cast<void *>(&hdr), 0, sizeof(hdr));
-    hdr.hdr_type = *(uint32_t *)"RDSN";
+    hdr.hdr_type = 0x4e534452; // "RDSN"
     hdr.hdr_length = sizeof(message_header);
     hdr.hdr_crc32 = hdr.body_crc32 = CRC_INVALID;
 

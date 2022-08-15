@@ -68,6 +68,11 @@ class KerberosProtocol implements AuthProtocol {
   }
 
   @Override
+  public String name() {
+    return "kerberos";
+  }
+
+  @Override
   public void authenticate(ReplicaSession session) {
     Negotiation negotiation = new Negotiation(session, subject, serviceName, serviceFqdn);
     negotiation.start();

@@ -16,9 +16,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 PID=$$
 ROOT=`pwd`
-LOCAL_IP=`scripts/get_local_ip`
+LOCAL_HOSTNAME=`hostname -f`
 export REPORT_DIR="$ROOT/test_report"
 export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
@@ -73,9 +75,8 @@ function usage_build()
     echo "Options for subcommand 'build':"
     echo "   -h|--help             print the help info"
     echo "   -t|--type             build type: debug|release, default is release"
-    echo "   -s|--serialize        serialize type: dsn|thrift|proto, default is thrift"
-    echo "   -c|--clear            clear rdsn/pegasus before building, not clear thirdparty"
-    echo "   --clear_thirdparty    clear thirdparty/rdsn/pegasus before building"
+    echo "   -c|--clear            clear pegasus before building, not clear thirdparty"
+    echo "   --clear_thirdparty    clear thirdparty/pegasus before building"
     echo "   --compiler            specify c and cxx compiler, sperated by ','"
     echo "                         e.g., \"gcc,g++\" or \"clang-3.9,clang++-3.9\""
     echo "                         default is \"gcc,g++\""
@@ -89,7 +90,6 @@ function usage_build()
                                    type: address|leak|thread|undefined"
     echo "   --skip_thirdparty     whether to skip building thirdparties, default no"
     echo "   --enable_rocksdb_portable      build a portable rocksdb binary"
-    echo "   --rdsn                whether to build rdsn module only"
     echo "   --test                whether to build test binaries"
 }
 
@@ -119,7 +119,6 @@ function run_build()
     ROCKSDB_PORTABLE=OFF
     USE_JEMALLOC=OFF
     BUILD_TEST=OFF
-    ONLY_RDSN=NO
     while [[ $# > 0 ]]; do
         key="$1"
         case $key in
@@ -184,9 +183,6 @@ function run_build()
             --test)
                 BUILD_TEST=ON
                 ;;
-            --rdsn)
-                ONLY_RDSN=YES
-                ;;
             *)
                 echo "ERROR: unknown option \"$key\""
                 echo
@@ -213,6 +209,11 @@ function run_build()
                    -DBoost_NO_BOOST_CMAKE=ON
                    -DBOOST_ROOT=${THIRDPARTY_ROOT}/output
                    -DBoost_NO_SYSTEM_PATHS=ON"
+
+    if [ "$(uname)" == "Darwin" ]; then
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
+    fi
+
     if [ ! -z "${SANITIZER}" ]; then
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DSANITIZER=${SANITIZER}"
     fi
@@ -238,9 +239,6 @@ function run_build()
         mkdir -p build
         pushd build
         CMAKE_OPTIONS="${CMAKE_OPTIONS} -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE}"
-        if [ "$(uname)" == "Darwin" ]; then
-            CMAKE_OPTIONS="${CMAKE_OPTIONS} -DMACOS_OPENSSL_ROOT_DIR=/usr/local/opt/openssl"
-        fi
         cmake .. ${CMAKE_OPTIONS}
         make -j$JOB_NUM
         exit_if_fail $?
@@ -248,82 +246,50 @@ function run_build()
         cd ..
     fi
 
-    echo "INFO: Start build rdsn..."
-    echo "Gen rdsn thrift"
-    python3 $ROOT/scripts/compile_thrift.py
-    BUILD_DIR="$ROOT/src/rdsn/builder"
+    echo "INFO: start build Pegasus..."
+    BUILD_DIR="${ROOT}/src/${BUILD_TYPE}_${SANITIZER}_builder"
     if [ "$CLEAR" == "YES" ]; then
         echo "Clear $BUILD_DIR ..."
         rm -rf $BUILD_DIR
     fi
-    echo "Running cmake..."
+
+    pushd ${ROOT}
+    echo "Gen thrift"
+    # TODO(yingchun): should be optimized
+    python3 $ROOT/scripts/compile_thrift.py
+    sh ${ROOT}/scripts/recompile_thrift.sh
+
+    mkdir -p ${DSN_ROOT}
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
-    fi
-    pushd $BUILD_DIR
-    CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
-    cmake ../../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=ON -DBUILD_PEGASUS=OFF
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake rdsn failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
-    make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
-    fi
-    popd
 
-    if [ "$ONLY_RDSN" == "YES" ]; then
-      exit 0
+        echo "Running cmake Pegasus..."
+        pushd $BUILD_DIR
+        CMAKE_OPTIONS="${CMAKE_OPTIONS} -DBUILD_TEST=${BUILD_TEST}"
+        cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS
+        exit_if_fail $?
     fi
 
-    echo "INFO: start build pegasus..."
-    echo "Gen pegasus thrift"
-    sh scripts/recompile_thrift.sh
-
-    cd "$ROOT/src"
+    echo "Gen git_commit.h ..."
+    pushd "$ROOT/src"
     PEGASUS_GIT_COMMIT="non-git-repo"
     if git rev-parse HEAD; then # this is a git repo
         PEGASUS_GIT_COMMIT=$(git rev-parse HEAD)
     fi
     echo "PEGASUS_GIT_COMMIT=${PEGASUS_GIT_COMMIT}"
-    GIT_COMMIT_FILE=include/pegasus/git_commit.h
+    GIT_COMMIT_FILE=$ROOT/src/include/pegasus/git_commit.h
     echo "Generating $GIT_COMMIT_FILE..."
     echo "#pragma once" >$GIT_COMMIT_FILE
     echo "#define PEGASUS_GIT_COMMIT \"$PEGASUS_GIT_COMMIT\"" >>$GIT_COMMIT_FILE
 
-    BUILD_DIR="$ROOT/src/builder"
-    if [ "$CLEAR" == "YES" ]; then
-        echo "Clear $BUILD_DIR ..."
-        rm -rf $BUILD_DIR
-    fi
-    echo "Running cmake..."
-    if [ ! -d "$BUILD_DIR" ]; then
-        mkdir -p $BUILD_DIR
-    fi
-    pushd $BUILD_DIR
-    cmake ../.. -DCMAKE_INSTALL_PREFIX=$BUILD_DIR/output $CMAKE_OPTIONS -DBUILD_RDSN=OFF -DBUILD_PEGASUS=ON
-    if [ $? -ne 0 ]; then
-        echo "ERROR: cmake pegasus failed"
-        exit 1
-    fi
-    echo "[$(date)] Building..."
-    make install $MAKE_OPTIONS
-    if [ $? -ne 0 ]
-    then
-        echo "ERROR: build failed"
-        exit 1
-    else
-        echo "[$(date)] Build succeed"
-    fi
+    # rebuild link
+    rm -f ${ROOT}/src/builder
+    ln -s ${BUILD_DIR} ${ROOT}/src/builder
 
-    cd $ROOT
-    chmod +x scripts/*.sh
+    echo "[$(date)] Building Pegasus ..."
+    pushd $BUILD_DIR
+    make install $MAKE_OPTIONS
+    exit_if_fail $?
 
     echo "Build finish time: `date`"
     finish_time=`date +%s`
@@ -343,14 +309,12 @@ function usage_test()
     echo "                     if not set, then run all tests"
     echo "   -k|--keep_onebox  whether keep the onebox after the test[default false]"
     echo "   --on_travis       run tests on travis without some time-cosuming function tests"
-    echo "   --rdsn            whether to test rdsn module only"
 }
 function run_test()
 {
     local test_modules=""
     local clear_flags="1"
     local on_travis=""
-    local only_rdsn="no"
     local enable_gcov="no"
     while [[ $# > 0 ]]; do
         key="$1"
@@ -369,9 +333,6 @@ function run_test()
             --on_travis)
                 on_travis="--on_travis"
                 ;;
-            --rdsn)
-                only_rdsn="yes"
-                ;;
             --enable_gcov)
                 enable_gcov="yes"
                 ;;
@@ -388,24 +349,60 @@ function run_test()
     echo "Test start time: `date`"
     start_time=`date +%s`
 
-    run_start_zk
-    if [ $? -ne 0 ]; then
-        echo "ERROR: start zk failed"
-        exit 1
-    fi
-
     if [ ! -d "$REPORT_DIR" ]; then
         mkdir -p $REPORT_DIR
     fi
 
-    if [ "$only_rdsn" == "yes" ]; then
-        BUILD_DIR=$ROOT/src/rdsn/builder
-        run_rdsn_test
-        exit 0
+    BUILD_DIR=$ROOT/src/builder
+    if [ "$test_modules" == "" ]; then
+        test_modules="dsn_runtime_tests,dsn_utils_tests,dsn_perf_counter_test,dsn.zookeeper.tests,dsn_aio_test,dsn.failure_detector.tests,dsn_meta_state_tests,dsn_nfs_test,dsn_block_service_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test,dsn_replica_backup_test,dsn_replica_bulk_load_test,dsn_replica_split_test,pegasus_unit_test,pegasus_function_test"
+    fi
+    echo "test_modules=$test_modules"
+
+    # download bulk load test data
+    if [[ "$test_modules" =~ "pegasus_function_test" && "$on_travis" == "" && ! -d "$ROOT/src/test/function_test/pegasus-bulk-load-function-test-files" ]]; then
+        echo "Start to download files used for bulk load function test"
+        wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
+        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test"
+        rm "pegasus-bulk-load-function-test-files.zip"
+        echo "Prepare files used for bulk load function test succeed"
     fi
 
-    BUILD_DIR=$ROOT/src/builder
-    run_pegasus_test
+    # restart zk
+    run_stop_zk
+    run_start_zk
+
+    # restart onebox when test pegasus
+    if [[ "$test_modules" =~ "pegasus" ]]; then
+        run_clear_onebox
+        if ! run_start_onebox -w; then
+            echo "ERROR: unable to continue on testing because starting onebox failed"
+            exit 1
+        fi
+        sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
+    fi
+
+    for module in `echo $test_modules | sed 's/,/ /g'`; do
+        echo "====================== run $module =========================="
+        pushd $ROOT/src/builder/bin/$module
+        parms=""
+        if [[ "$module" =~ "pegasus" ]]; then
+          parms=$on_travis
+        fi
+        REPORT_DIR=$REPORT_DIR ./run.sh $parms
+        if [ $? != 0 ]; then
+            echo "run test \"$module\" in `pwd` failed"
+            exit 1
+        fi
+        popd
+    done
+
+    # clear onebox if needed
+    if [[ "$test_modules" =~ "pegasus" ]]; then
+        if [ "$clear_flags" == "1" ]; then
+            run_clear_onebox
+        fi
+    fi
 
     echo "Test finish time: `date`"
     finish_time=`date +%s`
@@ -427,64 +424,6 @@ function run_test()
     fi
 }
 
-function run_pegasus_test()
-{
-    if [ "$test_modules" == "" ]; then
-        test_modules="pegasus_unit_test,pegasus_function_test"
-    fi
-    echo "test_modules=$test_modules"
-
-    if [[ "$test_modules" =~ "pegasus_function_test" && "$on_travis" == "" && ! -d "$ROOT/src/test/function_test/pegasus-bulk-load-function-test-files" ]]; then
-        echo "Start to download files used for bulk load function test"
-        wget "https://github.com/XiaoMi/pegasus-common/releases/download/deps/pegasus-bulk-load-function-test-files.zip"
-        unzip "pegasus-bulk-load-function-test-files.zip" -d "$ROOT/src/test/function_test"
-        rm "pegasus-bulk-load-function-test-files.zip"
-        echo "Prepare files used for bulk load function test succeed"
-    fi
-
-    ./run.sh clear_onebox #clear the onebox before test
-    if ! ./run.sh start_onebox -w; then
-        echo "ERROR: unable to continue on testing because starting onebox failed"
-        exit 1
-    fi
-
-    sed -i "s/@LOCAL_IP@/${LOCAL_IP}/g"  $ROOT/src/builder/server/test/config.ini
-
-    for module in `echo $test_modules | sed 's/,/ /g'`; do
-        echo "====================== run $module =========================="
-        pushd $ROOT/src/builder/bin/$module
-        REPORT_DIR=$REPORT_DIR ./run.sh $on_travis
-        if [ $? != 0 ]; then
-            echo "run test \"$module\" in `pwd` failed"
-            exit 1
-        fi
-        popd
-    done
-
-    if [ "$clear_flags" == "1" ]; then
-        ./run.sh clear_onebox
-    fi
-}
-function run_rdsn_test()
-{
-    if [ "$test_modules" == "" ]; then
-        test_modules="dsn_runtime_tests,dsn_utils_tests,dsn_perf_counter_test,dsn.zookeeper.tests,dsn_aio_test,dsn.failure_detector.tests,dsn_meta_state_tests,dsn_nfs_test,dsn_block_service_test,dsn.replication.simple_kv,dsn.rep_tests.simple_kv,dsn.meta.test,dsn.replica.test,dsn_http_test,dsn_replica_dup_test,dsn_replica_backup_test,dsn_replica_bulk_load_test,dsn_replica_split_test"
-    fi
-    echo "test_modules=$test_modules"
-
-    for module in `echo $test_modules | sed 's/,/ /g'`; do
-        echo "====================== run $module =========================="
-        pushd $ROOT/src/rdsn/builder/bin/$module
-        REPORT_DIR=$REPORT_DIR ./run.sh
-        if [ $? != 0 ]; then
-            echo "run test \"$module\" in `pwd` failed"
-            exit 1
-        fi
-        popd
-    done
-
-    echo "Test succeed"
-}
 #####################
 ## start_zk
 #####################
@@ -535,9 +474,6 @@ function run_start_zk()
     done
 
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
 }
 
 #####################
@@ -736,19 +672,19 @@ function run_start_onebox()
         do
             meta_port=$((34600+i))
             if [ $i -eq 1 ]; then
-                meta_list="${LOCAL_IP}:$meta_port"
+                meta_list="${LOCAL_HOSTNAME}:$meta_port"
             else
-                meta_list="$meta_list,${LOCAL_IP}:$meta_port"
+                meta_list="$meta_list,${LOCAL_HOSTNAME}:$meta_port"
             fi
         done
         sed -i 's/%{meta.server.list}/'"$meta_list"'/g' ${ROOT}/config-server.ini
-        sed -i 's/%{zk.server.list}/'"${LOCAL_IP}"':22181/g' ${ROOT}/config-server.ini
+        sed -i 's/%{zk.server.list}/'"${LOCAL_HOSTNAME}"':22181/g' ${ROOT}/config-server.ini
         sed -i 's/app_name = .*$/app_name = '"$APP_NAME"'/' ${ROOT}/config-server.ini
         sed -i 's/partition_count = .*$/partition_count = '"$PARTITION_COUNT"'/' ${ROOT}/config-server.ini
     else
         [ -z "${CONFIG_FILE}" ] && CONFIG_FILE=${ROOT}/src/server/config.min.ini
         [ ! -f "${CONFIG_FILE}" ] && { echo "${CONFIG_FILE} is not exist"; exit 1; }
-        sed "s/@LOCAL_IP@/${LOCAL_IP}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
+        sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/config-server.ini
     fi
 
@@ -842,7 +778,7 @@ function run_stop_onebox()
         esac
         shift
     done
-    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_server config.ini' | grep -E 'app_list meta|app_list replica|app_list collector' | awk '{print $2}' | xargs kill &>/dev/null || true
 }
 
 #####################
@@ -1070,7 +1006,7 @@ function run_stop_onebox_instance()
             echo "INFO: meta@$META_ID is not running"
             exit 1
         fi
-        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/meta$META_ID/pegasus_server config.ini" | grep "app_list meta" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: meta@$META_ID stopped"
     fi
     if [ $REPLICA_ID != "0" ]; then
@@ -1083,7 +1019,7 @@ function run_stop_onebox_instance()
             echo "INFO: replica@$REPLICA_ID is not running"
             exit 1
         fi
-        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/replica$REPLICA_ID/pegasus_server config.ini" | grep "app_list replica" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: replica@$REPLICA_ID stopped"
     fi
     if [ $COLLECTOR_ID != "0" ]; then
@@ -1091,7 +1027,7 @@ function run_stop_onebox_instance()
             echo "INFO: collector is not running"
             exit 1
         fi
-        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null
+        ps -ef | grep "/collector/pegasus_server config.ini" | grep "app_list collector" | awk '{print $2}' | xargs kill &>/dev/null || true
         echo "INFO: collector stopped"
     fi
 }
@@ -1247,7 +1183,7 @@ function run_start_kill_test()
     cd $ROOT
     CONFIG=config-kill-test.ini
 
-    sed "s/@LOCAL_IP@/${LOCAL_IP}/g;\
+    sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;\
 s/@META_COUNT@/${META_COUNT}/g;\
 s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
 s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\
@@ -1307,7 +1243,7 @@ function run_stop_kill_test()
         shift
     done
 
-    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep '/pegasus_kill_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
     run_stop_onebox
 }
 
@@ -1476,7 +1412,7 @@ function run_start_upgrade_test()
     cd $ROOT
     CONFIG=config-upgrade-test.ini
 
-    sed "s/@LOCAL_IP@/${LOCAL_IP}/g;\
+    sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;\
 s/@META_COUNT@/${META_COUNT}/g;\
 s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
 s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\
@@ -1537,7 +1473,7 @@ function run_stop_upgrade_test()
         shift
     done
 
-    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null
+    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
     run_stop_onebox
 }
 

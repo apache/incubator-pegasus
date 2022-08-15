@@ -15,7 +15,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+
+set -e
+
 # Options:
 #    INSTALL_DIR    <dir>
 #    PORT           <port>
@@ -47,7 +49,7 @@ ZOOKEEPER_TAR_MD5_VALUE="8ffa97e7e6b0b2cf1d022e5156a7561a"
 if [ ! -f $ZOOKEEPER_TAR_NAME ]; then
     echo "Downloading zookeeper..."
     download_url="http://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.com/apache-zookeeper-3.7.0-bin.tar.gz"
-    if ! wget -T 5 -t 1 $download_url; then
+    if ! wget -T 10 -t 5 $download_url; then
         echo "ERROR: download zookeeper failed"
         exit 1
     fi

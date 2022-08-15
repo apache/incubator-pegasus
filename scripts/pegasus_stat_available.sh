@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 PID=$$
 
 if [ $# -lt 2 ]; then

@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 pwd="$( cd "$( dirname "$0"  )" && pwd )"
 root_dir="$( cd $pwd/.. && pwd )"
 cd $root_dir
