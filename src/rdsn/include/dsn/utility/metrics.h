@@ -432,6 +432,8 @@ public:
 
     const attr_map &attributes() const { return _attrs; }
 
+    // This is useful especially when the attributes can be encoded to be a key for a snapshot,
+    // since it's unique for the multiple dimensions.
     std::string encode_attributes() const;
     static attr_map decode_attributes(const std::string &str);
 
