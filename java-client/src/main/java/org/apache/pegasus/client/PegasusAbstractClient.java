@@ -52,7 +52,7 @@ public abstract class PegasusAbstractClient {
   }
 
   @Override
-  public void finalize() {
+  protected void finalize() {
     close();
   }
 

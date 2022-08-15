@@ -18,7 +18,8 @@
  */
 package org.apache.pegasus.client;
 
-import io.netty.util.concurrent.*;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Future;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -28,7 +29,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.pegasus.apps.*;
+import org.apache.pegasus.apps.filter_type;
+import org.apache.pegasus.apps.get_scanner_request;
+import org.apache.pegasus.apps.key_value;
+import org.apache.pegasus.apps.scan_request;
+import org.apache.pegasus.apps.scan_response;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
@@ -188,6 +193,16 @@ public class PegasusScanner implements PegasusScannerInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) throws Throwable {
+            if (!(clientOP instanceof rrdb_get_scanner_operator)) {
+              logger.error(
+                  "scan rpc callback, encounter logic error, we just abandon this scan, "
+                      + "tableName({}), appId({})",
+                  _table.getTableName(),
+                  _table.getAppID());
+              _encounterError = true;
+              _cause = new PException("scan internal error, rpc callback error");
+              return;
+            }
             rrdb_get_scanner_operator op = (rrdb_get_scanner_operator) (clientOP);
             scan_response response = op.get_response();
             synchronized (_promisesLock) {
@@ -217,6 +232,16 @@ public class PegasusScanner implements PegasusScannerInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) throws Throwable {
+            if (!(clientOP instanceof rrdb_scan_operator)) {
+              logger.error(
+                  "scan rpc callback, encounter logic error, we just abandon this scan, "
+                      + "tableName({}), appId({})",
+                  _table.getTableName(),
+                  _table.getAppID());
+              _encounterError = true;
+              _cause = new PException("scan internal error, rpc callback error");
+              return;
+            }
             rrdb_scan_operator op = (rrdb_scan_operator) (clientOP);
             scan_response response = op.get_response();
             synchronized (_promisesLock) {

@@ -19,6 +19,7 @@
 package org.apache.pegasus.example;
 
 import io.netty.util.concurrent.Future;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
@@ -41,16 +42,29 @@ public class BatchSample {
     PegasusTableInterface table = client.openTable(tableName);
 
     List<Set> sets = new ArrayList<>();
-    sets.add(new Set("hashKeySet_1".getBytes(), "sortKeySet1".getBytes(), "valueSet1".getBytes()));
     sets.add(
-        new Set("hashKeySet_2".getBytes(), "sortKeySet2".getBytes(), "valueSet2".getBytes())
+        new Set(
+            "hashKeySet_1".getBytes(StandardCharsets.UTF_8),
+            "sortKeySet1".getBytes(StandardCharsets.UTF_8),
+            "valueSet1".getBytes(StandardCharsets.UTF_8)));
+    sets.add(
+        new Set(
+                "hashKeySet_2".getBytes(StandardCharsets.UTF_8),
+                "sortKeySet2".getBytes(StandardCharsets.UTF_8),
+                "valueSet2".getBytes(StandardCharsets.UTF_8))
             .withTTLSeconds(1000));
 
     new SetBatch(table, 1000).commit(sets);
 
     List<Get> gets = new ArrayList<>();
-    gets.add(new Get("hashKeySet_1".getBytes(), "sortKeySet1".getBytes()));
-    gets.add(new Get("hashKeySet_2".getBytes(), "sortKeySet2".getBytes()));
+    gets.add(
+        new Get(
+            "hashKeySet_1".getBytes(StandardCharsets.UTF_8),
+            "sortKeySet1".getBytes(StandardCharsets.UTF_8)));
+    gets.add(
+        new Get(
+            "hashKeySet_2".getBytes(StandardCharsets.UTF_8),
+            "sortKeySet2".getBytes(StandardCharsets.UTF_8)));
 
     List<Pair<PException, byte[]>> getResultsWithExp = new ArrayList<>();
     GetBatch getBatch = new GetBatch(table, 1000);
@@ -76,11 +90,22 @@ public class BatchSample {
     String tableName = "temp";
     PegasusTableInterface table = PegasusClientFactory.getSingletonClient().openTable(tableName);
 
-    table.del("hashKeyIncr1".getBytes(), "sortKeyIncr1".getBytes(), 1000);
+    table.del(
+        "hashKeyIncr1".getBytes(StandardCharsets.UTF_8),
+        "sortKeyIncr1".getBytes(StandardCharsets.UTF_8),
+        1000);
 
     List<Increment> increments = new ArrayList<>();
-    increments.add(new Increment("hashKeyIncr1".getBytes(), "sortKeyIncr1".getBytes(), 1));
-    increments.add(new Increment("hashKeyIncr1".getBytes(), "sortKeyIncr1".getBytes(), 2));
+    increments.add(
+        new Increment(
+            "hashKeyIncr1".getBytes(StandardCharsets.UTF_8),
+            "sortKeyIncr1".getBytes(StandardCharsets.UTF_8),
+            1));
+    increments.add(
+        new Increment(
+            "hashKeyIncr1".getBytes(StandardCharsets.UTF_8),
+            "sortKeyIncr1".getBytes(StandardCharsets.UTF_8),
+            2));
 
     List<Long> incrResults = new ArrayList<>();
 

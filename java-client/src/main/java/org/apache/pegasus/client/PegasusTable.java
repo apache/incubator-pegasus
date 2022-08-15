@@ -22,18 +22,48 @@ import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.pegasus.apps.*;
+import org.apache.pegasus.apps.batch_get_request;
+import org.apache.pegasus.apps.cas_check_type;
+import org.apache.pegasus.apps.check_and_mutate_request;
+import org.apache.pegasus.apps.check_and_set_request;
+import org.apache.pegasus.apps.filter_type;
+import org.apache.pegasus.apps.full_data;
+import org.apache.pegasus.apps.full_key;
+import org.apache.pegasus.apps.incr_request;
+import org.apache.pegasus.apps.key_value;
+import org.apache.pegasus.apps.multi_get_request;
+import org.apache.pegasus.apps.multi_put_request;
+import org.apache.pegasus.apps.multi_remove_request;
+import org.apache.pegasus.apps.update_request;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.operator.*;
+import org.apache.pegasus.operator.batch_get_operator;
+import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.rrdb_check_and_mutate_operator;
+import org.apache.pegasus.operator.rrdb_check_and_set_operator;
+import org.apache.pegasus.operator.rrdb_get_operator;
+import org.apache.pegasus.operator.rrdb_incr_operator;
+import org.apache.pegasus.operator.rrdb_multi_get_operator;
+import org.apache.pegasus.operator.rrdb_multi_put_operator;
+import org.apache.pegasus.operator.rrdb_multi_remove_operator;
+import org.apache.pegasus.operator.rrdb_put_operator;
+import org.apache.pegasus.operator.rrdb_remove_operator;
+import org.apache.pegasus.operator.rrdb_sortkey_count_operator;
+import org.apache.pegasus.operator.rrdb_ttl_operator;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.Table;
 import org.apache.pegasus.rpc.async.TableHandler;
@@ -98,6 +128,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_sortkey_count_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_sortkey_count_operator op = (rrdb_sortkey_count_operator) clientOP;
             if (op.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey), promise, op, table, timeout);
@@ -125,6 +159,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_get_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_get_operator gop = (rrdb_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
@@ -175,6 +213,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_put_operator)) {
+              promise.setFailure(new PException("Internal error: unexpected clientOP type"));
+              return;
+            }
             rrdb_put_operator gop = (rrdb_put_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
@@ -257,6 +299,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_multi_get_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
@@ -266,17 +312,21 @@ public class PegasusTable implements PegasusTableInterface {
               promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
             } else {
               MultiGetResult result = new MultiGetResult();
-              result.allFetched = (gop.get_response().error == 0);
-              result.values = new ArrayList<Pair<byte[], byte[]>>(gop.get_response().kvs.size());
+              result.setAllFetched((gop.get_response().error == 0));
+              result.setValues(new ArrayList<Pair<byte[], byte[]>>(gop.get_response().kvs.size()));
               if (finalSetKeyMap == null) {
                 for (key_value kv : gop.get_response().kvs) {
-                  result.values.add(new ImmutablePair<byte[], byte[]>(kv.key.data, kv.value.data));
+                  result
+                      .getValues()
+                      .add(new ImmutablePair<byte[], byte[]>(kv.key.data, kv.value.data));
                 }
               } else {
                 for (key_value kv : gop.get_response().kvs) {
                   byte[] sortKey = finalSetKeyMap.get(ByteBuffer.wrap(kv.key.data));
                   if (sortKey != null) {
-                    result.values.add(new ImmutablePair<byte[], byte[]>(sortKey, kv.value.data));
+                    result
+                        .getValues()
+                        .add(new ImmutablePair<byte[], byte[]>(sortKey, kv.value.data));
                   }
                 }
               }
@@ -349,6 +399,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_multi_get_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
@@ -358,10 +412,12 @@ public class PegasusTable implements PegasusTableInterface {
               promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
             } else {
               MultiGetResult result = new MultiGetResult();
-              result.allFetched = (gop.get_response().error == 0);
-              result.values = new ArrayList<Pair<byte[], byte[]>>(gop.get_response().kvs.size());
+              result.setAllFetched((gop.get_response().error == 0));
+              result.setValues(new ArrayList<Pair<byte[], byte[]>>(gop.get_response().kvs.size()));
               for (key_value kv : gop.get_response().kvs) {
-                result.values.add(new ImmutablePair<byte[], byte[]>(kv.key.data, kv.value.data));
+                result
+                    .getValues()
+                    .add(new ImmutablePair<byte[], byte[]>(kv.key.data, kv.value.data));
               }
               promise.setSuccess(result);
             }
@@ -392,14 +448,14 @@ public class PegasusTable implements PegasusTableInterface {
               public void operationComplete(Future<MultiGetResult> future) throws Exception {
                 if (future.isSuccess()) {
                   MultiGetResult result = future.getNow();
-                  MultiGetSortKeysResult sortkeyResult = new MultiGetSortKeysResult();
-                  sortkeyResult.allFetched = result.allFetched;
-                  sortkeyResult.keys = new ArrayList<byte[]>(result.values.size());
-                  for (Pair<byte[], byte[]> kv : result.values) {
-                    sortkeyResult.keys.add(kv.getLeft());
+                  MultiGetSortKeysResult sortKeyResult = new MultiGetSortKeysResult();
+                  sortKeyResult.allFetched = result.isAllFetched();
+                  sortKeyResult.keys = new ArrayList<byte[]>(result.getValues().size());
+                  for (Pair<byte[], byte[]> kv : result.getValues()) {
+                    sortKeyResult.keys.add(kv.getLeft());
                   }
 
-                  promise.setSuccess(sortkeyResult);
+                  promise.setSuccess(sortKeyResult);
                 } else {
                   promise.setFailure(future.cause());
                 }
@@ -440,6 +496,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof batch_get_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             batch_get_operator gop = (batch_get_operator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
@@ -449,12 +509,16 @@ public class PegasusTable implements PegasusTableInterface {
               promise.setFailure(new PException("rocksdb error: " + gop.get_response().error));
             } else {
               BatchGetResult result = new BatchGetResult();
-              result.allFetched = (gop.get_response().error == 0);
-              result.valueMap = new HashMap<>();
+              result.setAllFetched((gop.get_response().error == 0));
+              result.setValueMap(new HashMap<>());
               for (full_data data : gop.get_response().data) {
-                result.valueMap.put(
-                    Pair.of(new String(data.hash_key.data), new String(data.sort_key.data)),
-                    data.value.data);
+                result
+                    .getValueMap()
+                    .put(
+                        Pair.of(
+                            new String(data.hash_key.data, StandardCharsets.UTF_8),
+                            new String(data.sort_key.data, StandardCharsets.UTF_8)),
+                        data.value.data);
               }
 
               promise.setSuccess(result);
@@ -524,6 +588,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_multi_put_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_multi_put_operator op2 = (rrdb_multi_put_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
@@ -559,6 +627,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_remove_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_remove_operator op2 = (rrdb_remove_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
@@ -611,6 +683,10 @@ public class PegasusTable implements PegasusTableInterface {
         op,
         new Table.ClientOPCallback() {
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_multi_remove_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_multi_remove_operator op2 = (rrdb_multi_remove_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
@@ -649,6 +725,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_incr_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_incr_operator op2 = (rrdb_incr_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
@@ -738,6 +818,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_check_and_set_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, setSortKey), promise, op, table, timeout);
@@ -746,24 +830,20 @@ public class PegasusTable implements PegasusTableInterface {
               promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
             } else {
               CheckAndSetResult result = new CheckAndSetResult();
-              if (op2.get_response().error == 0) {
-                result.setSucceed = true;
-              } else {
-                result.setSucceed = false;
-              }
+              result.setSetSucceed(op2.get_response().error == 0);
               if (op2.get_response().check_value_returned) {
-                result.checkValueReturned = true;
+                result.setCheckValueReturned(true);
                 if (op2.get_response().check_value_exist) {
-                  result.checkValueExist = true;
-                  result.checkValue = op2.get_response().check_value.data;
+                  result.setCheckValueExist(true);
+                  result.setCheckValue(op2.get_response().check_value.data);
                 } else {
-                  result.checkValueExist = false;
-                  result.checkValue = null;
+                  result.setCheckValueExist(false);
+                  result.setCheckValue(null);
                 }
               } else {
-                result.checkValueReturned = false;
-                result.checkValueExist = false;
-                result.checkValue = null;
+                result.setCheckValueReturned(false);
+                result.setCheckValueExist(false);
+                result.setCheckValue(null);
               }
               promise.setSuccess(result);
             }
@@ -796,6 +876,7 @@ public class PegasusTable implements PegasusTableInterface {
     if (mutations == null || mutations.isEmpty()) {
       promise.setFailure(
           new PException("Invalid parameter: mutations should not be null or empty"));
+      return promise;
     }
 
     try {
@@ -829,6 +910,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_check_and_mutate_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_check_and_mutate_operator op2 = (rrdb_check_and_mutate_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
@@ -842,25 +927,21 @@ public class PegasusTable implements PegasusTableInterface {
               promise.setFailure(new PException("rocksdb error: " + op2.get_response().error));
             } else {
               CheckAndMutateResult result = new CheckAndMutateResult();
-              if (op2.get_response().error == 0) {
-                result.mutateSucceed = true;
-              } else {
-                result.mutateSucceed = false;
-              }
+              result.setMutateSucceed(op2.get_response().error == 0);
 
               if (op2.get_response().check_value_returned) {
-                result.checkValueReturned = true;
+                result.setCheckValueReturned(true);
                 if (op2.get_response().check_value_exist) {
-                  result.checkValueExist = true;
-                  result.checkValue = op2.get_response().check_value.data;
+                  result.setCheckValueExist(true);
+                  result.setCheckValue(op2.get_response().check_value.data);
                 } else {
-                  result.checkValueExist = false;
-                  result.checkValue = null;
+                  result.setCheckValueExist(false);
+                  result.setCheckValue(null);
                 }
               } else {
-                result.checkValueReturned = false;
-                result.checkValueExist = false;
-                result.checkValue = null;
+                result.setCheckValueReturned(false);
+                result.setCheckValueExist(false);
+                result.setCheckValue(null);
               }
 
               promise.setSuccess(result);
@@ -922,6 +1003,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_check_and_set_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
@@ -931,14 +1016,14 @@ public class PegasusTable implements PegasusTableInterface {
             } else {
               CompareExchangeResult result = new CompareExchangeResult();
               if (op2.get_response().error == 0) {
-                result.setSucceed = true;
-                result.actualValue = null;
+                result.setSetSucceed(true);
+                result.setActualValue(null);
               } else {
-                result.setSucceed = false;
+                result.setSetSucceed(false);
                 if (op2.get_response().check_value_exist) {
-                  result.actualValue = op2.get_response().check_value.data;
+                  result.setActualValue(op2.get_response().check_value.data);
                 } else {
-                  result.actualValue = null;
+                  result.setActualValue(null);
                 }
               }
               promise.setSuccess(result);
@@ -963,6 +1048,10 @@ public class PegasusTable implements PegasusTableInterface {
         new Table.ClientOPCallback() {
           @Override
           public void onCompletion(client_operator clientOP) {
+            if (!(clientOP instanceof rrdb_ttl_operator)) {
+              promise.setFailure(new PException("Unexpected client operator"));
+              return;
+            }
             rrdb_ttl_operator op2 = (rrdb_ttl_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
@@ -1109,7 +1198,7 @@ public class PegasusTable implements PegasusTableInterface {
       Future<BatchGetResult> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        resultMapList.add(fu.getNow().valueMap);
+        resultMapList.add(fu.getNow().getValueMap());
       } else {
         Throwable cause = fu.cause();
         partitionToPException.set(
@@ -1128,7 +1217,10 @@ public class PegasusTable implements PegasusTableInterface {
       byte[] value =
           resultMapList
               .get(index)
-              .get(Pair.of(new String(keys.get(i).getLeft()), new String(keys.get(i).getRight())));
+              .get(
+                  Pair.of(
+                      new String(keys.get(i).getLeft(), StandardCharsets.UTF_8),
+                      new String(keys.get(i).getRight(), StandardCharsets.UTF_8)));
       results.add(Pair.of(null, value));
 
       count++;
@@ -1152,20 +1244,18 @@ public class PegasusTable implements PegasusTableInterface {
       futures.add(asyncGet(k.getLeft(), k.getRight(), timeout));
     }
     int count = 0;
-    PException nullEx = null;
-    byte[] nullBytes = null;
     for (int i = 0; i < keys.size(); i++) {
       Future<byte[]> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        results.add(Pair.of(nullEx, fu.getNow()));
+        results.add(Pair.of(null, fu.getNow()));
         count++;
       } else {
         Throwable cause = fu.cause();
         results.add(
             Pair.of(
                 new PException("Get value of keys[" + i + "] failed: " + cause.getMessage(), cause),
-                nullBytes));
+                null));
       }
     }
     return count;
@@ -1274,7 +1364,9 @@ public class PegasusTable implements PegasusTableInterface {
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
         values.set(
-            i, new HashKeyData(fu.getNow().allFetched, keys.get(i).getLeft(), fu.getNow().values));
+            i,
+            new HashKeyData(
+                fu.getNow().isAllFetched(), keys.get(i).getLeft(), fu.getNow().getValues()));
       } else {
         Throwable cause = fu.cause();
         throw new PException(
@@ -1301,17 +1393,15 @@ public class PegasusTable implements PegasusTableInterface {
       futures.add(asyncMultiGet(k.getLeft(), k.getRight(), timeout));
     }
     int count = 0;
-    PException nullEx = null;
-    HashKeyData nullData = null;
     for (int i = 0; i < keys.size(); i++) {
       Future<MultiGetResult> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
         results.add(
             Pair.of(
-                nullEx,
+                null,
                 new HashKeyData(
-                    fu.getNow().allFetched, keys.get(i).getLeft(), fu.getNow().values)));
+                    fu.getNow().isAllFetched(), keys.get(i).getLeft(), fu.getNow().getValues())));
         count++;
       } else {
         Throwable cause = fu.cause();
@@ -1319,7 +1409,7 @@ public class PegasusTable implements PegasusTableInterface {
             Pair.of(
                 new PException(
                     "MultiGet value of keys[" + i + "] failed: " + cause.getMessage(), cause),
-                nullData));
+                null));
       }
     }
     return count;
@@ -1405,12 +1495,11 @@ public class PegasusTable implements PegasusTableInterface {
       futures.add(asyncSet(i.hashKey, i.sortKey, i.value, i.ttlSeconds, timeout));
     }
     int count = 0;
-    PException nullEx = null;
     for (int i = 0; i < items.size(); i++) {
       Future<Void> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        results.add(nullEx);
+        results.add(null);
         count++;
       } else {
         Throwable cause = fu.cause();
@@ -1499,12 +1588,11 @@ public class PegasusTable implements PegasusTableInterface {
       futures.add(asyncMultiSet(item.hashKey, item.values, ttlSeconds, timeout));
     }
     int count = 0;
-    PException nullEx = null;
     for (int i = 0; i < items.size(); i++) {
       Future<Void> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        results.add(nullEx);
+        results.add(null);
         count++;
       } else {
         Throwable cause = fu.cause();
@@ -1570,7 +1658,7 @@ public class PegasusTable implements PegasusTableInterface {
       Future<Void> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        results.add(nullEx);
+        results.add(null);
         count++;
       } else {
         Throwable cause = fu.cause();
@@ -1606,7 +1694,6 @@ public class PegasusTable implements PegasusTableInterface {
     }
     if (timeout <= 0) timeout = defaultTimeout;
     long startTime = System.currentTimeMillis();
-    long lastCheckTime = startTime;
     long deadlineTime = startTime + timeout;
     int count = 0;
     final int maxBatchDelCount = 100;
@@ -1621,13 +1708,15 @@ public class PegasusTable implements PegasusTableInterface {
     options.nextSortKey = startSortKey;
     PegasusScannerInterface pegasusScanner =
         getScanner(hashKey, startSortKey, stopSortKey, scanOptions);
-    lastCheckTime = System.currentTimeMillis();
+    long lastCheckTime = System.currentTimeMillis();
     if (lastCheckTime >= deadlineTime) {
-      String startSortKeyStr = startSortKey == null ? "" : new String(startSortKey);
-      String stopSortKeyStr = stopSortKey == null ? "" : new String(stopSortKey);
+      String startSortKeyStr =
+          startSortKey == null ? "" : new String(startSortKey, StandardCharsets.UTF_8);
+      String stopSortKeyStr =
+          stopSortKey == null ? "" : new String(stopSortKey, StandardCharsets.UTF_8);
       throw new PException(
           "Getting pegasusScanner takes too long time when delete hashKey:"
-              + new String(hashKey)
+              + new String(hashKey, StandardCharsets.UTF_8)
               + ",startSortKey:"
               + startSortKeyStr
               + ",stopSortKey:"
@@ -1661,10 +1750,13 @@ public class PegasusTable implements PegasusTableInterface {
         options.nextSortKey = null;
       }
     } catch (InterruptedException | ExecutionException e) {
-      String nextSortKeyStr = options.nextSortKey == null ? "" : new String(options.nextSortKey);
+      String nextSortKeyStr =
+          options.nextSortKey == null
+              ? ""
+              : new String(options.nextSortKey, StandardCharsets.UTF_8);
       throw new PException(
           "delRange of hashKey:"
-              + new String(hashKey)
+              + new String(hashKey, StandardCharsets.UTF_8)
               + " from sortKey:"
               + nextSortKeyStr
               + "[index:"
@@ -1673,11 +1765,12 @@ public class PegasusTable implements PegasusTableInterface {
               + " failed:",
           e);
     } catch (TimeoutException e) {
-      String sortKey = sortKeys.isEmpty() ? null : new String(sortKeys.get(0));
+      String sortKey =
+          sortKeys.isEmpty() ? null : new String(sortKeys.get(0), StandardCharsets.UTF_8);
       int timeUsed = (int) (System.currentTimeMillis() - startTime);
       throw new PException(
           "delRange of hashKey:"
-              + new String(hashKey)
+              + new String(hashKey, StandardCharsets.UTF_8)
               + " from sortKey:"
               + sortKey
               + "[index:"
@@ -1725,12 +1818,11 @@ public class PegasusTable implements PegasusTableInterface {
       futures.add(asyncMultiDel(k.getLeft(), k.getRight(), timeout));
     }
     int count = 0;
-    PException nullEx = null;
     for (int i = 0; i < keys.size(); i++) {
       Future<Void> fu = futures.get(i);
       fu.awaitUninterruptibly();
       if (fu.isSuccess()) {
-        results.add(nullEx);
+        results.add(null);
         count++;
       } else {
         Throwable cause = fu.cause();
@@ -2099,6 +2191,9 @@ public class PegasusTable implements PegasusTableInterface {
       case ERR_DISK_INSUFFICIENT:
         message = " The replica server disk space is insufficient";
         break;
+      default:
+        message = " Unknown error!";
+        break;
     }
     promise.setFailure(
         new PException(new ReplicationException(op.rpc_error.errno, header + message)));
@@ -2128,7 +2223,7 @@ public class PegasusTable implements PegasusTableInterface {
     }
 
     private String getSubstring(byte[] key) {
-      String keyStr = key == null ? "" : new String(key);
+      String keyStr = key == null ? "" : new String(key, StandardCharsets.UTF_8);
       return keyStr.length() < 32 ? keyStr : keyStr.substring(0, 32);
     }
 

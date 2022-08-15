@@ -21,6 +21,7 @@ package org.apache.pegasus.client;
 import static org.apache.pegasus.client.PConfigUtil.loadConfiguration;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Properties;
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ConfigurationConverter;
@@ -219,6 +220,23 @@ public class ClientOptions {
           && this.sessionResetTimeWindowSecs == clientOptions.sessionResetTimeWindowSecs;
     }
     return false;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = 20;
+    result = 31 * result + metaServers.hashCode();
+    result = 31 * result + Objects.hashCode(operationTimeout.toMillis());
+    result = 31 * result + asyncWorkers;
+    result = 31 * result + (enablePerfCounter ? 1 : 0);
+    result = 31 * result + falconPerfCounterTags.hashCode();
+    result = 31 * result + Objects.hashCode(falconPushInterval.toMillis());
+    result = 31 * result + (enableWriteLimit ? 1 : 0);
+    result = 31 * result + Objects.hashCode(metaQueryTimeout.toMillis());
+    result = 31 * result + authProtocol.hashCode();
+    result = 31 * result + credential.hashCode();
+    result = 31 * result + Objects.hashCode(sessionResetTimeWindowSecs);
+    return result;
   }
 
   @Override
