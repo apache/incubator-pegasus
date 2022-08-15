@@ -55,7 +55,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
@@ -72,6 +72,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
+              - '.github/workflows/lint_and_test_cpp.yaml'
             src:
               - 'src/**'
             thirdparty:
@@ -142,7 +143,7 @@ jobs:
     needs: build_Release
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2
@@ -168,7 +169,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
@@ -185,6 +186,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
+              - '.github/workflows/lint_and_test_cpp.yaml'
             src:
               - 'src/**'
             thirdparty:
@@ -249,7 +251,7 @@ jobs:
     needs: build_ASAN
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2
@@ -275,7 +277,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
@@ -292,6 +294,7 @@ jobs:
               - 'cmake_modules/**'
               - 'CMakeLists.txt'
               - 'run.sh'
+              - '.github/workflows/lint_and_test_cpp.yaml'
             src:
               - 'src/**'
             thirdparty:
@@ -356,7 +359,7 @@ jobs:
     needs: build_UBSAN
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804
+      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2
