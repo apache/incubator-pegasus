@@ -183,7 +183,6 @@ TEST_F(scan, OVERALL_COUNT_ONLY)
     std::string sort_key;
     std::string value;
     int32_t data_counts = 0;
-    std::map<std::string, std::map<std::string, std::string>> data;
     for (auto scanner : scanners) {
         ASSERT_NE(nullptr, scanner);
         int32_t kv_count;

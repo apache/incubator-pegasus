@@ -405,7 +405,7 @@ inline void scan_data_next(scan_data_context *context)
                                                uint32_t expire_ts_seconds,
                                                int32_t kv_count) {
             if (ret == pegasus::PERR_OK) {
-                if (kv_count == -1 || validate_filter(context, sort_key, value)) {
+                if (kv_count != -1 || validate_filter(context, sort_key, value)) {
                     bool ts_expired = false;
                     int ttl_seconds = 0;
                     switch (context->op) {

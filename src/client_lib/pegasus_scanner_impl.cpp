@@ -51,10 +51,13 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
       _options(options),
       _splits_hash(std::move(hash)),
       _p(-1),
+      _kv_count(-1),
       _context(SCAN_CONTEXT_ID_COMPLETED),
       _rpc_started(false),
       _validate_partition_hash(validate_partition_hash),
-      _full_scan(full_scan)
+      _full_scan(full_scan),
+      _only_calculate_count(false),
+      _already_add_count(true)
 {
 }
 
@@ -125,7 +128,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
 
     std::list<async_scan_next_callback_t> temp;
     while (true) {
-        while (++_p >= _kvs.size()) {
+        while (++_p >= _kvs.size() && _already_add_count) {
             if (_context == SCAN_CONTEXT_ID_COMPLETED) {
                 // reach the end of one partition
                 if (_splits_hash.empty()) {
@@ -170,8 +173,8 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         // valid data got
         std::string hash_key, sort_key, value;
         uint32_t expire_ts_seconds = 0;
-        // _kv_count > -1 means req just want to get data counts, not include data value
-        if (_kv_count == -1) {
+
+        if (!_only_calculate_count) {
             pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
             value = std::string(_kvs[_p].value.data(), _kvs[_p].value.length());
             if (_kvs[_p].__isset.expire_ts_seconds) {
@@ -189,6 +192,9 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
                      std::move(info),
                      expire_ts_seconds,
                      _kv_count);
+            if (_only_calculate_count) {
+                _already_add_count = true;
+            }
             _lock.lock();
             if (_queue.size() == 1) {
                 // keep the last callback until exit this function
@@ -272,7 +278,18 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
             _kvs = std::move(response.kvs);
             _p = -1;
             _context = response.context_id;
-            _kv_count = response.kv_count;
+            // 1. kv_count exist on response means server is newer version (added counting size only
+            // implementation)
+            //   1> kv_count == -1 indicates response still have key and value data
+            //   2> kv_count > -1 indicates response only have kv size count, but not key && value
+            // 2. kv_count is not existed means server is older version
+            if (response.__isset.kv_count) {
+                if (response.kv_count != -1) {
+                    _only_calculate_count = true;
+                    _already_add_count = false;
+                    _kv_count = response.kv_count;
+                }
+            }
             _async_next_internal();
             return;
         } else if (get_rocksdb_server_error(response.error) == PERR_NOT_FOUND) {

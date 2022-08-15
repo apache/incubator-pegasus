@@ -1162,6 +1162,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.kvs.reserve(batch_count);
 
     bool return_expire_ts = request.__isset.return_expire_ts ? request.return_expire_ts : false;
+    bool only_return_count = request.__isset.only_return_count ? request.only_return_count : false;
 
     std::unique_ptr<range_read_limiter> limiter =
         dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
@@ -1200,7 +1201,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         switch (state) {
         case range_iteration_state::kNormal:
             count++;
-            if (!request.only_return_count) {
+            if (!only_return_count) {
                 append_key_value(
                     resp.kvs, it->key(), it->value(), request.no_value, return_expire_ts);
             }
@@ -1223,9 +1224,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         it->Next();
     }
-    if (request.only_return_count) {
-        // add a null data avoid to refactor the client code
-        resp.kvs.emplace_back(::dsn::apps::key_value());
+    if (only_return_count) {
         resp.__set_kv_count(count);
     }
 
@@ -1282,7 +1281,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.no_value,
             request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
             return_expire_ts,
-            request.only_return_count));
+            only_return_count));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1401,7 +1400,6 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         }
 
         if (only_return_count) {
-            resp.kvs.emplace_back(::dsn::apps::key_value());
             resp.__set_kv_count(count);
         }
 
