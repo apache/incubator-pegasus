@@ -279,7 +279,7 @@ struct get_scanner_request
     11:optional bool    validate_partition_hash;
     12:optional bool    return_expire_ts;
     13:optional bool full_scan; // true means client want to build 'full scan' context with the server side, false otherwise
-    14:optional bool only_return_count;
+    14:optional bool only_return_count = false;
 }
 
 struct scan_request

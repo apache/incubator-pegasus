@@ -193,7 +193,11 @@ TEST_F(scan, OVERALL_COUNT_ONLY)
                                            << client->get_error_string(ret);
         delete scanner;
     }
-    ASSERT_EQ(10990, data_counts);
+    int data_sizes = 0;
+    for (auto &m : base) {
+        data_sizes += m.second.size();
+    }
+    ASSERT_EQ(data_sizes, data_counts);
 }
 
 TEST_F(scan, ALL_SORT_KEY)

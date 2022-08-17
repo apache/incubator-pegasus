@@ -1319,7 +1319,6 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
     resp.app_id = _gpid.get_app_id();
     resp.partition_index = _gpid.get_partition_index();
     resp.server = _primary_address;
-    bool only_return_count = false;
 
     if (!_read_size_throttling_controller->available()) {
         rpc.error() = dsn::ERR_BUSY;
@@ -1332,7 +1331,6 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
         rocksdb::Iterator *it = context->iterator.get();
         const rocksdb::Slice &stop = context->stop;
         bool stop_inclusive = context->stop_inclusive;
-        only_return_count = context->only_return_count;
         ::dsn::apps::filter_type::type hash_key_filter_type = context->hash_key_filter_type;
         const ::dsn::blob &hash_key_filter_pattern = context->hash_key_filter_pattern;
         ::dsn::apps::filter_type::type sort_key_filter_type = context->sort_key_filter_type;
@@ -1376,7 +1374,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             switch (state) {
             case range_iteration_state::kNormal:
                 count++;
-                if (!only_return_count) {
+                if (!context->only_return_count) {
                     append_key_value(resp.kvs, it->key(), it->value(), no_value, return_expire_ts);
                 }
                 break;
@@ -1399,7 +1397,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             it->Next();
         }
 
-        if (only_return_count) {
+        if (context->only_return_count) {
             resp.__set_kv_count(count);
         }
 

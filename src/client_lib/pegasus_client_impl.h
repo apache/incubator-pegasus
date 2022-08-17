@@ -296,7 +296,6 @@ public:
         volatile bool _rpc_started;
         bool _validate_partition_hash;
         bool _full_scan;
-        bool _only_calculate_count;
         bool _already_add_count;
 
         void _async_next_internal();

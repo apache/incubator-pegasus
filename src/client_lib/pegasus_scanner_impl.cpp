@@ -56,7 +56,6 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
       _rpc_started(false),
       _validate_partition_hash(validate_partition_hash),
       _full_scan(full_scan),
-      _only_calculate_count(false),
       _already_add_count(true)
 {
 }
@@ -174,7 +173,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
         std::string hash_key, sort_key, value;
         uint32_t expire_ts_seconds = 0;
 
-        if (!_only_calculate_count) {
+        if (!_options.only_return_count) {
             pegasus_restore_key(_kvs[_p].key, hash_key, sort_key);
             value = std::string(_kvs[_p].value.data(), _kvs[_p].value.length());
             if (_kvs[_p].__isset.expire_ts_seconds) {
@@ -192,7 +191,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
                      std::move(info),
                      expire_ts_seconds,
                      _kv_count);
-            if (_only_calculate_count) {
+            if (_options.only_return_count) {
                 _already_add_count = true;
             }
             _lock.lock();
@@ -285,7 +284,6 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
             // 2. kv_count is not existed means server is older version
             if (response.__isset.kv_count) {
                 if (response.kv_count != -1) {
-                    _only_calculate_count = true;
                     _already_add_count = false;
                     _kv_count = response.kv_count;
                 }
