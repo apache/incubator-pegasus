@@ -29,9 +29,6 @@ header:
     - '.github/ISSUE_TEMPLATE/general_question.md'
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
-    # TODO(yingchun): rrdb_types.* files can be automatic generated when build, we can remove them later.
-    - 'src/base/rrdb_types.cpp'
-    - 'src/include/rrdb/rrdb_types.h'
     # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     - 'src/shell/argh.h'
     - 'src/shell/linenoise/linenoise.c'
@@ -60,8 +57,6 @@ header:
     - 'src/rdsn/src/runtime/build_config.h'
     - 'src/rdsn/src/utils/test/autoref_ptr_test.cpp'
     - 'src/rdsn/include/dsn/utility/safe_strerror_posix.h'
-    - 'src/rdsn/src/runtime/build_config.h'
-    - 'src/rdsn/src/utils/test/autoref_ptr_test.cpp'
     - 'src/rdsn/src/utils/safe_strerror_posix.cpp'
     # Copyright 2017 The Abseil Authors
     - 'src/rdsn/include/dsn/utility/absl/base/internal/invoke.h'
