@@ -3016,9 +3016,16 @@ void pegasus_server_impl::reset_usage_scenario_options(
 void pegasus_server_impl::recalculate_data_cf_options(
     const rocksdb::ColumnFamilyOptions &cur_data_cf_opts)
 {
-#define UPDATE_OPTION_IF_NEEDED(option, value, str_value)                                          \
+#define UPDATE_NUMBER_OPTION_IF_NEEDED(option, value)                                              \
     if ((value) != cur_data_cf_opts.option) {                                                      \
-        new_options[#option] = (str_value);                                                        \
+        new_options[#option] = std::to_string((value));                                            \
+    }
+#define UPDATE_BOOL_OPTION_IF_NEEDED(option, value)                                                \
+    if ((value) != cur_data_cf_opts.option) {                                                      \
+        if ((value))                                                                               \
+            new_options[#option] = "true";                                                         \
+        else                                                                                       \
+            new_options[#option] = "false";                                                        \
     }
 
     if (!_is_need_update_data_cf_opts)
@@ -3032,10 +3039,8 @@ void pegasus_server_impl::recalculate_data_cf_options(
                 new_options["write_buffer_size"] =
                     std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size));
             }
-            UPDATE_OPTION_IF_NEEDED(
-                level0_file_num_compaction_trigger,
-                _data_cf_opts.level0_file_num_compaction_trigger,
-                std::to_string(_data_cf_opts.level0_file_num_compaction_trigger));
+            UPDATE_NUMBER_OPTION_IF_NEEDED(level0_file_num_compaction_trigger,
+                                           _data_cf_opts.level0_file_num_compaction_trigger);
         } else {
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
                                                        _data_cf_opts.write_buffer_size * 2);
@@ -3052,36 +3057,27 @@ void pegasus_server_impl::recalculate_data_cf_options(
                     std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
             }
         }
-        UPDATE_OPTION_IF_NEEDED(level0_slowdown_writes_trigger,
-                                _data_cf_opts.level0_slowdown_writes_trigger,
-                                std::to_string(_data_cf_opts.level0_slowdown_writes_trigger));
-        UPDATE_OPTION_IF_NEEDED(level0_stop_writes_trigger,
-                                _data_cf_opts.level0_stop_writes_trigger,
-                                std::to_string(_data_cf_opts.level0_stop_writes_trigger));
-        UPDATE_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit,
-                                _data_cf_opts.soft_pending_compaction_bytes_limit,
-                                std::to_string(_data_cf_opts.soft_pending_compaction_bytes_limit));
-        UPDATE_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit,
-                                _data_cf_opts.hard_pending_compaction_bytes_limit,
-                                std::to_string(_data_cf_opts.hard_pending_compaction_bytes_limit));
-        UPDATE_OPTION_IF_NEEDED(disable_auto_compactions, false, "false");
-        UPDATE_OPTION_IF_NEEDED(max_compaction_bytes,
-                                _data_cf_opts.max_compaction_bytes,
-                                std::to_string(_data_cf_opts.max_compaction_bytes));
-        UPDATE_OPTION_IF_NEEDED(max_write_buffer_number,
-                                _data_cf_opts.max_write_buffer_number,
-                                std::to_string(_data_cf_opts.max_write_buffer_number));
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_slowdown_writes_trigger,
+                                       _data_cf_opts.level0_slowdown_writes_trigger);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_stop_writes_trigger,
+                                       _data_cf_opts.level0_stop_writes_trigger);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit,
+                                       _data_cf_opts.soft_pending_compaction_bytes_limit);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit,
+                                       _data_cf_opts.hard_pending_compaction_bytes_limit);
+        UPDATE_BOOL_OPTION_IF_NEEDED(disable_auto_compactions, false);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(max_compaction_bytes, _data_cf_opts.max_compaction_bytes);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(max_write_buffer_number,
+                                       _data_cf_opts.max_write_buffer_number);
     } else {
         // ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD
-        UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger, 1000000000, "1000000000");
-        UPDATE_OPTION_IF_NEEDED(level0_slowdown_writes_trigger, 1000000000, "1000000000");
-        UPDATE_OPTION_IF_NEEDED(level0_stop_writes_trigger, 1000000000, "1000000000");
-        UPDATE_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit, 0, "0");
-        UPDATE_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit, 0, "0");
-        UPDATE_OPTION_IF_NEEDED(disable_auto_compactions, true, "true");
-        UPDATE_OPTION_IF_NEEDED(max_compaction_bytes,
-                                static_cast<uint64_t>(1) << 60,
-                                std::to_string(static_cast<uint64_t>(1) << 60));
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_file_num_compaction_trigger, 1000000000);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_slowdown_writes_trigger, 1000000000);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_stop_writes_trigger, 1000000000);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit, 0);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit, 0);
+        UPDATE_BOOL_OPTION_IF_NEEDED(disable_auto_compactions, true);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(max_compaction_bytes, static_cast<uint64_t>(1) << 60);
         if (!check_value_if_nearby(_data_cf_opts.write_buffer_size * 4,
                                    cur_data_cf_opts.write_buffer_size)) {
             new_options["write_buffer_size"] =
