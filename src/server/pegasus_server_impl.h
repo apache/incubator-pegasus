@@ -425,7 +425,10 @@ private:
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
     rocksdb::DBOptions _db_opts;
+    // The value of option in data_cf according to conf template file config.ini
     rocksdb::ColumnFamilyOptions _data_cf_opts;
+    // Dynamically calculate the value of current data_cf option according to the conf module file
+    // and usage mode
     rocksdb::ColumnFamilyOptions _table_data_cf_opts;
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
