@@ -82,10 +82,9 @@ struct backup_response
     2:dsn.gpid          pid;
     3:i64               backup_id;
     4:backup_status     status;
-    5:optional dsn.error_code   checkpoint_err;
-    6:optional dsn.error_code   upload_err;
-    7:optional i32      upload_progress;
-    8:optional i64      checkpoint_total_size;
+    5:optional dsn.error_code   checkpoint_upload_err;
+    6:optional i32      upload_progress;
+    7:optional i64      checkpoint_total_size;
 }
 
 // clear all backup resources (including backup contexts and checkpoint dirs) of this policy.
