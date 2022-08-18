@@ -2333,7 +2333,6 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         tp.output(std::cout, tp_output_format::kTabular);
         return true;
     }
-    options.only_return_count = true;
 
     if (max_batch_count <= 1) {
         fprintf(stderr, "ERROR: max_batch_count should be greater than 1\n");
@@ -2404,8 +2403,8 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     if (diff_hash_key || stat_size || value_filter_type != pegasus::pegasus_client::FT_NO_FILTER ||
         sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT) {
         options.only_return_count = false;
-    }
-    if (options.only_return_count) {
+    } else {
+        options.only_return_count = true;
         fprintf(stderr, "INFO: scanner only return kv count, not return value\n");
     }
 

@@ -247,6 +247,13 @@ public:
 
     static void init_error();
 
+    enum class async_scan_type : char
+    {
+        normal,
+        count_only,
+        count_only_finished
+    };
+
     class pegasus_scanner_impl : public pegasus_scanner
     {
     public:
@@ -296,7 +303,7 @@ public:
         volatile bool _rpc_started;
         bool _validate_partition_hash;
         bool _full_scan;
-        bool _already_add_count;
+        async_scan_type _type;
 
         void _async_next_internal();
         void _start_scan();
