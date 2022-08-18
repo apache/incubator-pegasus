@@ -30,7 +30,7 @@ public class WriteLimiter {
   private static final int MULTI_VALUE_COUNT = 1000;
   private static final int MULTI_VALUE_SIZE = 1024 * 1024;
 
-  private boolean enableWriteLimit;
+  private final boolean enableWriteLimit;
 
   public WriteLimiter(boolean enableWriteLimit) {
     this.enableWriteLimit = enableWriteLimit;

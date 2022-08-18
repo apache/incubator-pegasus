@@ -18,45 +18,53 @@
  */
 package org.apache.pegasus.operator;
 
+import org.apache.pegasus.apps.count_response;
 import org.apache.pegasus.apps.rrdb;
-import org.apache.pegasus.apps.ttl_response;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 
-public class rrdb_ttl_operator extends read_operator {
-  public rrdb_ttl_operator(gpid gpid, String tableName, blob request, long partitionHash) {
+/** Created by weijiesun on 16-12-8. */
+public class RRDBSortKeyCountOperator extends ClientOperator {
+
+  private final blob request;
+  private count_response resp;
+
+  public RRDBSortKeyCountOperator(gpid gpid, String tableName, blob request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "ttl";
+    return "sortkey_count";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_TTL", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.get_args get_args = new rrdb.get_args(request);
-    get_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_SORTKEY_COUNT", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.sortkey_count_args get_args = new rrdb.sortkey_count_args(request);
+    get_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException {
-    rrdb.ttl_result result = new rrdb.ttl_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(org.apache.thrift.protocol.TProtocol in) throws TException {
+    rrdb.sortkey_count_result result = new rrdb.sortkey_count_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT, "get ttl failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
+          "get sortkey count failed: unknown result");
+    }
   }
 
-  public ttl_response get_response() {
+  public count_response get_response() {
     return resp;
   }
-
-  private blob request;
-  private ttl_response resp;
 }

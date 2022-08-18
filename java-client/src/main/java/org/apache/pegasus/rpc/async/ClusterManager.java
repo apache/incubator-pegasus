@@ -140,12 +140,12 @@ public class ClusterManager extends Cluster {
   }
 
   public static EventLoopGroup getEventLoopGroupInstance(int threadsCount) {
-    logger.debug("create nio eventloop group");
+    logger.debug("create nio event loop group");
     return new NioEventLoopGroup(threadsCount);
   }
 
   public static Class getSocketChannelClass() {
-    logger.debug("create nio eventloop group");
+    logger.debug("create nio event loop group");
     return NioSocketChannel.class;
   }
 

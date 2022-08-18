@@ -18,46 +18,53 @@
  */
 package org.apache.pegasus.operator;
 
+import org.apache.pegasus.apps.multi_get_request;
+import org.apache.pegasus.apps.multi_get_response;
 import org.apache.pegasus.apps.rrdb;
-import org.apache.pegasus.apps.scan_request;
-import org.apache.pegasus.apps.scan_response;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
-import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_scan_operator extends client_operator {
-  public rrdb_scan_operator(gpid gpid, String tableName, scan_request request, long partitionHash) {
+public class RRDBMultiGetOperator extends ReadOperator {
+
+  private final multi_get_request request;
+  private multi_get_response resp;
+
+  public RRDBMultiGetOperator(
+      gpid gpid, String tableName, multi_get_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "scan";
+    return "multi_get";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_SCAN", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.scan_args args = new rrdb.scan_args(request);
-    args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_GET", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.multi_get_args get_args = new rrdb.multi_get_args(request);
+    get_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.scan_result result = new rrdb.scan_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(org.apache.thrift.protocol.TProtocol in) throws TException {
+    rrdb.multi_get_result result = new rrdb.multi_get_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT, "scan failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
+          "multi get failed: unknown result");
+    }
   }
 
-  public scan_response get_response() {
+  public multi_get_response get_response() {
     return resp;
   }
-
-  private scan_request request;
-  private scan_response resp;
 }

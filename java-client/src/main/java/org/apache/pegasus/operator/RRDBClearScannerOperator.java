@@ -18,45 +18,39 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.read_response;
 import org.apache.pegasus.apps.rrdb;
-import org.apache.pegasus.base.blob;
+import org.apache.pegasus.apps.scan_response;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_get_operator extends read_operator {
-  public rrdb_get_operator(gpid gpid, String tableName, blob request, long partitionHash) {
+public class RRDBClearScannerOperator extends ClientOperator {
+  public RRDBClearScannerOperator(gpid gpid, String tableName, long request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
   public String name() {
-    return "get";
+    return "clear_scanner";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_GET", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.get_args get_args = new rrdb.get_args(request);
-    get_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_CLEAR_SCANNER", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.clear_scanner_args args = new rrdb.clear_scanner_args(request);
+    args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException {
-    rrdb.get_result result = new rrdb.get_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
-      throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT, "get failed: unknown result");
+  @Override
+  public void recvData(TProtocol in) throws TException {}
+
+  public scan_response get_response() {
+    return null;
   }
 
-  public read_response get_response() {
-    return resp;
-  }
-
-  private blob request;
-  private read_response resp;
+  private long request;
 }

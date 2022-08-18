@@ -27,7 +27,7 @@ import org.apache.pegasus.rpc.async.TableHandler;
 
 public class TableInterceptorManager {
 
-  private List<TableInterceptor> interceptors = new ArrayList<>();
+  private final List<TableInterceptor> interceptors = new ArrayList<>();
 
   public TableInterceptorManager(TableOptions options) {
     if (options.enableBackupRequest()) {

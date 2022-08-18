@@ -21,10 +21,10 @@ package org.apache.pegasus.rpc.async;
 import org.apache.thrift.transport.TTransport;
 
 public class TByteBufTransport extends TTransport {
-  private io.netty.buffer.ByteBuf buffer_;
+  private io.netty.buffer.ByteBuf buffer;
 
   public TByteBufTransport(io.netty.buffer.ByteBuf b) {
-    buffer_ = b;
+    buffer = b;
   }
 
   public boolean isOpen() {
@@ -36,13 +36,15 @@ public class TByteBufTransport extends TTransport {
   public void close() {}
 
   public int read(byte[] buf, int off, int len) {
-    if (buffer_.readableBytes() < len) len = buffer_.readableBytes();
-    buffer_.readBytes(buf, off, len);
+    if (buffer.readableBytes() < len) {
+      len = buffer.readableBytes();
+    }
+    buffer.readBytes(buf, off, len);
     return len;
   }
 
   public void write(byte[] buf, int off, int len) {
-    buffer_.writeBytes(buf, off, len);
+    buffer.writeBytes(buf, off, len);
   }
 
   public String toString(String enc) {
@@ -50,10 +52,10 @@ public class TByteBufTransport extends TTransport {
   }
 
   public int length() {
-    return buffer_.readableBytes();
+    return buffer.readableBytes();
   }
 
   public byte[] getArray() {
-    return buffer_.array();
+    return buffer.array();
   }
 }

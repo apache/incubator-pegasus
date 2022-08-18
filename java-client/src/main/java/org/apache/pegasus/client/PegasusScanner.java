@@ -37,10 +37,10 @@ import org.apache.pegasus.apps.scan_response;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.rrdb_clear_scanner_operator;
-import org.apache.pegasus.operator.rrdb_get_scanner_operator;
-import org.apache.pegasus.operator.rrdb_scan_operator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.RRDBClearScannerOperator;
+import org.apache.pegasus.operator.RRDBGetScannerOperator;
+import org.apache.pegasus.operator.RRDBScanOperator;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.Table;
 import org.slf4j.Logger;
@@ -143,8 +143,8 @@ public class PegasusScanner implements PegasusScannerInterface {
   public void close() {
     if (_contextId >= CONTEXT_ID_VALID_MIN) {
       try {
-        rrdb_clear_scanner_operator op =
-            new rrdb_clear_scanner_operator(_gpid, _table.getTableName(), _contextId, _hash);
+        RRDBClearScannerOperator op =
+            new RRDBClearScannerOperator(_gpid, _table.getTableName(), _contextId, _hash);
         _table.operate(op, 0);
       } catch (Throwable e) {
         // ignore
@@ -187,13 +187,13 @@ public class PegasusScanner implements PegasusScannerInterface {
     request.need_check_hash = _needCheckHash;
     request.full_scan = _fullScan;
 
-    rrdb_get_scanner_operator op =
-        new rrdb_get_scanner_operator(_gpid, _table.getTableName(), request, _hash);
+    RRDBGetScannerOperator op =
+        new RRDBGetScannerOperator(_gpid, _table.getTableName(), request, _hash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) throws Throwable {
-            if (!(clientOP instanceof rrdb_get_scanner_operator)) {
+          public void onCompletion(ClientOperator clientOP) throws Throwable {
+            if (!(clientOP instanceof RRDBGetScannerOperator)) {
               logger.error(
                   "scan rpc callback, encounter logic error, we just abandon this scan, "
                       + "tableName({}), appId({})",
@@ -203,7 +203,7 @@ public class PegasusScanner implements PegasusScannerInterface {
               _cause = new PException("scan internal error, rpc callback error");
               return;
             }
-            rrdb_get_scanner_operator op = (rrdb_get_scanner_operator) (clientOP);
+            RRDBGetScannerOperator op = (RRDBGetScannerOperator) (clientOP);
             scan_response response = op.get_response();
             synchronized (_promisesLock) {
               onRecvRpcResponse(op.rpc_error, response);
@@ -227,12 +227,12 @@ public class PegasusScanner implements PegasusScannerInterface {
     }
     _rpcRunning = true;
     scan_request request = new scan_request(_contextId);
-    rrdb_scan_operator op = new rrdb_scan_operator(_gpid, _table.getTableName(), request, _hash);
+    RRDBScanOperator op = new RRDBScanOperator(_gpid, _table.getTableName(), request, _hash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) throws Throwable {
-            if (!(clientOP instanceof rrdb_scan_operator)) {
+          public void onCompletion(ClientOperator clientOP) throws Throwable {
+            if (!(clientOP instanceof RRDBScanOperator)) {
               logger.error(
                   "scan rpc callback, encounter logic error, we just abandon this scan, "
                       + "tableName({}), appId({})",
@@ -242,7 +242,7 @@ public class PegasusScanner implements PegasusScannerInterface {
               _cause = new PException("scan internal error, rpc callback error");
               return;
             }
-            rrdb_scan_operator op = (rrdb_scan_operator) (clientOP);
+            RRDBScanOperator op = (RRDBScanOperator) (clientOP);
             scan_response response = op.get_response();
             synchronized (_promisesLock) {
               onRecvRpcResponse(op.rpc_error, response);

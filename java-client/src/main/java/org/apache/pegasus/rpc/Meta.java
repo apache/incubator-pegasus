@@ -19,8 +19,8 @@
 package org.apache.pegasus.rpc;
 
 import org.apache.pegasus.base.error_code;
-import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.ClientOperator;
 
 public abstract class Meta {
-  public abstract error_code.error_types operate(client_operator op, int retryCount);
+  public abstract error_code.error_types operate(ClientOperator op, int retryCount);
 }

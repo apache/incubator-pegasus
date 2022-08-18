@@ -28,8 +28,12 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class negotiation_operator extends client_operator {
-  public negotiation_operator(negotiation_request request) {
+public class NegotiationOperator extends ClientOperator {
+
+  private final negotiation_request request;
+  private negotiation_response resp;
+
+  public NegotiationOperator(negotiation_request request) {
     super(new gpid(), "", 0);
     this.request = request;
   }
@@ -38,17 +42,17 @@ public class negotiation_operator extends client_operator {
     return "negotiate";
   }
 
-  public void send_data(TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_NEGOTIATION", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
+  public void sendData(TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_NEGOTIATION", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
     security.negotiate_args get_args = new security.negotiate_args(request);
-    get_args.write(oprot);
-    oprot.writeMessageEnd();
+    get_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
+  public void recvData(TProtocol in) throws TException {
     security.negotiate_result result = new security.negotiate_result();
-    result.read(iprot);
+    result.read(in);
     if (result.isSetSuccess()) resp = result.success;
     else
       throw new TApplicationException(
@@ -58,7 +62,4 @@ public class negotiation_operator extends client_operator {
   public negotiation_response get_response() {
     return resp;
   }
-
-  private negotiation_request request;
-  private negotiation_response resp;
 }

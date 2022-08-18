@@ -138,8 +138,8 @@ public class MetricsPoolTest {
     pool.setMeter("aaa", 2);
 
     for (int i = 0; i < 10000; ++i) {
-      pool.setHistorgram("ccc", i);
-      pool.setHistorgram("ccc@temp", i);
+      pool.setHistogram("ccc", i);
+      pool.setHistogram("ccc@temp", i);
     }
 
     JSONArray array = new JSONArray(pool.metricsToJson());

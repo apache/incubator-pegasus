@@ -18,47 +18,52 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.multi_get_request;
-import org.apache.pegasus.apps.multi_get_response;
 import org.apache.pegasus.apps.rrdb;
+import org.apache.pegasus.apps.update_response;
+import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_multi_get_operator extends read_operator {
-  public rrdb_multi_get_operator(
-      gpid gpid, String tableName, multi_get_request request, long partitionHash) {
+public class RRDBRemoveOperator extends ClientOperator {
+
+  private final blob request;
+  private update_response resp;
+
+  public RRDBRemoveOperator(gpid gpid, String tableName, blob request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "multi_get";
+    return "remove";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_GET", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.multi_get_args get_args = new rrdb.multi_get_args(request);
-    get_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_REMOVE", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.remove_args remove_args = new rrdb.remove_args(request);
+    remove_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException {
-    rrdb.multi_get_result result = new rrdb.multi_get_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(TProtocol in) throws TException {
+    rrdb.put_result result = new rrdb.put_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "multi get failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "remove failed: unknown result");
+    }
   }
 
-  public multi_get_response get_response() {
+  public update_response get_response() {
     return resp;
   }
-
-  private multi_get_request request;
-  private multi_get_response resp;
 }

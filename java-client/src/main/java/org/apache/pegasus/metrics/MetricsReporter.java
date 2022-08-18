@@ -53,10 +53,28 @@ import org.slf4j.Logger;
 
 /** Created by weijiesun on 18-3-9. */
 public class MetricsReporter {
+
+  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(MetricsReporter.class);
+
+  private final String falconAgentIP;
+  private final int falconAgentPort;
+  private final String falconAgentSocket; // IP:port;
+  private final int reportIntervalSecs;
+  private final String falconRequestPath;
+
+  private final MetricsPool metrics;
+
+  private final Bootstrap boot;
+  private final EventLoopGroup httpClientGroup;
+
+  private ScheduledFuture actionLater;
+  private boolean reportStopped;
+  private Channel reportTarget;
+
   public MetricsReporter(int reportSecs, MetricsPool pool) {
     falconAgentIP = "127.0.0.1";
     falconAgentPort = 1988;
-    falconAgentSocket = falconAgentIP + ":" + String.valueOf(falconAgentPort);
+    falconAgentSocket = falconAgentIP + ":" + falconAgentPort;
 
     reportIntervalSecs = reportSecs;
     falconRequestPath = "/v1/push";
@@ -254,21 +272,4 @@ public class MetricsReporter {
       scheduleNextConnect();
     }
   }
-
-  private String falconAgentIP;
-  private int falconAgentPort;
-  private String falconAgentSocket; // IP:port;
-  private int reportIntervalSecs;
-  private String falconRequestPath;
-
-  private MetricsPool metrics;
-
-  private Bootstrap boot;
-  private EventLoopGroup httpClientGroup;
-
-  private ScheduledFuture actionLater;
-  private boolean reportStopped;
-  private Channel reportTarget;
-
-  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(MetricsReporter.class);
 }

@@ -18,6 +18,7 @@
  */
 package org.apache.pegasus.operator;
 
+import org.apache.pegasus.apps.get_scanner_request;
 import org.apache.pegasus.apps.rrdb;
 import org.apache.pegasus.apps.scan_response;
 import org.apache.pegasus.base.gpid;
@@ -26,30 +27,44 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_clear_scanner_operator extends client_operator {
-  public rrdb_clear_scanner_operator(
-      gpid gpid, String tableName, long request, long partitionHash) {
+public class RRDBGetScannerOperator extends ClientOperator {
+
+  private final get_scanner_request request;
+  private scan_response resp;
+
+  public RRDBGetScannerOperator(
+      gpid gpid, String tableName, get_scanner_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
   public String name() {
-    return "clear_scanner";
+    return "get_scanner";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_CLEAR_SCANNER", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.clear_scanner_args args = new rrdb.clear_scanner_args(request);
-    args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_GET_SCANNER", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.get_scanner_args args = new rrdb.get_scanner_args(request);
+    args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {}
+  @Override
+  public void recvData(TProtocol in) throws TException {
+    rrdb.get_scanner_result result = new rrdb.get_scanner_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
+      throw new org.apache.thrift.TApplicationException(
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
+          "get scanner failed: unknown result");
+    }
+  }
 
   public scan_response get_response() {
-    return null;
+    return resp;
   }
-
-  private long request;
 }

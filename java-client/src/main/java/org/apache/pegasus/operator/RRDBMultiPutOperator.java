@@ -18,46 +18,58 @@
  */
 package org.apache.pegasus.operator;
 
+import org.apache.pegasus.apps.multi_put_request;
 import org.apache.pegasus.apps.rrdb;
 import org.apache.pegasus.apps.update_response;
-import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_remove_operator extends client_operator {
-  public rrdb_remove_operator(gpid gpid, String tableName, blob request, long partitionHash) {
+public class RRDBMultiPutOperator extends ClientOperator {
+
+  private final multi_put_request request;
+  private update_response resp;
+
+  public RRDBMultiPutOperator(
+      gpid gpid, String tableName, multi_put_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "remove";
+    return "multi_put";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_REMOVE", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.remove_args remove_args = new rrdb.remove_args(request);
-    remove_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_PUT", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.multi_put_args put_args = new rrdb.multi_put_args(request);
+    put_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.put_result result = new rrdb.put_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(TProtocol in) throws TException {
+    rrdb.multi_put_result result = new rrdb.multi_put_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT, "remove failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
+          "multi put failed: unknown result");
+    }
   }
 
   public update_response get_response() {
     return resp;
   }
 
-  private blob request;
-  private update_response resp;
+  public multi_put_request get_request() {
+    return request;
+  }
 }

@@ -32,9 +32,9 @@ import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.client.PegasusClient;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.rrdb_get_operator;
-import org.apache.pegasus.operator.rrdb_put_operator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.RRDBGetOperator;
+import org.apache.pegasus.operator.RRDBPutOperator;
 import org.apache.pegasus.rpc.KeyHasher;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import org.apache.pegasus.tools.Toollet;
@@ -75,7 +75,7 @@ public class ReplicaSessionTest {
     ArrayList<FutureTask<Void>> callbacks = new ArrayList<FutureTask<Void>>();
 
     for (int i = 0; i < 100; ++i) {
-      final client_operator op = new rrdb_put_operator(new gpid(-1, -1), "", null, 0);
+      final ClientOperator op = new RRDBPutOperator(new gpid(-1, -1), "", null, 0);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
               new Callable<Void>() {
@@ -126,7 +126,7 @@ public class ReplicaSessionTest {
       update_request req =
           new update_request(new blob("hello".getBytes()), new blob("world".getBytes()), 0);
 
-      final client_operator op = new Toollet.test_operator(new gpid(-1, -1), req);
+      final ClientOperator op = new Toollet.test_operator(new gpid(-1, -1), req);
       final rpc_address cp_addr = addr;
       final FutureTask<Void> cb =
           new FutureTask<Void>(
@@ -150,7 +150,7 @@ public class ReplicaSessionTest {
       // then we still send query request to replica server. But the timeout is longer.
       update_request req =
           new update_request(new blob("hello".getBytes()), new blob("world".getBytes()), 0);
-      final client_operator op = new Toollet.test_operator(new gpid(-1, -1), req);
+      final ClientOperator op = new Toollet.test_operator(new gpid(-1, -1), req);
       final FutureTask<Void> cb =
           new FutureTask<Void>(
               new Callable<Void>() {
@@ -183,7 +183,7 @@ public class ReplicaSessionTest {
   // ensure if response decode throws an exception, client is able to be informed.
   @Test
   public void testRecvInvalidData() throws Exception {
-    class test_operator extends rrdb_get_operator {
+    class test_operator extends RRDBGetOperator {
       private test_operator(gpid gpid, blob request) {
         super(gpid, "", request, KeyHasher.DEFAULT.hash("a".getBytes()));
       }
@@ -203,7 +203,7 @@ public class ReplicaSessionTest {
     for (int pid = 0; pid < 16; pid++) {
       // find a valid partition held on 127.0.0.1:34801
       blob req = new blob(PegasusClient.generateKey("a".getBytes(), "".getBytes()));
-      final client_operator op = new test_operator(new gpid(1, pid), req);
+      final ClientOperator op = new test_operator(new gpid(1, pid), req);
       FutureTask<Void> cb =
           new FutureTask<Void>(
               new Callable<Void>() {
@@ -244,7 +244,7 @@ public class ReplicaSessionTest {
     entry.sequenceId = 100;
     entry.callback = () -> passed.set(true);
     entry.timeoutTask = null; // simulate the timeoutTask has been null
-    entry.op = new rrdb_put_operator(new gpid(1, 1), null, null, 0);
+    entry.op = new RRDBPutOperator(new gpid(1, 1), null, null, 0);
     rs.pendingResponse.put(100, entry);
     rs.tryNotifyFailureWithSeqID(100, error_code.error_types.ERR_TIMEOUT, false);
     Assert.assertTrue(passed.get());

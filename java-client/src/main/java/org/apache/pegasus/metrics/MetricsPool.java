@@ -32,6 +32,8 @@ import org.json.JSONObject;
 public final class MetricsPool {
 
   private final String defaultTags;
+  private final FalconMetric theMetric;
+  private final MetricRegistry registry = new MetricRegistry();
 
   public MetricsPool(String host, String tags, int reportStepSec) {
     theMetric = new FalconMetric();
@@ -45,14 +47,13 @@ public final class MetricsPool {
     registry.meter(counterName).mark(count);
   }
 
-  public void setHistorgram(String counterName, long value) {
+  public void setHistogram(String counterName, long value) {
     registry.histogram(counterName).update(value);
   }
 
   public void genJsonsFromMeter(String name, Meter meter, StringBuilder output)
       throws JSONException {
     theMetric.counterType = "GAUGE";
-
     theMetric.metric = name + ".cps-1sec";
     theMetric.tags = getTableTag(name);
     theMetric.value = meter.getMeanRate();
@@ -136,7 +137,4 @@ public final class MetricsPool {
     public String counterType; // GAUGE or COUNTER
     public String tags; // metrics description
   }
-
-  private FalconMetric theMetric;
-  private final MetricRegistry registry = new MetricRegistry();
 }

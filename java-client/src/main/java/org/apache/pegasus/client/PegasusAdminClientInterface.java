@@ -32,7 +32,7 @@ public interface PegasusAdminClientInterface {
    * @param replicaCount The replica count of the newly creating app
    * @param envs Environment variables of pegasus app, you can see the supported envs in the website
    *     : https://pegasus.apache.org/administration/table-env
-   * @param timeoutMs The timeout of the interface, milli-seconds
+   * @param timeoutMs The timeout of the interface, milliseconds
    * @throws PException if rpc to the pegasus server cause timeout or other error happens in the
    *     server side, or the newly created app is not fully healthy when the 'timeoutMs' has
    *     elapsed, the interface will throw exception

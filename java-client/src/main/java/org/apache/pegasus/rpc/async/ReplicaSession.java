@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.rpc_address;
-import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.ClientOperator;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptorManager;
 import org.apache.thrift.protocol.TMessage;
 import org.slf4j.Logger;
@@ -49,7 +49,7 @@ import org.slf4j.Logger;
 public class ReplicaSession {
   public static class RequestEntry {
     int sequenceId;
-    public client_operator op;
+    public ClientOperator op;
     public Runnable callback;
     public ScheduledFuture<?> timeoutTask;
     public long timeoutMs;
@@ -100,7 +100,7 @@ public class ReplicaSession {
   }
 
   public void asyncSend(
-      client_operator op,
+      ClientOperator op,
       Runnable callbackFunc,
       long timeoutInMilliseconds,
       boolean isBackupRequest) {

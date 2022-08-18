@@ -18,48 +18,54 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.count_response;
+import org.apache.pegasus.apps.multi_remove_request;
+import org.apache.pegasus.apps.multi_remove_response;
 import org.apache.pegasus.apps.rrdb;
-import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 
 /** Created by weijiesun on 16-12-8. */
-public class rrdb_sortkey_count_operator extends client_operator {
-  public rrdb_sortkey_count_operator(
-      gpid gpid, String tableName, blob request, long partitionHash) {
+public class RRDBMultiRemoveOperator extends ClientOperator {
+
+  private final multi_remove_request request;
+  private multi_remove_response resp;
+
+  public RRDBMultiRemoveOperator(
+      gpid gpid, String tableName, multi_remove_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "sortkey_count";
+    return "multi_remove";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_SORTKEY_COUNT", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.sortkey_count_args get_args = new rrdb.sortkey_count_args(request);
-    get_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_REMOVE", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.multi_remove_args get_args = new rrdb.multi_remove_args(request);
+    get_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException {
-    rrdb.sortkey_count_result result = new rrdb.sortkey_count_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(org.apache.thrift.protocol.TProtocol in) throws TException {
+    rrdb.multi_remove_result result = new rrdb.multi_remove_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
           org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "get sortkey count failed: unknown result");
+          "multi remove failed: unknown result");
+    }
   }
 
-  public count_response get_response() {
-    return resp;
+  public multi_remove_response get_response() {
+    return this.resp;
   }
-
-  private blob request;
-  private count_response resp;
 }

@@ -85,13 +85,13 @@ public class PegasusClient extends PegasusAbstractClient implements PegasusClien
 
   public PegasusClient(Properties properties) throws PException {
     super(properties);
-    this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
+    this.tableMap = new ConcurrentHashMap<>();
     this.tableMapLock = new Object();
   }
 
   public PegasusClient(String configPath) throws PException {
     super(configPath);
-    this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
+    this.tableMap = new ConcurrentHashMap<>();
     this.tableMapLock = new Object();
   }
 

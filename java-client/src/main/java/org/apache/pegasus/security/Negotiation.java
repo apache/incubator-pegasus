@@ -27,7 +27,7 @@ import org.apache.pegasus.apps.negotiation_response;
 import org.apache.pegasus.apps.negotiation_status;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
-import org.apache.pegasus.operator.negotiation_operator;
+import org.apache.pegasus.operator.NegotiationOperator;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.slf4j.Logger;
@@ -55,15 +55,15 @@ class Negotiation {
 
   void send(negotiation_status status, blob msg) {
     negotiation_request request = new negotiation_request(status, msg);
-    negotiation_operator operator = new negotiation_operator(request);
+    NegotiationOperator operator = new NegotiationOperator(request);
     session.asyncSend(
         operator, new RecvHandler(operator), negotiationTimeoutMS, /* isBackupRequest */ false);
   }
 
   private class RecvHandler implements Runnable {
-    private negotiation_operator op;
+    private final NegotiationOperator op;
 
-    RecvHandler(negotiation_operator op) {
+    RecvHandler(NegotiationOperator op) {
       this.op = op;
     }
 

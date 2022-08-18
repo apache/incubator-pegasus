@@ -26,7 +26,7 @@ import org.apache.pegasus.apps.update_request;
 import org.apache.pegasus.apps.update_response;
 import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.base.rpc_address;
-import org.apache.pegasus.operator.rrdb_put_operator;
+import org.apache.pegasus.operator.RRDBPutOperator;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
@@ -155,7 +155,7 @@ public class Toollet {
     boolean call();
   }
 
-  public static class test_operator extends rrdb_put_operator {
+  public static class test_operator extends RRDBPutOperator {
     public test_operator(gpid gpid, update_request request) {
       super(gpid, "", request, 0);
     }

@@ -76,9 +76,7 @@ import org.apache.pegasus.client.request.BatchWithResponse;
  */
 public interface PegasusTableInterface {
 
-  /// < -------- Exist --------
-
-  public static interface ExistListener extends GenericFutureListener<Future<Boolean>> {
+  public interface ExistListener extends GenericFutureListener<Future<Boolean>> {
     /**
      * This function will be called when listened asyncExist future is done.
      *

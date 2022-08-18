@@ -58,7 +58,7 @@ public class BackupRequestInterceptor implements TableInterceptor {
     }
 
     final TableHandler.ReplicaConfiguration handle =
-        tableHandler.getReplicaConfig(clientRequestRound.getOperator().get_gpid().get_pidx());
+        tableHandler.getReplicaConfig(clientRequestRound.getOperator().getgpid().get_pidx());
 
     clientRequestRound.backupRequestTask(
         tableHandler

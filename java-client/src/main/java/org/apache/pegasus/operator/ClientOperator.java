@@ -25,17 +25,23 @@ import org.apache.pegasus.rpc.ThriftHeader;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TProtocol;
 
-public abstract class client_operator {
+public abstract class ClientOperator {
+
+  public ThriftHeader header;
+  public request_meta meta;
+  public gpid pid;
+  public String tableName; // only for metrics
+  public error_code rpc_error;
 
   /**
-   * Whether does this RPC support backup request.<br>
+   * Whether it does this RPC support backup request.<br>
    * Generally, only read-operations support backup-request which sacrifices strong-consistency.
    */
   public boolean supportBackupRequest() {
     return false;
   }
 
-  public client_operator(gpid gpid, String tableName, long partitionHash) {
+  public ClientOperator(gpid gpid, String tableName, long partitionHash) {
     this.header = new ThriftHeader();
     this.meta = new request_meta();
     this.meta.setApp_id(gpid.get_app_id());
@@ -46,14 +52,14 @@ public abstract class client_operator {
     this.rpc_error = new error_code();
   }
 
-  public final byte[] prepare_thrift_header(int meta_length, int body_length) {
+  public final byte[] prepareThriftHeader(int meta_length, int body_length) {
     this.header.meta_length = meta_length;
     this.header.body_length = body_length;
     return header.toByteArray();
   }
 
-  public final void prepare_thrift_meta(
-      TProtocol oprot, int client_timeout, boolean isBackupRequest) throws TException {
+  public final void prepareThriftMeta(TProtocol oprot, int client_timeout, boolean isBackupRequest)
+      throws TException {
     this.meta.setClient_timeout(client_timeout);
     this.meta.setIs_backup_request(isBackupRequest);
     this.meta.write(oprot);
@@ -74,40 +80,22 @@ public abstract class client_operator {
     }
 
     // pegasus.client.put.succ.qps
-    return new StringBuilder()
-        .append("pegasus.client.")
-        .append(name())
-        .append(".")
-        .append(mark)
-        .append(".qps@")
-        .append(tableName)
-        .toString();
+    return "pegasus.client." + name() + "." + mark + ".qps@" + tableName;
   }
 
   public String getLatencyCounter() {
     // pegasus.client.put.latency
-    return new StringBuilder()
-        .append("pegasus.client.")
-        .append(name())
-        .append(".latency@")
-        .append(tableName)
-        .toString();
+    return "pegasus.client." + name() + ".latency@" + tableName;
   }
 
-  public final gpid get_gpid() {
+  public final gpid getgpid() {
     return pid;
   }
 
   public abstract String name();
 
-  public abstract void send_data(org.apache.thrift.protocol.TProtocol oprot, int sequence_id)
+  public abstract void sendData(org.apache.thrift.protocol.TProtocol out, int sequenceId)
       throws TException;
 
-  public abstract void recv_data(org.apache.thrift.protocol.TProtocol iprot) throws TException;
-
-  public ThriftHeader header;
-  public request_meta meta;
-  public gpid pid;
-  public String tableName; // only for metrics
-  public error_code rpc_error;
+  public abstract void recvData(org.apache.thrift.protocol.TProtocol in) throws TException;
 }

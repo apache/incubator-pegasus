@@ -27,7 +27,7 @@ import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.client.PegasusTable.Request;
-import org.apache.pegasus.operator.rrdb_put_operator;
+import org.apache.pegasus.operator.RRDBPutOperator;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.async.ClusterManager;
 import org.apache.pegasus.rpc.async.TableHandler;
@@ -77,7 +77,7 @@ public class TestPException {
     DefaultPromise<Void> promise = table.newPromise();
     update_request req = new update_request(new blob(), new blob(), 100);
     gpid gpid = table.getGpidByHash(1);
-    rrdb_put_operator op = new rrdb_put_operator(gpid, table.getTableName(), req, 0);
+    RRDBPutOperator op = new RRDBPutOperator(gpid, table.getTableName(), req, 0);
     op.rpc_error.errno = error_code.error_types.ERR_OBJECT_NOT_FOUND;
 
     // set failure in promise, the exception is thrown as ExecutionException.
@@ -115,7 +115,7 @@ public class TestPException {
     DefaultPromise<Void> promise = table.newPromise();
     update_request req = new update_request(new blob(), new blob(), 100);
     gpid gpid = table.getGpidByHash(1);
-    rrdb_put_operator op = new rrdb_put_operator(gpid, table.getTableName(), req, 0);
+    RRDBPutOperator op = new RRDBPutOperator(gpid, table.getTableName(), req, 0);
     op.rpc_error.errno = error_code.error_types.ERR_TIMEOUT;
 
     PegasusClient client = (PegasusClient) PegasusClientFactory.getSingletonClient();

@@ -20,7 +20,7 @@ package org.apache.pegasus.security;
 
 import org.apache.commons.configuration2.Configuration;
 
-/** credential info for authentiation */
+/** credential info for authentication */
 public interface Credential {
   String KERBEROS_PROTOCOL_NAME = "kerberos";
 
@@ -38,7 +38,7 @@ public interface Credential {
     return credential;
   }
 
-  /** get the authentiation protocol supported */
+  /** get the authentication protocol supported */
   AuthProtocol getProtocol();
 
   String toString();

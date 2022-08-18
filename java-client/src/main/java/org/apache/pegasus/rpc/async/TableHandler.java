@@ -36,8 +36,8 @@ import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.FutureGroup;
 import org.apache.pegasus.client.PException;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.query_cfg_operator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.QueryCfgOperator;
 import org.apache.pegasus.replication.partition_configuration;
 import org.apache.pegasus.replication.query_cfg_request;
 import org.apache.pegasus.replication.query_cfg_response;
@@ -62,12 +62,12 @@ public class TableHandler extends Table {
   }
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TableHandler.class);
-  ClusterManager manager_;
-  EventExecutor executor_; // should be only one thread in this service
+  ClusterManager manager;
+  EventExecutor executor; // should be only one thread in this service
 
-  AtomicReference<TableConfiguration> tableConfig_;
-  AtomicBoolean inQuerying_;
-  long lastQueryTime_;
+  AtomicReference<TableConfiguration> tableConfig;
+  AtomicBoolean inQuerying;
+  long lastQueryTime;
   int backupRequestDelayMs;
   private TableInterceptorManager interceptorManager;
 
@@ -94,7 +94,7 @@ public class TableHandler extends Table {
     }
 
     query_cfg_request req = new query_cfg_request(name, new ArrayList<Integer>());
-    query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
+    QueryCfgOperator op = new QueryCfgOperator(new gpid(-1, -1), req);
     mgr.getMetaSession().execute(op, 5);
     error_code.error_types err = MetaSession.getMetaServiceError(op);
     if (err != error_code.error_types.ERR_OK) {
@@ -109,29 +109,29 @@ public class TableHandler extends Table {
         resp.partition_count);
 
     // superclass members
-    tableName_ = name;
-    appID_ = resp.app_id;
-    hasher_ = internalTableOptions.keyHasher();
+    tableName = name;
+    appID = resp.app_id;
+    hasher = internalTableOptions.keyHasher();
 
     // members of this
-    manager_ = mgr;
-    executor_ = manager_.getExecutor();
+    manager = mgr;
+    executor = manager.getExecutor();
     this.backupRequestDelayMs = internalTableOptions.tableOptions().backupRequestDelayMs();
     if (backupRequestDelayMs > 0) {
       logger.info("the delay time of backup request is \"{}\"", backupRequestDelayMs);
     }
 
-    tableConfig_ = new AtomicReference<TableConfiguration>(null);
+    tableConfig = new AtomicReference<TableConfiguration>(null);
     initTableConfiguration(resp);
 
-    inQuerying_ = new AtomicBoolean(false);
-    lastQueryTime_ = 0;
+    inQuerying = new AtomicBoolean(false);
+    lastQueryTime = 0;
 
     this.interceptorManager = new TableInterceptorManager(internalTableOptions.tableOptions());
   }
 
   public ReplicaConfiguration getReplicaConfig(int index) {
-    return tableConfig_.get().replicas.get(index);
+    return tableConfig.get().replicas.get(index);
   }
 
   public gpid getGpidByHash(long hashValue) {
@@ -142,19 +142,19 @@ public class TableHandler extends Table {
     if (replicaConfiguration.ballot < 0) {
       logger.info(
           "Table[{}] is executing partition split, partition[{}] is not ready, requests will send to parent partition[{}]",
-          tableName_,
+          tableName,
           index,
           index - getPartitionCount() / 2);
       index -= getPartitionCount() / 2;
     }
-    return new gpid(appID_, index);
+    return new gpid(appID, index);
   }
 
   // update the table configuration & appID_ according to to queried response
   // there should only be one thread to do the table config update
   void initTableConfiguration(query_cfg_response resp) {
     int partitionCount = resp.getPartition_count();
-    TableConfiguration oldConfig = tableConfig_.get();
+    TableConfiguration oldConfig = tableConfig.get();
 
     TableConfiguration newConfig = new TableConfiguration();
     newConfig.updateVersion = (oldConfig == null) ? 1 : (oldConfig.updateVersion + 1);
@@ -205,14 +205,14 @@ public class TableHandler extends Table {
     // Warm up the connections during client.openTable, so RPCs thereafter can
     // skip the connect process.
     try {
-      futureGroup.waitAllCompleteOrOneFail(manager_.getTimeout());
+      futureGroup.waitAllCompleteOrOneFail(manager.getTimeout());
     } catch (PException e) {
       logger.warn("failed to connect with some replica servers: ", e);
     }
 
     // there should only be one thread to do the table config update
-    appID_ = resp.getApp_id();
-    tableConfig_.set(newConfig);
+    appID = resp.getApp_id();
+    tableConfig.set(newConfig);
   }
 
   public ReplicaSession tryConnect(final rpc_address addr, FutureGroup<Void> futureGroup) {
@@ -220,7 +220,7 @@ public class TableHandler extends Table {
       return null;
     }
 
-    ReplicaSession session = manager_.getReplicaSession(addr);
+    ReplicaSession session = manager.getReplicaSession(addr);
     ChannelFuture fut = session.tryConnect();
     if (fut != null) {
       futureGroup.add(fut);
@@ -236,48 +236,48 @@ public class TableHandler extends Table {
     );
   }
 
-  void onUpdateConfiguration(final query_cfg_operator op) {
+  void onUpdateConfiguration(final QueryCfgOperator op) {
     error_code.error_types err = MetaSession.getMetaServiceError(op);
     if (err != error_code.error_types.ERR_OK) {
-      logger.warn("query meta for table({}) failed, error_code({})", tableName_, err.toString());
+      logger.warn("query meta for table({}) failed, error_code({})", tableName, err.toString());
     } else {
-      logger.info("query meta for table({}) received response", tableName_);
+      logger.info("query meta for table({}) received response", tableName);
       query_cfg_response resp = op.get_response();
-      if (resp.app_id != appID_
-          || !isPartitionCountValid(tableConfig_.get().replicas.size(), resp.partition_count)) {
+      if (resp.app_id != appID
+          || !isPartitionCountValid(tableConfig.get().replicas.size(), resp.partition_count)) {
         logger.warn(
             "table({}) meta reset, app_id({}->{}), partition_count({}->{})",
-            tableName_,
-            appID_,
+            tableName,
+            appID,
             resp.app_id,
-            tableConfig_.get().replicas.size(),
+            tableConfig.get().replicas.size(),
             resp.partition_count);
       }
       initTableConfiguration(resp);
     }
 
-    inQuerying_.set(false);
+    inQuerying.set(false);
   }
 
   boolean tryQueryMeta(long cachedConfigVersion) {
-    if (!inQuerying_.compareAndSet(false, true)) return false;
+    if (!inQuerying.compareAndSet(false, true)) return false;
 
     long now = System.currentTimeMillis();
-    if (now - lastQueryTime_ < manager_.getRetryDelay()) {
-      inQuerying_.set(false);
+    if (now - lastQueryTime < manager.getRetryDelay()) {
+      inQuerying.set(false);
       return false;
     }
-    if (tableConfig_.get().updateVersion > cachedConfigVersion) {
-      inQuerying_.set(false);
+    if (tableConfig.get().updateVersion > cachedConfigVersion) {
+      inQuerying.set(false);
       return false;
     }
 
-    lastQueryTime_ = now;
-    query_cfg_request req = new query_cfg_request(tableName_, new ArrayList<Integer>());
-    final query_cfg_operator query_op = new query_cfg_operator(new gpid(-1, -1), req);
+    lastQueryTime = now;
+    query_cfg_request req = new query_cfg_request(tableName, new ArrayList<Integer>());
+    final QueryCfgOperator query_op = new QueryCfgOperator(new gpid(-1, -1), req);
 
-    logger.info("query meta for table({}) query request", tableName_);
-    manager_
+    logger.info("query meta for table({}) query request", tableName);
+    manager
         .getMetaSession()
         .asyncExecute(
             query_op,
@@ -306,7 +306,7 @@ public class TableHandler extends Table {
       }
     }
 
-    client_operator operator = round.getOperator();
+    ClientOperator operator = round.getOperator();
     interceptorManager.after(round, operator.rpc_error.errno, this);
     boolean needQueryMeta = false;
     switch (operator.rpc_error.errno) {
@@ -318,9 +318,9 @@ public class TableHandler extends Table {
       case ERR_TIMEOUT: // <- operation timeout
         logger.warn(
             "{}: replica server({}) rpc timeout for gpid({}), operator({}), try({}), error_code({}), not retry",
-            tableName_,
+            tableName,
             serverAddr,
-            operator.get_gpid().toString(),
+            operator.getgpid().toString(),
             operator,
             round.tryId,
             operator.rpc_error.errno.toString());
@@ -334,9 +334,9 @@ public class TableHandler extends Table {
         // split
         logger.warn(
             "{}: replica server({}) doesn't serve gpid({}), operator({}), try({}), error_code({}), need query meta",
-            tableName_,
+            tableName,
             serverAddr,
-            operator.get_gpid().toString(),
+            operator.getgpid().toString(),
             operator,
             round.tryId,
             operator.rpc_error.errno.toString());
@@ -348,9 +348,9 @@ public class TableHandler extends Table {
       case ERR_CAPACITY_EXCEEDED:
         logger.warn(
             "{}: replica server({}) can't serve writing for gpid({}), operator({}), try({}), error_code({}), retry later",
-            tableName_,
+            tableName,
             serverAddr,
-            operator.get_gpid().toString(),
+            operator.getgpid().toString(),
             operator,
             round.tryId,
             operator.rpc_error.errno.toString());
@@ -360,9 +360,9 @@ public class TableHandler extends Table {
       default:
         logger.error(
             "{}: replica server({}) fails for gpid({}), operator({}), try({}), error_code({}), not retry",
-            tableName_,
+            tableName,
             serverAddr,
-            operator.get_gpid().toString(),
+            operator.getgpid().toString(),
             operator,
             round.tryId,
             operator.rpc_error.errno.toString());
@@ -389,9 +389,9 @@ public class TableHandler extends Table {
 
   void tryDelayCall(final ClientRequestRound round) {
     round.tryId++;
-    long nanoDelay = manager_.getRetryDelay(round.timeoutMs) * 1000000L;
+    long nanoDelay = manager.getRetryDelay(round.timeoutMs) * 1000000L;
     if (round.expireNanoTime - System.nanoTime() > nanoDelay) {
-      executor_.schedule(
+      executor.schedule(
           new Runnable() {
             @Override
             public void run() {
@@ -412,9 +412,9 @@ public class TableHandler extends Table {
 
   void call(final ClientRequestRound round) {
     // tableConfig & handle is initialized in constructor, so both shouldn't be null
-    final TableConfiguration tableConfig = tableConfig_.get();
+    final TableConfiguration tableConfiguration = tableConfig.get();
     final ReplicaConfiguration handle =
-        tableConfig.replicas.get(round.getOperator().get_gpid().get_pidx());
+        tableConfiguration.replicas.get(round.getOperator().getgpid().get_pidx());
 
     if (handle.primarySession != null) {
       interceptorManager.before(round, this);
@@ -424,7 +424,7 @@ public class TableHandler extends Table {
           new Runnable() {
             @Override
             public void run() {
-              onRpcReply(round, tableConfig.updateVersion, handle.primarySession.name());
+              onRpcReply(round, tableConfiguration.updateVersion, handle.primarySession.name());
             }
           },
           round.timeoutMs,
@@ -432,22 +432,22 @@ public class TableHandler extends Table {
     } else {
       logger.warn(
           "{}: no primary for gpid({}), operator({}), try({}), retry later",
-          tableName_,
-          round.getOperator().get_gpid().toString(),
+          tableName,
+          round.getOperator().getgpid().toString(),
           round.getOperator(),
           round.tryId);
-      tryQueryMeta(tableConfig.updateVersion);
+      tryQueryMeta(tableConfiguration.updateVersion);
       tryDelayCall(round);
     }
   }
 
   @Override
   public int getPartitionCount() {
-    return tableConfig_.get().replicas.size();
+    return tableConfig.get().replicas.size();
   }
 
   @Override
-  public void operate(client_operator op, int timeoutMs) throws ReplicationException {
+  public void operate(ClientOperator op, int timeoutMs) throws ReplicationException {
     final FutureTask<Void> syncer =
         new FutureTask<Void>(
             new Callable<Void>() {
@@ -459,7 +459,7 @@ public class TableHandler extends Table {
     ClientOPCallback cb =
         new ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator op) throws Throwable {
+          public void onCompletion(ClientOperator op) throws Throwable {
             syncer.run();
           }
         };
@@ -485,27 +485,27 @@ public class TableHandler extends Table {
   }
 
   public long updateVersion() {
-    return tableConfig_.get().updateVersion;
+    return tableConfig.get().updateVersion;
   }
 
   @Override
   public EventExecutor getExecutor() {
-    return executor_;
+    return executor;
   }
 
   @Override
   public int getDefaultTimeout() {
-    return manager_.getTimeout();
+    return manager.getTimeout();
   }
 
   @Override
-  public void asyncOperate(client_operator op, ClientOPCallback callback, int timeoutMs) {
+  public void asyncOperate(ClientOperator op, ClientOPCallback callback, int timeoutMs) {
     if (timeoutMs <= 0) {
-      timeoutMs = manager_.getTimeout();
+      timeoutMs = manager.getTimeout();
     }
 
     ClientRequestRound round =
-        new ClientRequestRound(op, callback, manager_.counterEnabled(), (long) timeoutMs);
+        new ClientRequestRound(op, callback, manager.counterEnabled(), (long) timeoutMs);
     call(round);
   }
 

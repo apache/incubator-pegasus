@@ -23,7 +23,7 @@ import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.apache.pegasus.rpc.interceptor.ReplicaSessionInterceptor;
 
 public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor {
-  private AuthProtocol protocol;
+  private final AuthProtocol protocol;
 
   public AuthReplicaSessionInterceptor(ClientOptions options) throws IllegalArgumentException {
     this.protocol = options.getCredential().getProtocol();
@@ -36,7 +36,7 @@ public class AuthReplicaSessionInterceptor implements ReplicaSessionInterceptor 
 
   @Override
   public boolean onSendMessage(ReplicaSession session, final ReplicaSession.RequestEntry entry) {
-    // tryPendRequest returns false means that the negotiation is succeed now
+    // tryPendRequest returns false means that the negotiation is succeeded now
     return protocol.isAuthRequest(entry) || !session.tryPendRequest(entry);
   }
 }

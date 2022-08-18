@@ -28,8 +28,12 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class query_cfg_operator extends client_operator {
-  public query_cfg_operator(gpid gpid, query_cfg_request request) {
+public class QueryCfgOperator extends ClientOperator {
+
+  private final query_cfg_request request;
+  private query_cfg_response response;
+
+  public QueryCfgOperator(gpid gpid, query_cfg_request request) {
     super(gpid, "", 0);
     this.request = request;
   }
@@ -38,28 +42,29 @@ public class query_cfg_operator extends client_operator {
     return "query_config";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
     meta.query_cfg_args args = new meta.query_cfg_args(request);
-    args.write(oprot);
-    oprot.writeMessageEnd();
+    args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
+  @Override
+  public void recvData(TProtocol in) throws TException {
     meta.query_cfg_result result = new meta.query_cfg_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) response = result.success;
-    else
+    result.read(in);
+    if (result.isSetSuccess()) {
+      response = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
           org.apache.thrift.TApplicationException.MISSING_RESULT,
           "query config failed: unknown result");
+    }
   }
 
   public query_cfg_response get_response() {
     return response;
   }
-
-  private query_cfg_request request;
-  private query_cfg_response response;
 }

@@ -32,13 +32,25 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.rpc_address;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.create_app_operator;
-import org.apache.pegasus.operator.drop_app_operator;
-import org.apache.pegasus.operator.query_cfg_operator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.CreateAppOperator;
+import org.apache.pegasus.operator.DropAppOperator;
+import org.apache.pegasus.operator.QueryCfgOperator;
 import org.apache.pegasus.replication.partition_configuration;
 
 public class MetaSession extends HostNameResolver {
+
+  private final ClusterManager clusterManager;
+  private final List<ReplicaSession> metaList;
+  private int curLeader;
+  private final int eachQueryTimeoutInMills;
+  private final int defaultMaxQueryCount;
+  private final EventLoopGroup group;
+  private String hostPort;
+
+  private static final org.slf4j.Logger logger =
+      org.slf4j.LoggerFactory.getLogger(MetaSession.class);
+
   public MetaSession(
       ClusterManager manager,
       String[] addrList,
@@ -47,7 +59,7 @@ public class MetaSession extends HostNameResolver {
       EventLoopGroup g)
       throws IllegalArgumentException {
     clusterManager = manager;
-    metaList = new ArrayList<ReplicaSession>();
+    metaList = new ArrayList<>();
 
     if (addrList.length == 1 && !InetAddresses.isInetAddress(addrList[0])) {
       // if the given string is not a valid ip address,
@@ -77,28 +89,28 @@ public class MetaSession extends HostNameResolver {
     this.group = g;
   }
 
-  public static error_code.error_types getMetaServiceError(client_operator metaQueryOp) {
+  public static error_code.error_types getMetaServiceError(ClientOperator metaQueryOp) {
     if (metaQueryOp.rpc_error.errno != error_code.error_types.ERR_OK)
       return metaQueryOp.rpc_error.errno;
 
-    if (metaQueryOp instanceof query_cfg_operator) {
-      return ((query_cfg_operator) (metaQueryOp)).get_response().getErr().errno;
-    } else if (metaQueryOp instanceof create_app_operator) {
-      return ((create_app_operator) (metaQueryOp)).get_response().getErr().errno;
-    } else if (metaQueryOp instanceof drop_app_operator) {
-      return ((drop_app_operator) (metaQueryOp)).get_response().getErr().errno;
+    if (metaQueryOp instanceof QueryCfgOperator) {
+      return ((QueryCfgOperator) (metaQueryOp)).get_response().getErr().errno;
+    } else if (metaQueryOp instanceof CreateAppOperator) {
+      return ((CreateAppOperator) (metaQueryOp)).get_response().getErr().errno;
+    } else if (metaQueryOp instanceof DropAppOperator) {
+      return ((DropAppOperator) (metaQueryOp)).get_response().getErr().errno;
     } else {
       assert (false);
       return null;
     }
   }
 
-  public static rpc_address getMetaServiceForwardAddress(client_operator metaQueryOp) {
+  public static rpc_address getMetaServiceForwardAddress(ClientOperator metaQueryOp) {
     if (metaQueryOp.rpc_error.errno != error_code.error_types.ERR_OK) return null;
 
     rpc_address addr = null;
-    if (metaQueryOp instanceof query_cfg_operator) {
-      query_cfg_operator op = (query_cfg_operator) metaQueryOp;
+    if (metaQueryOp instanceof QueryCfgOperator) {
+      QueryCfgOperator op = (QueryCfgOperator) metaQueryOp;
       if (op.get_response().getErr().errno != error_code.error_types.ERR_FORWARD_TO_OTHERS)
         return null;
       java.util.List<partition_configuration> partitions = op.get_response().getPartitions();
@@ -110,7 +122,7 @@ public class MetaSession extends HostNameResolver {
     return addr;
   }
 
-  public final void asyncExecute(client_operator op, Runnable callbackFunc, int maxExecuteCount) {
+  public final void asyncExecute(ClientOperator op, Runnable callbackFunc, int maxExecuteCount) {
     if (maxExecuteCount == 0) {
       maxExecuteCount = defaultMaxQueryCount;
     }
@@ -121,9 +133,9 @@ public class MetaSession extends HostNameResolver {
     asyncCall(round);
   }
 
-  public final void execute(client_operator op, int maxExecuteCount) {
+  public final void execute(ClientOperator op, int maxExecuteCount) {
     FutureTask<Void> v =
-        new FutureTask<Void>(
+        new FutureTask<>(
             new Callable<Void>() {
               @Override
               public Void call() throws Exception {
@@ -136,10 +148,10 @@ public class MetaSession extends HostNameResolver {
         v.get();
         return;
       } catch (InterruptedException e) {
-        logger.info("operation {} got interrupt exception: ", op.get_gpid().toString(), e);
+        logger.info("operation {} got interrupt exception: ", op.getgpid().toString(), e);
       } catch (ExecutionException e) {
         logger.warn(
-            "operation {} got execution exception, just return: ", op.get_gpid().toString(), e);
+            "operation {} got execution exception, just return: ", op.getgpid().toString(), e);
         return;
       }
     }
@@ -165,7 +177,7 @@ public class MetaSession extends HostNameResolver {
   }
 
   void onFinishQueryMeta(final MetaRequestRound round) {
-    client_operator op = round.op;
+    ClientOperator op = round.op;
 
     boolean needDelay = false;
     boolean needSwitchLeader = false;
@@ -178,9 +190,7 @@ public class MetaSession extends HostNameResolver {
       metaError = getMetaServiceError(op);
       if (metaError == error_code.error_types.ERR_SERVICE_NOT_ACTIVE) {
         needDelay = true;
-        needSwitchLeader = false;
       } else if (metaError == error_code.error_types.ERR_FORWARD_TO_OTHERS) {
-        needDelay = false;
         needSwitchLeader = true;
         forwardAddress = getMetaServiceForwardAddress(op);
       } else {
@@ -189,7 +199,6 @@ public class MetaSession extends HostNameResolver {
       }
     } else if (op.rpc_error.errno == error_code.error_types.ERR_SESSION_RESET
         || op.rpc_error.errno == error_code.error_types.ERR_TIMEOUT) {
-      needDelay = false;
       needSwitchLeader = true;
     } else {
       logger.error("unknown error: {}", op.rpc_error.errno.toString());
@@ -201,7 +210,7 @@ public class MetaSession extends HostNameResolver {
         "query meta got error, rpc error({}), meta error({}), forward address({}), current leader({}), "
             + "remain retry count({}), need switch leader({}), need delay({})",
         op.rpc_error.errno.toString(),
-        metaError.toString(),
+        metaError,
         forwardAddress,
         round.lastSession.name(),
         round.maxExecuteCount,
@@ -264,12 +273,12 @@ public class MetaSession extends HostNameResolver {
   static final class MetaRequestRound {
     public int maxResolveCount = 2;
 
-    public client_operator op;
+    public ClientOperator op;
     public Runnable callbackFunc;
     public int maxExecuteCount;
     public ReplicaSession lastSession;
 
-    public MetaRequestRound(client_operator o, Runnable r, int q, ReplicaSession l) {
+    public MetaRequestRound(ClientOperator o, Runnable r, int q, ReplicaSession l) {
       op = o;
       callbackFunc = r;
       maxExecuteCount = q;
@@ -287,8 +296,8 @@ public class MetaSession extends HostNameResolver {
       return;
     }
 
-    Set<rpc_address> newSet = new TreeSet<rpc_address>(Arrays.asList(addrs));
-    Set<rpc_address> oldSet = new TreeSet<rpc_address>();
+    Set<rpc_address> newSet = new TreeSet<>(Arrays.asList(addrs));
+    Set<rpc_address> oldSet = new TreeSet<>();
     for (ReplicaSession meta : metaList) {
       oldSet.add(meta.getAddress());
     }
@@ -299,7 +308,7 @@ public class MetaSession extends HostNameResolver {
     }
 
     // removed metas
-    Set<rpc_address> removed = new HashSet<rpc_address>(oldSet);
+    Set<rpc_address> removed = new HashSet<>(oldSet);
     removed.removeAll(newSet);
     for (rpc_address addr : removed) {
       logger.info("meta server {} was removed", addr);
@@ -312,7 +321,7 @@ public class MetaSession extends HostNameResolver {
     }
 
     // newly added metas
-    Set<rpc_address> added = new HashSet<rpc_address>(newSet);
+    Set<rpc_address> added = new HashSet<>(newSet);
     added.removeAll(oldSet);
     for (rpc_address addr : added) {
       metaList.add(clusterManager.getReplicaSession(addr));
@@ -324,15 +333,4 @@ public class MetaSession extends HostNameResolver {
   List<ReplicaSession> getMetaList() {
     return metaList;
   }
-
-  private ClusterManager clusterManager;
-  private List<ReplicaSession> metaList;
-  private int curLeader;
-  private int eachQueryTimeoutInMills;
-  private int defaultMaxQueryCount;
-  private EventLoopGroup group;
-  private String hostPort;
-
-  private static final org.slf4j.Logger logger =
-      org.slf4j.LoggerFactory.getLogger(MetaSession.class);
 }

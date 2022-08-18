@@ -21,8 +21,8 @@ package org.apache.pegasus.operator;
 import org.apache.pegasus.base.gpid;
 
 /** Identifies that an RPC is a pure read-operation. */
-abstract class read_operator extends client_operator {
-  public read_operator(gpid gpid, String tableName, long partitionHash) {
+abstract class ReadOperator extends ClientOperator {
+  public ReadOperator(gpid gpid, String tableName, long partitionHash) {
     super(gpid, tableName, partitionHash);
   }
 

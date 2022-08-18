@@ -18,52 +18,50 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.multi_put_request;
+import org.apache.pegasus.apps.read_response;
 import org.apache.pegasus.apps.rrdb;
-import org.apache.pegasus.apps.update_response;
+import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
-import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_multi_put_operator extends client_operator {
-  public rrdb_multi_put_operator(
-      gpid gpid, String tableName, multi_put_request request, long partitionHash) {
+public class RRDBGetOperator extends ReadOperator {
+
+  private final blob request;
+  private read_response resp;
+
+  public RRDBGetOperator(gpid gpid, String tableName, blob request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
   public String name() {
-    return "multi_put";
+    return "get";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_MULTI_PUT", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.multi_put_args put_args = new rrdb.multi_put_args(request);
-    put_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_GET", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.get_args get_args = new rrdb.get_args(request);
+    get_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.multi_put_result result = new rrdb.multi_put_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(org.apache.thrift.protocol.TProtocol in) throws TException {
+    rrdb.get_result result = new rrdb.get_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "multi put failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "get failed: unknown result");
+    }
   }
 
-  public update_response get_response() {
+  public read_response get_response() {
     return resp;
   }
-
-  public multi_put_request get_request() {
-    return request;
-  }
-
-  private multi_put_request request;
-  private update_response resp;
 }

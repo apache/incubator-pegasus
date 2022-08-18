@@ -22,14 +22,14 @@ import java.util.List;
 import org.apache.pegasus.apps.key_value;
 import org.apache.pegasus.apps.mutate;
 import org.apache.pegasus.base.error_code;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.rrdb_check_and_mutate_operator;
-import org.apache.pegasus.operator.rrdb_check_and_set_operator;
-import org.apache.pegasus.operator.rrdb_get_operator;
-import org.apache.pegasus.operator.rrdb_multi_get_operator;
-import org.apache.pegasus.operator.rrdb_multi_put_operator;
-import org.apache.pegasus.operator.rrdb_put_operator;
-import org.apache.pegasus.operator.rrdb_scan_operator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.RRDBCheckAndMutateOperator;
+import org.apache.pegasus.operator.RRDBCheckAndSetOperator;
+import org.apache.pegasus.operator.RRDBGetOperator;
+import org.apache.pegasus.operator.RRDBMultiGetOperator;
+import org.apache.pegasus.operator.RRDBMultiPutOperator;
+import org.apache.pegasus.operator.RRDBPutOperator;
+import org.apache.pegasus.operator.RRDBScanOperator;
 import org.apache.pegasus.rpc.async.ClientRequestRound;
 import org.apache.pegasus.rpc.async.TableHandler;
 import org.apache.pegasus.tools.ZstdWrapper;
@@ -53,30 +53,30 @@ public class CompressionInterceptor implements TableInterceptor {
   }
 
   private void tryCompress(ClientRequestRound clientRequestRound) {
-    client_operator operator = clientRequestRound.getOperator();
-    if (operator instanceof rrdb_put_operator) {
-      rrdb_put_operator put = (rrdb_put_operator) operator;
+    ClientOperator operator = clientRequestRound.getOperator();
+    if (operator instanceof RRDBPutOperator) {
+      RRDBPutOperator put = (RRDBPutOperator) operator;
       put.get_request().value.data = ZstdWrapper.compress(put.get_request().value.data);
       return;
     }
 
-    if (operator instanceof rrdb_multi_put_operator) {
-      List<key_value> kvs = ((rrdb_multi_put_operator) operator).get_request().kvs;
+    if (operator instanceof RRDBMultiPutOperator) {
+      List<key_value> kvs = ((RRDBMultiPutOperator) operator).get_request().kvs;
       for (key_value kv : kvs) {
         kv.value.data = ZstdWrapper.compress(kv.value.data);
       }
       return;
     }
 
-    if (operator instanceof rrdb_check_and_set_operator) {
-      rrdb_check_and_set_operator check_and_set = (rrdb_check_and_set_operator) operator;
+    if (operator instanceof RRDBCheckAndSetOperator) {
+      RRDBCheckAndSetOperator check_and_set = (RRDBCheckAndSetOperator) operator;
       check_and_set.get_request().set_value.data =
           ZstdWrapper.compress(check_and_set.get_request().set_value.data);
       return;
     }
 
-    if (operator instanceof rrdb_check_and_mutate_operator) {
-      List<mutate> mutates = ((rrdb_check_and_mutate_operator) operator).get_request().mutate_list;
+    if (operator instanceof RRDBCheckAndMutateOperator) {
+      List<mutate> mutates = ((RRDBCheckAndMutateOperator) operator).get_request().mutate_list;
       for (mutate mu : mutates) {
         mu.value.data = ZstdWrapper.compress(mu.value.data);
       }
@@ -84,24 +84,24 @@ public class CompressionInterceptor implements TableInterceptor {
   }
 
   private void tryDecompress(ClientRequestRound clientRequestRound) {
-    client_operator operator = clientRequestRound.getOperator();
+    ClientOperator operator = clientRequestRound.getOperator();
 
-    if (operator instanceof rrdb_get_operator) {
-      rrdb_get_operator get = (rrdb_get_operator) operator;
+    if (operator instanceof RRDBGetOperator) {
+      RRDBGetOperator get = (RRDBGetOperator) operator;
       get.get_response().value.data = ZstdWrapper.tryDecompress(get.get_response().value.data);
       return;
     }
 
-    if (operator instanceof rrdb_multi_get_operator) {
-      List<key_value> kvs = ((rrdb_multi_get_operator) operator).get_response().kvs;
+    if (operator instanceof RRDBMultiGetOperator) {
+      List<key_value> kvs = ((RRDBMultiGetOperator) operator).get_response().kvs;
       for (key_value kv : kvs) {
         kv.value.data = ZstdWrapper.tryDecompress(kv.value.data);
       }
       return;
     }
 
-    if (operator instanceof rrdb_scan_operator) {
-      List<key_value> kvs = ((rrdb_scan_operator) operator).get_response().kvs;
+    if (operator instanceof RRDBScanOperator) {
+      List<key_value> kvs = ((RRDBScanOperator) operator).get_response().kvs;
       for (key_value kv : kvs) {
         kv.value.data = ZstdWrapper.tryDecompress(kv.value.data);
       }

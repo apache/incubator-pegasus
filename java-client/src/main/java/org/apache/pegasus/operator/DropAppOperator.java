@@ -18,52 +18,51 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.check_and_set_request;
-import org.apache.pegasus.apps.check_and_set_response;
-import org.apache.pegasus.apps.rrdb;
+import org.apache.pegasus.apps.meta;
 import org.apache.pegasus.base.gpid;
+import org.apache.pegasus.replication.configuration_drop_app_request;
+import org.apache.pegasus.replication.configuration_drop_app_response;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_check_and_set_operator extends client_operator {
-  public rrdb_check_and_set_operator(
-      gpid gpid, String tableName, check_and_set_request request, long partitionHash) {
-    super(gpid, tableName, partitionHash);
+public class DropAppOperator extends ClientOperator {
+
+  private final configuration_drop_app_request request;
+  private configuration_drop_app_response response;
+
+  public DropAppOperator(String appName, final configuration_drop_app_request request) {
+    super(new gpid(), appName, 0);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "check_and_set";
+    return "drop_app_operator";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_CHECK_AND_SET", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.check_and_set_args incr_args = new rrdb.check_and_set_args(request);
-    incr_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(TProtocol out, int sequence_id) throws TException {
+    TMessage msg = new TMessage("RPC_CM_DROP_APP", TMessageType.CALL, sequence_id);
+    out.writeMessageBegin(msg);
+    org.apache.pegasus.apps.meta.drop_app_args args = new meta.drop_app_args(request);
+    args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.check_and_set_result result = new rrdb.check_and_set_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
+  @Override
+  public void recvData(TProtocol in) throws TException {
+    meta.drop_app_result result = new meta.drop_app_result();
+    result.read(in);
+    if (result.isSetSuccess()) response = result.success;
     else
       throw new org.apache.thrift.TApplicationException(
           org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "check_and_set failed: unknown result");
+          "drop app failed: unknown result");
   }
 
-  public check_and_set_response get_response() {
-    return resp;
+  public configuration_drop_app_response get_response() {
+    return response;
   }
-
-  public check_and_set_request get_request() {
-    return request;
-  }
-
-  private check_and_set_request request;
-  private check_and_set_response resp;
 }

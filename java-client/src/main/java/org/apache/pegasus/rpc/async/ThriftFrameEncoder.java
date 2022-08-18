@@ -23,17 +23,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import org.apache.pegasus.rpc.ThriftHeader;
 import org.apache.thrift.protocol.TBinaryProtocol;
-import org.slf4j.Logger;
 
 public class ThriftFrameEncoder extends MessageToByteEncoder<ReplicaSession.RequestEntry> {
-  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ThriftFrameEncoder.class);
 
   public ThriftFrameEncoder() {}
 
   @Override
   protected ByteBuf allocateBuffer(
-      ChannelHandlerContext ctx, ReplicaSession.RequestEntry entry, boolean preferDirect)
-      throws Exception {
+      ChannelHandlerContext ctx, ReplicaSession.RequestEntry entry, boolean preferDirect) {
     return preferDirect ? ctx.alloc().ioBuffer(256) : ctx.alloc().heapBuffer(256);
   }
 
@@ -47,16 +44,16 @@ public class ThriftFrameEncoder extends MessageToByteEncoder<ReplicaSession.Requ
     TBinaryProtocol protocol = new TBinaryProtocol(new TByteBufTransport(out));
 
     // write meta
-    e.op.prepare_thrift_meta(protocol, (int) e.timeoutMs, e.isBackupRequest);
+    e.op.prepareThriftMeta(protocol, (int) e.timeoutMs, e.isBackupRequest);
     int meta_length = out.readableBytes() - ThriftHeader.HEADER_LENGTH;
 
     // write body
-    e.op.send_data(protocol, e.sequenceId);
+    e.op.sendData(protocol, e.sequenceId);
 
     // write header
     out.setBytes(
         initIndex,
-        e.op.prepare_thrift_header(
+        e.op.prepareThriftHeader(
             meta_length, out.readableBytes() - ThriftHeader.HEADER_LENGTH - meta_length));
   }
 }

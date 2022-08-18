@@ -30,8 +30,8 @@ import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.query_cfg_operator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.QueryCfgOperator;
 import org.apache.pegasus.replication.partition_configuration;
 import org.apache.pegasus.replication.query_cfg_request;
 import org.apache.pegasus.replication.query_cfg_response;
@@ -91,7 +91,7 @@ public class MetaSessionTest {
     ArrayList<FutureTask<Void>> callbacks = new ArrayList<FutureTask<Void>>();
     for (int i = 0; i < 1000; ++i) {
       query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
-      final client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
+      final ClientOperator op = new QueryCfgOperator(new gpid(-1, -1), req);
       FutureTask<Void> callback =
           new FutureTask<Void>(
               new Callable<Void>() {
@@ -187,7 +187,7 @@ public class MetaSessionTest {
     Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
-    client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
+    ClientOperator op = new QueryCfgOperator(new gpid(-1, -1), req);
     op.rpc_error.errno = error_code.error_types.ERR_SESSION_RESET;
     MetaSession.MetaRequestRound round =
         new MetaSession.MetaRequestRound(
@@ -248,7 +248,7 @@ public class MetaSessionTest {
     Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
-    query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
+    QueryCfgOperator op = new QueryCfgOperator(new gpid(-1, -1), req);
     op.rpc_error.errno = error_code.error_types.ERR_OK;
     FieldUtils.writeField(op, "response", new query_cfg_response(), true);
     op.get_response().err = new error_code();
@@ -305,7 +305,7 @@ public class MetaSessionTest {
     Mockito.when(metaMock.resolve("localhost:34601")).thenReturn(newAddrs);
 
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
-    client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
+    ClientOperator op = new QueryCfgOperator(new gpid(-1, -1), req);
 
     // `MetaSession#query` will first query the 3 old addresses (and failed), then resolve the DNS
     // and find the 5 new addresses.
@@ -338,7 +338,7 @@ public class MetaSessionTest {
         };
     Mockito.when(metaMock.resolve("localhost:34601")).thenReturn(newAddrs);
     query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
-    client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
+    ClientOperator op = new QueryCfgOperator(new gpid(-1, -1), req);
     metaMock.execute(op, metaList.size());
     Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, MetaSession.getMetaServiceError(op));
   }

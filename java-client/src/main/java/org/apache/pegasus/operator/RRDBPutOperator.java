@@ -18,52 +18,56 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.check_and_mutate_request;
-import org.apache.pegasus.apps.check_and_mutate_response;
 import org.apache.pegasus.apps.rrdb;
+import org.apache.pegasus.apps.update_request;
+import org.apache.pegasus.apps.update_response;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_check_and_mutate_operator extends client_operator {
-  public rrdb_check_and_mutate_operator(
-      gpid gpid, String tableName, check_and_mutate_request request, long partitionHash) {
+public class RRDBPutOperator extends ClientOperator {
+
+  private final update_request request;
+  private update_response resp;
+
+  public RRDBPutOperator(gpid gpid, String tableName, update_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "check_and_mutate";
+    return "put";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_CHECK_AND_MUTATE", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.check_and_mutate_args incr_args = new rrdb.check_and_mutate_args(request);
-    incr_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_PUT", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.put_args put_args = new rrdb.put_args(request);
+    put_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.check_and_mutate_result result = new rrdb.check_and_mutate_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(TProtocol in) throws TException {
+    rrdb.put_result result = new rrdb.put_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      resp = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "check_and_mutate failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "put failed: unknown result");
+    }
   }
 
-  public check_and_mutate_response get_response() {
+  public update_response get_response() {
     return resp;
   }
 
-  public check_and_mutate_request get_request() {
+  public update_request get_request() {
     return request;
   }
-
-  private check_and_mutate_request request;
-  private check_and_mutate_response resp;
 }

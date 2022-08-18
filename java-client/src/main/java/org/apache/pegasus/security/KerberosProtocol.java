@@ -33,7 +33,7 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-import org.apache.pegasus.operator.negotiation_operator;
+import org.apache.pegasus.operator.NegotiationOperator;
 import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,10 +48,10 @@ class KerberosProtocol implements AuthProtocol {
   // request. The JAAS framework defines the term "subject" to represent the source of a request. A
   // subject may be any entity, such as a person or a service.
   private Subject subject;
-  private String serviceName;
-  private String serviceFqdn;
-  private String keyTab;
-  private String principal;
+  private final String serviceName;
+  private final String serviceFqdn;
+  private final String keyTab;
+  private final String principal;
   final int CHECK_TGT_INTEVAL_SECONDS = 10;
   final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
 
@@ -80,12 +80,12 @@ class KerberosProtocol implements AuthProtocol {
 
   @Override
   public boolean isAuthRequest(final ReplicaSession.RequestEntry entry) {
-    return entry.op instanceof negotiation_operator;
+    return entry.op instanceof NegotiationOperator;
   }
 
   private void scheduleCheckTGTAndRelogin() {
     service.scheduleAtFixedRate(
-        () -> checkTGTAndRelogin(),
+        this::checkTGTAndRelogin,
         CHECK_TGT_INTEVAL_SECONDS,
         CHECK_TGT_INTEVAL_SECONDS,
         TimeUnit.SECONDS);
@@ -113,13 +113,13 @@ class KerberosProtocol implements AuthProtocol {
     Set<KerberosTicket> tickets = this.subject.getPrivateCredentials(KerberosTicket.class);
 
     KerberosTicket ticket;
-    Iterator iter = tickets.iterator();
+    Iterator<KerberosTicket> iter = tickets.iterator();
     do {
       if (!iter.hasNext()) {
         return null;
       }
 
-      ticket = (KerberosTicket) iter.next();
+      ticket = iter.next();
     } while (!isTGSPrincipal(ticket.getServer()));
 
     return ticket;

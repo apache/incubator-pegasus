@@ -20,10 +20,10 @@ package org.apache.pegasus.security;
 
 import org.apache.pegasus.rpc.async.ReplicaSession;
 
-/** authentiation protocol */
+/** authentication protocol */
 public interface AuthProtocol {
   String name();
-  /** start the authentiate process */
+  /** start the authenticate process */
   void authenticate(ReplicaSession session);
 
   boolean isAuthRequest(final ReplicaSession.RequestEntry entry);

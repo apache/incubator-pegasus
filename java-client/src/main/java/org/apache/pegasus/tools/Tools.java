@@ -33,10 +33,10 @@ import org.slf4j.Logger;
 
 public class Tools {
   private static class dsn_crc {
-    public static final long crc64_poly = 0x9a6c9329ac4bc9b5l;
+    public static final long crc64_poly = 0x9a6c9329ac4bc9b5L;
     public static final int crc32_poly = 0x82f63b78;
-    public static final int crc32_table[] = new int[0x100];
-    public static final long crc64_table[] = new long[0x100];
+    public static final int[] crc32_table = new int[0x100];
+    public static final long[] crc64_table = new long[0x100];
 
     static {
       for (int i = 0; i < 256; ++i) {

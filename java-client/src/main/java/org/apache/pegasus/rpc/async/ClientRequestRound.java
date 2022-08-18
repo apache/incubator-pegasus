@@ -21,7 +21,7 @@ package org.apache.pegasus.rpc.async;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.pegasus.metrics.MetricsManager;
-import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.ClientOperator;
 import org.apache.pegasus.rpc.Table;
 import org.slf4j.Logger;
 
@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 public final class ClientRequestRound {
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TableHandler.class);
 
-  client_operator operator;
+  ClientOperator operator;
   Table.ClientOPCallback callback;
   long timeoutMs;
 
@@ -47,7 +47,7 @@ public final class ClientRequestRound {
    * @param enableCounter whether enable counter.
    */
   public ClientRequestRound(
-      client_operator op,
+      ClientOperator op,
       Table.ClientOPCallback cb,
       boolean enableCounter,
       long timeoutInMilliseconds) {
@@ -64,7 +64,7 @@ public final class ClientRequestRound {
   }
 
   public ClientRequestRound(
-      client_operator op,
+      ClientOperator op,
       Table.ClientOPCallback cb,
       boolean enableCounter,
       long expireNanoTime,
@@ -85,11 +85,11 @@ public final class ClientRequestRound {
     backupRequestTask = task;
   }
 
-  public client_operator getOperator() {
+  public ClientOperator getOperator() {
     return operator;
   }
 
-  public void setOperator(client_operator op) {
+  public void setOperator(ClientOperator op) {
     operator = op;
   }
 

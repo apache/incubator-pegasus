@@ -18,53 +18,52 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.batch_get_request;
-import org.apache.pegasus.apps.batch_get_response;
 import org.apache.pegasus.apps.rrdb;
+import org.apache.pegasus.apps.scan_request;
+import org.apache.pegasus.apps.scan_response;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class batch_get_operator extends client_operator {
-  private batch_get_request request;
-  private batch_get_response response;
+public class RRDBScanOperator extends ClientOperator {
 
-  public batch_get_operator(
-      gpid gpid, String tableName, batch_get_request request, long partitionHash) {
+  private final scan_request request;
+  private scan_response resp;
+
+  public RRDBScanOperator(gpid gpid, String tableName, scan_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
   @Override
   public String name() {
-    return "batch_get";
+    return "scan";
   }
 
   @Override
-  public void send_data(TProtocol oprot, int sequence_id) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_BATCH_GET", TMessageType.CALL, sequence_id);
-    oprot.writeMessageBegin(msg);
-    rrdb.batch_get_args get_args = new rrdb.batch_get_args(request);
-    get_args.write(oprot);
-    oprot.writeMessageEnd();
+  public void sendData(org.apache.thrift.protocol.TProtocol out, int seqId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_RRDB_SCAN", TMessageType.CALL, seqId);
+    out.writeMessageBegin(msg);
+    rrdb.scan_args args = new rrdb.scan_args(request);
+    args.write(out);
+    out.writeMessageEnd();
   }
 
   @Override
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.batch_get_result result = new rrdb.batch_get_result();
-    result.read(iprot);
+  public void recvData(TProtocol in) throws TException {
+    rrdb.scan_result result = new rrdb.scan_result();
+    result.read(in);
     if (result.isSetSuccess()) {
-      response = result.success;
+      resp = result.success;
     } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "Batch Get failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT, "scan failed: unknown result");
     }
   }
 
-  public batch_get_response get_response() {
-    return response;
+  public scan_response get_response() {
+    return resp;
   }
 }

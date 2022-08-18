@@ -20,48 +20,49 @@ package org.apache.pegasus.operator;
 
 import org.apache.pegasus.apps.meta;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.replication.configuration_drop_app_request;
-import org.apache.pegasus.replication.configuration_drop_app_response;
+import org.apache.pegasus.replication.configuration_create_app_request;
+import org.apache.pegasus.replication.configuration_create_app_response;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class drop_app_operator extends client_operator {
-  public drop_app_operator(String appName, final configuration_drop_app_request reqeust) {
+public class CreateAppOperator extends ClientOperator {
+
+  private final configuration_create_app_request request;
+  private configuration_create_app_response response;
+
+  public CreateAppOperator(String appName, configuration_create_app_request request) {
     super(new gpid(), appName, 0);
-    this.request = reqeust;
+    this.request = request;
   }
 
   @Override
   public String name() {
-    return "drop_app_operator";
+    return "create_app_operator";
   }
 
   @Override
-  public void send_data(TProtocol oprot, int sequence_id) throws TException {
-    TMessage msg = new TMessage("RPC_CM_DROP_APP", TMessageType.CALL, sequence_id);
-    oprot.writeMessageBegin(msg);
-    org.apache.pegasus.apps.meta.drop_app_args args = new meta.drop_app_args(request);
-    args.write(oprot);
-    oprot.writeMessageEnd();
+  public void sendData(TProtocol out, int sequence_id) throws TException {
+    TMessage msg = new TMessage("RPC_CM_CREATE_APP", TMessageType.CALL, sequence_id);
+    out.writeMessageBegin(msg);
+    org.apache.pegasus.apps.meta.create_app_args args = new meta.create_app_args(request);
+    args.write(out);
+    out.writeMessageEnd();
   }
 
   @Override
-  public void recv_data(TProtocol iprot) throws TException {
-    meta.drop_app_result result = new meta.drop_app_result();
-    result.read(iprot);
+  public void recvData(TProtocol in) throws TException {
+    meta.create_app_result result = new meta.create_app_result();
+    result.read(in);
     if (result.isSetSuccess()) response = result.success;
     else
       throw new org.apache.thrift.TApplicationException(
           org.apache.thrift.TApplicationException.MISSING_RESULT,
-          "drop app failed: unknown result");
+          "create app failed: unknown result");
   }
 
-  public configuration_drop_app_response get_response() {
+  public configuration_create_app_response get_response() {
     return response;
   }
-
-  private configuration_drop_app_request request;
-  private configuration_drop_app_response response;
 }

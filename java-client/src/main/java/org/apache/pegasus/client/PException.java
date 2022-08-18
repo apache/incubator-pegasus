@@ -31,22 +31,22 @@ import org.apache.pegasus.rpc.ReplicationException;
  */
 public class PException extends Exception {
   private static final long serialVersionUID = 4436491238550521203L;
-  private static final String versionPrefix = loadVersion() + ": ";
+  private static final String VERSION_PREFIX = loadVersion() + ": ";
 
   public PException() {
     super();
   }
 
   public PException(String message, Throwable cause) {
-    super(versionPrefix + message, cause);
+    super(VERSION_PREFIX + message, cause);
   }
 
   public PException(String message) {
-    super(versionPrefix + message);
+    super(VERSION_PREFIX + message);
   }
 
   public PException(Throwable cause) {
-    super(versionPrefix + cause.toString(), cause);
+    super(VERSION_PREFIX + cause.toString(), cause);
   }
 
   static PException threadInterrupted(String tableName, InterruptedException e) {

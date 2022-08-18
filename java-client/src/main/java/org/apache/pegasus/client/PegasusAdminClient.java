@@ -23,10 +23,16 @@ import java.util.Map;
 import java.util.Properties;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.operator.create_app_operator;
-import org.apache.pegasus.operator.drop_app_operator;
-import org.apache.pegasus.operator.query_cfg_operator;
-import org.apache.pegasus.replication.*;
+import org.apache.pegasus.operator.CreateAppOperator;
+import org.apache.pegasus.operator.DropAppOperator;
+import org.apache.pegasus.operator.QueryCfgOperator;
+import org.apache.pegasus.replication.configuration_create_app_request;
+import org.apache.pegasus.replication.configuration_drop_app_request;
+import org.apache.pegasus.replication.create_app_options;
+import org.apache.pegasus.replication.drop_app_options;
+import org.apache.pegasus.replication.partition_configuration;
+import org.apache.pegasus.replication.query_cfg_request;
+import org.apache.pegasus.replication.query_cfg_response;
 import org.apache.pegasus.rpc.Meta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,7 +126,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
     request.setApp_name(appName);
     request.setOptions(options);
 
-    create_app_operator app_operator = new create_app_operator(appName, request);
+    CreateAppOperator app_operator = new CreateAppOperator(appName, request);
     error_code.error_types error = this.meta.operate(app_operator, META_RETRY_MIN_COUNT);
     if (error != error_code.error_types.ERR_OK) {
       throw new PException(
@@ -169,7 +175,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
     query_cfg_request request = new query_cfg_request();
     request.setApp_name(appName);
 
-    query_cfg_operator query_op = new query_cfg_operator(new gpid(-1, -1), request);
+    QueryCfgOperator query_op = new QueryCfgOperator(new gpid(-1, -1), request);
     error_code.error_types error = this.meta.operate(query_op, META_RETRY_MIN_COUNT);
     if (error != error_code.error_types.ERR_OK) {
       throw new PException(
@@ -210,7 +216,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
     request.setApp_name(appName);
     request.setOptions(options);
 
-    drop_app_operator app_operator = new drop_app_operator(appName, request);
+    DropAppOperator app_operator = new DropAppOperator(appName, request);
     error_code.error_types error = this.meta.operate(app_operator, META_RETRY_MIN_COUNT);
 
     if (error != error_code.error_types.ERR_OK) {

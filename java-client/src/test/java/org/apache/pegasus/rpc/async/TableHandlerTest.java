@@ -25,7 +25,7 @@ import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
 import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
-import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.ClientOperator;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.tools.Toollet;
@@ -95,7 +95,7 @@ public class TableHandlerTest {
     handle.ballot--;
     handle.primarySession = testManager.getReplicaSession(addr);
 
-    client_operator op = new Toollet.test_operator(pid, request);
+    ClientOperator op = new Toollet.test_operator(pid, request);
 
     try {
       table.operate(op, 0);
@@ -163,7 +163,7 @@ public class TableHandlerTest {
     Assert.assertNotNull(table);
     Assert.assertEquals(8, table.getPartitionCount());
 
-    TableHandler.TableConfiguration tableConfig = table.tableConfig_.get();
+    TableHandler.TableConfiguration tableConfig = table.tableConfig.get();
     for (int i = 0; i < tableConfig.replicas.size(); ++i) {
       TableHandler.ReplicaConfiguration handle = tableConfig.replicas.get(i);
       Assert.assertNotNull(handle);
@@ -207,7 +207,7 @@ public class TableHandlerTest {
     Assert.assertNotNull(table);
 
     Thread.sleep(100);
-    ArrayList<TableHandler.ReplicaConfiguration> replicas = table.tableConfig_.get().replicas;
+    ArrayList<TableHandler.ReplicaConfiguration> replicas = table.tableConfig.get().replicas;
     for (TableHandler.ReplicaConfiguration r : replicas) {
       Assert.assertEquals(r.primarySession.getState(), ReplicaSession.ConnState.CONNECTED);
     }

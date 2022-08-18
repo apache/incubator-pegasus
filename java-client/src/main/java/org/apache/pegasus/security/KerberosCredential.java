@@ -52,10 +52,10 @@ class KerberosCredential implements Credential {
   public static final String DEFAULT_KEYTAB = "";
   public static final String DEFAULT_PRINCIPAL = "";
 
-  private String serviceName;
-  private String serviceFqdn;
-  private String keyTab;
-  private String principal;
+  private final String serviceName;
+  private final String serviceFqdn;
+  private final String keyTab;
+  private final String principal;
 
   KerberosCredential(Configuration config) {
     this.serviceName = config.getString(PEGASUS_SERVICE_NAME_KEY, DEFAULT_SERVICE_NAME);

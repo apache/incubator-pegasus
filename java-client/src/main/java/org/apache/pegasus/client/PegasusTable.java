@@ -51,19 +51,19 @@ import org.apache.pegasus.apps.update_request;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.operator.batch_get_operator;
-import org.apache.pegasus.operator.client_operator;
-import org.apache.pegasus.operator.rrdb_check_and_mutate_operator;
-import org.apache.pegasus.operator.rrdb_check_and_set_operator;
-import org.apache.pegasus.operator.rrdb_get_operator;
-import org.apache.pegasus.operator.rrdb_incr_operator;
-import org.apache.pegasus.operator.rrdb_multi_get_operator;
-import org.apache.pegasus.operator.rrdb_multi_put_operator;
-import org.apache.pegasus.operator.rrdb_multi_remove_operator;
-import org.apache.pegasus.operator.rrdb_put_operator;
-import org.apache.pegasus.operator.rrdb_remove_operator;
-import org.apache.pegasus.operator.rrdb_sortkey_count_operator;
-import org.apache.pegasus.operator.rrdb_ttl_operator;
+import org.apache.pegasus.operator.BatchGetOperator;
+import org.apache.pegasus.operator.ClientOperator;
+import org.apache.pegasus.operator.RRDBCheckAndMutateOperator;
+import org.apache.pegasus.operator.RRDBCheckAndSetOperator;
+import org.apache.pegasus.operator.RRDBGetOperator;
+import org.apache.pegasus.operator.RRDBIncrOperator;
+import org.apache.pegasus.operator.RRDBMultiGetOperator;
+import org.apache.pegasus.operator.RRDBMultiPutOperator;
+import org.apache.pegasus.operator.RRDBMultiRemoveOperator;
+import org.apache.pegasus.operator.RRDBPutOperator;
+import org.apache.pegasus.operator.RRDBRemoveOperator;
+import org.apache.pegasus.operator.RRDBSortKeyCountOperator;
+import org.apache.pegasus.operator.RRDBTTLOperator;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.Table;
 import org.apache.pegasus.rpc.async.TableHandler;
@@ -76,10 +76,10 @@ import org.apache.pegasus.tools.WriteLimiter;
  *     <p>Implementation of {@link PegasusTableInterface}.
  */
 public class PegasusTable implements PegasusTableInterface {
-  private Table table;
-  private int defaultTimeout;
-  private WriteLimiter writeLimiter;
-  private String metaList;
+  private final Table table;
+  private final int defaultTimeout;
+  private final WriteLimiter writeLimiter;
+  private final String metaList;
 
   public PegasusTable(PegasusClient client, Table table) {
     this.table = table;
@@ -93,16 +93,14 @@ public class PegasusTable implements PegasusTableInterface {
     final DefaultPromise<Boolean> promise = table.newPromise();
     asyncTTL(hashKey, sortKey, timeout)
         .addListener(
-            new TTLListener() {
-              @Override
-              public void operationComplete(Future<Integer> future) throws Exception {
-                if (future.isSuccess()) {
-                  promise.setSuccess(future.get() != -2);
-                } else {
-                  promise.setFailure(future.cause());
-                }
-              }
-            });
+            (TTLListener)
+                future -> {
+                  if (future.isSuccess()) {
+                    promise.setSuccess(future.get() != -2);
+                  } else {
+                    promise.setFailure(future.cause());
+                  }
+                });
     return promise;
   }
 
@@ -122,24 +120,21 @@ public class PegasusTable implements PegasusTableInterface {
     blob hashKeyRequest = new blob(hashKey);
     long partitionHash = table.getKeyHash(hashKey);
     gpid pid = table.getGpidByHash(partitionHash);
-    rrdb_sortkey_count_operator op =
-        new rrdb_sortkey_count_operator(pid, table.getTableName(), hashKeyRequest, partitionHash);
+    RRDBSortKeyCountOperator op =
+        new RRDBSortKeyCountOperator(pid, table.getTableName(), hashKeyRequest, partitionHash);
     Table.ClientOPCallback callback =
-        new Table.ClientOPCallback() {
-          @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_sortkey_count_operator)) {
-              promise.setFailure(new PException("Unexpected client operator"));
-              return;
-            }
-            rrdb_sortkey_count_operator op = (rrdb_sortkey_count_operator) clientOP;
-            if (op.rpc_error.errno != error_code.error_types.ERR_OK) {
-              handleReplicaException(new Request(hashKey), promise, op, table, timeout);
-            } else if (op.get_response().error != 0) {
-              promise.setFailure(new PException("rocksdb error: " + op.get_response().error));
-            } else {
-              promise.setSuccess(op.get_response().count);
-            }
+        clientOP -> {
+          if (!(clientOP instanceof RRDBSortKeyCountOperator)) {
+            promise.setFailure(new PException("Unexpected client operator"));
+            return;
+          }
+          RRDBSortKeyCountOperator op1 = (RRDBSortKeyCountOperator) clientOP;
+          if (op1.rpc_error.errno != error_code.error_types.ERR_OK) {
+            handleReplicaException(new Request(hashKey), promise, op1, table, timeout);
+          } else if (op1.get_response().error != 0) {
+            promise.setFailure(new PException("rocksdb error: " + op1.get_response().error));
+          } else {
+            promise.setSuccess(op1.get_response().count);
           }
         };
 
@@ -153,17 +148,16 @@ public class PegasusTable implements PegasusTableInterface {
     blob request = new blob(PegasusClient.generateKey(hashKey, sortKey));
     long partitionHash = table.getHash(request.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_get_operator op =
-        new rrdb_get_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBGetOperator op = new RRDBGetOperator(gpid, table.getTableName(), request, partitionHash);
     Table.ClientOPCallback callback =
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_get_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBGetOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_get_operator gop = (rrdb_get_operator) clientOP;
+            RRDBGetOperator gop = (RRDBGetOperator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
             } else if (gop.get_response().error == 1) { // rocksdb::kNotFound
@@ -207,17 +201,17 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getHash(k.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_put_operator op = new rrdb_put_operator(gpid, table.getTableName(), req, partitionHash);
+    RRDBPutOperator op = new RRDBPutOperator(gpid, table.getTableName(), req, partitionHash);
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_put_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBPutOperator)) {
               promise.setFailure(new PException("Internal error: unexpected clientOP type"));
               return;
             }
-            rrdb_put_operator gop = (rrdb_put_operator) clientOP;
+            RRDBPutOperator gop = (RRDBPutOperator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
             } else if (gop.get_response().error != 0) {
@@ -290,20 +284,20 @@ public class PegasusTable implements PegasusTableInterface {
             false);
     long partitionHash = table.getKeyHash(request.hash_key.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_multi_get_operator op =
-        new rrdb_multi_get_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBMultiGetOperator op =
+        new RRDBMultiGetOperator(gpid, table.getTableName(), request, partitionHash);
     final Map<ByteBuffer, byte[]> finalSetKeyMap = setKeyMap;
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_multi_get_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBMultiGetOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
+            RRDBMultiGetOperator gop = (RRDBMultiGetOperator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(hashKey, sortKeyBlobs.size()), promise, op, table, timeout);
@@ -391,19 +385,19 @@ public class PegasusTable implements PegasusTableInterface {
             options.reverse);
     long partitionHash = table.getKeyHash(request.hash_key.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_multi_get_operator op =
-        new rrdb_multi_get_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBMultiGetOperator op =
+        new RRDBMultiGetOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_multi_get_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBMultiGetOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_multi_get_operator gop = (rrdb_multi_get_operator) clientOP;
+            RRDBMultiGetOperator gop = (RRDBMultiGetOperator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(hashKey, maxFetchCount), promise, op, table, timeout);
@@ -488,19 +482,18 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getKeyHash(request.keys.get(0).hash_key.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    batch_get_operator op =
-        new batch_get_operator(gpid, table.getTableName(), request, partitionHash);
+    BatchGetOperator op = new BatchGetOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof batch_get_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof BatchGetOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            batch_get_operator gop = (batch_get_operator) clientOP;
+            BatchGetOperator gop = (BatchGetOperator) clientOP;
             if (gop.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(request.keys.get(0).hash_key.data), promise, op, table, timeout);
@@ -580,19 +573,19 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getKeyHash(hashKey);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_multi_put_operator op =
-        new rrdb_multi_put_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBMultiPutOperator op =
+        new RRDBMultiPutOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_multi_put_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBMultiPutOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_multi_put_operator op2 = (rrdb_multi_put_operator) clientOP;
+            RRDBMultiPutOperator op2 = (RRDBMultiPutOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(hashKey, values_blob.size()), promise, op, table, timeout);
@@ -619,19 +612,19 @@ public class PegasusTable implements PegasusTableInterface {
     blob request = new blob(PegasusClient.generateKey(hashKey, sortKey));
     long partitionHash = table.getHash(request.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_remove_operator op =
-        new rrdb_remove_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBRemoveOperator op =
+        new RRDBRemoveOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_remove_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBRemoveOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_remove_operator op2 = (rrdb_remove_operator) clientOP;
+            RRDBRemoveOperator op2 = (RRDBRemoveOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
             } else if (op2.get_response().error != 0) {
@@ -676,18 +669,18 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getKeyHash(hashKey);
     gpid pid = table.getGpidByHash(partitionHash);
-    rrdb_multi_remove_operator op =
-        new rrdb_multi_remove_operator(pid, table.getTableName(), request, partitionHash);
+    RRDBMultiRemoveOperator op =
+        new RRDBMultiRemoveOperator(pid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_multi_remove_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBMultiRemoveOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_multi_remove_operator op2 = (rrdb_multi_remove_operator) clientOP;
+            RRDBMultiRemoveOperator op2 = (RRDBMultiRemoveOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(hashKey, sortKeyBlobs.size()), promise, op, table, timeout);
@@ -717,19 +710,18 @@ public class PegasusTable implements PegasusTableInterface {
     incr_request request = new incr_request(key, increment, expireSeconds);
     long partitionHash = table.getHash(request.key.data);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_incr_operator op =
-        new rrdb_incr_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBIncrOperator op = new RRDBIncrOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_incr_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBIncrOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_incr_operator op2 = (rrdb_incr_operator) clientOP;
+            RRDBIncrOperator op2 = (RRDBIncrOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
             } else if (op2.get_response().error != 0) {
@@ -810,19 +802,19 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getKeyHash(hashKey);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_check_and_set_operator op =
-        new rrdb_check_and_set_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBCheckAndSetOperator op =
+        new RRDBCheckAndSetOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_check_and_set_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBCheckAndSetOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
+            RRDBCheckAndSetOperator op2 = (RRDBCheckAndSetOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, setSortKey), promise, op, table, timeout);
             } else if (op2.get_response().error != 0
@@ -902,19 +894,19 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getKeyHash(hashKey);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_check_and_mutate_operator op =
-        new rrdb_check_and_mutate_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBCheckAndMutateOperator op =
+        new RRDBCheckAndMutateOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_check_and_mutate_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBCheckAndMutateOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_check_and_mutate_operator op2 = (rrdb_check_and_mutate_operator) clientOP;
+            RRDBCheckAndMutateOperator op2 = (RRDBCheckAndMutateOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
                   new Request(hashKey, mutations.getMutations().size()),
@@ -995,19 +987,19 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getKeyHash(hashKey);
     gpid gpid = table.getGpidByHash(partitionHash);
-    rrdb_check_and_set_operator op =
-        new rrdb_check_and_set_operator(gpid, table.getTableName(), request, partitionHash);
+    RRDBCheckAndSetOperator op =
+        new RRDBCheckAndSetOperator(gpid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_check_and_set_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBCheckAndSetOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
+            RRDBCheckAndSetOperator op2 = (RRDBCheckAndSetOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
             } else if (op2.get_response().error != 0
@@ -1041,18 +1033,18 @@ public class PegasusTable implements PegasusTableInterface {
 
     long partitionHash = table.getHash(request.data);
     gpid pid = table.getGpidByHash(partitionHash);
-    rrdb_ttl_operator op = new rrdb_ttl_operator(pid, table.getTableName(), request, partitionHash);
+    RRDBTTLOperator op = new RRDBTTLOperator(pid, table.getTableName(), request, partitionHash);
 
     table.asyncOperate(
         op,
         new Table.ClientOPCallback() {
           @Override
-          public void onCompletion(client_operator clientOP) {
-            if (!(clientOP instanceof rrdb_ttl_operator)) {
+          public void onCompletion(ClientOperator clientOP) {
+            if (!(clientOP instanceof RRDBTTLOperator)) {
               promise.setFailure(new PException("Unexpected client operator"));
               return;
             }
-            rrdb_ttl_operator op2 = (rrdb_ttl_operator) clientOP;
+            RRDBTTLOperator op2 = (RRDBTTLOperator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(new Request(hashKey, sortKey), promise, op, table, timeout);
             } else if (op2.get_response().error != 0 && op2.get_response().error != 1) {
@@ -2136,9 +2128,9 @@ public class PegasusTable implements PegasusTableInterface {
   }
 
   public void handleReplicaException(
-      Request request, DefaultPromise promise, client_operator op, Table table, int timeout) {
+      Request request, DefaultPromise promise, ClientOperator op, Table table, int timeout) {
     if (timeout <= 0) timeout = defaultTimeout;
-    gpid gPid = op.get_gpid();
+    gpid gPid = op.getgpid();
     ReplicaConfiguration replicaConfiguration =
         ((TableHandler) table).getReplicaConfig(gPid.get_pidx());
     String replicaServer;

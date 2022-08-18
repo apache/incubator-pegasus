@@ -25,7 +25,7 @@ import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.apache.pegasus.security.AuthReplicaSessionInterceptor;
 
 public class ReplicaSessionInterceptorManager {
-  private List<ReplicaSessionInterceptor> interceptors = new ArrayList<>();
+  private final List<ReplicaSessionInterceptor> interceptors = new ArrayList<>();
 
   public ReplicaSessionInterceptorManager(ClientOptions options) {
     if (options.getCredential() != null

@@ -18,8 +18,8 @@
  */
 package org.apache.pegasus.operator;
 
-import org.apache.pegasus.apps.incr_request;
-import org.apache.pegasus.apps.incr_response;
+import org.apache.pegasus.apps.batch_get_request;
+import org.apache.pegasus.apps.batch_get_response;
 import org.apache.pegasus.apps.rrdb;
 import org.apache.pegasus.base.gpid;
 import org.apache.thrift.TException;
@@ -27,37 +27,44 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
-public class rrdb_incr_operator extends client_operator {
-  public rrdb_incr_operator(gpid gpid, String tableName, incr_request request, long partitionHash) {
+public class BatchGetOperator extends ClientOperator {
+  private final batch_get_request request;
+  private batch_get_response response;
+
+  public BatchGetOperator(
+      gpid gpid, String tableName, batch_get_request request, long partitionHash) {
     super(gpid, tableName, partitionHash);
     this.request = request;
   }
 
+  @Override
   public String name() {
-    return "incr";
+    return "batch_get";
   }
 
-  public void send_data(org.apache.thrift.protocol.TProtocol oprot, int seqid) throws TException {
-    TMessage msg = new TMessage("RPC_RRDB_RRDB_INCR", TMessageType.CALL, seqid);
-    oprot.writeMessageBegin(msg);
-    rrdb.incr_args incr_args = new rrdb.incr_args(request);
-    incr_args.write(oprot);
-    oprot.writeMessageEnd();
+  @Override
+  public void sendData(TProtocol out, int sequenceId) throws TException {
+    TMessage msg = new TMessage("RPC_RRDB_BATCH_GET", TMessageType.CALL, sequenceId);
+    out.writeMessageBegin(msg);
+    rrdb.batch_get_args get_args = new rrdb.batch_get_args(request);
+    get_args.write(out);
+    out.writeMessageEnd();
   }
 
-  public void recv_data(TProtocol iprot) throws TException {
-    rrdb.incr_result result = new rrdb.incr_result();
-    result.read(iprot);
-    if (result.isSetSuccess()) resp = result.success;
-    else
+  @Override
+  public void recvData(TProtocol in) throws TException {
+    rrdb.batch_get_result result = new rrdb.batch_get_result();
+    result.read(in);
+    if (result.isSetSuccess()) {
+      response = result.success;
+    } else {
       throw new org.apache.thrift.TApplicationException(
-          org.apache.thrift.TApplicationException.MISSING_RESULT, "incr failed: unknown result");
+          org.apache.thrift.TApplicationException.MISSING_RESULT,
+          "Batch Get failed: unknown result");
+    }
   }
 
-  public incr_response get_response() {
-    return resp;
+  public batch_get_response get_response() {
+    return response;
   }
-
-  private incr_request request;
-  private incr_response resp;
 }

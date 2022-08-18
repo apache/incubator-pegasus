@@ -42,9 +42,9 @@ public class FlowController {
   private final AtomicInteger token;
   private boolean stopped;
 
-  /** @param qps_ QPS to control. should > 0. */
-  public FlowController(int qps_) {
-    this.qps = qps_;
+  /** @param qps QPS to control. should > 0. */
+  public FlowController(int qps) {
+    this.qps = qps;
     this.slots = new int[10];
     int base = qps / 10;
     for (int i = 0; i < 10; i++) {

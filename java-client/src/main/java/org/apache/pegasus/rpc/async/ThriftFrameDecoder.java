@@ -57,7 +57,7 @@ public class ThriftFrameDecoder extends ByteToMessageDecoder {
       TMessage msgHeader = iprot.readMessageBegin();
       if (session.filter != null && session.filter.abandonIt(ec.errno, msgHeader)) {
         logger.info(
-            "{}: abaondon a message, err({}), header({})",
+            "{}: abandon a message, err({}), header({})",
             ctx.channel().toString(),
             ec.errno.toString(),
             msgHeader.toString());
@@ -70,7 +70,7 @@ public class ThriftFrameDecoder extends ByteToMessageDecoder {
           e.op.rpc_error.errno = ec.errno;
           if (e.op.rpc_error.errno == error_code.error_types.ERR_OK) {
             try {
-              e.op.recv_data(iprot);
+              e.op.recvData(iprot);
             } catch (TException readException) {
               logger.error(
                   "{}: unable to parse message body [seqId: {}, error: {}]",

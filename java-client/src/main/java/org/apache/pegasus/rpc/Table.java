@@ -21,15 +21,20 @@ package org.apache.pegasus.rpc;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.ClientOperator;
 
 public abstract class Table {
+
+  protected String tableName;
+  protected int appID;
+  protected KeyHasher hasher;
+
   public interface ClientOPCallback {
-    public void onCompletion(client_operator clientOP) throws Throwable;
+    public void onCompletion(ClientOperator clientOP) throws Throwable;
   }
 
   public final long getHash(byte[] data) {
-    return hasher_.hash(data);
+    return hasher.hash(data);
   }
 
   public final long getKeyHash(byte[] data) {
@@ -40,17 +45,17 @@ public abstract class Table {
     int count = getPartitionCount();
     gpid[] ret = new gpid[count];
     for (int i = 0; i < count; i++) {
-      ret[i] = new gpid(appID_, i);
+      ret[i] = new gpid(appID, i);
     }
     return ret;
   }
 
   public final String getTableName() {
-    return tableName_;
+    return tableName;
   }
 
   public final int getAppID() {
-    return appID_;
+    return appID;
   }
 
   public final <T> DefaultPromise<T> newPromise() {
@@ -61,17 +66,13 @@ public abstract class Table {
 
   public abstract int getPartitionCount();
 
-  public abstract void operate(client_operator op, int timeoutMs) throws ReplicationException;
+  public abstract void operate(ClientOperator op, int timeoutMs) throws ReplicationException;
 
-  public abstract void asyncOperate(client_operator op, ClientOPCallback callback, int timeoutMs);
+  public abstract void asyncOperate(ClientOperator op, ClientOPCallback callback, int timeoutMs);
 
   public abstract gpid getGpidByHash(long hashValue);
 
   public abstract EventExecutor getExecutor();
-
-  protected String tableName_;
-  protected int appID_;
-  protected KeyHasher hasher_;
 
   public static long remainder_unsigned(long dividend, long divisor) {
     if (dividend > 0) {

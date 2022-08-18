@@ -20,7 +20,7 @@
 package org.apache.pegasus.rpc.async;
 
 import org.apache.pegasus.base.error_code;
-import org.apache.pegasus.operator.client_operator;
+import org.apache.pegasus.operator.ClientOperator;
 import org.apache.pegasus.rpc.Meta;
 
 public class MetaHandler extends Meta {
@@ -31,7 +31,7 @@ public class MetaHandler extends Meta {
   }
 
   @Override
-  public error_code.error_types operate(client_operator op, int retryCount) {
+  public error_code.error_types operate(ClientOperator op, int retryCount) {
     this.session.execute(op, retryCount);
     return MetaSession.getMetaServiceError(op);
   }

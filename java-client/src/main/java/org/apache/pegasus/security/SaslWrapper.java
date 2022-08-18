@@ -29,10 +29,10 @@ import org.apache.pegasus.base.blob;
 
 class SaslWrapper {
   private SaslClient saslClient;
-  private Subject subject;
-  private String serviceName;
-  private String serviceFQDN;
-  private HashMap<String, Object> properties = new HashMap<>();
+  private final Subject subject;
+  private final String serviceName;
+  private final String serviceFQDN;
+  private final HashMap<String, Object> properties = new HashMap<>();
 
   SaslWrapper(Subject subject, String serviceName, String serviceFQDN) {
     this.subject = subject;
