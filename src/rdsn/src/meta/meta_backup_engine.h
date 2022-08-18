@@ -127,10 +127,11 @@ private:
     std::string get_remote_backup_path() const
     {
         auto type_path = _is_periodic_backup ? PERIODIC_PATH : ONETIME_PATH;
-        std::stringstream ss;
-        ss << get_remote_storage_root() << "/" << _cur_backup.app_id << "/" << type_path << "/"
-           << _cur_backup.backup_id;
-        return ss.str();
+        return fmt::format("{}/{}/{}/{}",
+                           get_remote_storage_root(),
+                           _cur_backup.app_id,
+                           type_path,
+                           _cur_backup.backup_id);
     }
 
 private:

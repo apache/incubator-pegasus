@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <dsn/dist/fmt_logging.h>
 #include <dsn/utility/filesystem.h>
 
 #include "backup_restore_common.h"
@@ -59,14 +60,12 @@ std::string get_backup_path(const std::string &root,
                             const int64_t backup_id,
                             const bool is_compatible)
 {
-    std::string str_app = app_name + "_" + std::to_string(app_id);
-    std::stringstream ss;
+    std::string str_app = fmt::format("{}_{}", app_name, app_id);
     if (!is_compatible) {
-        ss << root << "/" << str_app << "/" << backup_id;
+        return fmt::format("{}/{}/{}", root, str_app, backup_id);
     } else {
-        ss << root << "/" << backup_id << "/" << str_app;
+        return fmt::format("{}/{}/{}", root, backup_id, str_app);
     }
-    return ss.str();
 }
 
 std::string get_backup_meta_path(const std::string &root,
@@ -75,9 +74,8 @@ std::string get_backup_meta_path(const std::string &root,
                                  const int64_t backup_id,
                                  const bool is_compatible)
 {
-    std::stringstream ss;
-    ss << get_backup_path(root, app_name, app_id, backup_id, is_compatible) << "/meta";
-    return ss.str();
+    return fmt::format("{}/meta",
+                       get_backup_path(root, app_name, app_id, backup_id, is_compatible));
 }
 
 } // namespace replication

@@ -28,7 +28,7 @@ namespace replication {
 class meta_backup_engine_test : public meta_test_base
 {
 public:
-    void SetUp()
+    void SetUp() override
     {
         meta_test_base::SetUp();
         create_app(APP_NAME, PARTITION_COUNT);
@@ -38,7 +38,7 @@ public:
         fail::setup();
     }
 
-    void TearDown()
+    void TearDown() override
     {
         fail::teardown();
         meta_test_base::TearDown();
