@@ -190,7 +190,7 @@ public class ReplicaSessionTest {
 
       // should be called on ThriftFrameDecoder#decode
       @Override
-      public void recv_data(TProtocol iprot) throws TException {
+      public void recvData(TProtocol iprot) throws TException {
         throw new org.apache.thrift.TApplicationException(
             org.apache.thrift.TApplicationException.MISSING_RESULT, "get failed: unknown result");
       }
