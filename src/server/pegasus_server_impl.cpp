@@ -3017,16 +3017,22 @@ void pegasus_server_impl::recalculate_data_cf_options(
     const rocksdb::ColumnFamilyOptions &cur_data_cf_opts)
 {
 #define UPDATE_NUMBER_OPTION_IF_NEEDED(option, value)                                              \
-    if ((value) != cur_data_cf_opts.option) {                                                      \
-        new_options[#option] = std::to_string((value));                                            \
-    }
+    do {                                                                                           \
+        if ((value) != cur_data_cf_opts.option) {                                                  \
+            new_options[#option] = std::to_string((value));                                        \
+        }                                                                                          \
+    } while (0)
+
 #define UPDATE_BOOL_OPTION_IF_NEEDED(option, value)                                                \
-    if ((value) != cur_data_cf_opts.option) {                                                      \
-        if ((value))                                                                               \
-            new_options[#option] = "true";                                                         \
-        else                                                                                       \
-            new_options[#option] = "false";                                                        \
-    }
+    do {                                                                                           \
+        if ((value) != cur_data_cf_opts.option) {                                                  \
+            if ((value))                                                                           \
+                new_options[#option] = "true";                                                     \
+            else                                                                                   \
+                new_options[#option] = "false";                                                    \
+        }                                                                                          \
+    } while (0)
+
 #define UPDATE_OPTION_IF_NEEDED(option) UPDATE_NUMBER_OPTION_IF_NEEDED(option, _data_cf_opts.option)
 
     if (!_table_data_cf_opts_recalculated)
@@ -3093,6 +3099,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
         }
     }
     _table_data_cf_opts_recalculated = false;
+#undef UPDATE_OPTION_IF_NEEDED
+#undef UPDATE_BOOL_OPTION_IF_NEEDED
+#undef UPDATE_NUMBER_OPTION_IF_NEEDED
 }
 
 bool pegasus_server_impl::set_options(
