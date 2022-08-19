@@ -428,7 +428,7 @@ private:
     // The value of option in data_cf according to conf template file config.ini
     rocksdb::ColumnFamilyOptions _data_cf_opts;
     // Dynamically calculate the value of current data_cf option according to the conf module file
-    // and usage mode
+    // and usage scenario
     rocksdb::ColumnFamilyOptions _table_data_cf_opts;
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
