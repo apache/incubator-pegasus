@@ -59,7 +59,7 @@ jobs:
       - name: Clone Apache Pegasus Source
         working-directory: /root
         run: |
-          git clone --depth=1 https://github.com/apache/incubator-pegasus.git
+          git clone -b ${{ github.ref_name }} --depth=1 https://github.com/apache/incubator-pegasus.git
           cd incubator-pegasus
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
