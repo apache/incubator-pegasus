@@ -2270,7 +2270,7 @@ void replica_stub::register_jemalloc_ctrl_command()
 {
     _dump_jemalloc_stats_command = ::dsn::command_manager::instance().register_command(
         {"replica.dump-jemalloc-stats"},
-        fmt::format("replica.dump-jemalloc-stats <{}> [buf_sz]", kAllKthPercentileTypes),
+        fmt::format("replica.dump-jemalloc-stats <{}> [buf_sz]", kAllJeStatsTypesStr),
         "dump stats of jemalloc",
         [](const std::vector<std::string> &args) {
             if (args.empty()) {

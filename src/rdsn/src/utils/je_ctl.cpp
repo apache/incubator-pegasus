@@ -39,8 +39,6 @@ namespace dsn {
 
 namespace {
 
-template <typename T, typename>
-
 void je_stats_cb(void *opaque, const char *str)
 {
     if (str == nullptr) {
@@ -89,7 +87,7 @@ std::string get_all_je_stats_types_str()
 {
     std::vector<std::string> names;
     for (size_t i = 0; i < static_cast<size_t>(je_stats_type::COUNT); ++i) {
-        names.emplace_back(enum_to_string(static_cast(i)));
+        names.emplace_back(enum_to_string(static_cast<je_stats_type>(i)));
     }
     return boost::join(names, " | ");
 }
