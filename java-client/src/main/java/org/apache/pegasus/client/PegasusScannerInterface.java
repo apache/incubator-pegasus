@@ -32,7 +32,7 @@ public interface PegasusScannerInterface {
    * @return item like {@literal <<hashKey, sortKey>, value>}; null returned if scan completed.
    * @throws PException
    */
-  public Pair<Pair<byte[], byte[]>, byte[]> next() throws PException;
+  Pair<Pair<byte[], byte[]>, byte[]> next() throws PException;
 
   /**
    * Judge whether scan completed
@@ -40,17 +40,17 @@ public interface PegasusScannerInterface {
    * @return Return false if no data left, return true means some data left.
    * @throws PException
    */
-  public boolean hasNext() throws PException;
+  boolean hasNext() throws PException;
 
   /**
    * Get the next item asynchronously.
    *
    * @return A future for current op.
-   *     <p>Future return: On success: if scan haven't reach the end then return the kv-pair, else
+   *     <p>Future return: On success: if scan haven't reached the end then return the kv-pair, else
    *     return null. On failure: a throwable, which is an instance of PException.
    */
-  public Future<Pair<Pair<byte[], byte[]>, byte[]>> asyncNext();
+  Future<Pair<Pair<byte[], byte[]>, byte[]>> asyncNext();
 
   /** Close the scanner. Should be called when scan completed. */
-  public void close();
+  void close();
 }

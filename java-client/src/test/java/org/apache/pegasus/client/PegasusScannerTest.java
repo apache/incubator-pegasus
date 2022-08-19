@@ -18,7 +18,16 @@
  */
 package org.apache.pegasus.client;
 
-import java.util.*;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.Future;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.AfterClass;
@@ -27,23 +36,23 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
-public class TestScan {
+public class PegasusScannerTest {
   static char[] CCH =
       "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
   static char[] buffer = new char[256];
   static Random random;
 
   private static PegasusClientInterface client;
-  private static String tableName = "temp";
+  private static final String tableName = "temp";
 
   private static TreeMap<String, TreeMap<String, String>> base;
   private static String expectedHashKey;
 
   @BeforeClass
-  public static void setupTestCase() throws PException {
+  public static void setup() throws PException {
     client = PegasusClientFactory.getSingletonClient();
     random = new Random();
-    base = new TreeMap<String, TreeMap<String, String>>();
+    base = new TreeMap<>();
     expectedHashKey = randomString();
 
     for (int i = 0; i < buffer.length; i++) {
@@ -52,7 +61,7 @@ public class TestScan {
 
     clearDatabase();
 
-    TreeMap<String, String> hashMap = new TreeMap<String, String>();
+    TreeMap<String, String> hashMap = new TreeMap<>();
     for (int i = 0; i < 1000 || hashMap.size() < 1000; i++) {
       String sortKey = randomString();
       String value = randomString();
@@ -64,11 +73,7 @@ public class TestScan {
 
     for (int i = 0; i < 1000 || base.size() < 1000; i++) {
       String hashKey = randomString();
-      TreeMap<String, String> sortMap = base.get(hashKey);
-      if (sortMap == null) {
-        sortMap = new TreeMap<String, String>();
-        base.put(hashKey, sortMap);
-      }
+      TreeMap<String, String> sortMap = base.computeIfAbsent(hashKey, k -> new TreeMap<>());
       for (int j = 0; j < 10 || sortMap.size() < 10; j++) {
         String sortKey = randomString();
         String value = randomString();
@@ -85,10 +90,8 @@ public class TestScan {
 
   @Test
   public void testAllSortKey() throws PException {
-    /** ** ALL SORT_KEYS *** */
-    System.out.println("TESTING_HASH_SCAN, ALL SORT_KEYS ....");
     ScanOptions options = new ScanOptions();
-    TreeMap<String, String> data = new TreeMap<String, String>();
+    TreeMap<String, String> data = new TreeMap<>();
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
@@ -108,9 +111,8 @@ public class TestScan {
 
   @Test
   public void testHasNext() throws PException {
-    System.out.println("TESTING_HAS_NEXT, ALL SORT_KEYS ....");
     ScanOptions options = new ScanOptions();
-    TreeMap<String, String> data = new TreeMap<String, String>();
+    TreeMap<String, String> data = new TreeMap<>();
     PegasusScannerInterface scanner =
         client.getScanner(
             tableName, expectedHashKey.getBytes(), new byte[] {}, new byte[] {}, options);
@@ -143,8 +145,6 @@ public class TestScan {
 
   @Test
   public void testInclusive() throws PException {
-    /** ** [start, stop] *** */
-    System.out.println("TESTING_HASH_SCAN, [start, stop]...");
     Iterator<String> iterator = base.get(expectedHashKey).keySet().iterator();
     for (int i = random.nextInt(500); i >= 0; i--) iterator.next();
     String start = iterator.next();
@@ -175,8 +175,6 @@ public class TestScan {
 
   @Test
   public void testExclusive() throws PException {
-    /** ** (start, stop) *** */
-    System.out.println("TESTING_HASH_SCAN, (start, stop)...");
     Iterator<String> iterator = base.get(expectedHashKey).keySet().iterator();
     for (int i = random.nextInt(500); i >= 0; i--) iterator.next();
     String start = iterator.next();
@@ -207,7 +205,6 @@ public class TestScan {
 
   @Test
   public void testOnePoint() throws PException {
-    System.out.println("TESTING_HASH_SCAN, [start, start]");
     Iterator<String> iterator = base.get(expectedHashKey).keySet().iterator();
     for (int i = random.nextInt(800); i >= 0; i--) iterator.next();
     String start = iterator.next();
@@ -228,7 +225,6 @@ public class TestScan {
 
   @Test
   public void testHalfInclusive() throws PException {
-    System.out.println("TESTING_HASH_SCAN, [start, start)");
     Iterator<String> iterator = base.get(expectedHashKey).keySet().iterator();
     for (int i = random.nextInt(800); i >= 0; i--) iterator.next();
     String start = iterator.next();
@@ -247,8 +243,6 @@ public class TestScan {
 
   @Test
   public void testVoidSpan() throws PException {
-    /** ** [stop, start] *** */
-    System.out.println("TESTING_HASH_SCAN, [stop, start]...");
     Iterator<String> iterator = base.get(expectedHashKey).keySet().iterator();
     for (int i = random.nextInt(500); i >= 0; i--) iterator.next();
     String start = iterator.next();
@@ -269,8 +263,6 @@ public class TestScan {
 
   @Test
   public void testOverallScan() throws PException {
-    System.out.println("TEST OVERALL_SCAN...");
-
     ScanOptions options = new ScanOptions();
     TreeMap<String, TreeMap<String, String>> data = new TreeMap<String, TreeMap<String, String>>();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 3, options);
@@ -294,8 +286,6 @@ public class TestScan {
 
   @Test
   public void testAsyncScan() throws PException {
-    System.out.println("TEST asyncNext...");
-
     ScanOptions options = new ScanOptions();
     TreeMap<String, TreeMap<String, String>> data = new TreeMap<String, TreeMap<String, String>>();
     List<PegasusScannerInterface> scanners = client.getUnorderedScanners(tableName, 3, options);
@@ -361,7 +351,6 @@ public class TestScan {
 
   @Test
   public void testHashKeyFilteringScan() throws PException {
-    System.out.println("TEST HASHKEY_FILTERING_SCAN...");
     ScanOptions options = new ScanOptions();
     options.hashKeyFilterType = FilterType.FT_MATCH_PREFIX;
     options.hashKeyFilterPattern = expectedHashKey.getBytes();
@@ -408,7 +397,7 @@ public class TestScan {
           items.add(item);
           if (!encounterErrorMocked) {
             // only mock _encounterError = true, all the follow request will be failed
-            ((PegasusScanner) scanner).mockEncounterErrorForTest();
+            mockEncounterErrorForTest(scanner);
             encounterErrorMocked = true;
           }
         }
@@ -417,9 +406,6 @@ public class TestScan {
       }
     }
     Assertions.assertEquals(1, items.size());
-    Assertions.assertTrue(((PegasusScanner) scanner)._encounterError);
-    Assertions.assertFalse(((PegasusScanner) scanner)._rpcFailed);
-    ((PegasusScanner) scanner)._encounterError = false;
     items.clear();
 
     // test encounter rpc error
@@ -433,7 +419,7 @@ public class TestScan {
           if (!rpcErrorMocked) {
             // mock _encounterError = true and _rpcFailed = true, follow request will be recovered
             // automatically
-            ((PegasusScanner) scanner).mockRpcErrorForTest();
+            mockRpcErrorForTest(scanner);
             rpcErrorMocked = true;
           }
         } else {
@@ -444,8 +430,33 @@ public class TestScan {
       }
     }
     Assertions.assertEquals(100, items.size());
-    Assertions.assertFalse(((PegasusScanner) scanner)._encounterError);
-    Assertions.assertFalse(((PegasusScanner) scanner)._rpcFailed);
+  }
+
+  private void mockEncounterErrorForTest(PegasusScannerInterface scanner) {
+    try {
+      Field encounterErrorField = scanner.getClass().getDeclaredField("encounterError");
+      encounterErrorField.setAccessible(true);
+      encounterErrorField.set(scanner, true);
+      Field causeField = scanner.getClass().getDeclaredField("cause");
+      causeField.setAccessible(true);
+      causeField.set(scanner, new PException("encounter unknown error"));
+    } catch (Exception ignored) {
+    }
+  }
+
+  protected void mockRpcErrorForTest(PegasusScannerInterface scanner) {
+    try {
+      Field encounterErrorField = scanner.getClass().getDeclaredField("encounterError");
+      encounterErrorField.setAccessible(true);
+      encounterErrorField.set(scanner, true);
+      Field rpcFailedField = scanner.getClass().getDeclaredField("rpcFailed");
+      rpcFailedField.setAccessible(true);
+      rpcFailedField.set(scanner, true);
+      Field causeField = scanner.getClass().getDeclaredField("cause");
+      causeField.setAccessible(true);
+      causeField.set(scanner, new PException("scan failed with error rpc"));
+    } catch (Exception ignored) {
+    }
   }
 
   private static void clearDatabase() throws PException {
@@ -490,7 +501,7 @@ public class TestScan {
       TreeMap<String, TreeMap<String, String>> data, String hashKey, String sortKey, String value) {
     TreeMap<String, String> sortMap = data.get(hashKey);
     if (sortMap == null) {
-      sortMap = new TreeMap<String, String>();
+      sortMap = new TreeMap<>();
       data.put(hashKey, sortMap);
     } else {
       Assert.assertNull(
