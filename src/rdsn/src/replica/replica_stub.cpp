@@ -37,6 +37,7 @@
 #include "replica_stub.h"
 #include "mutation_log.h"
 #include "mutation.h"
+#include "backup/replica_backup_manager.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "duplication/duplication_sync_timer.h"
 #include "split/replica_split_manager.h"
@@ -2255,6 +2256,8 @@ void replica_stub::open_service()
         RPC_DETECT_HOTKEY, "detect_hotkey", &replica_stub::on_detect_hotkey);
     register_rpc_handler_with_rpc_holder(
         RPC_ADD_NEW_DISK, "add_new_disk", &replica_stub::on_add_new_disk);
+    register_rpc_handler_with_rpc_holder(
+        RPC_COLD_BACKUP, "cold_backup", &replica_stub::on_cold_backup);
 
     register_ctrl_command();
 }
@@ -2994,6 +2997,21 @@ void replica_stub::update_disks_status()
                          enum_to_string(replica->get_disk_status()));
             }
         }
+    }
+}
+
+void replica_stub::on_cold_backup(backup_rpc rpc)
+{
+    const backup_request &request = rpc.request();
+    backup_response &response = rpc.response();
+
+    ddebug_f("[{}@{}]: receive backup request", request.pid, _primary_address_str);
+    replica_ptr rep = get_replica(request.pid);
+    if (rep != nullptr) {
+        rep->get_backup_manager()->on_backup(request, response);
+    } else {
+        derror_f("replica({}) is not existed", request.pid);
+        response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
 
