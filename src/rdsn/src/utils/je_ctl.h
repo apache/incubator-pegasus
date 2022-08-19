@@ -21,15 +21,29 @@
 
 #include <string>
 
+#include <dsn/utility/enum_helper.h>
+
 namespace dsn {
 
 enum class je_stats_type : size_t
 {
-    kSummaryStats,
-    kConfigs,
-    kBriefArenaStats,
-    kDetailedStats,
+    SUMMARY_STATS,
+    CONFIGS,
+    BRIEF_ARENA_STATS,
+    DETAILED_STATS,
+    COUNT,
+    INVALID,
 };
+
+ENUM_BEGIN(je_stats_type, je_stats_type::INVALID)
+ENUM_REG(je_stats_type::SUMMARY_STATS)
+ENUM_REG(je_stats_type::CONFIGS)
+ENUM_REG(je_stats_type::BRIEF_ARENA_STATS)
+ENUM_REG(je_stats_type::DETAILED_STATS)
+ENUM_END(je_stats_type)
+
+std::string get_all_je_stats_types_str();
+const std::string kAllJeStatsTypesStr = get_all_je_stats_types_str();
 
 void je_dump_stats(je_stats_type type, size_t buf_sz, std::string &stats);
 

@@ -384,6 +384,8 @@ private:
     dsn_handle_t _get_tcmalloc_status_command;
     dsn_handle_t _max_reserved_memory_percentage_command;
     dsn_handle_t _release_all_reserved_memory_command;
+#elif defined(DSN_USE_JEMALLOC)
+    dsn_handle_t _dump_jemalloc_stats_command;
 #endif
     dsn_handle_t _max_concurrent_bulk_load_downloading_count_command;
 

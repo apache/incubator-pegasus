@@ -109,10 +109,7 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _max_reserved_memory_percentage_command = nullptr;
     _release_all_reserved_memory_command = nullptr;
 #elif defined(DSN_USE_JEMALLOC)
-    _get_jemalloc_summary_stats_command = nullptr;
-    _get_jemalloc_configs_command = nullptr;
-    _get_jemalloc_brief_arena_stats_command = nullptr;
-    _get_jemalloc_detailed_stats_command = nullptr;
+    _dump_jemalloc_stats_command = nullptr;
 #endif
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -2271,43 +2268,33 @@ void replica_stub::open_service()
 #if !defined(DSN_ENABLE_GPERF) && defined(DSN_USE_JEMALLOC)
 void replica_stub::register_jemalloc_ctrl_command()
 {
-    _get_jemalloc_configs_command = ::dsn::command_manager::instance().register_command(
-        {"replica.get-jemalloc-configs"},
-        "replica.get-jemalloc-configs - get configs of jemalloc",
-        "get configs of jemalloc",
+    _dump_jemalloc_stats_command = ::dsn::command_manager::instance().register_command(
+        {"replica.dump-jemalloc-stats"},
+        fmt::format("replica.dump-jemalloc-stats <{}> [buf_sz]", kAllKthPercentileTypes),
+        "dump stats of jemalloc",
         [](const std::vector<std::string> &args) {
-            std::string stats("\n");
-            dsn::utils::je_dump_configs(&stats);
-            return stats;
-        });
+            if (args.empty()) {
+                return std::string("ERR: invalid arguments");
+            }
 
-    _get_jemalloc_summary_stats_command = ::dsn::command_manager::instance().register_command(
-        {"replica.get-jemalloc-summary-stats"},
-        "replica.get-jemalloc-summary-stats - get summary stats of jemalloc",
-        "get summary stats of jemalloc",
-        [](const std::vector<std::string> &args) {
-            std::string stats("\n");
-            dsn::utils::je_dump_summary_stats(&stats);
-            return stats;
-        });
+            auto type = enum_from_string(args[0].c_str(), je_stats_type::INVALID);
+            if (type == je_stats_type::INVALID) {
+                return std::string("ERR: invalid stats type");
+            }
 
-    _get_jemalloc_brief_arena_stats_command = ::dsn::command_manager::instance().register_command(
-        {"replica.get-jemalloc-brief-arena-stats"},
-        "replica.get-jemalloc-brief-arena-stats - get brief_arena stats of jemalloc",
-        "get brief arena stats of jemalloc",
-        [](const std::vector<std::string> &args) {
             std::string stats("\n");
-            dsn::utils::je_dump_brief_arena_stats(&stats);
-            return stats;
-        });
 
-    _get_jemalloc_detailed_stats_command = ::dsn::command_manager::instance().register_command(
-        {"replica.get-jemalloc-detailed-stats"},
-        "replica.get-jemalloc-detailed-stats - get detailed stats of jemalloc",
-        "get detailed stats of jemalloc",
-        [](const std::vector<std::string> &args) {
-            std::string stats("\n");
-            dsn::utils::je_dump_detailed_stats(&stats);
+            if (args.size() == 1) {
+                dsn::je_dump_stats(type, stats);
+                return stats;
+            }
+
+            uint64_t buf_sz;
+            if (!dsn::buf2uint64(args[1], buf_sz)) {
+                return std::string("ERR: invalid buffer size");
+            }
+
+            dsn::je_dump_stats(type, static_cast<size_t>(buf_sz), stats);
             return stats;
         });
 }
@@ -2463,6 +2450,8 @@ void replica_stub::register_ctrl_command()
                 auto release_bytes = gc_tcmalloc_memory(true);
                 return "OK, release_bytes=" + std::to_string(release_bytes);
             });
+#elif defined(DSN_USE_JEMALLOC)
+        register_jemalloc_ctrl_command();
 #endif
         _max_concurrent_bulk_load_downloading_count_command =
             dsn::command_manager::instance().register_command(
@@ -2625,6 +2614,8 @@ void replica_stub::close()
     UNREGISTER_VALID_HANDLER(_get_tcmalloc_status_command);
     UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
     UNREGISTER_VALID_HANDLER(_release_all_reserved_memory_command);
+#elif defined(DSN_USE_JEMALLOC)
+    UNREGISTER_VALID_HANDLER(_dump_jemalloc_stats_command);
 #endif
     UNREGISTER_VALID_HANDLER(_max_concurrent_bulk_load_downloading_count_command);
 
@@ -2640,6 +2631,8 @@ void replica_stub::close()
     _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
     _release_all_reserved_memory_command = nullptr;
+#elif defined(DSN_USE_JEMALLOC)
+    _dump_jemalloc_stats_command = nullptr;
 #endif
     _max_concurrent_bulk_load_downloading_count_command = nullptr;
 

@@ -20,17 +20,19 @@
 #include "je_ctl.h"
 
 #include <cstring>
+#include <vector>
 
+#include <boost/algorithm/string/join.hpp>
 #include <jemalloc/jemalloc.h>
 
 #include <dsn/c/api_utilities.h>
 #include <dsn/dist/fmt_logging.h>
 
-#define RETURN_ARRAY_ELEM_BY_ENUM_TYPE(type, array) \
-    do {    \
-        const auto index = static_cast<size_t>(type);\
-        dcheck_lt(index, sizeof(array) / sizeof(array[0]));\
-        return array[index];\
+#define RETURN_ARRAY_ELEM_BY_ENUM_TYPE(type, array)                                                \
+    do {                                                                                           \
+        const auto index = static_cast<size_t>(type);                                              \
+        dcheck_lt(index, sizeof(array) / sizeof(array[0]));                                        \
+        return array[index];                                                                       \
     } while (0);
 
 namespace dsn {
@@ -82,6 +84,15 @@ size_t je_stats_type_to_default_buf_sz(je_stats_type type)
 }
 
 } // anonymous namespace
+
+std::string get_all_je_stats_types_str()
+{
+    std::vector<std::string> names;
+    for (size_t i = 0; i < static_cast<size_t>(je_stats_type::COUNT); ++i) {
+        names.emplace_back(enum_to_string(static_cast(i)));
+    }
+    return boost::join(names, " | ");
+}
 
 void je_dump_stats(je_stats_type type, size_t buf_sz, std::string &stats)
 {
