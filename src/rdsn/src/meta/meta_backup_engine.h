@@ -73,8 +73,13 @@ public:
     explicit meta_backup_engine(meta_service *meta_svc, bool is_periodic);
     ~meta_backup_engine();
 
-    int64_t get_current_backup_id() const { return _cur_backup.backup_id; }
     int32_t get_backup_app_id() const { return _cur_backup.app_id; }
+
+    int64_t get_backup_id() const
+    {
+        zauto_read_lock l(_lock);
+        return _cur_backup.backup_id;
+    }
 
     backup_status::type get_backup_status() const
     {
@@ -106,10 +111,10 @@ private:
     void backup_app_partition(const gpid &pid);
     void on_backup_reply(error_code err,
                          const backup_response &response,
-                         gpid pid,
+                         const gpid &pid,
                          const rpc_address &primary);
-    void retry_backup(const dsn::gpid pid);
-    void handle_replica_backup_failed(const backup_response &response, const gpid pid);
+    void retry_backup(const gpid &pid);
+    void handle_replica_backup_failed(int32_t app_id);
 
     error_code write_backup_file(const std::string &remote_dir,
                                  const std::string &file_name,
@@ -118,6 +123,17 @@ private:
     void write_backup_info();
 
     void update_backup_item_on_remote_storage(backup_status::type new_status, int64_t end_time = 0);
+
+    bool check_partition_backup_status(backup_status::type expected_status) const
+    {
+        zauto_read_lock l(_lock);
+        for (const auto &status : _backup_status) {
+            if (status != expected_status) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     std::string get_remote_storage_root() const
     {
