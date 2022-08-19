@@ -434,8 +434,8 @@ private:
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
     std::string _user_specified_compaction;
-    // Whether it is necessary to update the current data_cf, it is required when opening the db at the first time,
-    // but not later
+    // Whether it is necessary to update the current data_cf, it is required when opening the db at
+    // the first time, but not later
     bool _table_data_cf_opts_recalculated;
 
     rocksdb::DB *_db;
