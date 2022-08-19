@@ -3026,10 +3026,11 @@ void pegasus_server_impl::recalculate_data_cf_options(
 #define UPDATE_BOOL_OPTION_IF_NEEDED(option, value)                                                \
     do {                                                                                           \
         if ((value) != cur_data_cf_opts.option) {                                                  \
-            if ((value))                                                                           \
+            if ((value)) {                                                                         \
                 new_options[#option] = "true";                                                     \
-            else                                                                                   \
+            } else {                                                                               \
                 new_options[#option] = "false";                                                    \
+            }                                                                                      \
         }                                                                                          \
     } while (0)
 
