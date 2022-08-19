@@ -249,9 +249,9 @@ public:
 
     enum class async_scan_type : char
     {
-        normal,
-        count_only,
-        count_only_finished
+        NORMAL,
+        COUNT_ONLY,
+        COUNT_ONLY_FINISHED
     };
 
     class pegasus_scanner_impl : public pegasus_scanner

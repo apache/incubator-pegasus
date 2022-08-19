@@ -182,22 +182,22 @@ TEST_F(scan, OVERALL_COUNT_ONLY)
     std::string hash_key;
     std::string sort_key;
     std::string value;
-    int32_t data_counts = 0;
+    int32_t data_count = 0;
     for (auto scanner : scanners) {
         ASSERT_NE(nullptr, scanner);
         int32_t kv_count;
         while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value, nullptr, &kv_count)))) {
-            data_counts += kv_count;
+            data_count += kv_count;
         }
         ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
                                            << client->get_error_string(ret);
         delete scanner;
     }
-    int data_sizes = 0;
+    int base_data_count = 0;
     for (auto &m : base) {
-        data_sizes += m.second.size();
+        base_data_count += m.second.size();
     }
-    ASSERT_EQ(data_sizes, data_counts);
+    ASSERT_EQ(base_data_count, data_count);
 }
 
 TEST_F(scan, ALL_SORT_KEY)

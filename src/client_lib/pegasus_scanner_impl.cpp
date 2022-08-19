@@ -56,7 +56,7 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
       _rpc_started(false),
       _validate_partition_hash(validate_partition_hash),
       _full_scan(full_scan),
-      _type(async_scan_type::normal)
+      _type(async_scan_type::NORMAL)
 {
 }
 
@@ -128,7 +128,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
     std::list<async_scan_next_callback_t> temp;
     while (true) {
         // count_only means should calculate kv counts once
-        while (++_p >= _kvs.size() && _type != async_scan_type::count_only) {
+        while (++_p >= _kvs.size() && _type != async_scan_type::COUNT_ONLY) {
             if (_context == SCAN_CONTEXT_ID_COMPLETED) {
                 // reach the end of one partition
                 if (_splits_hash.empty()) {
@@ -193,7 +193,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_async_next_internal()
                      expire_ts_seconds,
                      _kv_count);
             if (_options.only_return_count) {
-                _type = async_scan_type::count_only_finished;
+                _type = async_scan_type::COUNT_ONLY_FINISHED;
             }
             _lock.lock();
             if (_queue.size() == 1) {
@@ -285,7 +285,7 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
             // 2. kv_count is not existed means server is older version
             if (response.__isset.kv_count) {
                 if (response.kv_count != -1) {
-                    _type = async_scan_type::count_only;
+                    _type = async_scan_type::COUNT_ONLY;
                     _kv_count = response.kv_count;
                 }
             }
