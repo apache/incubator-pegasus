@@ -41,6 +41,19 @@ struct app_backup_info
 };
 
 ///
+/// backup path on remote storage
+///
+/// Onetime backup:
+/// <cluster_root>/backup/<app_id>/once/<backup_id>/<backup_item>
+///
+/// Periodic backup:
+/// <cluster_root>/backup/<app_id>/periodic/<periodic_backup_policy>
+/// <cluster_root>/backup/<app_id>/periodic/<backup_id>/<backup_item>
+///
+static const std::string ONETIME_PATH = "once";
+static const std::string PERIODIC_PATH = "periodic";
+
+///
 ///           Meta backup status
 ///
 ///              start backup
@@ -62,6 +75,12 @@ public:
 
     int64_t get_current_backup_id() const { return _cur_backup.backup_id; }
     int32_t get_backup_app_id() const { return _cur_backup.app_id; }
+
+    backup_status::type get_backup_status() const
+    {
+        zauto_read_lock l(_lock);
+        return _cur_backup.status;
+    }
 
     backup_item get_backup_item() const
     {
@@ -92,11 +111,28 @@ private:
     void retry_backup(const dsn::gpid pid);
     void handle_replica_backup_failed(const backup_response &response, const gpid pid);
 
-    error_code write_backup_file(const std::string &file_name, const dsn::blob &write_buffer);
+    error_code write_backup_file(const std::string &remote_dir,
+                                 const std::string &file_name,
+                                 const blob &write_buffer);
     error_code write_app_info();
     void write_backup_info();
 
     void update_backup_item_on_remote_storage(backup_status::type new_status, int64_t end_time = 0);
+
+    std::string get_remote_storage_root() const
+    {
+        return meta_options::concat_path_unix_style(_meta_svc->get_cluster_root(), "backup");
+    }
+
+    std::string get_remote_backup_path() const
+    {
+        auto type_path = _is_periodic_backup ? PERIODIC_PATH : ONETIME_PATH;
+        return fmt::format("{}/{}/{}/{}",
+                           get_remote_storage_root(),
+                           _cur_backup.app_id,
+                           type_path,
+                           _cur_backup.backup_id);
+    }
 
 private:
     friend class meta_backup_engine_test;
@@ -114,19 +150,10 @@ private:
 
     // TODO(heyuchen): remove following functions and vars
 private:
-    error_code backup_app_meta();
-
     void complete_current_backup();
 
-    const std::string get_policy_name() const
-    {
-        return "fake_policy_" + std::to_string(_cur_backup.backup_id);
-    }
-
     backup_service *_backup_service;
-    dist::block_service::block_filesystem *_block_service;
     std::string _backup_path;
-    std::string _provider_type;
 };
 
 } // namespace replication
