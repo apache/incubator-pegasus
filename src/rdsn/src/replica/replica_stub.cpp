@@ -57,6 +57,8 @@
 #include <dsn/dist/fmt_logging.h>
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
+#elif defined(DSN_USE_JEMALLOC)
+#include "utils/je_ctl.h"
 #endif
 #include <dsn/utility/fail_point.h>
 #include <dsn/dist/remote_command.h>
@@ -106,6 +108,11 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
     _release_all_reserved_memory_command = nullptr;
+#elif defined(DSN_USE_JEMALLOC)
+    _get_jemalloc_summary_stats_command = nullptr;
+    _get_jemalloc_configs_command = nullptr;
+    _get_jemalloc_brief_arena_stats_command = nullptr;
+    _get_jemalloc_detailed_stats_command = nullptr;
 #endif
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -2260,6 +2267,51 @@ void replica_stub::open_service()
 
     register_ctrl_command();
 }
+
+#if !defined(DSN_ENABLE_GPERF) && defined(DSN_USE_JEMALLOC)
+void replica_stub::register_jemalloc_ctrl_command()
+{
+    _get_jemalloc_configs_command = ::dsn::command_manager::instance().register_command(
+        {"replica.get-jemalloc-configs"},
+        "replica.get-jemalloc-configs - get configs of jemalloc",
+        "get configs of jemalloc",
+        [](const std::vector<std::string> &args) {
+            std::string stats("\n");
+            dsn::utils::je_dump_configs(&stats);
+            return stats;
+        });
+
+    _get_jemalloc_summary_stats_command = ::dsn::command_manager::instance().register_command(
+        {"replica.get-jemalloc-summary-stats"},
+        "replica.get-jemalloc-summary-stats - get summary stats of jemalloc",
+        "get summary stats of jemalloc",
+        [](const std::vector<std::string> &args) {
+            std::string stats("\n");
+            dsn::utils::je_dump_summary_stats(&stats);
+            return stats;
+        });
+
+    _get_jemalloc_brief_arena_stats_command = ::dsn::command_manager::instance().register_command(
+        {"replica.get-jemalloc-brief-arena-stats"},
+        "replica.get-jemalloc-brief-arena-stats - get brief_arena stats of jemalloc",
+        "get brief arena stats of jemalloc",
+        [](const std::vector<std::string> &args) {
+            std::string stats("\n");
+            dsn::utils::je_dump_brief_arena_stats(&stats);
+            return stats;
+        });
+
+    _get_jemalloc_detailed_stats_command = ::dsn::command_manager::instance().register_command(
+        {"replica.get-jemalloc-detailed-stats"},
+        "replica.get-jemalloc-detailed-stats - get detailed stats of jemalloc",
+        "get detailed stats of jemalloc",
+        [](const std::vector<std::string> &args) {
+            std::string stats("\n");
+            dsn::utils::je_dump_detailed_stats(&stats);
+            return stats;
+        });
+}
+#endif
 
 void replica_stub::register_ctrl_command()
 {

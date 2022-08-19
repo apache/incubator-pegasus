@@ -307,6 +307,8 @@ private:
     // Try to release tcmalloc memory back to operating system
     // If release_all = true, it will release all reserved-not-used memory
     uint64_t gc_tcmalloc_memory(bool release_all);
+#elif defined(DSN_USE_JEMALLOC)
+    void register_jemalloc_ctrl_command();
 #endif
 
 private:
