@@ -102,7 +102,7 @@ public:
     }
 
     backup_response mock_backup_response(backup_status::type status,
-                                         const int64_t backup_id,
+                                         int64_t backup_id,
                                          error_code resp_err,
                                          error_code checkpoint_err,
                                          error_code upload_err,

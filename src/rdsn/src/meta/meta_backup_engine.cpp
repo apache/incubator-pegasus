@@ -191,6 +191,8 @@ void meta_backup_engine::on_backup_reply(const error_code err,
             derror_f("partition[{}] handle backup failed", pid);
             return;
         }
+
+        // TODO(heyuchen): check if backup canceled
     }
 
     auto rep_error = err == ERR_OK ? response.err : err;
