@@ -36,10 +36,10 @@ enum class je_stats_type : size_t
 };
 
 ENUM_BEGIN(je_stats_type, je_stats_type::INVALID)
-ENUM_REG(je_stats_type::SUMMARY_STATS)
-ENUM_REG(je_stats_type::CONFIGS)
-ENUM_REG(je_stats_type::BRIEF_ARENA_STATS)
-ENUM_REG(je_stats_type::DETAILED_STATS)
+ENUM_REG2(je_stats_type, SUMMARY_STATS)
+ENUM_REG2(je_stats_type, CONFIGS)
+ENUM_REG2(je_stats_type, BRIEF_ARENA_STATS)
+ENUM_REG2(je_stats_type, DETAILED_STATS)
 ENUM_END(je_stats_type)
 
 std::string get_all_je_stats_types_str();
