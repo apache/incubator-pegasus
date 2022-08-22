@@ -25,6 +25,13 @@
 
 namespace dsn {
 
+// `je_stats_type` defines the types of stats that are dumped for jemalloc allocator:
+//   * By SUMMARY_STATS, it will dump the briefest message of stats, which only referred the
+//     summary information;
+//   * By CONFIGS, it will dump the configurations of jemalloc;
+//   * By BRIEF_ARENA_STATS, it will dump necessary information about overall stats for all
+//     arenas and individual stats for each arena;
+//   * By DETAILED_STATS, it will dump the detailed stats for all arenas, bins, extents, etc.
 enum class je_stats_type : size_t
 {
     SUMMARY_STATS,
@@ -45,8 +52,14 @@ ENUM_END(je_stats_type)
 std::string get_all_je_stats_types_str();
 const std::string kAllJeStatsTypesStr = get_all_je_stats_types_str();
 
+// Dump the stats of specified type to a string, with specified buffer size.
+//
+// The buffer is used to read stats from jemalloc allocator. The reason why an extra buffer is
+// involved is that the stats can only be accessed in the callback function for jemalloc where
+// memory allocation should be avoided.
 void je_dump_stats(je_stats_type type, size_t buf_sz, std::string &stats);
 
+// Dump the stats of specified type to a string, with default buffer size.
 void je_dump_stats(je_stats_type type, std::string &stats);
 
 } // namespace dsn
