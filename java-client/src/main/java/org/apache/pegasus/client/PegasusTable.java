@@ -48,6 +48,7 @@ import org.apache.pegasus.apps.multi_get_request;
 import org.apache.pegasus.apps.multi_put_request;
 import org.apache.pegasus.apps.multi_remove_request;
 import org.apache.pegasus.apps.update_request;
+import org.apache.pegasus.apps.mutate;
 import org.apache.pegasus.base.blob;
 import org.apache.pegasus.base.error_code;
 import org.apache.pegasus.base.gpid;
