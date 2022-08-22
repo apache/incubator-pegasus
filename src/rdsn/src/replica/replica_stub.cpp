@@ -2270,16 +2270,16 @@ void replica_stub::register_jemalloc_ctrl_command()
 {
     _dump_jemalloc_stats_command = ::dsn::command_manager::instance().register_command(
         {"replica.dump-jemalloc-stats"},
-        fmt::format("replica.dump-jemalloc-stats <{}> [buf_sz]", kAllJeStatsTypesStr),
+        fmt::format("replica.dump-jemalloc-stats <{}> [buffer size]", kAllJeStatsTypesStr),
         "dump stats of jemalloc",
         [](const std::vector<std::string> &args) {
             if (args.empty()) {
-                return std::string("ERR: invalid arguments");
+                return std::string("invalid arguments");
             }
 
             auto type = enum_from_string(args[0].c_str(), je_stats_type::INVALID);
             if (type == je_stats_type::INVALID) {
-                return std::string("ERR: invalid stats type");
+                return std::string("invalid stats type");
             }
 
             std::string stats("\n");
@@ -2291,7 +2291,7 @@ void replica_stub::register_jemalloc_ctrl_command()
 
             uint64_t buf_sz;
             if (!dsn::buf2uint64(args[1], buf_sz)) {
-                return std::string("ERR: invalid buffer size");
+                return std::string("invalid buffer size");
             }
 
             dsn::je_dump_stats(type, static_cast<size_t>(buf_sz), stats);
