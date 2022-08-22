@@ -762,7 +762,7 @@ public class PegasusTable implements PegasusTableInterface {
             rrdb_check_and_set_operator op2 = (rrdb_check_and_set_operator) clientOP;
             if (op2.rpc_error.errno != error_code.error_types.ERR_OK) {
               handleReplicaException(
-                  new Request(hashKey, setSortKey, 1, Request.getLength(setValue)),
+                  new Request(hashKey, setSortKey, 1, Request.getValueLength(setValue)),
                   promise,
                   op,
                   table,
@@ -1400,7 +1400,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, Request.getLength(value)),
+          new Request(hashKey, sortKey, 1, Request.getValueLength(value)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1419,7 +1419,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, Request.getLength(value)),
+          new Request(hashKey, sortKey, 1, Request.getValueLength(value)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -1920,7 +1920,7 @@ public class PegasusTable implements PegasusTableInterface {
       throw PException.timeout(
           metaList,
           table.getTableName(),
-          new Request(hashKey, sortKey, 1, Request.getLength(desiredValue)),
+          new Request(hashKey, sortKey, 1, Request.getValueLength(desiredValue)),
           timeout,
           e);
     } catch (ExecutionException e) {
@@ -2181,15 +2181,9 @@ public class PegasusTable implements PegasusTableInterface {
 
   static class Request {
     public static final byte[] EMPTY_BYTES = "".getBytes();
-
-    public static int getLength(byte[] value) {
-      return value == null ? 0 : value.length;
-    }
-
     byte[] hashKey = EMPTY_BYTES;
     byte[] sortKey = EMPTY_BYTES;
     int sortKeyCount = 1;
-
     int valueLength = -1;
 
     Request(byte[] hashKey) {
@@ -2211,6 +2205,10 @@ public class PegasusTable implements PegasusTableInterface {
     private String getSubstring(byte[] key) {
       String keyStr = key == null ? "" : new String(key);
       return keyStr.length() < 32 ? keyStr : keyStr.substring(0, 32);
+    }
+
+    public static int getValueLength(byte[] value) {
+      return value == null ? 0 : value.length;
     }
 
     public static int getValueLength(List<Pair<byte[], byte[]>> values) {
