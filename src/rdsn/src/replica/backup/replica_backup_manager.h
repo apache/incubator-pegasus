@@ -64,7 +64,7 @@ private:
     void fill_response_unlock(/*out*/ backup_response &response);
 
     void generate_checkpoint();
-    bool get_backup_metadata_unlock(const std::string &local_checkpoint_dir,
+    bool set_backup_metadata_unlock(const std::string &local_checkpoint_dir,
                                     int64_t checkpoint_decree,
                                     int64_t checkpoint_timestamp);
 

@@ -134,7 +134,7 @@ void replica_backup_manager::generate_checkpoint()
 
     {
         zauto_write_lock l(_lock);
-        if (!get_backup_metadata_unlock(
+        if (!set_backup_metadata_unlock(
                 local_checkpoint_dir, checkpoint_decree, static_cast<int64_t>(dsn_now_ms()))) {
             _checkpoint_err = ERR_FILE_OPERATION_FAILED;
             return;
@@ -145,11 +145,11 @@ void replica_backup_manager::generate_checkpoint()
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION_LONG
-bool replica_backup_manager::get_backup_metadata_unlock(const std::string &local_checkpoint_dir,
+bool replica_backup_manager::set_backup_metadata_unlock(const std::string &local_checkpoint_dir,
                                                         int64_t checkpoint_decree,
                                                         int64_t checkpoint_timestamp)
 {
-    FAIL_POINT_INJECT_F("replica_get_backup_metadata", [](dsn::string_view) { return true; });
+    FAIL_POINT_INJECT_F("replica_set_backup_metadata", [](dsn::string_view) { return true; });
 
     std::vector<std::string> sub_files;
     if (!utils::filesystem::get_subfiles(local_checkpoint_dir, sub_files, false)) {
@@ -182,7 +182,7 @@ bool replica_backup_manager::get_backup_metadata_unlock(const std::string &local
     _backup_metadata.checkpoint_decree = checkpoint_decree;
     _backup_metadata.checkpoint_timestamp = checkpoint_timestamp;
     _backup_metadata.checkpoint_total_size = total_file_size;
-    ddebug_replica("get backup metadata succeed, decree = {}, timestamp = {}, file_count = {}, "
+    ddebug_replica("set backup metadata succeed, decree = {}, timestamp = {}, file_count = {}, "
                    "total_size = {}",
                    _backup_metadata.checkpoint_decree,
                    _backup_metadata.checkpoint_timestamp,

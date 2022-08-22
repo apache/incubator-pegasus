@@ -44,11 +44,11 @@ public:
 
     void generate_checkpoint() { _backup_mgr->generate_checkpoint(); }
 
-    bool get_backup_metadata()
+    bool set_backup_metadata()
     {
         auto dir_name = create_local_backup_checkpoint_dir();
         create_local_backup_file(dir_name, FILE_NAME1);
-        return _backup_mgr->get_backup_metadata_unlock(dir_name, DECREE, _backup_mgr->_backup_id);
+        return _backup_mgr->set_backup_metadata_unlock(dir_name, DECREE, _backup_mgr->_backup_id);
     }
 
     void report_checkpointing(backup_response &response)
@@ -106,16 +106,16 @@ protected:
 
 TEST_F(replica_backup_manager_test, generate_checkpoint_test)
 {
-    fail::cfg("replica_get_backup_metadata", "return()");
+    fail::cfg("replica_set_backup_metadata", "return()");
     mock_local_backup_states(backup_status::CHECKPOINTING);
     generate_checkpoint();
     ASSERT_EQ(get_checkpoint_err(), ERR_OK);
     ASSERT_EQ(get_status(), backup_status::CHECKPOINTED);
 }
 
-TEST_F(replica_backup_manager_test, get_backup_metadata_test)
+TEST_F(replica_backup_manager_test, set_backup_metadata_test)
 {
-    ASSERT_TRUE(get_backup_metadata());
+    ASSERT_TRUE(set_backup_metadata());
 }
 
 TEST_F(replica_backup_manager_test, report_checkpointing_test)
