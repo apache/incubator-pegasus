@@ -1563,7 +1563,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     // Here we create a `_table_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
     // will be used elsewhere.
     _table_data_cf_opts = _data_cf_opts;
-    _table_data_cf_opts_recalculated = true;
+    _table_data_cf_opts_recalculated = false;
     bool has_incompatible_db_options = false;
     if (db_exist) {
         // When DB exists, meta CF and data CF must be present.
@@ -3036,7 +3036,7 @@ void pegasus_server_impl::recalculate_data_cf_options(
 
 #define UPDATE_OPTION_IF_NEEDED(option) UPDATE_NUMBER_OPTION_IF_NEEDED(option, _data_cf_opts.option)
 
-    if (!_table_data_cf_opts_recalculated)
+    if (_table_data_cf_opts_recalculated)
         return;
     std::unordered_map<std::string, std::string> new_options;
     if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
@@ -3099,7 +3099,7 @@ void pegasus_server_impl::recalculate_data_cf_options(
                 _usage_scenario);
         }
     }
-    _table_data_cf_opts_recalculated = false;
+    _table_data_cf_opts_recalculated = true;
 #undef UPDATE_OPTION_IF_NEEDED
 #undef UPDATE_BOOL_OPTION_IF_NEEDED
 #undef UPDATE_NUMBER_OPTION_IF_NEEDED
