@@ -19,7 +19,15 @@
 package org.apache.pegasus.rpc.async;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import java.net.UnknownHostException;
 import java.util.LinkedList;
@@ -120,7 +128,9 @@ public class ReplicaSession {
         if (cache.state == ConnState.CONNECTED) {
           write(entry, cache);
         } else {
-          pendingSend.offer(entry);
+          if (!pendingSend.offer(entry)) {
+            logger.warn("pendingSend queue is full, drop the request");
+          }
         }
       }
       tryConnect();
@@ -406,7 +416,9 @@ public class ReplicaSession {
     if (!this.authSucceed) {
       synchronized (authPendingSend) {
         if (!this.authSucceed) {
-          authPendingSend.offer(entry);
+          if (!authPendingSend.offer(entry)) {
+            logger.warn("{}: pend request {} failed", name(), entry.sequenceId);
+          }
           return true;
         }
       }
@@ -479,14 +491,14 @@ public class ReplicaSession {
   private Bootstrap boot;
   private EventLoopGroup timeoutTaskGroup;
   private ReplicaSessionInterceptorManager interceptorManager;
-  private boolean authSucceed;
+  private volatile boolean authSucceed;
   final Queue<RequestEntry> authPendingSend = new LinkedList<>();
 
   // Session will be actively closed if all the rpcs across `sessionResetTimeWindowMs`
   // are timed out, in that case we suspect that the server is unavailable.
 
   // Timestamp of the first timed out rpc.
-  private AtomicLong firstRecentTimedOutMs;
+  private final AtomicLong firstRecentTimedOutMs;
   private final long sessionResetTimeWindowMs;
 
   private static final Logger logger = org.slf4j.LoggerFactory.getLogger(ReplicaSession.class);

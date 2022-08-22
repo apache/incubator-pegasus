@@ -186,9 +186,25 @@ public interface PegasusTableInterface {
      *     values. if sortKeys is null or empty, then the returned values will be ascending ordered
      *     by sortKey.
      */
-    public boolean allFetched;
+    private boolean allFetched;
 
-    public List<Pair<byte[], byte[]>> values;
+    private List<Pair<byte[], byte[]>> values;
+
+    public boolean isAllFetched() {
+      return allFetched;
+    }
+
+    public void setAllFetched(final boolean allFetched) {
+      this.allFetched = allFetched;
+    }
+
+    public List<Pair<byte[], byte[]>> getValues() {
+      return values;
+    }
+
+    public void setValues(final List<Pair<byte[], byte[]>> values) {
+      this.values = values;
+    }
   }
 
   public static class BatchGetResult {
@@ -196,9 +212,25 @@ public interface PegasusTableInterface {
      * @param allFetched true if all data on the server are fetched; false if only partial data are
      *     fetched.
      */
-    public boolean allFetched;
+    private boolean allFetched;
 
-    public Map<Pair<String, String>, byte[]> valueMap;
+    private Map<Pair<String, String>, byte[]> valueMap;
+
+    public boolean isAllFetched() {
+      return allFetched;
+    }
+
+    public void setAllFetched(final boolean allFetched) {
+      this.allFetched = allFetched;
+    }
+
+    public Map<Pair<String, String>, byte[]> getValueMap() {
+      return valueMap;
+    }
+
+    public void setValueMap(final Map<Pair<String, String>, byte[]> valueMap) {
+      this.valueMap = valueMap;
+    }
   }
 
   public static interface MultiGetListener extends GenericFutureListener<Future<MultiGetResult>> {
@@ -548,11 +580,43 @@ public interface PegasusTableInterface {
      * @param checkValue return the check value if exist; can be used only when checkValueExist is
      *     true.
      */
-    public boolean setSucceed;
+    private boolean setSucceed;
 
-    public boolean checkValueReturned;
-    public boolean checkValueExist;
-    public byte[] checkValue;
+    private boolean checkValueReturned;
+    private boolean checkValueExist;
+    private byte[] checkValue;
+
+    public boolean isSetSucceed() {
+      return setSucceed;
+    }
+
+    public void setSetSucceed(final boolean setSucceed) {
+      this.setSucceed = setSucceed;
+    }
+
+    public boolean isCheckValueReturned() {
+      return checkValueReturned;
+    }
+
+    public void setCheckValueReturned(final boolean checkValueReturned) {
+      this.checkValueReturned = checkValueReturned;
+    }
+
+    public boolean isCheckValueExist() {
+      return checkValueExist;
+    }
+
+    public void setCheckValueExist(final boolean checkValueExist) {
+      this.checkValueExist = checkValueExist;
+    }
+
+    public byte[] getCheckValue() {
+      return checkValue;
+    }
+
+    public void setCheckValue(final byte[] checkValue) {
+      this.checkValue = checkValue;
+    }
   }
 
   public static interface CheckAndSetListener
@@ -613,11 +677,43 @@ public interface PegasusTableInterface {
      * @param checkValue return the check value if exist; can be used only when checkValueExist is
      *     true.
      */
-    public boolean mutateSucceed;
+    private boolean mutateSucceed;
 
-    public boolean checkValueReturned;
-    public boolean checkValueExist;
-    public byte[] checkValue;
+    private boolean checkValueReturned;
+    private boolean checkValueExist;
+    private byte[] checkValue;
+
+    public boolean isMutateSucceed() {
+      return mutateSucceed;
+    }
+
+    public void setMutateSucceed(final boolean mutateSucceed) {
+      this.mutateSucceed = mutateSucceed;
+    }
+
+    public boolean isCheckValueReturned() {
+      return checkValueReturned;
+    }
+
+    public void setCheckValueReturned(final boolean checkValueReturned) {
+      this.checkValueReturned = checkValueReturned;
+    }
+
+    public boolean isCheckValueExist() {
+      return checkValueExist;
+    }
+
+    public void setCheckValueExist(final boolean checkValueExist) {
+      this.checkValueExist = checkValueExist;
+    }
+
+    public byte[] getCheckValue() {
+      return checkValue;
+    }
+
+    public void setCheckValue(final byte[] checkValue) {
+      this.checkValue = checkValue;
+    }
   }
 
   /**
@@ -660,9 +756,25 @@ public interface PegasusTableInterface {
      * @param actualValue return the actual value if set value failed; null means the actual value
      *     is not exist.
      */
-    public boolean setSucceed;
+    private boolean setSucceed;
 
-    public byte[] actualValue;
+    private byte[] actualValue;
+
+    public boolean isSetSucceed() {
+      return setSucceed;
+    }
+
+    public void setSetSucceed(final boolean setSucceed) {
+      this.setSucceed = setSucceed;
+    }
+
+    public byte[] getActualValue() {
+      return actualValue;
+    }
+
+    public void setActualValue(final byte[] actualValue) {
+      this.actualValue = actualValue;
+    }
   }
 
   public static interface CompareExchangeListener

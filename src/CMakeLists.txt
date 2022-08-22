@@ -27,15 +27,15 @@ dsn_common_setup()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${DSN_ROOT}/include)
-
-link_directories(${DSN_ROOT}/lib)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rdsn/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rdsn/include/dsn/cpp/serialization_helper)
 
 # Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
 # the destination.
 set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
 message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
 
+add_subdirectory(rdsn/src)
 add_subdirectory(base)
 add_subdirectory(reporter)
 add_subdirectory(base/test)

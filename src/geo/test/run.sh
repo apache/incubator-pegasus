@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -5,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-#
+# 
 #   http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -15,30 +16,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(MY_PROJ_NAME pegasus_geo_test)
-project(${MY_PROJ_NAME} C CXX)
+exit_if_fail() {
+    if [ $1 != 0 ]; then
+        echo $2
+        exit 1
+    fi
+}
 
-# Source files under CURRENT project directory will be automatically included.
-# You can manually set MY_PROJ_SRC to include source files under other directories.
-set(MY_PROJ_SRC "")
+./pegasus_geo_test
 
-# Search mode for source files under CURRENT project directory?
-# "GLOB_RECURSE" for recursive search
-# "GLOB" for non-recursive search
-set(MY_SRC_SEARCH_MODE "GLOB")
-
-set(MY_PROJ_LIBS
-        pegasus_geo_lib
-        s2testing
-        s2
-        pegasus_client_static
-        dsn_utils
-        gtest)
-
-set(MY_BOOST_LIBS Boost::system Boost::filesystem Boost::regex)
-
-add_definitions(-Wno-attributes)
-
-set(MY_BINPLACES config.ini run.sh)
-
-dsn_add_test()
+exit_if_fail $? "run pegasus_geo_test failed"

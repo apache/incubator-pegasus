@@ -39,7 +39,7 @@ public class FlowController {
   private final int qps;
   private int[] slots;
   private int next;
-  private AtomicInteger token;
+  private final AtomicInteger token;
   private boolean stopped;
 
   /** @param qps_ QPS to control. should > 0. */

@@ -27,6 +27,8 @@ import org.apache.pegasus.rpc.async.ReplicaSession;
 import org.apache.pegasus.rpc.async.TableHandler;
 
 public class BackupRequestInterceptor implements TableInterceptor {
+
+  private static final Random RANDOM = new Random();
   private final long backupRequestDelayMs;
 
   public BackupRequestInterceptor(long backupRequestDelayMs) {
@@ -65,8 +67,7 @@ public class BackupRequestInterceptor implements TableInterceptor {
                 () -> {
                   // pick a secondary at random
                   ReplicaSession secondarySession =
-                      handle.secondarySessions.get(
-                          new Random().nextInt(handle.secondarySessions.size()));
+                      handle.secondarySessions.get(RANDOM.nextInt(handle.secondarySessions.size()));
                   secondarySession.asyncSend(
                       clientRequestRound.getOperator(),
                       () ->

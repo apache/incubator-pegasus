@@ -70,28 +70,6 @@ public class Tools {
     }
   }
 
-  public static void waitForever(Object obj) {
-    try {
-      obj.wait();
-    } catch (InterruptedException e) {
-    }
-  }
-
-  public static long waitFor(Object obj, long millseconds) {
-    long current = System.currentTimeMillis();
-    try {
-      obj.wait(millseconds);
-    } catch (InterruptedException e) {
-    }
-    return System.currentTimeMillis() - current;
-  }
-
-  public static void notify(Object obj) {
-    synchronized (obj) {
-      obj.notify();
-    }
-  }
-
   public static <T> T waitUninterruptable(FutureTask<T> task, long millseconds)
       throws ExecutionException {
     long current = System.currentTimeMillis();

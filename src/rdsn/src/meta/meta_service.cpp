@@ -42,12 +42,10 @@
 
 #include "meta_service.h"
 #include "server_state.h"
-#include "meta_server_failure_detector.h"
 #include "server_load_balancer.h"
 #include "meta/duplication/meta_duplication_service.h"
 #include "meta_split_service.h"
 #include "meta_bulk_load_service.h"
-#include "runtime/security/access_controller.h"
 
 namespace dsn {
 namespace replication {
@@ -113,87 +111,6 @@ bool meta_service::check_freeze() const
         return true;
     int total = _alive_set.size() + _dead_set.size();
     return _alive_set.size() * 100 < _node_live_percentage_threshold_for_update * total;
-}
-
-template <typename TRpcHolder>
-int meta_service::check_leader(TRpcHolder rpc, rpc_address *forward_address)
-{
-    dsn::rpc_address leader;
-    if (!_failure_detector->get_leader(&leader)) {
-        if (!rpc.dsn_request()->header->context.u.is_forward_supported) {
-            if (forward_address != nullptr)
-                *forward_address = leader;
-            return -1;
-        }
-
-        dinfo("leader address: %s", leader.to_string());
-        if (!leader.is_invalid()) {
-            rpc.forward(leader);
-            return 0;
-        } else {
-            if (forward_address != nullptr)
-                forward_address->set_invalid();
-            return -1;
-        }
-    }
-    return 1;
-}
-
-template <typename TRpcHolder>
-bool meta_service::check_status(TRpcHolder rpc, rpc_address *forward_address)
-{
-    if (!_access_controller->allowed(rpc.dsn_request())) {
-        rpc.response().err = ERR_ACL_DENY;
-        ddebug("reject request with ERR_ACL_DENY");
-        return false;
-    }
-
-    int result = check_leader(rpc, forward_address);
-    if (result == 0)
-        return false;
-    if (result == -1 || !_started) {
-        if (result == -1) {
-            rpc.response().err = ERR_FORWARD_TO_OTHERS;
-        } else if (_recovering) {
-            rpc.response().err = ERR_UNDER_RECOVERY;
-        } else {
-            rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
-        }
-        ddebug("reject request with %s", rpc.response().err.to_string());
-        return false;
-    }
-
-    return true;
-}
-
-template <typename TRespType>
-bool meta_service::check_status_with_msg(message_ex *req, TRespType &response_struct)
-{
-    if (!_access_controller->allowed(req)) {
-        ddebug("reject request with ERR_ACL_DENY");
-        response_struct.err = ERR_ACL_DENY;
-        reply(req, response_struct);
-        return false;
-    }
-
-    int result = check_leader(req, nullptr);
-    if (result == 0) {
-        return false;
-    }
-    if (result == -1 || !_started) {
-        if (result == -1) {
-            response_struct.err = ERR_FORWARD_TO_OTHERS;
-        } else if (_recovering) {
-            response_struct.err = ERR_UNDER_RECOVERY;
-        } else {
-            response_struct.err = ERR_SERVICE_NOT_ACTIVE;
-        }
-        ddebug("reject request with %s", response_struct.err.to_string());
-        reply(req, response_struct);
-        return false;
-    }
-
-    return true;
 }
 
 error_code meta_service::remote_storage_initialize()

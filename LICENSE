@@ -203,7 +203,7 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-rdsn/** - MIT License
+src/rdsn/** - MIT License
 
  The MIT License (MIT)
 
@@ -296,7 +296,7 @@ src/shell/sds/* - BSD-2-Clause License
 
 --------------------------------------------------------------------------------
 
-src/shell/argh.h - BSD 3-Clause
+src/shell/argh.h - BSD-3-Clause License
 
  Copyright (c) 2016, Adi Shavit
  All rights reserved.
@@ -327,15 +327,15 @@ src/shell/argh.h - BSD 3-Clause
 
 --------------------------------------------------------------------------------
 
-rdsn/include/dsn/utility/smart_pointers.h - Apache 2.0 License
-rdsn/include/dsn/utility/string_view.h
-rdsn/include/dsn/utility/absl/base/internal/invoke.h
-rdsn/include/dsn/utility/absl/utility/utility.h
-rdsn/src/utils/memutil.h
-rdsn/src/utils/string_view.cpp
-rdsn/src/utils/test/memutil_test.cpp
-rdsn/src/utils/test/smart_pointers_test.cpp
-rdsn/src/utils/test/string_view_test.cpp
+src/rdsn/include/dsn/utility/smart_pointers.h - Apache 2.0 License
+src/rdsn/include/dsn/utility/string_view.h
+src/rdsn/include/dsn/utility/absl/base/internal/invoke.h
+src/rdsn/include/dsn/utility/absl/utility/utility.h
+src/rdsn/src/utils/memutil.h
+src/rdsn/src/utils/string_view.cpp
+src/rdsn/src/utils/test/memutil_test.cpp
+src/rdsn/src/utils/test/smart_pointers_test.cpp
+src/rdsn/src/utils/test/string_view_test.cpp
 
 Copyright 2017 The Abseil Authors.
 
@@ -353,29 +353,7 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-rdsn/src/http/pprof_http_service.cpp - Apache 2.0 License
-rdsn/include/dsn/utility/timer.h
-rdsn/include/dsn/utility/string_splitter.h
-
-Copyright (c) 2011 Baidu, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
---------------------------------------------------------------------------------
-
-rdsn/include/dsn/utility/safe_strerror_posix.h - 3-clause BSD
-rdsn/src/runtime/build_config.h
-rdsn/src/utils/test/autoref_ptr_test.cpp
+src/rdsn/src/utils/safe_strerror_posix.cpp - BSD-3-Clause License
 
 Copyright (c) 2006-2009 The Chromium Authors. All rights reserved.
 
@@ -407,9 +385,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-rdsn/include/dsn/utility/TokenBucket.h - Apache License, Version 2.0
-rdsn/src/utils/test/TokenBucketTest.cpp
-rdsn/src/utils/test/TokenBucketTest.h
+src/rdsn/include/dsn/utility/TokenBucket.h - Apache License, Version 2.0
+src/rdsn/src/utils/test/TokenBucketTest.cpp
+src/rdsn/src/utils/test/TokenBucketTest.h
 
 Copyright (c) Facebook, Inc. and its affiliates.
 
@@ -427,12 +405,12 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-rdsn/include/dsn/utility/hpc_locks/autoreseteventcondvar.h - zlib License
-rdsn/include/dsn/utility/hpc_locks/rwlock.h
-rdsn/include/dsn/utility/hpc_locks/autoresetevent.h
-rdsn/include/dsn/utility/hpc_locks/sema.h
-rdsn/include/dsn/utility/hpc_locks/bitfield.h
-rdsn/include/dsn/utility/hpc_locks/benaphore.h
+src/rdsn/include/dsn/utility/hpc_locks/autoreseteventcondvar.h - zlib License
+src/rdsn/include/dsn/utility/hpc_locks/rwlock.h
+src/rdsn/include/dsn/utility/hpc_locks/autoresetevent.h
+src/rdsn/include/dsn/utility/hpc_locks/sema.h
+src/rdsn/include/dsn/utility/hpc_locks/bitfield.h
+src/rdsn/include/dsn/utility/hpc_locks/benaphore.h
 
 Copyright (c) 2015 Jeff Preshing
 
@@ -454,12 +432,8 @@ freely, subject to the following restrictions:
 
 --------------------------------------------------------------------------------
 
-rdsn/src/runtime/build_config.h - BSD-3-Clause license
-rdsn/src/utils/test/autoref_ptr_test.cpp
-rdsn/include/dsn/utility/safe_strerror_posix.h
-rdsn/src/runtime/build_config.h
-rdsn/src/utils/test/autoref_ptr_test.cpp
-rdsn/src/utils/safe_strerror_posix.cpp
+src/rdsn/src/runtime/build_config.h - BSD-3-Clause License
+src/rdsn/src/utils/test/autoref_ptr_test.cpp
 
 Copyright (c) 2012 The Chromium Authors. All rights reserved.
 
@@ -491,34 +465,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-rdsn/include/dsn/utility/absl/base/internal/invoke.h - Apache License, Version 2.0
-rdsn/include/dsn/utility/absl/utility/utility.h
-rdsn/include/dsn/utility/smart_pointers.h
-rdsn/include/dsn/utility/string_view.h
-rdsn/src/utils/test/memutil_test.cpp
-rdsn/src/utils/test/string_view_test.cpp
-rdsn/src/utils/test/smart_pointers_test.cpp
-rdsn/src/utils/memutil.h
-rdsn/src/utils/string_view.cpp
-
-Copyright 2017 The Abseil Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
---------------------------------------------------------------------------------
-
-rdsn/bin/FindRT.cmake - BSD-3-Clause license
-rdsn/bin/FindDL.cmake
+cmake_modules/FindRT.cmake - BSD-3-Clause license
+cmake_modules/FindDL.cmake
 
 Copyright (c) 2010-2011, Rob Jansen
 
@@ -581,4 +529,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+src/rdsn/include/dsn/utility/safe_strerror_posix.h - BSD-3-Clause License
+
+Copyright (c) 2011 The Chromium Authors. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+    * Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 

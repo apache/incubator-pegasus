@@ -46,7 +46,7 @@ HDFS_TAR_MD5_VALUE="b30b409bb69185003b3babd1504ba224"
 if [ ! -f $HDFS_ROOT ]; then
     echo "Downloading hadoop..."
     download_url="https://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.com/hadoop-2.8.4.tar.gz"
-    if ! wget -T 5 -t 1 $download_url; then
+    if ! wget -T 10 -t 5 $download_url; then
         echo "ERROR: download hadoop failed"
         exit 1
     fi

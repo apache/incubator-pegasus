@@ -19,9 +19,15 @@
 package org.apache.pegasus.example;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.pegasus.client.*;
+import org.apache.pegasus.client.ClientOptions;
+import org.apache.pegasus.client.PException;
+import org.apache.pegasus.client.PegasusClientFactory;
+import org.apache.pegasus.client.PegasusClientInterface;
+import org.apache.pegasus.client.PegasusScannerInterface;
+import org.apache.pegasus.client.ScanOptions;
 
 /** A simple example shows how to use full scan. */
 public class FullScanSample {
@@ -55,9 +61,9 @@ public class FullScanSample {
         // Here we assume they are UTF-8 strings.
         System.out.printf(
             "hashKey = %s, sortKey = %s, value = %s%n",
-            new String(hashKey, "UTF-8"),
-            new String(sortKey, "UTF-8"),
-            new String(pair.getValue(), "UTF-8"));
+            new String(hashKey, StandardCharsets.UTF_8),
+            new String(sortKey, StandardCharsets.UTF_8),
+            new String(pair.getValue(), StandardCharsets.UTF_8));
       }
       System.out.printf("scanning %d rows costs %d ms%n", cnt, System.currentTimeMillis() - start);
     }

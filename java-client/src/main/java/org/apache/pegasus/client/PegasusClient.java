@@ -41,13 +41,15 @@ import org.slf4j.LoggerFactory;
 public class PegasusClient extends PegasusAbstractClient implements PegasusClientInterface {
   private static final Logger LOGGER = LoggerFactory.getLogger(PegasusClient.class);
 
-  private ConcurrentHashMap<String, PegasusTable> tableMap;
-  private Object tableMapLock;
+  private final ConcurrentHashMap<String, PegasusTable> tableMap;
+  private final Object tableMapLock;
 
   private static class PegasusHasher implements KeyHasher {
     @Override
     public long hash(byte[] key) {
-      Validate.isTrue(key != null && key.length >= 2);
+      if (null == key || key.length < 2) {
+        throw new IllegalArgumentException("key is null or too short");
+      }
       ByteBuffer buf = ByteBuffer.wrap(key);
       int hashKeyLen = 0xFFFF & buf.getShort();
       Validate.isTrue(hashKeyLen != 0xFFFF && (2 + hashKeyLen <= key.length));
@@ -74,31 +76,29 @@ public class PegasusClient extends PegasusAbstractClient implements PegasusClien
           } catch (Throwable e) {
             throw new PException(e);
           }
-          tableMap.put(tableName, table);
+          tableMap.putIfAbsent(tableName, table);
         }
       }
     }
     return table;
   }
 
-  private void initTableMap() {
+  public PegasusClient(Properties properties) throws PException {
+    super(properties);
     this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
     this.tableMapLock = new Object();
   }
 
-  public PegasusClient(Properties properties) throws PException {
-    super(properties);
-    initTableMap();
-  }
-
   public PegasusClient(String configPath) throws PException {
     super(configPath);
-    initTableMap();
+    this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
+    this.tableMapLock = new Object();
   }
 
   public PegasusClient(ClientOptions clientOptions) throws PException {
     super(clientOptions);
-    initTableMap();
+    this.tableMap = new ConcurrentHashMap<String, PegasusTable>();
+    this.tableMapLock = new Object();
   }
 
   public boolean isWriteLimitEnabled() {
@@ -162,7 +162,9 @@ public class PegasusClient extends PegasusAbstractClient implements PegasusClien
   }
 
   public static Pair<byte[], byte[]> restoreKey(byte[] key) {
-    Validate.isTrue(key != null && key.length >= 2);
+    if (null == key || key.length < 2) {
+      throw new IllegalArgumentException("key is null or too short");
+    }
     ByteBuffer buf = ByteBuffer.wrap(key);
     int hashKeyLen = 0xFFFF & buf.getShort();
     Validate.isTrue(hashKeyLen != 0xFFFF && (2 + hashKeyLen <= key.length));
@@ -266,10 +268,8 @@ public class PegasusClient extends PegasusAbstractClient implements PegasusClien
     PegasusTable tb = getTable(tableName);
     PegasusTableInterface.MultiGetResult res =
         tb.multiGet(hashKey, sortKeys, maxFetchCount, maxFetchSize, 0);
-    for (Pair<byte[], byte[]> kv : res.values) {
-      values.add(kv);
-    }
-    return res.allFetched;
+    values.addAll(res.getValues());
+    return res.isAllFetched();
   }
 
   @Override
@@ -296,8 +296,8 @@ public class PegasusClient extends PegasusAbstractClient implements PegasusClien
     PegasusTable tb = getTable(tableName);
     PegasusTableInterface.MultiGetResult res =
         tb.multiGet(hashKey, startSortKey, stopSortKey, options, maxFetchCount, maxFetchSize, 0);
-    values.addAll(res.values);
-    return res.allFetched;
+    values.addAll(res.getValues());
+    return res.isAllFetched();
   }
 
   @Override
