@@ -233,7 +233,6 @@ public class ClientOptions {
     result = 31 * result + Objects.hashCode(falconPushInterval.toMillis());
     result = 31 * result + (enableWriteLimit ? 1 : 0);
     result = 31 * result + Objects.hashCode(metaQueryTimeout.toMillis());
-    result = 31 * result + authProtocol.hashCode();
     result = 31 * result + credential.hashCode();
     result = 31 * result + Objects.hashCode(sessionResetTimeWindowSecs);
     return result;
