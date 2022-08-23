@@ -3051,7 +3051,7 @@ void pegasus_server_impl::recalculate_data_cf_options(
     if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
         ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
         if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
-            UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, data_cf_opts.write_buffer_size);
+            UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, _data_cf_opts.write_buffer_size);
             UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger);
         } else {
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
