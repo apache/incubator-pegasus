@@ -60,11 +60,33 @@ pegasus_client_impl::pegasus_scanner_impl::pegasus_scanner_impl(::dsn::apps::rrd
 {
 }
 
+int pegasus_client_impl::pegasus_scanner_impl::next(int32_t &count, internal_info *info)
+{
+    ::dsn::utils::notify_event op_completed;
+    int ret = -1;
+    auto callback = [&](int err,
+                        std::string &&hash,
+                        std::string &&sort,
+                        std::string &&val,
+                        internal_info &&ii,
+                        uint32_t expire_ts_seconds,
+                        int32_t kv_count) {
+        ret = err;
+        if (info) {
+            (*info) = std::move(ii);
+        }
+        count = kv_count;
+        op_completed.notify();
+    };
+    async_next(std::move(callback));
+    op_completed.wait();
+    return ret;
+}
+
 int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
                                                     std::string &sortkey,
                                                     std::string &value,
-                                                    internal_info *info,
-                                                    int32_t *count)
+                                                    internal_info *info)
 {
     ::dsn::utils::notify_event op_completed;
     int ret = -1;
@@ -81,9 +103,6 @@ int pegasus_client_impl::pegasus_scanner_impl::next(std::string &hashkey,
         value = std::move(val);
         if (info) {
             (*info) = std::move(ii);
-        }
-        if (count) {
-            (*count) = kv_count;
         }
         op_completed.notify();
     };
@@ -278,16 +297,15 @@ void pegasus_client_impl::pegasus_scanner_impl::_on_scan_response(::dsn::error_c
             _kvs = std::move(response.kvs);
             _p = -1;
             _context = response.context_id;
-            // 1. kv_count exist on response means server is newer version (added counting size only
-            // implementation)
-            //   1> kv_count == -1 indicates response still have key and value data
-            //   2> kv_count > -1 indicates response only have kv size count, but not key && value
-            // 2. kv_count is not existed means server is older version
+            // 1. kv_count exist on response mean (a && b):
+            //   a> server is newer version (added counting size only implementation)
+            //   b> response only have kv size count, but not key && value
+            // 2. kv_count is not existed means (a || b):
+            //   a> server is older version
+            //   b> response still have key and value data
             if (response.__isset.kv_count) {
-                if (response.kv_count != -1) {
-                    _type = async_scan_type::COUNT_ONLY;
-                    _kv_count = response.kv_count;
-                }
+                _type = async_scan_type::COUNT_ONLY;
+                _kv_count = response.kv_count;
             }
             _async_next_internal();
             return;

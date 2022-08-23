@@ -247,21 +247,15 @@ public:
 
     static void init_error();
 
-    enum class async_scan_type : char
-    {
-        NORMAL,
-        COUNT_ONLY,
-        COUNT_ONLY_FINISHED
-    };
-
     class pegasus_scanner_impl : public pegasus_scanner
     {
     public:
         int next(std::string &hashkey,
                  std::string &sortkey,
                  std::string &value,
-                 internal_info *info = nullptr,
-                 int32_t *count = nullptr) override;
+                 internal_info *info = nullptr) override;
+
+        int next(int32_t &count, internal_info *info = nullptr) override;
 
         void async_next(async_scan_next_callback_t &&) override;
 
@@ -285,6 +279,13 @@ public:
                              bool full_scan);
 
     private:
+        enum class async_scan_type : char
+        {
+            NORMAL,
+            COUNT_ONLY,
+            COUNT_ONLY_FINISHED
+        };
+
         ::dsn::apps::rrdb_client *_client;
         ::dsn::blob _start_key;
         ::dsn::blob _stop_key;
@@ -330,13 +331,17 @@ private:
 
         void async_next(async_scan_next_callback_t &&callback) override;
 
+        int next(int32_t &count, internal_info *info = nullptr) override
+        {
+            return _p->next(count, info);
+        }
+
         int next(std::string &hashkey,
                  std::string &sortkey,
                  std::string &value,
-                 internal_info *info,
-                 int32_t *count = nullptr) override
+                 internal_info *info) override
         {
-            return _p->next(hashkey, sortkey, value, info, count);
+            return _p->next(hashkey, sortkey, value, info);
         }
     };
 

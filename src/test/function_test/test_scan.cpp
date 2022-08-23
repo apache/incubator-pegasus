@@ -179,14 +179,11 @@ TEST_F(scan, OVERALL_COUNT_ONLY)
                       << client->get_error_string(ret);
     ASSERT_LE(scanners.size(), 3);
 
-    std::string hash_key;
-    std::string sort_key;
-    std::string value;
     int32_t data_count = 0;
     for (auto scanner : scanners) {
         ASSERT_NE(nullptr, scanner);
         int32_t kv_count;
-        while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value, nullptr, &kv_count)))) {
+        while (PERR_OK == (ret = (scanner->next(kv_count)))) {
             data_count += kv_count;
         }
         ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="

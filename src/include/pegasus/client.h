@@ -345,8 +345,22 @@ public:
         virtual int next(std::string &hashkey,
                          std::string &sortkey,
                          std::string &value,
-                         internal_info *info = nullptr,
-                         int32_t *count = nullptr) = 0;
+                         internal_info *info = nullptr) = 0;
+
+        ///
+        /// \brief get the next k-v pair count of this scanner
+        //  only used for scanner which option only_return_count is true
+        /// thread-safe
+        /// \param count
+        /// data count value
+        /// \return
+        /// int, the error indicates whether or not the operation is succeeded.
+        /// this error can be converted to a string using get_error_string()
+        /// PERR_OK means a valid k-v pair count got
+        /// PERR_SCAN_COMPLETE means all k-v pair count have been return before this call
+        /// otherwise some error orrured
+        ///
+        virtual int next(int32_t &count, internal_info *info = nullptr) = 0;
 
         ///
         /// \brief async get the next key-value pair of this scanner

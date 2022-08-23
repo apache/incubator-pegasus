@@ -295,7 +295,7 @@ struct scan_response
     4:i32           app_id;
     5:i32           partition_index;
     6:string        server;
-    7:optional i32  kv_count = -1;
+    7:optional i32  kv_count;
 }
 
 struct duplicate_request
