@@ -91,13 +91,13 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
           ccache -p
           ccache -z
-          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --enable_rocksdb_portable
+          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release
           ccache -s
       - name: Pack Server
         run: ./run.sh pack_server
@@ -198,13 +198,13 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
           ccache -p
           ccache -z
-          ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc) --enable_rocksdb_portable
+          ./run.sh build --test --sanitizer address --skip_thirdparty --disable_gperf -j $(nproc)
           ccache -s
       - name: Tar files
         run: |
@@ -301,13 +301,13 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
           ccache -p
           ccache -z
-          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc) --enable_rocksdb_portable
+          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
           ccache -s
       - name: Tar files
         run: |
