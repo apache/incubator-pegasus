@@ -3018,8 +3018,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
 {
 #define UPDATE_NUMBER_OPTION_IF_NEEDED(option, value)                                              \
     do {                                                                                           \
-        if ((value) != cur_data_cf_opts.option) {                                                  \
-            new_options[#option] = std::to_string((value));                                        \
+        auto _v = (value);                                                                         \
+        if (_v != cur_data_cf_opts.option) {                                                       \
+            new_options[#option] = std::to_string(_v);                                             \
         }                                                                                          \
     } while (0)
 
@@ -3034,6 +3035,14 @@ void pegasus_server_impl::recalculate_data_cf_options(
         }                                                                                          \
     } while (0)
 
+#define UPDATE_OPTION_IF_NOT_NEARBY(option, value)                                                 \
+    do {                                                                                           \
+        auto _v = (value);                                                                         \
+        if (!check_value_if_nearby(_v, cur_data_cf_opts.option)) {                                 \
+            new_options[#option] = std::to_string(get_random_nearby(_v));                          \
+        }                                                                                          \
+    } while (0)
+
 #define UPDATE_OPTION_IF_NEEDED(option) UPDATE_NUMBER_OPTION_IF_NEEDED(option, _data_cf_opts.option)
 
     if (_table_data_cf_opts_recalculated)
@@ -3042,11 +3051,7 @@ void pegasus_server_impl::recalculate_data_cf_options(
     if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
         ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
         if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
-            if (!check_value_if_nearby(_data_cf_opts.write_buffer_size,
-                                       cur_data_cf_opts.write_buffer_size)) {
-                new_options["write_buffer_size"] =
-                    std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size));
-            }
+            UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, data_cf_opts.write_buffer_size);
             UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger);
         } else {
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
@@ -3080,16 +3085,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
         UPDATE_NUMBER_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit, 0);
         UPDATE_BOOL_OPTION_IF_NEEDED(disable_auto_compactions, true);
         UPDATE_NUMBER_OPTION_IF_NEEDED(max_compaction_bytes, static_cast<uint64_t>(1) << 60);
-        if (!check_value_if_nearby(_data_cf_opts.write_buffer_size * 4,
-                                   cur_data_cf_opts.write_buffer_size)) {
-            new_options["write_buffer_size"] =
-                std::to_string(get_random_nearby(_data_cf_opts.write_buffer_size * 4));
-        }
-        if (cur_data_cf_opts.max_write_buffer_number !=
-            std::max(_data_cf_opts.max_write_buffer_number, 6)) {
-            new_options["max_write_buffer_number"] =
-                std::to_string(std::max(_data_cf_opts.max_write_buffer_number, 6));
-        }
+        UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, _data_cf_opts.write_buffer_size * 4);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(max_write_buffer_number,
+                                       std::max(_data_cf_opts.max_write_buffer_number, 6));
     }
     if (new_options.size() > 0) {
         if (set_options(new_options)) {
