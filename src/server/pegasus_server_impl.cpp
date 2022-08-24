@@ -3026,8 +3026,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
 
 #define UPDATE_BOOL_OPTION_IF_NEEDED(option, value)                                                \
     do {                                                                                           \
-        if ((value) != cur_data_cf_opts.option) {                                                  \
-            if ((value)) {                                                                         \
+        auto _v = (value);                                                                         \
+        if (_v != cur_data_cf_opts.option) {                                                       \
+            if (_v) {                                                                              \
                 new_options[#option] = "true";                                                     \
             } else {                                                                               \
                 new_options[#option] = "false";                                                    \
@@ -3045,8 +3046,9 @@ void pegasus_server_impl::recalculate_data_cf_options(
 
 #define UPDATE_OPTION_IF_NEEDED(option) UPDATE_NUMBER_OPTION_IF_NEEDED(option, _data_cf_opts.option)
 
-    if (_table_data_cf_opts_recalculated)
+    if (_table_data_cf_opts_recalculated) {
         return;
+    }
     std::unordered_map<std::string, std::string> new_options;
     if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
         ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
@@ -3056,8 +3058,8 @@ void pegasus_server_impl::recalculate_data_cf_options(
         } else {
             uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
                                                        _data_cf_opts.write_buffer_size * 2);
-            if (!(cur_data_cf_opts.write_buffer_size >= _data_cf_opts.write_buffer_size &&
-                  cur_data_cf_opts.write_buffer_size <= _data_cf_opts.write_buffer_size * 2)) {
+            if (cur_data_cf_opts.write_buffer_size < _data_cf_opts.write_buffer_size ||
+                cur_data_cf_opts.write_buffer_size > _data_cf_opts.write_buffer_size * 2) {
                 new_options["write_buffer_size"] = std::to_string(buffer_size);
                 uint64_t max_size = get_random_nearby(_data_cf_opts.max_bytes_for_level_base);
                 new_options["level0_file_num_compaction_trigger"] =
