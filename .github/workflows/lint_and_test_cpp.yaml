@@ -34,6 +34,9 @@ on:
       - '*dev'
     paths:
       - '.github/workflows/lint_and_test_cpp.yaml'
+      - '.github/workflows/thirdparty-regular-push.yml'
+      - 'docker/thirdparties-src/**'
+      - 'docker/thirdparties-bin/**'
       - 'CMakeLists.txt'
       - 'run.sh'
       - 'cmake_modules/**'
@@ -76,6 +79,9 @@ jobs:
         with:
           filters: |
             thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
@@ -85,7 +91,7 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
@@ -180,6 +186,9 @@ jobs:
         with:
           filters: |
             thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
@@ -189,7 +198,7 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
@@ -280,6 +289,9 @@ jobs:
         with:
           filters: |
             thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
@@ -289,7 +301,7 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
