@@ -127,12 +127,10 @@ private:
     bool check_partition_backup_status(backup_status::type expected_status) const
     {
         zauto_read_lock l(_lock);
-        for (const auto &status : _backup_status) {
-            if (status != expected_status) {
-                return false;
-            }
-        }
-        return true;
+        return std::all_of(
+            _backup_status.begin(),
+            _backup_status.end(),
+            [expected_status](backup_status::type status) { return expected_status == status; });
     }
 
     std::string get_remote_storage_root() const
