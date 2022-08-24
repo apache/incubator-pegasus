@@ -78,6 +78,12 @@ private:
                                                std::to_string(_backup_id));
     }
 
+    backup_status::type get_backup_status()
+    {
+        zauto_read_lock l(_lock);
+        return _status;
+    }
+
     void set_checkpoint_err(const error_code &ec)
     {
         zauto_write_lock l(_lock);

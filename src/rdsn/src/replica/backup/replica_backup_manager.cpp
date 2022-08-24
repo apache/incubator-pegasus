@@ -48,7 +48,7 @@ void replica_backup_manager::on_backup(const backup_request &request,
 void replica_backup_manager::try_to_checkpoint(const int64_t &backup_id,
                                                /*out*/ backup_response &response)
 {
-    switch (_status) {
+    switch (get_backup_status()) {
     case backup_status::UNINITIALIZED:
         start_checkpointing(backup_id, response);
         break;
@@ -158,7 +158,7 @@ bool replica_backup_manager::set_backup_metadata_unlock(const std::string &local
     }
 
     int64_t total_file_size = 0;
-    for (std::string &file : sub_files) {
+    for (const auto &file : sub_files) {
         file_meta meta;
         meta.name = utils::filesystem::get_file_name(file);
         if (!utils::filesystem::file_size(file, meta.size)) {
