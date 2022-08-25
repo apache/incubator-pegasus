@@ -39,6 +39,7 @@
 #include <dsn/dist/nfs_node.h>
 
 #include "common/replication_common.h"
+#include "common/backup_restore_common.h"
 #include "common/bulk_load_common.h"
 #include "common/fs_manager.h"
 #include "block_service/block_service_manager.h"
@@ -80,6 +81,7 @@ class replica_stub;
 typedef dsn::ref_ptr<replica_stub> replica_stub_ptr;
 
 class duplication_sync_timer;
+class replica_backup_manager;
 class replica_bulk_loader;
 class replica_split_manager;
 
@@ -227,6 +229,8 @@ public:
 
     // query last checkpoint info for follower in duplication process
     void on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc);
+
+    void on_cold_backup(backup_rpc rpc);
 
 private:
     enum replica_node_state
