@@ -56,6 +56,15 @@ public:
         _backup_mgr->report_checkpointing(response);
     }
 
+    void upload_checkpoint(const std::string &dir_name)
+    {
+        _backup_mgr->set_backup_metadata_unlock(dir_name, DECREE, _backup_mgr->_backup_id);
+        _backup_mgr->upload_checkpoint(PROVIDER, PATH, APP_NAME);
+        _backup_mgr->tracker()->wait_outstanding_tasks();
+    }
+
+    void report_uploading(backup_response &response) { _backup_mgr->report_uploading(response); }
+
     void mock_local_backup_states(backup_status::type status,
                                   error_code checkpoint_err = ERR_OK,
                                   error_code upload_err = ERR_OK,
@@ -64,9 +73,8 @@ public:
         _backup_mgr->_status = status;
         _backup_mgr->_backup_id = dsn_now_ms();
         _backup_mgr->_checkpoint_err = checkpoint_err;
-        // TODO(heyuchen): add upload params
-        // _backup_mgr->_upload_err = upload_err;
-        // _backup_mgr->_upload_file_size = upload_file_size;
+        _backup_mgr->_upload_err = upload_err;
+        _backup_mgr->_upload_file_size = upload_file_size;
         _backup_mgr->_backup_metadata.checkpoint_total_size = 100;
     }
 
@@ -90,6 +98,16 @@ public:
     backup_status::type get_status() { return _backup_mgr->_status; }
 
     error_code get_checkpoint_err() { return _backup_mgr->_checkpoint_err; }
+
+    int64_t get_backup_id() { return _backup_mgr->_backup_id; }
+
+    bool is_upload_finished()
+    {
+        return _backup_mgr->_backup_metadata.checkpoint_total_size ==
+               _backup_mgr->_upload_file_size;
+    }
+
+    error_code get_upload_err() { return _backup_mgr->_upload_err; }
 
 protected:
     const std::string LOCAL_BACKUP_DIR = "backup";
@@ -136,6 +154,62 @@ TEST_F(replica_backup_manager_test, report_checkpointing_test)
         report_checkpointing(resp);
         ASSERT_EQ(resp.status, test.status);
         ASSERT_EQ(resp.checkpoint_upload_err, test.checkpoint_err);
+    }
+}
+
+TEST_F(replica_backup_manager_test, upload_checkpoint_test)
+{
+    auto dir_name = create_local_backup_checkpoint_dir();
+    create_local_backup_file(dir_name, FILE_NAME1);
+    create_local_backup_file(dir_name, FILE_NAME2);
+
+    upload_checkpoint(dir_name);
+
+    std::string remote_partition_dir =
+        get_backup_partition_path(get_backup_root(FLAGS_cold_backup_root, PATH),
+                                  APP_NAME,
+                                  _replica->get_gpid().get_app_id(),
+                                  get_backup_id(),
+                                  _replica->get_gpid().get_partition_index());
+    std::string remote_checkpoint_dir = get_backup_checkpoint_path(remote_partition_dir);
+    ASSERT_TRUE(is_upload_finished());
+    ASSERT_TRUE(utils::filesystem::file_exists(
+        utils::filesystem::path_combine(remote_checkpoint_dir, FILE_NAME1)));
+    ASSERT_TRUE(utils::filesystem::file_exists(
+        utils::filesystem::path_combine(remote_checkpoint_dir, FILE_NAME2)));
+    ASSERT_TRUE(utils::filesystem::file_exists(
+        utils::filesystem::path_combine(remote_checkpoint_dir, backup_constant::BACKUP_METADATA)));
+    ASSERT_TRUE(utils::filesystem::file_exists(utils::filesystem::path_combine(
+        remote_partition_dir, backup_constant::CURRENT_CHECKPOINT)));
+    ASSERT_TRUE(utils::filesystem::file_exists(
+        utils::filesystem::path_combine(remote_partition_dir, backup_constant::DATA_VERSION)));
+    ASSERT_EQ(get_status(), backup_status::SUCCEED);
+}
+
+TEST_F(replica_backup_manager_test, report_uploading_test)
+{
+    struct test_struct
+    {
+        backup_status::type status;
+        error_code upload_err;
+        bool is_response_upload_err_set;
+        int32_t upload_file_size;
+        int32_t expected_upload_progress;
+    } tests[]{{backup_status::UPLOADING, ERR_FILE_OPERATION_FAILED, true, 0, 0},
+              {backup_status::UPLOADING, ERR_IO_PENDING, false, 0, 0},
+              {backup_status::UPLOADING, ERR_IO_PENDING, false, 40, 40},
+              {backup_status::UPLOADING, ERR_IO_PENDING, false, 100, 100},
+              {backup_status::UPLOADING, ERR_OK, false, 100, 100}};
+    for (const auto &test : tests) {
+        mock_local_backup_states(test.status, ERR_OK, test.upload_err, test.upload_file_size);
+        backup_response resp;
+        report_uploading(resp);
+        ASSERT_EQ(resp.status, test.status);
+        ASSERT_EQ(resp.__isset.checkpoint_upload_err, test.is_response_upload_err_set);
+        if (test.is_response_upload_err_set) {
+            ASSERT_EQ(resp.checkpoint_upload_err, test.upload_err);
+        }
+        ASSERT_EQ(resp.upload_progress, test.expected_upload_progress);
     }
 }
 

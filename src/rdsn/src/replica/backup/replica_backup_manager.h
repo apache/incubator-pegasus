@@ -59,14 +59,40 @@ public:
 
 private:
     void try_to_checkpoint(const int64_t &backup_id, /*out*/ backup_response &response);
+    void try_to_upload(const std::string &provider_type,
+                       const std::string &root_path,
+                       const std::string app_name,
+                       /*out*/ backup_response &response);
     void start_checkpointing(int64_t backup_id, /*out*/ backup_response &response);
     void report_checkpointing(/*out*/ backup_response &response);
+    void start_uploading(const std::string &provider_name,
+                         const std::string &root_path,
+                         const std::string &app_name,
+                         /*out*/ backup_response &response);
+    void report_uploading(/*out*/ backup_response &response);
+    void upload_completed(/*out*/ backup_response &response);
     void fill_response_unlock(/*out*/ backup_response &response);
 
     void generate_checkpoint();
     bool set_backup_metadata_unlock(const std::string &local_checkpoint_dir,
                                     int64_t checkpoint_decree,
                                     int64_t checkpoint_timestamp);
+    void upload_checkpoint(const std::string &provider_name,
+                           const std::string &root_path,
+                           const std::string &app_name);
+    void upload_file(dist::block_service::block_filesystem *fs,
+                     const std::string &remote_partition_dir,
+                     const file_meta &f_meta,
+                     int32_t next_index);
+    void upload_file_completed(dist::block_service::block_filesystem *fs,
+                               const std::string &remote_partition_dir);
+    error_code write_file_to_blockfs(dist::block_service::block_filesystem *fs,
+                                     const std::string &remote_dir,
+                                     const std::string &file_name,
+                                     const blob &buffer);
+    int32_t calc_upload_progress();
+
+    void clear_context();
 
     task_tracker *tracker() { return _replica->tracker(); }
 
@@ -90,6 +116,12 @@ private:
         _checkpoint_err = ec;
     }
 
+    void set_upload_err(const error_code &ec)
+    {
+        zauto_write_lock l(_lock);
+        _upload_err = ec;
+    }
+
 private:
     replica *_replica;
     replica_stub *_stub;
@@ -102,8 +134,13 @@ private:
     backup_status::type _status{backup_status::UNINITIALIZED};
     int64_t _backup_id{0};
     error_code _checkpoint_err{ERR_OK};
+    error_code _upload_err{ERR_IO_PENDING};
     cold_backup_metadata _backup_metadata;
     task_ptr _checkpointing_task;
+    task_ptr _uploading_task;
+    // file_name -> upload task
+    std::map<std::string, task_ptr> _upload_files_task;
+    std::atomic<uint64_t> _upload_file_size{0};
     // }
 };
 

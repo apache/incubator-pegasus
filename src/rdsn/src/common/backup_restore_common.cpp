@@ -34,6 +34,7 @@ const std::string backup_constant::CURRENT_CHECKPOINT("current_checkpoint");
 const std::string backup_constant::BACKUP_METADATA("backup_metadata");
 const std::string backup_constant::BACKUP_INFO("backup_info");
 const int32_t backup_constant::PROGRESS_FINISHED = 1000;
+const std::string backup_constant::DATA_VERSION("data_version");
 
 const std::string backup_restore_constant::FORCE_RESTORE("restore.force_restore");
 const std::string backup_restore_constant::BLOCK_SERVICE_PROVIDER("restore.block_service_provider");
@@ -76,6 +77,28 @@ std::string get_backup_meta_path(const std::string &root,
 {
     return fmt::format("{}/meta",
                        get_backup_path(root, app_name, app_id, backup_id, is_compatible));
+}
+
+std::string get_backup_partition_path(const std::string &root,
+                                      const std::string &app_name,
+                                      const int32_t app_id,
+                                      const int64_t backup_id,
+                                      const int32_t pidx,
+                                      const bool is_compatible)
+{
+    return fmt::format(
+        "{}/{}", get_backup_path(root, app_name, app_id, backup_id, is_compatible), pidx);
+}
+
+std::string get_checkpoint_str()
+{
+    auto node_address = dsn_primary_address();
+    return fmt::format("chkpt_{}_{}", node_address.ipv4_str(), node_address.port());
+}
+
+std::string get_backup_checkpoint_path(const std::string &partition_path)
+{
+    return fmt::format("{}/{}", partition_path, get_checkpoint_str());
 }
 
 } // namespace replication

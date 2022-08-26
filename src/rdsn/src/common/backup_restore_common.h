@@ -39,6 +39,7 @@ public:
     static const std::string BACKUP_METADATA;
     static const std::string BACKUP_INFO;
     static const int32_t PROGRESS_FINISHED;
+    static const std::string DATA_VERSION;
 };
 
 typedef rpc_holder<backup_request, backup_response> backup_rpc;
@@ -120,6 +121,29 @@ std::string get_backup_meta_path(const std::string &root,
                                  const int32_t app_id,
                                  const int64_t backup_id,
                                  const bool is_compatible = false);
+
+// This backup partition path on block service
+// if is_compatible = false (root is the return value of get_backup_root function)
+// - return <root>/<app_name>_<app_id>/<backup_id>/<pidx>
+// else (only used for restore compatible backup, root is the return value of
+// get_compatible_backup_root function)
+// - return <root>/<backup_id>/<app_name>_<app_id>/<pidx>
+std::string get_backup_partition_path(const std::string &root,
+                                      const std::string &app_name,
+                                      const int32_t app_id,
+                                      const int64_t backup_id,
+                                      const int32_t pidx,
+                                      const bool is_compatible = false);
+
+// Get replica node checkpoint directory string
+// return chkpt_<node_ip>_<node_port>
+std::string get_checkpoint_str();
+
+// This backup checkpoint path on block service
+// checkpoint_str is the return value of function get_checkpoint_str
+// partition_path should be the return value of function get_backup_partition_path
+// - return <partition_path>/<checkpoint_str>
+std::string get_backup_checkpoint_path(const std::string &partition_path);
 
 } // namespace replication
 } // namespace dsn
