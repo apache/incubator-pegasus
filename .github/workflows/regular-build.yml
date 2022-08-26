@@ -1,0 +1,158 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+---
+name: Build Regularly
+
+on:
+  push:
+    paths:
+      - '.github/workflows/regular-build.yml'
+
+  # for manually triggering workflow
+  workflow_dispatch:
+
+  # run for every day 2am UTC+8(Beijing)
+  schedule:
+    - cron:  '0 18 */1 * *'
+
+jobs:
+  lint_cpp:
+    name: Lint Cpp
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:clang-format-3.9
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          submodules: true
+      - name: clang-format
+        run: ./scripts/run-clang-format.py --clang-format-executable clang-format-3.9 -e ./src/shell/linenoise -e ./src/shell/sds -e ./thirdparty -r .
+
+  build_cpp:
+    name: Build Cpp
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu1604
+          - ubuntu1804
+          - ubuntu2004
+          - centos6
+          - centos7
+        compiler-family:
+          - gcc
+        include:
+          - compiler-family: clang
+            compiler: "clang-10,clang++-10"
+            os: ubuntu2004
+          - compiler-family: clang
+            compiler: "clang-9,clang++-9"
+            os: ubuntu1804
+    container:
+      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-${{ github.ref_name }}
+    defaults:
+      run:
+        working-directory: /root/incubator-pegasus
+    steps:
+      - name: Clone Apache Pegasus Source
+        working-directory: /root
+        run: |
+          git clone -b ${{ github.ref_name }} --depth=1 https://github.com/apache/incubator-pegasus.git
+          cd incubator-pegasus
+      - name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Compilation Pegasus on GCC
+        if: ${{ matrix.compiler-family == 'gcc' }}
+        run: ./run.sh build -c --skip_thirdparty
+      - name: Compilation Pegasus on Clang
+        if: ${{ matrix.compiler-family == 'clang' }}
+        env:
+          COMPILER: ${{ matrix.compiler }}
+        run: ./run.sh build --test --compiler $COMPILER --skip_thirdparty -j $(nproc)
+      - name: Packaging Server
+        run: ./run.sh pack_server
+
+  lint_go:
+    name: Lint Golang
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: go-client
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./go-client
+      - name: admin-cli
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./admin-cli
+      - name: pegic
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./pegic
+
+  build_go:
+    name: Build Golang
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+      - name: Build go-client
+        run: make
+        working-directory: ./go-client
+      - name: Build admin-cli
+        run: make
+        working-directory: ./admin-cli
+      - name: Build pegic
+        run: make
+        working-directory: ./pegic
+
+  build_java:
+    name: Build Java
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '8', '11']
+    steps:
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.java }}
+      - name: ci
+        working-directory: ./java-client
+        run: |
+          cd idl && sh recompile_thrift.sh && cd -
+          mvn spotless:apply
+          mvn clean package -DskipTests
