@@ -400,12 +400,15 @@ function run_test()
         echo "====================== run $module =========================="
         # restart onebox when test pegasus
         local need_onebox_tests=(
+          backup_restore_test
           base_api_test
           bulk_load_test
+          detect_hotspot_test
           partition_split_test
           pegasus_geo_test
           pegasus_rproxy_test
           recovery_test
+          restore_test
           throttle_test
         )
         if [[ "${need_onebox_tests[@]}" =~ "${test_modules}" ]]; then
