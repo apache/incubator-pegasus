@@ -18,6 +18,11 @@
 name: Build Regularly
 
 on:
+  pull_request:
+    types: [ synchronize, opened, reopened ]
+    paths:
+      - '.github/workflows/regular-build.yml'
+
   push:
     paths:
       - '.github/workflows/regular-build.yml'
