@@ -155,7 +155,7 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: ${{ matrix.java }}
-      - name: ci
+      - name: Build
         working-directory: ./java-client
         # TODO(yingchun): should add 'mvn spotless:apply'
         run: |
