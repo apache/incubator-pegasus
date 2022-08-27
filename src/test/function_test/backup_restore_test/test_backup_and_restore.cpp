@@ -64,7 +64,7 @@ public:
                                       "config.test_backup_restore.ini",
                                       _cluster_name);
         system(cmd.c_str());
-        system("./run.sh start_onebox --config_path config.test_backup_restore.ini");
+        system("./run.sh start_onebox -w --config_path config.test_backup_restore.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
         // initialize ddl_client
