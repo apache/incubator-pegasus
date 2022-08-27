@@ -102,6 +102,14 @@ protected:
         }
     }
 
+    void TearDown() override
+    {
+        chdir(global_env::instance()._pegasus_root.c_str());
+        system("./run.sh clear_onebox");
+        system("./run.sh start_onebox -w");
+        chdir(global_env::instance()._working_dir.c_str());
+    }
+
 public:
     std::shared_ptr<replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;

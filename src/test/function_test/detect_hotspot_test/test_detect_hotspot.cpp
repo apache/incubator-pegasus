@@ -76,6 +76,14 @@ public:
         ddl_client->list_app(app_name, app_id, partition_count, partitions);
     }
 
+    void TearDown() override
+    {
+        chdir(global_env::instance()._pegasus_root.c_str());
+        system("./run.sh clear_onebox");
+        system("./run.sh start_onebox -w");
+        chdir(global_env::instance()._working_dir.c_str());
+    }
+
     void generate_dataset(int64_t time_duration, detection_type dt, key_type kt)
     {
         int64_t start = dsn_now_s();

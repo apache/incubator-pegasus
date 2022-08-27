@@ -71,6 +71,14 @@ protected:
         ASSERT_TRUE(pg_client != nullptr);
     }
 
+    void TearDown() override
+    {
+        chdir(pegasus_root_dir.c_str());
+        system("./run.sh clear_onebox");
+        system("./run.sh start_onebox -w");
+        chdir(working_root_dir.c_str());
+    }
+
 public:
     std::shared_ptr<replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;
