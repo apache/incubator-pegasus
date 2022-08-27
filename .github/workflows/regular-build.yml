@@ -158,5 +158,5 @@ jobs:
       - name: ci
         working-directory: ./java-client
         run: |
-          cd idl && sh recompile_thrift.sh && cd -
+          cd idl && bash recompile_thrift.sh && cd -
           mvn clean package -DskipTests
