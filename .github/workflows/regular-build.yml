@@ -65,7 +65,7 @@ jobs:
             compiler: "clang-9,clang++-9"
             os: ubuntu1804
     container:
-      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-${{ github.ref_name }}
+      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-${{ github.base_ref }}
     defaults:
       run:
         working-directory: /root/incubator-pegasus
@@ -73,7 +73,7 @@ jobs:
       - name: Clone Apache Pegasus Source
         working-directory: /root
         run: |
-          git clone -b ${{ github.ref_name }} --depth=1 https://github.com/apache/incubator-pegasus.git
+          git clone -b ${{ github.base_ref }} --depth=1 https://github.com/apache/incubator-pegasus.git
           cd incubator-pegasus
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
