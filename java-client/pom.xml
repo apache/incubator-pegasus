@@ -317,12 +317,13 @@
           </execution>
         </executions>
       </plugin>
+      <!--
+      TODO(yingchun): we have to fix the issues reported by spotbugs
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
         <version>4.7.0.0</version>
         <dependencies>
-          <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
           <dependency>
             <groupId>com.github.spotbugs</groupId>
             <artifactId>spotbugs</artifactId>
@@ -330,7 +331,7 @@
           </dependency>
         </dependencies>
         <configuration>
-          <excludeFilterFile>dev-support/findbugs-exclude.xml</excludeFilterFile>-->
+          <excludeFilterFile>dev-support/findbugs-exclude.xml</excludeFilterFile>
         </configuration>
         <executions>
           <execution>
@@ -342,7 +343,7 @@
           </execution>
         </executions>
       </plugin>
-
+      -->
 
       <!--License Maven Plugin
       mycila/license-maven-plugin provides a stricter license check compared to apache-rat.

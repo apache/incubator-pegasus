@@ -157,7 +157,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - name: Build
         working-directory: ./java-client
-        # TODO(yingchun): should add 'mvn spotless:apply'
         run: |
           cd idl && bash recompile_thrift.sh && cd -
+          mvn spotless:apply
           mvn clean package -DskipTests
