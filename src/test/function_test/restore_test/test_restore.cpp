@@ -109,6 +109,14 @@ public:
         ASSERT_EQ(err, ERR_OK);
     }
 
+    void TearDown() override
+    {
+        chdir(global_env::instance()._pegasus_root.c_str());
+        system("./run.sh clear_onebox");
+        system("./run.sh start_onebox -w");
+        chdir(global_env::instance()._working_dir.c_str());
+    }
+
     void write_data()
     {
         std::cout << "start to write " << kv_pair_cnt << " key-value pairs, using set().."

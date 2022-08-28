@@ -41,6 +41,8 @@ using namespace pegasus;
 class recovery_test : public testing::Test
 {
 protected:
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+
     void SetUp() override
     {
         // THREAD_POOL_META_SERVER worker count should be greater than 1
@@ -70,7 +72,6 @@ protected:
         chdir(global_env::instance()._working_dir.c_str());
 
         // 2. initialize the clients
-        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         std::vector<dsn::rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));

@@ -46,6 +46,8 @@ enum key_type
 class detect_hotspot_test : public testing::Test
 {
 public:
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+
     void SetUp() override
     {
         // TODO(yingchun): all the commands should be run in shell, not in C++ code.
@@ -58,7 +60,6 @@ public:
         system("./run.sh start_onebox -c -w --config_path config-server-test-hotspot.ini");
         std::this_thread::sleep_for(std::chrono::seconds(3));
 
-        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         std::vector<dsn::rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));

@@ -80,6 +80,14 @@ public:
         _ddl_client->list_app(_old_app_name, _old_app_id, partition_count, partitions);
     }
 
+    void TearDown() override
+    {
+        chdir(_pegasus_root_dir.c_str());
+        system("./run.sh clear_onebox");
+        system("./run.sh start_onebox -w");
+        chdir(_working_root_dir.c_str());
+    }
+
     bool write_data()
     {
         pegasus::pegasus_client *client = pegasus::pegasus_client_factory::get_client(

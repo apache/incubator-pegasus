@@ -48,6 +48,8 @@ using namespace pegasus;
 class bulk_load_test : public testing::Test
 {
 protected:
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+
     void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
@@ -64,7 +66,6 @@ protected:
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
         ASSERT_FALSE(meta_list.empty());
 
-        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         ASSERT_TRUE(ddl_client != nullptr);
         pg_client = pegasus::pegasus_client_factory::get_client("mycluster", APP_NAME.c_str());
