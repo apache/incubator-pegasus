@@ -44,10 +44,7 @@ public:
     {
     }
 
-    static void SetUpTestCase()
-    {
-        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
-    }
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
 
     void SetUp() override
     {
