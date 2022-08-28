@@ -44,9 +44,13 @@ public:
     {
     }
 
+    static void SetUpTestCase()
+    {
+        ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
+    }
+
     void SetUp() override
     {
-        dassert(pegasus_client_factory::initialize("config.ini"), "");
         // initialize root dirs
         _pegasus_root_dir = global_env::instance()._pegasus_root;
         _working_root_dir = global_env::instance()._working_dir;
