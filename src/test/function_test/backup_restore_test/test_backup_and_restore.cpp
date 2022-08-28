@@ -66,18 +66,15 @@ public:
                                       _cluster_name);
         system(cmd.c_str());
         system("./run.sh start_onebox -w --config_path config.test_backup_restore.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(30));
 
         // initialize ddl_client
         std::vector<rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), _cluster_name.c_str());
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), _cluster_name.c_str()));
+        ASSERT_FALSE(meta_list.empty());
         _ddl_client = std::make_shared<replication_ddl_client>(meta_list);
-
-        // initialize _old_app_id
-        int32_t partition_count;
-        std::vector<partition_configuration> partitions;
-        _ddl_client->list_app(_old_app_name, _old_app_id, partition_count, partitions);
+        ASSERT_TRUE(_ddl_client != nullptr);
     }
 
     void TearDown() override

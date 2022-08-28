@@ -169,7 +169,7 @@ public:
         system("sed -i \"/^\\s*enable_detect_hotkey/c enable_detect_hotkey = "
                "true\" config-server-test-hotspot.ini");
         system("./run.sh start_onebox -c -w --config_path config-server-test-hotspot.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(30));
 
         std::vector<dsn::rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(

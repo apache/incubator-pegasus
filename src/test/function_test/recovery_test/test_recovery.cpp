@@ -67,7 +67,7 @@ protected:
 
         system("./run.sh start_onebox -w -m 1 -r 3 --config_path config-server-test-recovery.ini");
         std::cout << "sleep for a while to wait the new onebox start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(30));
 
         chdir(global_env::instance()._working_dir.c_str());
 

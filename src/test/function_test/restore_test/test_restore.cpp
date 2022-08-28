@@ -36,6 +36,8 @@ using namespace pegasus;
 class restore_test : public testing::Test
 {
 public:
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+
     void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
@@ -55,7 +57,7 @@ public:
         cmd = cmd + std::string("\" config-server-test-restore.ini");
         system(cmd.c_str());
         system("./run.sh start_onebox -w --config_path config-server-test-restore.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(30));
 
         // First of all, we are in the path of pegasus root, for example: /home/mi/pegasus.
         // And we can get the provider_dir which actually is `block_service/local_service`,
@@ -177,7 +179,7 @@ public:
 
     bool restore()
     {
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(30));
         error_code err = ddl_client->do_restore(backup_provider_name,
                                                 cluster_name,
                                                 /*old_policy_name=*/"",
