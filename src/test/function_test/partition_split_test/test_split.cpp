@@ -33,14 +33,18 @@ public:
     void prepare(const std::string &table_name)
     {
         ASSERT_TRUE(pegasus_client_factory::initialize("config.ini"));
+
         std::vector<rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
+        ASSERT_FALSE(meta_list.empty());
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
         create_table(table_name);
 
         pg_client = pegasus_client_factory::get_client("mycluster", table_name.c_str());
+        ASSERT_TRUE(pg_client != nullptr);
         write_data_before_split();
 
         start_partition_split(table_name);

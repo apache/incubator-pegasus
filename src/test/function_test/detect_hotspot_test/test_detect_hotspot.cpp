@@ -25,12 +25,12 @@
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
-#include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
 using namespace pegasus;
+using std::string;
 
 enum detection_type
 {
@@ -50,15 +50,11 @@ public:
 
     void SetUp() override
     {
-        // TODO(yingchun): all the commands should be run in shell, not in C++ code.
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("pwd");
-        system("./run.sh clear_onebox");
-        system("cp src/server/config.min.ini config-server-test-hotspot.ini");
-        system("sed -i \"/^\\s*enable_detect_hotkey/c enable_detect_hotkey = "
-               "true\" config-server-test-hotspot.ini");
-        system("./run.sh start_onebox -c -w --config_path config-server-test-hotspot.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(30));
+        string cmd = "curl 'localhost:34101/updateConfig?enable_detect_hotkey=true'";
+        std::stringstream ss;
+        int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+        std::cout << cmd << " output: " << ss.str() << std::endl;
+        ASSERT_EQ(ret, 0);
 
         std::vector<dsn::rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
@@ -76,14 +72,6 @@ public:
 
         err = ddl_client->list_app(app_name, app_id, partition_count, partitions);
         ASSERT_EQ(dsn::ERR_OK, err);
-    }
-
-    void TearDown() override
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
     void generate_dataset(int64_t time_duration, detection_type dt, key_type kt)
@@ -229,18 +217,18 @@ public:
 TEST_F(detect_hotspot_test, write_hotspot_data)
 {
     std::cout << "start testing write hotspot data..." << std::endl;
-    write_hotspot_data();
+    ASSERT_NO_FATAL_FAILURE(write_hotspot_data());
     std::cout << "write hotspot data passed....." << std::endl;
     std::cout << "start testing write random data..." << std::endl;
-    write_random_data();
+    ASSERT_NO_FATAL_FAILURE(write_random_data());
     std::cout << "write random data passed....." << std::endl;
     std::cout << "start testing max detection time..." << std::endl;
-    capture_until_maxtime();
+    ASSERT_NO_FATAL_FAILURE(capture_until_maxtime());
     std::cout << "max detection time passed....." << std::endl;
     std::cout << "start testing read hotspot data..." << std::endl;
-    read_hotspot_data();
+    ASSERT_NO_FATAL_FAILURE(read_hotspot_data());
     std::cout << "read hotspot data passed....." << std::endl;
     std::cout << "start testing read random data..." << std::endl;
-    read_random_data();
+    ASSERT_NO_FATAL_FAILURE(read_random_data());
     std::cout << "read random data passed....." << std::endl;
 }

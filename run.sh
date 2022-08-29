@@ -413,7 +413,7 @@ function run_test()
         )
         if [[ "${need_onebox_tests[@]}" =~ "${test_modules}" ]]; then
             run_clear_onebox
-            if ! run_start_onebox -w; then
+            if ! run_start_onebox -w -m 1 -c; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1
             fi
