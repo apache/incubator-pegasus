@@ -2398,8 +2398,9 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
     else
         options.no_value = true;
 
-    // cuz option only_return_count not return data(hashkey&sortkey&value) to client
-    // all of this options need check data on client side
+    // Decide whether real data should be returned to client. Once the real data is
+    // decided not to be returned to client side: option `only_return_count` will be
+    // used.
     if (diff_hash_key || stat_size || value_filter_type != pegasus::pegasus_client::FT_NO_FILTER ||
         sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT) {
         options.only_return_count = false;
