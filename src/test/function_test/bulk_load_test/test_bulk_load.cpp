@@ -68,6 +68,8 @@ protected:
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         ASSERT_TRUE(ddl_client != nullptr);
+        auto ret = ddl_client->wait_app_ready(APP_NAME, 8, 3);
+        ASSERT_EQ(ERR_OK, ret);
         pg_client = pegasus::pegasus_client_factory::get_client("mycluster", APP_NAME.c_str());
         ASSERT_TRUE(pg_client != nullptr);
     }
@@ -140,13 +142,7 @@ public:
         auto err_resp = ddl_client->set_app_envs(APP_NAME, keys, values);
         ASSERT_EQ(err_resp.get_value().err, ERR_OK);
         std::cout << "sleep 30s to wait app_envs update" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-        // restart onebox to make config works
-        chdir(pegasus_root_dir.c_str());
-        system("./run.sh stop_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        system("./run.sh start_onebox -w");
-        std::this_thread::sleep_for(std::chrono::seconds(20));
+        std::this_thread::sleep_for(std::chrono::seconds(61));
         chdir(working_root_dir.c_str());
     }
 
