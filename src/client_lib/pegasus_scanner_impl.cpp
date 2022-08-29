@@ -72,8 +72,8 @@ int pegasus_client_impl::pegasus_scanner_impl::next(int32_t &count, internal_inf
                         uint32_t expire_ts_seconds,
                         int32_t kv_count) {
         ret = err;
-        if (info) {
-            (*info) = std::move(ii);
+        if (info != nullptr) {
+            *info = std::move(ii);
         }
         count = kv_count;
         op_completed.notify();
