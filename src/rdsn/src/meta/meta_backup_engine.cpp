@@ -180,6 +180,86 @@ void meta_backup_engine::backup_app_partition(const gpid &pid)
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
+void meta_backup_engine::on_backup_reply(const error_code err,
+                                         const backup_response &response,
+                                         const gpid &pid,
+                                         const rpc_address &primary)
+{
+    {
+        zauto_read_lock l(_lock);
+        if (_is_backup_failed) {
+            derror_f("partition[{}] handle backup failed", pid);
+            return;
+        }
+
+        // TODO(heyuchen): check if backup canceled
+    }
+
+    auto rep_error = err == ERR_OK ? response.err : err;
+    if (rep_error != ERR_OK) {
+        derror_f(
+            "backup_id({}): receive backup response for partition {} from server {}, error = {}",
+            _cur_backup.backup_id,
+            pid.to_string(),
+            primary.to_string(),
+            rep_error);
+        handle_replica_backup_failed(pid.get_app_id());
+        return;
+    }
+
+    if (response.backup_id != _cur_backup.backup_id) {
+        dwarn_f("backup_id({}): receive outdated backup response(backup_id={}) for partition {} "
+                "from server {}, ignore it",
+                _cur_backup.backup_id,
+                response.backup_id,
+                pid.to_string(),
+                primary.to_string());
+        retry_backup(pid);
+        return;
+    }
+
+    if (response.__isset.checkpoint_upload_err) {
+        auto type = response.status == backup_status::UPLOADING ? "upload" : "checkpoint";
+        derror_f("backup_id({}): receive backup response for partition {} from server {}, meet {} "
+                 "error = {}",
+                 _cur_backup.backup_id,
+                 pid.to_string(),
+                 primary.to_string(),
+                 type,
+                 response.checkpoint_upload_err);
+        handle_replica_backup_failed(pid.get_app_id());
+        retry_backup(pid);
+        return;
+    }
+
+    if (response.status == backup_status::CHECKPOINTED) {
+        ddebug_f("backup_id({}): backup for partition {} from server {} finish checkpoint",
+                 _cur_backup.backup_id,
+                 pid.to_string(),
+                 primary.to_string());
+        {
+            zauto_write_lock l(_lock);
+            _backup_status[pid.get_partition_index()] = backup_status::UPLOADING;
+        }
+        if (check_partition_backup_status(backup_status::UPLOADING)) {
+            update_backup_item_on_remote_storage(backup_status::UPLOADING);
+        }
+    }
+
+    // TODO(heyuchen): handle other status
+
+    // backup is not finished, meta polling to send request
+    ddebug_f("backup_id({}): receive backup response for partition {} from server {}, "
+             "backup_status = {}, retry to send backup request.",
+             _cur_backup.backup_id,
+             pid.to_string(),
+             primary.to_string(),
+             dsn::enum_to_string(response.status));
+
+    retry_backup(pid);
+}
+
+// ThreadPool: THREAD_POOL_DEFAULT
 void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::type new_status,
                                                               int64_t end_time)
 {
@@ -204,26 +284,23 @@ void meta_backup_engine::update_backup_item_on_remote_storage(backup_status::typ
     });
 }
 
-// TODO(heyuchen): update following functions
-
-inline void meta_backup_engine::handle_replica_backup_failed(const backup_response &response,
-                                                             const gpid pid)
+// ThreadPool: THREAD_POOL_DEFAULT
+void meta_backup_engine::handle_replica_backup_failed(int32_t app_id)
 {
-    dcheck_eq(response.pid, pid);
-    dcheck_eq(response.backup_id, _cur_backup.backup_id);
-
-    derror_f("backup_id({}): backup for partition {} failed, response.err: {}",
-             _cur_backup.backup_id,
-             pid.to_string(),
-             response.err.to_string());
     zauto_write_lock l(_lock);
-    // if one partition fail, the whole backup plan fail.
+    // if one partition fail, the whole backup process fail.
     _is_backup_failed = true;
-    _backup_status[pid.get_partition_index()] = backup_status::FAILED;
+    for (auto i = 0; i < _backup_status.size(); i++) {
+        _backup_status[i] = backup_status::FAILED;
+        retry_backup(gpid(app_id, i));
+    }
+    update_backup_item_on_remote_storage(backup_status::FAILED, dsn_now_ms());
 }
 
-inline void meta_backup_engine::retry_backup(const dsn::gpid pid)
+// ThreadPool: THREAD_POOL_DEFAULT
+inline void meta_backup_engine::retry_backup(const gpid &pid)
 {
+    FAIL_POINT_INJECT_F("meta_retry_backup", [](dsn::string_view) {});
     tasking::enqueue(LPC_DEFAULT_CALLBACK,
                      &_tracker,
                      [this, pid]() { backup_app_partition(pid); },
@@ -231,66 +308,7 @@ inline void meta_backup_engine::retry_backup(const dsn::gpid pid)
                      std::chrono::seconds(1));
 }
 
-void meta_backup_engine::on_backup_reply(const error_code err,
-                                         const backup_response &response,
-                                         const gpid pid,
-                                         const rpc_address &primary)
-{
-    {
-        zauto_read_lock l(_lock);
-        // if backup of some partition failed, we would not handle response from other partitions.
-        if (_is_backup_failed) {
-            return;
-        }
-    }
-
-    // if backup completed, receive ERR_OK and
-    // resp.progress=backup_constant::PROGRESS_FINISHED;
-    // if backup failed, receive ERR_LOCAL_APP_FAILURE;
-    // backup not completed in other cases.
-    // see replica::on_cold_backup() for details.
-
-    auto rep_error = err == ERR_OK ? response.err : err;
-
-    if (rep_error == ERR_LOCAL_APP_FAILURE) {
-        handle_replica_backup_failed(response, pid);
-        return;
-    }
-
-    if (rep_error != ERR_OK) {
-        derror_f("backup_id({}): backup request to server {} failed, error: {}, retry to "
-                 "send backup request.",
-                 _cur_backup.backup_id,
-                 primary.to_string(),
-                 rep_error.to_string());
-        retry_backup(pid);
-        return;
-    };
-
-    if (response.upload_progress == backup_constant::PROGRESS_FINISHED) {
-        dcheck_eq(response.pid, pid);
-        dcheck_eq(response.backup_id, _cur_backup.backup_id);
-        ddebug_f("backup_id({}): backup for partition {} completed.",
-                 _cur_backup.backup_id,
-                 pid.to_string());
-        {
-            zauto_write_lock l(_lock);
-            _backup_status[pid.get_partition_index()] = backup_status::SUCCEED;
-        }
-        complete_current_backup();
-        return;
-    }
-
-    // backup is not finished, meta polling to send request
-    ddebug_f("backup_id({}): receive backup response for partition {} from server {}, now "
-             "progress {}, retry to send backup request.",
-             _cur_backup.backup_id,
-             pid.to_string(),
-             primary.to_string(),
-             response.upload_progress);
-
-    retry_backup(pid);
-}
+// TODO(heyuchen): update following functions
 
 void meta_backup_engine::write_backup_info()
 {
