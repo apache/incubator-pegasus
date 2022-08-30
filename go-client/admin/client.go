@@ -33,7 +33,7 @@ import (
 // Client provides the administration API to a specific cluster.
 // Remember only the superusers configured to the cluster have the admin priviledges.
 type Client interface {
-	CreateTable(ctx context.Context, tableName string, partitionCount int) error
+	CreateTable(ctx context.Context, tableName string, partitionCount int, successIfExist_optional ...bool) error
 
 	DropTable(ctx context.Context, tableName string) error
 
@@ -89,12 +89,17 @@ func (c *rpcBasedClient) waitTableReady(ctx context.Context, tableName string, p
 	return nil
 }
 
-func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int) error {
+func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int, successIfExist_optional ...bool) error {
+	successIfExist := true
+	if len(successIfExist_optional) > 0 {
+		successIfExist = successIfExist_optional[0]
+	}
 	_, err := c.metaManager.CreateApp(ctx, &admin.ConfigurationCreateAppRequest{
 		AppName: tableName,
 		Options: &admin.CreateAppOptions{
 			PartitionCount: int32(partitionCount),
 			ReplicaCount:   3,
+			SuccessIfExist: successIfExist,
 			AppType:        "pegasus",
 			Envs:           make(map[string]string),
 			IsStateful:     true,

@@ -631,6 +631,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"partition_count", required_argument, 0, 'p'},
                                            {"replica_count", required_argument, 0, 'r'},
+                                           {"fail_if_exist", no_argument, 0, 's'},
                                            {"envs", required_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
@@ -638,6 +639,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
         return false;
 
     std::string app_name = args.argv[1];
+    bool success_if_exist = true;
 
     int pc = 4, rc = 3;
     std::map<std::string, std::string> envs;
@@ -645,7 +647,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
     while (true) {
         int option_index = 0;
         int c;
-        c = getopt_long(args.argc, args.argv, "p:r:e:", long_options, &option_index);
+        c = getopt_long(args.argc, args.argv, "p:r:fe:", long_options, &option_index);
         if (c == -1)
             break;
         switch (c) {
@@ -661,6 +663,9 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
                 return false;
             }
             break;
+        case 'f':
+            success_if_exist = false;
+            break;
         case 'e':
             if (!::dsn::utils::parse_kv_map(optarg, envs, ',', '=')) {
                 fprintf(stderr, "invalid envs: %s\n", optarg);
@@ -672,7 +677,8 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
         }
     }
 
-    ::dsn::error_code err = sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false);
+    ::dsn::error_code err =
+        sc->ddl_client->create_app(app_name, "pegasus", pc, rc, envs, false, success_if_exist);
     if (err == ::dsn::ERR_OK)
         std::cout << "create app \"" << pegasus::utils::c_escape_string(app_name) << "\" succeed"
                   << std::endl;
