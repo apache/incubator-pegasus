@@ -2397,6 +2397,18 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
         options.no_value = false;
     else
         options.no_value = true;
+
+    // Decide whether real data should be returned to client. Once the real data is
+    // decided not to be returned to client side: option `only_return_count` will be
+    // used.
+    if (diff_hash_key || stat_size || value_filter_type != pegasus::pegasus_client::FT_NO_FILTER ||
+        sort_key_filter_type == pegasus::pegasus_client::FT_MATCH_EXACT) {
+        options.only_return_count = false;
+    } else {
+        options.only_return_count = true;
+        fprintf(stderr, "INFO: scanner only return kv count, not return value\n");
+    }
+
     int ret = sc->pg_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
     if (ret != pegasus::PERR_OK) {
         fprintf(

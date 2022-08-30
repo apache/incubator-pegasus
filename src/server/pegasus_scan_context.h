@@ -43,7 +43,8 @@ struct pegasus_scan_context
                          int32_t batch_size_,
                          bool no_value_,
                          bool validate_partition_hash_,
-                         bool return_expire_ts_)
+                         bool return_expire_ts_,
+                         bool only_return_count_)
         : _stop_holder(std::move(stop_)),
           _hash_key_filter_pattern_holder(std::move(hash_key_filter_pattern_)),
           _sort_key_filter_pattern_holder(std::move(sort_key_filter_pattern_)),
@@ -59,7 +60,8 @@ struct pegasus_scan_context
           batch_size(batch_size_),
           no_value(no_value_),
           validate_partition_hash(validate_partition_hash_),
-          return_expire_ts(return_expire_ts_)
+          return_expire_ts(return_expire_ts_),
+          only_return_count(only_return_count_)
     {
     }
 
@@ -80,6 +82,7 @@ public:
     bool no_value;
     bool validate_partition_hash;
     bool return_expire_ts;
+    bool only_return_count;
 };
 
 class pegasus_context_cache

@@ -224,18 +224,21 @@ private:
 
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
+    void append_key_value(std::vector<::dsn::apps::key_value> &kvs,
+                          const rocksdb::Slice &key,
+                          const rocksdb::Slice &value,
+                          bool no_value,
+                          bool request_expire_ts);
+
     range_iteration_state
-    append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                              const rocksdb::Slice &key,
-                              const rocksdb::Slice &value,
-                              ::dsn::apps::filter_type::type hash_key_filter_type,
-                              const ::dsn::blob &hash_key_filter_pattern,
-                              ::dsn::apps::filter_type::type sort_key_filter_type,
-                              const ::dsn::blob &sort_key_filter_pattern,
-                              uint32_t epoch_now,
-                              bool no_value,
-                              bool request_validate_hash,
-                              bool request_expire_ts);
+    validate_key_value_for_scan(const rocksdb::Slice &key,
+                                const rocksdb::Slice &value,
+                                ::dsn::apps::filter_type::type hash_key_filter_type,
+                                const ::dsn::blob &hash_key_filter_pattern,
+                                ::dsn::apps::filter_type::type sort_key_filter_type,
+                                const ::dsn::blob &sort_key_filter_pattern,
+                                uint32_t epoch_now,
+                                bool request_validate_hash);
 
     range_iteration_state
     append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
@@ -312,6 +315,9 @@ private:
     // return true if successfully changed
     bool set_usage_scenario(const std::string &usage_scenario);
 
+    // recalculate option value if necessary
+    void recalculate_data_cf_options(const rocksdb::ColumnFamilyOptions &cur_data_cf_opts);
+
     void reset_usage_scenario_options(const rocksdb::ColumnFamilyOptions &base_opts,
                                       rocksdb::ColumnFamilyOptions *target_opts);
 
@@ -323,6 +329,15 @@ private:
     {
         uint64_t gap = base_value / 4;
         return dsn::rand::next_u64(base_value - gap, base_value + gap);
+    }
+
+    // return true if value in range of [0.75, 1.25] * base_value
+    bool check_value_if_nearby(uint64_t base_value, uint64_t check_value)
+    {
+        uint64_t gap = base_value / 4;
+        uint64_t actual_gap =
+            (base_value < check_value) ? check_value - base_value : base_value - check_value;
+        return actual_gap <= gap;
     }
 
     // return true if expired
@@ -413,11 +428,18 @@ private:
     std::shared_ptr<KeyWithTTLCompactionFilterFactory> _key_ttl_compaction_filter_factory;
     std::shared_ptr<rocksdb::Statistics> _statistics;
     rocksdb::DBOptions _db_opts;
+    // The value of option in data_cf according to conf template file config.ini
     rocksdb::ColumnFamilyOptions _data_cf_opts;
+    // Dynamically calculate the value of current data_cf option according to the conf module file
+    // and usage scenario
+    rocksdb::ColumnFamilyOptions _table_data_cf_opts;
     rocksdb::ColumnFamilyOptions _meta_cf_opts;
     rocksdb::ReadOptions _data_cf_rd_opts;
     std::string _usage_scenario;
     std::string _user_specified_compaction;
+    // Whether it is necessary to update the current data_cf, it is required when opening the db at
+    // the first time, but not later
+    bool _table_data_cf_opts_recalculated;
 
     rocksdb::DB *_db;
     rocksdb::ColumnFamilyHandle *_data_cf;

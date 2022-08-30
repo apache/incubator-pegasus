@@ -66,6 +66,7 @@ jobs:
 
   build_push_bin_docker_images:
     runs-on: ubuntu-latest
+    needs: build_push_src_docker_images
     strategy:
       fail-fast: false
       matrix:
@@ -86,7 +87,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
+      - name: Build and push for production
         uses: docker/build-push-action@v2.10.0
         with:
           context: .
@@ -97,5 +98,42 @@ jobs:
           build-args: |
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
+      - name: Build and push for production with jemalloc
+        uses: docker/build-push-action@v2.10.0
+        with:
+          context: .
+          file: ./docker/thirdparties-bin/Dockerfile
+          push: true
+          tags: |
+            apache/pegasus:thirdparties-bin-jemallc-${{ matrix.osversion }}-${{ github.ref_name }}
+          build-args: |
+            GITHUB_BRANCH=${{ github.ref_name }}
+            OS_VERSION=${{ matrix.osversion }}
+            USE_JEMALLOC=ON
+      - name: Build and push for test
+        uses: docker/build-push-action@v2.10.0
+        with:
+          context: .
+          file: ./docker/thirdparties-bin/Dockerfile
+          push: true
+          tags: |
+            apache/pegasus:thirdparties-bin-test-${{ matrix.osversion }}-${{ github.ref_name }}
+          build-args: |
+            GITHUB_BRANCH=${{ github.ref_name }}
+            OS_VERSION=${{ matrix.osversion }}
+            ROCKSDB_PORTABLE=ON
+      - name: Build and push for test with jemalloc
+        uses: docker/build-push-action@v2.10.0
+        with:
+          context: .
+          file: ./docker/thirdparties-bin/Dockerfile
+          push: true
+          tags: |
+            apache/pegasus:thirdparties-bin-test-jemallc-${{ matrix.osversion }}-${{ github.ref_name }}
+          build-args: |
+            GITHUB_BRANCH=${{ github.ref_name }}
+            OS_VERSION=${{ matrix.osversion }}
+            ROCKSDB_PORTABLE=ON
+            USE_JEMALLOC=ON
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}

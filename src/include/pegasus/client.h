@@ -252,6 +252,7 @@ public:
         std::string sort_key_filter_pattern;
         bool no_value; // only fetch hash_key and sort_key, but not fetch value
         bool return_expire_ts;
+        bool only_return_count;
         scan_options()
             : timeout_ms(5000),
               batch_size(100),
@@ -260,7 +261,8 @@ public:
               hash_key_filter_type(FT_NO_FILTER),
               sort_key_filter_type(FT_NO_FILTER),
               no_value(false),
-              return_expire_ts(false)
+              return_expire_ts(false),
+              only_return_count(false)
         {
         }
         scan_options(const scan_options &o)
@@ -273,7 +275,8 @@ public:
               sort_key_filter_type(o.sort_key_filter_type),
               sort_key_filter_pattern(o.sort_key_filter_pattern),
               no_value(o.no_value),
-              return_expire_ts(o.return_expire_ts)
+              return_expire_ts(o.return_expire_ts),
+              only_return_count(o.only_return_count)
         {
         }
     };
@@ -312,7 +315,8 @@ public:
                                std::string && /*sort_key*/,
                                std::string && /*value*/,
                                internal_info && /*info*/,
-                               uint32_t /*expire_ts_seconds*/)>
+                               uint32_t /*expire_ts_seconds*/,
+                               int32_t /*kv_count*/)>
         async_scan_next_callback_t;
     typedef std::function<void(int /*error_code*/, pegasus_scanner * /*hash_scanner*/)>
         async_get_scanner_callback_t;
@@ -342,6 +346,21 @@ public:
                          std::string &sortkey,
                          std::string &value,
                          internal_info *info = nullptr) = 0;
+
+        ///
+        /// \brief get the next k-v pair count of this scanner
+        //  only used for scanner which option only_return_count is true
+        /// thread-safe
+        /// \param count
+        /// data count value
+        /// \return
+        /// int, the error indicates whether or not the operation is succeeded.
+        /// this error can be converted to a string using get_error_string()
+        /// PERR_OK means a valid k-v pair count got
+        /// PERR_SCAN_COMPLETE means all k-v pair count have been return before this call
+        /// otherwise some error orrured
+        ///
+        virtual int next(int32_t &count, internal_info *info = nullptr) = 0;
 
         ///
         /// \brief async get the next key-value pair of this scanner

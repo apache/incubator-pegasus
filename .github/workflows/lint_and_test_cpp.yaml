@@ -34,6 +34,9 @@ on:
       - '*dev'
     paths:
       - '.github/workflows/lint_and_test_cpp.yaml'
+      - '.github/workflows/thirdparty-regular-push.yml'
+      - 'docker/thirdparties-src/**'
+      - 'docker/thirdparties-bin/**'
       - 'CMakeLists.txt'
       - 'run.sh'
       - 'cmake_modules/**'
@@ -62,7 +65,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
@@ -76,6 +79,9 @@ jobs:
         with:
           filters: |
             thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
@@ -85,7 +91,7 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
@@ -140,7 +146,7 @@ jobs:
     needs: build_Release
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2
@@ -166,7 +172,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
@@ -180,6 +186,9 @@ jobs:
         with:
           filters: |
             thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
@@ -189,7 +198,7 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
@@ -240,7 +249,7 @@ jobs:
     needs: build_ASAN
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2
@@ -266,7 +275,7 @@ jobs:
     needs: cpp_clang_format_linter
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
@@ -280,6 +289,9 @@ jobs:
         with:
           filters: |
             thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
               - 'thirdparty/**'
       - name: Unpack prebuilt third-parties
         if: steps.changes.outputs.thirdparty == 'false'
@@ -289,7 +301,7 @@ jobs:
         working-directory: thirdparty
         run: |
           mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -B build/
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
       - name: Compilation
         run: |
@@ -340,7 +352,7 @@ jobs:
     needs: build_UBSAN
     runs-on: ubuntu-latest
     container:
-      image: apache/pegasus:thirdparties-bin-ubuntu1804-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
       options: --cap-add=SYS_PTRACE
     steps:
       - uses: actions/checkout@v2

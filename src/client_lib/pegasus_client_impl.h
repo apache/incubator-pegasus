@@ -255,6 +255,8 @@ public:
                  std::string &value,
                  internal_info *info = nullptr) override;
 
+        int next(int32_t &count, internal_info *info = nullptr) override;
+
         void async_next(async_scan_next_callback_t &&) override;
 
         bool safe_destructible() const override;
@@ -277,6 +279,13 @@ public:
                              bool full_scan);
 
     private:
+        enum class async_scan_type : char
+        {
+            NORMAL,
+            COUNT_ONLY,
+            COUNT_ONLY_FINISHED
+        };
+
         ::dsn::apps::rrdb_client *_client;
         ::dsn::blob _start_key;
         ::dsn::blob _stop_key;
@@ -287,6 +296,7 @@ public:
         std::vector<::dsn::apps::key_value> _kvs;
         internal_info _info;
         int32_t _p;
+        int32_t _kv_count;
 
         int64_t _context;
         mutable ::dsn::zlock _lock;
@@ -294,6 +304,7 @@ public:
         volatile bool _rpc_started;
         bool _validate_partition_hash;
         bool _full_scan;
+        async_scan_type _type;
 
         void _async_next_internal();
         void _start_scan();
@@ -319,6 +330,11 @@ private:
         pegasus_scanner_impl_wrapper(pegasus_scanner *p) : _p(p) {}
 
         void async_next(async_scan_next_callback_t &&callback) override;
+
+        int next(int32_t &count, internal_info *info = nullptr) override
+        {
+            return _p->next(count, info);
+        }
 
         int next(std::string &hashkey,
                  std::string &sortkey,

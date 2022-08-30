@@ -1162,6 +1162,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     resp.kvs.reserve(batch_count);
 
     bool return_expire_ts = request.__isset.return_expire_ts ? request.return_expire_ts : false;
+    bool only_return_count = request.__isset.only_return_count ? request.only_return_count : false;
 
     std::unique_ptr<range_read_limiter> limiter =
         dsn::make_unique<range_read_limiter>(_rng_rd_opts.rocksdb_max_iteration_count,
@@ -1187,8 +1188,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
         limiter->add_count();
 
-        auto state = append_key_value_for_scan(
-            resp.kvs,
+        auto state = validate_key_value_for_scan(
             it->key(),
             it->value(),
             request.hash_key_filter_type,
@@ -1196,12 +1196,15 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             request.sort_key_filter_type,
             request.sort_key_filter_pattern,
             epoch_now,
-            request.no_value,
-            request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
-            return_expire_ts);
+            request.__isset.validate_partition_hash ? request.validate_partition_hash : true);
+
         switch (state) {
         case range_iteration_state::kNormal:
             count++;
+            if (!only_return_count) {
+                append_key_value(
+                    resp.kvs, it->key(), it->value(), request.no_value, return_expire_ts);
+            }
             break;
         case range_iteration_state::kExpired:
             expire_count++;
@@ -1220,6 +1223,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         }
 
         it->Next();
+    }
+    if (only_return_count) {
+        resp.__set_kv_count(count);
     }
 
     // check iteration time whether exceed limit
@@ -1274,7 +1280,8 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             batch_count,
             request.no_value,
             request.__isset.validate_partition_hash ? request.validate_partition_hash : true,
-            return_expire_ts));
+            return_expire_ts,
+            only_return_count));
         int64_t handle = _context_cache.put(std::move(context));
         resp.context_id = handle;
         // if the context is used, it will be fetched and re-put into cache,
@@ -1355,20 +1362,21 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
 
             limiter->add_count();
 
-            auto state = append_key_value_for_scan(resp.kvs,
-                                                   it->key(),
-                                                   it->value(),
-                                                   hash_key_filter_type,
-                                                   hash_key_filter_pattern,
-                                                   sort_key_filter_type,
-                                                   sort_key_filter_pattern,
-                                                   epoch_now,
-                                                   no_value,
-                                                   validate_hash,
-                                                   return_expire_ts);
+            auto state = validate_key_value_for_scan(it->key(),
+                                                     it->value(),
+                                                     hash_key_filter_type,
+                                                     hash_key_filter_pattern,
+                                                     sort_key_filter_type,
+                                                     sort_key_filter_pattern,
+                                                     epoch_now,
+                                                     validate_hash);
+
             switch (state) {
             case range_iteration_state::kNormal:
                 count++;
+                if (!context->only_return_count) {
+                    append_key_value(resp.kvs, it->key(), it->value(), no_value, return_expire_ts);
+                }
                 break;
             case range_iteration_state::kExpired:
                 expire_count++;
@@ -1387,6 +1395,10 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             }
 
             it->Next();
+        }
+
+        if (context->only_return_count) {
+            resp.__set_kv_count(count);
         }
 
         // check iteration time whether exceed limit
@@ -1560,9 +1572,10 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 
     ddebug_replica("start to open rocksDB's rdb({})", rdb_path);
 
-    // Here we create a `tmp_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
+    // Here we create a `_table_data_cf_opts` because we don't want to modify `_data_cf_opts`, which
     // will be used elsewhere.
-    rocksdb::ColumnFamilyOptions tmp_data_cf_opts = _data_cf_opts;
+    _table_data_cf_opts = _data_cf_opts;
+    _table_data_cf_opts_recalculated = false;
     bool has_incompatible_db_options = false;
     if (db_exist) {
         // When DB exists, meta CF and data CF must be present.
@@ -1609,7 +1622,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             // We don't use `loaded_data_cf_opts` directly because pointer-typed options will
             // only be initialized with default values when calling 'LoadLatestOptions', see
             // 'rocksdb/utilities/options_util.h'.
-            reset_usage_scenario_options(loaded_data_cf_opts, &tmp_data_cf_opts);
+            reset_usage_scenario_options(loaded_data_cf_opts, &_table_data_cf_opts);
             _db_opts.allow_ingest_behind = parse_allow_ingest_behind(envs);
         }
     } else {
@@ -1620,7 +1633,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     }
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_families(
-        {{DATA_COLUMN_FAMILY_NAME, tmp_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
+        {{DATA_COLUMN_FAMILY_NAME, _table_data_cf_opts}, {META_COLUMN_FAMILY_NAME, _meta_cf_opts}});
     auto s = rocksdb::CheckOptionsCompatibility(rdb_path,
                                                 rocksdb::Env::Default(),
                                                 _db_opts,
@@ -2263,18 +2276,15 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
     return false;
 }
 
-range_iteration_state
-pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                                               const rocksdb::Slice &key,
-                                               const rocksdb::Slice &value,
-                                               ::dsn::apps::filter_type::type hash_key_filter_type,
-                                               const ::dsn::blob &hash_key_filter_pattern,
-                                               ::dsn::apps::filter_type::type sort_key_filter_type,
-                                               const ::dsn::blob &sort_key_filter_pattern,
-                                               uint32_t epoch_now,
-                                               bool no_value,
-                                               bool request_validate_hash,
-                                               bool request_expire_ts)
+range_iteration_state pegasus_server_impl::validate_key_value_for_scan(
+    const rocksdb::Slice &key,
+    const rocksdb::Slice &value,
+    ::dsn::apps::filter_type::type hash_key_filter_type,
+    const ::dsn::blob &hash_key_filter_pattern,
+    ::dsn::apps::filter_type::type sort_key_filter_type,
+    const ::dsn::blob &sort_key_filter_pattern,
+    uint32_t epoch_now,
+    bool request_validate_hash)
 {
     if (check_if_record_expired(epoch_now, value)) {
         if (_verbose_log) {
@@ -2292,8 +2302,6 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
             return range_iteration_state::kHashInvalid;
         }
     }
-
-    ::dsn::apps::key_value kv;
 
     // extract raw key
     ::dsn::blob raw_key(key.data(), 0, key.size());
@@ -2316,6 +2324,18 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
             return range_iteration_state::kFiltered;
         }
     }
+
+    return range_iteration_state::kNormal;
+}
+
+void pegasus_server_impl::append_key_value(std::vector<::dsn::apps::key_value> &kvs,
+                                           const rocksdb::Slice &key,
+                                           const rocksdb::Slice &value,
+                                           bool no_value,
+                                           bool request_expire_ts)
+{
+    ::dsn::apps::key_value kv;
+    ::dsn::blob raw_key(key.data(), 0, key.size());
     std::shared_ptr<char> key_buf(::dsn::utils::make_shared_array<char>(raw_key.length()));
     ::memcpy(key_buf.get(), raw_key.data(), raw_key.length());
     kv.key.assign(std::move(key_buf), 0, raw_key.length());
@@ -2334,7 +2354,6 @@ pegasus_server_impl::append_key_value_for_scan(std::vector<::dsn::apps::key_valu
     }
 
     kvs.emplace_back(std::move(kv));
-    return range_iteration_state::kNormal;
 }
 
 range_iteration_state pegasus_server_impl::append_key_value_for_multi_get(
@@ -2634,6 +2653,10 @@ void pegasus_server_impl::update_usage_scenario(const std::map<std::string, std:
                            old_usage_scenario,
                            new_usage_scenario);
         }
+    } else {
+        // When an old db is opened and the rocksDB related configs in server config.ini has been
+        // changed, the options related to usage scenario need to be recalculated with new values.
+        recalculate_data_cf_options(_table_data_cf_opts);
     }
 }
 
@@ -2993,7 +3016,8 @@ bool pegasus_server_impl::set_usage_scenario(const std::string &usage_scenario)
 void pegasus_server_impl::reset_usage_scenario_options(
     const rocksdb::ColumnFamilyOptions &base_opts, rocksdb::ColumnFamilyOptions *target_opts)
 {
-    // reset usage scenario related options, refer to options set in 'set_usage_scenario' function.
+    // reset usage scenario related options, refer to options set in 'set_usage_scenario'
+    // function.
     target_opts->level0_file_num_compaction_trigger = base_opts.level0_file_num_compaction_trigger;
     target_opts->level0_slowdown_writes_trigger = base_opts.level0_slowdown_writes_trigger;
     target_opts->level0_stop_writes_trigger = base_opts.level0_stop_writes_trigger;
@@ -3005,6 +3029,98 @@ void pegasus_server_impl::reset_usage_scenario_options(
     target_opts->max_compaction_bytes = base_opts.max_compaction_bytes;
     target_opts->write_buffer_size = base_opts.write_buffer_size;
     target_opts->max_write_buffer_number = base_opts.max_write_buffer_number;
+}
+
+void pegasus_server_impl::recalculate_data_cf_options(
+    const rocksdb::ColumnFamilyOptions &cur_data_cf_opts)
+{
+#define UPDATE_NUMBER_OPTION_IF_NEEDED(option, value)                                              \
+    do {                                                                                           \
+        auto _v = (value);                                                                         \
+        if (_v != cur_data_cf_opts.option) {                                                       \
+            new_options[#option] = std::to_string(_v);                                             \
+        }                                                                                          \
+    } while (0)
+
+#define UPDATE_BOOL_OPTION_IF_NEEDED(option, value)                                                \
+    do {                                                                                           \
+        auto _v = (value);                                                                         \
+        if (_v != cur_data_cf_opts.option) {                                                       \
+            if (_v) {                                                                              \
+                new_options[#option] = "true";                                                     \
+            } else {                                                                               \
+                new_options[#option] = "false";                                                    \
+            }                                                                                      \
+        }                                                                                          \
+    } while (0)
+
+#define UPDATE_OPTION_IF_NOT_NEARBY(option, value)                                                 \
+    do {                                                                                           \
+        auto _v = (value);                                                                         \
+        if (!check_value_if_nearby(_v, cur_data_cf_opts.option)) {                                 \
+            new_options[#option] = std::to_string(get_random_nearby(_v));                          \
+        }                                                                                          \
+    } while (0)
+
+#define UPDATE_OPTION_IF_NEEDED(option) UPDATE_NUMBER_OPTION_IF_NEEDED(option, _data_cf_opts.option)
+
+    if (_table_data_cf_opts_recalculated) {
+        return;
+    }
+    std::unordered_map<std::string, std::string> new_options;
+    if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario ||
+        ROCKSDB_ENV_USAGE_SCENARIO_PREFER_WRITE == _usage_scenario) {
+        if (ROCKSDB_ENV_USAGE_SCENARIO_NORMAL == _usage_scenario) {
+            UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, _data_cf_opts.write_buffer_size);
+            UPDATE_OPTION_IF_NEEDED(level0_file_num_compaction_trigger);
+        } else {
+            uint64_t buffer_size = dsn::rand::next_u64(_data_cf_opts.write_buffer_size,
+                                                       _data_cf_opts.write_buffer_size * 2);
+            if (cur_data_cf_opts.write_buffer_size < _data_cf_opts.write_buffer_size ||
+                cur_data_cf_opts.write_buffer_size > _data_cf_opts.write_buffer_size * 2) {
+                new_options["write_buffer_size"] = std::to_string(buffer_size);
+                uint64_t max_size = get_random_nearby(_data_cf_opts.max_bytes_for_level_base);
+                new_options["level0_file_num_compaction_trigger"] =
+                    std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
+            } else if (!check_value_if_nearby(_data_cf_opts.max_bytes_for_level_base,
+                                              cur_data_cf_opts.max_bytes_for_level_base)) {
+                uint64_t max_size = get_random_nearby(_data_cf_opts.max_bytes_for_level_base);
+                new_options["level0_file_num_compaction_trigger"] =
+                    std::to_string(std::max<uint64_t>(4UL, max_size / buffer_size));
+            }
+        }
+        UPDATE_OPTION_IF_NEEDED(level0_slowdown_writes_trigger);
+        UPDATE_OPTION_IF_NEEDED(level0_stop_writes_trigger);
+        UPDATE_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit);
+        UPDATE_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit);
+        UPDATE_BOOL_OPTION_IF_NEEDED(disable_auto_compactions, false);
+        UPDATE_OPTION_IF_NEEDED(max_compaction_bytes);
+        UPDATE_OPTION_IF_NEEDED(max_write_buffer_number);
+    } else {
+        // ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_file_num_compaction_trigger, 1000000000);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_slowdown_writes_trigger, 1000000000);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(level0_stop_writes_trigger, 1000000000);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(soft_pending_compaction_bytes_limit, 0);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(hard_pending_compaction_bytes_limit, 0);
+        UPDATE_BOOL_OPTION_IF_NEEDED(disable_auto_compactions, true);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(max_compaction_bytes, static_cast<uint64_t>(1) << 60);
+        UPDATE_OPTION_IF_NOT_NEARBY(write_buffer_size, _data_cf_opts.write_buffer_size * 4);
+        UPDATE_NUMBER_OPTION_IF_NEEDED(max_write_buffer_number,
+                                       std::max(_data_cf_opts.max_write_buffer_number, 6));
+    }
+    if (new_options.size() > 0) {
+        if (set_options(new_options)) {
+            ddebug_replica(
+                "{}: recalculate the value of the options related to usage scenario \"{}\"",
+                replica_name(),
+                _usage_scenario);
+        }
+    }
+    _table_data_cf_opts_recalculated = true;
+#undef UPDATE_OPTION_IF_NEEDED
+#undef UPDATE_BOOL_OPTION_IF_NEEDED
+#undef UPDATE_NUMBER_OPTION_IF_NEEDED
 }
 
 bool pegasus_server_impl::set_options(
