@@ -224,18 +224,21 @@ private:
 
     void set_last_durable_decree(int64_t decree) { _last_durable_decree.store(decree); }
 
+    void append_key_value(std::vector<::dsn::apps::key_value> &kvs,
+                          const rocksdb::Slice &key,
+                          const rocksdb::Slice &value,
+                          bool no_value,
+                          bool request_expire_ts);
+
     range_iteration_state
-    append_key_value_for_scan(std::vector<::dsn::apps::key_value> &kvs,
-                              const rocksdb::Slice &key,
-                              const rocksdb::Slice &value,
-                              ::dsn::apps::filter_type::type hash_key_filter_type,
-                              const ::dsn::blob &hash_key_filter_pattern,
-                              ::dsn::apps::filter_type::type sort_key_filter_type,
-                              const ::dsn::blob &sort_key_filter_pattern,
-                              uint32_t epoch_now,
-                              bool no_value,
-                              bool request_validate_hash,
-                              bool request_expire_ts);
+    validate_key_value_for_scan(const rocksdb::Slice &key,
+                                const rocksdb::Slice &value,
+                                ::dsn::apps::filter_type::type hash_key_filter_type,
+                                const ::dsn::blob &hash_key_filter_pattern,
+                                ::dsn::apps::filter_type::type sort_key_filter_type,
+                                const ::dsn::blob &sort_key_filter_pattern,
+                                uint32_t epoch_now,
+                                bool request_validate_hash);
 
     range_iteration_state
     append_key_value_for_multi_get(std::vector<::dsn::apps::key_value> &kvs,
