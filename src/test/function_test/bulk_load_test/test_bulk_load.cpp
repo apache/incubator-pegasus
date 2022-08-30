@@ -66,7 +66,11 @@ protected:
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         ASSERT_TRUE(ddl_client != nullptr);
-        auto ret = ddl_client->create_app(APP_NAME, "pegasus", 8, 3, {}, false);
+
+        auto ret = ddl_client->drop_app(APP_NAME, 0);
+        ASSERT_EQ(ERR_OK, ret);
+
+        ret = ddl_client->create_app(APP_NAME, "pegasus", 8, 3, {{"rocksdb.allow_ingest_behind", "true"}}, false);
         ASSERT_EQ(ERR_OK, ret);
         int32_t new_app_id;
         int32_t partition_count;
@@ -82,9 +86,6 @@ protected:
 
     void TearDown() override
     {
-        auto ret = ddl_client->drop_app(APP_NAME, 0);
-        ASSERT_EQ(ERR_OK, ret);
-
         chdir(pegasus_root_dir.c_str());
         string cmd = "rm -rf onebox/block_service";
         std::stringstream ss;
@@ -162,8 +163,8 @@ public:
         values.emplace_back(allow_ingest_behind);
         auto err_resp = ddl_client->set_app_envs(APP_NAME, keys, values);
         ASSERT_EQ(err_resp.get_value().err, ERR_OK);
-        std::cout << "sleep 30s to wait app_envs update" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(61));
+        std::cout << "sleep 31s to wait app_envs update" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(31));
         chdir(working_root_dir.c_str());
     }
 
@@ -318,6 +319,8 @@ TEST_F(bulk_load_test, bulk_load_tests)
 ///
 TEST_F(bulk_load_test, bulk_load_ingest_behind_tests)
 {
+    update_allow_ingest_behind("false");
+
     // app envs allow_ingest_behind = false, request ingest_behind = true
     ASSERT_EQ(start_bulk_load(true), ERR_INCONSISTENT_STATE);
 
