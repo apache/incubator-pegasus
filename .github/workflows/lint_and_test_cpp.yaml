@@ -373,6 +373,90 @@ jobs:
           ./scripts/config_hdfs.sh
           ./run.sh test --on_travis -m ${{ matrix.test_module }}
 
+  build_with_jemalloc:
+    name: Build with jemalloc
+    needs: cpp_clang_format_linter
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu1804-${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            /github/home/.ccache
+          key: release_ccache
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            thirdparty:
+              - '.github/workflows/thirdparty-regular-push.yml'
+              - 'docker/thirdparties-src/**'
+              - 'docker/thirdparties-bin/**'
+              - 'thirdparty/**'
+      - name: Unpack prebuilt third-parties
+        if: steps.changes.outputs.thirdparty == 'false'
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Rebuild third-parties
+        if: steps.changes.outputs.thirdparty == 'true'
+        working-directory: thirdparty
+        run: |
+          mkdir build
+          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -DUSE_JEMALLOC=ON -B build/
+          cmake --build build/ -j $(nproc)
+      - name: Compilation
+        run: |
+          ccache -p
+          ccache -z
+          ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
+          ccache -s
+      - name: Pack Server
+        run: ./run.sh pack_server
+      - name: Pack Tools
+        run: ./run.sh pack_tools
+      - name: Tar files
+        run: |
+          rm -rf thirdparty
+          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini --exclude='*CMakeFiles*'
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: release_artifact_${{ github.sha }}
+          path: release__builder.tar
+
+  test_with_jemalloc:
+    name: Test with jemallc
+    strategy:
+      fail-fast: false
+      matrix:
+        test_module:
+          - dsn_utils_tests
+    needs: build_with_jemalloc
+    runs-on: ubuntu-latest
+    container:
+      image: apache/pegasus:thirdparties-bin-test-jemallc-ubuntu1804-${{ github.base_ref }}
+      options: --cap-add=SYS_PTRACE
+    steps:
+      - uses: actions/checkout@v2
+      - name: Unpack prebuilt third-parties
+        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release_artifact_${{ github.sha }}
+          path: .
+      - name: Tar files
+        run: |
+          tar -zxvf release__builder.tar
+      - name: Unit Testing
+        run: |
+          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+          ulimit -s unlimited
+          ./scripts/config_hdfs.sh
+          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+
   build_pegasus_on_macos:
     name: macOS
     needs: cpp_clang_format_linter
