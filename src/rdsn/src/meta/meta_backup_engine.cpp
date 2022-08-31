@@ -246,7 +246,31 @@ void meta_backup_engine::on_backup_reply(const error_code err,
         }
     }
 
-    // TODO(heyuchen): handle other status
+    if (response.status == backup_status::UPLOADING) {
+        ddebug_f(
+            "backup_id({}): backup for partition {} from server {} is uploading, progress = {}",
+            _cur_backup.backup_id,
+            pid.to_string(),
+            primary.to_string(),
+            response.upload_progress);
+    }
+
+    if (response.status == backup_status::SUCCEED) {
+        ddebug_f("backup_id({}): backup for partition {} from server {} succeed",
+                 _cur_backup.backup_id,
+                 pid.to_string(),
+                 primary.to_string());
+        {
+            zauto_write_lock l(_lock);
+            _backup_status[pid.get_partition_index()] = backup_status::SUCCEED;
+        }
+
+        if (check_partition_backup_status(backup_status::SUCCEED)) {
+            ddebug_f("backup_id({}): all partitions backup succeed", _cur_backup.backup_id);
+            complete_backup();
+        }
+        return;
+    }
 
     // backup is not finished, meta polling to send request
     ddebug_f("backup_id({}): receive backup response for partition {} from server {}, "
@@ -257,6 +281,48 @@ void meta_backup_engine::on_backup_reply(const error_code err,
              dsn::enum_to_string(response.status));
 
     retry_backup(pid);
+}
+
+// ThreadPool: THREAD_POOL_DEFAULT
+void meta_backup_engine::complete_backup()
+{
+    std::string remote_backup_dir =
+        get_backup_path(get_backup_root(FLAGS_cold_backup_root, _cur_backup.backup_path),
+                        _cur_backup.app_name,
+                        _cur_backup.app_id,
+                        _cur_backup.backup_id);
+    app_backup_info backup_info;
+    backup_info.app_id = _cur_backup.app_id;
+    backup_info.app_name = _cur_backup.app_name;
+    backup_info.backup_id = _cur_backup.backup_id;
+    backup_info.start_time_ms = _cur_backup.start_time_ms;
+    const auto end_time_ms = dsn_now_ms();
+    backup_info.end_time_ms = end_time_ms;
+    blob buf = json::json_forwarder<app_backup_info>::encode(backup_info);
+    error_code err = write_backup_file(remote_backup_dir, backup_constant::BACKUP_INFO, buf);
+    if (err == ERR_FS_INTERNAL) {
+        derror_f(
+            "backup_id({}): write backup info failed, error {}, do not try again for this error.",
+            _cur_backup.backup_id,
+            err.to_string());
+        zauto_write_lock l(_lock);
+        update_backup_item_on_remote_storage(backup_status::FAILED, end_time_ms);
+        _is_backup_failed = true;
+        return;
+    }
+    if (err != ERR_OK) {
+        dwarn_f("backup_id({}): write backup info failed, retry it later.", _cur_backup.backup_id);
+        tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                         &_tracker,
+                         [this]() { complete_backup(); },
+                         0,
+                         std::chrono::seconds(1));
+        return;
+    }
+    ddebug_f("backup_id({}): successfully wrote backup_info, backup for app {} completed.",
+             _cur_backup.backup_id,
+             _cur_backup.app_id);
+    update_backup_item_on_remote_storage(backup_status::SUCCEED, end_time_ms);
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
@@ -306,57 +372,6 @@ inline void meta_backup_engine::retry_backup(const gpid &pid)
                      [this, pid]() { backup_app_partition(pid); },
                      0,
                      std::chrono::seconds(1));
-}
-
-// TODO(heyuchen): update following functions
-
-void meta_backup_engine::write_backup_info()
-{
-    std::string backup_root =
-        dsn::utils::filesystem::path_combine(_backup_path, _backup_service->backup_root());
-    // TODO(heyuchen): refactor and update it in future
-    std::string remote_dir = "todo";
-    std::string file_name = "todo";
-    blob buf = dsn::json::json_forwarder<backup_item>::encode(_cur_backup);
-    error_code err = write_backup_file(remote_dir, file_name, buf);
-    if (err == ERR_FS_INTERNAL) {
-        derror_f(
-            "backup_id({}): write backup info failed, error {}, do not try again for this error.",
-            _cur_backup.backup_id,
-            err.to_string());
-        zauto_write_lock l(_lock);
-        _is_backup_failed = true;
-        return;
-    }
-    if (err != ERR_OK) {
-        dwarn_f("backup_id({}): write backup info failed, retry it later.", _cur_backup.backup_id);
-        tasking::enqueue(LPC_DEFAULT_CALLBACK,
-                         &_tracker,
-                         [this]() { write_backup_info(); },
-                         0,
-                         std::chrono::seconds(1));
-        return;
-    }
-    ddebug_f("backup_id({}): successfully wrote backup info, backup for app {} completed.",
-             _cur_backup.backup_id,
-             _cur_backup.app_id);
-    zauto_write_lock l(_lock);
-    _cur_backup.end_time_ms = dsn_now_ms();
-}
-
-void meta_backup_engine::complete_current_backup()
-{
-    {
-        zauto_read_lock l(_lock);
-        for (const auto &status : _backup_status) {
-            if (status != backup_status::SUCCEED) {
-                // backup for some partition was not finished.
-                return;
-            }
-        }
-    }
-    // complete backup for all partitions.
-    write_backup_info();
 }
 
 } // namespace replication

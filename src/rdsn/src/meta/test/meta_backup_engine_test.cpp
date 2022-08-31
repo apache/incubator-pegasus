@@ -186,8 +186,9 @@ TEST_F(meta_backup_engine_test, on_backup_reply_succeed_test)
          true,
          backup_status::UPLOADING,
          true},
-        // TODO(heyuchen): add other status cases
-    };
+        {backup_status::UPLOADING, backup_status::UPLOADING, false, backup_status::UPLOADING, true},
+        {backup_status::SUCCEED, backup_status::UPLOADING, false, backup_status::UPLOADING, true},
+        {backup_status::SUCCEED, backup_status::UPLOADING, true, backup_status::SUCCEED, false}};
 
     for (const auto &test : tests) {
         init_backup(_app_id, test.old_status);
