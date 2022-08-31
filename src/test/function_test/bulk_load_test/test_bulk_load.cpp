@@ -70,7 +70,8 @@ protected:
         auto ret = ddl_client->drop_app(APP_NAME, 0);
         ASSERT_EQ(ERR_OK, ret);
 
-        ret = ddl_client->create_app(APP_NAME, "pegasus", 8, 3, {{"rocksdb.allow_ingest_behind", "true"}}, false);
+        ret = ddl_client->create_app(
+            APP_NAME, "pegasus", 8, 3, {{"rocksdb.allow_ingest_behind", "true"}}, false);
         ASSERT_EQ(ERR_OK, ret);
         int32_t new_app_id;
         int32_t partition_count;
