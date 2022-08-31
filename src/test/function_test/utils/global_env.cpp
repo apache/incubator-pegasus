@@ -71,7 +71,7 @@ void global_env::get_dirs()
 
 void global_env::get_hostip()
 {
-    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("");
+    uint32_t ip = dsn::rpc_address::ipv4_from_network_interface("lo");
     uint32_t ipnet = htonl(ip);
     char buffer[512] = {0};
     memset(buffer, 0, sizeof(buffer));

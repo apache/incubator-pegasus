@@ -45,31 +45,11 @@ protected:
 
     void SetUp() override
     {
-        // THREAD_POOL_META_SERVER worker count should be greater than 1
+        // NOTE: THREAD_POOL_META_SERVER worker count should be greater than 1
         // This function test update 'distributed_lock_service_type' to
         // 'distributed_lock_service_simple', which executes in threadpool THREAD_POOL_META_SERVER
         // As a result, failure detection lock executes in this pool
         // if worker count = 1, it will lead to ERR_TIMEOUT when execute 'ddl_client->do_recovery'
-
-        // 1. restart onebox, modify the config
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-
-        system("cp src/server/config.min.ini config-server-test-recovery.ini");
-        system("sed -i \"/^\\s*meta_state_service_type/c meta_state_service_type = "
-               "meta_state_service_simple\" config-server-test-recovery.ini");
-        system("sed -i \"/^\\s*distributed_lock_service_type/c distributed_lock_service_type = "
-               "distributed_lock_service_simple\" config-server-test-recovery.ini");
-        system("sed -i \"/^\\s*server_list/c server_list = @LOCAL_HOSTNAME@:34601\" "
-               "config-server-test-recovery.ini");
-        system("sed -i \"/^\\s*perf_counter_enable_logging/c perf_counter_enable_logging = false\" "
-               "config-server-test-recovery.ini");
-
-        system("./run.sh start_onebox -w -m 1 -r 3 --config_path config-server-test-recovery.ini");
-        std::cout << "sleep for a while to wait the new onebox start" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-
-        chdir(global_env::instance()._working_dir.c_str());
 
         // 2. initialize the clients
         std::vector<dsn::rpc_address> meta_list;
@@ -101,14 +81,6 @@ protected:
             ASSERT_EQ(0, ans);
             ASSERT_TRUE(info.partition_index < default_partitions);
         }
-    }
-
-    void TearDown() override
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
 public:

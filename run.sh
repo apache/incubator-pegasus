@@ -413,10 +413,14 @@ function run_test()
         )
         if [[ "${need_onebox_tests[@]}" =~ "${test_modules}" ]]; then
             run_clear_onebox
-            if ! run_start_onebox -w -m 1 -c; then
+            if [ "${test_modules}" == "recovery_test" ]; then
+                opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
+            fi
+            if ! run_start_onebox -w -m 1 -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1
             fi
+            # TODO(yingchun): remove it?
             sed -i "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g"  $ROOT/src/builder/src/server/test/config.ini
         else
             run_stop_zk
@@ -622,6 +626,7 @@ function run_start_onebox()
     SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
+    OPTS=""
 
     while [[ $# > 0 ]]; do
         key="$1"
@@ -662,6 +667,10 @@ function run_start_onebox()
                 ;;
             --use_product_config)
                 USE_PRODUCT_CONFIG=true
+                ;;
+            --opts)
+                OPTS="$2"
+                shift
                 ;;
             *)
                 echo "ERROR: unknown option \"$key\""
@@ -720,6 +729,18 @@ function run_start_onebox()
         sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;s/@APP_NAME@/${APP_NAME}/g;s/@PARTITION_COUNT@/${PARTITION_COUNT}/g" \
             ${CONFIG_FILE} >${ROOT}/config-server.ini
     fi
+
+    OPTS=`echo $OPTS | xargs`
+    config_kvs=(${OPTS//,/ })
+    for config_kv in ${config_kvs[@]}; do
+        config_kv=`echo $config_kv | xargs`
+        kv=(${config_kv//=/ })
+        if [ ! ${#kv[*]} -eq 2 ]; then
+            echo "Invalid --opts arguments!"
+            exit 1
+        fi
+        sed -i '/^\s*'"${kv[0]}"'/c '"${kv[0]}"' = '"${kv[1]}" ${ROOT}/config-server.ini
+    done
 
     echo "starting server"
     ld_library_path=${SERVER_PATH}:$LD_LIBRARY_PATH
