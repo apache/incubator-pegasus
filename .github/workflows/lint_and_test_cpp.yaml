@@ -413,18 +413,18 @@ jobs:
           ./run.sh build --test --skip_thirdparty -j $(nproc) -t release --use_jemalloc
           ccache -s
       - name: Pack Server
-        run: ./run.sh pack_server
+        run: ./run.sh pack_server -j
       - name: Pack Tools
-        run: ./run.sh pack_tools
+        run: ./run.sh pack_tools -j
       - name: Tar files
         run: |
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini --exclude='*CMakeFiles*'
+          tar -zcvhf release_jemalloc_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: release_artifact_${{ github.sha }}
-          path: release__builder.tar
+          name: release_jemalloc_artifact_${{ github.sha }}
+          path: release_jemalloc_builder.tar
 
   test_with_jemalloc:
     name: Test with jemallc
@@ -445,11 +445,11 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-          name: release_artifact_${{ github.sha }}
+          name: release_jemalloc_artifact_${{ github.sha }}
           path: .
       - name: Tar files
         run: |
-          tar -zxvf release__builder.tar
+          tar -zxvf release_jemalloc_builder.tar
       - name: Unit Testing
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
