@@ -81,10 +81,7 @@ public:
         ASSERT_EQ(err, ERR_OK);
     }
 
-    void TearDown() override
-    {
-        ASSERT_EQ(ERR_OK, ddl_client->drop_app(app_name, 0));
-    }
+    void TearDown() override { ASSERT_EQ(ERR_OK, ddl_client->drop_app(app_name, 0)); }
 
     void write_data()
     {
