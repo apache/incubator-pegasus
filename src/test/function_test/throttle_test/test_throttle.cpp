@@ -93,6 +93,12 @@ struct throttle_test_recorder
                                               "first_1000_ms_successful_size",
                                               "first_5000_ms_successful_size"};
 
+    throttle_test_recorder() {
+        for (const auto& key : parameter_seq) {
+            records[key] = 0;
+        }
+    }
+
     void start_test(const std::string &test_case, uint64_t time_duration_s)
     {
         test_name = test_case;
@@ -162,15 +168,6 @@ public:
 
     void SetUp() override
     {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("pwd");
-        system("./run.sh clear_onebox");
-        system("cp src/server/config.min.ini config-server-test-hotspot.ini");
-        system("sed -i \"/^\\s*enable_detect_hotkey/c enable_detect_hotkey = "
-               "true\" config-server-test-hotspot.ini");
-        system("./run.sh start_onebox -c -w --config_path config-server-test-hotspot.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-
         std::vector<dsn::rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));
@@ -184,14 +181,6 @@ public:
 
         auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 4, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
-    }
-
-    void TearDown() override
-    {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
     }
 
     void set_throttle(throttle_type type, uint64_t value)
