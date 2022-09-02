@@ -93,8 +93,9 @@ struct throttle_test_recorder
                                               "first_1000_ms_successful_size",
                                               "first_5000_ms_successful_size"};
 
-    throttle_test_recorder() {
-        for (const auto& key : parameter_seq) {
+    throttle_test_recorder()
+    {
+        for (const auto &key : parameter_seq) {
             records[key] = 0;
         }
     }
