@@ -47,7 +47,7 @@ static const int timeout_ms = 5000;
 static const int max_multi_set_concurrency = 20;
 static const int default_partitions = 4;
 static const string empty_hash_key = "";
-static const string srouce_app_name = "copy_data_source_table";
+static const string source_app_name = "copy_data_source_table";
 static const string destination_app_name = "copy_data_destination_table";
 static char buffer[256];
 static map<string, map<string, string>> base_data;
@@ -67,11 +67,8 @@ public:
 
     void TearDown() override
     {
-        ddebug_f("TearDown...");
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
+        ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(source_app_name, 0));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(destination_app_name, 0));
     }
 
     void verify_data()
@@ -104,14 +101,14 @@ public:
     void create_table_and_get_client()
     {
         dsn::error_code err;
-        err = ddl_client->create_app(srouce_app_name, "pegasus", default_partitions, 3, {}, false);
+        err = ddl_client->create_app(source_app_name, "pegasus", default_partitions, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
 
         err = ddl_client->create_app(
             destination_app_name, "pegasus", default_partitions, 3, {}, false);
         ASSERT_EQ(dsn::ERR_OK, err);
 
-        srouce_client = pegasus_client_factory::get_client("mycluster", srouce_app_name.c_str());
+        srouce_client = pegasus_client_factory::get_client("mycluster", source_app_name.c_str());
         destination_client =
             pegasus_client_factory::get_client("mycluster", destination_app_name.c_str());
     }

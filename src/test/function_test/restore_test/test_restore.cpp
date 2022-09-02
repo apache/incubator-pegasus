@@ -40,37 +40,7 @@ public:
 
     void SetUp() override
     {
-        pegasus_root_dir = global_env::instance()._pegasus_root;
-
-        chdir(pegasus_root_dir.c_str());
-        system("pwd");
-
-        // modify the config to enable backup, and restart onebox
-        system("./run.sh clear_onebox");
-        system("cp src/server/config.min.ini config-server-test-restore.ini");
-        system("sed -i \"/^\\s*cold_backup_disabled/c cold_backup_disabled = false\" "
-               "config-server-test-restore.ini");
-        system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c "
-               "cold_backup_checkpoint_reserve_minutes = 0\" "
-               "config-server-test-restore.ini");
-        std::string cmd = "sed -i \"/^\\s*cold_backup_root/c cold_backup_root = " + cluster_name;
-        cmd = cmd + std::string("\" config-server-test-restore.ini");
-        system(cmd.c_str());
-        system("./run.sh start_onebox -w --config_path config-server-test-restore.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-
-        // First of all, we are in the path of pegasus root, for example: /home/mi/pegasus.
-        // And we can get the provider_dir which actually is `block_service/local_service`,
-        // from config-server-test-restore.ini.
-        // With cluster_name = mycluster and policy_name = policy_1, we can get the absolute
-        // path of policy: /home/mi/pegasus/onebox/block_service/local_service/mycluster/policy_1
-        cmd = "grep -A 5 block_service." + backup_provider_name +
-              " config-server-test-restore.ini | grep args | cut -f2,3 -d'/'";
-        std::stringstream ss;
-        int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
-        std::cout << cmd << " output: " << ss.str() << std::endl;
-        dcheck_eq(ret, 0);
-        std::string provider_dir = ss.str().substr(0, ss.str().length() - 1);
+        std::string provider_dir = "block_service/local_service";
         policy_dir = "onebox/" + provider_dir + '/' +
                      dsn::utils::filesystem::path_combine(cluster_name, policy_name);
         backup_dir = "onebox/" + provider_dir + '/' + cluster_name;
@@ -113,10 +83,7 @@ public:
 
     void TearDown() override
     {
-        chdir(global_env::instance()._pegasus_root.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(global_env::instance()._working_dir.c_str());
+        ASSERT_EQ(ERR_OK, ddl_client->drop_app(app_name, 0));
     }
 
     void write_data()
@@ -274,6 +241,8 @@ public:
 
     int64_t get_first_backup_timestamp()
     {
+        std::string pegasus_root_dir = global_env::instance()._pegasus_root;
+        chdir(pegasus_root_dir.c_str());
         std::string cmd = "cd " + backup_dir + "; "
                                                "ls -c > restore_app_from_backup_test_tmp; "
                                                "tail -n 1 restore_app_from_backup_test_tmp; "
@@ -314,7 +283,6 @@ public:
     pegasus_client *pg_client;
     pegasus_client *new_pg_client;
     std::shared_ptr<replication_ddl_client> ddl_client;
-    std::string pegasus_root_dir;
     std::string policy_dir;
     std::string backup_dir;
 

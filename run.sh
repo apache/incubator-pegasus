@@ -416,6 +416,12 @@ function run_test()
             if [ "${test_modules}" == "recovery_test" ]; then
                 opts="meta_state_service_type=meta_state_service_simple,distributed_lock_service_type=distributed_lock_service_simple"
             fi
+            if [ "${test_modules}" == "backup_restore_test" ]; then
+                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=onebox"
+            fi
+            if [ "${test_modules}" == "restore_test" ]; then
+                opts="cold_backup_disabled=false,cold_backup_checkpoint_reserve_minutes=0,cold_backup_root=mycluster"
+            fi
             if ! run_start_onebox -w -m 1 -c --opts ${opts}; then
                 echo "ERROR: unable to continue on testing because starting onebox failed"
                 exit 1

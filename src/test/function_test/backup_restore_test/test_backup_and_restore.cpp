@@ -48,26 +48,6 @@ public:
 
     void SetUp() override
     {
-        // initialize root dirs
-        _pegasus_root_dir = global_env::instance()._pegasus_root;
-        _working_root_dir = global_env::instance()._working_dir;
-
-        // modify the config to enable backup, and restart onebox
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("cp src/server/config.min.ini config.test_backup_restore.ini");
-        system("sed -i \"/^\\s*cold_backup_disabled/c cold_backup_disabled = false\" "
-               "config.test_backup_restore.ini");
-        system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c "
-               "cold_backup_checkpoint_reserve_minutes = 0\" "
-               "config.test_backup_restore.ini");
-        std::string cmd = fmt::format("sed -i \"/^\\s*cold_backup_root/c cold_backup_root = {}\" "
-                                      "config.test_backup_restore.ini",
-                                      _cluster_name);
-        system(cmd.c_str());
-        system("./run.sh start_onebox -w --config_path config.test_backup_restore.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-
         // initialize ddl_client
         std::vector<rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
@@ -79,10 +59,8 @@ public:
 
     void TearDown() override
     {
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(_working_root_dir.c_str());
+        ASSERT_EQ(ERR_OK, _ddl_client->drop_app(_old_app_name, 0));
+        ASSERT_EQ(ERR_OK, _ddl_client->drop_app(_new_app_name, 0));
     }
 
     bool write_data()
@@ -235,8 +213,6 @@ private:
     const std::string _new_app_name;
     const std::string _provider;
 
-    std::string _pegasus_root_dir;
-    std::string _working_root_dir;
     int32_t _old_app_id;
 };
 
