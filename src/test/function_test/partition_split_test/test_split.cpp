@@ -190,6 +190,7 @@ public:
         std::cout << "Start full scan after partition split......" << std::endl;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
         pegasus_client::scan_options options;
+        options.timeout_ms = 30000;
         auto ret = pg_client->get_unordered_scanners(10000, options, scanners);
         ASSERT_EQ(ret, PERR_OK);
         int32_t count = 0;
@@ -238,7 +239,7 @@ TEST_F(partition_split_test, split_with_write)
     } while (!is_split_finished());
     std::cout << "Partition split succeed" << std::endl;
 
-    verify_data_after_split();
+    ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
 
 TEST_F(partition_split_test, split_with_read)
@@ -249,7 +250,7 @@ TEST_F(partition_split_test, split_with_read)
         std::this_thread::sleep_for(std::chrono::seconds(1));
     } while (!is_split_finished());
     std::cout << "Partition split succeed" << std::endl;
-    verify_data_after_split();
+    ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
 
 TEST_F(partition_split_test, split_with_scan)
@@ -261,9 +262,9 @@ TEST_F(partition_split_test, split_with_scan)
         ++count;
     } while (!is_split_finished());
     std::cout << "Partition split succeed" << std::endl;
-    verify_data_after_split();
+    ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
     std::this_thread::sleep_for(std::chrono::seconds(30));
-    full_scan_after_split();
+    ASSERT_NO_FATAL_FAILURE(full_scan_after_split());
 }
 
 TEST_F(partition_split_test, pause_split)
@@ -294,7 +295,7 @@ TEST_F(partition_split_test, pause_split)
     } while (!is_split_finished());
     std::cout << "Partition split succeed" << std::endl;
 
-    verify_data_after_split();
+    ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
 
 TEST_F(partition_split_test, cancel_split)
@@ -325,5 +326,5 @@ TEST_F(partition_split_test, cancel_split)
         std::this_thread::sleep_for(std::chrono::seconds(1));
     } while (!is_split_finished());
 
-    verify_data_after_split();
+    ASSERT_NO_FATAL_FAILURE(verify_data_after_split());
 }
