@@ -108,7 +108,7 @@ void replica_backup_manager::report_checkpointing(/*out*/ backup_response &respo
 // ThreadPool: THREAD_POOL_REPLICATION
 void replica_backup_manager::try_to_upload(const std::string &provider_type,
                                            const std::string &root_path,
-                                           const std::string app_name,
+                                           const std::string &app_name,
                                            /*out*/ backup_response &response)
 {
     switch (get_backup_status()) {
@@ -141,6 +141,7 @@ void replica_backup_manager::start_uploading(const std::string &provider_name,
         response.err = ERR_OK;
     });
     zauto_write_lock l(_lock);
+    _upload_err = ERR_IO_PENDING;
     _uploading_task = tasking::enqueue(
         LPC_BACKGROUND_COLD_BACKUP,
         tracker(),

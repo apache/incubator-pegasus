@@ -61,7 +61,7 @@ private:
     void try_to_checkpoint(const int64_t &backup_id, /*out*/ backup_response &response);
     void try_to_upload(const std::string &provider_type,
                        const std::string &root_path,
-                       const std::string app_name,
+                       const std::string &app_name,
                        /*out*/ backup_response &response);
     void start_checkpointing(int64_t backup_id, /*out*/ backup_response &response);
     void report_checkpointing(/*out*/ backup_response &response);
@@ -134,7 +134,7 @@ private:
     backup_status::type _status{backup_status::UNINITIALIZED};
     int64_t _backup_id{0};
     error_code _checkpoint_err{ERR_OK};
-    error_code _upload_err{ERR_IO_PENDING};
+    error_code _upload_err{ERR_OK};
     cold_backup_metadata _backup_metadata;
     task_ptr _checkpointing_task;
     task_ptr _uploading_task;
