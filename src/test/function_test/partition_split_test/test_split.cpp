@@ -70,8 +70,7 @@ public:
         return err_resp.get_value().err == ERR_INVALID_STATE;
     }
 
-    bool check_partition_split_status(int32_t target_pidx,
-                                      split_status::type target_status)
+    bool check_partition_split_status(int32_t target_pidx, split_status::type target_status)
     {
         auto err_resp = ddl_client->query_partition_split(_table_name);
         auto status_map = err_resp.get_value().status;
@@ -95,8 +94,8 @@ public:
                                        int32_t parent_pidx,
                                        int32_t old_partition_count = 0)
     {
-        auto err_resp =
-            ddl_client->control_partition_split(_table_name, type, parent_pidx, old_partition_count);
+        auto err_resp = ddl_client->control_partition_split(
+            _table_name, type, parent_pidx, old_partition_count);
         return err_resp.get_value().err;
     }
 
@@ -274,10 +273,8 @@ TEST_F(partition_split_test, pause_split)
     do {
         write_data_during_split();
         // pause target partition split
-        if (!already_pause &&
-            check_partition_split_status(-1, split_status::SPLITTING)) {
-            error_code error =
-                control_partition_split(split_control_type::PAUSE, target_partition);
+        if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
+            error_code error = control_partition_split(split_control_type::PAUSE, target_partition);
             ASSERT_EQ(ERR_OK, error);
             std::cout << "Table(" << _table_name << ") pause partition[" << target_partition
                       << "] split succeed" << std::endl;
@@ -308,8 +305,7 @@ TEST_F(partition_split_test, cancel_split)
     do {
         write_data_during_split();
         // pause all partition split
-        if (!already_pause &&
-            check_partition_split_status(-1, split_status::SPLITTING)) {
+        if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
             error = control_partition_split(split_control_type::PAUSE, -1);
             ASSERT_EQ(ERR_OK, error);
             std::cout << "Table(" << _table_name << ") pause all partitions split succeed"
