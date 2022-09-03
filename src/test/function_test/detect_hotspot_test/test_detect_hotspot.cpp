@@ -148,17 +148,18 @@ public:
 
     void write_hotspot_data()
     {
-        generate_dataset(warmup_second, detection_type::write_data, key_type::random_dataset);
-        generate_dataset(
-            max_detection_second, detection_type::write_data, key_type::hotspot_dataset);
-        get_result(detection_type::write_data, key_type::hotspot_dataset);
+        ASSERT_NO_FATAL_FAILURE(
+            generate_dataset(warmup_second, detection_type::write_data, key_type::random_dataset));
+        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+            max_detection_second, detection_type::write_data, key_type::hotspot_dataset));
+        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::write_data, key_type::hotspot_dataset));
     }
 
     void write_random_data()
     {
-        generate_dataset(
-            max_detection_second, detection_type::write_data, key_type::random_dataset);
-        get_result(detection_type::write_data, key_type::random_dataset);
+        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+            max_detection_second, detection_type::write_data, key_type::random_dataset));
+        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::write_data, key_type::random_dataset));
     }
 
     void capture_until_maxtime()
@@ -179,8 +180,8 @@ public:
 
         // max_detection_second > max_seconds_to_detect_hotkey
         int max_seconds_to_detect_hotkey = 160;
-        generate_dataset(
-            max_seconds_to_detect_hotkey, detection_type::write_data, key_type::random_dataset);
+        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+            max_seconds_to_detect_hotkey, detection_type::write_data, key_type::random_dataset));
 
         req.action = dsn::replication::detect_action::QUERY;
         errinfo = ddl_client->detect_hotkey(partitions[target_partition].primary, req, resp);
@@ -190,16 +191,18 @@ public:
 
     void read_hotspot_data()
     {
-        generate_dataset(warmup_second, detection_type::read_data, key_type::hotspot_dataset);
-        generate_dataset(
-            max_detection_second, detection_type::read_data, key_type::hotspot_dataset);
-        get_result(detection_type::read_data, key_type::hotspot_dataset);
+        ASSERT_NO_FATAL_FAILURE(
+            generate_dataset(warmup_second, detection_type::read_data, key_type::hotspot_dataset));
+        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+            max_detection_second, detection_type::read_data, key_type::hotspot_dataset));
+        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::read_data, key_type::hotspot_dataset));
     }
 
     void read_random_data()
     {
-        generate_dataset(max_detection_second, detection_type::read_data, key_type::random_dataset);
-        get_result(detection_type::read_data, key_type::random_dataset);
+        ASSERT_NO_FATAL_FAILURE(generate_dataset(
+            max_detection_second, detection_type::read_data, key_type::random_dataset));
+        ASSERT_NO_FATAL_FAILURE(get_result(detection_type::read_data, key_type::random_dataset));
     }
 
     const std::string app_name = "hotspot_test";
