@@ -26,7 +26,6 @@
 
 #include <algorithm>
 
-#include "dsn/dist/fmt_logging.h"
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/partition_resolver.h>
 #include "partition_resolver_manager.h"
@@ -62,10 +61,6 @@ partition_resolver_ptr partition_resolver_manager::find_or_create(
         dsn::rpc_address meta_group;
         meta_group.assign_group(cluster_name);
         meta_group.group_address()->add_list(meta_list);
-        derror_f("meta_list:");
-        for (const auto &meta : meta_list) {
-            derror_f("{} ", meta.to_std_string());
-        }
         ptr = new partition_resolver_simple(meta_group, app_name);
         return ptr;
     } else {
@@ -73,14 +68,6 @@ partition_resolver_ptr partition_resolver_manager::find_or_create(
         const std::vector<dsn::rpc_address> &existing_list = meta_group.group_address()->members();
         if (!vector_equal(meta_list, existing_list)) {
             derror("meta list not match for cluster(%s)", cluster_name);
-            derror_f("meta_list:");
-            for (const auto &meta : meta_list) {
-                derror_f("{} ", meta.to_std_string());
-            }
-            derror_f("existing_list:");
-            for (const auto &meta : existing_list) {
-                derror_f("{} ", meta.to_std_string());
-            }
             return nullptr;
         }
         return ptr;
