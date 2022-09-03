@@ -60,8 +60,7 @@ public:
     {
         count_during_split = 0;
         expected.clear();
-        error_code error = ddl_client->drop_app(_table_name, 0);
-        ASSERT_EQ(ERR_OK, error);
+        ASSERT_EQ(ERR_OK, ddl_client->drop_app(_table_name, 0));
     }
 
     bool is_split_finished()
@@ -145,8 +144,10 @@ public:
     {
         std::cout << "Verify data(count=" << dataset_count + count_during_split
                   << ") after partition split......" << std::endl;
-        verify_data(dataset_hashkey_prefix, dataset_sortkey_prefix, dataset_count);
-        verify_data(splitting_hashkey_prefix, splitting_sortkey_prefix, count_during_split);
+        ASSERT_NO_FATAL_FAILURE(
+            verify_data(dataset_hashkey_prefix, dataset_sortkey_prefix, dataset_count));
+        ASSERT_NO_FATAL_FAILURE(
+            verify_data(splitting_hashkey_prefix, splitting_sortkey_prefix, count_during_split));
     }
 
     void verify_data(const std::string &hashkey_prefix,
@@ -156,10 +157,9 @@ public:
         for (auto i = 0; i < count; ++i) {
             std::string hash_key = hashkey_prefix + std::to_string(i);
             std::string sort_key = sortkey_prefix + std::to_string(i);
-            std::string expected_value;
-            auto ret = pg_client->get(hash_key, sort_key, expected_value);
-            ASSERT_EQ(ret, PERR_OK);
-            ASSERT_EQ(expected[hash_key][sort_key], expected_value);
+            std::string value;
+            ASSERT_EQ(PERR_OK, pg_client->get(hash_key, sort_key, expected_value));
+            ASSERT_EQ(expected[hash_key][sort_key], value);
         }
     }
 
