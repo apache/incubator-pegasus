@@ -25,7 +25,6 @@
  */
 
 #include <algorithm>
-
 #include <dsn/tool-api/group_address.h>
 #include <dsn/dist/replication/partition_resolver.h>
 #include "partition_resolver_manager.h"
