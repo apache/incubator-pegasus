@@ -49,13 +49,13 @@ public:
     {
         ddebug("SetUp...");
         test_util::SetUp();
-        fill_database();
+        ASSERT_NO_FATAL_FAILURE(fill_database());
     }
 
     void TearDown() override
     {
         ddebug("TearDown...");
-        clear_database();
+        ASSERT_NO_FATAL_FAILURE(clear_database());
     }
 
     // REQUIRED: 'buffer' has been filled with random chars.
@@ -93,7 +93,6 @@ public:
                                   << ", error=" << client->get_error_string(r);
             i++;
         }
-        std::cout << "================ set count: " << i;
         delete scanners[0];
 
         ASSERT_EQ(PERR_SCAN_COMPLETE, ret)
@@ -107,8 +106,9 @@ public:
 
         ret = scanners[0]->next(hash_key, sort_key, value);
         delete scanners[0];
-        ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when clearing database. error="
-                                           << client->get_error_string(ret);
+        ASSERT_EQ(PERR_SCAN_COMPLETE, ret)
+            << "Error occurred when clearing database. error=" << client->get_error_string(ret)
+            << ", " << hash_key << " : " << sort_key;
 
         base.clear();
 
@@ -185,7 +185,6 @@ public:
         }
 
         ddebug("Database filled.");
-        std::cout << "================ set count: " << i;
     }
 };
 

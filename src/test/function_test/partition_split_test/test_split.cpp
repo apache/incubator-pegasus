@@ -158,7 +158,7 @@ public:
             std::string hash_key = hashkey_prefix + std::to_string(i);
             std::string sort_key = sortkey_prefix + std::to_string(i);
             std::string value;
-            ASSERT_EQ(PERR_OK, pg_client->get(hash_key, sort_key, expected_value));
+            ASSERT_EQ(PERR_OK, pg_client->get(hash_key, sort_key, value));
             ASSERT_EQ(expected[hash_key][sort_key], value);
         }
     }
