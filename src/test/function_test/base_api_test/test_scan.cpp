@@ -188,7 +188,7 @@ public:
     }
 };
 
-TEST_F(scan, DISABLED_OVERALL_COUNT_ONLY)
+TEST_F(scan, OVERALL_COUNT_ONLY)
 {
     ddebug("TEST OVERALL_SCAN_COUNT_ONLY...");
     pegasus_client::scan_options options;

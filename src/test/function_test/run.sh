@@ -26,4 +26,4 @@ if [ -z ${TEST_BIN} ]; then
     exit 1
 fi
 
-GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN} --gtest_filter=scan.ITERATION_TIME_LIMIT
+GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN}
