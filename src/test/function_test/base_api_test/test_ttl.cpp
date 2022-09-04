@@ -39,7 +39,7 @@ std::string ttl_test_value_2 = "ttl_test_value_2";
 int default_ttl = 3600;
 int specify_ttl = 5;
 int sleep_for_expiring = 10;
-int sleep_for_envs_effect = 65;
+int sleep_for_envs_effect = 31;
 int error_allow = 2;
 int timeout = 5000;
 

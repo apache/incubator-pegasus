@@ -34,7 +34,7 @@ using std::vector;
 
 namespace pegasus {
 
-test_util::test_util() {}
+test_util::test_util() : cluster_name_("mycluster"), app_name_("temp") {}
 
 test_util::~test_util() {}
 
@@ -42,14 +42,16 @@ void test_util::SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize
 
 void test_util::SetUp()
 {
-    client = pegasus_client_factory::get_client("mycluster", "temp");
-    ASSERT_TRUE(client != nullptr);
     vector<rpc_address> meta_list;
     ASSERT_TRUE(replica_helper::load_meta_servers(
-        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
+        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), cluster_name_.c_str()));
     ASSERT_FALSE(meta_list.empty());
     ddl_client = std::make_shared<replication_ddl_client>(meta_list);
     ASSERT_TRUE(ddl_client != nullptr);
+
+    ASSERT_EQ(dsn::ERR_OK, ddl_client->create_app(app_name_, "pegasus", 8, 3, {}, false));
+    client = pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+    ASSERT_TRUE(client != nullptr);
 }
 
 } // namespace pegasus

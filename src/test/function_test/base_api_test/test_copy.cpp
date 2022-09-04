@@ -59,7 +59,6 @@ class copy_data_test : public test_util
 public:
     void SetUp() override
     {
-        ddebug_f("SetUp...");
         test_util::SetUp();
         create_table_and_get_client();
         fill_data();
@@ -67,6 +66,7 @@ public:
 
     void TearDown() override
     {
+        test_util::TearDown();
         ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(source_app_name, 0));
         ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(destination_app_name, 0));
     }

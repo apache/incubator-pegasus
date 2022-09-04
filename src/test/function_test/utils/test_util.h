@@ -39,9 +39,12 @@ public:
     virtual ~test_util();
 
     static void SetUpTestCase();
+
     void SetUp() override;
 
 protected:
+    std::string cluster_name_;
+    std::string app_name_;
     pegasus_client *client = nullptr;
     std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client;
 };

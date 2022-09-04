@@ -98,8 +98,7 @@ TEST_F(drop_and_recall, simple)
 
     // then drop the table
     std::cerr << "drop table " << simple_table << std::endl;
-    error = ddl_client->drop_app(simple_table, 0);
-    ASSERT_EQ(0, error);
+    ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(simple_table, 0));
 
     // wait for all elements to be dropped
     for (int i = 0; i < partition_count; ++i) {
