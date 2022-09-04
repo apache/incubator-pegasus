@@ -52,51 +52,49 @@ public:
     {
         string cmd = "curl 'localhost:34101/updateConfig?enable_detect_hotkey=true'";
         std::stringstream ss;
-        int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
-        std::cout << cmd << " output: " << ss.str() << std::endl;
-        ASSERT_EQ(ret, 0);
+        ASSERT_EQ(0, dsn::utils::pipe_execute(cmd.c_str(), ss)) << cmd << " output: " << ss.str()
+                                                                << std::endl;
 
         std::vector<dsn::rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "single_master_cluster"));
         ASSERT_FALSE(meta_list.empty());
 
-        ddl_client = std::make_shared<replication_ddl_client>(meta_list);
-        ASSERT_TRUE(ddl_client != nullptr);
+        ddl_client_ = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client_ != nullptr);
+
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false));
+
         pg_client =
             pegasus::pegasus_client_factory::get_client("single_master_cluster", app_name.c_str());
         ASSERT_TRUE(pg_client != nullptr);
 
-        auto err = ddl_client->create_app(app_name.c_str(), "pegasus", 8, 3, {}, false);
-        ASSERT_EQ(dsn::ERR_OK, err);
-
-        err = ddl_client->list_app(app_name, app_id, partition_count, partitions);
-        ASSERT_EQ(dsn::ERR_OK, err);
+        int32_t partition_count = 0;
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->list_app(app_name, app_id, partition_count, partitions));
     }
 
     void generate_dataset(int64_t time_duration, detection_type dt, key_type kt)
     {
         int64_t start = dsn_now_s();
-        int err = PERR_OK;
-        ASSERT_NE(pg_client, nullptr);
-
         for (int i = 0; dsn_now_s() - start < time_duration; ++i %= 1000) {
             std::string index = std::to_string(i);
             std::string h_key = generate_hotkey(kt, 50);
             std::string s_key = "sortkey_" + index;
             std::string value = "value_" + index;
             if (dt == detection_type::write_data) {
-                err = pg_client->set(h_key, s_key, value);
-                ASSERT_EQ(err, PERR_OK);
+                ASSERT_EQ(PERR_OK, pg_client->set(h_key, s_key, value));
             } else {
-                err = pg_client->get(h_key, s_key, value);
-                ASSERT_TRUE((err == PERR_OK) || err == (PERR_NOT_FOUND));
+                int err = pg_client->get(h_key, s_key, value);
+                ASSERT_TRUE(err == PERR_OK || err == PERR_NOT_FOUND);
             }
         }
     }
 
     void get_result(detection_type dt, key_type expect_hotspot)
     {
+        dsn::replication::detect_hotkey_request req;
         if (dt == detection_type::write_data) {
             req.type = dsn::replication::hotkey_type::type::WRITE;
         } else {
@@ -106,11 +104,11 @@ public:
 
         bool find_hotkey = false;
         int partition_index;
+        dsn::replication::detect_hotkey_response resp;
         for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
             req.pid = dsn::gpid(app_id, partition_index);
-            auto errinfo =
-                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-            ASSERT_EQ(errinfo, dsn::ERR_OK);
+            ASSERT_EQ(dsn::ERR_OK,
+                      ddl_client_->detect_hotkey(partitions[partition_index].primary, req, resp));
             if (!resp.hotkey_result.empty()) {
                 find_hotkey = true;
                 break;
@@ -118,8 +116,8 @@ public:
         }
         if (expect_hotspot == key_type::hotspot_dataset) {
             ASSERT_TRUE(find_hotkey);
-            ASSERT_EQ(resp.err, dsn::ERR_OK);
-            ASSERT_EQ(resp.hotkey_result, "ThisisahotkeyThisisahotkey");
+            ASSERT_EQ(dsn::ERR_OK, resp.err);
+            ASSERT_EQ("ThisisahotkeyThisisahotkey", resp.hotkey_result);
         } else {
             ASSERT_FALSE(find_hotkey);
         }
@@ -129,20 +127,18 @@ public:
 
         req.action = dsn::replication::detect_action::STOP;
         for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
-            auto errinfo =
-                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-            ASSERT_EQ(errinfo, dsn::ERR_OK);
-            ASSERT_EQ(resp.err, dsn::ERR_OK);
+            ASSERT_EQ(dsn::ERR_OK,
+                      ddl_client_->detect_hotkey(partitions[partition_index].primary, req, resp));
+            ASSERT_EQ(dsn::ERR_OK, resp.err);
         }
 
         req.action = dsn::replication::detect_action::QUERY;
         for (partition_index = 0; partition_index < partitions.size(); partition_index++) {
             req.pid = dsn::gpid(app_id, partition_index);
-            auto errinfo =
-                ddl_client->detect_hotkey(partitions[partition_index].primary, req, resp);
-            ASSERT_EQ(errinfo, dsn::ERR_OK);
-            ASSERT_EQ(resp.err_hint,
-                      "Can't get hotkey now, now state: hotkey_collector_state::STOPPED");
+            ASSERT_EQ(dsn::ERR_OK,
+                      ddl_client_->detect_hotkey(partitions[partition_index].primary, req, resp));
+            ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::STOPPED",
+                      resp.err_hint);
         }
     }
 
@@ -165,18 +161,21 @@ public:
     void capture_until_maxtime()
     {
         int target_partition = 2;
+        dsn::replication::detect_hotkey_request req;
         req.type = dsn::replication::hotkey_type::type::WRITE;
         req.action = dsn::replication::detect_action::START;
-
         req.pid = dsn::gpid(app_id, target_partition);
-        auto errinfo = ddl_client->detect_hotkey(partitions[target_partition].primary, req, resp);
-        ASSERT_EQ(errinfo, dsn::ERR_OK);
-        ASSERT_EQ(resp.err, dsn::ERR_OK);
+
+        dsn::replication::detect_hotkey_response resp;
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->detect_hotkey(partitions[target_partition].primary, req, resp));
+        ASSERT_EQ(dsn::ERR_OK, resp.err);
 
         req.action = dsn::replication::detect_action::QUERY;
-        errinfo = ddl_client->detect_hotkey(partitions[target_partition].primary, req, resp);
-        ASSERT_EQ(resp.err_hint,
-                  "Can't get hotkey now, now state: hotkey_collector_state::COARSE_DETECTING");
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->detect_hotkey(partitions[target_partition].primary, req, resp));
+        ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::COARSE_DETECTING",
+                  resp.err_hint);
 
         // max_detection_second > max_seconds_to_detect_hotkey
         int max_seconds_to_detect_hotkey = 160;
@@ -184,9 +183,10 @@ public:
             max_seconds_to_detect_hotkey, detection_type::write_data, key_type::random_dataset));
 
         req.action = dsn::replication::detect_action::QUERY;
-        errinfo = ddl_client->detect_hotkey(partitions[target_partition].primary, req, resp);
-        ASSERT_EQ(resp.err_hint,
-                  "Can't get hotkey now, now state: hotkey_collector_state::STOPPED");
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->detect_hotkey(partitions[target_partition].primary, req, resp));
+        ASSERT_EQ("Can't get hotkey now, now state: hotkey_collector_state::STOPPED",
+                  resp.err_hint);
     }
 
     void read_hotspot_data()
@@ -206,14 +206,11 @@ public:
     }
 
     const std::string app_name = "hotspot_test";
-    const int64_t max_detection_second = 100;
-    const int64_t warmup_second = 30;
+    const int64_t max_detection_second = 30;
+    const int64_t warmup_second = 5;
     int32_t app_id;
-    int32_t partition_count;
     std::vector<dsn::partition_configuration> partitions;
-    dsn::replication::detect_hotkey_response resp;
-    dsn::replication::detect_hotkey_request req;
-    std::shared_ptr<replication_ddl_client> ddl_client;
+    std::shared_ptr<replication_ddl_client> ddl_client_;
     pegasus::pegasus_client *pg_client;
 };
 

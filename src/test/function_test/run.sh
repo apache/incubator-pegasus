@@ -27,3 +27,12 @@ if [ -z ${TEST_BIN} ]; then
 fi
 
 GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN}
+
+if [ $? -ne 0 ]; then
+    echo "---- ls ----"
+    ls -l
+    if [ -f core ]; then
+        gdb ./${TEST_BIN} core -ex "thread apply all bt" -ex "set pagination 0" -batch
+    fi
+    exit 1
+fi

@@ -46,6 +46,14 @@ int timeout = 5000;
 class ttl : public test_util
 {
 public:
+    void SetUp() override
+    {
+        test_util::SetUp();
+        set_default_ttl(0);
+    }
+
+    void TearDown() override { set_default_ttl(0); }
+
     void set_default_ttl(int ttl)
     {
         std::map<std::string, std::string> envs;
@@ -66,9 +74,6 @@ public:
 
 TEST_F(ttl, set_without_default_ttl)
 {
-    // unset default_ttl
-    set_default_ttl(0);
-
     // set with ttl
     int ret =
         client->set(ttl_hash_key, ttl_test_sort_key_1, ttl_test_value_1, timeout, specify_ttl);
@@ -145,9 +150,6 @@ TEST_F(ttl, set_without_default_ttl)
 
 TEST_F(ttl, set_with_default_ttl)
 {
-    // unset default_ttl
-    set_default_ttl(0);
-
     // set without ttl
     int ret = client->set(ttl_hash_key, ttl_test_sort_key_0, ttl_test_value_0);
     ASSERT_EQ(PERR_OK, ret);
