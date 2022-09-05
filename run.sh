@@ -621,6 +621,8 @@ function usage_start_onebox()
     echo "                                                                  ./src/server/config.ini in production env"
     echo "   --use_product_config"
     echo "                     use the product config template"
+    echo "   --opts"
+    echo "                     update configs before start onebox, the configs are in the form of 'key1=value1,key2=value2'"
 }
 
 function run_start_onebox()
