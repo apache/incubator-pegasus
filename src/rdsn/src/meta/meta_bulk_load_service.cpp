@@ -328,7 +328,10 @@ bool bulk_load_service::check_partition_status(
     std::shared_ptr<app_state> app = get_app(pid.get_app_id());
     if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
         dwarn_f(
-            "app(name={}, id={}) is not existed, set bulk load failed", app_name, pid.get_app_id());
+            "app(name={}, id={}, status={}) is not existed or not available, set bulk load failed",
+            app_name,
+            pid.get_app_id(),
+            app ? dsn::enum_to_string(app->status) : "-");
         handle_app_unavailable(pid.get_app_id(), app_name);
         return false;
     }
