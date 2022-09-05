@@ -20,24 +20,22 @@
 #include <dsn/utility/filesystem.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
-#include <pegasus/client.h>
-#include <pegasus/error.h>
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/test_util.h"
 
 using namespace dsn;
 using namespace dsn::replication;
 using namespace pegasus;
 
-class backup_restore_test : public testing::Test
+class backup_restore_test : public test_util
 {
 public:
     backup_restore_test()
-        : _ddl_client(nullptr),
-          _num_of_rows(1000),
+        : _num_of_rows(1000),
           _check_interval_sec(10),
-          _cluster_name("onebox"),
           _old_app_name("test_app"),
           _new_app_name("new_app"),
           _provider("local_service")
@@ -46,115 +44,48 @@ public:
 
     void SetUp() override
     {
-        // initialize root dirs
-        _pegasus_root_dir = global_env::instance()._pegasus_root;
-        _working_root_dir = global_env::instance()._working_dir;
-
-        // modify the config to enable backup, and restart onebox
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("cp src/server/config.min.ini config.test_backup_restore.ini");
-        system("sed -i \"/^\\s*cold_backup_disabled/c cold_backup_disabled = false\" "
-               "config.test_backup_restore.ini");
-        system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c "
-               "cold_backup_checkpoint_reserve_minutes = 0\" "
-               "config.test_backup_restore.ini");
-        std::string cmd = fmt::format("sed -i \"/^\\s*cold_backup_root/c cold_backup_root = {}\" "
-                                      "config.test_backup_restore.ini",
-                                      _cluster_name);
-        system(cmd.c_str());
-        system("./run.sh start_onebox --config_path config.test_backup_restore.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-
-        // initialize ddl_client
-        std::vector<rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), _cluster_name.c_str());
-        _ddl_client = std::make_shared<replication_ddl_client>(meta_list);
-
-        // initialize _old_app_id
-        int32_t partition_count;
-        std::vector<partition_configuration> partitions;
-        _ddl_client->list_app(_old_app_name, _old_app_id, partition_count, partitions);
+        test_util::SetUp();
+        ASSERT_EQ(ERR_OK, ddl_client_->create_app(_old_app_name, "pegasus", 4, 3, {}, false));
+        ASSERT_NO_FATAL_FAILURE(wait_app_become_healthy(_old_app_name, 180));
     }
 
     void TearDown() override
     {
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(_working_root_dir.c_str());
+        test_util::TearDown();
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(_old_app_name, 0));
+        ASSERT_EQ(ERR_OK, ddl_client_->drop_app(_new_app_name, 0));
     }
 
-    bool write_data()
+    void write_data()
     {
         pegasus::pegasus_client *client = pegasus::pegasus_client_factory::get_client(
-            _cluster_name.c_str(), _old_app_name.c_str());
-        if (client == nullptr) {
-            std::cout << "get pegasus client failed" << std::endl;
-            return false;
-        }
+            cluster_name_.c_str(), _old_app_name.c_str());
+        ASSERT_NE(client, nullptr);
 
         for (int i = 0; i < _num_of_rows; ++i) {
-            int ret = client->set("hashkey_" + std::to_string(i),
+            ASSERT_EQ(pegasus::PERR_OK,
+                      client->set("hashkey_" + std::to_string(i),
                                   "sortkey_" + std::to_string(i),
-                                  "value_" + std::to_string(i));
-            if (ret != pegasus::PERR_OK) {
-                std::cout << "write data failed. " << std::endl;
-                return false;
-            }
+                                  "value_" + std::to_string(i)));
         }
-        return true;
     }
 
-    bool verify_data(const std::string &app_name)
+    void verify_data(const std::string &app_name)
     {
         pegasus::pegasus_client *client =
-            pegasus::pegasus_client_factory::get_client(_cluster_name.c_str(), app_name.c_str());
-        if (client == nullptr) {
-            std::cout << "get pegasus client failed" << std::endl;
-            return false;
-        }
+            pegasus::pegasus_client_factory::get_client(cluster_name_.c_str(), app_name.c_str());
+        ASSERT_NE(client, nullptr);
 
         for (int i = 0; i < _num_of_rows; ++i) {
-            const std::string &expected_value = "value_" + std::to_string(i);
             std::string value;
-            int ret =
-                client->get("hashkey_" + std::to_string(i), "sortkey_" + std::to_string(i), value);
-            if (ret != pegasus::PERR_OK) {
-                return false;
-            }
-            if (value != expected_value) {
-                return false;
-            }
+            ASSERT_EQ(
+                pegasus::PERR_OK,
+                client->get("hashkey_" + std::to_string(i), "sortkey_" + std::to_string(i), value));
+            ASSERT_EQ("value_" + std::to_string(i), value);
         }
-        return true;
     }
 
-    start_backup_app_response start_backup(const std::string &user_specified_path = "")
-    {
-        return _ddl_client->backup_app(_old_app_id, _provider, user_specified_path).get_value();
-    }
-
-    query_backup_status_response query_backup(int64_t backup_id)
-    {
-        return _ddl_client->query_backup(_old_app_id, backup_id).get_value();
-    }
-
-    error_code start_restore(int64_t backup_id, const std::string &user_specified_path = "")
-    {
-        return _ddl_client->do_restore(_provider,
-                                       _cluster_name,
-                                       /*policy_name=*/"",
-                                       backup_id,
-                                       _old_app_name,
-                                       _old_app_id,
-                                       _new_app_name,
-                                       /*skip_bad_partition=*/false,
-                                       user_specified_path);
-    }
-
-    bool wait_backup_complete(int64_t backup_id, int max_sleep_seconds)
+    void wait_backup_complete(int64_t backup_id, int max_sleep_seconds)
     {
         int sleep_sec = 0;
         bool is_backup_complete = false;
@@ -163,20 +94,16 @@ public:
             sleep(_check_interval_sec);
             sleep_sec += _check_interval_sec;
 
-            auto resp = query_backup(backup_id);
-            if (resp.err != ERR_OK) {
-                return false;
-            }
+            auto resp = ddl_client_->query_backup(_old_app_id, backup_id).get_value();
+            ASSERT_EQ(ERR_OK, resp.err);
             // we got only one backup_item for a certain app_id and backup_id.
             auto item = resp.backup_items[0];
             is_backup_complete = (item.end_time_ms > 0);
         }
-        return is_backup_complete;
+        ASSERT_TRUE(is_backup_complete);
     }
 
-    // test
-
-    bool wait_app_become_healthy(const std::string &app_name, uint32_t max_sleep_seconds)
+    void wait_app_become_healthy(const std::string &app_name, uint32_t max_sleep_seconds)
     {
         int sleep_sec = 0;
         bool is_app_healthy = false;
@@ -188,11 +115,8 @@ public:
             int32_t new_app_id;
             int32_t partition_count;
             std::vector<partition_configuration> partitions;
-            auto err = _ddl_client->list_app(app_name, _old_app_id, partition_count, partitions);
-            if (err != ERR_OK) {
-                std::cout << "list app " + app_name + " failed" << std::endl;
-                return false;
-            }
+            ASSERT_EQ(ERR_OK,
+                      ddl_client_->list_app(app_name, _old_app_id, partition_count, partitions));
             int32_t healthy_partition_count = 0;
             for (const auto &partition : partitions) {
                 if (partition.primary.is_invalid()) {
@@ -205,47 +129,47 @@ public:
             }
             is_app_healthy = (healthy_partition_count == partition_count);
         }
-        return is_app_healthy;
+        ASSERT_TRUE(is_app_healthy);
     }
 
     void test_backup_and_restore(const std::string &user_specified_path = "")
     {
-        error_code err = _ddl_client->create_app(_old_app_name, "pegasus", 4, 3, {}, false);
-        ASSERT_EQ(ERR_OK, err);
-        ASSERT_TRUE(wait_app_become_healthy(_old_app_name, 180));
+        ASSERT_NO_FATAL_FAILURE(write_data());
+        ASSERT_NO_FATAL_FAILURE(verify_data(_old_app_name));
 
-        ASSERT_TRUE(write_data());
-        ASSERT_TRUE(verify_data(_old_app_name));
-
-        auto resp = start_backup(user_specified_path);
+        auto resp =
+            ddl_client_->backup_app(_old_app_id, _provider, user_specified_path).get_value();
         ASSERT_EQ(ERR_OK, resp.err);
         int64_t backup_id = resp.backup_id;
-        ASSERT_TRUE(wait_backup_complete(backup_id, 180));
-        err = start_restore(backup_id, user_specified_path);
-        ASSERT_EQ(ERR_OK, err);
-        ASSERT_TRUE(wait_app_become_healthy(_new_app_name, 180));
-
-        ASSERT_TRUE(verify_data(_new_app_name));
+        ASSERT_NO_FATAL_FAILURE(wait_backup_complete(backup_id, 180));
+        ASSERT_EQ(ERR_OK,
+                  ddl_client_->do_restore(_provider,
+                                          cluster_name_,
+                                          /*policy_name=*/"",
+                                          backup_id,
+                                          _old_app_name,
+                                          _old_app_id,
+                                          _new_app_name,
+                                          /*skip_bad_partition=*/false,
+                                          user_specified_path));
+        ASSERT_NO_FATAL_FAILURE(wait_app_become_healthy(_new_app_name, 180));
+        ASSERT_NO_FATAL_FAILURE(verify_data(_new_app_name));
     }
 
 private:
-    std::shared_ptr<replication_ddl_client> _ddl_client;
-
     const uint32_t _num_of_rows;
     const uint8_t _check_interval_sec;
-    const std::string _cluster_name;
     const std::string _old_app_name;
     const std::string _new_app_name;
     const std::string _provider;
 
-    std::string _pegasus_root_dir;
-    std::string _working_root_dir;
     int32_t _old_app_id;
 };
 
-TEST_F(backup_restore_test, test_backup_and_restore) { test_backup_and_restore(); }
+TEST_F(backup_restore_test, test_backup_and_restore_basic) { test_backup_and_restore(); }
 
 TEST_F(backup_restore_test, test_backup_and_restore_with_user_specified_path)
 {
     test_backup_and_restore("test/path");
 }
+
