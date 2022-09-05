@@ -174,6 +174,8 @@ public:
         return is_backup_complete;
     }
 
+    // test
+
     bool wait_app_become_healthy(const std::string &app_name, uint32_t max_sleep_seconds)
     {
         int sleep_sec = 0;
