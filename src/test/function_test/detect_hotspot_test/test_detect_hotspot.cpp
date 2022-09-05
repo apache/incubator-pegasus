@@ -206,8 +206,8 @@ public:
     }
 
     const std::string app_name = "hotspot_test";
-    const int64_t max_detection_second = 30;
-    const int64_t warmup_second = 5;
+    const int64_t max_detection_second = 100;
+    const int64_t warmup_second = 30;
     int32_t app_id;
     std::vector<dsn::partition_configuration> partitions;
     std::shared_ptr<replication_ddl_client> ddl_client_;

@@ -52,7 +52,7 @@ public:
         set_default_ttl(0);
     }
 
-    void TearDown() override { set_default_ttl(0); }
+    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(app_name_, 0)); }
 
     void set_default_ttl(int ttl)
     {
