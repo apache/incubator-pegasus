@@ -19,16 +19,17 @@
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/utility/filesystem.h>
 
-#include <pegasus/client.h>
-#include <pegasus/error.h>
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/global_env.h"
 
 using namespace ::dsn;
 using namespace ::dsn::replication;
 using namespace pegasus;
+using std::string;
 
 ///
 /// Files:
@@ -48,31 +49,50 @@ using namespace pegasus;
 class bulk_load_test : public testing::Test
 {
 protected:
-    virtual void SetUp()
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+
+    void SetUp() override
     {
         pegasus_root_dir = global_env::instance()._pegasus_root;
         working_root_dir = global_env::instance()._working_dir;
         bulk_load_local_root =
             utils::filesystem::path_combine("onebox/block_service/local_service/", LOCAL_ROOT);
 
-        // copy bulk_load files
-        copy_bulk_load_files();
-
         // initialize the clients
         std::vector<rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
+        ASSERT_FALSE(meta_list.empty());
 
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
+        ASSERT_TRUE(ddl_client != nullptr);
+
+        auto ret = ddl_client->drop_app(APP_NAME, 0);
+        ASSERT_EQ(ERR_OK, ret);
+
+        ret = ddl_client->create_app(
+            APP_NAME, "pegasus", 8, 3, {{"rocksdb.allow_ingest_behind", "true"}}, false);
+        ASSERT_EQ(ERR_OK, ret);
+        int32_t new_app_id;
+        int32_t partition_count;
+        std::vector<partition_configuration> partitions;
+        ret = ddl_client->list_app(APP_NAME, _app_id, partition_count, partitions);
+        ASSERT_EQ(ERR_OK, ret);
         pg_client = pegasus::pegasus_client_factory::get_client("mycluster", APP_NAME.c_str());
+        ASSERT_TRUE(pg_client != nullptr);
+
+        // copy bulk_load files
+        copy_bulk_load_files();
     }
 
-    virtual void TearDown()
+    void TearDown() override
     {
         chdir(pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(working_root_dir.c_str());
+        string cmd = "rm -rf onebox/block_service";
+        std::stringstream ss;
+        int iret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+        std::cout << cmd << " output: " << ss.str() << std::endl;
+        ASSERT_EQ(iret, 0);
     }
 
 public:
@@ -96,9 +116,19 @@ public:
         system("mkdir onebox/block_service");
         system("mkdir onebox/block_service/local_service");
         std::string copy_file_cmd =
-            "cp -r src/test/function_test/pegasus-bulk-load-function-test-files/" + LOCAL_ROOT +
-            " onebox/block_service/local_service";
+            "cp -r src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/" +
+            LOCAL_ROOT + " onebox/block_service/local_service";
         system(copy_file_cmd.c_str());
+
+        std::stringstream cmd;
+        cmd << "echo '{\"app_id\":";
+        cmd << _app_id;
+        cmd << ",\"app_name\":\"temp\",\"partition_count\":8}' > "
+               "onebox/block_service/local_service/bulk_load_root/cluster/temp/bulk_load_info";
+        std::stringstream ss;
+        int ret = dsn::utils::pipe_execute(cmd.str().c_str(), ss);
+        std::cout << cmd.str() << " output: " << ss.str() << std::endl;
+        ASSERT_EQ(ret, 0);
     }
 
     error_code start_bulk_load(bool ingest_behind = false)
@@ -117,10 +147,11 @@ public:
     void replace_bulk_load_info()
     {
         chdir(pegasus_root_dir.c_str());
-        std::string cmd = "cp -R "
-                          "src/test/function_test/pegasus-bulk-load-function-test-files/"
-                          "mock_bulk_load_info/. " +
-                          bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/";
+        std::string cmd =
+            "cp -R "
+            "src/test/function_test/bulk_load_test/pegasus-bulk-load-function-test-files/"
+            "mock_bulk_load_info/. " +
+            bulk_load_local_root + "/" + CLUSTER + "/" + APP_NAME + "/";
         system(cmd.c_str());
     }
 
@@ -133,14 +164,8 @@ public:
         values.emplace_back(allow_ingest_behind);
         auto err_resp = ddl_client->set_app_envs(APP_NAME, keys, values);
         ASSERT_EQ(err_resp.get_value().err, ERR_OK);
-        std::cout << "sleep 30s to wait app_envs update" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(30));
-        // restart onebox to make config works
-        chdir(pegasus_root_dir.c_str());
-        system("./run.sh stop_onebox");
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        system("./run.sh start_onebox -w");
-        std::this_thread::sleep_for(std::chrono::seconds(20));
+        std::cout << "sleep 31s to wait app_envs update" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(31));
         chdir(working_root_dir.c_str());
     }
 
@@ -168,11 +193,11 @@ public:
 
     void verify_bulk_load_data()
     {
-        ASSERT_TRUE(verify_data("hashkey", "sortkey"));
-        ASSERT_TRUE(verify_data(HASHKEY_PREFIX, SORTKEY_PREFIX));
+        ASSERT_NO_FATAL_FAILURE(verify_data("hashkey", "sortkey"));
+        ASSERT_NO_FATAL_FAILURE(verify_data(HASHKEY_PREFIX, SORTKEY_PREFIX));
     }
 
-    bool verify_data(const std::string &hashkey_prefix, const std::string &sortkey_prefix)
+    void verify_data(const std::string &hashkey_prefix, const std::string &sortkey_prefix)
     {
         const std::string &expected_value = VALUE;
         for (int i = 0; i < COUNT; ++i) {
@@ -181,20 +206,13 @@ public:
                 std::string sort_key = sortkey_prefix + std::to_string(j);
                 std::string act_value;
                 int ret = pg_client->get(hash_key, sort_key, act_value);
-                if (ret != PERR_OK) {
-                    std::cout << "Failed to get [" << hash_key << "," << sort_key << "], error is "
-                              << ret << std::endl;
-                    return false;
-                }
-                if (act_value != expected_value) {
-                    std::cout << "get [" << hash_key << "," << sort_key
-                              << "], value = " << act_value
-                              << ", but expected_value = " << expected_value << std::endl;
-                    return false;
-                }
+                ASSERT_EQ(PERR_OK, ret) << "Failed to get [" << hash_key << "," << sort_key
+                                        << "], error is " << ret << std::endl;
+                ASSERT_EQ(expected_value, act_value)
+                    << "get [" << hash_key << "," << sort_key << "], value = " << act_value
+                    << ", but expected_value = " << expected_value << std::endl;
             }
         }
-        return true;
     }
 
     void operate_data(bulk_load_test::operation op, const std::string &value, int count)
@@ -235,6 +253,8 @@ public:
     const std::string SORTKEY_PREFIX = "sort";
     const std::string VALUE = "newValue";
     const int32_t COUNT = 1000;
+
+    int32_t _app_id = 0;
 };
 
 ///
@@ -300,6 +320,8 @@ TEST_F(bulk_load_test, bulk_load_tests)
 ///
 TEST_F(bulk_load_test, bulk_load_ingest_behind_tests)
 {
+    update_allow_ingest_behind("false");
+
     // app envs allow_ingest_behind = false, request ingest_behind = true
     ASSERT_EQ(start_bulk_load(true), ERR_INCONSISTENT_STATE);
 
@@ -315,7 +337,7 @@ TEST_F(bulk_load_test, bulk_load_ingest_behind_tests)
     std::cout << "Start to verify data..." << std::endl;
     // value overide by bulk_loaded_data
     operate_data(operation::GET, "oldValue", 10);
-    ASSERT_TRUE(verify_data("hashkey", "sortkey"));
+    ASSERT_NO_FATAL_FAILURE(verify_data("hashkey", "sortkey"));
 
     // write data after bulk load succeed
     operate_data(operation::SET, "valueAfterBulkLoad", 20);

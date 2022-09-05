@@ -20,16 +20,14 @@
 #include <thread>
 
 #include <dsn/dist/replication/replication_ddl_client.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 
 #include "base/pegasus_const.h"
+#include "test/function_test/utils/test_util.h"
 
 using namespace ::dsn;
 using namespace ::pegasus;
-
-extern pegasus_client *client;
-extern std::shared_ptr<replication::replication_ddl_client> ddl_client;
 
 std::string ttl_hash_key = "ttl_test_hash_key";
 std::string ttl_test_sort_key_0 = "ttl_test_sort_key_0";
@@ -41,57 +39,66 @@ std::string ttl_test_value_2 = "ttl_test_value_2";
 int default_ttl = 3600;
 int specify_ttl = 5;
 int sleep_for_expiring = 10;
-int sleep_for_envs_effect = 65;
+int sleep_for_envs_effect = 31;
 int error_allow = 2;
 int timeout = 5000;
 
-void set_default_ttl(int ttl)
+class ttl : public test_util
 {
-    std::map<std::string, std::string> envs;
-    ddl_client->get_app_envs(client->get_app_name(), envs);
-
-    std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
-    if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
-        auto response = ddl_client->set_app_envs(
-            client->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
-        ASSERT_EQ(true, response.is_ok());
-        ASSERT_EQ(ERR_OK, response.get_value().err);
-
-        // wait envs to be synced.
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_for_envs_effect));
+public:
+    void SetUp() override
+    {
+        test_util::SetUp();
+        set_default_ttl(0);
     }
-}
 
-TEST(ttl, set_without_default_ttl)
+    void TearDown() override { ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0)); }
+
+    void set_default_ttl(int ttl)
+    {
+        std::map<std::string, std::string> envs;
+        ddl_client_->get_app_envs(pg_client_->get_app_name(), envs);
+
+        std::string env = envs[TABLE_LEVEL_DEFAULT_TTL];
+        if ((env.empty() && ttl != 0) || env != std::to_string(ttl)) {
+            auto response = ddl_client_->set_app_envs(
+                pg_client_->get_app_name(), {TABLE_LEVEL_DEFAULT_TTL}, {std::to_string(ttl)});
+            ASSERT_EQ(true, response.is_ok());
+            ASSERT_EQ(ERR_OK, response.get_value().err);
+
+            // wait envs to be synced.
+            std::this_thread::sleep_for(std::chrono::seconds(sleep_for_envs_effect));
+        }
+    }
+};
+
+TEST_F(ttl, set_without_default_ttl)
 {
-    // unset default_ttl
-    set_default_ttl(0);
-
     // set with ttl
     int ret =
-        client->set(ttl_hash_key, ttl_test_sort_key_1, ttl_test_value_1, timeout, specify_ttl);
+        pg_client_->set(ttl_hash_key, ttl_test_sort_key_1, ttl_test_value_1, timeout, specify_ttl);
     ASSERT_EQ(PERR_OK, ret);
 
     std::string value;
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_1, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_1, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_1, value);
 
     int ttl_seconds;
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_TRUE(ttl_seconds > specify_ttl - error_allow && ttl_seconds <= specify_ttl)
         << "ttl is " << ttl_seconds;
 
     // set without ttl
-    ret = client->set(ttl_hash_key, ttl_test_sort_key_2, ttl_test_value_2);
+    ret = pg_client_->set(ttl_hash_key, ttl_test_sort_key_2, ttl_test_value_2);
     ASSERT_EQ(PERR_OK, ret);
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_2, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_2, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_2, value);
 
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_seconds, -1) << "ttl is " << ttl_seconds;
 
@@ -99,25 +106,25 @@ TEST(ttl, set_without_default_ttl)
     std::this_thread::sleep_for(std::chrono::seconds(sleep_for_expiring));
 
     // check expired one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_1, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_1, value);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // check exist one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_seconds, -1) << "ttl is " << ttl_seconds;
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_2, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_2, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    auto response = ddl_client->set_app_envs(client->get_app_name(),
-                                             {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                             {std::to_string(time(nullptr))});
+    auto response = ddl_client_->set_app_envs(pg_client_->get_app_name(),
+                                              {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
+                                              {std::to_string(time(nullptr))});
     ASSERT_EQ(true, response.is_ok());
     ASSERT_EQ(ERR_OK, response.get_value().err);
 
@@ -125,58 +132,56 @@ TEST(ttl, set_without_default_ttl)
     std::this_thread::sleep_for(std::chrono::seconds(sleep_for_envs_effect));
 
     // check expired one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_1, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_1, value);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // check exist one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_seconds, -1) << "ttl is " << ttl_seconds;
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_2, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_2, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_2, value);
 }
 
-TEST(ttl, set_with_default_ttl)
+TEST_F(ttl, set_with_default_ttl)
 {
-    // unset default_ttl
-    set_default_ttl(0);
-
     // set without ttl
-    int ret = client->set(ttl_hash_key, ttl_test_sort_key_0, ttl_test_value_0);
+    int ret = pg_client_->set(ttl_hash_key, ttl_test_sort_key_0, ttl_test_value_0);
     ASSERT_EQ(PERR_OK, ret);
 
     // set default_ttl
     set_default_ttl(default_ttl);
 
     // set with ttl
-    ret = client->set(ttl_hash_key, ttl_test_sort_key_1, ttl_test_value_1, timeout, specify_ttl);
+    ret =
+        pg_client_->set(ttl_hash_key, ttl_test_sort_key_1, ttl_test_value_1, timeout, specify_ttl);
     ASSERT_EQ(PERR_OK, ret);
 
     std::string value;
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_1, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_1, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_1, value);
 
     int ttl_seconds;
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_TRUE(ttl_seconds >= specify_ttl - error_allow && ttl_seconds <= specify_ttl)
         << "ttl is " << ttl_seconds;
 
     // set without ttl
-    ret = client->set(ttl_hash_key, ttl_test_sort_key_2, ttl_test_value_2);
+    ret = pg_client_->set(ttl_hash_key, ttl_test_sort_key_2, ttl_test_value_2);
     ASSERT_EQ(PERR_OK, ret);
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_2, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_2, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_2, value);
 
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_TRUE(ttl_seconds >= default_ttl - error_allow && ttl_seconds <= default_ttl)
         << "ttl is " << ttl_seconds;
@@ -185,32 +190,32 @@ TEST(ttl, set_with_default_ttl)
     std::this_thread::sleep_for(std::chrono::seconds(sleep_for_expiring));
 
     // check forever one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_0, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_0, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_seconds, -1) << "ttl is " << ttl_seconds;
 
     // check expired one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_1, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_1, value);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // check exist one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_TRUE(ttl_seconds >= default_ttl - sleep_for_expiring - error_allow &&
                 ttl_seconds <= default_ttl - sleep_for_expiring + error_allow)
         << "ttl is " << ttl_seconds;
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_2, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_2, value);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(ttl_test_value_2, value);
 
     // trigger a manual compaction
-    auto response = ddl_client->set_app_envs(client->get_app_name(),
-                                             {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
-                                             {std::to_string(time(nullptr))});
+    auto response = ddl_client_->set_app_envs(pg_client_->get_app_name(),
+                                              {MANUAL_COMPACT_ONCE_TRIGGER_TIME_KEY},
+                                              {std::to_string(time(nullptr))});
     ASSERT_EQ(true, response.is_ok());
     ASSERT_EQ(ERR_OK, response.get_value().err);
 
@@ -218,21 +223,21 @@ TEST(ttl, set_with_default_ttl)
     std::this_thread::sleep_for(std::chrono::seconds(sleep_for_envs_effect));
 
     // check forever one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_0, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_0, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_TRUE(ttl_seconds >= default_ttl - sleep_for_envs_effect - error_allow &&
                 ttl_seconds <= default_ttl + error_allow)
         << "ttl is " << ttl_seconds;
 
     // check expired one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_1, ttl_seconds);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
-    ret = client->get(ttl_hash_key, ttl_test_sort_key_1, value);
+    ret = pg_client_->get(ttl_hash_key, ttl_test_sort_key_1, value);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // check exist one
-    ret = client->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
+    ret = pg_client_->ttl(ttl_hash_key, ttl_test_sort_key_2, ttl_seconds);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_TRUE(
         ttl_seconds >= default_ttl - sleep_for_expiring - sleep_for_envs_effect - error_allow &&

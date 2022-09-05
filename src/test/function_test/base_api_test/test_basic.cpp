@@ -25,64 +25,70 @@
 
 #include <dsn/service_api_c.h>
 #include <unistd.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 #include <atomic>
 
+#include "test/function_test/utils/test_util.h"
+
 using namespace ::pegasus;
 
-extern pegasus_client *client;
 typedef pegasus_client::internal_info internal_info;
 
-TEST(basic, set_get_del)
+class basic : public test_util
 {
-    ASSERT_STREQ("mycluster", client->get_cluster_name());
+};
+
+TEST_F(basic, set_get_del)
+{
+    ASSERT_STREQ("mycluster", pg_client_->get_cluster_name());
 
     // set
-    int ret = client->set("basic_test_hash_key_1", "basic_test_sort_key_1", "basic_test_value_1");
+    int ret =
+        pg_client_->set("basic_test_hash_key_1", "basic_test_sort_key_1", "basic_test_value_1");
     ASSERT_EQ(PERR_OK, ret);
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
+    ret = pg_client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
     ASSERT_EQ(PERR_OK, ret);
 
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_2");
+    ret = pg_client_->exist("basic_test_hash_key_1", "basic_test_sort_key_2");
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, count);
 
     // get
     std::string new_value_str;
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
+    ret = pg_client_->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ("basic_test_value_1", new_value_str);
 
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_2", new_value_str);
+    ret = pg_client_->get("basic_test_hash_key_1", "basic_test_sort_key_2", new_value_str);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // del
-    ret = client->del("basic_test_hash_key_1", "basic_test_sort_key_1");
+    ret = pg_client_->del("basic_test_hash_key_1", "basic_test_sort_key_1");
     ASSERT_EQ(PERR_OK, ret);
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
+    ret = pg_client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 
     // get
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
+    ret = pg_client_->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 }
 
-TEST(basic, multi_get)
+TEST_F(basic, multi_get)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -99,12 +105,12 @@ TEST(basic, multi_get)
     kvs["5-hijklmn"] = "5-hijklmn";
     kvs["6"] = "6";
     kvs["7"] = "7";
-    int ret = client->multi_set("basic_test_multi_get", kvs);
+    int ret = pg_client_->multi_set("basic_test_multi_get", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_multi_get", count);
+    ret = pg_client_->sortkey_count("basic_test_multi_get", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, count);
 
@@ -113,7 +119,7 @@ TEST(basic, multi_get)
     ASSERT_TRUE(options.start_inclusive);
     ASSERT_FALSE(options.stop_inclusive);
     std::map<std::string, std::string> new_values;
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -135,7 +141,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -157,7 +163,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = false;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(12, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -178,7 +184,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(12, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -199,7 +205,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -210,7 +216,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = false;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -220,7 +226,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -230,7 +236,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = false;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -239,7 +245,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -249,7 +255,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = false;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -258,7 +264,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -267,7 +273,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = false;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -276,7 +282,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "2", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "2", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -285,7 +291,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
     options.sort_key_filter_pattern = "-";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(5, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -299,7 +305,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
     options.sort_key_filter_pattern = "1";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -310,7 +316,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
     options.sort_key_filter_pattern = "1-";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -320,7 +326,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
     options.sort_key_filter_pattern = "abc";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -331,7 +337,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "1";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -344,7 +350,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = false;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "0", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "0", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -355,7 +361,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "0", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "0", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -367,7 +373,7 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "2", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1", "2", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -380,7 +386,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "2", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1", "2", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -392,7 +398,7 @@ TEST(basic, multi_get)
     options.start_inclusive = false;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1-abcdefg", "2", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "1-abcdefg", "2", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -401,7 +407,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "1-";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -411,7 +417,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "1-x";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -420,7 +426,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "abc";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -429,7 +435,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "efg";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -438,7 +444,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "ijk";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -447,7 +453,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "lmn";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -456,7 +462,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
     options.sort_key_filter_pattern = "5-hijklmn";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
@@ -466,7 +472,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -476,7 +482,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1-";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -485,7 +491,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "1-x";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -494,7 +500,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "abc";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -503,7 +509,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "efg";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -514,7 +520,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "ijk";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
@@ -524,7 +530,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "lmn";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
@@ -535,7 +541,7 @@ TEST(basic, multi_get)
     options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
     options.sort_key_filter_pattern = "5-hijklmn";
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
@@ -543,7 +549,7 @@ TEST(basic, multi_get)
     // maxCount = 4
     options = pegasus::pegasus_client::multi_get_options();
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 4, -1);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values, 4, -1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(4, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -556,17 +562,17 @@ TEST(basic, multi_get)
     options.start_inclusive = true;
     options.stop_inclusive = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "5", "6", options, new_values, 1, -1);
+    ret = pg_client_->multi_get("basic_test_multi_get", "5", "6", options, new_values, 1, -1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5", new_values["5"]);
 
     // set a expired value
-    ret = client->set("basic_test_multi_get", "", "expire_value", 5000, 1);
+    ret = pg_client_->set("basic_test_multi_get", "", "expire_value", 5000, 1);
     ASSERT_EQ(PERR_OK, ret);
     std::this_thread::sleep_for(std::chrono::seconds(1));
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 2);
+    ret = pg_client_->multi_get("basic_test_multi_get", "", "", options, new_values, 2);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -587,17 +593,17 @@ TEST(basic, multi_get)
     sortkeys.insert("6");
     sortkeys.insert("7");
     int64_t deleted_count;
-    ret = client->multi_del("basic_test_multi_get", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("basic_test_multi_get", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, deleted_count);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_multi_get", count);
+    ret = pg_client_->sortkey_count("basic_test_multi_get", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, multi_get_reverse)
+TEST_F(basic, multi_get_reverse)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -614,12 +620,12 @@ TEST(basic, multi_get_reverse)
     kvs["5-hijklmn"] = "5-hijklmn";
     kvs["6"] = "6";
     kvs["7"] = "7";
-    int ret = client->multi_set("basic_test_multi_get_reverse", kvs);
+    int ret = pg_client_->multi_set("basic_test_multi_get_reverse", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_multi_get_reverse", count);
+    ret = pg_client_->sortkey_count("basic_test_multi_get_reverse", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, count);
 
@@ -629,7 +635,7 @@ TEST(basic, multi_get_reverse)
     ASSERT_FALSE(options.stop_inclusive);
     options.reverse = true;
     std::map<std::string, std::string> new_values;
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -652,7 +658,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -675,7 +681,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = false;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(12, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -697,7 +703,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(12, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -719,7 +725,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -731,7 +737,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = false;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("0", new_values[""]);
@@ -742,7 +748,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -753,7 +759,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = false;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -763,7 +769,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -774,7 +780,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = false;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -784,7 +790,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -794,7 +800,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = false;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -804,7 +810,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "2", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "2", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -814,7 +820,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "-";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(5, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -829,7 +835,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -841,7 +847,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1-";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -852,7 +858,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "abc";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -864,7 +870,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -878,7 +884,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = false;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -890,7 +896,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -903,7 +909,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -917,7 +923,7 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -930,7 +936,8 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1-abcdefg", "2", options, new_values);
+    ret = pg_client_->multi_get(
+        "basic_test_multi_get_reverse", "1-abcdefg", "2", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -940,7 +947,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1-";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -951,7 +958,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1-x";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -961,7 +968,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "abc";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -971,7 +978,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "efg";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -981,7 +988,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "ijk";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -991,7 +998,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "lmn";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -1001,7 +1008,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "5-hijklmn";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
@@ -1012,7 +1019,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("1", new_values["1"]);
@@ -1023,7 +1030,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1-";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -1033,7 +1040,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "1-x";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -1043,7 +1050,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "abc";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, (int)new_values.size());
 
@@ -1053,7 +1060,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "efg";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
@@ -1065,7 +1072,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "ijk";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
@@ -1076,7 +1083,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "lmn";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, (int)new_values.size());
     ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
@@ -1088,7 +1095,7 @@ TEST(basic, multi_get_reverse)
     options.sort_key_filter_pattern = "5-hijklmn";
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
@@ -1097,7 +1104,7 @@ TEST(basic, multi_get_reverse)
     options = pegasus::pegasus_client::multi_get_options();
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values, 4, -1);
+    ret = pg_client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values, 4, -1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(4, (int)new_values.size());
     ASSERT_EQ("5", new_values["5"]);
@@ -1111,7 +1118,8 @@ TEST(basic, multi_get_reverse)
     options.stop_inclusive = true;
     options.reverse = true;
     new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "5", "6", options, new_values, 1, -1);
+    ret =
+        pg_client_->multi_get("basic_test_multi_get_reverse", "5", "6", options, new_values, 1, -1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(1, (int)new_values.size());
     ASSERT_EQ("6", new_values["6"]);
@@ -1132,17 +1140,17 @@ TEST(basic, multi_get_reverse)
     sortkeys.insert("6");
     sortkeys.insert("7");
     int64_t deleted_count;
-    ret = client->multi_del("basic_test_multi_get_reverse", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("basic_test_multi_get_reverse", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(13, deleted_count);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_multi_get_reverse", count);
+    ret = pg_client_->sortkey_count("basic_test_multi_get_reverse", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, multi_set_get_del)
+TEST_F(basic, multi_set_get_del)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -1150,12 +1158,12 @@ TEST(basic, multi_set_get_del)
     kvs["basic_test_sort_key_2"] = "basic_test_value_2";
     kvs["basic_test_sort_key_3"] = "basic_test_value_3";
     kvs["basic_test_sort_key_4"] = "basic_test_value_4";
-    int ret = client->multi_set("basic_test_hash_key_1", kvs);
+    int ret = pg_client_->multi_set("basic_test_hash_key_1", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(4, count);
 
@@ -1167,7 +1175,7 @@ TEST(basic, multi_set_get_del)
     sortkeys.insert("basic_test_sort_key_3");
     sortkeys.insert("basic_test_sort_key_4");
     std::map<std::string, std::string> new_kvs;
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(4, new_kvs.size());
     auto it = new_kvs.begin();
@@ -1185,7 +1193,7 @@ TEST(basic, multi_set_get_del)
 
     // multi_get with limit count 4
     new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 4);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 4);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(4, new_kvs.size());
     it = new_kvs.begin();
@@ -1203,7 +1211,7 @@ TEST(basic, multi_set_get_del)
 
     // multi_get with limit count 3
     new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 3);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 3);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(3, new_kvs.size());
     it = new_kvs.begin();
@@ -1218,7 +1226,7 @@ TEST(basic, multi_set_get_del)
 
     // multi_get with limit count 1
     new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 1);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(1, new_kvs.size());
     it = new_kvs.begin();
@@ -1228,7 +1236,7 @@ TEST(basic, multi_set_get_del)
     // multi_get with empty sortkeys
     sortkeys.clear();
     new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(4, new_kvs.size());
     it = new_kvs.begin();
@@ -1246,7 +1254,7 @@ TEST(basic, multi_set_get_del)
 
     // multi_get_sortkeys with no limit count
     sortkeys.clear();
-    ret = client->multi_get_sortkeys("basic_test_hash_key_1", sortkeys, -1);
+    ret = pg_client_->multi_get_sortkeys("basic_test_hash_key_1", sortkeys, -1);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(4, sortkeys.size());
     auto it2 = sortkeys.begin();
@@ -1260,7 +1268,7 @@ TEST(basic, multi_set_get_del)
 
     // multi_get_sortkeys with limit count
     sortkeys.clear();
-    ret = client->multi_get_sortkeys("basic_test_hash_key_1", sortkeys, 1);
+    ret = pg_client_->multi_get_sortkeys("basic_test_hash_key_1", sortkeys, 1);
     ASSERT_EQ(PERR_INCOMPLETE, ret);
     ASSERT_EQ(1, sortkeys.size());
     it2 = sortkeys.begin();
@@ -1269,7 +1277,7 @@ TEST(basic, multi_set_get_del)
     // multi_del with empty sortkeys
     sortkeys.clear();
     int64_t deleted_count;
-    ret = client->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
     ASSERT_EQ(PERR_INVALID_VALUE, ret);
 
     // multi_del
@@ -1277,19 +1285,19 @@ TEST(basic, multi_set_get_del)
     sortkeys.insert("basic_test_sort_key_0");
     sortkeys.insert("basic_test_sort_key_1");
     sortkeys.insert("basic_test_sort_key_2");
-    ret = client->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(3, deleted_count);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, count);
 
     // check deleted
     sortkeys.clear();
     new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, new_kvs.size());
     it = new_kvs.begin();
@@ -1303,83 +1311,83 @@ TEST(basic, multi_set_get_del)
     sortkeys.clear();
     sortkeys.insert("basic_test_sort_key_3");
     sortkeys.insert("basic_test_sort_key_4");
-    ret = client->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, deleted_count);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, set_get_del_async)
+TEST_F(basic, set_get_del_async)
 {
     std::atomic<bool> callbacked(false);
     int ret = 0;
     std::string new_value_str;
     // set_async
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_set("basic_test_hash_key_1",
-                      "basic_test_sort_key_1",
-                      "basic_test_value_1",
-                      [&](int err, internal_info &&info) {
-                          ASSERT_EQ(PERR_OK, err);
-                          ASSERT_GT(info.app_id, 0);
-                          ASSERT_GT(info.partition_index, 0);
-                          ASSERT_GT(info.decree, 0);
-                          ASSERT_FALSE(info.server.empty());
-                          callbacked.store(true, std::memory_order_seq_cst);
-                      });
+    pg_client_->async_set("basic_test_hash_key_1",
+                          "basic_test_sort_key_1",
+                          "basic_test_value_1",
+                          [&](int err, internal_info &&info) {
+                              ASSERT_EQ(PERR_OK, err);
+                              ASSERT_GT(info.app_id, 0);
+                              ASSERT_GT(info.partition_index, 0);
+                              ASSERT_GT(info.decree, 0);
+                              ASSERT_FALSE(info.server.empty());
+                              callbacked.store(true, std::memory_order_seq_cst);
+                          });
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
+    ret = pg_client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
     ASSERT_EQ(PERR_OK, ret);
 
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_2");
+    ret = pg_client_->exist("basic_test_hash_key_1", "basic_test_sort_key_2");
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(1, count);
 
     // get_async
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_get("basic_test_hash_key_1",
-                      "basic_test_sort_key_1",
-                      [&](int err, std::string &&value, internal_info &&info) {
-                          ASSERT_EQ(PERR_OK, err);
-                          ASSERT_GT(info.app_id, 0);
-                          ASSERT_GT(info.partition_index, 0);
-                          ASSERT_EQ(info.decree, -1);
-                          ASSERT_FALSE(info.server.empty());
-                          ASSERT_EQ("basic_test_value_1", value);
-                          callbacked.store(true, std::memory_order_seq_cst);
-                      });
+    pg_client_->async_get("basic_test_hash_key_1",
+                          "basic_test_sort_key_1",
+                          [&](int err, std::string &&value, internal_info &&info) {
+                              ASSERT_EQ(PERR_OK, err);
+                              ASSERT_GT(info.app_id, 0);
+                              ASSERT_GT(info.partition_index, 0);
+                              ASSERT_EQ(info.decree, -1);
+                              ASSERT_FALSE(info.server.empty());
+                              ASSERT_EQ("basic_test_value_1", value);
+                              callbacked.store(true, std::memory_order_seq_cst);
+                          });
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_get("basic_test_hash_key_1",
-                      "basic_test_sort_key_2",
-                      [&](int err, std::string &&value, internal_info &&info) {
-                          ASSERT_EQ(PERR_NOT_FOUND, err);
-                          ASSERT_GT(info.app_id, 0);
-                          ASSERT_GT(info.partition_index, 0);
-                          ASSERT_EQ(info.decree, -1);
-                          ASSERT_FALSE(info.server.empty());
-                          callbacked.store(true, std::memory_order_seq_cst);
-                      });
+    pg_client_->async_get("basic_test_hash_key_1",
+                          "basic_test_sort_key_2",
+                          [&](int err, std::string &&value, internal_info &&info) {
+                              ASSERT_EQ(PERR_NOT_FOUND, err);
+                              ASSERT_GT(info.app_id, 0);
+                              ASSERT_GT(info.partition_index, 0);
+                              ASSERT_EQ(info.decree, -1);
+                              ASSERT_FALSE(info.server.empty());
+                              callbacked.store(true, std::memory_order_seq_cst);
+                          });
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
     // del_async
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_del(
+    pg_client_->async_del(
         "basic_test_hash_key_1", "basic_test_sort_key_1", [&](int err, internal_info &&info) {
             ASSERT_EQ(PERR_OK, err);
             ASSERT_GT(info.app_id, 0);
@@ -1392,20 +1400,20 @@ TEST(basic, set_get_del_async)
         usleep(100);
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
+    ret = pg_client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 
     // get -- finally, using get_sync to get the key-value.
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
+    ret = pg_client_->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
     ASSERT_EQ(PERR_NOT_FOUND, ret);
 }
 
-TEST(basic, multi_set_get_del_async)
+TEST_F(basic, multi_set_get_del_async)
 {
     std::atomic<bool> callbacked(false);
     int ret = 0;
@@ -1417,7 +1425,7 @@ TEST(basic, multi_set_get_del_async)
     kvs["basic_test_sort_key_3"] = "basic_test_value_3";
     kvs["basic_test_sort_key_4"] = "basic_test_value_4";
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_set("basic_test_hash_key_1", kvs, [&](int err, internal_info &&info) {
+    pg_client_->async_multi_set("basic_test_hash_key_1", kvs, [&](int err, internal_info &&info) {
         ASSERT_EQ(PERR_OK, err);
         ASSERT_GT(info.app_id, 0);
         ASSERT_GT(info.partition_index, 0);
@@ -1430,7 +1438,7 @@ TEST(basic, multi_set_get_del_async)
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(4, count);
 
@@ -1443,7 +1451,7 @@ TEST(basic, multi_set_get_del_async)
     sortkeys.insert("basic_test_sort_key_4");
 
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get(
+    pg_client_->async_multi_get(
         "basic_test_hash_key_1",
         sortkeys,
         [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
@@ -1472,7 +1480,7 @@ TEST(basic, multi_set_get_del_async)
 
     // multi_get_async with limit count
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get(
+    pg_client_->async_multi_get(
         "basic_test_hash_key_1",
         sortkeys,
         [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
@@ -1494,7 +1502,7 @@ TEST(basic, multi_set_get_del_async)
     // multi_get with empty sortkeys
     sortkeys.clear();
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get(
+    pg_client_->async_multi_get(
         "basic_test_hash_key_1",
         sortkeys,
         [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
@@ -1523,7 +1531,7 @@ TEST(basic, multi_set_get_del_async)
 
     // multi_get_sortkeys_async with limit count
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get_sortkeys(
+    pg_client_->async_multi_get_sortkeys(
         "basic_test_hash_key_1",
         [&](int err, std::set<std::string> &&sortkeys, internal_info &&info) {
             ASSERT_EQ(PERR_INCOMPLETE, err);
@@ -1542,7 +1550,7 @@ TEST(basic, multi_set_get_del_async)
 
     // multi_get_sortkeys_async with no limit count
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get_sortkeys(
+    pg_client_->async_multi_get_sortkeys(
         "basic_test_hash_key_1",
         [&](int err, std::set<std::string> &&sortkeys, internal_info &&info) {
             ASSERT_EQ(PERR_OK, err);
@@ -1568,12 +1576,12 @@ TEST(basic, multi_set_get_del_async)
     // multi_del_async with empty sortkeys
     sortkeys.clear();
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_del("basic_test_hash_key_1",
-                            sortkeys,
-                            [&](int err, int64_t deleted_count, internal_info &&info) {
-                                ASSERT_EQ(PERR_INVALID_VALUE, err);
-                                callbacked.store(true, std::memory_order_seq_cst);
-                            });
+    pg_client_->async_multi_del("basic_test_hash_key_1",
+                                sortkeys,
+                                [&](int err, int64_t deleted_count, internal_info &&info) {
+                                    ASSERT_EQ(PERR_INVALID_VALUE, err);
+                                    callbacked.store(true, std::memory_order_seq_cst);
+                                });
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
@@ -1583,29 +1591,29 @@ TEST(basic, multi_set_get_del_async)
     sortkeys.insert("basic_test_sort_key_1");
     sortkeys.insert("basic_test_sort_key_2");
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_del("basic_test_hash_key_1",
-                            sortkeys,
-                            [&](int err, int64_t deleted_count, internal_info &&info) {
-                                ASSERT_EQ(PERR_OK, err);
-                                ASSERT_GT(info.app_id, 0);
-                                ASSERT_GT(info.partition_index, 0);
-                                ASSERT_GT(info.decree, 0);
-                                ASSERT_FALSE(info.server.empty());
-                                ASSERT_EQ(3, deleted_count);
-                                callbacked.store(true, std::memory_order_seq_cst);
-                            });
+    pg_client_->async_multi_del("basic_test_hash_key_1",
+                                sortkeys,
+                                [&](int err, int64_t deleted_count, internal_info &&info) {
+                                    ASSERT_EQ(PERR_OK, err);
+                                    ASSERT_GT(info.app_id, 0);
+                                    ASSERT_GT(info.partition_index, 0);
+                                    ASSERT_GT(info.decree, 0);
+                                    ASSERT_FALSE(info.server.empty());
+                                    ASSERT_EQ(3, deleted_count);
+                                    callbacked.store(true, std::memory_order_seq_cst);
+                                });
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, count);
 
     // check deleted  --- using multi_get to check.
     sortkeys.clear();
     new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
+    ret = pg_client_->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(2, new_kvs.size());
     auto it = new_kvs.begin();
@@ -1620,27 +1628,27 @@ TEST(basic, multi_set_get_del_async)
     sortkeys.insert("basic_test_sort_key_3");
     sortkeys.insert("basic_test_sort_key_4");
     callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_del("basic_test_hash_key_1",
-                            sortkeys,
-                            [&](int err, int64_t deleted_count, internal_info &&info) {
-                                ASSERT_EQ(PERR_OK, err);
-                                ASSERT_GT(info.app_id, 0);
-                                ASSERT_GT(info.partition_index, 0);
-                                ASSERT_GT(info.decree, 0);
-                                ASSERT_FALSE(info.server.empty());
-                                ASSERT_EQ(2, deleted_count);
-                                callbacked.store(true, std::memory_order_seq_cst);
-                            });
+    pg_client_->async_multi_del("basic_test_hash_key_1",
+                                sortkeys,
+                                [&](int err, int64_t deleted_count, internal_info &&info) {
+                                    ASSERT_EQ(PERR_OK, err);
+                                    ASSERT_GT(info.app_id, 0);
+                                    ASSERT_GT(info.partition_index, 0);
+                                    ASSERT_GT(info.decree, 0);
+                                    ASSERT_FALSE(info.server.empty());
+                                    ASSERT_EQ(2, deleted_count);
+                                    callbacked.store(true, std::memory_order_seq_cst);
+                                });
     while (!callbacked.load(std::memory_order_seq_cst))
         usleep(100);
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
+    ret = pg_client_->sortkey_count("basic_test_hash_key_1", count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(0, count);
 }
 
-TEST(basic, scan_with_filter)
+TEST_F(basic, scan_with_filter)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -1652,7 +1660,7 @@ TEST(basic, scan_with_filter)
     kvs["n_1"] = "b";
     kvs["n_2"] = "b";
     kvs["n_3"] = "b";
-    int ret = client->multi_set("xyz", kvs);
+    int ret = pg_client_->multi_set("xyz", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
     // scan with batch_size = 10
@@ -1662,9 +1670,9 @@ TEST(basic, scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 10;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("xyz", "", "", options, scanner);
+        ret = pg_client_->get_scanner("xyz", "", "", options, scanner);
         ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
-                          << client->get_error_string(ret);
+                          << pg_client_->get_error_string(ret);
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
         std::string hash_key;
@@ -1691,7 +1699,7 @@ TEST(basic, scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 3;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("xyz", "", "", options, scanner);
+        ret = pg_client_->get_scanner("xyz", "", "", options, scanner);
         ASSERT_EQ(PERR_OK, ret);
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
@@ -1719,9 +1727,9 @@ TEST(basic, scan_with_filter)
         options.hash_key_filter_pattern = "xy";
         options.batch_size = 10;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("xyz", "", "", options, scanner);
+        ret = pg_client_->get_scanner("xyz", "", "", options, scanner);
         ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
-                          << client->get_error_string(ret);
+                          << pg_client_->get_error_string(ret);
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
         std::string hash_key;
@@ -1741,12 +1749,12 @@ TEST(basic, scan_with_filter)
         sortkeys.insert(kv.first);
     }
     int64_t deleted_count;
-    ret = client->multi_del("x", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("x", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(8, deleted_count);
 }
 
-TEST(basic, full_scan_with_filter)
+TEST_F(basic, full_scan_with_filter)
 {
     // multi_set
     std::map<std::string, std::string> kvs;
@@ -1758,7 +1766,7 @@ TEST(basic, full_scan_with_filter)
     kvs["n_1"] = "b";
     kvs["n_2"] = "b";
     kvs["n_3"] = "b";
-    int ret = client->multi_set("xyz", kvs);
+    int ret = pg_client_->multi_set("xyz", kvs);
     ASSERT_EQ(PERR_OK, ret);
 
     // scan with sort key filter and batch_size = 10
@@ -1768,7 +1776,7 @@ TEST(basic, full_scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 10;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
-        ret = client->get_unordered_scanners(1, options, scanners);
+        ret = pg_client_->get_unordered_scanners(1, options, scanners);
         ASSERT_EQ(PERR_OK, ret);
         ASSERT_EQ(1, scanners.size());
         pegasus_client::pegasus_scanner *scanner = scanners[0];
@@ -1797,7 +1805,7 @@ TEST(basic, full_scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 3;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
-        ret = client->get_unordered_scanners(1, options, scanners);
+        ret = pg_client_->get_unordered_scanners(1, options, scanners);
         ASSERT_EQ(PERR_OK, ret);
         ASSERT_EQ(1, scanners.size());
         pegasus_client::pegasus_scanner *scanner = scanners[0];
@@ -1826,7 +1834,7 @@ TEST(basic, full_scan_with_filter)
         options.hash_key_filter_pattern = "xy";
         options.batch_size = 10;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
-        ret = client->get_unordered_scanners(1, options, scanners);
+        ret = pg_client_->get_unordered_scanners(1, options, scanners);
         ASSERT_EQ(PERR_OK, ret);
         ASSERT_EQ(1, scanners.size());
         pegasus_client::pegasus_scanner *scanner = scanners[0];
@@ -1848,7 +1856,8 @@ TEST(basic, full_scan_with_filter)
         sortkeys.insert(kv.first);
     }
     int64_t deleted_count;
-    ret = client->multi_del("x", sortkeys, deleted_count);
+    ret = pg_client_->multi_del("x", sortkeys, deleted_count);
     ASSERT_EQ(PERR_OK, ret);
     ASSERT_EQ(8, deleted_count);
 }
+
