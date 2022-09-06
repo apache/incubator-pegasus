@@ -386,7 +386,7 @@ jobs:
         with:
           path: |
             /github/home/.ccache
-          key: release_ccache
+          key: jemalloc_ccache
       - uses: dorny/paths-filter@v2
         id: changes
         with:
