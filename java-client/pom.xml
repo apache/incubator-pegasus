@@ -55,7 +55,7 @@
     <guava.version>28.1-jre</guava.version>
     <mockito.version>2.24.5</mockito.version>
     <dropwizard.version>3.1.2</dropwizard.version>
-    <apache.commons.configuration2.version>2.7</apache.commons.configuration2.version>
+    <apache.commons.configuration2.version>2.8.0</apache.commons.configuration2.version>
     <slf4j.version>1.7.2</slf4j.version>
     <apache.commons.lang3.version>3.1</apache.commons.lang3.version>
     <zkclient.version>0.2</zkclient.version>
