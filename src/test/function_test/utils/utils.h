@@ -158,7 +158,7 @@ inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>
             << ", value=" << it1->second.first << ", expire_ts_seconds=" << it1->second.second;
         ASSERT_EQ(it1->first, it2->first)
             << "Diff sort_key: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
-            << ", data_value=" << it1->second.first
+            << ", actual_value=" << it1->second.first
             << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
             << ", base_value=" << it2->second.first
             << ", base_expire_ts_seconds=" << it2->second.second;
