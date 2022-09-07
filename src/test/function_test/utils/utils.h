@@ -195,7 +195,7 @@ inline void compare(const T &expect, const U &actual)
             break;
         }
         ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << it1->first;
-        ASSERT_EQ(it1->first, it2->first) << "Diff: data_hash_key=" << it1->first
+        ASSERT_EQ(it1->first, it2->first) << "Diff: actual_hash_key=" << it1->first
                                           << ", base_hash_key=" << it2->first;
         ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, it1->first));
     }
