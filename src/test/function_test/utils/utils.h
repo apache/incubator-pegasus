@@ -159,8 +159,8 @@ inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>
         ASSERT_EQ(it1->first, it2->first)
             << "Diff sort_key: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
             << ", actual_value=" << it1->second.first
-            << ", actual_expire_ts_seconds=" << it1->second.second << ", expected_sort_key=" << it2->first
-            << ", expected_value=" << it2->second.first
+            << ", actual_expire_ts_seconds=" << it1->second.second
+            << ", expected_sort_key=" << it2->first << ", expected_value=" << it2->second.first
             << ", expected_expire_ts_seconds=" << it2->second.second;
         ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, hash_key, it1->first));
     }
@@ -180,7 +180,8 @@ inline void compare(const std::map<std::string, std::string> &expect,
         ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << hash_key
                                      << ", sort_key=" << it1->first << ", value=" << it1->second;
         ASSERT_EQ(*it1, *it2) << "Diff: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
-                              << ", actual_value=" << it1->second << ", expected_sort_key=" << it2->first
+                              << ", actual_value=" << it1->second
+                              << ", expected_sort_key=" << it2->first
                               << ", expected_value=" << it2->second;
     }
 }

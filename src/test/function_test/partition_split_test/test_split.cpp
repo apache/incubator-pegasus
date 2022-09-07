@@ -34,8 +34,8 @@ public:
 
     void SetUp() override
     {
-        test_case_++;
-        _table_name = _table_name_prefix + std::to_string(test_case_);
+        test_case++;
+        table_name = table_name_prefix + std::to_string(test_case);
         std::vector<rpc_address> meta_list;
         ASSERT_TRUE(replica_helper::load_meta_servers(
             meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
@@ -44,34 +44,34 @@ public:
         ddl_client = std::make_shared<replication_ddl_client>(meta_list);
         ASSERT_TRUE(ddl_client != nullptr);
         error_code error =
-            ddl_client->create_app(_table_name, "pegasus", partition_count, 3, {}, false);
+            ddl_client->create_app(table_name, "pegasus", partition_count, 3, {}, false);
         ASSERT_EQ(ERR_OK, error);
 
-        pg_client = pegasus_client_factory::get_client("mycluster", _table_name.c_str());
+        pg_client = pegasus_client_factory::get_client("mycluster", table_name.c_str());
         ASSERT_TRUE(pg_client != nullptr);
         ASSERT_NO_FATAL_FAILURE(write_data_before_split());
 
-        auto err_resp = ddl_client->start_partition_split(_table_name, partition_count * 2);
+        auto err_resp = ddl_client->start_partition_split(table_name, partition_count * 2);
         ASSERT_EQ(ERR_OK, err_resp.get_value().err);
-        std::cout << "Table(" << _table_name << ") start partition split succeed" << std::endl;
+        std::cout << "Table(" << table_name << ") start partition split succeed" << std::endl;
     }
 
     void TearDown() override
     {
         count_during_split = 0;
         expected.clear();
-        ASSERT_EQ(ERR_OK, ddl_client->drop_app(_table_name, 0));
+        ASSERT_EQ(ERR_OK, ddl_client->drop_app(table_name, 0));
     }
 
     bool is_split_finished()
     {
-        auto err_resp = ddl_client->query_partition_split(_table_name);
+        auto err_resp = ddl_client->query_partition_split(table_name);
         return err_resp.get_value().err == ERR_INVALID_STATE;
     }
 
     bool check_partition_split_status(int32_t target_pidx, split_status::type target_status)
     {
-        auto err_resp = ddl_client->query_partition_split(_table_name);
+        auto err_resp = ddl_client->query_partition_split(table_name);
         auto status_map = err_resp.get_value().status;
         // is_single_partition
         if (target_pidx > 0) {
@@ -93,8 +93,8 @@ public:
                                        int32_t parent_pidx,
                                        int32_t old_partition_count = 0)
     {
-        auto err_resp = ddl_client->control_partition_split(
-            _table_name, type, parent_pidx, old_partition_count);
+        auto err_resp =
+            ddl_client->control_partition_split(table_name, type, parent_pidx, old_partition_count);
         return err_resp.get_value().err;
     }
 
@@ -228,7 +228,7 @@ public:
     static int32_t test_case;
 };
 
-int32_t partition_split_test::test_case_ = 0;
+int32_t partition_split_test::test_case = 0;
 
 TEST_F(partition_split_test, split_with_write)
 {
@@ -277,7 +277,7 @@ TEST_F(partition_split_test, pause_split)
         if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
             error_code error = control_partition_split(split_control_type::PAUSE, target_partition);
             ASSERT_EQ(ERR_OK, error);
-            std::cout << "Table(" << _table_name << ") pause partition[" << target_partition
+            std::cout << "Table(" << table_name << ") pause partition[" << target_partition
                       << "] split succeed" << std::endl;
             already_pause = true;
         }
@@ -287,7 +287,7 @@ TEST_F(partition_split_test, pause_split)
             error_code error =
                 control_partition_split(split_control_type::RESTART, target_partition);
             ASSERT_EQ(ERR_OK, error);
-            std::cout << "Table(" << _table_name << ") restart split partition[" << target_partition
+            std::cout << "Table(" << table_name << ") restart split partition[" << target_partition
                       << "] succeed" << std::endl;
             already_restart = true;
         }
@@ -309,7 +309,7 @@ TEST_F(partition_split_test, cancel_split)
         if (!already_pause && check_partition_split_status(-1, split_status::SPLITTING)) {
             error = control_partition_split(split_control_type::PAUSE, -1);
             ASSERT_EQ(ERR_OK, error);
-            std::cout << "Table(" << _table_name << ") pause all partitions split succeed"
+            std::cout << "Table(" << table_name << ") pause all partitions split succeed"
                       << std::endl;
             already_pause = true;
         }
@@ -319,7 +319,7 @@ TEST_F(partition_split_test, cancel_split)
     // cancel partition split
     error = control_partition_split(split_control_type::CANCEL, -1, partition_count);
     ASSERT_EQ(ERR_OK, error);
-    std::cout << "Table(" << _table_name << ") cancel partitions split succeed" << std::endl;
+    std::cout << "Table(" << table_name << ") cancel partitions split succeed" << std::endl;
     // write data during cancel partition split
     do {
         write_data_during_split();
