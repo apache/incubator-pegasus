@@ -181,7 +181,7 @@ inline void compare(const std::map<std::string, std::string> &expect,
                                      << ", sort_key=" << it1->first << ", value=" << it1->second;
         ASSERT_EQ(*it1, *it2) << "Diff: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
                               << ", actual_value=" << it1->second << ", expected_sort_key=" << it2->first
-                              << ", base_value=" << it2->second;
+                              << ", expected_value=" << it2->second;
     }
 }
 
