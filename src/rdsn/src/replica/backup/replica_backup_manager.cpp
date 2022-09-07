@@ -23,8 +23,6 @@
 namespace dsn {
 namespace replication {
 
-// TODO(heyuchen): implement it
-
 replica_backup_manager::replica_backup_manager(replica *r)
     : replica_base(r), _replica(r), _stub(r->get_replica_stub())
 {
@@ -36,7 +34,12 @@ replica_backup_manager::~replica_backup_manager() {}
 void replica_backup_manager::on_backup(const backup_request &request,
                                        /*out*/ backup_response &response)
 {
-    // TODO(heyuchen): add other status
+    if (request.status == backup_status::FAILED || request.status == backup_status::CANCELED) {
+        ddebug_replica("start to cleanup backup context, request status = {}",
+                       enum_to_string(request.status));
+        clear_context();
+        return;
+    }
 
     if (request.status == backup_status::CHECKPOINTING) {
         try_to_checkpoint(request.backup_id, response);
@@ -50,6 +53,11 @@ void replica_backup_manager::on_backup(const backup_request &request,
                       response);
         return;
     }
+
+    // other status:
+    // backup_status::UNINITIALIZED, backup_status::CHECKPOINTED, backup_status::SUCCEED
+    derror_replica("invalid request backup_status = {}", enum_to_string(request.status));
+    response.err = ERR_INVALID_STATE;
 }
 
 // ThreadPool: THREAD_POOL_REPLICATION
@@ -414,7 +422,70 @@ void replica_backup_manager::clear_context()
 {
     FAIL_POINT_INJECT_F("replica_backup_clear_context",
                         [this](dsn::string_view) { _status = backup_status::UNINITIALIZED; });
-    // TODO(heyuchen): TBD
+
+    zauto_write_lock l(_lock);
+    if (_status == backup_status::UNINITIALIZED) {
+        return;
+    }
+    ddebug_replica("start to clear backup context, old status = {}", enum_to_string(_status));
+
+    for (auto &kv : _upload_files_task) {
+        cleanup_backup_task(kv.second);
+    }
+    cleanup_backup_task(_uploading_task);
+    _upload_files_task.clear();
+    _uploading_task = nullptr;
+    _upload_err = ERR_OK;
+    _upload_file_size.store(0);
+
+    cleanup_backup_task(_checkpointing_task);
+    _checkpointing_task = nullptr;
+    _checkpoint_err = ERR_OK;
+    _backup_metadata.files.clear();
+    _backup_metadata.checkpoint_total_size = 0;
+    _backup_metadata.checkpoint_decree = 0;
+    _backup_metadata.checkpoint_timestamp = 0;
+
+    background_clear_backup_checkpoint(_backup_id);
+    _backup_id = 0;
+    _status = backup_status::UNINITIALIZED;
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+void replica_backup_manager::background_clear_backup_checkpoint(int64_t backup_id)
+{
+    ddebug_replica("schedule to checkpoint dir of backup({}) after {} minutes",
+                   backup_id,
+                   FLAGS_cold_backup_checkpoint_reserve_minutes);
+    tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
+                     tracker(),
+                     std::bind(&replica_backup_manager::clear_backup_checkpoint, this, backup_id),
+                     get_gpid().thread_hash(),
+                     std::chrono::minutes(FLAGS_cold_backup_checkpoint_reserve_minutes));
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION_LONG
+void replica_backup_manager::clear_backup_checkpoint(int64_t backup_id)
+{
+    ddebug_replica("clear checkpoint dirs of backup({})", backup_id);
+    const auto &backup_dir = _replica->_app->backup_dir();
+    if (!utils::filesystem::directory_exists(backup_dir)) {
+        return;
+    }
+
+    const auto &path = utils::filesystem::path_combine(backup_dir, std::to_string(backup_id));
+    if (utils::filesystem::remove_path(path)) {
+        ddebug_replica("remove backup checkpoint dir({}) succeed", path);
+    } else {
+        derror_replica("remove backup checkpoint dir({}) failed", path);
+    }
+}
+
+// ThreadPool: THREAD_POOL_REPLICATION
+bool replica_backup_manager::cleanup_backup_task(task_ptr task_)
+{
+    CLEANUP_TASK(task_, false)
+    return true;
 }
 
 } // namespace replication

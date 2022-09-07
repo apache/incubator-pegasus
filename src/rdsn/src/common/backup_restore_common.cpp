@@ -27,6 +27,10 @@ DSN_DEFINE_string("replication",
                   cold_backup_root,
                   "",
                   "cold backup remote block service storage path prefix");
+DSN_DEFINE_uint32("replication",
+                  cold_backup_checkpoint_reserve_minutes,
+                  10,
+                  "reserve minutes of cold backup checkpoint");
 
 const std::string backup_constant::APP_METADATA("app_metadata");
 const std::string backup_constant::APP_BACKUP_STATUS("app_backup_status");

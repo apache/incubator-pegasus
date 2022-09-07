@@ -29,6 +29,7 @@ namespace dsn {
 namespace replication {
 
 DSN_DECLARE_string(cold_backup_root);
+DSN_DECLARE_uint32(cold_backup_checkpoint_reserve_minutes);
 
 class backup_constant
 {
