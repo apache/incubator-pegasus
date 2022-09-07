@@ -179,7 +179,7 @@ inline void compare(const std::map<std::string, std::string> &expect,
         }
         ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << hash_key
                                      << ", sort_key=" << it1->first << ", value=" << it1->second;
-        ASSERT_EQ(*it1, *it2) << "Diff: hash_key=" << hash_key << ", data_sort_key=" << it1->first
+        ASSERT_EQ(*it1, *it2) << "Diff: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
                               << ", data_value=" << it1->second << ", base_sort_key=" << it2->first
                               << ", base_value=" << it2->second;
     }
