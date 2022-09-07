@@ -19,10 +19,10 @@ set(MY_PROJ_NAME "function_test_utils")
 set(MY_SRC_SEARCH_MODE "GLOB")
 set(MY_PROJ_SRC "")
 set(MY_PROJ_LIBS
-        dsn_client
-        dsn_replication_common
-        pegasus_client_static
-        gtest
-        )
+    dsn_client
+    dsn_replication_common
+    pegasus_client_static
+    gtest
+    )
 
 dsn_add_static_library()
