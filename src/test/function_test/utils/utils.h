@@ -161,7 +161,7 @@ inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>
             << ", actual_value=" << it1->second.first
             << ", actual_expire_ts_seconds=" << it1->second.second << ", expected_sort_key=" << it2->first
             << ", expected_value=" << it2->second.first
-            << ", base_expire_ts_seconds=" << it2->second.second;
+            << ", expected_expire_ts_seconds=" << it2->second.second;
         ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, hash_key, it1->first));
     }
 }
