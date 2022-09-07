@@ -225,7 +225,7 @@ public:
     const std::string splitting_sortkey_prefix = "keys_";
     const std::string data_value = "vaule";
     int32_t count_during_split = 0;
-    static int32_t test_case_;
+    static int32_t test_case;
 };
 
 int32_t partition_split_test::test_case_ = 0;
