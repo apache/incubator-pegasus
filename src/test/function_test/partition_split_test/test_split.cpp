@@ -217,8 +217,8 @@ public:
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> expected;
     const int32_t partition_count = 4;
     const int32_t dataset_count = 1000;
-    const std::string _table_name_prefix = "split_table_test_";
-    std::string _table_name;
+    const std::string table_name_prefix = "split_table_test_";
+    std::string table_name;
     const std::string dataset_hashkey_prefix = "hashkey";
     const std::string dataset_sortkey_prefix = "sortkey";
     const std::string splitting_hashkey_prefix = "keyh_";
