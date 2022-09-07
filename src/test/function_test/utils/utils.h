@@ -139,7 +139,7 @@ inline void compare(const std::pair<std::string, uint32_t> &expect,
     ASSERT_TRUE(expect.second >= actual.second && expect.second - actual.second <= 1)
         << "Diff expire_ts_seconds: hash_key=" << hash_key << ", sort_key=" << sort_key
         << ", expected_value=" << expect.first << ", expected_expire_ts_seconds=" << expect.second
-        << ", base_value=" << actual.first << ", base_expire_ts_seconds=" << actual.second;
+        << ", actual_value=" << actual.first << ", actual_expire_ts_seconds=" << actual.second;
 }
 
 inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>> &expect,
