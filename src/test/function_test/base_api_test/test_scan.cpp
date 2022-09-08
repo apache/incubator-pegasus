@@ -21,151 +21,143 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <iostream>
 
 #include <dsn/dist/replication/replication_ddl_client.h>
 #include <dsn/service_api_c.h>
 #include <unistd.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 #include "base/pegasus_const.h"
 #include "base/pegasus_utils.h"
-#include "utils.h"
+#include "test/function_test/utils/utils.h"
+#include "test/function_test/utils/test_util.h"
 
 using namespace ::pegasus;
 
-extern pegasus_client *client;
-extern std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client;
 static const char CCH[] = "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 static char buffer[256];
-static std::map<std::string, std::map<std::string, std::string>> base;
-static std::string expected_hash_key;
 static constexpr int ttl_seconds = 24 * 60 * 60;
-static std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>> ttl_base;
 
-// REQUIRED: 'buffer' has been filled with random chars.
-static const std::string random_string()
-{
-    int pos = random() % sizeof(buffer);
-    buffer[pos] = CCH[random() % sizeof(CCH)];
-    unsigned int length = random() % sizeof(buffer) + 1;
-    if (pos + length < sizeof(buffer)) {
-        return std::string(buffer + pos, length);
-    } else {
-        return std::string(buffer + pos, sizeof(buffer) - pos) +
-               std::string(buffer, length + pos - sizeof(buffer));
-    }
-}
-static void clear_database()
-{
-    ddebug("CLEARING_DATABASE...");
-    pegasus_client::scan_options option;
-    std::vector<pegasus_client::pegasus_scanner *> scanners;
-    int ret = client->get_unordered_scanners(1, option, scanners);
-    ASSERT_EQ(PERR_OK, ret) << "Error occurred when get scanners, error="
-                            << client->get_error_string(ret);
-    ASSERT_EQ(1, scanners.size());
-    ASSERT_NE(nullptr, scanners[0]);
-
-    std::string hash_key;
-    std::string sort_key;
-    std::string value;
-    while (PERR_OK == (ret = (scanners[0]->next(hash_key, sort_key, value)))) {
-        int r = client->del(hash_key, sort_key);
-        ASSERT_EQ(PERR_OK, r) << "Error occurred when del, hash_key=" << hash_key
-                              << ", sort_key=" << sort_key
-                              << ", error=" << client->get_error_string(r);
-    }
-    delete scanners[0];
-
-    ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when next() in clearing database. error="
-                                       << client->get_error_string(ret);
-    ret = client->get_unordered_scanners(1, option, scanners);
-    ASSERT_EQ(PERR_OK, ret) << "Error occurred when get scanners, error="
-                            << client->get_error_string(ret);
-    ASSERT_EQ(1, scanners.size());
-    ASSERT_NE(nullptr, scanners[0]);
-
-    ret = scanners[0]->next(hash_key, sort_key, value);
-    delete scanners[0];
-    ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when clearing database. error="
-                                       << client->get_error_string(ret);
-
-    base.clear();
-
-    ddebug("Database cleared.");
-}
-
-// REQUIRED: 'base' is empty
-static void fill_database()
-{
-    ddebug("FILLING_DATABASE...");
-
-    srandom((unsigned int)time(nullptr));
-    for (auto &c : buffer) {
-        c = CCH[random() % sizeof(CCH)];
-    }
-
-    expected_hash_key = random_string();
-    std::string hash_key;
-    std::string sort_key;
-    std::string value;
-    while (base[expected_hash_key].size() < 1000) {
-        sort_key = random_string();
-        value = random_string();
-        int ret = client->set(expected_hash_key, sort_key, value);
-        ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
-                                << ", sort_key=" << sort_key
-                                << ", error=" << client->get_error_string(ret);
-        base[expected_hash_key][sort_key] = value;
-    }
-
-    while (base.size() < 500) {
-        hash_key = random_string();
-        while (base[hash_key].size() < 10) {
-            sort_key = random_string();
-            value = random_string();
-            int ret = client->set(hash_key, sort_key, value);
-            ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
-                                    << ", sort_key=" << sort_key
-                                    << ", error=" << client->get_error_string(ret);
-            base[hash_key][sort_key] = value;
-        }
-    }
-
-    while (base.size() < 1000) {
-        hash_key = random_string();
-        while (base[hash_key].size() < 10) {
-            sort_key = random_string();
-            value = random_string();
-            auto expire_ts_seconds = static_cast<uint32_t>(ttl_seconds) + utils::epoch_now();
-            int ret = client->set(hash_key, sort_key, value, 5000, ttl_seconds, nullptr);
-            ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
-                                    << ", sort_key=" << sort_key
-                                    << ", error=" << client->get_error_string(ret);
-            base[hash_key][sort_key] = value;
-            ttl_base[hash_key][sort_key] =
-                std::pair<std::string, uint32_t>(value, expire_ts_seconds);
-        }
-    }
-
-    ddebug("Database filled.");
-}
-
-class scan : public testing::Test
+class scan : public test_util
 {
 public:
-    static void SetUpTestCase()
+    void SetUp() override
     {
-        ddebug("SetUp...");
-        clear_database();
-        fill_database();
+        test_util::SetUp();
+        // TODO(yingchun): can be removed?
+        ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(app_name_, 0));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client->create_app(app_name_, "pegasus", 8, 3, {}, false));
+        client = pegasus_client_factory::get_client(cluster_name_.c_str(), app_name_.c_str());
+        ASSERT_TRUE(client != nullptr);
+        ASSERT_NO_FATAL_FAILURE(fill_database());
     }
 
-    static void TearDownTestCase()
+    void TearDown() override
     {
-        ddebug("TearDown...");
-        clear_database();
+        // TODO(yingchun): can be removed too?
+        ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(app_name_, 0));
     }
+
+    // REQUIRED: 'buffer' has been filled with random chars.
+    static const std::string random_string()
+    {
+        int pos = random() % sizeof(buffer);
+        unsigned int length = random() % sizeof(buffer) + 1;
+        if (pos + length < sizeof(buffer)) {
+            return std::string(buffer + pos, length);
+        } else {
+            return std::string(buffer + pos, sizeof(buffer) - pos) +
+                   std::string(buffer, length + pos - sizeof(buffer));
+        }
+    }
+
+    // REQUIRED: 'base' is empty
+    void fill_database()
+    {
+        ddebug("FILLING_DATABASE...");
+
+        srandom((unsigned int)time(nullptr));
+        for (auto &c : buffer) {
+            c = CCH[random() % strlen(CCH)];
+        }
+
+        int i = 0;
+        // Fill data with <expected_hash_key> : <sort_key> -> <value>, there are 1000 sort keys in
+        // the unique <expected_hash_key>.
+        expected_hash_key = random_string();
+        std::string sort_key;
+        std::string value;
+        while (base[expected_hash_key].size() < 1000) {
+            sort_key = random_string();
+            value = random_string();
+            int ret = client->set(expected_hash_key, sort_key, value);
+            ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << expected_hash_key
+                                    << ", sort_key=" << sort_key
+                                    << ", error=" << client->get_error_string(ret);
+            i++;
+            base[expected_hash_key][sort_key] = value;
+        }
+        // 1000 kvs
+
+        std::string hash_key;
+        // Fill data with <hash_key> : <sort_key> -> <value>, except <expected_hash_key>, there are
+        // total 499 hash keys and 10 sortkeys in each <hash_key>.
+        while (base.size() < 501) {
+            hash_key = random_string();
+            if (base.count(hash_key) != 0) {
+                continue;
+            }
+            while (base[hash_key].size() < 10) {
+                sort_key = random_string();
+                if (base[hash_key].count(sort_key) != 0) {
+                    continue;
+                }
+                value = random_string();
+                int ret = client->set(hash_key, sort_key, value);
+                ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
+                                        << ", sort_key=" << sort_key
+                                        << ", error=" << client->get_error_string(ret);
+                i++;
+                base[hash_key][sort_key] = value;
+            }
+        }
+        // 1000 + 5000 kvs
+
+        // Fill data with <hash_key> : <sort_key> -> <value> with TTL, except <expected_hash_key>
+        // and normal kvs, there are total 500 hash keys and 10 sortkeys in each <hash_key>.
+        while (base.size() < 1001) {
+            hash_key = random_string();
+            if (base.count(hash_key) != 0) {
+                continue;
+            }
+            while (base[hash_key].size() < 10) {
+                sort_key = random_string();
+                if (base[hash_key].count(sort_key) != 0) {
+                    continue;
+                }
+                value = random_string();
+                auto expire_ts_seconds = static_cast<uint32_t>(ttl_seconds) + utils::epoch_now();
+                int ret = client->set(hash_key, sort_key, value, 5000, ttl_seconds, nullptr);
+                i++;
+                ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
+                                        << ", sort_key=" << sort_key
+                                        << ", error=" << client->get_error_string(ret);
+                i++;
+                base[hash_key][sort_key] = value;
+                ttl_base[hash_key][sort_key] =
+                    std::pair<std::string, uint32_t>(value, expire_ts_seconds);
+            }
+        }
+        // 1000 + 5000 + 5000 kvs
+
+        ddebug_f("Database filled with kv count {}.", i);
+    }
+
+public:
+    std::string expected_hash_key;
+    std::map<std::string, std::map<std::string, std::string>> base;
+    std::map<std::string, std::map<std::string, std::pair<std::string, uint32_t>>> ttl_base;
 };
 
 TEST_F(scan, OVERALL_COUNT_ONLY)
@@ -179,17 +171,20 @@ TEST_F(scan, OVERALL_COUNT_ONLY)
                       << client->get_error_string(ret);
     ASSERT_LE(scanners.size(), 3);
 
+    int i = 0;
     int32_t data_count = 0;
     for (auto scanner : scanners) {
         ASSERT_NE(nullptr, scanner);
         int32_t kv_count;
         while (PERR_OK == (ret = (scanner->next(kv_count)))) {
             data_count += kv_count;
+            i++;
         }
         ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
                                            << client->get_error_string(ret);
         delete scanner;
     }
+    ddebug_f("scan count {}", i);
     int base_data_count = 0;
     for (auto &m : base) {
         base_data_count += m.second.size();
@@ -218,7 +213,7 @@ TEST_F(scan, ALL_SORT_KEY)
     delete scanner;
     ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
                                        << client->get_error_string(ret);
-    compare(data, base[expected_hash_key], expected_hash_key);
+    ASSERT_NO_FATAL_FAILURE(compare(base[expected_hash_key], data, expected_hash_key));
 }
 
 TEST_F(scan, BOUND_INCLUSIVE)
@@ -253,7 +248,8 @@ TEST_F(scan, BOUND_INCLUSIVE)
     ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
                                        << client->get_error_string(ret);
     ++it2; // to be the 'end' iterator
-    compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key);
+    ASSERT_NO_FATAL_FAILURE(
+        compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key));
 }
 
 TEST_F(scan, BOUND_EXCLUSIVE)
@@ -288,7 +284,8 @@ TEST_F(scan, BOUND_EXCLUSIVE)
     ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
                                        << client->get_error_string(ret);
     ++it1;
-    compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key);
+    ASSERT_NO_FATAL_FAILURE(
+        compare(data, std::map<std::string, std::string>(it1, it2), expected_hash_key));
 }
 
 TEST_F(scan, ONE_POINT)
@@ -398,13 +395,11 @@ TEST_F(scan, OVERALL)
                                            << client->get_error_string(ret);
         delete scanner;
     }
-    compare(data, base);
+    ASSERT_NO_FATAL_FAILURE(compare(base, data));
 }
 
 TEST_F(scan, REQUEST_EXPIRE_TS)
 {
-    ddebug("TEST REQUEST_EXPIRE_TS...");
-
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
     std::vector<pegasus_client::pegasus_scanner *> raw_scanners;
@@ -450,8 +445,8 @@ TEST_F(scan, REQUEST_EXPIRE_TS)
         }
     }
 
-    compare(data, base);
-    compare(ttl_data, ttl_base);
+    ASSERT_NO_FATAL_FAILURE(compare(base, data));
+    ASSERT_NO_FATAL_FAILURE(compare(ttl_base, ttl_data));
 }
 
 TEST_F(scan, ITERATION_TIME_LIMIT)

@@ -25,14 +25,18 @@
 
 #include <dsn/service_api_c.h>
 #include <unistd.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
+
+#include "test/function_test/utils/test_util.h"
 
 using namespace ::pegasus;
 
-extern pegasus_client *client;
+class incr : public test_util
+{
+};
 
-TEST(incr, unexist_key)
+TEST_F(incr, unexist_key)
 {
     int ret = client->del("incr_test_unexist_key", "");
     ASSERT_EQ(0, ret);
@@ -51,7 +55,7 @@ TEST(incr, unexist_key)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, empty_key)
+TEST_F(incr, empty_key)
 {
     int ret = client->set("incr_test_empty_key", "", "");
     ASSERT_EQ(0, ret);
@@ -70,7 +74,7 @@ TEST(incr, empty_key)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, negative_value)
+TEST_F(incr, negative_value)
 {
     int ret = client->set("incr_test_negative_value", "", "-100");
     ASSERT_EQ(0, ret);
@@ -89,7 +93,7 @@ TEST(incr, negative_value)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, increase_zero)
+TEST_F(incr, increase_zero)
 {
     int ret = client->set("incr_test_increase_zero", "", "100");
     ASSERT_EQ(0, ret);
@@ -108,7 +112,7 @@ TEST(incr, increase_zero)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, multiple_increment)
+TEST_F(incr, multiple_increment)
 {
     int ret = client->set("incr_test_multiple_increment", "", "100");
     ASSERT_EQ(0, ret);
@@ -135,7 +139,7 @@ TEST(incr, multiple_increment)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, invalid_old_data)
+TEST_F(incr, invalid_old_data)
 {
     int ret = client->set("incr_test_invalid_old_data", "", "aaa");
     ASSERT_EQ(0, ret);
@@ -154,7 +158,7 @@ TEST(incr, invalid_old_data)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, out_of_range_old_data)
+TEST_F(incr, out_of_range_old_data)
 {
     int ret = client->set(
         "incr_test_out_of_range_old_data", "", "10000000000000000000000000000000000000");
@@ -174,7 +178,7 @@ TEST(incr, out_of_range_old_data)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, up_overflow)
+TEST_F(incr, up_overflow)
 {
     int ret = client->set("incr_test_up_overflow", "", "1");
     ASSERT_EQ(0, ret);
@@ -193,7 +197,7 @@ TEST(incr, up_overflow)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, down_overflow)
+TEST_F(incr, down_overflow)
 {
     int ret = client->set("incr_test_down_overflow", "", "-1");
     ASSERT_EQ(0, ret);
@@ -212,7 +216,7 @@ TEST(incr, down_overflow)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, preserve_ttl)
+TEST_F(incr, preserve_ttl)
 {
     int ret = client->set("incr_test_preserve_ttl", "", "100", 5000, 3);
     ASSERT_EQ(0, ret);
@@ -237,7 +241,7 @@ TEST(incr, preserve_ttl)
     ASSERT_EQ(0, ret);
 }
 
-TEST(incr, reset_ttl)
+TEST_F(incr, reset_ttl)
 {
     /// reset after old value ttl timeout
     int ret = client->set("incr_test_reset_ttl", "", "100", 5000, 3);

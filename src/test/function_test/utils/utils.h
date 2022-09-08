@@ -126,81 +126,78 @@ inline void check_and_put(std::map<std::string, std::string> &data,
     data[sort_key] = value;
 }
 
-inline void compare(const std::pair<std::string, uint32_t> &data,
-                    const std::pair<std::string, uint32_t> &base,
+inline void compare(const std::pair<std::string, uint32_t> &expect,
+                    const std::pair<std::string, uint32_t> &actual,
                     const std::string &hash_key,
                     const std::string sort_key)
 {
-    ASSERT_EQ(base.first, data.first)
+    ASSERT_EQ(expect.first, actual.first)
         << "Diff value: hash_key=" << hash_key << ", sort_key=" << sort_key
-        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
-        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+        << ", expected_value=" << expect.first << ", expected_expire_ts_seconds=" << expect.second
+        << ", actual_value=" << actual.first << ", actual_expire_ts_seconds=" << actual.second;
 
-    ASSERT_TRUE(data.second >= base.second && data.second - base.second <= 1)
+    ASSERT_TRUE(expect.second >= actual.second && expect.second - actual.second <= 1)
         << "Diff expire_ts_seconds: hash_key=" << hash_key << ", sort_key=" << sort_key
-        << ", data_value=" << data.first << ", data_expire_ts_seconds=" << data.second
-        << ", base_value=" << base.first << ", base_expire_ts_seconds=" << base.second;
+        << ", expected_value=" << expect.first << ", expected_expire_ts_seconds=" << expect.second
+        << ", actual_value=" << actual.first << ", actual_expire_ts_seconds=" << actual.second;
 }
 
-inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>> &data,
-                    const std::map<std::string, std::pair<std::string, uint32_t>> &base,
+inline void compare(const std::map<std::string, std::pair<std::string, uint32_t>> &expect,
+                    const std::map<std::string, std::pair<std::string, uint32_t>> &actual,
                     const std::string &hash_key)
 {
-    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
-        if (it1 == data.end()) {
-            ASSERT_EQ(base.end(), it2)
-                << "Only in base: hash_key=" << hash_key << ", sort_key=" << it2->first
+    for (auto it1 = actual.begin(), it2 = expect.begin();; ++it1, ++it2) {
+        if (it1 == actual.end()) {
+            ASSERT_EQ(expect.end(), it2)
+                << "Only in expect: hash_key=" << hash_key << ", sort_key=" << it2->first
                 << ", value=" << it2->second.first << ", expire_ts_seconds=" << it2->second.second;
             break;
         }
-        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << hash_key
-                                   << ", sort_key=" << it1->first << ", value=" << it1->second.first
-                                   << ", expire_ts_seconds=" << it1->second.second;
-        ASSERT_EQ(it2->first, it1->first)
-            << "Diff sort_key: hash_key=" << hash_key << ", data_sort_key=" << it1->first
-            << ", data_value=" << it1->second.first
-            << ", data_expire_ts_seconds=" << it1->second.second << ", base_sort_key=" << it2->first
-            << ", base_value=" << it2->second.first
-            << ", base_expire_ts_seconds=" << it2->second.second;
-        compare(it1->second, it2->second, hash_key, it1->first);
+        ASSERT_NE(expect.end(), it2)
+            << "Only in actual: hash_key=" << hash_key << ", sort_key=" << it1->first
+            << ", value=" << it1->second.first << ", expire_ts_seconds=" << it1->second.second;
+        ASSERT_EQ(it1->first, it2->first)
+            << "Diff sort_key: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
+            << ", actual_value=" << it1->second.first
+            << ", actual_expire_ts_seconds=" << it1->second.second
+            << ", expected_sort_key=" << it2->first << ", expected_value=" << it2->second.first
+            << ", expected_expire_ts_seconds=" << it2->second.second;
+        ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, hash_key, it1->first));
     }
-
-    dinfo("Data and base are the same.");
 }
 
-inline void compare(const std::map<std::string, std::string> &data,
-                    const std::map<std::string, std::string> &base,
+inline void compare(const std::map<std::string, std::string> &expect,
+                    const std::map<std::string, std::string> &actual,
                     const std::string &hash_key)
 {
-    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
-        if (it1 == data.end()) {
-            ASSERT_EQ(base.end(), it2) << "Only in base: hash_key=" << hash_key
-                                       << ", sort_key=" << it2->first << ", value=" << it2->second;
+    for (auto it1 = actual.begin(), it2 = expect.begin();; ++it1, ++it2) {
+        if (it1 == actual.end()) {
+            ASSERT_EQ(expect.end(), it2) << "Only in expect: hash_key=" << hash_key
+                                         << ", sort_key=" << it2->first
+                                         << ", value=" << it2->second;
             break;
         }
-        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << hash_key
-                                   << ", sort_key=" << it1->first << ", value=" << it1->second;
-        ASSERT_EQ(*it2, *it1) << "Diff: hash_key=" << hash_key << ", data_sort_key=" << it1->first
-                              << ", data_value=" << it1->second << ", base_sort_key=" << it2->first
-                              << ", base_value=" << it2->second;
+        ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << hash_key
+                                     << ", sort_key=" << it1->first << ", value=" << it1->second;
+        ASSERT_EQ(*it1, *it2) << "Diff: hash_key=" << hash_key << ", actual_sort_key=" << it1->first
+                              << ", actual_value=" << it1->second
+                              << ", expected_sort_key=" << it2->first
+                              << ", expected_value=" << it2->second;
     }
-
-    dinfo("Data and base are the same.");
 }
 
 template <typename T, typename U>
-inline void compare(const T &data, const U &base)
+inline void compare(const T &expect, const U &actual)
 {
-    for (auto it1 = data.begin(), it2 = base.begin();; ++it1, ++it2) {
-        if (it1 == data.end()) {
-            ASSERT_EQ(base.end(), it2) << "Only in base: hash_key=" << it2->first;
+    ASSERT_EQ(expect.size(), actual.size());
+    for (auto it1 = actual.begin(), it2 = expect.begin();; ++it1, ++it2) {
+        if (it1 == actual.end()) {
+            ASSERT_EQ(expect.end(), it2) << "Only in expect: hash_key=" << it2->first;
             break;
         }
-        ASSERT_NE(base.end(), it2) << "Only in data: hash_key=" << it1->first;
-        ASSERT_EQ(it1->first, it2->first) << "Diff: data_hash_key=" << it1->first
-                                          << ", base_hash_key=" << it2->first;
-        compare(it1->second, it2->second, it1->first);
+        ASSERT_NE(expect.end(), it2) << "Only in actual: hash_key=" << it1->first;
+        ASSERT_EQ(it1->first, it2->first) << "Diff: actual_hash_key=" << it1->first
+                                          << ", expected_hash_key=" << it2->first;
+        ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, it1->first));
     }
-
-    dinfo("Data and base are the same.");
 }

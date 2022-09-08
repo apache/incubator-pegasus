@@ -26,28 +26,29 @@
 
 #include <dsn/service_api_c.h>
 #include <unistd.h>
-#include <pegasus/client.h>
+#include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 
 #include <dsn/dist/replication/replication_ddl_client.h>
 
 #include "base/pegasus_const.h"
-#include "utils.h"
+#include "test/function_test/utils/utils.h"
+#include "test/function_test/utils/test_util.h"
 
 using namespace dsn::replication;
 using namespace pegasus;
 
-TEST(drop_and_recall, simple)
+class drop_and_recall : public test_util
+{
+};
+
+TEST_F(drop_and_recall, simple)
 {
     const std::string simple_table = "simple_table";
     const std::string key_prefix = "hello";
     const std::string value_prefix = "world";
     const int number = 10000;
     const int partition_count = 4;
-
-    std::vector<dsn::rpc_address> meta_list;
-    replica_helper::load_meta_servers(meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster");
-    replication_ddl_client *ddl_client = new replication_ddl_client(meta_list);
 
     // first create table
     std::cerr << "create app " << simple_table << std::endl;
@@ -97,8 +98,7 @@ TEST(drop_and_recall, simple)
 
     // then drop the table
     std::cerr << "drop table " << simple_table << std::endl;
-    error = ddl_client->drop_app(simple_table, 0);
-    ASSERT_EQ(0, error);
+    ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(simple_table, 0));
 
     // wait for all elements to be dropped
     for (int i = 0; i < partition_count; ++i) {

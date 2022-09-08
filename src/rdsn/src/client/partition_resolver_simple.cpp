@@ -271,7 +271,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
 
             if (_app_id != -1 && _app_id != resp.app_id) {
                 dwarn_f("app id is changed (mostly the app was removed and created with the same "
-                        "name), local Vs remote: %u vs %u ",
+                        "name), local Vs remote: {} vs {} ",
                         _app_id,
                         resp.app_id);
             }

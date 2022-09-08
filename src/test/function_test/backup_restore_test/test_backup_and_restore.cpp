@@ -20,11 +20,11 @@
 #include <dsn/utility/filesystem.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
-#include <pegasus/client.h>
-#include <pegasus/error.h>
+#include "include/pegasus/client.h"
+#include "include/pegasus/error.h"
 
 #include "base/pegasus_const.h"
-#include "global_env.h"
+#include "test/function_test/utils/global_env.h"
 
 using namespace dsn;
 using namespace dsn::replication;
@@ -44,46 +44,23 @@ public:
     {
     }
 
+    static void SetUpTestCase() { ASSERT_TRUE(pegasus_client_factory::initialize("config.ini")); }
+
     void SetUp() override
     {
-        // initialize root dirs
-        _pegasus_root_dir = global_env::instance()._pegasus_root;
-        _working_root_dir = global_env::instance()._working_dir;
-
-        // modify the config to enable backup, and restart onebox
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("cp src/server/config.min.ini config.test_backup_restore.ini");
-        system("sed -i \"/^\\s*cold_backup_disabled/c cold_backup_disabled = false\" "
-               "config.test_backup_restore.ini");
-        system("sed -i \"/^\\s*cold_backup_checkpoint_reserve_minutes/c "
-               "cold_backup_checkpoint_reserve_minutes = 0\" "
-               "config.test_backup_restore.ini");
-        std::string cmd = fmt::format("sed -i \"/^\\s*cold_backup_root/c cold_backup_root = {}\" "
-                                      "config.test_backup_restore.ini",
-                                      _cluster_name);
-        system(cmd.c_str());
-        system("./run.sh start_onebox --config_path config.test_backup_restore.ini");
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-
         // initialize ddl_client
         std::vector<rpc_address> meta_list;
-        replica_helper::load_meta_servers(
-            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), _cluster_name.c_str());
+        ASSERT_TRUE(replica_helper::load_meta_servers(
+            meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), _cluster_name.c_str()));
+        ASSERT_FALSE(meta_list.empty());
         _ddl_client = std::make_shared<replication_ddl_client>(meta_list);
-
-        // initialize _old_app_id
-        int32_t partition_count;
-        std::vector<partition_configuration> partitions;
-        _ddl_client->list_app(_old_app_name, _old_app_id, partition_count, partitions);
+        ASSERT_TRUE(_ddl_client != nullptr);
     }
 
     void TearDown() override
     {
-        chdir(_pegasus_root_dir.c_str());
-        system("./run.sh clear_onebox");
-        system("./run.sh start_onebox -w");
-        chdir(_working_root_dir.c_str());
+        ASSERT_EQ(ERR_OK, _ddl_client->drop_app(_old_app_name, 0));
+        ASSERT_EQ(ERR_OK, _ddl_client->drop_app(_new_app_name, 0));
     }
 
     bool write_data()
@@ -236,8 +213,6 @@ private:
     const std::string _new_app_name;
     const std::string _provider;
 
-    std::string _pegasus_root_dir;
-    std::string _working_root_dir;
     int32_t _old_app_id;
 };
 

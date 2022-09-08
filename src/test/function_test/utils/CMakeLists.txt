@@ -15,12 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-add_subdirectory(utils)
-add_subdirectory(backup_restore_test)
-add_subdirectory(base_api_test)
-add_subdirectory(bulk_load_test)
-add_subdirectory(detect_hotspot_test)
-add_subdirectory(partition_split_test)
-add_subdirectory(recovery_test)
-add_subdirectory(restore_test)
-add_subdirectory(throttle_test)
+set(MY_PROJ_NAME "function_test_utils")
+set(MY_SRC_SEARCH_MODE "GLOB")
+set(MY_PROJ_SRC "")
+set(MY_PROJ_LIBS
+    dsn_client
+    dsn_replication_common
+    pegasus_client_static
+    gtest
+    )
+
+dsn_add_static_library()
