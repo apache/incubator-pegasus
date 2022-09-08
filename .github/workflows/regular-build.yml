@@ -71,9 +71,6 @@ jobs:
             os: ubuntu1804
     container:
       image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-master
-    defaults:
-      run:
-        working-directory: /root/incubator-pegasus
     steps:
       - name: Clone Apache Pegasus Source
         uses: actions/checkout@v2
