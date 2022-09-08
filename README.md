@@ -27,7 +27,7 @@ under the License.
 
 ![pegasus-logo](https://github.com/apache/incubator-pegasus-website/blob/master/assets/images/pegasus-logo-inv.png)
 
-[![BuildPegasusRegularly - build pegasus and rdsn on different env every day](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml)
+[![Lint and build regularly](https://github.com/apache/incubator-pegasus/actions/workflows/regular-build.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/regular-build.yml)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 [![Releases](https://img.shields.io/github/release/apache/incubator-pegasus.svg)][github-release]
 
