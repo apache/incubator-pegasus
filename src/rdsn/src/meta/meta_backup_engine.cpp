@@ -296,10 +296,10 @@ void meta_backup_engine::complete_backup()
     backup_info.app_name = _cur_backup.app_name;
     backup_info.backup_id = _cur_backup.backup_id;
     backup_info.start_time_ms = _cur_backup.start_time_ms;
-    const auto end_time_ms = dsn_now_ms();
+    const auto end_time_ms = static_cast<int64_t>(dsn_now_ms());
     backup_info.end_time_ms = end_time_ms;
-    blob buf = json::json_forwarder<app_backup_info>::encode(backup_info);
-    error_code err = write_backup_file(remote_backup_dir, backup_constant::BACKUP_INFO, buf);
+    const auto &buf = json::json_forwarder<app_backup_info>::encode(backup_info);
+    const auto &err = write_backup_file(remote_backup_dir, backup_constant::BACKUP_INFO, buf);
     if (err == ERR_FS_INTERNAL) {
         derror_f(
             "backup_id({}): write backup info failed, error {}, do not try again for this error.",
