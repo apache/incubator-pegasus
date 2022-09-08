@@ -48,6 +48,7 @@
 
 #define ENUM_BEGIN(type, invalid_value) ENUM_BEGIN2(type, type, invalid_value)
 
+#define ENUM_REG2(type, name) helper->register_enum(#name, type::name);
 #define ENUM_REG(e) helper->register_enum(#e, e);
 
 #define ENUM_END2(type, name)                                                                      \

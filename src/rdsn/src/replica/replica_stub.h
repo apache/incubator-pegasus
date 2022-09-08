@@ -307,6 +307,8 @@ private:
     // Try to release tcmalloc memory back to operating system
     // If release_all = true, it will release all reserved-not-used memory
     uint64_t gc_tcmalloc_memory(bool release_all);
+#elif defined(DSN_USE_JEMALLOC)
+    void register_jemalloc_ctrl_command();
 #endif
 
 private:
@@ -382,6 +384,8 @@ private:
     dsn_handle_t _get_tcmalloc_status_command;
     dsn_handle_t _max_reserved_memory_percentage_command;
     dsn_handle_t _release_all_reserved_memory_command;
+#elif defined(DSN_USE_JEMALLOC)
+    dsn_handle_t _dump_jemalloc_stats_command;
 #endif
     dsn_handle_t _max_concurrent_bulk_load_downloading_count_command;
 

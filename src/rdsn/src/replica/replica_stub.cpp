@@ -57,6 +57,8 @@
 #include <dsn/dist/fmt_logging.h>
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
+#elif defined(DSN_USE_JEMALLOC)
+#include "utils/je_ctl.h"
 #endif
 #include <dsn/utility/fail_point.h>
 #include <dsn/dist/remote_command.h>
@@ -106,6 +108,8 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
     _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
     _release_all_reserved_memory_command = nullptr;
+#elif defined(DSN_USE_JEMALLOC)
+    _dump_jemalloc_stats_command = nullptr;
 #endif
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -2261,6 +2265,41 @@ void replica_stub::open_service()
     register_ctrl_command();
 }
 
+#if !defined(DSN_ENABLE_GPERF) && defined(DSN_USE_JEMALLOC)
+void replica_stub::register_jemalloc_ctrl_command()
+{
+    _dump_jemalloc_stats_command = ::dsn::command_manager::instance().register_command(
+        {"replica.dump-jemalloc-stats"},
+        fmt::format("replica.dump-jemalloc-stats <{}> [buffer size]", kAllJeStatsTypesStr),
+        "dump stats of jemalloc",
+        [](const std::vector<std::string> &args) {
+            if (args.empty()) {
+                return std::string("invalid arguments");
+            }
+
+            auto type = enum_from_string(args[0].c_str(), je_stats_type::INVALID);
+            if (type == je_stats_type::INVALID) {
+                return std::string("invalid stats type");
+            }
+
+            std::string stats("\n");
+
+            if (args.size() == 1) {
+                dsn::je_dump_stats(type, stats);
+                return stats;
+            }
+
+            uint64_t buf_sz;
+            if (!dsn::buf2uint64(args[1], buf_sz)) {
+                return std::string("invalid buffer size");
+            }
+
+            dsn::je_dump_stats(type, static_cast<size_t>(buf_sz), stats);
+            return stats;
+        });
+}
+#endif
+
 void replica_stub::register_ctrl_command()
 {
     /// In simple_kv test, three replica apps are created, which means that three replica_stubs are
@@ -2411,6 +2450,8 @@ void replica_stub::register_ctrl_command()
                 auto release_bytes = gc_tcmalloc_memory(true);
                 return "OK, release_bytes=" + std::to_string(release_bytes);
             });
+#elif defined(DSN_USE_JEMALLOC)
+        register_jemalloc_ctrl_command();
 #endif
         _max_concurrent_bulk_load_downloading_count_command =
             dsn::command_manager::instance().register_command(
@@ -2573,6 +2614,8 @@ void replica_stub::close()
     UNREGISTER_VALID_HANDLER(_get_tcmalloc_status_command);
     UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
     UNREGISTER_VALID_HANDLER(_release_all_reserved_memory_command);
+#elif defined(DSN_USE_JEMALLOC)
+    UNREGISTER_VALID_HANDLER(_dump_jemalloc_stats_command);
 #endif
     UNREGISTER_VALID_HANDLER(_max_concurrent_bulk_load_downloading_count_command);
 
@@ -2588,6 +2631,8 @@ void replica_stub::close()
     _get_tcmalloc_status_command = nullptr;
     _max_reserved_memory_percentage_command = nullptr;
     _release_all_reserved_memory_command = nullptr;
+#elif defined(DSN_USE_JEMALLOC)
+    _dump_jemalloc_stats_command = nullptr;
 #endif
     _max_concurrent_bulk_load_downloading_count_command = nullptr;
 
