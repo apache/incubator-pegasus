@@ -18,14 +18,14 @@
 name: Lint and build regularly
 
 on:
-  pull_request:
-    types: [ synchronize, opened, reopened ]
-    paths:
-      - '.github/workflows/regular-build.yml'
-
   push:
     paths:
       - '.github/workflows/regular-build.yml'
+    branches:
+      - master
+      - 'v[0-9]+.*' # release branch
+      - ci-test # testing branch for github action
+      - '*dev' # developing branch
 
   # for manually triggering workflow
   workflow_dispatch:
@@ -70,7 +70,7 @@ jobs:
             compiler: "clang-9,clang++-9"
             os: ubuntu1804
     container:
-      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-${{ github.base_ref }}
+      image: apache/pegasus:thirdparties-bin-${{ matrix.os }}-${{ github.ref_name }}
     defaults:
       run:
         working-directory: /root/incubator-pegasus
@@ -78,8 +78,7 @@ jobs:
       - name: Clone Apache Pegasus Source
         working-directory: /root
         run: |
-          git clone -b ${{ github.base_ref }} --depth=1 https://github.com/apache/incubator-pegasus.git
-          cd incubator-pegasus
+          git clone -b ${{ github.ref_name }} --depth=1 https://github.com/apache/incubator-pegasus.git
       - name: Unpack prebuilt third-parties
         run: unzip /root/thirdparties-bin.zip -d ./thirdparty
       - name: Compilation Pegasus on GCC
