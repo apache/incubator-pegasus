@@ -120,7 +120,7 @@ private:
                                  const std::string &file_name,
                                  const blob &write_buffer);
     error_code write_app_info();
-    void write_backup_info();
+    void complete_backup();
 
     void update_backup_item_on_remote_storage(backup_status::type new_status, int64_t end_time = 0);
 
@@ -161,13 +161,6 @@ private:
     backup_item _cur_backup;
     std::vector<backup_status::type> _backup_status;
     // }
-
-    // TODO(heyuchen): remove following functions and vars
-private:
-    void complete_current_backup();
-
-    backup_service *_backup_service;
-    std::string _backup_path;
 };
 
 } // namespace replication
