@@ -23,6 +23,7 @@
 #include "meta/meta_server_failure_detector.h"
 #include "meta/meta_split_service.h"
 #include "meta/meta_bulk_load_service.h"
+#include "meta/meta_backup_service.h"
 #include "meta/test/misc/misc.h"
 
 #include "meta_service_test_app.h"
@@ -51,6 +52,9 @@ void meta_test_base::SetUp()
         _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "bulk_load"));
     ASSERT_TRUE(_ms->_bulk_load_svc);
     _ms->_bulk_load_svc->initialize_bulk_load_service();
+    _ms->_backup_handler = make_unique<backup_service>(
+        _ms.get(), meta_options::concat_path_unix_style(_ms->_cluster_root, "backup"));
+    ASSERT_TRUE(_ms->_backup_handler);
 
     _ss = _ms->_state;
     _ss->initialize(_ms.get(), _ms->_cluster_root + "/apps");
@@ -228,6 +232,8 @@ meta_duplication_service &meta_test_base::dup_svc() { return *(_ms->_dup_svc); }
 meta_split_service &meta_test_base::split_svc() { return *(_ms->_split_svc); }
 
 bulk_load_service &meta_test_base::bulk_svc() { return *(_ms->_bulk_load_svc); }
+
+backup_service &meta_test_base::backup_svc() { return *(_ms->_backup_handler); }
 
 } // namespace replication
 } // namespace dsn

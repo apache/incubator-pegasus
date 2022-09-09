@@ -382,6 +382,12 @@ static command_executor commands[] = {
         recover,
     },
     {
+        "start_app_backup",
+        "start app cold backup",
+        "<-a|--app_id num> <-p|--provider_type str> <-r|root_path str>",
+        start_app_backup,
+    },
+    {
         "add_backup_policy",
         "add new cold backup policy",
         "<-p|--policy_name str> <-b|--backup_provider_type str> <-a|--app_ids 1,2...> "

@@ -19,6 +19,67 @@
 
 #include "shell/commands.h"
 
+bool start_app_backup(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"app_id", required_argument, 0, 'a'},
+                                           {"provider_type", required_argument, 0, 'p'},
+                                           {"root_path", required_argument, 0, 'r'},
+                                           {0, 0, 0, 0}};
+
+    int32_t app_id = 0;
+    std::string backup_provider_type;
+    std::string backup_root_path = "";
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "a:p:r:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'a':
+            app_id = atoi(optarg);
+            break;
+        case 'p':
+            backup_provider_type = optarg;
+            break;
+        case 'r':
+            backup_root_path = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if (app_id <= 0) {
+        fprintf(stderr, "invalid app_id: %d, should > 0\n", app_id);
+        return false;
+    }
+
+    if (backup_provider_type.empty()) {
+        fprintf(stderr, "backup_provider_type should not be empty\n");
+        return false;
+    }
+
+    auto err_resp = sc->ddl_client->backup_app(app_id, backup_provider_type, backup_root_path);
+    dsn::error_s err = err_resp.get_error();
+    std::string hint_msg;
+    int64_t backup_id;
+    if (err.is_ok()) {
+        err = dsn::error_s::make(err_resp.get_value().err);
+        hint_msg = err_resp.get_value().hint_message;
+        backup_id = err_resp.get_value().backup_id;
+    }
+    if (!err.is_ok()) {
+        fmt::print(stderr, "error={} [hint:\"{}\"]\n", err, hint_msg);
+    } else {
+        fmt::print(stdout, "start bakcup succeed, backup_id={}\n", backup_id);
+    }
+
+    return true;
+}
+
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"policy_name", required_argument, 0, 'p'},

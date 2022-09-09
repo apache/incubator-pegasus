@@ -17,33 +17,21 @@
 
 #pragma once
 
-#include <cstdio>
-#include <sstream>
-#include <iomanip> // std::setfill, std::setw
-#include <functional>
-
-#include <dsn/dist/block_service.h>
-#include <dsn/http/http_server.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <gtest/gtest_prod.h>
-
 #include "meta_backup_engine.h"
-#include "meta_data.h"
-#include "meta_rpc_types.h"
+#include "meta_service.h"
+#include "meta_state_service_utils.h"
+#include "server_state.h"
 
 namespace dsn {
 namespace replication {
-
-class meta_service;
-class server_state;
 
 // TODO(heyuchen): implement it
 class backup_service
 {
 public:
-    explicit backup_service(meta_service *meta_svc,
-                            const std::string &policy_meta_root,
-                            const std::string &backup_root);
+    explicit backup_service(meta_service *meta_svc, const std::string &remote_storage_root);
+    virtual ~backup_service();
+
     void start();
 
     void start_backup_app(start_backup_app_rpc rpc);
@@ -52,19 +40,36 @@ public:
     meta_service *get_meta_service() const { return _meta_svc; }
     server_state *get_state() const { return _state; }
 
-    const std::string &backup_root() const { return _backup_root; }
-    const std::string &policy_root() const { return _policy_meta_root; }
+private:
+    void create_onetime_backup_on_remote_storage(std::shared_ptr<meta_backup_engine> engine,
+                                                 start_backup_app_rpc rpc);
+
+    void get_node_path(const int32_t app_id,
+                       const bool is_periodic,
+                       /*out*/ std::queue<std::string> &nodes,
+                       const int64_t backup_id = 0) const
+    {
+        nodes.push(_remote_storage_root);
+        nodes.push(std::to_string(app_id));
+        nodes.push(is_periodic ? PERIODIC_PATH : ONETIME_PATH);
+        if (backup_id > 0) {
+            nodes.push(std::to_string(backup_id));
+        }
+    }
 
 private:
     friend class backup_engine;
+    friend class meta_backup_service_test;
 
     meta_service *_meta_svc;
     server_state *_state;
 
-    // the root of policy metas, stored on remote_storage(zookeeper)
-    std::string _policy_meta_root;
-    // the root of cold backup data, stored on block service
-    std::string _backup_root;
+    std::string _remote_storage_root;
+    task_tracker _tracker;
+
+    zrwlock_nr _lock; // {
+    std::vector<std::shared_ptr<meta_backup_engine>> _onetime_backup_states;
+    // }
 };
 } // namespace replication
 } // namespace dsn
