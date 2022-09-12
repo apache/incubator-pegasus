@@ -365,7 +365,7 @@ function run_test()
                 enable_gcov="yes"
                 ;;
             *)
-                echo "Error: unknow option \"$key\""
+                echo "Error: unknown option \"$key\""
                 echo
                 usage_test
                 exit 1
