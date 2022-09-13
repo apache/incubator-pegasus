@@ -19,13 +19,14 @@
 package org.apache.pegasus.client;
 
 import io.netty.util.concurrent.Future;
+import java.io.Closeable;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * @author shenyuannan
  *     <p>This class provides interfaces to scan data of a specified table.
  */
-public interface PegasusScannerInterface {
+public interface PegasusScannerInterface extends Closeable {
   /**
    * Get the next item.
    *
@@ -52,5 +53,6 @@ public interface PegasusScannerInterface {
   Future<Pair<Pair<byte[], byte[]>, byte[]>> asyncNext();
 
   /** Close the scanner. Should be called when scan completed. */
+  @Override
   void close();
 }

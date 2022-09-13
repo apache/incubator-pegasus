@@ -19,9 +19,10 @@
 
 package org.apache.pegasus.client;
 
+import java.io.Closeable;
 import java.util.Map;
 
-public interface PegasusAdminClientInterface {
+public interface PegasusAdminClientInterface extends Closeable {
   /**
    * Create A new pegasus app which is not stateless However the successful execution of the
    * interface does not guarantee the fully healthy of every partition of the newly created app You
@@ -61,5 +62,6 @@ public interface PegasusAdminClientInterface {
   public void dropApp(String appName, int reserveSeconds) throws PException;
 
   /** close the client */
+  @Override
   public void close();
 }

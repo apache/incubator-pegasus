@@ -476,7 +476,7 @@ jobs:
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
           ./scripts/config_hdfs.sh
-          ./run.sh test --on_travis -m ${{ matrix.test_module }}
+          ./run.sh test -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:
     name: macOS
