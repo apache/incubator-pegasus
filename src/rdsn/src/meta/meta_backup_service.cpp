@@ -109,7 +109,7 @@ void backup_service::create_onetime_backup_on_remote_storage(
                 ddebug_f("App({}) start backup succeed", engine->get_backup_item().app_name);
             });
             tasking::enqueue(
-                LPC_DEFAULT_CALLBACK, _meta_svc->tracker(), [this, engine]() { engine->start(); });
+                LPC_DEFAULT_CALLBACK, _meta_svc->tracker(), [engine]() { engine->start(); });
             int64_t backup_id = engine->get_backup_id();
             {
                 zauto_write_lock l(_lock);
