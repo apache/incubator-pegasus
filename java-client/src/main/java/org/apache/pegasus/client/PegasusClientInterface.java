@@ -18,6 +18,7 @@
  */
 package org.apache.pegasus.client;
 
+import java.io.Closeable;
 import java.util.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.pegasus.client.request.Batch;
@@ -27,7 +28,7 @@ import org.apache.pegasus.client.request.BatchWithResponse;
  * @author qinzuoyan
  *     <p>This class provides interfaces to access data of a specified cluster.
  */
-public interface PegasusClientInterface {
+public interface PegasusClientInterface extends Closeable {
   /**
    * Get pegasus configuration for client.
    *
@@ -36,6 +37,7 @@ public interface PegasusClientInterface {
   public ClientOptions getConfiguration();
 
   /** Close the client. The client can not be used again after closed. */
+  @Override
   public void close();
 
   /**
