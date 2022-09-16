@@ -18,8 +18,10 @@
 # under the License.
 
 set -e
+set -x
 
 if [ $# -lt 1 ]; then
+    echo "parameterNumber is less than 1"
     exit 0
 fi
 
