@@ -21,6 +21,7 @@ set(MY_PROJ_SRC "")
 set(MY_PROJ_LIBS
     dsn_client
     dsn_replication_common
+    pegasus_base
     pegasus_client_static
     gtest
     )

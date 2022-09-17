@@ -42,17 +42,14 @@ class batch_get : public test_util
 
 TEST_F(batch_get, set_and_then_batch_get)
 {
-    std::vector<rpc_address> meta_list;
-    ASSERT_TRUE(replica_helper::load_meta_servers(
-        meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), "mycluster"));
-    auto rrdb_client = new ::dsn::apps::rrdb_client("mycluster", meta_list, client->get_app_name());
+    auto rrdb_client =
+        new ::dsn::apps::rrdb_client(cluster_name_.c_str(), meta_list_, app_name_.c_str());
 
     int test_data_count = 100;
     int test_timeout_milliseconds = 3000;
     uint64_t test_partition_hash = 0;
 
     apps::batch_get_request batch_request;
-
     std::vector<std::string> test_data_hash_keys(test_data_count);
     std::vector<std::string> test_data_sort_keys(test_data_count);
     std::vector<std::string> test_data_values(test_data_count);
