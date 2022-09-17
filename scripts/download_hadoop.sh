@@ -65,4 +65,4 @@ if [ ! -d ${HADOOP_DIR_NAME} ]; then
     exit 1
 fi
 
-mv ${HADOOP_PACKAGE_NAME} ${HADOOP_BIN_PATH}
+mv ${HADOOP_DIR_NAME} ${HADOOP_BIN_PATH}
