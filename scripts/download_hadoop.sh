@@ -18,15 +18,15 @@
 # under the License.
 
 set -e
-set -x
 
 if [ $# -lt 1 ]; then
-    echo "parameterNumber is less than 1"
+    echo "Target HADOOP_BIN_PATH is not provided, thus do not try to download hadoop"
     exit 0
 fi
 
 HADOOP_BIN_PATH=$1
 if [ -d ${HADOOP_BIN_PATH} ]; then
+    echo "Target HADOOP_BIN_PATH ${HADOOP_BIN_PATH} has existed, thus do not try to download hadoop"
     exit 0
 fi
 
@@ -51,7 +51,7 @@ fi
 
 rm -rf ${HADOOP_DIR_NAME}
 
-echo "Decompressing HDFS..."
+echo "Decompressing hadoop..."
 if ! tar xf ${HADOOP_PACKAGE_NAME}; then
     echo "ERROR: decompress hadoop failed"
     rm -f ${HADOOP_PACKAGE_NAME}
