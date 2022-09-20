@@ -93,6 +93,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          ./scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
@@ -105,8 +106,9 @@ jobs:
         run: ./run.sh pack_tools
       - name: Tar files
         run: |
+          mv thirdparty/hadoop-bin ./
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini --exclude='*CMakeFiles*'
+          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -207,6 +209,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          ./scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
@@ -215,8 +218,9 @@ jobs:
           ccache -s
       - name: Tar files
         run: |
+          mv thirdparty/hadoop-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini --exclude='*CMakeFiles*'
+          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -317,6 +321,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
+          ./scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
@@ -325,8 +330,9 @@ jobs:
           ccache -s
       - name: Tar files
         run: |
+          mv thirdparty/hadoop-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini --exclude='*CMakeFiles*'
+          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:

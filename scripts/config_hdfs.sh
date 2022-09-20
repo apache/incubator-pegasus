@@ -39,35 +39,9 @@ fi
 JAVA_JVM_LIBRARY_DIR=$(dirname $(find "${JAVA_HOME}/" -name libjvm.so  | head -1))
 export LD_LIBRARY_PATH=${JAVA_JVM_LIBRARY_DIR}:$LD_LIBRARY_PATH
 
-# download hdfs for unit test
-HDFS_ROOT=hadoop-2.8.4
-HDFS_TAR_NAME=${HDFS_ROOT}.tar.gz
-HDFS_TAR_MD5_VALUE="b30b409bb69185003b3babd1504ba224"
-if [ ! -f $HDFS_ROOT ]; then
-    echo "Downloading hadoop..."
-    download_url="https://pegasus-thirdparty-package.oss-cn-beijing.aliyuncs.com/hadoop-2.8.4.tar.gz"
-    if ! wget -T 10 -t 5 $download_url; then
-        echo "ERROR: download hadoop failed"
-        exit 1
-    fi
-    if [ `md5sum $HDFS_TAR_NAME | awk '{print$1}'` != $HDFS_TAR_MD5_VALUE ]; then
-        echo "check file $HDFS_TAR_NAME md5sum failed!"
-        exit 1
-    fi
-fi
-
-if [ ! -d $HDFS_ROOT ]; then
-    echo "Decompressing HDFS..."
-    if ! tar xf $HDFS_TAR_NAME; then
-        echo "ERROR: decompress hadoop failed"
-        exit 1
-    fi
-    rm -f $HDFS_TAR_NAME
-fi
-
 # Set CLASSPATH to all the Hadoop jars needed to run Hadoop itself as well as
 # the right configuration directory containing core-site.xml or hdfs-site.xml.
-PEGASUS_HADOOP_HOME=`pwd`/${HDFS_ROOT}
+PEGASUS_HADOOP_HOME=`pwd`/hadoop-bin
 # Prefer the HADOOP_HOME set in the environment, but use the pegasus's hadoop dir otherwise.
 export HADOOP_HOME="${HADOOP_HOME:-${PEGASUS_HADOOP_HOME}}"
 if [ ! -d "$HADOOP_HOME/etc/hadoop" ] || [ ! -d "$HADOOP_HOME/share/hadoop" ]; then
