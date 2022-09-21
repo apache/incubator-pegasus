@@ -23,6 +23,10 @@
 
 namespace dsn {
 
+namespace replication {
+class replica_http_service_test;
+}
+
 // A singleton registry for all the HTTP calls
 class http_call_registry : public utils::singleton<http_call_registry>
 {
@@ -47,7 +51,7 @@ public:
     {
         auto call = std::shared_ptr<http_call>(call_uptr.release());
         std::lock_guard<std::mutex> guard(_mu);
-        CHECK_EQ(_call_map.count(call->path), 0);
+        CHECK_EQ_MSG(_call_map.count(call->path), 0, call->path);
         _call_map[call->path] = call;
     }
 
@@ -64,6 +68,18 @@ public:
 
 private:
     friend class utils::singleton<http_call_registry>;
+    friend class replication::replica_http_service_test;
+
+    // Just for testing.
+    // Since paths are registered to a singleton, some paths will be re-registered when create http
+    // service in test, and cause crash.
+    // We will remove this function when make http_call_registry as a non-singleton.
+    void clear_paths()
+    {
+        std::lock_guard<std::mutex> guard(_mu);
+        _call_map.clear();
+    }
+
     http_call_registry() = default;
     ~http_call_registry() = default;
 

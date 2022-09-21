@@ -52,7 +52,7 @@ struct usage_scenario_info
 };
 
 class meta_service;
-class meta_http_service : public http_service
+class meta_http_service : public http_server_base
 {
 public:
     explicit meta_http_service(meta_service *s) : _service(s)

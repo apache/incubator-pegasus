@@ -21,11 +21,11 @@
 namespace dsn {
 namespace replication {
 
-class replica_http_service_test : public duplication_test_base
+class dup_replica_http_service_test : public duplication_test_base
 {
 };
 
-TEST_F(replica_http_service_test, query_duplication_handler)
+TEST_F(dup_replica_http_service_test, query_duplication_handler)
 {
     auto pri = stub->add_primary_replica(1, 1);
 
@@ -58,11 +58,8 @@ TEST_F(replica_http_service_test, query_duplication_handler)
     http_svc.query_duplication_handler(req, resp);
     ASSERT_EQ(resp.status_code, http_status_code::ok);
     ASSERT_EQ(
-        resp.body,
-        R"({)"
-        R"("1583306653":)"
-        R"({"1.1":{"duplicating":false,"fail_mode":"FAIL_SLOW","not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50}})"
-        R"(})");
+        R"({"1583306653":{"1.1":{"duplicating":false,"fail_mode":"FAIL_SLOW","not_confirmed_mutations_num":100,"not_duplicated_mutations_num":50}}})",
+        resp.body);
 }
 
 } // namespace replication

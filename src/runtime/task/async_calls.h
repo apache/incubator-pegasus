@@ -68,13 +68,13 @@ create_task(task_code code, task_tracker *tracker, task_handler &&callback, int 
     return t;
 }
 
-inline task_ptr create_timer_task(task_code code,
-                                  task_tracker *tracker,
-                                  task_handler &&callback,
-                                  std::chrono::milliseconds interval,
-                                  int hash = 0)
+inline timer_task_ptr create_timer_task(task_code code,
+                                        task_tracker *tracker,
+                                        task_handler &&callback,
+                                        std::chrono::milliseconds interval,
+                                        int hash = 0)
 {
-    task_ptr t(new timer_task(code, std::move(callback), interval.count(), hash, nullptr));
+    timer_task_ptr t(new timer_task(code, std::move(callback), interval.count(), hash, nullptr));
     t->set_tracker(tracker);
     t->spec().on_task_create.execute(task::get_current_task(), t);
     return t;
@@ -92,12 +92,12 @@ inline task_ptr enqueue(task_code code,
     return tsk;
 }
 
-inline task_ptr enqueue_timer(task_code evt,
-                              task_tracker *tracker,
-                              task_handler &&callback,
-                              std::chrono::milliseconds timer_interval,
-                              int hash = 0,
-                              std::chrono::milliseconds delay = std::chrono::milliseconds(0))
+inline timer_task_ptr enqueue_timer(task_code evt,
+                                    task_tracker *tracker,
+                                    task_handler &&callback,
+                                    std::chrono::milliseconds timer_interval,
+                                    int hash = 0,
+                                    std::chrono::milliseconds delay = std::chrono::milliseconds(0))
 {
     auto tsk = create_timer_task(evt, tracker, std::move(callback), timer_interval, hash);
     tsk->set_delay(static_cast<int>(delay.count()));

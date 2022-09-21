@@ -22,7 +22,7 @@
 namespace dsn {
 namespace replication {
 
-class replica_http_service : public http_service
+class replica_http_service : public http_server_base
 {
 public:
     explicit replica_http_service(replica_stub *stub) : _stub(stub)
@@ -71,6 +71,10 @@ public:
     }
 
 private:
+    friend class replica_http_service_test;
+
+    void update_config(const std::string &name) override;
+
     replica_stub *_stub;
 };
 

@@ -16,21 +16,37 @@
 // under the License.
 
 #include "http_server.h"
-#include "runtime/tool_api.h"
-#include "utils/time_utils.h"
+
 #include <boost/algorithm/string.hpp>
 #include <fmt/ostream.h>
 
-#include "http_message_parser.h"
-#include "pprof_http_service.h"
 #include "builtin_http_calls.h"
-#include "uri_decoder.h"
 #include "http_call_registry.h"
+#include "http_message_parser.h"
 #include "http_server_impl.h"
+#include "pprof_http_service.h"
+#include "runtime/tool_api.h"
+#include "uri_decoder.h"
+#include "utils/output_utils.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 
 DSN_DEFINE_bool("http", enable_http_server, true, "whether to enable the embedded HTTP server");
+
+namespace {
+error_s update_config(const http_request &req)
+{
+    if (req.query_args.size() != 1) {
+        return error_s::make(ERR_INVALID_PARAMETERS,
+                             "there should be exactly one config to be updated once");
+    }
+
+    auto iter = req.query_args.begin();
+    return update_flag(iter->first, iter->second);
+}
+
+} // anonymous namespace
 
 /*extern*/ std::string http_status_code_to_string(http_status_code code)
 {
@@ -65,19 +81,36 @@ DSN_DEFINE_bool("http", enable_http_server, true, "whether to enable the embedde
     http_call_registry::instance().remove(full_path);
 }
 
-void http_service::register_handler(std::string path, http_callback cb, std::string help)
+void http_service::register_handler(std::string sub_path, http_callback cb, std::string help)
 {
+    CHECK(!sub_path.empty(), "");
     if (!FLAGS_enable_http_server) {
         return;
     }
     auto call = make_unique<http_call>();
-    call->path = this->path();
-    if (!path.empty()) {
-        call->path += "/" + std::move(path);
+    if (this->path().empty()) {
+        call->path = std::move(sub_path);
+    } else {
+        call->path = this->path() + "/" + std::move(sub_path);
     }
     call->callback = std::move(cb);
     call->help = std::move(help);
     http_call_registry::instance().add(std::move(call));
+}
+
+void http_server_base::update_config_handler(const http_request &req, http_response &resp)
+{
+    auto res = dsn::update_config(req);
+    if (res.is_ok()) {
+        CHECK_EQ(1, req.query_args.size());
+        update_config(req.query_args.begin()->first);
+    }
+    utils::table_printer tp;
+    tp.add_row_name_and_data("update_status", res.description());
+    std::ostringstream out;
+    tp.output(out, dsn::utils::table_printer::output_format::kJsonCompact);
+    resp.body = out.str();
+    resp.status_code = http_status_code::ok;
 }
 
 http_server::http_server() : serverlet<http_server>("http_server")
