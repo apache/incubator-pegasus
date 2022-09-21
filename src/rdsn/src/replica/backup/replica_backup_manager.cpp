@@ -23,6 +23,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_uint32(cold_backup_checkpoint_reserve_minutes);
+
 replica_backup_manager::replica_backup_manager(replica *r)
     : replica_base(r), _replica(r), _stub(r->get_replica_stub())
 {

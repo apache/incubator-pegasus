@@ -24,6 +24,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_uint32(cold_backup_checkpoint_reserve_minutes);
+
 class replica_backup_manager_test : public replica_test_base
 {
 public:
