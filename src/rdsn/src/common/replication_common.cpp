@@ -110,8 +110,6 @@ replication_options::replication_options()
     lb_interval_ms = 10000;
 
     learn_app_max_concurrent_count = 5;
-
-    cold_backup_checkpoint_reserve_minutes = 10;
 }
 
 replication_options::~replication_options() {}
@@ -397,12 +395,6 @@ void replication_options::initialize()
                                          "learn_app_max_concurrent_count",
                                          learn_app_max_concurrent_count,
                                          "max count of learning app concurrently");
-
-    cold_backup_checkpoint_reserve_minutes =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "cold_backup_checkpoint_reserve_minutes",
-                                         cold_backup_checkpoint_reserve_minutes,
-                                         "reserve minutes of cold backup checkpoint");
 
     max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
