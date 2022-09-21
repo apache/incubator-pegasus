@@ -429,7 +429,7 @@ void replica_backup_manager::clear_context()
     }
     ddebug_replica("start to clear backup context, old status = {}", enum_to_string(_status));
 
-    for (auto &kv : _upload_files_task) {
+    for (const auto &kv : _upload_files_task) {
         cleanup_backup_task(kv.second);
     }
     cleanup_backup_task(_uploading_task);
