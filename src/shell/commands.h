@@ -221,6 +221,8 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args);
 
 // == cold backup (see 'commands/cold_backup.cpp') == //
 
+bool start_app_backup(command_executor *e, shell_context *sc, arguments args);
+
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args);
 
 bool ls_backup_policy(command_executor *e, shell_context *sc, arguments args);

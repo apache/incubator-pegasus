@@ -58,8 +58,7 @@ public:
         }
 
         start_backup_app_rpc rpc(std::move(request), RPC_CM_START_BACKUP_APP);
-        _ms->_backup_handler =
-            std::make_shared<backup_service>(_ms.get(), "mock_policy_root", _cluster_name);
+        _ms->_backup_handler = std::make_shared<backup_service>(_ms.get(), "mock_policy_root");
         _ms->_backup_handler->start_backup_app(rpc);
         wait_all();
         return rpc.response();

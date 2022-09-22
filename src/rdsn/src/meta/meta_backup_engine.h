@@ -23,7 +23,6 @@
 #include "common/backup_restore_common.h"
 #include "meta_service.h"
 #include "server_state.h"
-#include "meta_backup_service.h"
 
 namespace dsn {
 namespace replication {
@@ -149,7 +148,9 @@ private:
     }
 
 private:
+    friend class backup_service;
     friend class meta_backup_engine_test;
+    friend class meta_backup_service_test;
 
     meta_service *_meta_svc;
     task_tracker _tracker;

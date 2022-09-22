@@ -442,9 +442,7 @@ error_code meta_service::start()
     if (!_meta_opts.cold_backup_disabled) {
         ddebug("initialize backup handler");
         _backup_handler = std::make_shared<backup_service>(
-            this,
-            meta_options::concat_path_unix_style(_cluster_root, "backup"),
-            FLAGS_cold_backup_root);
+            this, meta_options::concat_path_unix_style(_cluster_root, "backup"));
     }
 
     _bulk_load_svc = make_unique<bulk_load_service>(
@@ -1183,8 +1181,21 @@ void meta_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
                      server_state::sStateHash);
 }
 
-// TODO(heyuchen): implement it
-void meta_service::on_start_backup_app(start_backup_app_rpc rpc) {}
+void meta_service::on_start_backup_app(start_backup_app_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+    if (_backup_handler == nullptr) {
+        derror_f("meta doesn't enable backup service");
+        rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
+        return;
+    }
+    tasking::enqueue(LPC_DEFAULT_CALLBACK,
+                     tracker(),
+                     [this, rpc]() { _backup_handler->start_backup_app(std::move(rpc)); },
+                     server_state::sStateHash);
+}
 
 // TODO(heyuchen): implement it
 void meta_service::on_query_backup_status(query_backup_status_rpc rpc) {}

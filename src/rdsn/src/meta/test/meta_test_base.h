@@ -27,6 +27,7 @@ namespace replication {
 class meta_split_service;
 class meta_duplication_service;
 class bulk_load_service;
+class backup_service;
 class meta_service;
 class server_state;
 
@@ -72,6 +73,8 @@ public:
     meta_split_service &split_svc();
 
     bulk_load_service &bulk_svc();
+
+    backup_service &backup_svc();
 
     std::shared_ptr<server_state> _ss;
     std::unique_ptr<meta_service> _ms;
