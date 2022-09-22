@@ -170,6 +170,7 @@ jobs:
             GITHUB_BRANCH=${{ github.ref_name }}
             OS_VERSION=${{ matrix.osversion }}
             ROCKSDB_PORTABLE=ON
+            HADOOP_BIN_PATH=hadoop-bin
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
@@ -205,5 +206,6 @@ jobs:
             OS_VERSION=${{ matrix.osversion }}
             ROCKSDB_PORTABLE=ON
             USE_JEMALLOC=ON
+            HADOOP_BIN_PATH=hadoop-bin
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
