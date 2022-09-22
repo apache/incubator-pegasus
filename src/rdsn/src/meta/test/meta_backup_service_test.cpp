@@ -116,9 +116,14 @@ TEST_F(meta_backup_service_test, start_backup_test)
                  /*{_app_id, false, true, PROVIDER, ERR_INVALID_STATE},*/
                  {_app_id, false, false, "wrong_provider", ERR_INVALID_PARAMETERS},
                  {_app_id, false, false, PROVIDER, ERR_OK}};
-    for (auto test : tests) {
+    for (const auto &test : tests) {
         mock_app_backup_context(test.mock_onetime, test.mock_periodic);
-        ASSERT_EQ(start_backup(test.app_id, test.provider_name), test.expected_err);
+        ASSERT_EQ(start_backup(test.app_id, test.provider_name), test.expected_err) << fmt::format(
+            "Test case params: app_id({}), provider({}), mock_onetime={}, mock_periodic={}",
+            test.app_id,
+            test.provider_name,
+            test.mock_onetime,
+            test.mock_periodic);
     }
 }
 
