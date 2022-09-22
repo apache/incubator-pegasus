@@ -74,7 +74,7 @@ bool start_app_backup(command_executor *e, shell_context *sc, arguments args)
     if (!err.is_ok()) {
         fmt::print(stderr, "error={} [hint:\"{}\"]\n", err, hint_msg);
     } else {
-        fmt::print(stdout, "start bakcup succeed, backup_id={}\n", backup_id);
+        fmt::print(stdout, "start backup succeed, backup_id={}\n", backup_id);
     }
 
     return true;
