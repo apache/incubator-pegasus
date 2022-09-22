@@ -38,6 +38,7 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica_stub.h"
+#include "backup/replica_backup_manager.h"
 #include "bulk_load/replica_bulk_loader.h"
 #include "runtime/security/access_controller.h"
 #include "split/replica_split_manager.h"
@@ -849,6 +850,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
     switch (old_status) {
     case partition_status::PS_PRIMARY:
         cleanup_preparing_mutations(false);
+        _backup_mgr->clear_context();
         switch (config.status) {
         case partition_status::PS_PRIMARY:
             replay_prepare_list();

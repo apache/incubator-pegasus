@@ -93,6 +93,9 @@ private:
     int32_t calc_upload_progress();
 
     void clear_context();
+    void background_clear_backup_checkpoint(int64_t backup_id);
+    void clear_backup_checkpoint(int64_t backup_id);
+    bool cleanup_backup_task(task_ptr task_);
 
     task_tracker *tracker() { return _replica->tracker(); }
 

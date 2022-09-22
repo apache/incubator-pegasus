@@ -24,6 +24,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_uint32(cold_backup_checkpoint_reserve_minutes);
+
 class replica_backup_manager_test : public replica_test_base
 {
 public:
@@ -40,6 +42,23 @@ public:
         utils::filesystem::remove_path(LOCAL_BACKUP_DIR);
         utils::filesystem::remove_path(PATH);
         fail::teardown();
+    }
+
+    error_code on_backup(backup_status::type local_status, backup_status::type request_status)
+    {
+        mock_local_backup_states(local_status);
+
+        backup_request req;
+        req.pid = _replica->get_gpid();
+        req.app_name = APP_NAME;
+        req.backup_id = dsn_now_ms();
+        req.status = request_status;
+        req.backup_provider_type = PROVIDER;
+        req.__set_backup_root_path(PATH);
+
+        backup_response resp;
+        _backup_mgr->on_backup(req, resp);
+        return resp.err;
     }
 
     void generate_checkpoint() { _backup_mgr->generate_checkpoint(); }
@@ -64,6 +83,12 @@ public:
     }
 
     void report_uploading(backup_response &response) { _backup_mgr->report_uploading(response); }
+
+    void clear_context()
+    {
+        _backup_mgr->clear_context();
+        _backup_mgr->tracker()->wait_outstanding_tasks();
+    }
 
     void mock_local_backup_states(backup_status::type status,
                                   error_code checkpoint_err = ERR_OK,
@@ -120,7 +145,178 @@ protected:
     std::unique_ptr<replica_backup_manager> _backup_mgr;
 };
 
-// TODO(heyuchen): add unit test for on_backup after implement all status
+TEST_F(replica_backup_manager_test, on_backup_test)
+{
+    fail::cfg("replica_backup_start_checkpointing", "return()");
+    fail::cfg("replica_backup_start_uploading", "return()");
+    fail::cfg("replica_backup_upload_completed", "return()");
+    fail::cfg("replica_backup_clear_context", "return()");
+
+    struct test_struct
+    {
+        backup_status::type local_status;
+        backup_status::type request_status;
+        error_code expected_err;
+        backup_status::type expected_status;
+    } tests[]{
+        // request_status = UNINITIALIZED
+        {backup_status::UNINITIALIZED,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTING,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTING},
+        {backup_status::CHECKPOINTED,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTED},
+        {backup_status::UPLOADING,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::UPLOADING},
+        {backup_status::SUCCEED,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::SUCCEED},
+        {backup_status::FAILED,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::FAILED},
+        {backup_status::CANCELED,
+         backup_status::UNINITIALIZED,
+         ERR_INVALID_STATE,
+         backup_status::CANCELED},
+        // request_status = CHECKPOINTING
+        {backup_status::UNINITIALIZED,
+         backup_status::CHECKPOINTING,
+         ERR_OK,
+         backup_status::CHECKPOINTING},
+        {backup_status::CHECKPOINTING,
+         backup_status::CHECKPOINTING,
+         ERR_OK,
+         backup_status::CHECKPOINTING},
+        {backup_status::CHECKPOINTED,
+         backup_status::CHECKPOINTING,
+         ERR_OK,
+         backup_status::CHECKPOINTED},
+        {backup_status::UPLOADING,
+         backup_status::CHECKPOINTING,
+         ERR_INVALID_STATE,
+         backup_status::UPLOADING},
+        {backup_status::SUCCEED,
+         backup_status::CHECKPOINTING,
+         ERR_INVALID_STATE,
+         backup_status::SUCCEED},
+        {backup_status::FAILED,
+         backup_status::CHECKPOINTING,
+         ERR_INVALID_STATE,
+         backup_status::FAILED},
+        {backup_status::CANCELED,
+         backup_status::CHECKPOINTING,
+         ERR_INVALID_STATE,
+         backup_status::CANCELED},
+        // request_status = CHECKPOINTED
+        {backup_status::UNINITIALIZED,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTING,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTING},
+        {backup_status::CHECKPOINTED,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTED},
+        {backup_status::UPLOADING,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::UPLOADING},
+        {backup_status::SUCCEED,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::SUCCEED},
+        {backup_status::FAILED,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::FAILED},
+        {backup_status::CANCELED,
+         backup_status::CHECKPOINTED,
+         ERR_INVALID_STATE,
+         backup_status::CANCELED},
+        // request_status = UPLOADING
+        {backup_status::UNINITIALIZED,
+         backup_status::UPLOADING,
+         ERR_INVALID_STATE,
+         backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTING,
+         backup_status::UPLOADING,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTING},
+        {backup_status::CHECKPOINTED, backup_status::UPLOADING, ERR_OK, backup_status::UPLOADING},
+        {backup_status::UPLOADING, backup_status::UPLOADING, ERR_OK, backup_status::UPLOADING},
+        {backup_status::SUCCEED, backup_status::UPLOADING, ERR_OK, backup_status::SUCCEED},
+        {backup_status::FAILED, backup_status::UPLOADING, ERR_INVALID_STATE, backup_status::FAILED},
+        {backup_status::CANCELED,
+         backup_status::UPLOADING,
+         ERR_INVALID_STATE,
+         backup_status::CANCELED},
+        // request_status = SUCCEED
+        {backup_status::UNINITIALIZED,
+         backup_status::SUCCEED,
+         ERR_INVALID_STATE,
+         backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTING,
+         backup_status::SUCCEED,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTING},
+        {backup_status::CHECKPOINTED,
+         backup_status::SUCCEED,
+         ERR_INVALID_STATE,
+         backup_status::CHECKPOINTED},
+        {backup_status::UPLOADING,
+         backup_status::SUCCEED,
+         ERR_INVALID_STATE,
+         backup_status::UPLOADING},
+        {backup_status::SUCCEED, backup_status::SUCCEED, ERR_INVALID_STATE, backup_status::SUCCEED},
+        {backup_status::FAILED, backup_status::SUCCEED, ERR_INVALID_STATE, backup_status::FAILED},
+        {backup_status::CANCELED,
+         backup_status::SUCCEED,
+         ERR_INVALID_STATE,
+         backup_status::CANCELED},
+        // request_status = FAILED
+        {backup_status::UNINITIALIZED, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTING, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTED, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::UPLOADING, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::SUCCEED, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::FAILED, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::CANCELED, backup_status::FAILED, ERR_OK, backup_status::UNINITIALIZED},
+        // request_status = CANCELED
+        {backup_status::UNINITIALIZED,
+         backup_status::CANCELED,
+         ERR_OK,
+         backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTING,
+         backup_status::CANCELED,
+         ERR_OK,
+         backup_status::UNINITIALIZED},
+        {backup_status::CHECKPOINTED,
+         backup_status::CANCELED,
+         ERR_OK,
+         backup_status::UNINITIALIZED},
+        {backup_status::UPLOADING, backup_status::CANCELED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::SUCCEED, backup_status::CANCELED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::FAILED, backup_status::CANCELED, ERR_OK, backup_status::UNINITIALIZED},
+        {backup_status::CANCELED, backup_status::CANCELED, ERR_OK, backup_status::UNINITIALIZED}};
+
+    for (const auto &test : tests) {
+        ASSERT_EQ(on_backup(test.local_status, test.request_status), test.expected_err);
+        ASSERT_EQ(get_status(), test.expected_status);
+    }
+}
 
 TEST_F(replica_backup_manager_test, generate_checkpoint_test)
 {
@@ -211,6 +407,21 @@ TEST_F(replica_backup_manager_test, report_uploading_test)
         }
         ASSERT_EQ(resp.upload_progress, test.expected_upload_progress);
     }
+}
+
+TEST_F(replica_backup_manager_test, clear_context_test)
+{
+    FLAGS_cold_backup_checkpoint_reserve_minutes = 0;
+    mock_local_backup_states(backup_status::SUCCEED, ERR_OK, ERR_OK, 100);
+    auto dir_name = create_local_backup_checkpoint_dir();
+    create_local_backup_file(dir_name, FILE_NAME1);
+
+    clear_context();
+
+    ASSERT_EQ(get_status(), backup_status::UNINITIALIZED);
+    ASSERT_EQ(get_checkpoint_err(), ERR_OK);
+    ASSERT_EQ(get_upload_err(), ERR_OK);
+    ASSERT_FALSE(utils::filesystem::directory_exists(dir_name));
 }
 
 } // namespace replication
