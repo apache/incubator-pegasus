@@ -173,7 +173,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          source ./scripts/config_hdfs.sh
+          . ./scripts/config_hdfs.sh
           ./run.sh test -m ${{ matrix.test_module }}
 
   build_ASAN:
@@ -285,7 +285,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          source ./scripts/config_hdfs.sh
+          . ./scripts/config_hdfs.sh
           ./run.sh test -m ${{ matrix.test_module }}
 
   build_UBSAN:
@@ -397,7 +397,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          source ./scripts/config_hdfs.sh
+          . ./scripts/config_hdfs.sh
           ./run.sh test -m ${{ matrix.test_module }}
 
   build_with_jemalloc:
@@ -483,7 +483,7 @@ jobs:
         run: |
           export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
           ulimit -s unlimited
-          source ./scripts/config_hdfs.sh
+          . ./scripts/config_hdfs.sh
           ./run.sh test -m ${{ matrix.test_module }}
 
   build_pegasus_on_macos:
