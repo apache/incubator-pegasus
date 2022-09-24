@@ -216,6 +216,7 @@ public:
         http_response resp;
         req.body = blob::create_from_bytes(std::move(req_body_json));
         _mhs->start_bulk_load_handler(req, resp);
+        wait_all();
         return resp;
     }
 
@@ -225,6 +226,7 @@ public:
         http_response resp;
         req.query_args.emplace("name", app_name);
         _mhs->query_bulk_load_handler(req, resp);
+        wait_all();
         return resp.body;
     }
 
@@ -234,6 +236,7 @@ public:
         http_response resp;
         req.body = blob::create_from_bytes(std::move(req_body_json));
         _mhs->start_compaction_handler(req, resp);
+        wait_all();
         return resp;
     }
 
@@ -243,6 +246,7 @@ public:
         http_response resp;
         req.body = blob::create_from_bytes(std::move(req_body_json));
         _mhs->update_scenario_handler(req, resp);
+        wait_all();
         return resp;
     }
 
