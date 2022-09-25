@@ -30,6 +30,8 @@ using namespace dsn;
 using namespace dsn::replication;
 using namespace pegasus;
 
+// TODO(yingchun): backup & restore festure is on refactoring, we can refactor the related function
+// test later.
 class backup_restore_test : public testing::Test
 {
 public:

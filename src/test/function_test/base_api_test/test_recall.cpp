@@ -40,97 +40,69 @@ using namespace pegasus;
 
 class drop_and_recall : public test_util
 {
+protected:
+    const std::string key_prefix = "hello";
+    const std::string value_prefix = "world";
+
+    const int kv_count = 10000;
 };
 
 TEST_F(drop_and_recall, simple)
 {
-    const std::string simple_table = "simple_table";
-    const std::string key_prefix = "hello";
-    const std::string value_prefix = "world";
-    const int number = 10000;
-    const int partition_count = 4;
-
-    // first create table
-    std::cerr << "create app " << simple_table << std::endl;
-    dsn::error_code error =
-        ddl_client->create_app(simple_table, "pegasus", partition_count, 3, {}, false);
-    ASSERT_EQ(dsn::ERR_OK, error);
-
-    // list table
-    std::vector<::dsn::app_info> apps;
-    error = ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
-    ASSERT_EQ(dsn::ERR_OK, error);
-    int app_id = 0;
-    for (auto &app : apps) {
-        if (app.app_name == simple_table) {
-            app_id = app.app_id;
-            break;
-        }
-    }
-    ASSERT_NE(0, app_id);
-    std::cerr << "app_id = " << app_id << std::endl;
-
-    pegasus::pegasus_client *pg_client =
-        pegasus::pegasus_client_factory::get_client("mycluster", simple_table.c_str());
-
-    std::vector<std::string> hash_for_gpid(partition_count, "");
+    std::vector<std::string> hashkeys_for_gpid(partition_count_, "");
 
     // then write keys
-    std::cerr << "write " << number << " keys" << std::endl;
-    for (int i = 0; i < number; ++i) {
+    for (int i = 0; i < kv_count; ++i) {
         std::string hash_key = key_prefix + boost::lexical_cast<std::string>(i);
         std::string sort_key = hash_key;
         std::string value = value_prefix + boost::lexical_cast<std::string>(i);
 
         pegasus::pegasus_client::internal_info info;
         int ans;
-        RETRY_OPERATION(pg_client->set(hash_key, sort_key, value, 5000, 0, &info), ans);
-        ASSERT_EQ(0, ans);
-        ASSERT_TRUE(info.partition_index < partition_count);
-        if (hash_for_gpid[info.partition_index] == "") {
-            hash_for_gpid[info.partition_index] = hash_key;
+        RETRY_OPERATION(client_->set(hash_key, sort_key, value, 5000, 0, &info), ans);
+        ASSERT_EQ(PERR_OK, ans);
+        ASSERT_TRUE(info.partition_index < partition_count_);
+        if (hashkeys_for_gpid[info.partition_index].empty()) {
+            hashkeys_for_gpid[info.partition_index] = hash_key;
         }
     }
 
-    for (const auto &key : hash_for_gpid) {
-        ASSERT_TRUE(key != "");
+    for (const auto &hashkey : hashkeys_for_gpid) {
+        ASSERT_FALSE(hashkey.empty());
     }
 
-    // then drop the table
-    std::cerr << "drop table " << simple_table << std::endl;
-    ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(simple_table, 0));
+    // drop the table
+    ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(app_name_, 0));
 
     // wait for all elements to be dropped
-    for (int i = 0; i < partition_count; ++i) {
+    for (int i = 0; i < partition_count_; ++i) {
         int j;
         for (j = 0; j < 60; ++j) {
             pegasus::pegasus_client::internal_info info;
-            pg_client->set(hash_for_gpid[i], "", "", 1000, 0, &info);
+            client_->set(hashkeys_for_gpid[i], "", "", 1000, 0, &info);
             if (info.app_id == -1) {
-                std::cerr << "partition " << i << " is removed from server" << std::endl;
+                std::cout << "partition " << i << " is removed from server" << std::endl;
                 break;
             } else {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         }
-        ASSERT_TRUE(j < 60);
+        ASSERT_LT(j, 60);
     }
 
     // then recall table
-    std::cerr << "start to recall table " << std::endl;
-    error = ddl_client->recall_app(app_id, "");
-    ASSERT_EQ(dsn::ERR_OK, error);
+    ASSERT_EQ(dsn::ERR_OK, ddl_client_->recall_app(app_id_, ""));
 
     // then read all keys
-    for (int i = 0; i < number; ++i) {
-        std::string hash_key = key_prefix + boost::lexical_cast<std::string>(i);
+    for (int i = 0; i < kv_count; ++i) {
+        std::string hash_key = key_prefix + std::to_string(i);
         std::string sort_key = hash_key;
-        std::string exp_value = value_prefix + boost::lexical_cast<std::string>(i);
+        std::string exp_value = value_prefix + std::to_string(i);
 
         std::string act_value;
         int ans;
-        RETRY_OPERATION(pg_client->get(hash_key, sort_key, act_value), ans);
-        ASSERT_EQ(0, ans);
+        RETRY_OPERATION(client_->get(hash_key, sort_key, act_value), ans);
+        ASSERT_EQ(PERR_OK, ans);
         ASSERT_EQ(exp_value, act_value);
     }
 }

@@ -33,6 +33,8 @@ using namespace ::dsn;
 using namespace ::dsn::replication;
 using namespace pegasus;
 
+// TODO(yingchun): backup & restore festure is on refactoring, we can refactor the related function
+// test later.
 class restore_test : public testing::Test
 {
 public:
@@ -288,42 +290,28 @@ public:
     int32_t old_app_id;
     int64_t time_stamp;
 
-    static const std::string policy_name;
-    static const std::string backup_provider_name;
-    static const int backup_interval_seconds;
-    static const int backup_history_count_to_keep;
-    static const std::string start_time;
+    const std::string policy_name = "policy_1";
+    const std::string backup_provider_name = "local_service";
+    // NOTICE: we enqueue a time task to check whether policy should start backup periodically, the
+    // period is 5min, so the time between two backup is at least 5min, but if we set the
+    // backup_interval_seconds smaller enough such as smaller than the time of finishing once
+    // backup, we
+    // can start next backup immediately when current backup is finished
+    // The backup interval must be greater than checkpoint reserve time, see
+    // backup_service::add_backup_policy() for details.
+    const int backup_interval_seconds = 700;
+    const int backup_history_count_to_keep = 6;
+    const std::string start_time = "24:0";
 
-    static const std::string app_name;
+    const std::string app_name = "backup_test";
 
-    static const std::string hash_key_prefix;
-    static const std::string sort_key_prefix;
-    static const std::string value_prefix;
+    const std::string hash_key_prefix = "hash_key";
+    const std::string sort_key_prefix = "sort_key";
+    const std::string value_prefix = "value";
 
-    static const int kv_pair_cnt;
-    static const int default_partition_cnt;
+    const int kv_pair_cnt = 10000;
+    const int default_partition_cnt = 8;
 };
-
-const std::string restore_test::policy_name = "policy_1";
-const std::string restore_test::backup_provider_name = "local_service";
-// NOTICE: we enqueue a time task to check whether policy should start backup periodically, the
-// period is 5min, so the time between two backup is at least 5min, but if we set the
-// backup_interval_seconds smaller enough such as smaller than the time of finishing once backup, we
-// can start next backup immediately when current backup is finished
-// The backup interval must be greater than checkpoint reserve time, see
-// backup_service::add_backup_policy() for details.
-const int restore_test::backup_interval_seconds = 700;
-const int restore_test::backup_history_count_to_keep = 6;
-const std::string restore_test::start_time = "24:0";
-
-const std::string restore_test::app_name = "backup_test";
-
-const std::string restore_test::hash_key_prefix = "hash_key";
-const std::string restore_test::sort_key_prefix = "sort_key";
-const std::string restore_test::value_prefix = "value";
-
-const int restore_test::kv_pair_cnt = 10000;
-const int restore_test::default_partition_cnt = 8;
 
 TEST_F(restore_test, restore)
 {

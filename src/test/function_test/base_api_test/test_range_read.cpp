@@ -21,48 +21,49 @@
 #include <gtest/gtest.h>
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"
+#include "test/function_test/utils/test_util.h"
 
 using namespace ::dsn;
 using namespace pegasus;
 
-class range_read_test : public testing::Test
+class range_read_test : public test_util
 {
 public:
     void prepare(const int32_t total_count, const int32_t expire_count)
     {
+        ASSERT_GE(total_count, expire_count);
+
         if (expire_count > 0) {
             // set expire values
             for (auto i = 0; i < expire_count; i++) {
                 std::string sort_key = "1-" + std::to_string(i);
-                sortkeys.insert(sort_key);
-                kvs[sort_key] = value;
+                expect_sortkeys_.insert(sort_key);
+                expect_kvs_[sort_key] = value;
             }
-            auto ret = pg_client->multi_set(hashkey, kvs, timeoutms, 1);
-            ASSERT_EQ(PERR_OK, ret);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            kvs.clear();
+            ASSERT_EQ(PERR_OK, client_->multi_set(expect_hashkey, expect_kvs_, 5000, 1));
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            // all data is expired, so clear 'expect_kvs_'.
+            expect_kvs_.clear();
         }
 
         if (total_count > expire_count) {
             // set normal values
             for (auto i = expire_count; i < total_count; i++) {
                 std::string sort_key = "2-" + std::to_string(i);
-                sortkeys.insert(sort_key);
-                kvs[sort_key] = value;
+                expect_sortkeys_.insert(sort_key);
+                expect_kvs_[sort_key] = value;
             }
-            auto ret = pg_client->multi_set(hashkey, kvs);
-            ASSERT_EQ(PERR_OK, ret);
+            ASSERT_EQ(PERR_OK, client_->multi_set(expect_hashkey, expect_kvs_));
         }
     }
 
     void cleanup(const int32_t expected_deleted_count)
     {
         int64_t deleted_count;
-        auto ret = pg_client->multi_del(hashkey, sortkeys, deleted_count);
-        ASSERT_EQ(PERR_OK, ret);
-        ASSERT_EQ(deleted_count, expected_deleted_count);
-        sortkeys.clear();
-        kvs.clear();
+        ASSERT_EQ(PERR_OK, client_->multi_del(expect_hashkey, expect_sortkeys_, deleted_count));
+        ASSERT_EQ(expected_deleted_count, deleted_count);
+        expect_sortkeys_.clear();
+        expect_kvs_.clear();
     }
 
     void test_scan(const int32_t expire_count,
@@ -73,52 +74,38 @@ public:
         pegasus::pegasus_client::scan_options options;
         options.batch_size = batch_count;
         pegasus::pegasus_client::pegasus_scanner *scanner;
-        auto ret = pg_client->get_scanner(hashkey, "", "", options, scanner);
-        ASSERT_EQ(ret, PERR_OK);
+        ASSERT_EQ(PERR_OK, client_->get_scanner(expect_hashkey, "", "", options, scanner));
 
-        std::map<std::string, std::string> scan_kvs;
+        std::map<std::string, std::string> actual_kvs;
         std::string hash_key;
         std::string sort_key;
-        std::string act_value;
+        std::string actual_value;
         auto i = expire_count;
         while (i < total_count) {
-            ret = scanner->next(hash_key, sort_key, act_value);
-            ASSERT_EQ(ret, PERR_OK);
-            ASSERT_EQ(hash_key, hashkey);
-            scan_kvs[sort_key] = act_value;
+            ASSERT_EQ(PERR_OK, scanner->next(hash_key, sort_key, actual_value));
+            ASSERT_EQ(expect_hashkey, hash_key);
+            actual_kvs[sort_key] = actual_value;
             i++;
         }
-        ret = scanner->next(hash_key, sort_key, act_value);
-        ASSERT_EQ(ret, PERR_SCAN_COMPLETE);
-        ASSERT_EQ(expected_scan_count, scan_kvs.size());
+        ASSERT_EQ(PERR_SCAN_COMPLETE, scanner->next(hash_key, sort_key, actual_value));
+        ASSERT_EQ(expected_scan_count, actual_kvs.size());
         delete scanner;
 
-        // compare scan result
-        for (auto it1 = kvs.begin(), it2 = scan_kvs.begin();; ++it1, ++it2) {
-            if (it1 == kvs.end()) {
-                ASSERT_EQ(it2, scan_kvs.end());
-                break;
-            }
-            ASSERT_NE(it2, scan_kvs.end());
-            ASSERT_EQ(*it1, *it2);
-        }
+        ASSERT_EQ(expect_kvs_, actual_kvs);
     }
 
 public:
-    const std::string table = "temp";
-    const std::string hashkey = "range_read_hashkey";
-    const std::string sortkey_prefix = "1-";
+    const std::string expect_hashkey = "range_read_hashkey";
     const std::string value = "value";
-    const int32_t timeoutms = 5000;
-    pegasus_client *pg_client = pegasus_client_factory::get_client("mycluster", table.c_str());
-    std::set<std::string> sortkeys;
-    std::map<std::string, std::string> kvs;
+
+    std::set<std::string> expect_sortkeys_;
+    std::map<std::string, std::string> expect_kvs_;
 };
 
+// TODO(yingchun): use TEST_P to refact
 TEST_F(range_read_test, multiget_test)
 {
     pegasus::pegasus_client::multi_get_options options;
-    std::map<std::string, std::string> new_values;
     struct test_struct
     {
         int32_t expire_count;
@@ -142,13 +129,13 @@ TEST_F(range_read_test, multiget_test)
               {0, 4000, 100, PERR_INCOMPLETE, 100}};
 
     for (auto test : tests) {
-        new_values.clear();
-        prepare(test.total_count, test.expire_count);
-        auto ret =
-            pg_client->multi_get(hashkey, "", "", options, new_values, test.get_max_kv_count);
-        ASSERT_EQ(ret, test.expected_error);
-        ASSERT_EQ(new_values.size(), test.expected_value_count);
-        cleanup(test.total_count);
+        std::map<std::string, std::string> new_values;
+        ASSERT_NO_FATAL_FAILURE(prepare(test.total_count, test.expire_count));
+        ASSERT_EQ(
+            test.expected_error,
+            client_->multi_get(expect_hashkey, "", "", options, new_values, test.get_max_kv_count));
+        ASSERT_EQ(test.expected_value_count, new_values.size());
+        ASSERT_NO_FATAL_FAILURE(cleanup(test.total_count));
     }
 }
 
@@ -164,11 +151,10 @@ TEST_F(range_read_test, sortkeycount_test)
     } tests[]{{0, 500, PERR_OK, 500}, {500, 4000, PERR_OK, 3500}};
 
     for (auto test : tests) {
-        prepare(test.total_count, test.expire_count);
-        auto ret = pg_client->sortkey_count(hashkey, count);
-        ASSERT_EQ(ret, test.expected_error);
-        ASSERT_EQ(count, test.expected_count);
-        cleanup(test.total_count);
+        ASSERT_NO_FATAL_FAILURE(prepare(test.total_count, test.expire_count));
+        ASSERT_EQ(test.expected_error, client_->sortkey_count(expect_hashkey, count));
+        ASSERT_EQ(test.expected_count, count);
+        ASSERT_NO_FATAL_FAILURE(cleanup(test.total_count));
     }
 }
 
@@ -196,8 +182,9 @@ TEST_F(range_read_test, scan_test)
               {0, 4000, 100, 4000}};
 
     for (auto test : tests) {
-        prepare(test.total_count, test.expire_count);
-        test_scan(test.expire_count, test.total_count, test.batch_size, test.expected_scan_count);
-        cleanup(test.total_count);
+        ASSERT_NO_FATAL_FAILURE(prepare(test.total_count, test.expire_count));
+        ASSERT_NO_FATAL_FAILURE(test_scan(
+            test.expire_count, test.total_count, test.batch_size, test.expected_scan_count));
+        ASSERT_NO_FATAL_FAILURE(cleanup(test.total_count));
     }
 }

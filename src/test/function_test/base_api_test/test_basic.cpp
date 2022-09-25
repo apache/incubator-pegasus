@@ -41,1351 +41,1393 @@ class basic : public test_util
 
 TEST_F(basic, set_get_del)
 {
-    ASSERT_STREQ("mycluster", client->get_cluster_name());
-
     // set
-    int ret = client->set("basic_test_hash_key_1", "basic_test_sort_key_1", "basic_test_value_1");
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK,
+              client_->set("basic_test_hash_key_1", "basic_test_sort_key_1", "basic_test_value_1"));
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
-    ASSERT_EQ(PERR_OK, ret);
-
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_2");
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
+    ASSERT_EQ(PERR_OK, client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1"));
+    ASSERT_EQ(PERR_NOT_FOUND, client_->exist("basic_test_hash_key_1", "basic_test_sort_key_2"));
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(1, count);
 
     // get
-    std::string new_value_str;
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ("basic_test_value_1", new_value_str);
+    std::string new_value;
+    ASSERT_EQ(PERR_OK, client_->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value));
+    ASSERT_EQ("basic_test_value_1", new_value);
 
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_2", new_value_str);
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
+    ASSERT_EQ(PERR_NOT_FOUND,
+              client_->get("basic_test_hash_key_1", "basic_test_sort_key_2", new_value));
 
     // del
-    ret = client->del("basic_test_hash_key_1", "basic_test_sort_key_1");
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->del("basic_test_hash_key_1", "basic_test_sort_key_1"));
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
+    ASSERT_EQ(PERR_NOT_FOUND, client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1"));
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(0, count);
 
     // get
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
+    ASSERT_EQ(PERR_NOT_FOUND,
+              client_->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value));
 }
 
 TEST_F(basic, multi_get)
 {
+    const std::map<std::string, std::string> kvs({{"", "0"},
+                                                  {"1", "1"},
+                                                  {"1-abcdefg", "1-abcdefg"},
+                                                  {"2", "2"},
+                                                  {"2-abcdefg", "2-abcdefg"},
+                                                  {"3", "3"},
+                                                  {"3-efghijk", "3-efghijk"},
+                                                  {"4", "4"},
+                                                  {"4-hijklmn", "4-hijklmn"},
+                                                  {"5", "5"},
+                                                  {"5-hijklmn", "5-hijklmn"},
+                                                  {"6", "6"},
+                                                  {"7", "7"}});
+
     // multi_set
-    std::map<std::string, std::string> kvs;
-    kvs[""] = "0";
-    kvs["1"] = "1";
-    kvs["1-abcdefg"] = "1-abcdefg";
-    kvs["2"] = "2";
-    kvs["2-abcdefg"] = "2-abcdefg";
-    kvs["3"] = "3";
-    kvs["3-efghijk"] = "3-efghijk";
-    kvs["4"] = "4";
-    kvs["4-hijklmn"] = "4-hijklmn";
-    kvs["5"] = "5";
-    kvs["5-hijklmn"] = "5-hijklmn";
-    kvs["6"] = "6";
-    kvs["7"] = "7";
-    int ret = client->multi_set("basic_test_multi_get", kvs);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->multi_set("basic_test_multi_get", kvs));
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_multi_get", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_multi_get", count));
     ASSERT_EQ(13, count);
 
     // [null, null)
-    pegasus::pegasus_client::multi_get_options options;
-    ASSERT_TRUE(options.start_inclusive);
-    ASSERT_FALSE(options.stop_inclusive);
-    std::map<std::string, std::string> new_values;
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(13, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        ASSERT_TRUE(options.start_inclusive);
+        ASSERT_FALSE(options.stop_inclusive);
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_EQ(kvs, new_values);
+    }
 
     // [null, null]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(13, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_EQ(kvs, new_values);
+    }
 
     // (null, null)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = false;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(12, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = false;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        auto expect_kvs(kvs);
+        expect_kvs.erase("");
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, null]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(12, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        auto expect_kvs(kvs);
+        expect_kvs.erase("");
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [null, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"", "0"}, {"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [null, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = false;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = false;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"", "0"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = false;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = false;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // [1, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "1", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [1, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = false;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = false;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "1", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // (1, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "1", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // (1, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = false;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = false;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "1", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // [2, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "2", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "2", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-anywhere("-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "-";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(5, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "-";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({
+            {"1-abcdefg", "1-abcdefg"},
+            {"2-abcdefg", "2-abcdefg"},
+            {"3-efghijk", "3-efghijk"},
+            {"4-hijklmn", "4-hijklmn"},
+            {"5-hijklmn", "5-hijklmn"},
+        });
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-anywhere("1")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "1";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "1";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}, {"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-anywhere("1-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "1-";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "1-";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-anywhere("abc")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "abc";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "abc";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs(
+            {{"1-abcdefg", "1-abcdefg"}, {"2-abcdefg", "2-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({
+            {"1", "1"}, {"1-abcdefg", "1-abcdefg"},
+        });
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in [0, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = true;
-    options.stop_inclusive = false;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "0", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = true;
+        options.stop_inclusive = false;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "0", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("1") in [0, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "0", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "0", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in [1, 2]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "2", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "1", "2", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}, {"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in (1, 2]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1", "2", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get", "1", "2", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in (1-abcdefg, 2]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "1-abcdefg", "2", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get", "1-abcdefg", "2", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("1-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1-";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1-";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1-x")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1-x";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1-x";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("abc")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "abc";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "abc";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("efg")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "efg";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "efg";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("ijk")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "ijk";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "ijk";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("lmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "lmn";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "lmn";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("5-hijklmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "5-hijklmn";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "5-hijklmn";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("1")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "1";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "1";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("1-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "1-";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "1-";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-postfix("1-x")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "1-x";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "1-x";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-postfix("abc")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "abc";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "abc";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-postfix("efg")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "efg";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "efg";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs(
+            {{"1-abcdefg", "1-abcdefg"}, {"2-abcdefg", "2-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("ijk")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "ijk";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "ijk";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"3-efghijk", "3-efghijk"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("lmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "lmn";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "lmn";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs(
+            {{"4-hijklmn", "4-hijklmn"}, {"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("5-hijklmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "5-hijklmn";
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "5-hijklmn";
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_multi_get", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // maxCount = 4
-    options = pegasus::pegasus_client::multi_get_options();
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 4, -1);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(4, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get("basic_test_multi_get", "", "", options, new_values, 4, -1));
+        std::map<std::string, std::string> expect_kvs(
+            {{"", "0"}, {"1", "1"}, {"1-abcdefg", "1-abcdefg"}, {"2", "2"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // maxCount = 1
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "5", "6", options, new_values, 1, -1);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("5", new_values["5"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get("basic_test_multi_get", "5", "6", options, new_values, 1, -1));
+        std::map<std::string, std::string> expect_kvs({{"5", "5"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // set a expired value
-    ret = client->set("basic_test_multi_get", "", "expire_value", 5000, 1);
-    ASSERT_EQ(PERR_OK, ret);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get", "", "", options, new_values, 2);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        ASSERT_EQ(PERR_OK, client_->set("basic_test_multi_get", "", "expire_value", 5000, 1));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get("basic_test_multi_get", "", "", options, new_values, 2));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}, {"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // multi_del
-    std::set<std::string> sortkeys;
-    sortkeys.insert("");
-    sortkeys.insert("1");
-    sortkeys.insert("1-abcdefg");
-    sortkeys.insert("2");
-    sortkeys.insert("2-abcdefg");
-    sortkeys.insert("3");
-    sortkeys.insert("3-efghijk");
-    sortkeys.insert("4");
-    sortkeys.insert("4-hijklmn");
-    sortkeys.insert("5");
-    sortkeys.insert("5-hijklmn");
-    sortkeys.insert("6");
-    sortkeys.insert("7");
-    int64_t deleted_count;
-    ret = client->multi_del("basic_test_multi_get", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(13, deleted_count);
+    {
+        std::set<std::string> sortkeys({"",
+                                        "1",
+                                        "1-abcdefg",
+                                        "2",
+                                        "2-abcdefg",
+                                        "3",
+                                        "3-efghijk",
+                                        "4",
+                                        "4-hijklmn",
+                                        "5",
+                                        "5-hijklmn",
+                                        "6",
+                                        "7"});
+        int64_t deleted_count;
+        ASSERT_EQ(PERR_OK, client_->multi_del("basic_test_multi_get", sortkeys, deleted_count));
+        ASSERT_EQ(13, deleted_count);
+    }
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_multi_get", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_multi_get", count));
     ASSERT_EQ(0, count);
 }
 
 TEST_F(basic, multi_get_reverse)
 {
     // multi_set
-    std::map<std::string, std::string> kvs;
-    kvs[""] = "0";
-    kvs["1"] = "1";
-    kvs["1-abcdefg"] = "1-abcdefg";
-    kvs["2"] = "2";
-    kvs["2-abcdefg"] = "2-abcdefg";
-    kvs["3"] = "3";
-    kvs["3-efghijk"] = "3-efghijk";
-    kvs["4"] = "4";
-    kvs["4-hijklmn"] = "4-hijklmn";
-    kvs["5"] = "5";
-    kvs["5-hijklmn"] = "5-hijklmn";
-    kvs["6"] = "6";
-    kvs["7"] = "7";
-    int ret = client->multi_set("basic_test_multi_get_reverse", kvs);
-    ASSERT_EQ(PERR_OK, ret);
+    const std::map<std::string, std::string> kvs({{"", "0"},
+                                                  {"1", "1"},
+                                                  {"1-abcdefg", "1-abcdefg"},
+                                                  {"2", "2"},
+                                                  {"2-abcdefg", "2-abcdefg"},
+                                                  {"3", "3"},
+                                                  {"3-efghijk", "3-efghijk"},
+                                                  {"4", "4"},
+                                                  {"4-hijklmn", "4-hijklmn"},
+                                                  {"5", "5"},
+                                                  {"5-hijklmn", "5-hijklmn"},
+                                                  {"6", "6"},
+                                                  {"7", "7"}});
+    ASSERT_EQ(PERR_OK, client_->multi_set("basic_test_multi_get_reverse", kvs));
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_multi_get_reverse", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_multi_get_reverse", count));
     ASSERT_EQ(13, count);
 
     // [null, null)
-    pegasus::pegasus_client::multi_get_options options;
-    ASSERT_TRUE(options.start_inclusive);
-    ASSERT_FALSE(options.stop_inclusive);
-    options.reverse = true;
-    std::map<std::string, std::string> new_values;
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(13, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        ASSERT_TRUE(options.start_inclusive);
+        ASSERT_FALSE(options.stop_inclusive);
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        auto expect_kvs(kvs);
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [null, null]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(13, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        auto expect_kvs(kvs);
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, null)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = false;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(12, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = false;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        auto expect_kvs(kvs);
+        expect_kvs.erase("");
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, null]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(12, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2", new_values["2"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3", new_values["3"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4", new_values["4"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        auto expect_kvs(kvs);
+        expect_kvs.erase("");
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [null, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"", "0"}, {"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [null, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = false;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("0", new_values[""]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = false;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"", "0"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // (null, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = false;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = false;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // [1, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // [1, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = false;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = false;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // (1, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // (1, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = false;
-    options.stop_inclusive = false;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = false;
+        options.stop_inclusive = false;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "1", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // [2, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "2", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "2", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-anywhere("-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "-";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(5, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "-";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        const std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"},
+                                                             {"2-abcdefg", "2-abcdefg"},
+                                                             {"3-efghijk", "3-efghijk"},
+                                                             {"4-hijklmn", "4-hijklmn"},
+                                                             {"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-anywhere("1")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "1";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "1";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}, {"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-anywhere("1-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "1-";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "1-";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-anywhere("abc")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
-    options.sort_key_filter_pattern = "abc";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_ANYWHERE;
+        options.sort_key_filter_pattern = "abc";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        const std::map<std::string, std::string> expect_kvs(
+            {{"1-abcdefg", "1-abcdefg"}, {"2-abcdefg", "2-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}, {"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in [0, 1)
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = true;
-    options.stop_inclusive = false;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = true;
+        options.stop_inclusive = false;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("1") in [0, 1]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "0", "1", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in [1, 2]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}, {"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in (1, 2]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_get("basic_test_multi_get_reverse", "1", "2", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1") in (1-abcdefg, 2]
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1";
-    options.start_inclusive = false;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "1-abcdefg", "2", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1";
+        options.start_inclusive = false;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get(
+                      "basic_test_multi_get_reverse", "1-abcdefg", "2", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("1-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1-";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1-";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1-abcdefg", "1-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-prefix("1-x")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "1-x";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "1-x";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("abc")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "abc";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "abc";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("efg")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "efg";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "efg";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("ijk")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "ijk";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "ijk";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("lmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "lmn";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "lmn";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-prefix("5-hijklmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
-    options.sort_key_filter_pattern = "5-hijklmn";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_PREFIX;
+        options.sort_key_filter_pattern = "5-hijklmn";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("1")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "1";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("1", new_values["1"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "1";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"1", "1"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("1-")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "1-";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "1-";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-postfix("1-x")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "1-x";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "1-x";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-postfix("abc")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "abc";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, (int)new_values.size());
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "abc";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        ASSERT_TRUE(new_values.empty());
+    }
 
     // match-postfix("efg")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "efg";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("1-abcdefg", new_values["1-abcdefg"]);
-    ASSERT_EQ("2-abcdefg", new_values["2-abcdefg"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "efg";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs(
+            {{"1-abcdefg", "1-abcdefg"}, {"2-abcdefg", "2-abcdefg"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("ijk")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "ijk";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("3-efghijk", new_values["3-efghijk"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "ijk";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"3-efghijk", "3-efghijk"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("lmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "lmn";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, (int)new_values.size());
-    ASSERT_EQ("4-hijklmn", new_values["4-hijklmn"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "lmn";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs(
+            {{"4-hijklmn", "4-hijklmn"}, {"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // match-postfix("5-hijklmn")
-    options = pegasus::pegasus_client::multi_get_options();
-    options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
-    options.sort_key_filter_pattern = "5-hijklmn";
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.sort_key_filter_type = pegasus::pegasus_client::FT_MATCH_POSTFIX;
+        options.sort_key_filter_pattern = "5-hijklmn";
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values));
+        std::map<std::string, std::string> expect_kvs({{"5-hijklmn", "5-hijklmn"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // maxCount = 4
-    options = pegasus::pegasus_client::multi_get_options();
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "", "", options, new_values, 4, -1);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(4, (int)new_values.size());
-    ASSERT_EQ("5", new_values["5"]);
-    ASSERT_EQ("5-hijklmn", new_values["5-hijklmn"]);
-    ASSERT_EQ("6", new_values["6"]);
-    ASSERT_EQ("7", new_values["7"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(
+            PERR_INCOMPLETE,
+            client_->multi_get("basic_test_multi_get_reverse", "", "", options, new_values, 4, -1));
+        std::map<std::string, std::string> expect_kvs(
+            {{"5", "5"}, {"5-hijklmn", "5-hijklmn"}, {"6", "6"}, {"7", "7"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // maxCount = 1
-    options = pegasus::pegasus_client::multi_get_options();
-    options.start_inclusive = true;
-    options.stop_inclusive = true;
-    options.reverse = true;
-    new_values.clear();
-    ret = client->multi_get("basic_test_multi_get_reverse", "5", "6", options, new_values, 1, -1);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(1, (int)new_values.size());
-    ASSERT_EQ("6", new_values["6"]);
+    {
+        pegasus::pegasus_client::multi_get_options options;
+        options.start_inclusive = true;
+        options.stop_inclusive = true;
+        options.reverse = true;
+        std::map<std::string, std::string> new_values;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get(
+                      "basic_test_multi_get_reverse", "5", "6", options, new_values, 1, -1));
+        std::map<std::string, std::string> expect_kvs({{"6", "6"}});
+        ASSERT_EQ(expect_kvs, new_values);
+    }
 
     // multi_del
-    std::set<std::string> sortkeys;
-    sortkeys.insert("");
-    sortkeys.insert("1");
-    sortkeys.insert("1-abcdefg");
-    sortkeys.insert("2");
-    sortkeys.insert("2-abcdefg");
-    sortkeys.insert("3");
-    sortkeys.insert("3-efghijk");
-    sortkeys.insert("4");
-    sortkeys.insert("4-hijklmn");
-    sortkeys.insert("5");
-    sortkeys.insert("5-hijklmn");
-    sortkeys.insert("6");
-    sortkeys.insert("7");
-    int64_t deleted_count;
-    ret = client->multi_del("basic_test_multi_get_reverse", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(13, deleted_count);
+    {
+        const std::set<std::string> sortkeys_to_delete({"",
+                                                        "1",
+                                                        "1-abcdefg",
+                                                        "2",
+                                                        "2-abcdefg",
+                                                        "3",
+                                                        "3-efghijk",
+                                                        "4",
+                                                        "4-hijklmn",
+                                                        "5",
+                                                        "5-hijklmn",
+                                                        "6",
+                                                        "7"});
+        int64_t deleted_count;
+        ASSERT_EQ(
+            PERR_OK,
+            client_->multi_del("basic_test_multi_get_reverse", sortkeys_to_delete, deleted_count));
+        ASSERT_EQ(13, deleted_count);
+    }
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_multi_get_reverse", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_multi_get_reverse", count));
     ASSERT_EQ(0, count);
 }
 
 TEST_F(basic, multi_set_get_del)
 {
     // multi_set
-    std::map<std::string, std::string> kvs;
-    kvs["basic_test_sort_key_1"] = "basic_test_value_1";
-    kvs["basic_test_sort_key_2"] = "basic_test_value_2";
-    kvs["basic_test_sort_key_3"] = "basic_test_value_3";
-    kvs["basic_test_sort_key_4"] = "basic_test_value_4";
-    int ret = client->multi_set("basic_test_hash_key_1", kvs);
-    ASSERT_EQ(PERR_OK, ret);
+    const std::map<std::string, std::string> kvs({{"basic_test_sort_key_1", "basic_test_value_1"},
+                                                  {"basic_test_sort_key_2", "basic_test_value_2"},
+                                                  {"basic_test_sort_key_3", "basic_test_value_3"},
+                                                  {"basic_test_sort_key_4", "basic_test_value_4"}});
+    ASSERT_EQ(PERR_OK, client_->multi_set("basic_test_hash_key_1", kvs));
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(4, count);
 
+    const std::set<std::string> expect_sortkeys({"basic_test_sort_key_1",
+                                                 "basic_test_sort_key_2",
+                                                 "basic_test_sort_key_3",
+                                                 "basic_test_sort_key_4"});
+
     // multi_get
-    std::set<std::string> sortkeys;
-    sortkeys.insert("basic_test_sort_key_0");
-    sortkeys.insert("basic_test_sort_key_1");
-    sortkeys.insert("basic_test_sort_key_2");
-    sortkeys.insert("basic_test_sort_key_3");
-    sortkeys.insert("basic_test_sort_key_4");
-    std::map<std::string, std::string> new_kvs;
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(4, new_kvs.size());
-    auto it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_1", it->first);
-    ASSERT_EQ("basic_test_value_1", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_2", it->first);
-    ASSERT_EQ("basic_test_value_2", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_3", it->first);
-    ASSERT_EQ("basic_test_value_3", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_4", it->first);
-    ASSERT_EQ("basic_test_value_4", it->second);
+    const std::set<std::string> sortkeys({"basic_test_sort_key_0",
+                                          "basic_test_sort_key_1",
+                                          "basic_test_sort_key_2",
+                                          "basic_test_sort_key_3",
+                                          "basic_test_sort_key_4"});
+    {
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_hash_key_1", sortkeys, actual_kvs));
+        ASSERT_EQ(kvs, actual_kvs);
+    }
 
     // multi_get with limit count 4
-    new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 4);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(4, new_kvs.size());
-    it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_1", it->first);
-    ASSERT_EQ("basic_test_value_1", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_2", it->first);
-    ASSERT_EQ("basic_test_value_2", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_3", it->first);
-    ASSERT_EQ("basic_test_value_3", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_4", it->first);
-    ASSERT_EQ("basic_test_value_4", it->second);
+    {
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_hash_key_1", sortkeys, actual_kvs, 4));
+        ASSERT_EQ(kvs, actual_kvs);
+    }
 
     // multi_get with limit count 3
-    new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 3);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(3, new_kvs.size());
-    it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_1", it->first);
-    ASSERT_EQ("basic_test_value_1", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_2", it->first);
-    ASSERT_EQ("basic_test_value_2", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_3", it->first);
-    ASSERT_EQ("basic_test_value_3", it->second);
+    {
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get("basic_test_hash_key_1", sortkeys, actual_kvs, 3));
+        auto expect_kvs(kvs);
+        expect_kvs.erase("basic_test_sort_key_4");
+        ASSERT_EQ(expect_kvs, actual_kvs);
+    }
 
     // multi_get with limit count 1
-    new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs, 1);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(1, new_kvs.size());
-    it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_1", it->first);
-    ASSERT_EQ("basic_test_value_1", it->second);
+    {
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get("basic_test_hash_key_1", sortkeys, actual_kvs, 1));
+        std::map<std::string, std::string> expect_kvs(
+            {{"basic_test_sort_key_1", "basic_test_value_1"}});
+        ASSERT_EQ(expect_kvs, actual_kvs);
+    }
 
     // multi_get with empty sortkeys
-    sortkeys.clear();
-    new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(4, new_kvs.size());
-    it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_1", it->first);
-    ASSERT_EQ("basic_test_value_1", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_2", it->first);
-    ASSERT_EQ("basic_test_value_2", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_3", it->first);
-    ASSERT_EQ("basic_test_value_3", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_4", it->first);
-    ASSERT_EQ("basic_test_value_4", it->second);
+    {
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_hash_key_1", {}, actual_kvs));
+        ASSERT_EQ(kvs, actual_kvs);
+    }
 
     // multi_get_sortkeys with no limit count
-    sortkeys.clear();
-    ret = client->multi_get_sortkeys("basic_test_hash_key_1", sortkeys, -1);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(4, sortkeys.size());
-    auto it2 = sortkeys.begin();
-    ASSERT_EQ("basic_test_sort_key_1", *it2);
-    it2++;
-    ASSERT_EQ("basic_test_sort_key_2", *it2);
-    it2++;
-    ASSERT_EQ("basic_test_sort_key_3", *it2);
-    it2++;
-    ASSERT_EQ("basic_test_sort_key_4", *it2);
+    {
+        std::set<std::string> actual_sortkeys;
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_get_sortkeys("basic_test_hash_key_1", actual_sortkeys, -1));
+        ASSERT_EQ(expect_sortkeys, actual_sortkeys);
+    }
 
     // multi_get_sortkeys with limit count
-    sortkeys.clear();
-    ret = client->multi_get_sortkeys("basic_test_hash_key_1", sortkeys, 1);
-    ASSERT_EQ(PERR_INCOMPLETE, ret);
-    ASSERT_EQ(1, sortkeys.size());
-    it2 = sortkeys.begin();
-    ASSERT_EQ("basic_test_sort_key_1", *it2);
+    {
+        std::set<std::string> actual_sortkeys;
+        ASSERT_EQ(PERR_INCOMPLETE,
+                  client_->multi_get_sortkeys("basic_test_hash_key_1", actual_sortkeys, 1));
+        std::set<std::string> expect_sortkeys({"basic_test_sort_key_1"});
+        ASSERT_EQ(expect_sortkeys, actual_sortkeys);
+    }
 
     // multi_del with empty sortkeys
-    sortkeys.clear();
     int64_t deleted_count;
-    ret = client->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_INVALID_VALUE, ret);
+    {
+        ASSERT_EQ(PERR_INVALID_VALUE,
+                  client_->multi_del("basic_test_hash_key_1", {}, deleted_count));
+        ASSERT_EQ(0, deleted_count);
+    }
 
     // multi_del
-    sortkeys.clear();
-    sortkeys.insert("basic_test_sort_key_0");
-    sortkeys.insert("basic_test_sort_key_1");
-    sortkeys.insert("basic_test_sort_key_2");
-    ret = client->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(3, deleted_count);
+    {
+        std::set<std::string> sortkeys_to_delete(
+            {"basic_test_sort_key_0", "basic_test_sort_key_1", "basic_test_sort_key_2"});
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_del("basic_test_hash_key_1", sortkeys_to_delete, deleted_count));
+        ASSERT_EQ(3, deleted_count);
+    }
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(2, count);
 
     // check deleted
-    sortkeys.clear();
-    new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, new_kvs.size());
-    it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_3", it->first);
-    ASSERT_EQ("basic_test_value_3", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_4", it->first);
-    ASSERT_EQ("basic_test_value_4", it->second);
+    {
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_hash_key_1", {}, actual_kvs));
+        std::map<std::string, std::string> expect_kvs(
+            {{"basic_test_sort_key_3", "basic_test_value_3"},
+             {"basic_test_sort_key_4", "basic_test_value_4"}});
+        ASSERT_EQ(expect_kvs, actual_kvs);
+    }
 
     // multi_del
-    sortkeys.clear();
-    sortkeys.insert("basic_test_sort_key_3");
-    sortkeys.insert("basic_test_sort_key_4");
-    ret = client->multi_del("basic_test_hash_key_1", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, deleted_count);
+    {
+        std::set<std::string> sortkeys_to_delete(
+            {"basic_test_sort_key_3", "basic_test_sort_key_4"});
+        ASSERT_EQ(PERR_OK,
+                  client_->multi_del("basic_test_hash_key_1", sortkeys_to_delete, deleted_count));
+        ASSERT_EQ(2, deleted_count);
+    }
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(0, count);
 }
 
 TEST_F(basic, set_get_del_async)
 {
-    std::atomic<bool> callbacked(false);
-    int ret = 0;
-    std::string new_value_str;
+    std::string new_value;
+
     // set_async
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_set("basic_test_hash_key_1",
-                      "basic_test_sort_key_1",
-                      "basic_test_value_1",
-                      [&](int err, internal_info &&info) {
-                          ASSERT_EQ(PERR_OK, err);
-                          ASSERT_GT(info.app_id, 0);
-                          ASSERT_GT(info.partition_index, 0);
-                          ASSERT_GT(info.decree, 0);
-                          ASSERT_FALSE(info.server.empty());
-                          callbacked.store(true, std::memory_order_seq_cst);
-                      });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_set("basic_test_hash_key_1",
+                           "basic_test_sort_key_1",
+                           "basic_test_value_1",
+                           [&](int err, internal_info &&info) {
+                               ASSERT_EQ(PERR_OK, err);
+                               ASSERT_GT(info.app_id, 0);
+                               ASSERT_GT(info.partition_index, 0);
+                               ASSERT_GT(info.decree, 0);
+                               ASSERT_FALSE(info.server.empty());
+                               callbacked.store(true, std::memory_order_seq_cst);
+                           });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
-    ASSERT_EQ(PERR_OK, ret);
-
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_2");
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
+    ASSERT_EQ(PERR_OK, client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1"));
+    ASSERT_EQ(PERR_NOT_FOUND, client_->exist("basic_test_hash_key_1", "basic_test_sort_key_2"));
 
     // sortkey_count
     int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(1, count);
 
     // get_async
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_get("basic_test_hash_key_1",
-                      "basic_test_sort_key_1",
-                      [&](int err, std::string &&value, internal_info &&info) {
-                          ASSERT_EQ(PERR_OK, err);
-                          ASSERT_GT(info.app_id, 0);
-                          ASSERT_GT(info.partition_index, 0);
-                          ASSERT_EQ(info.decree, -1);
-                          ASSERT_FALSE(info.server.empty());
-                          ASSERT_EQ("basic_test_value_1", value);
-                          callbacked.store(true, std::memory_order_seq_cst);
-                      });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_get("basic_test_hash_key_1",
+                           "basic_test_sort_key_1",
+                           [&](int err, std::string &&value, internal_info &&info) {
+                               ASSERT_EQ(PERR_OK, err);
+                               ASSERT_GT(info.app_id, 0);
+                               ASSERT_GT(info.partition_index, 0);
+                               ASSERT_EQ(info.decree, -1);
+                               ASSERT_FALSE(info.server.empty());
+                               ASSERT_EQ("basic_test_value_1", value);
+                               callbacked.store(true, std::memory_order_seq_cst);
+                           });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_get("basic_test_hash_key_1",
-                      "basic_test_sort_key_2",
-                      [&](int err, std::string &&value, internal_info &&info) {
-                          ASSERT_EQ(PERR_NOT_FOUND, err);
-                          ASSERT_GT(info.app_id, 0);
-                          ASSERT_GT(info.partition_index, 0);
-                          ASSERT_EQ(info.decree, -1);
-                          ASSERT_FALSE(info.server.empty());
-                          callbacked.store(true, std::memory_order_seq_cst);
-                      });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_get("basic_test_hash_key_1",
+                           "basic_test_sort_key_2",
+                           [&](int err, std::string &&value, internal_info &&info) {
+                               ASSERT_EQ(PERR_NOT_FOUND, err);
+                               ASSERT_GT(info.app_id, 0);
+                               ASSERT_GT(info.partition_index, 0);
+                               ASSERT_EQ(info.decree, -1);
+                               ASSERT_FALSE(info.server.empty());
+                               callbacked.store(true, std::memory_order_seq_cst);
+                           });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // del_async
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_del(
-        "basic_test_hash_key_1", "basic_test_sort_key_1", [&](int err, internal_info &&info) {
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_del(
+            "basic_test_hash_key_1", "basic_test_sort_key_1", [&](int err, internal_info &&info) {
+                ASSERT_EQ(PERR_OK, err);
+                ASSERT_GT(info.app_id, 0);
+                ASSERT_GT(info.partition_index, 0);
+                ASSERT_GT(info.decree, 0);
+                ASSERT_FALSE(info.server.empty());
+                callbacked.store(true, std::memory_order_seq_cst);
+            });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
+
+    // exist
+    ASSERT_EQ(PERR_NOT_FOUND, client_->exist("basic_test_hash_key_1", "basic_test_sort_key_1"));
+
+    // sortkey_count
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
+    ASSERT_EQ(0, count);
+
+    // get -- finally, using get_sync to get the key-value.
+    ASSERT_EQ(PERR_NOT_FOUND,
+              client_->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value));
+}
+
+TEST_F(basic, multi_set_get_del_async)
+{
+    std::map<std::string, std::string> actual_kvs;
+    int64_t count;
+
+    const std::map<std::string, std::string> kvs({{"basic_test_sort_key_1", "basic_test_value_1"},
+                                                  {"basic_test_sort_key_2", "basic_test_value_2"},
+                                                  {"basic_test_sort_key_3", "basic_test_value_3"},
+                                                  {"basic_test_sort_key_4", "basic_test_value_4"}});
+    const std::set<std::string> expect_sortkeys({"basic_test_sort_key_1",
+                                                 "basic_test_sort_key_2",
+                                                 "basic_test_sort_key_3",
+                                                 "basic_test_sort_key_4"});
+    const std::set<std::string> sortkeys_to_get({"basic_test_sort_key_0",
+                                                 "basic_test_sort_key_1",
+                                                 "basic_test_sort_key_2",
+                                                 "basic_test_sort_key_3",
+                                                 "basic_test_sort_key_4"});
+
+    // multi_set_async
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_multi_set("basic_test_hash_key_1", kvs, [&](int err, internal_info &&info) {
             ASSERT_EQ(PERR_OK, err);
             ASSERT_GT(info.app_id, 0);
             ASSERT_GT(info.partition_index, 0);
@@ -1393,272 +1435,200 @@ TEST_F(basic, set_get_del_async)
             ASSERT_FALSE(info.server.empty());
             callbacked.store(true, std::memory_order_seq_cst);
         });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
 
-    // exist
-    ret = client->exist("basic_test_hash_key_1", "basic_test_sort_key_1");
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
-
-    // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(0, count);
-
-    // get -- finally, using get_sync to get the key-value.
-    ret = client->get("basic_test_hash_key_1", "basic_test_sort_key_1", new_value_str);
-    ASSERT_EQ(PERR_NOT_FOUND, ret);
-}
-
-TEST_F(basic, multi_set_get_del_async)
-{
-    std::atomic<bool> callbacked(false);
-    int ret = 0;
-    std::map<std::string, std::string> new_kvs;
-    // multi_set_async
-    std::map<std::string, std::string> kvs;
-    kvs["basic_test_sort_key_1"] = "basic_test_value_1";
-    kvs["basic_test_sort_key_2"] = "basic_test_value_2";
-    kvs["basic_test_sort_key_3"] = "basic_test_value_3";
-    kvs["basic_test_sort_key_4"] = "basic_test_value_4";
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_set("basic_test_hash_key_1", kvs, [&](int err, internal_info &&info) {
-        ASSERT_EQ(PERR_OK, err);
-        ASSERT_GT(info.app_id, 0);
-        ASSERT_GT(info.partition_index, 0);
-        ASSERT_GT(info.decree, 0);
-        ASSERT_FALSE(info.server.empty());
-        callbacked.store(true, std::memory_order_seq_cst);
-    });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
-
-    // sortkey_count
-    int64_t count;
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(4, count);
+        // sortkey_count
+        ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
+        ASSERT_EQ(4, count);
+    }
 
     // multi_get_async
-    std::set<std::string> sortkeys;
-    sortkeys.insert("basic_test_sort_key_0");
-    sortkeys.insert("basic_test_sort_key_1");
-    sortkeys.insert("basic_test_sort_key_2");
-    sortkeys.insert("basic_test_sort_key_3");
-    sortkeys.insert("basic_test_sort_key_4");
-
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get(
-        "basic_test_hash_key_1",
-        sortkeys,
-        [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
-            ASSERT_EQ(PERR_OK, err);
-            ASSERT_GT(info.app_id, 0);
-            ASSERT_GT(info.partition_index, 0);
-            ASSERT_EQ(info.decree, -1);
-            ASSERT_FALSE(info.server.empty());
-            ASSERT_EQ(4, values.size());
-            auto it = values.begin();
-            ASSERT_EQ("basic_test_sort_key_1", it->first);
-            ASSERT_EQ("basic_test_value_1", it->second);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_2", it->first);
-            ASSERT_EQ("basic_test_value_2", it->second);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_3", it->first);
-            ASSERT_EQ("basic_test_value_3", it->second);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_4", it->first);
-            ASSERT_EQ("basic_test_value_4", it->second);
-            callbacked.store(true, std::memory_order_seq_cst);
-        });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_multi_get(
+            "basic_test_hash_key_1",
+            sortkeys_to_get,
+            [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
+                ASSERT_EQ(PERR_OK, err);
+                ASSERT_GT(info.app_id, 0);
+                ASSERT_GT(info.partition_index, 0);
+                ASSERT_EQ(info.decree, -1);
+                ASSERT_FALSE(info.server.empty());
+                ASSERT_EQ(kvs, values);
+                callbacked.store(true, std::memory_order_seq_cst);
+            });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // multi_get_async with limit count
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get(
-        "basic_test_hash_key_1",
-        sortkeys,
-        [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
-            ASSERT_EQ(PERR_INCOMPLETE, err);
-            ASSERT_GT(info.app_id, 0);
-            ASSERT_GT(info.partition_index, 0);
-            ASSERT_EQ(info.decree, -1);
-            ASSERT_FALSE(info.server.empty());
-            ASSERT_EQ(1, values.size());
-            auto it = values.begin();
-            ASSERT_EQ("basic_test_sort_key_1", it->first);
-            ASSERT_EQ("basic_test_value_1", it->second);
-            callbacked.store(true, std::memory_order_seq_cst);
-        },
-        1);
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_multi_get(
+            "basic_test_hash_key_1",
+            sortkeys_to_get,
+            [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
+                ASSERT_EQ(PERR_INCOMPLETE, err);
+                ASSERT_GT(info.app_id, 0);
+                ASSERT_GT(info.partition_index, 0);
+                ASSERT_EQ(info.decree, -1);
+                ASSERT_FALSE(info.server.empty());
+                std::map<std::string, std::string> expect_kvs(
+                    {{"basic_test_sort_key_1", "basic_test_value_1"}});
+                ASSERT_EQ(expect_kvs, values);
+                callbacked.store(true, std::memory_order_seq_cst);
+            },
+            1);
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // multi_get with empty sortkeys
-    sortkeys.clear();
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get(
-        "basic_test_hash_key_1",
-        sortkeys,
-        [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
-            ASSERT_EQ(PERR_OK, err);
-            ASSERT_GT(info.app_id, 0);
-            ASSERT_GT(info.partition_index, 0);
-            ASSERT_EQ(info.decree, -1);
-            ASSERT_FALSE(info.server.empty());
-            ASSERT_EQ(4, values.size());
-            auto it = values.begin();
-            ASSERT_EQ("basic_test_sort_key_1", it->first);
-            ASSERT_EQ("basic_test_value_1", it->second);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_2", it->first);
-            ASSERT_EQ("basic_test_value_2", it->second);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_3", it->first);
-            ASSERT_EQ("basic_test_value_3", it->second);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_4", it->first);
-            ASSERT_EQ("basic_test_value_4", it->second);
-            callbacked.store(true, std::memory_order_seq_cst);
-        });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_multi_get(
+            "basic_test_hash_key_1",
+            {},
+            [&](int err, std::map<std::string, std::string> &&values, internal_info &&info) {
+                ASSERT_EQ(PERR_OK, err);
+                ASSERT_GT(info.app_id, 0);
+                ASSERT_GT(info.partition_index, 0);
+                ASSERT_EQ(info.decree, -1);
+                ASSERT_FALSE(info.server.empty());
+                ASSERT_EQ(kvs, values);
+                callbacked.store(true, std::memory_order_seq_cst);
+            });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // multi_get_sortkeys_async with limit count
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get_sortkeys(
-        "basic_test_hash_key_1",
-        [&](int err, std::set<std::string> &&sortkeys, internal_info &&info) {
-            ASSERT_EQ(PERR_INCOMPLETE, err);
-            ASSERT_GT(info.app_id, 0);
-            ASSERT_GT(info.partition_index, 0);
-            ASSERT_EQ(info.decree, -1);
-            ASSERT_FALSE(info.server.empty());
-            ASSERT_EQ(1, sortkeys.size());
-            auto it = sortkeys.begin();
-            ASSERT_EQ("basic_test_sort_key_1", *it);
-            callbacked.store(true, std::memory_order_seq_cst);
-        },
-        1);
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        const std::set<std::string> expect_sortkeys({"basic_test_sort_key_1"});
+        std::set<std::string> actual_sortkeys;
+        client_->async_multi_get_sortkeys(
+            "basic_test_hash_key_1",
+            [&](int err, std::set<std::string> &&actual_sortkeys, internal_info &&info) {
+                ASSERT_EQ(PERR_INCOMPLETE, err);
+                ASSERT_GT(info.app_id, 0);
+                ASSERT_GT(info.partition_index, 0);
+                ASSERT_EQ(info.decree, -1);
+                ASSERT_FALSE(info.server.empty());
+                ASSERT_EQ(expect_sortkeys, actual_sortkeys);
+                callbacked.store(true, std::memory_order_seq_cst);
+            },
+            1);
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // multi_get_sortkeys_async with no limit count
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_get_sortkeys(
-        "basic_test_hash_key_1",
-        [&](int err, std::set<std::string> &&sortkeys, internal_info &&info) {
-            ASSERT_EQ(PERR_OK, err);
-            ASSERT_GT(info.app_id, 0);
-            ASSERT_GT(info.partition_index, 0);
-            ASSERT_EQ(info.decree, -1);
-            ASSERT_FALSE(info.server.empty());
-            ASSERT_EQ(4, sortkeys.size());
-            auto it = sortkeys.begin();
-            ASSERT_EQ("basic_test_sort_key_1", *it);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_2", *it);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_3", *it);
-            it++;
-            ASSERT_EQ("basic_test_sort_key_4", *it);
-            callbacked.store(true, std::memory_order_seq_cst);
-        },
-        -1);
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        std::set<std::string> actual_sortkeys;
+        client_->async_multi_get_sortkeys(
+            "basic_test_hash_key_1",
+            [&](int err, std::set<std::string> &&actual_sortkeys, internal_info &&info) {
+                ASSERT_EQ(PERR_OK, err);
+                ASSERT_GT(info.app_id, 0);
+                ASSERT_GT(info.partition_index, 0);
+                ASSERT_EQ(info.decree, -1);
+                ASSERT_FALSE(info.server.empty());
+                ASSERT_EQ(expect_sortkeys, actual_sortkeys);
+                callbacked.store(true, std::memory_order_seq_cst);
+            },
+            -1);
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // multi_del_async with empty sortkeys
-    sortkeys.clear();
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_del("basic_test_hash_key_1",
-                            sortkeys,
-                            [&](int err, int64_t deleted_count, internal_info &&info) {
-                                ASSERT_EQ(PERR_INVALID_VALUE, err);
-                                callbacked.store(true, std::memory_order_seq_cst);
-                            });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        client_->async_multi_del(
+            "basic_test_hash_key_1", {}, [&](int err, int64_t deleted_count, internal_info &&info) {
+                ASSERT_EQ(PERR_INVALID_VALUE, err);
+                callbacked.store(true, std::memory_order_seq_cst);
+            });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // multi_del_async
-    sortkeys.clear();
-    sortkeys.insert("basic_test_sort_key_0");
-    sortkeys.insert("basic_test_sort_key_1");
-    sortkeys.insert("basic_test_sort_key_2");
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_del("basic_test_hash_key_1",
-                            sortkeys,
-                            [&](int err, int64_t deleted_count, internal_info &&info) {
-                                ASSERT_EQ(PERR_OK, err);
-                                ASSERT_GT(info.app_id, 0);
-                                ASSERT_GT(info.partition_index, 0);
-                                ASSERT_GT(info.decree, 0);
-                                ASSERT_FALSE(info.server.empty());
-                                ASSERT_EQ(3, deleted_count);
-                                callbacked.store(true, std::memory_order_seq_cst);
-                            });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        std::set<std::string> sortkeys_to_delete(
+            {"basic_test_sort_key_0", "basic_test_sort_key_1", "basic_test_sort_key_2"});
+        client_->async_multi_del("basic_test_hash_key_1",
+                                 sortkeys_to_delete,
+                                 [&](int err, int64_t deleted_count, internal_info &&info) {
+                                     ASSERT_EQ(PERR_OK, err);
+                                     ASSERT_GT(info.app_id, 0);
+                                     ASSERT_GT(info.partition_index, 0);
+                                     ASSERT_GT(info.decree, 0);
+                                     ASSERT_FALSE(info.server.empty());
+                                     ASSERT_EQ(3, deleted_count);
+                                     callbacked.store(true, std::memory_order_seq_cst);
+                                 });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
 
-    // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, count);
+        // sortkey_count
+        ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
+        ASSERT_EQ(2, count);
 
-    // check deleted  --- using multi_get to check.
-    sortkeys.clear();
-    new_kvs.clear();
-    ret = client->multi_get("basic_test_hash_key_1", sortkeys, new_kvs);
-    ASSERT_EQ(PERR_OK, ret);
-    ASSERT_EQ(2, new_kvs.size());
-    auto it = new_kvs.begin();
-    ASSERT_EQ("basic_test_sort_key_3", it->first);
-    ASSERT_EQ("basic_test_value_3", it->second);
-    it++;
-    ASSERT_EQ("basic_test_sort_key_4", it->first);
-    ASSERT_EQ("basic_test_value_4", it->second);
+        // check deleted  --- using multi_get to check.
+        std::map<std::string, std::string> actual_kvs;
+        ASSERT_EQ(PERR_OK, client_->multi_get("basic_test_hash_key_1", {}, actual_kvs));
+        std::map<std::string, std::string> expect_kvs(
+            {{"basic_test_sort_key_3", "basic_test_value_3"},
+             {"basic_test_sort_key_4", "basic_test_value_4"}});
+        ASSERT_EQ(expect_kvs, actual_kvs);
+    }
 
     // multi_del_async
-    sortkeys.clear();
-    sortkeys.insert("basic_test_sort_key_3");
-    sortkeys.insert("basic_test_sort_key_4");
-    callbacked.store(false, std::memory_order_seq_cst);
-    client->async_multi_del("basic_test_hash_key_1",
-                            sortkeys,
-                            [&](int err, int64_t deleted_count, internal_info &&info) {
-                                ASSERT_EQ(PERR_OK, err);
-                                ASSERT_GT(info.app_id, 0);
-                                ASSERT_GT(info.partition_index, 0);
-                                ASSERT_GT(info.decree, 0);
-                                ASSERT_FALSE(info.server.empty());
-                                ASSERT_EQ(2, deleted_count);
-                                callbacked.store(true, std::memory_order_seq_cst);
-                            });
-    while (!callbacked.load(std::memory_order_seq_cst))
-        usleep(100);
+    {
+        std::atomic<bool> callbacked(false);
+        std::set<std::string> sortkeys_to_delete(
+            {"basic_test_sort_key_3", "basic_test_sort_key_4"});
+        client_->async_multi_del("basic_test_hash_key_1",
+                                 sortkeys_to_delete,
+                                 [&](int err, int64_t deleted_count, internal_info &&info) {
+                                     ASSERT_EQ(PERR_OK, err);
+                                     ASSERT_GT(info.app_id, 0);
+                                     ASSERT_GT(info.partition_index, 0);
+                                     ASSERT_GT(info.decree, 0);
+                                     ASSERT_FALSE(info.server.empty());
+                                     ASSERT_EQ(2, deleted_count);
+                                     callbacked.store(true, std::memory_order_seq_cst);
+                                 });
+        while (!callbacked.load(std::memory_order_seq_cst))
+            usleep(100);
+    }
 
     // sortkey_count
-    ret = client->sortkey_count("basic_test_hash_key_1", count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->sortkey_count("basic_test_hash_key_1", count));
     ASSERT_EQ(0, count);
 }
 
 TEST_F(basic, scan_with_filter)
 {
+    int ret = 0;
+    const std::map<std::string, std::string> kvs({{"m_1", "a"},
+                                                  {"m_2", "a"},
+                                                  {"m_3", "a"},
+                                                  {"m_4", "a"},
+                                                  {"m_5", "a"},
+                                                  {"n_1", "b"},
+                                                  {"n_2", "b"},
+                                                  {"n_3", "b"}});
+    const std::map<std::string, std::string> expect_kvs_prefixed_by_m(
+        {{"m_1", "a"}, {"m_2", "a"}, {"m_3", "a"}, {"m_4", "a"}, {"m_5", "a"}});
+
     // multi_set
-    std::map<std::string, std::string> kvs;
-    kvs["m_1"] = "a";
-    kvs["m_2"] = "a";
-    kvs["m_3"] = "a";
-    kvs["m_4"] = "a";
-    kvs["m_5"] = "a";
-    kvs["n_1"] = "b";
-    kvs["n_2"] = "b";
-    kvs["n_3"] = "b";
-    int ret = client->multi_set("xyz", kvs);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->multi_set("xyz", kvs));
 
     // scan with batch_size = 10
     {
@@ -1667,9 +1637,7 @@ TEST_F(basic, scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 10;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("xyz", "", "", options, scanner);
-        ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
-                          << client->get_error_string(ret);
+        ASSERT_EQ(PERR_OK, client_->get_scanner("xyz", "", "", options, scanner));
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
         std::string hash_key;
@@ -1681,12 +1649,7 @@ TEST_F(basic, scan_with_filter)
             data[sort_key] = value;
         }
         delete scanner;
-        ASSERT_EQ(5, data.size());
-        ASSERT_NE(data.end(), data.find("m_1"));
-        ASSERT_NE(data.end(), data.find("m_2"));
-        ASSERT_NE(data.end(), data.find("m_3"));
-        ASSERT_NE(data.end(), data.find("m_4"));
-        ASSERT_NE(data.end(), data.find("m_5"));
+        ASSERT_EQ(expect_kvs_prefixed_by_m, data);
     }
 
     // scan with batch_size = 3
@@ -1696,8 +1659,7 @@ TEST_F(basic, scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 3;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("xyz", "", "", options, scanner);
-        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_EQ(PERR_OK, client_->get_scanner("xyz", "", "", options, scanner));
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
         std::string hash_key;
@@ -1709,12 +1671,7 @@ TEST_F(basic, scan_with_filter)
             data[sort_key] = value;
         }
         delete scanner;
-        ASSERT_EQ(5, data.size());
-        ASSERT_NE(data.end(), data.find("m_1"));
-        ASSERT_NE(data.end(), data.find("m_2"));
-        ASSERT_NE(data.end(), data.find("m_3"));
-        ASSERT_NE(data.end(), data.find("m_4"));
-        ASSERT_NE(data.end(), data.find("m_5"));
+        ASSERT_EQ(expect_kvs_prefixed_by_m, data);
     }
 
     // scan with batch_size = 10
@@ -1724,9 +1681,7 @@ TEST_F(basic, scan_with_filter)
         options.hash_key_filter_pattern = "xy";
         options.batch_size = 10;
         pegasus_client::pegasus_scanner *scanner = nullptr;
-        ret = client->get_scanner("xyz", "", "", options, scanner);
-        ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
-                          << client->get_error_string(ret);
+        ASSERT_EQ(PERR_OK, client_->get_scanner("xyz", "", "", options, scanner));
         ASSERT_NE(nullptr, scanner);
         std::map<std::string, std::string> data;
         std::string hash_key;
@@ -1746,25 +1701,26 @@ TEST_F(basic, scan_with_filter)
         sortkeys.insert(kv.first);
     }
     int64_t deleted_count;
-    ret = client->multi_del("x", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->multi_del("x", sortkeys, deleted_count));
     ASSERT_EQ(8, deleted_count);
 }
 
 TEST_F(basic, full_scan_with_filter)
 {
+    int ret = 0;
     // multi_set
-    std::map<std::string, std::string> kvs;
-    kvs["m_1"] = "a";
-    kvs["m_2"] = "a";
-    kvs["m_3"] = "a";
-    kvs["m_4"] = "a";
-    kvs["m_5"] = "a";
-    kvs["n_1"] = "b";
-    kvs["n_2"] = "b";
-    kvs["n_3"] = "b";
-    int ret = client->multi_set("xyz", kvs);
-    ASSERT_EQ(PERR_OK, ret);
+    const std::map<std::string, std::string> kvs({{"m_1", "a"},
+                                                  {"m_2", "a"},
+                                                  {"m_3", "a"},
+                                                  {"m_4", "a"},
+                                                  {"m_5", "a"},
+                                                  {"n_1", "b"},
+                                                  {"n_2", "b"},
+                                                  {"n_3", "b"}});
+    ASSERT_EQ(PERR_OK, client_->multi_set("xyz", kvs));
+
+    const std::map<std::string, std::string> expect_kvs_prefixed_by_m(
+        {{"m_1", "a"}, {"m_2", "a"}, {"m_3", "a"}, {"m_4", "a"}, {"m_5", "a"}});
 
     // scan with sort key filter and batch_size = 10
     {
@@ -1773,8 +1729,7 @@ TEST_F(basic, full_scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 10;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
-        ret = client->get_unordered_scanners(1, options, scanners);
-        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_EQ(PERR_OK, client_->get_unordered_scanners(1, options, scanners));
         ASSERT_EQ(1, scanners.size());
         pegasus_client::pegasus_scanner *scanner = scanners[0];
         std::map<std::string, std::string> data;
@@ -1787,12 +1742,7 @@ TEST_F(basic, full_scan_with_filter)
             data[sort_key] = value;
         }
         delete scanner;
-        ASSERT_EQ(5, data.size());
-        ASSERT_NE(data.end(), data.find("m_1"));
-        ASSERT_NE(data.end(), data.find("m_2"));
-        ASSERT_NE(data.end(), data.find("m_3"));
-        ASSERT_NE(data.end(), data.find("m_4"));
-        ASSERT_NE(data.end(), data.find("m_5"));
+        ASSERT_EQ(expect_kvs_prefixed_by_m, data);
     }
 
     // scan with sort key filter and batch_size = 3
@@ -1802,8 +1752,7 @@ TEST_F(basic, full_scan_with_filter)
         options.sort_key_filter_pattern = "m";
         options.batch_size = 3;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
-        ret = client->get_unordered_scanners(1, options, scanners);
-        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_EQ(PERR_OK, client_->get_unordered_scanners(1, options, scanners));
         ASSERT_EQ(1, scanners.size());
         pegasus_client::pegasus_scanner *scanner = scanners[0];
         std::map<std::string, std::string> data;
@@ -1816,12 +1765,7 @@ TEST_F(basic, full_scan_with_filter)
             data[sort_key] = value;
         }
         delete scanner;
-        ASSERT_EQ(5, data.size());
-        ASSERT_NE(data.end(), data.find("m_1"));
-        ASSERT_NE(data.end(), data.find("m_2"));
-        ASSERT_NE(data.end(), data.find("m_3"));
-        ASSERT_NE(data.end(), data.find("m_4"));
-        ASSERT_NE(data.end(), data.find("m_5"));
+        ASSERT_EQ(expect_kvs_prefixed_by_m, data);
     }
 
     // scan with hash key filter and batch_size = 10
@@ -1831,8 +1775,7 @@ TEST_F(basic, full_scan_with_filter)
         options.hash_key_filter_pattern = "xy";
         options.batch_size = 10;
         std::vector<pegasus_client::pegasus_scanner *> scanners;
-        ret = client->get_unordered_scanners(1, options, scanners);
-        ASSERT_EQ(PERR_OK, ret);
+        ASSERT_EQ(PERR_OK, client_->get_unordered_scanners(1, options, scanners));
         ASSERT_EQ(1, scanners.size());
         pegasus_client::pegasus_scanner *scanner = scanners[0];
         std::map<std::string, std::string> data;
@@ -1853,7 +1796,6 @@ TEST_F(basic, full_scan_with_filter)
         sortkeys.insert(kv.first);
     }
     int64_t deleted_count;
-    ret = client->multi_del("x", sortkeys, deleted_count);
-    ASSERT_EQ(PERR_OK, ret);
+    ASSERT_EQ(PERR_OK, client_->multi_del("x", sortkeys, deleted_count));
     ASSERT_EQ(8, deleted_count);
 }
