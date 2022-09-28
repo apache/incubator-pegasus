@@ -165,10 +165,11 @@ public:
 
         result.reset(test_plan.test_plan_case);
 
-        bool is_running = true;
+        std::atomic<bool> is_running(true);
         std::atomic<int64_t> ref_count(0);
+        std::atomic<int> last_error(PERR_OK);
 
-        while (!result.is_time_up()) {
+        while (!result.is_time_up() && (last_error == PERR_OK || last_error == PERR_APP_BUSY)) {
             auto h_key = generate_hotkey(test_plan.is_hotkey, 75, test_hashkey_len);
             auto s_key = generate_random_string(test_sortkey_len);
             auto value = generate_random_string(test_plan.random_value_size
@@ -187,14 +188,16 @@ public:
                     s_key,
                     value,
                     [&, h_key, s_key, value](int ec, pegasus_client::internal_info &&info) {
+                        ref_count--;
                         if (!is_running) {
-                            ref_count--;
                             return;
                         }
-                        ASSERT_TRUE(ec == PERR_OK || ec == PERR_APP_BUSY) << ec;
+                        if (ec != PERR_OK && ec != PERR_APP_BUSY) {
+                            last_error = ec;
+                            return;
+                        }
                         result.record(value.size() + h_key.size() + s_key.size(),
                                       ec == PERR_APP_BUSY);
-                        ref_count--;
                     });
                 break;
             }
@@ -204,17 +207,19 @@ public:
                     h_key,
                     sortkey_value_pairs,
                     [&, h_key, sortkey_value_pairs](int ec, pegasus_client::internal_info &&info) {
+                        ref_count--;
                         if (!is_running) {
-                            ref_count--;
                             return;
                         }
-                        ASSERT_TRUE(ec == PERR_OK || ec == PERR_APP_BUSY) << ec;
+                        if (ec != PERR_OK && ec != PERR_APP_BUSY) {
+                            last_error = ec;
+                            return;
+                        }
                         int total_size = 0;
                         for (const auto &iter : sortkey_value_pairs) {
                             total_size += iter.second.size();
                         }
                         result.record(total_size + h_key.size(), ec == PERR_APP_BUSY);
-                        ref_count--;
                     });
                 break;
             }
@@ -225,28 +230,31 @@ public:
                     s_key,
                     value,
                     [&, h_key, s_key, value](int ec_write, pegasus_client::internal_info &&info) {
+                        ref_count--;
                         if (!is_running) {
-                            ref_count--;
                             return;
                         }
-                        ASSERT_EQ(PERR_OK, ec_write);
+                        if (ec_write != PERR_OK) {
+                            last_error = ec_write;
+                            return;
+                        }
                         ref_count++;
                         client_->async_get(
                             h_key,
                             s_key,
                             [&, h_key, s_key, value](
                                 int ec_read, string &&val, pegasus_client::internal_info &&info) {
+                                ref_count--;
                                 if (!is_running) {
-                                    ref_count--;
                                     return;
                                 }
-                                ASSERT_TRUE(ec_read == PERR_OK || ec_read == PERR_APP_BUSY)
-                                    << ec_read;
+                                if (ec_read != PERR_OK && ec_read != PERR_APP_BUSY) {
+                                    last_error = ec_read;
+                                    return;
+                                }
                                 result.record(value.size() + h_key.size() + s_key.size(),
                                               ec_read == PERR_APP_BUSY);
-                                ref_count--;
                             });
-                        ref_count--;
                     });
                 break;
             }
@@ -256,11 +264,14 @@ public:
                     h_key,
                     sortkey_value_pairs,
                     [&, h_key](int ec_write, pegasus_client::internal_info &&info) {
+                        ref_count--;
                         if (!is_running) {
-                            ref_count--;
                             return;
                         }
-                        ASSERT_EQ(PERR_OK, ec_write);
+                        if (ec_write != PERR_OK) {
+                            last_error = ec_write;
+                            return;
+                        }
                         ref_count++;
                         client_->async_multi_get(
                             h_key,
@@ -268,29 +279,34 @@ public:
                             [&, h_key](int ec_read,
                                        std::map<string, string> &&values,
                                        pegasus_client::internal_info &&info) {
+                                ref_count--;
                                 if (!is_running) {
-                                    ref_count--;
                                     return;
                                 }
-                                ASSERT_TRUE(ec_read == PERR_OK || ec_read == PERR_APP_BUSY)
-                                    << ec_read;
+                                if (ec_read != PERR_OK && ec_read != PERR_APP_BUSY) {
+                                    last_error = ec_read;
+                                    return;
+                                }
                                 int total_size = 0;
                                 for (const auto &iter : values) {
                                     total_size += iter.second.size();
                                 }
                                 result.record(total_size + h_key.size(), ec_read == PERR_APP_BUSY);
-                                ref_count--;
                             });
-                        ref_count--;
                     });
                 break;
             }
             }
         }
         is_running = false;
-        while (ref_count.load() != 0) {
-            sleep(1);
-        }
+        int try_times = 0;
+        ASSERT_IN_TIME(
+            [&] {
+                LOG_INFO_F("Start to try the {}th time", ++try_times);
+                ASSERT_EQ(0, ref_count.load());
+                ASSERT_TRUE(last_error == PERR_OK || last_error == PERR_APP_BUSY) << last_error;
+            },
+            3 * throttle_test_recorder::limit_duration_ms / 1000);
     }
 };
 

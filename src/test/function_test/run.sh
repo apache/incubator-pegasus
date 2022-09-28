@@ -16,8 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 if [ -z ${REPORT_DIR} ]; then
     REPORT_DIR="./"
 fi
@@ -26,9 +24,19 @@ if [ -z ${TEST_BIN} ]; then
     exit 1
 fi
 
-GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN}
+loop_count=0
+last_ret=0
+while [ $loop_count -le 5 ]
+do
+  GTEST_OUTPUT="xml:${REPORT_DIR}/${TEST_BIN}.xml" ./${TEST_BIN}
+  last_ret=$?
+  if [ $last_ret -eq 0 ]; then
+      break
+  fi
+  loop_count=`expr $loop_count + 1`
+done
 
-if [ $? -ne 0 ]; then
+if [ $last_ret -ne 0 ]; then
     echo "---- ls ----"
     ls -l
     if [ -f core ]; then

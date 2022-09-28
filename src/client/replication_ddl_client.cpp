@@ -87,9 +87,10 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
                                                        int partition_count,
                                                        int max_replica_count)
 {
-    int sleep_sec = 2;
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(sleep_sec));
+    do {
+        uint32_t one_step_wait_sec = std::min(_max_wait_secs, 2U);
+        std::this_thread::sleep_for(std::chrono::seconds(one_step_wait_sec));
+        _max_wait_secs -= one_step_wait_sec;
 
         std::shared_ptr<query_cfg_request> query_req(new query_cfg_request());
         query_req->app_name = app_name;
@@ -132,7 +133,8 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
         }
         std::cout << app_name << " not ready yet, still waiting... (" << ready_count << "/"
                   << partition_count << ")" << std::endl;
-    }
+    } while (_max_wait_secs > 0);
+
     return dsn::ERR_OK;
 }
 

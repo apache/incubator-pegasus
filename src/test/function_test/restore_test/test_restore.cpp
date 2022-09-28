@@ -42,6 +42,8 @@
 #include "pegasus/error.h"
 #include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_address.h"
+#include "utils/test_macros.h"
+#include "test_util/test_util.h"
 #include "test/function_test/utils/global_env.h"
 #include "utils/error_code.h"
 #include "utils/filesystem.h"
@@ -124,17 +126,13 @@ public:
         std::cout << "write data complete, total time = " << ts << "s" << std::endl;
     }
 
-    bool verify_data()
+    void verify_data()
     {
-        int err = PERR_OK;
         std::cout << "start to get " << kv_pair_cnt << " key-value pairs, using get()..."
                   << std::endl;
         new_pg_client =
             pegasus::pegasus_client_factory::get_client(cluster_name.c_str(), new_app_name.c_str());
-        if (nullptr == new_pg_client) {
-            std::cout << "error to create client for " << new_app_name << std::endl;
-            return false;
-        }
+        ASSERT_NE(nullptr, new_pg_client);
 
         int64_t start = dsn_now_ms();
         for (int i = 1; i <= kv_pair_cnt; i++) {
@@ -143,94 +141,46 @@ public:
             std::string s_key = sort_key_prefix + "_" + index;
             std::string value = value_prefix + "_" + index;
             std::string value_new;
-            err = new_pg_client->get(h_key, s_key, value_new);
-            if (err != PERR_OK) {
-                std::cout << "get <" << h_key << ">, <" << s_key
-                          << "> failed， with err = " << new_pg_client->get_error_string(err)
-                          << std::endl;
-                return false;
-            }
-            if (value != value_new) {
-                std::cout << "old value = " << value << ", but new value = " << value_new
-                          << std::endl;
-                return false;
-            }
+            ASSERT_EQ(PERR_OK, new_pg_client->get(h_key, s_key, value_new)) << h_key << " : "
+                                                                            << s_key;
+            ASSERT_EQ(value, value_new);
         }
         int64_t end = dsn_now_ms();
         int64_t ts = (end - start) / 1000;
         std::cout << "verify data complete, total time = " << ts << "s" << std::endl;
-        return true;
     }
 
-    bool restore()
+    void restore()
     {
         std::this_thread::sleep_for(std::chrono::seconds(30));
-        error_code err = ddl_client->do_restore(backup_provider_name,
-                                                cluster_name,
-                                                /*old_policy_name=*/"",
-                                                time_stamp,
-                                                app_name,
-                                                old_app_id,
-                                                new_app_name,
-                                                false);
-        if (err != ERR_OK) {
-            std::cout << "restore failed, err = " << err.to_string() << std::endl;
-            return false;
-        } else {
-            // sleep for at most 3 min to wait app is fully healthy
-            bool ret = wait_app_healthy(180);
-            return ret;
-        }
+        ASSERT_EQ(ERR_OK,
+                  ddl_client->do_restore(backup_provider_name,
+                                         cluster_name,
+                                         /*old_policy_name=*/"",
+                                         time_stamp,
+                                         app_name,
+                                         old_app_id,
+                                         new_app_name,
+                                         false));
+        ASSERT_NO_FATAL_FAILURE(wait_app_healthy());
     }
 
-    bool wait_app_healthy(int64_t seconds)
+    void wait_app_healthy()
     {
-        std::vector<partition_configuration> p_confs;
-        int32_t app_id = 0, partition_cnt = 0;
-        bool is_app_full_healthy = false;
-        error_code err = ERR_OK;
-        while (seconds > 0 && !is_app_full_healthy) {
-            int64_t sleep_time = 0;
-            if (seconds >= 3) {
-                sleep_time = 3;
-            } else {
-                sleep_time = seconds;
-            }
-            seconds -= sleep_time;
-            std::cout << "sleep " << sleep_time << "s to wait app become healthy..." << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
-
-            p_confs.clear();
-            app_id = 0, partition_cnt = 0;
-            err = ddl_client->list_app(new_app_name, app_id, partition_cnt, p_confs);
-            if (err != ERR_OK) {
-                std::cout << "list app failed, app_name = " << new_app_name
-                          << ", with err = " << err.to_string() << std::endl;
-                continue;
-            }
-            int index = 0;
-            for (index = 0; index < p_confs.size(); index++) {
-                const auto &pc = p_confs[index];
-                int replica_count = 0;
-                if (pc.primary.is_invalid()) {
-                    std::cout << "partition[" << index
-                              << "] is unhealthy, coz primary is invalid..." << std::endl;
-                    break;
+        ASSERT_IN_TIME(
+            [&] {
+                int32_t app_id = 0;
+                int32_t partition_cnt = 0;
+                std::vector<partition_configuration> p_confs;
+                ASSERT_EQ(ERR_OK,
+                          ddl_client->list_app(new_app_name, app_id, partition_cnt, p_confs));
+                for (int i = 0; i < p_confs.size(); i++) {
+                    const auto &pc = p_confs[i];
+                    ASSERT_FALSE(pc.primary.is_invalid());
+                    ASSERT_EQ(1 + pc.secondaries.size(), pc.max_replica_count);
                 }
-                replica_count += 1;
-                replica_count += pc.secondaries.size();
-                if (replica_count != pc.max_replica_count) {
-                    std::cout << "partition[" << index
-                              << "] is unhealthy, coz replica_cont = " << replica_count
-                              << ", but max_replica_count = " << pc.max_replica_count << std::endl;
-                    break;
-                }
-            }
-            if (index >= p_confs.size()) {
-                is_app_full_healthy = true;
-            }
-        }
-        return is_app_full_healthy;
+            },
+            180);
     }
 
     bool wait_backup_complete(int64_t seconds)
@@ -338,8 +288,8 @@ TEST_F(restore_test, restore)
     // step1: wait backup complete
     ASSERT_TRUE(wait_backup_complete(180));
     // step2: test restore
-    ASSERT_TRUE(restore());
+    ASSERT_NO_FATAL_FAILURE(restore());
     // step3: verify_data
-    ASSERT_TRUE(verify_data());
+    ASSERT_NO_FATAL_FAILURE(verify_data());
     std::cout << "restore passed....." << std::endl;
 }
