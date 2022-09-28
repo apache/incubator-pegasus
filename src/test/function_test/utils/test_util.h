@@ -19,11 +19,21 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
-
+#include <string>
 #include <gtest/gtest.h>
 
+// TODO(yingchun): it's too tricky, but I don't know how does it happen, we can fix it later.
+#define TRICKY_CODE_TO_AVOID_LINK_ERROR                                                            \
+    do {                                                                                           \
+        ddl_client_->create_app("", "pegasus", 0, 0, {}, false);                                   \
+        pegasus_client_factory::get_client("", "");                                                \
+    } while (false)
+
 namespace dsn {
+class partition_configuration;
+class rpc_address;
 namespace replication {
 class replication_ddl_client;
 } // namespace replication
@@ -35,17 +45,24 @@ class pegasus_client;
 class test_util : public ::testing::Test
 {
 public:
-    test_util();
+    test_util(std::map<std::string, std::string> create_envs = {});
     virtual ~test_util();
 
     static void SetUpTestCase();
 
     void SetUp() override;
 
+    void run_cmd_from_project_root(const std::string &cmd);
+
 protected:
-    std::string cluster_name_;
+    const std::string cluster_name_;
     std::string app_name_;
-    pegasus_client *client = nullptr;
-    std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client;
+    const std::map<std::string, std::string> create_envs_;
+    int32_t app_id_;
+    int32_t partition_count_ = 8;
+    std::vector<dsn::partition_configuration> partitions_;
+    pegasus_client *client_ = nullptr;
+    std::vector<dsn::rpc_address> meta_list_;
+    std::shared_ptr<dsn::replication::replication_ddl_client> ddl_client_;
 };
 } // namespace pegasus

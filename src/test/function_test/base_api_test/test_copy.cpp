@@ -41,130 +41,124 @@ using std::map;
 using std::string;
 using std::vector;
 
-static const char CCH[] = "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-static const int max_batch_count = 500;
-static const int timeout_ms = 5000;
-static const int max_multi_set_concurrency = 20;
-static const int default_partitions = 4;
-static const string empty_hash_key = "";
-static const string source_app_name = "copy_data_source_table";
-static const string destination_app_name = "copy_data_destination_table";
-static char buffer[256];
-static map<string, map<string, string>> base_data;
-static pegasus_client *srouce_client;
-static pegasus_client *destination_client;
-
 class copy_data_test : public test_util
 {
 public:
     void SetUp() override
     {
         test_util::SetUp();
-        create_table_and_get_client();
-        fill_data();
+        ASSERT_NO_FATAL_FAILURE(create_table_and_get_client());
+        ASSERT_NO_FATAL_FAILURE(fill_data());
     }
 
     void TearDown() override
     {
         test_util::TearDown();
-        ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(source_app_name, 0));
-        ASSERT_EQ(dsn::ERR_OK, ddl_client->drop_app(destination_app_name, 0));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(source_app_name, 0));
+        ASSERT_EQ(dsn::ERR_OK, ddl_client_->drop_app(destination_app_name, 0));
     }
 
     void verify_data()
     {
         pegasus_client::scan_options options;
         vector<pegasus_client::pegasus_scanner *> scanners;
-        int ret = destination_client->get_unordered_scanners(INT_MAX, options, scanners);
-        ASSERT_EQ(0, ret) << "Error occurred when getting scanner. error="
-                          << destination_client->get_error_string(ret);
+        ASSERT_EQ(PERR_OK, destination_client_->get_unordered_scanners(INT_MAX, options, scanners));
 
         string hash_key;
         string sort_key;
         string value;
-        map<string, map<string, string>> data;
+        map<string, map<string, string>> actual_data;
         for (auto scanner : scanners) {
             ASSERT_NE(nullptr, scanner);
+            int ret = PERR_OK;
             while (PERR_OK == (ret = (scanner->next(hash_key, sort_key, value)))) {
-                check_and_put(data, hash_key, sort_key, value);
+                check_and_put(actual_data, hash_key, sort_key, value);
             }
-            ASSERT_EQ(PERR_SCAN_COMPLETE, ret) << "Error occurred when scan. error="
-                                               << destination_client->get_error_string(ret);
+            ASSERT_EQ(PERR_SCAN_COMPLETE, ret);
             delete scanner;
         }
 
-        compare(data, base_data);
-
-        ddebug_f("Data and base_data are the same.");
+        ASSERT_NO_FATAL_FAILURE(compare(expect_data_, actual_data));
     }
 
     void create_table_and_get_client()
     {
-        dsn::error_code err;
-        err = ddl_client->create_app(source_app_name, "pegasus", default_partitions, 3, {}, false);
-        ASSERT_EQ(dsn::ERR_OK, err);
-
-        err = ddl_client->create_app(
-            destination_app_name, "pegasus", default_partitions, 3, {}, false);
-        ASSERT_EQ(dsn::ERR_OK, err);
-
-        srouce_client = pegasus_client_factory::get_client("mycluster", source_app_name.c_str());
-        destination_client =
-            pegasus_client_factory::get_client("mycluster", destination_app_name.c_str());
+        ASSERT_EQ(
+            dsn::ERR_OK,
+            ddl_client_->create_app(source_app_name, "pegasus", default_partitions, 3, {}, false));
+        ASSERT_EQ(dsn::ERR_OK,
+                  ddl_client_->create_app(
+                      destination_app_name, "pegasus", default_partitions, 3, {}, false));
+        srouce_client_ =
+            pegasus_client_factory::get_client(cluster_name_.c_str(), source_app_name.c_str());
+        ASSERT_NE(nullptr, srouce_client_);
+        destination_client_ =
+            pegasus_client_factory::get_client(cluster_name_.c_str(), destination_app_name.c_str());
+        ASSERT_NE(nullptr, destination_client_);
     }
 
-    // REQUIRED: 'buffer' has been filled with random chars.
-    const string random_string()
+    // REQUIRED: 'buffer_' has been filled with random chars.
+    const string random_string() const
     {
-        int pos = random() % sizeof(buffer);
-        buffer[pos] = CCH[random() % strlen(CCH)];
-        unsigned int length = random() % sizeof(buffer) + 1;
-        if (pos + length < sizeof(buffer)) {
-            return string(buffer + pos, length);
+        int pos = random() % sizeof(buffer_);
+        unsigned int length = random() % sizeof(buffer_) + 1;
+        if (pos + length < sizeof(buffer_)) {
+            return string(buffer_ + pos, length);
         } else {
-            return string(buffer + pos, sizeof(buffer) - pos) +
-                   string(buffer, length + pos - sizeof(buffer));
+            return string(buffer_ + pos, sizeof(buffer_) - pos) +
+                   string(buffer_, length + pos - sizeof(buffer_));
         }
     }
 
     void fill_data()
     {
-        ddebug_f("FILLING_DATA...");
-
         srandom((unsigned int)time(nullptr));
-        for (auto &c : buffer) {
+        for (auto &c : buffer_) {
             c = CCH[random() % strlen(CCH)];
         }
 
         string hash_key;
         string sort_key;
         string value;
-        while (base_data[empty_hash_key].size() < 1000) {
+        while (expect_data_[empty_hash_key].size() < 1000) {
             sort_key = random_string();
             value = random_string();
-            int ret = srouce_client->set(empty_hash_key, sort_key, value);
-            ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
-                                    << ", sort_key=" << sort_key
-                                    << ", error=" << srouce_client->get_error_string(ret);
-            base_data[empty_hash_key][sort_key] = value;
+            ASSERT_EQ(PERR_OK, srouce_client_->set(empty_hash_key, sort_key, value))
+                << "hash_key=" << hash_key << ", sort_key=" << sort_key;
+            expect_data_[empty_hash_key][sort_key] = value;
         }
 
-        while (base_data.size() < 500) {
+        while (expect_data_.size() < 500) {
             hash_key = random_string();
-            while (base_data[hash_key].size() < 10) {
+            while (expect_data_[hash_key].size() < 10) {
                 sort_key = random_string();
                 value = random_string();
-                int ret = srouce_client->set(hash_key, sort_key, value);
-                ASSERT_EQ(PERR_OK, ret) << "Error occurred when set, hash_key=" << hash_key
-                                        << ", sort_key=" << sort_key
-                                        << ", error=" << srouce_client->get_error_string(ret);
-                base_data[hash_key][sort_key] = value;
+                ASSERT_EQ(PERR_OK, srouce_client_->set(hash_key, sort_key, value))
+                    << "hash_key=" << hash_key << ", sort_key=" << sort_key;
+                expect_data_[hash_key][sort_key] = value;
             }
         }
-
-        ddebug_f("Data filled.");
     }
+
+protected:
+    static const char CCH[];
+    const string empty_hash_key = "";
+    const string source_app_name = "copy_data_source_table";
+    const string destination_app_name = "copy_data_destination_table";
+
+    const int max_batch_count = 500;
+    const int timeout_ms = 5000;
+    const int max_multi_set_concurrency = 20;
+    const int default_partitions = 4;
+
+    char buffer_[256];
+    map<string, map<string, string>> expect_data_;
+
+    pegasus_client *srouce_client_;
+    pegasus_client *destination_client_;
 };
+const char copy_data_test::CCH[] =
+    "_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
 {
@@ -173,9 +167,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     pegasus_client::scan_options options;
     options.return_expire_ts = true;
     vector<pegasus::pegasus_client::pegasus_scanner *> raw_scanners;
-    int ret = srouce_client->get_unordered_scanners(INT_MAX, options, raw_scanners);
-    ASSERT_EQ(pegasus::PERR_OK, ret) << "Error occurred when getting scanner. error="
-                                     << srouce_client->get_error_string(ret);
+    ASSERT_EQ(PERR_OK, srouce_client_->get_unordered_scanners(INT_MAX, options, raw_scanners));
 
     ddebug_f("open source app scanner succeed, partition_count = {}", raw_scanners.size());
 
@@ -198,7 +190,7 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
                                                            max_batch_count,
                                                            timeout_ms,
                                                            scanners[i],
-                                                           destination_client,
+                                                           destination_client_,
                                                            nullptr,
                                                            &error_occurred,
                                                            max_multi_set_concurrency);
@@ -223,8 +215,5 @@ TEST_F(copy_data_test, EMPTY_HASH_KEY_COPY)
     }
 
     ASSERT_FALSE(error_occurred.load()) << "error occurred, processing terminated or timeout!";
-
-    verify_data();
-
-    ddebug_f("finished copy data test..");
+    ASSERT_NO_FATAL_FAILURE(verify_data());
 }

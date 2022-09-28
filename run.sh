@@ -765,7 +765,6 @@ function run_start_onebox()
         cd meta$i
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/$meta_port/;s/@REPLICA_PORT@/34800/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
         $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
@@ -779,7 +778,6 @@ function run_start_onebox()
         cd replica$j
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/$replica_port/;s/@PROMETHEUS_PORT@/$prometheus_port/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
         $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
@@ -791,7 +789,6 @@ function run_start_onebox()
         cd collector
         ln -s -f ${SERVER_PATH}/pegasus_server pegasus_server
         sed "s/@META_PORT@/34600/;s/@REPLICA_PORT@/34800/;s/@PROMETHEUS_PORT@/9091/" ${ROOT}/config-server.ini >config.ini
-        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
         $PWD/pegasus_server config.ini -app_list collector &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
@@ -967,7 +964,6 @@ function run_start_onebox_instance()
             exit 1
         fi
         cd $dir
-        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list meta &>result &"
         $PWD/pegasus_server config.ini -app_list meta &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
@@ -985,7 +981,6 @@ function run_start_onebox_instance()
             exit 1
         fi
         cd $dir
-        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list replica &>result &"
         $PWD/pegasus_server config.ini -app_list replica &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
@@ -1003,7 +998,6 @@ function run_start_onebox_instance()
             exit 1
         fi
         cd $dir
-        echo "cd `pwd` && $PWD/pegasus_server config.ini -app_list collector &>result &"
         $PWD/pegasus_server config.ini -app_list collector &>result &
         PID=$!
         ps -ef | grep '/pegasus_server config.ini' | grep "\<$PID\>"
@@ -1376,236 +1370,6 @@ function run_clear_kill_test()
     run_stop_kill_test
     run_clear_onebox
     rm -rf kill_history.txt *.data config-*.ini &>/dev/null
-}
-
-#####################
-## start_upgrade_test
-#####################
-function usage_start_upgrade_test()
-{
-    echo "Options for subcommand 'start_upgrade_test':"
-    echo "   -h|--help         print the help info"
-    echo "   -m|--meta_count <num>"
-    echo "                     meta server count, default is 3"
-    echo "   -r|--replica_count <num>"
-    echo "                     replica server count, default is 5"
-    echo "   -a|--app_name <str>"
-    echo "                     app name, default is temp"
-    echo "   -p|--partition_count <num>"
-    echo "                     app partition count, default is 16"
-    echo "   --upgrade_type <str>"
-    echo "                     upgrade type: meta | replica | all, default is all"
-    echo "   -o|--old_version_path <str>"
-    echo "                     old server binary and library path"
-    echo "   -n|--new_version_path <str>"
-    echo "                     new server binary and library path"
-    echo "   -s|--sleep_time <num>"
-    echo "                     max sleep time before next update, default is 10"
-    echo "                     actual sleep time will be a random value in range of [1, sleep_time]"
-    echo "   -w|--worker_count <num>"
-    echo "                     worker count for concurrently setting value, default is 10"
-}
-
-function run_start_upgrade_test()
-{
-    META_COUNT=3
-    REPLICA_COUNT=5
-    APP_NAME=temp
-    PARTITION_COUNT=16
-    UPGRADE_TYPE=replica
-    OLD_VERSION_PATH=
-    NEW_VERSION_PATH=
-    SLEEP_TIME=10
-    THREAD_COUNT=10
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_start_upgrade_test
-                exit 0
-                ;;
-            -m|--meta_count)
-                META_COUNT="$2"
-                shift
-                ;;
-            -r|--replica_count)
-                REPLICA_COUNT="$2"
-                shift
-                ;;
-            -a|--app_name)
-                APP_NAME="$2"
-                shift
-                ;;
-            -p|--partition_count)
-                PARTITION_COUNT="$2"
-                shift
-                ;;
-            -t|--upgrade_type)
-                UPGRADE_TYPE="$2"
-                shift
-                ;;
-            -o|--old_version_path)
-                OLD_VERSION_PATH="${ROOT}/$2"
-                shift
-                ;;
-            -n|--new_version_path)
-                NEW_VERSION_PATH="${ROOT}/$2"
-                shift
-                ;;
-            -s|--sleep_time)
-                SLEEP_TIME="$2"
-                shift
-                ;;
-            -w|--worker_count)
-                THREAD_COUNT="$2"
-                shift
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_start_upgrade_test
-                exit 1
-                ;;
-        esac
-        shift
-    done
-
-    run_start_onebox -m $META_COUNT -r $REPLICA_COUNT -a $APP_NAME -p $PARTITION_COUNT -s $OLD_VERSION_PATH
-    echo
-
-    cd $ROOT
-    CONFIG=config-upgrade-test.ini
-
-    sed "s/@LOCAL_HOSTNAME@/${LOCAL_HOSTNAME}/g;\
-s/@META_COUNT@/${META_COUNT}/g;\
-s/@REPLICA_COUNT@/${REPLICA_COUNT}/g;\
-s/@ZK_COUNT@/1/g;s/@APP_NAME@/${APP_NAME}/g;\
-s/@SET_THREAD_COUNT@/${THREAD_COUNT}/g;\
-s/@GET_THREAD_COUNT@/${THREAD_COUNT}/g;\
-s+@ONEBOX_RUN_PATH@+`pwd`+g; \
-s+@OLD_VERSION_PATH@+${OLD_VERSION_PATH}+g;\
-s+@NEW_VERSION_PATH@+${NEW_VERSION_PATH}+g " ${ROOT}/src/test/upgrade_test/config.ini >$CONFIG
-
-    # start verifier
-    mkdir -p onebox/verifier && cd onebox/verifier
-    ln -s -f ${DSN_ROOT}/bin/pegasus_upgrade_test/pegasus_upgrade_test
-    ln -s -f ${ROOT}/$CONFIG config.ini
-    echo "./pegasus_upgrade_test config.ini verifier &>/dev/null &"
-    ./pegasus_upgrade_test config.ini verifier &>/dev/null &
-    sleep 0.2
-    echo
-    cd ${ROOT}
-
-    #start upgrader
-    mkdir -p onebox/upgrader && cd onebox/upgrader
-    ln -s -f ${DSN_ROOT}/bin/pegasus_upgrade_test/pegasus_upgrade_test
-    ln -s -f ${ROOT}/$CONFIG config.ini
-    echo "./pegasus_upgrade_test config.ini upgrader &>/dev/null &"
-    ./pegasus_upgrade_test config.ini upgrader &>/dev/null &
-    sleep 0.2
-    echo
-    cd ${ROOT}
-
-    run_list_upgrade_test
-}
-
-#####################
-## stop_upgrade_test
-#####################
-function usage_stop_upgrade_test()
-{
-    echo "Options for subcommand 'stop_upgrade_test':"
-    echo "   -h|--help         print the help info"
-}
-
-function run_stop_upgrade_test()
-{
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_stop_upgrade_test
-                exit 0
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_stop_upgrade_test
-                exit 1
-                ;;
-        esac
-        shift
-    done
-
-    ps -ef | grep ' \./pegasus_upgrade_test ' | awk '{print $2}' | xargs kill &>/dev/null || true
-    run_stop_onebox
-}
-
-#####################
-## list_upgrade_test
-#####################
-function usage_list_upgrade_test()
-{
-    echo "Options for subcommand 'list_upgrade_test':"
-    echo "   -h|--help         print the help info"
-}
-
-function run_list_upgrade_test()
-{
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_list_upgrade_test
-                exit 0
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_list_upgrade_test
-                exit 1
-                ;;
-        esac
-        shift
-    done
-    echo "------------------------------"
-    run_list_onebox
-    ps -ef | grep ' \./pegasus_upgrade_test ' | grep -v grep
-    echo "------------------------------"
-    echo "Server dir: ./onebox"
-    echo "------------------------------"
-}
-
-#####################
-## clear_upgrade_test
-#####################
-function usage_clear_upgrade_test()
-{
-    echo "Options for subcommand 'clear_upgrade_test':"
-    echo "   -h|--help         print the help info"
-}
-
-function run_clear_upgrade_test()
-{
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-            -h|--help)
-                usage_clear_upgrade_test
-                exit 0
-                ;;
-            *)
-                echo "ERROR: unknown option \"$key\""
-                echo
-                usage_clear_upgrade_test
-                exit 1
-                ;;
-        esac
-        shift
-    done
-    run_stop_upgrade_test
-    run_clear_onebox
-    rm -rf upgrade_history.txt *.data config-*.ini &>/dev/null
 }
 
 #####################
@@ -2108,22 +1872,6 @@ case $cmd in
     clear_kill_test)
         shift
         run_clear_kill_test $*
-        ;;
-    start_upgrade_test)
-        shift
-        run_start_upgrade_test $*
-        ;;
-    stop_upgrade_test)
-        shift
-        run_stop_upgrade_test $*
-        ;;
-    list_upgrade_test)
-        shift
-        run_list_upgrade_test $*
-        ;;
-    clear_upgrade_test)
-        shift
-        run_clear_upgrade_test $*
         ;;
     bench)
         shift

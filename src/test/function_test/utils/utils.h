@@ -19,15 +19,16 @@
 
 #pragma once
 
-#include <dsn/utility/rand.h>
 #include <dsn/c/api_utilities.h>
 #include <dsn/dist/fmt_logging.h>
+#include <dsn/utility/rand.h>
+#include <dsn/utility/strings.h>
 
 #define RETRY_OPERATION(CLIENT_FUNCTION, RESULT)                                                   \
     do {                                                                                           \
         for (int i = 0; i < 60; ++i) {                                                             \
             RESULT = CLIENT_FUNCTION;                                                              \
-            if (RESULT == 0) {                                                                     \
+            if (RESULT == PERR_OK) {                                                               \
                 break;                                                                             \
             } else {                                                                               \
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));                       \
@@ -199,5 +200,17 @@ inline void compare(const T &expect, const U &actual)
         ASSERT_EQ(it1->first, it2->first) << "Diff: actual_hash_key=" << it1->first
                                           << ", expected_hash_key=" << it2->first;
         ASSERT_NO_FATAL_FAILURE(compare(it1->second, it2->second, it1->first));
+    }
+}
+
+inline void run_cmd(const std::string &cmd, std::string *output = nullptr)
+{
+    std::stringstream ss;
+    int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
+    ASSERT_TRUE(ret == 0 || ret == 256) << "ret: " << ret << std::endl
+                                        << "cmd: " << cmd << std::endl
+                                        << "output: " << ss.str();
+    if (output) {
+        *output = dsn::utils::trim_string((char *)ss.str().c_str());
     }
 }

@@ -26,42 +26,32 @@
 #include <iostream>
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "dsn/dist/fmt_logging.h"
 #include "dsn/utility/utils.h"
 #include "dsn/tool-api/rpc_address.h"
 #include "dsn/c/api_layer1.h"
+#include "test/function_test/utils/utils.h"
 
 global_env::global_env()
 {
-    std::cout << "============" << std::endl << "start global_env()" << std::endl;
     get_dirs();
     get_hostip();
 }
 
 void global_env::get_dirs()
 {
-    const char *cmd1 = "ps aux | grep '/meta1/pegasus_server' | grep -v grep | awk '{print $2}'";
-    std::stringstream ss1;
-    int ret = dsn::utils::pipe_execute(cmd1, ss1);
-    std::cout << cmd1 << " output: " << ss1.str() << std::endl;
-    dcheck_eq(ret, 0);
-    int meta1_pid;
-    ss1 >> meta1_pid;
-    std::cout << "meta1 pid: " << meta1_pid << std::endl;
+    std::string output1;
+    ASSERT_NO_FATAL_FAILURE(run_cmd(
+        "ps aux | grep '/meta1/pegasus_server' | grep -v grep | awk '{print $2}'", &output1));
 
     // get the dir of a process in onebox, say: $PEGASUS/onebox/meta1
-    char cmd2[512] = {0};
-    sprintf(cmd2, "readlink /proc/%d/cwd", meta1_pid);
-    std::stringstream ss2;
-    ret = dsn::utils::pipe_execute(cmd2, ss2);
-    std::cout << cmd2 << " output: " << ss2.str() << std::endl;
-    dcheck_eq(ret, 0);
-    std::string meta1_dir;
-    ss2 >> meta1_dir;
-    std::cout << "meta1 dir: " << meta1_dir << std::endl;
+    std::string output2;
+    ASSERT_NO_FATAL_FAILURE(run_cmd("readlink /proc/" + output1 + "/cwd", &output2));
 
-    _pegasus_root = dirname(dirname((char *)meta1_dir.c_str()));
-    std::cout << "project root: " << _pegasus_root << std::endl;
+    _pegasus_root = dirname(dirname((char *)output2.c_str()));
+    std::cout << "Pegasus project root: " << _pegasus_root << std::endl;
 
     char task_target[512] = {0};
     dassert_f(getcwd(task_target, sizeof(task_target)), "");
@@ -77,5 +67,4 @@ void global_env::get_hostip()
     memset(buffer, 0, sizeof(buffer));
     dassert_f(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)), "");
     _host_ip = buffer;
-    std::cout << "get ip: " << _host_ip << std::endl;
 }
