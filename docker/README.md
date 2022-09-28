@@ -27,7 +27,7 @@ to deploying a standalone cluster of Pegasus containers on your local machine.
 
 [![BuildThirdpartyDockerRegularly - build and publish thirdparty every week](https://github.com/apache/incubator-pegasus/actions/workflows/thirdparty-regular-push.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/thirdparty-regular-push.yml)
 
-[![BuildPegasusRegularly - build pegasus and rdsn on different env every day](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/pegasus-regular-build.yml)
+[![Lint and build regularly](https://github.com/apache/incubator-pegasus/actions/workflows/regular-build.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/regular-build.yml)
 
 ## pegasus-build-env
 
