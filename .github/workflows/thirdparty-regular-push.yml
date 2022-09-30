@@ -171,6 +171,7 @@ jobs:
             OS_VERSION=${{ matrix.osversion }}
             ROCKSDB_PORTABLE=ON
             HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
@@ -207,5 +208,6 @@ jobs:
             ROCKSDB_PORTABLE=ON
             USE_JEMALLOC=ON
             HADOOP_BIN_PATH=hadoop-bin
+            ZOOKEEPER_BIN_PATH=zookeeper-bin
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
