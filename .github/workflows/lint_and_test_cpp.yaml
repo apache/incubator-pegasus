@@ -93,7 +93,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
-          ./scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
@@ -209,7 +209,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
-          ./scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
@@ -321,7 +321,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
-          ./scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
@@ -433,7 +433,7 @@ jobs:
           mkdir build
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -DUSE_JEMALLOC=ON -B build/
           cmake --build build/ -j $(nproc)
-          ./scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_hadoop.sh hadoop-bin
       - name: Compilation
         run: |
           ccache -p
