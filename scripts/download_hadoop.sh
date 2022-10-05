@@ -18,9 +18,10 @@
 # under the License.
 
 set -e
-set -x
 
+echo "ready to dirname"
 CWD=$(cd $(dirname $0) && pwd)
+echo "finish dirname"
 
 if [ $# -ge 1 ]; then
     HADOOP_BIN_PATH=$1

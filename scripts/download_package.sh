@@ -18,7 +18,6 @@
 # under the License.
 
 set -e
-set -x
 
 if [ $# -lt 2 ]; then
     echo "Invalid arguments !"
