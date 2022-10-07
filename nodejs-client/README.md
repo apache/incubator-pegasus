@@ -24,7 +24,7 @@ under the License.
 
 ## Usage
 ### Create pegasus client:  `create(configs)`
-```
+```javascript
 let pegasusClient = require('pegasus-nodejs-client');
 let configs = {
     'metaServers'      : [     // required - meta server address array
@@ -40,14 +40,14 @@ let client = pegasusClient.create(configs);
 ```
 
 ### Close pegasus client:  `close()`
-```
+```javascript
 // we strongly recommend that you should close client when you finish your operations
 client.close();
 ```
 
 
 ### Get value: `get(tableName, args, callback)`
-```
+```javascript
 let getArgs = {
     'hashKey' : new Buffer('1'),    // required (Buffer)
     'sortKey' : new Buffer('1'),    // required (Buffer)
@@ -62,7 +62,7 @@ client.get('temp', getArgs, function(err, result){
 ```
 > Notice:  
 > If pegasus can't get value according to hashKey and sortKey in args, client DO NOT consider it as an error.  
-> ```
+> ```javascript
 >  let getArgs = {
 >      'hashKey' : new Buffer('not-exist'),
 >      'sortKey' : new Buffer('not-found'),
@@ -74,7 +74,7 @@ client.get('temp', getArgs, function(err, result){
 > ``` 
 
 ### Set value: `set(tableName, args, callback)`
-```
+```javascript
 let setArgs = {
     'hashKey' : new Buffer('1'),  // required (Buffer)
     'sortKey' : new Buffer('1'),  // required (Buffer)
@@ -91,7 +91,7 @@ client.set(tableName, setArgs, function(err){
 > Default ttl is 0, which means the value will not expire automatically.   
 
 ### Delete value:  `del(tableName, args, callback)`
-```
+```javascript
 let delArgs = {
     'hashKey' : new Buffer('1'),  // required (Buffer)
     'sortKey' : new Buffer('1'),  // required (Buffer)
@@ -103,7 +103,7 @@ client.del(tableName, delArgs, function(err){
 ```
 
 ### MultiGet: `MultiGet(tableName, args, callback)`
-```
+```javascript
 let multiGetArgs = {
     'hashKey'       : new Buffer('1'),  // required (Buffer)
     'sortKeyArray'  : [                 // required (Array)
@@ -126,7 +126,7 @@ client.multiGet(tableName, multiGetArgs, function(err, result){
 > - maxFetchSize: max size of k-v pairs, if maxFetchSize <= 0 means no limit, default value is 1000000
 
 ### BatchGet: `batchGet(tableName, argsArray, callback)`
-```
+```javascript
 let batchGetArgArray = [];
 batchGetArgArray[0] = {
     'hashKey' : new Buffer('1'),    // required (Buffer)
@@ -149,7 +149,7 @@ client.batchGet(tableName, batchGetArgArray, function(err, result){
 > batchGet is different from multiGet, you can get values under several hashKeys.  
 
 ### multiSet: `multiSet(tableName, args, callback)`
-```
+```javascript
 let array = [];
 array[0] = {
     'key'   : new Buffer('11'),     // required - sortKey (Buffer)
@@ -172,7 +172,7 @@ client.multiSet(tableName, args, function(err){
 ```
 
 ### batchSet: `batchSet(tableName, argsArray, callback)`
-```
+```javascript
 let argArray = [];
 argArray[0] = {
     'hashKey' : new Buffer('1'),    // required (Buffer)
@@ -196,7 +196,7 @@ client.batchSet(tableName, argArray, function(err){
 ## Log
 We use [log4js](https://github.com/log4js-node/log4js-node) as logging library.  
 Default log configuration is in `log_config.js` file:  
-```
+```javascript
 let filename = "./logs/"+process.pid+"/pegasus-nodejs-client.log";
 let logConfig = {
    appenders: { 
