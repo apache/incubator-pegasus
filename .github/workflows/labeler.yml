@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Assign GitHub labels
-        uses: actions/labeler@v4
+        uses: actions/labeler@main
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/workflows/module_labeler_conf.yml
