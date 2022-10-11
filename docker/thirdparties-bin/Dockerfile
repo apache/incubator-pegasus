@@ -29,12 +29,14 @@ ARG GITHUB_REPOSITORY_URL=https://github.com/apache/incubator-pegasus.git
 ARG ROCKSDB_PORTABLE=OFF
 ARG USE_JEMALLOC=OFF
 ARG HADOOP_BIN_PATH
+ARG ZOOKEEPER_BIN_PATH
 RUN git clone --depth=1 --branch=${GITHUB_BRANCH} ${GITHUB_REPOSITORY_URL} \
     && cd incubator-pegasus/thirdparty \
     && unzip /root/thirdparties-src.zip -d . \
     && cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=${ROCKSDB_PORTABLE} -DUSE_JEMALLOC=${USE_JEMALLOC} -B build/ . \
     && cmake --build build/ -j $(($(nproc)/2+1)) \
     && ../scripts/download_hadoop.sh ${HADOOP_BIN_PATH} \
-    && zip -r ~/thirdparties-bin.zip output/ build/Source/rocksdb/cmake build/Source/http-parser build/Source/hadoop build/Download/zookeeper ${HADOOP_BIN_PATH} \
+    && ../scripts/download_zk.sh ${ZOOKEEPER_BIN_PATH} \
+    && zip -r ~/thirdparties-bin.zip output/ build/Source/rocksdb/cmake build/Source/http-parser build/Source/hadoop build/Download/zookeeper ${HADOOP_BIN_PATH} ${ZOOKEEPER_BIN_PATH} \
     && cd ~ \
     && rm -rf incubator-pegasus;
