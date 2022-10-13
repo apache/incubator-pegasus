@@ -166,6 +166,17 @@ struct configuration_drop_app_response
     1:dsn.error_code   err;
 }
 
+struct configuration_rename_app_request
+{
+    1:i32 app_id;
+    2:string new_app_name;
+}
+
+struct configuration_rename_app_response
+{
+    1:dsn.error_code err;
+}
+
 struct configuration_recall_app_request
 {
     1:i32 app_id;
