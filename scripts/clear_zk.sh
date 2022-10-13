@@ -36,9 +36,16 @@ fi
 cd $INSTALL_DIR
 ZOOKEEPER_HOME=`pwd`/apache-zookeeper-3.7.0-bin
 
-if [ -d "$ZOOKEEPER_HOME" ]
-then
-    $ZOOKEEPER_HOME/bin/zkServer.sh stop
-    rm -rf $ZOOKEEPER_HOME/data &>/dev/null
+if [ -d "${ZOOKEEPER_HOME}" ]; then
+    ${ZOOKEEPER_HOME}/bin/zkServer.sh stop
+    rm -rf ${ZOOKEEPER_HOME} &> /dev/null
+    echo "Deleting old zookeeper ... DELETED"
+fi
+
+ZOOKEEPER_HOME=`pwd`/zookeeper-bin
+
+if [ -d "${ZOOKEEPER_HOME}" ]; then
+    ${ZOOKEEPER_HOME}/bin/zkServer.sh stop
+    rm -rf ${ZOOKEEPER_HOME}/data &> /dev/null
     echo "Clearing zookeeper ... CLEARED"
 fi

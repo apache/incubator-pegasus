@@ -94,6 +94,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
           ../scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
           ccache -p
@@ -107,8 +108,9 @@ jobs:
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
+          mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -210,6 +212,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
           ../scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
           ccache -p
@@ -219,8 +222,9 @@ jobs:
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
+          mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -322,6 +326,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
           cmake --build build/ -j $(nproc)
           ../scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
           ccache -p
@@ -331,8 +336,9 @@ jobs:
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
+          mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -434,6 +440,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -DUSE_JEMALLOC=ON -B build/
           cmake --build build/ -j $(nproc)
           ../scripts/download_hadoop.sh hadoop-bin
+          ../scripts/download_zk.sh zookeeper-bin
       - name: Compilation
         run: |
           ccache -p
@@ -447,8 +454,9 @@ jobs:
       - name: Tar files
         run: |
           mv thirdparty/hadoop-bin ./
+          mv thirdparty/zookeeper-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_jemalloc_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release_jemalloc_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:

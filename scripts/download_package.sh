@@ -71,4 +71,9 @@ if [ ! -d ${DIR_NAME} ]; then
     exit 1
 fi
 
+if [ -d ${TARGET_PATH} ]; then
+    echo "TARGET_PATH ${TARGET_PATH} has been generated, which means it and ${DIR_NAME} are the same dir thus do not do mv any more"
+    exit 0
+fi
+
 mv ${DIR_NAME} ${TARGET_PATH}
