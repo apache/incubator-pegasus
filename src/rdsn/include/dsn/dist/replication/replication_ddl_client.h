@@ -66,6 +66,8 @@ public:
 
     dsn::error_code recall_app(int32_t app_id, const std::string &new_app_name);
 
+    dsn::error_code rename_app(int32_t app_id, const std::string &new_app_name);
+
     dsn::error_code list_apps(const dsn::app_status::type status,
                               bool show_all,
                               bool detailed,

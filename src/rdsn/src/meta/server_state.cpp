@@ -1267,6 +1267,74 @@ void server_state::drop_app(dsn::message_ex *msg)
     }
 }
 
+void server_state::do_app_rename(std::shared_ptr<app_state> &app, const std::string &old_app_name)
+{
+    auto after_rename_app = [this, app, old_app_name](dsn::error_code ec) mutable {
+        if (ERR_OK == ec) {
+            zauto_write_lock l(_lock);
+            _exist_apps.erase(old_app_name);
+        } else if (ERR_TIMEOUT == ec) {
+            dinfo("rename app(%s) prepare timeout, continue to drop later", app->get_logname());
+            tasking::enqueue(LPC_META_STATE_HIGH,
+                             tracker(),
+                             std::bind(&server_state::do_app_rename, this, app, old_app_name),
+                             0,
+                             std::chrono::seconds(1));
+        } else {
+            dassert(false, "we can't handle this, error(%s)", ec.to_string());
+        }
+    };
+
+    std::string app_path = get_app_path(*app);
+    blob value = app->to_json(app_status::AS_AVAILABLE);
+    _meta_svc->get_remote_storage()->set_data(
+        app_path, value, LPC_META_STATE_HIGH, after_rename_app);
+}
+
+void server_state::rename_app(dsn::message_ex *msg)
+{
+    configuration_rename_app_request request;
+    configuration_rename_app_response response;
+    std::shared_ptr<app_state> target_app;
+    std::string old_app_name;
+
+    dsn::unmarshall(msg, request);
+    ddebug("rename app request, app_id(%d), new_app_name(%s)", request.app_id, request.new_app_name);
+
+    bool do_rename = false;
+    {
+        zauto_write_lock l(_lock);
+        target_app = get_app(request.app_id);
+        old_app_name = target_app->app_name;
+        if (target_app == nullptr) {
+            response.err = ERR_APP_NOT_EXIST;
+        } else if (target_app->status != app_status::AS_AVAILABLE) {
+            if (target_app->status == app_status::AS_CREATING ||
+                target_app->status == app_status::AS_RECALLING)
+                response.err = ERR_BUSY_CREATING;
+            else if (target_app->status == app_status::AS_DROPPING)
+                response.err = ERR_BUSY_DROPPING;
+            else
+                // AS_DROPPED && AS_INVALID
+                response.err = ERR_APP_EXIST;
+        } else {
+            if (_exist_apps.find(request.new_app_name) != _exist_apps.end()) {
+                response.err = ERR_INVALID_PARAMETERS;
+            } else {
+                do_rename = true;
+                target_app->app_name = request.new_app_name;
+                _exist_apps.emplace(target_app->app_name, target_app);
+            }
+        }
+    }
+
+    if (do_rename) {
+        do_app_rename(target_app, old_app_name);
+    }
+    _meta_svc->reply_data(msg, response);
+    msg->release_ref();
+}
+
 void server_state::do_app_recall(std::shared_ptr<app_state> &app)
 {
     auto after_recall_app = [this, app](dsn::error_code ec) mutable {

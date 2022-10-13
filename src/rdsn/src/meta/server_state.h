@@ -144,6 +144,7 @@ public:
     void create_app(dsn::message_ex *msg);
     void drop_app(dsn::message_ex *msg);
     void recall_app(dsn::message_ex *msg);
+    void rename_app(dsn::message_ex *msg);
     void list_apps(const configuration_list_apps_request &request,
                    configuration_list_apps_response &response);
     void restore_app(dsn::message_ex *msg);
@@ -238,6 +239,7 @@ private:
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);
     void do_app_recall(std::shared_ptr<app_state> &app);
+    void do_app_rename(std::shared_ptr<app_state> &app, const std::string &old_app_name);
     void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx, task_ptr callback);
     // do_update_app_info()
     //  -- ensure update app_info to remote storage succeed, if timeout, it will retry autoly
