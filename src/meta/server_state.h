@@ -144,6 +144,7 @@ public:
     void create_app(dsn::message_ex *msg);
     void drop_app(dsn::message_ex *msg);
     void recall_app(dsn::message_ex *msg);
+    void rename_app(configuration_rename_app_rpc rpc);
     void list_apps(const configuration_list_apps_request &request,
                    configuration_list_apps_response &response);
     void restore_app(dsn::message_ex *msg);
@@ -238,12 +239,29 @@ private:
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);
     void do_app_recall(std::shared_ptr<app_state> &app);
+    void do_app_rename(std::shared_ptr<app_state> &app, configuration_rename_app_rpc rpc);
+    void update_app_name(std::shared_ptr<app_state> &app, configuration_rename_app_rpc rpc);
     void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx, task_ptr callback);
     // do_update_app_info()
     //  -- ensure update app_info to remote storage succeed, if timeout, it will retry autoly
     void do_update_app_info(const std::string &app_path,
                             const app_info &info,
                             const std::function<void(error_code)> &cb);
+    task_ptr update_partition_configuration_ballot_on_remote(
+        std::shared_ptr<app_state> &app,
+        const partition_configuration &new_partition_config,
+        partition_callback on_partition_updated);
+    void update_partition_configuration_ballot_on_remote_reply(
+        error_code ec,
+        std::shared_ptr<app_state> &app,
+        const partition_configuration &new_partition_config,
+        partition_callback on_partition_updated);
+    void update_partition_configuration_ballot(std::shared_ptr<app_state> &app,
+                                               int32_t partition_index,
+                                                partition_callback on_partition_updated);
+    void check_app_info_rename_finished_on_replica(int32_t app_id,
+                                                   int32_t partition_index,
+                                                   const std::string new_app_name);
 
     task_ptr
     update_configuration_on_remote(std::shared_ptr<configuration_update_request> &config_request);

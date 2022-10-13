@@ -161,6 +161,18 @@ struct configuration_drop_app_response
     1:dsn.error_code   err;
 }
 
+struct configuration_rename_app_request
+{
+    1:i32 app_id;
+    2:string new_app_name;
+}
+
+struct configuration_rename_app_response
+{
+    1:dsn.error_code err;
+    2:string hint_message;
+}
+
 struct configuration_recall_app_request
 {
     1:i32 app_id;
@@ -193,6 +205,18 @@ struct query_app_info_response
 {
     1:dsn.error_code err;
     2:list<dsn.layer2.app_info> apps;
+}
+
+struct query_replica_app_mame_on_app_info_request
+{
+    1:dsn.rpc_address     node;
+    1:dsn.gpid pid;
+}
+
+struct query_replica_app_mame_on_app_info_reponse
+{
+    1:dsn.error_code      err;
+    2:string app_name;
 }
 
 enum app_env_operation

@@ -1134,6 +1134,24 @@ void replica_stub::on_query_app_info(query_app_info_rpc rpc)
     }
 }
 
+void replica_stub::on_query_app_name_on_replica(query_app_name_on_replica_rpc rpc);
+{
+    const query_replica_app_mame_on_replica_request &req = rpc.requset();
+    query_replica_app_mame_on_replica_reponse &resp = rpc.response();
+
+    ddebug_f("got query app name on replica request from {} to gpid {}",
+             req.meta_server.to_string(),
+             req.gpid.to_string());
+    replica_ptr replica = get_replica(req.pid);
+    if (replica != nullptr) {
+        response.err = ERR_OBJECT_NOT_FOUND;
+    } else {
+        auto &info = replica->get_app_info();
+        response.app_name = info.app_name;
+        response.err = ERR_OK;
+    }
+}
+
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
 {
@@ -2243,6 +2261,8 @@ void replica_stub::open_service()
         RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler_with_rpc_holder(
+        RPC_QUERY_APP_NAME_ON_REPLICA, "query_app_name_on_replica", &replica_stub::on_query_app_name_on_replica);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
     register_rpc_handler_with_rpc_holder(RPC_QUERY_LAST_CHECKPOINT_INFO,

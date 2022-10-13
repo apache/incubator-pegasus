@@ -63,6 +63,7 @@ public:
     static const std::string USER_SPECIFIED_COMPACTION;
     static const std::string ROCKSDB_ALLOW_INGEST_BEHIND;
     static const std::string UPDATE_MAX_REPLICA_COUNT;
+    static const std::string UPDATE_APP_NAME;
 };
 
 } // namespace replication

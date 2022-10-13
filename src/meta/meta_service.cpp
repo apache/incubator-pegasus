@@ -409,6 +409,7 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler(RPC_CM_CREATE_APP, "create_app", &meta_service::on_create_app);
     register_rpc_handler(RPC_CM_DROP_APP, "drop_app", &meta_service::on_drop_app);
     register_rpc_handler(RPC_CM_RECALL_APP, "recall_app", &meta_service::on_recall_app);
+    register_rpc_handler(RPC_CM_RENAME_APP, "rename_app", &meta_service::on_rename_app);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_LIST_APPS, "list_apps", &meta_service::on_list_apps);
     register_rpc_handler_with_rpc_holder(
@@ -532,6 +533,18 @@ void meta_service::on_drop_app(dsn::message_ex *req)
     tasking::enqueue(LPC_META_STATE_NORMAL,
                      nullptr,
                      std::bind(&server_state::drop_app, _state.get(), req),
+                     server_state::sStateHash);
+}
+
+void meta_service::on_rename_app(configuration_rename_app_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+
+    tasking::enqueue(LPC_META_STATE_NORMAL,
+                     tracker(),
+                     std::bind(&server_state::rename_app, _state.get(), rpc),
                      server_state::sStateHash);
 }
 
