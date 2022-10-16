@@ -24,8 +24,8 @@
 #include <cstring>
 #include <queue>
 #include <boost/lexical_cast.hpp>
-#include <dsn/tool-api/rpc_address.h>
-#include <dsn/utility/string_view.h>
+#include "utils/rpc_address.h"
+#include "utils/string_view.h"
 #include <rocksdb/slice.h>
 
 namespace pegasus {

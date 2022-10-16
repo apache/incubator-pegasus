@@ -16,9 +16,9 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/c/api_utilities.h>
-#include <dsn/tool-api/logging_provider.h>
-#include <dsn/utility/flags.h>
+#include "utils/api_utilities.h"
+#include "utils/logging_provider.h"
+#include "utils/flags.h"
 
 extern void command_manager_module_init();
 

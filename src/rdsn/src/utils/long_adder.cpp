@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/long_adder.h>
+#include "utils/long_adder.h"
 
 #ifdef __aarch64__
 #define _mm_free(p) free(p)
@@ -30,11 +30,11 @@
 #include <new>
 #include <string>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utility/rand.h>
-#include <dsn/utility/safe_strerror_posix.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/rand.h"
+#include "utils/safe_strerror_posix.h"
 
 namespace dsn {
 

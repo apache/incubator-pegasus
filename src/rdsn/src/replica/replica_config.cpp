@@ -41,11 +41,11 @@
 #include "bulk_load/replica_bulk_loader.h"
 #include "runtime/security/access_controller.h"
 #include "split/replica_split_manager.h"
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/dist/replication/replica_envs.h>
+#include "utils/fmt_logging.h"
+#include "replica/replication_app_base.h"
+#include "utils/fail_point.h"
+#include "utils/string_conv.h"
+#include "common/replica_envs.h"
 
 namespace dsn {
 namespace replication {

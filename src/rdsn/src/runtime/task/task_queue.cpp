@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/tool-api/task_queue.h>
+#include "task_queue.h"
+
 #include "task_engine.h"
-#include <dsn/tool-api/network.h>
-#include <dsn/dist/fmt_logging.h>
+#include "runtime/rpc/network.h"
+#include "utils/fmt_logging.h"
 #include "runtime/rpc/rpc_engine.h"
 
 namespace dsn {

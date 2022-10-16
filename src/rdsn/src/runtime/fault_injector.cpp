@@ -33,10 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/toollet/fault_injector.h>
-#include <dsn/service_api_c.h>
-#include <dsn/utility/rand.h>
-#include <dsn/tool-api/aio_task.h>
+#include "runtime/fault_injector.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/rand.h"
+#include "aio/aio_task.h"
 
 namespace dsn {
 namespace tools {

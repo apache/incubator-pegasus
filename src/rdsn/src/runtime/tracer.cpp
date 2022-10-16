@@ -33,10 +33,10 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/toollet/tracer.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/tool-api/aio_task.h>
+#include "runtime/tracer.h"
+#include "utils/filesystem.h"
+#include "utils/command_manager.h"
+#include "aio/aio_task.h"
 
 namespace dsn {
 namespace tools {

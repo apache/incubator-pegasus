@@ -23,8 +23,8 @@
 #include <fmt/ostream.h>
 #include <gtest/gtest.h>
 
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/long_adder.h>
+#include "runtime/api_layer1.h"
+#include "utils/long_adder.h"
 
 namespace dsn {
 

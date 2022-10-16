@@ -22,7 +22,7 @@
 #include <string>
 #include <unordered_set>
 
-#include <dsn/utility/factory_store.h>
+#include "utils/factory_store.h"
 
 namespace pegasus {
 namespace test {

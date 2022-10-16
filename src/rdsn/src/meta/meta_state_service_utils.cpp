@@ -15,9 +15,24 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/cpp/pipeline.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication.h>
+#include "runtime/pipeline.h"
+#include "utils/fmt_logging.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/serverlet.h"
+#include "runtime/service_app.h"
+#include "utils/rpc_address.h"
+#include "common/replication_other_types.h"
+#include "common/replication.codes.h"
 
 #include "meta_state_service_utils.h"
 #include "meta_state_service_utils_impl.h"

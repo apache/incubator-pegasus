@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/cpp/json_helper.h>
-#include <dsn/utility/filesystem.h>
+#include "common/json_helper.h"
+#include "utils/filesystem.h"
 #include <gtest/gtest.h>
 
 #include "common/backup_common.h"

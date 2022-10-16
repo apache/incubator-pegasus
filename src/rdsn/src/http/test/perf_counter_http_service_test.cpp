@@ -16,9 +16,9 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/perf_counter/perf_counters.h>
-#include <dsn/http/http_server.h>
 
+#include "perf_counter/perf_counters.h"
+#include "http/http_server.h"
 #include "http/builtin_http_calls.h"
 
 namespace dsn {

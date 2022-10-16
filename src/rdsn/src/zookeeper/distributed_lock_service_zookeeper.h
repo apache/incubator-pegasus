@@ -33,7 +33,7 @@
  */
 #pragma once
 
-#include <dsn/dist/distributed_lock_service.h>
+#include "utils/distributed_lock_service.h"
 #include <unordered_map>
 #include "lock_types.h"
 

@@ -22,10 +22,10 @@
 #include <sasl/saslplug.h>
 #include <functional>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/synchronize.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace security {

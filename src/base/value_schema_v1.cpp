@@ -19,10 +19,10 @@
 
 #include "value_schema_v1.h"
 
-#include <dsn/utility/endians.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/smart_pointers.h>
+#include "utils/endians.h"
+#include "utils/fmt_logging.h"
+#include "utils/api_utilities.h"
+#include "utils/smart_pointers.h"
 
 namespace pegasus {
 std::unique_ptr<value_field> value_schema_v1::extract_field(dsn::string_view value,

@@ -26,7 +26,7 @@
 
 #pragma once
 #include <iomanip>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "perf_counter/perf_counter_wrapper.h"
 
 namespace dsn {
 namespace tools {

@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/fmt_logging.h"
+#include "utils/filesystem.h"
 
 #include "common/backup_common.h"
 #include "common/replication_common.h"

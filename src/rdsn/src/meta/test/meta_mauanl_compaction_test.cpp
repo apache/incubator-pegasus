@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/replication/replica_envs.h>
+#include "common/replica_envs.h"
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"

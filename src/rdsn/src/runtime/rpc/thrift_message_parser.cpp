@@ -26,15 +26,19 @@
 
 #include "thrift_message_parser.h"
 
-#include <dsn/service_api_c.h>
-#include <dsn/cpp/serialization_helper/thrift_helper.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
-#include <dsn/cpp/message_utils.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/ports.h>
-#include <dsn/utility/crc.h>
-#include <dsn/utility/endians.h>
-#include <dsn/tool-api/rpc_message.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "common/serialization_helper/thrift_helper.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "runtime/message_utils.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/crc.h"
+#include "utils/endians.h"
+#include "runtime/rpc/rpc_message.h"
 
 namespace dsn {
 

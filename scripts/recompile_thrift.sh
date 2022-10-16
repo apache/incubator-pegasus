@@ -30,7 +30,7 @@ rm -rf $TMP_DIR
 mkdir -p $TMP_DIR
 $THIRDPARTY_ROOT/output/bin/thrift --gen cpp:moveable_types -out $TMP_DIR ../idl/rrdb.thrift
 
-sed 's/#include "dsn_types.h"/#include <dsn\/service_api_cpp.h>/' $TMP_DIR/rrdb_types.h > ../src/include/rrdb/rrdb_types.h
+sed 's/#include "dsn_types.h"/#include "utils\/rpc_address.h"\n#include "runtime\/task\/task_code.h"\n#include "utils\/blob.h"/' $TMP_DIR/rrdb_types.h > ../src/include/rrdb/rrdb_types.h
 sed 's/#include "rrdb_types.h"/#include <rrdb\/rrdb_types.h>/' $TMP_DIR/rrdb_types.cpp > ../src/base/rrdb_types.cpp
 
 rm -rf $TMP_DIR

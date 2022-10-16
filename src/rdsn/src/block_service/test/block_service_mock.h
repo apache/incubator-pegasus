@@ -19,8 +19,8 @@
 
 #include "block_service/block_service_manager.h"
 
-#include <dsn/dist/block_service.h>
-#include <dsn/utility/filesystem.h>
+#include "block_service/block_service.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace dist {

@@ -23,7 +23,7 @@
 #include <thread>
 #include <memory>
 #include <vector>
-#include <dsn/utility/singleton.h>
+#include "utils/singleton.h"
 
 namespace pegasus {
 namespace server {

@@ -15,16 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/cpp/json_helper.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/error_code.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/safe_strerror_posix.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/utils.h>
+#include "common/json_helper.h"
+#include "utils/fmt_logging.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/defer.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
 #include <memory>
 #include <nlohmann/json.hpp>
 

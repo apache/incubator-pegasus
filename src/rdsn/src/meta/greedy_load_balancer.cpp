@@ -26,11 +26,11 @@
 
 #include <iostream>
 #include <queue>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/utility/math.h>
-#include <dsn/utility/utils.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/command_manager.h"
+#include "utils/math.h"
+#include "utils/utils.h"
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
 #include "greedy_load_balancer.h"
 #include "meta_data.h"
 #include "meta_admin_types.h"

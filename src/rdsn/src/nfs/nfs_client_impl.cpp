@@ -30,8 +30,8 @@
 
 #include <queue>
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/tool-api/command_manager.h>
+#include "utils/filesystem.h"
+#include "utils/command_manager.h"
 
 namespace dsn {
 namespace service {

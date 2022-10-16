@@ -20,8 +20,8 @@
 #pragma once
 
 #include <pegasus/client.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "client/replication_ddl_client.h"
+#include "perf_counter/perf_counter_wrapper.h"
 
 namespace pegasus {
 namespace server {

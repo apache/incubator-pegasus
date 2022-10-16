@@ -39,9 +39,9 @@ then
     exit 1
 fi
 
-if [ ! -f DSN_ROOT/bin/pegasus_server/pegasus_server ]
+if [ ! -f ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server ]
 then
-    echo "ERROR: DSN_ROOT/bin/pegasus_server/pegasus_server not found"
+    echo "ERROR: ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server not found"
     exit 1
 fi
 
@@ -106,19 +106,15 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/lib
-copy_file ./DSN_ROOT/lib/libpegasus_client_static.a ${pack}/lib
-copy_file ./DSN_ROOT/lib/libpegasus_client_shared.so ${pack}/lib
+copy_file ${BUILD_DIR}/output/lib/libpegasus_client_static.a ${pack}/lib
+# TODO(yingchun): make sure shared lib works well too
+# copy_file ${BUILD_DIR}/output/lib/libpegasus_client_shared.so ${pack}/lib
 copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib
 ln -sf `ls ${pack}/lib | grep libboost_system` ${pack}/lib/libboost_system.so
 ln -sf `ls ${pack}/lib | grep libboost_filesystem` ${pack}/lib/libboost_filesystem.so
 ln -sf `ls ${pack}/lib | grep libboost_regex` ${pack}/lib/libboost_regex.so
 
 cp -v -r ./src/include ${pack}
-
-cd src/sample
-make clean &>/dev/null
-cd $shell_dir
-cp -v -r ./src/sample ${pack}
 
 echo "Pegasus Client $version ($commit_id) $platform $build_type" >${pack}/VERSION
 

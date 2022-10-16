@@ -24,24 +24,19 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     task is the execution of a piece of sequence code, which completes
- *     a meaningful application level task.
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+#include "task.h"
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/synchronize.h>
-#include <dsn/utility/rand.h>
-#include <dsn/tool/node_scoper.h>
-#include <dsn/dist/fmt_logging.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/zlocks.h"
+#include "utils/utils.h"
+#include "utils/synchronize.h"
+#include "utils/rand.h"
+#include "runtime/node_scoper.h"
+#include "utils/fmt_logging.h"
 
 #include "task_engine.h"
 #include "runtime/service_engine.h"

@@ -18,8 +18,8 @@
  */
 
 #include <iomanip>
-#include <dsn/c/api_utilities.h>
-#include <dsn/perf_counter/perf_counters.h>
+#include "utils/api_utilities.h"
+#include "perf_counter/perf_counters.h"
 
 #include "brief_stat.h"
 

@@ -41,13 +41,19 @@
 #include <map>
 #include <unordered_map>
 #include <functional>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/extensible_object.h>
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/cpp/json_helper.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/dist/block_service.h>
+#include "utils/utils.h"
+#include "utils/extensible_object.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "common/replication_other_types.h"
+#include "common/json_helper.h"
+#include "utils/zlocks.h"
+#include "block_service/block_service.h"
 
 #include "meta/duplication/duplication_info.h"
 

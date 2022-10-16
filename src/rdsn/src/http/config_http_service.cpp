@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/http/http_server.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/output_utils.h>
+#include "http_server.h"
+#include "utils/flags.h"
+#include "utils/output_utils.h"
 
 namespace dsn {
 void update_config(const http_request &req, http_response &resp)

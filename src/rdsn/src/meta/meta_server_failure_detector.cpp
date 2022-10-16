@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/factory_store.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 #include "meta_server_failure_detector.h"
 #include "server_state.h"
 #include "meta_service.h"

@@ -20,9 +20,9 @@
 #include "runtime/rpc/network.sim.h"
 
 #include <gtest/gtest.h>
-#include <dsn/utility/flags.h>
-#include <dsn/dist/failure_detector/fd.code.definition.h>
-#include <http/http_server_impl.h>
+#include "utils/flags.h"
+#include "failure_detector/fd.code.definition.h"
+#include "http/http_server_impl.h"
 #include "nfs/nfs_code_definition.h"
 
 namespace dsn {

@@ -33,11 +33,11 @@
  */
 
 #include "fs_manager.h"
-#include <dsn/utility/utils.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/utils.h"
+#include "utils/filesystem.h"
 #include <thread>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

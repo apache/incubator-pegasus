@@ -16,5 +16,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-LD_LIBRARY_PATH=`pwd`/../lib:`pwd`/../../DSN_ROOT/lib ./pegasus_cpp_sample onebox temp
-
+export LD_LIBRARY_PATH=`pwd`/../../../../../thirdparty/output/lib:`pwd`/../../lib:/usr/lib/jvm/java-1.8.0-openjdk/jre/lib/amd64/server
+./sample onebox temp

@@ -34,14 +34,14 @@
  *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
  */
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/strings.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/tool-api/async_calls.h>
+#include "utils/fmt_logging.h"
+#include "common/replica_envs.h"
+#include "utils/factory_store.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "runtime/task/task.h"
+#include "utils/command_manager.h"
+#include "runtime/task/async_calls.h"
 #include <sstream>
 #include <cinttypes>
 #include <string>

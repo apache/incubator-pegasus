@@ -37,16 +37,16 @@
 #include "replica_disk_migrator.h"
 #include "runtime/security/access_controller.h"
 
-#include <dsn/utils/latency_tracer.h>
-#include <dsn/cpp/json_helper.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/rand.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/strings.h>
-#include <dsn/tool-api/rpc_message.h>
+#include "utils/latency_tracer.h"
+#include "common/json_helper.h"
+#include "replica/replication_app_base.h"
+#include "common/replica_envs.h"
+#include "utils/fmt_logging.h"
+#include "utils/filesystem.h"
+#include "utils/rand.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "runtime/rpc/rpc_message.h"
 
 namespace dsn {
 namespace replication {

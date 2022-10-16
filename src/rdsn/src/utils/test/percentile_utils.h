@@ -22,9 +22,9 @@
 #include <type_traits>
 #include <vector>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/metrics.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/api_utilities.h"
+#include "utils/metrics.h"
+#include "utils/fmt_logging.h"
 
 #include "nth_element_utils.h"
 

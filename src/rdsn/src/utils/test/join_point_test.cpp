@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/join_point.h>
+#include "utils/join_point.h"
 #include <gtest/gtest.h>
 
 namespace dsn {

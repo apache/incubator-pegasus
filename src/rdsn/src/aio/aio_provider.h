@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <dsn/tool-api/aio_task.h>
-#include <dsn/utility/dlib.h>
-#include <dsn/utility/factory_store.h>
+#include "aio/aio_task.h"
+#include "utils/dlib.h"
+#include "utils/factory_store.h"
 
 namespace dsn {
 

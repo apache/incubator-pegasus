@@ -21,7 +21,7 @@
 #include <thread>
 
 #include <gtest/gtest.h>
-#include <dsn/dist/replication/replication_service_app.h>
+#include "replica/replication_service_app.h"
 
 #include "replication_service_test_app.h"
 

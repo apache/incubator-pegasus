@@ -19,13 +19,13 @@
 
 #include "replica_follower.h"
 #include "replica/replica_stub.h"
-#include "dsn/utility/filesystem.h"
-#include "dsn/dist/replication/duplication_common.h"
+#include "utils/filesystem.h"
+#include "common/duplication_common.h"
 
 #include <boost/algorithm/string.hpp>
-#include <dsn/tool-api/group_address.h>
-#include <dsn/dist/nfs_node.h>
-#include <dsn/utility/fail_point.h>
+#include "runtime/rpc/group_address.h"
+#include "nfs/nfs_node.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/errors.h>
+#include "utils/smart_pointers.h"
+#include "replica/replication_app_base.h"
+#include "utils/filesystem.h"
+#include "utils/errors.h"
 #include <gtest/gtest.h>
 
 #include "replica/replica_stub.h"

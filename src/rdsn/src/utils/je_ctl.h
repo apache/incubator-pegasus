@@ -21,7 +21,7 @@
 
 #include <string>
 
-#include <dsn/utility/enum_helper.h>
+#include "utils/enum_helper.h"
 
 namespace dsn {
 

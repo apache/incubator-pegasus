@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool/simulator.h>
+#include "runtime/simulator.h"
 #include "scheduler.h"
 #include "service_engine.h"
 

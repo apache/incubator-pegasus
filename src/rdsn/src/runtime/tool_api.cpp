@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool_api.h>
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/singleton_store.h>
+#include "runtime/tool_api.h"
+#include "utils/factory_store.h"
+#include "utils/singleton_store.h"
 #include "runtime/service_engine.h"
 #include "runtime/rpc/message_parser_manager.h"
 

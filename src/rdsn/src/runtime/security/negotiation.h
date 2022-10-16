@@ -21,7 +21,7 @@
 #include "sasl_wrapper.h"
 
 #include <memory>
-#include <dsn/cpp/rpc_holder.h>
+#include "runtime/rpc/rpc_holder.h"
 
 namespace dsn {
 class rpc_session;

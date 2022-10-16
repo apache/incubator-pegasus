@@ -28,8 +28,8 @@
 #include <thread>
 #include <sstream>
 
-#include <dsn/utility/utils.h>
-#include <dsn/tool-api/command_manager.h>
+#include "utils/utils.h"
+#include "utils/command_manager.h"
 
 namespace dsn {
 

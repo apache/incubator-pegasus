@@ -15,16 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/common.h>
-#include <dsn/utility/chrono_literals.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/tool-api/group_address.h>
+#include "common//duplication_common.h"
+#include "utils/fmt_logging.h"
+#include "common/common.h"
+#include "utils/chrono_literals.h"
+#include "utils/string_conv.h"
+#include "runtime/rpc/group_address.h"
 
 #include "meta/meta_service.h"
 #include "meta_duplication_service.h"
-#include "dsn/utility/fail_point.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

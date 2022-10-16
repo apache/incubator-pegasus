@@ -24,8 +24,8 @@
 #include <sys/types.h>
 #include <unistd.h> // getpagesize
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 #include "block_service/directio_writable_file.h"
 

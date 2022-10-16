@@ -29,15 +29,15 @@
 #include <vector>
 #include <deque>
 #include <iostream>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/nfs_node.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/TokenBucket.h>
-#include <dsn/utility/flags.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/utils/token_buckets.h>
+#include "runtime/task/task_tracker.h"
+#include "utils/zlocks.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "nfs/nfs_node.h"
+#include "utils/defer.h"
+#include "utils/TokenBucket.h"
+#include "utils/flags.h"
+#include "runtime/task/async_calls.h"
+#include "utils/token_buckets.h"
 
 #include "nfs_types.h"
 #include "nfs_code_definition.h"

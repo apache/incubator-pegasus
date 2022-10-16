@@ -19,7 +19,7 @@
 
 #include "server_negotiation.h"
 
-#include <dsn/cpp/serverlet.h>
+#include "runtime/serverlet.h"
 
 namespace dsn {
 namespace security {

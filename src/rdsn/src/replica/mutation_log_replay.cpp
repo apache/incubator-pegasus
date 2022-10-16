@@ -17,9 +17,9 @@
 
 #include "mutation_log.h"
 #include "mutation_log_utils.h"
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/errors.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fail_point.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

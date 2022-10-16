@@ -35,8 +35,8 @@
 
 #include <sstream>
 #include <boost/lexical_cast.hpp>
-#include <dsn/utility/factory_store.h>
-#include <dsn/tool_api.h>
+#include "utils/factory_store.h"
+#include "runtime/tool_api.h"
 
 #include "checker.h"
 #include "case.h"

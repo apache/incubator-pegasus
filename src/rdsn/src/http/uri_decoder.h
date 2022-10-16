@@ -18,7 +18,7 @@
 #pragma once
 
 #include <string>
-#include <dsn/utility/errors.h>
+#include "utils/errors.h"
 
 namespace dsn {
 namespace uri {

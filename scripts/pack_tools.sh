@@ -40,9 +40,9 @@ then
     exit 1
 fi
 
-if [ ! -f DSN_ROOT/bin/pegasus_shell/pegasus_shell ]
+if [ ! -f ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell ]
 then
-    echo "ERROR: DSN_ROOT/bin/pegasus_shell/pegasus_shell not found"
+    echo "ERROR: ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell not found"
     exit 1
 fi
 
@@ -113,31 +113,31 @@ done
 mkdir -p ${pack}
 copy_file ./run.sh ${pack}/
 
-mkdir -p ${pack}/DSN_ROOT/bin
-cp -v -r ./DSN_ROOT/bin/pegasus_server ${pack}/DSN_ROOT/bin/
-cp -v -r ./DSN_ROOT/bin/pegasus_shell ${pack}/DSN_ROOT/bin/
-cp -v -r ./DSN_ROOT/bin/pegasus_bench ${pack}/DSN_ROOT/bin/
-cp -v -r ./DSN_ROOT/bin/pegasus_kill_test ${pack}/DSN_ROOT/bin/
-cp -v -r ./DSN_ROOT/bin/pegasus_rproxy ${pack}/DSN_ROOT/bin/
-cp -v -r ./DSN_ROOT/bin/pegasus_pressureclient ${pack}/DSN_ROOT/bin/
+mkdir -p ${pack}/bin
+cp -v -r ${BUILD_DIR}/output/bin/pegasus_server ${pack}/bin/
+cp -v -r ${BUILD_DIR}/output/bin/pegasus_shell ${pack}/bin/
+cp -v -r ${BUILD_DIR}/output/bin/pegasus_bench ${pack}/bin/
+cp -v -r ${BUILD_DIR}/output/bin/pegasus_kill_test ${pack}/bin/
+cp -v -r ${BUILD_DIR}/output/bin/pegasus_rproxy ${pack}/bin/
+cp -v -r ${BUILD_DIR}/output/bin/pegasus_pressureclient ${pack}/bin/
 
-mkdir -p ${pack}/DSN_ROOT/lib
-copy_file ./DSN_ROOT/lib/*.so* ${pack}/DSN_ROOT/lib/
-copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/DSN_ROOT/lib/
+mkdir -p ${pack}/lib
+copy_file ${BUILD_DIR}/output/lib/*.so* ${pack}/lib/
+copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/lib/
 
 if [ "$use_jemalloc" == "on" ]; then
-    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/DSN_ROOT/lib/
-    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/DSN_ROOT/lib/
+    copy_file ./thirdparty/output/lib/libjemalloc.so.2 ${pack}/lib/
+    copy_file ./thirdparty/output/lib/libprofiler.so.0 ${pack}/lib/
 else
-    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/DSN_ROOT/lib/
+    copy_file ./thirdparty/output/lib/libtcmalloc_and_profiler.so.4 ${pack}/lib/
 fi
 
-copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/DSN_ROOT/lib/
-copy_file ./thirdparty/output/lib/libhdfs* ${pack}/DSN_ROOT/lib
-copy_file `get_stdcpp_lib $custom_gcc` ${pack}/DSN_ROOT/lib/
+copy_file ./thirdparty/output/lib/libboost*.so.1.69.0 ${pack}/lib/
+copy_file ./thirdparty/output/lib/libhdfs* ${pack}/lib
+copy_file `get_stdcpp_lib $custom_gcc` ${pack}/lib/
 
 pack_tools_lib() {
-    pack_system_lib "${pack}/DSN_ROOT/lib" shell "$1"
+    pack_system_lib "${pack}/lib" shell "$1"
 }
 
 pack_tools_lib snappy
@@ -146,7 +146,7 @@ pack_tools_lib ssl
 pack_tools_lib zstd
 pack_tools_lib lz4
 
-chmod -x ${pack}/DSN_ROOT/lib/*
+chmod -x ${pack}/lib/*
 
 mkdir -p ${pack}/scripts
 copy_file ./scripts/* ${pack}/scripts/

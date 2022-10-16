@@ -25,7 +25,7 @@
  */
 
 #include <cstdio>
-#include <dsn/utility/crc.h>
+#include "utils/crc.h"
 
 namespace dsn {
 namespace utils {

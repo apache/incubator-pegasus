@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/metrics.h>
+#include "utils/metrics.h"
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/rand.h>
+#include "utils/api_utilities.h"
+#include "utils/rand.h"
 
 #include "shared_io_service.h"
 

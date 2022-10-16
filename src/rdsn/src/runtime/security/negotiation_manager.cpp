@@ -20,11 +20,11 @@
 #include "server_negotiation.h"
 #include "client_negotiation.h"
 
-#include <dsn/utility/flags.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/dist/failure_detector/fd.code.definition.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/http/http_server.h>
+#include "utils/flags.h"
+#include "utils/zlocks.h"
+#include "failure_detector/fd.code.definition.h"
+#include "utils/fmt_logging.h"
+#include "http/http_server.h"
 
 namespace dsn {
 namespace security {

@@ -29,14 +29,14 @@
 #include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/env.h>
 #include <rocksdb/statistics.h>
-#include <dsn/cpp/json_helper.h>
-#include <dsn/dist/remote_command.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/dist/replication/mutation_log_tool.h>
-#include <dsn/perf_counter/perf_counter_utils.h>
-#include <dsn/utility/string_view.h>
-#include <dsn/utility/synchronize.h>
-#include <dsn/utils/time_utils.h>
+#include "common/json_helper.h"
+#include "remote_cmd/remote_command.h"
+#include "client/replication_ddl_client.h"
+#include "tools/mutation_log_tool.h"
+#include "perf_counter/perf_counter_utils.h"
+#include "utils/string_view.h"
+#include "utils/synchronize.h"
+#include "utils/time_utils.h"
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>

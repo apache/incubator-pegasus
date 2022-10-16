@@ -22,9 +22,9 @@
 #include <vector>
 
 #include "base/pegasus_const.h"
-#include "dsn/dist/replication/replication_ddl_client.h"
-#include "dsn/dist/replication/replication_other_types.h"
-#include "dsn/tool-api/rpc_address.h"
+#include "client/replication_ddl_client.h"
+#include "common/replication_other_types.h"
+#include "utils/rpc_address.h"
 #include "include/pegasus/client.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "replication_ddl_client.h"
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -35,14 +35,14 @@
 #include <iostream>
 
 #include <boost/lexical_cast.hpp>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/tool-api/group_address.h>
-#include <dsn/utility/error_code.h>
-#include <dsn/utility/output_utils.h>
+#include "utils/fmt_logging.h"
+#include "common//duplication_common.h"
+#include "common/replication_other_types.h"
+#include "runtime/rpc/group_address.h"
+#include "utils/error_code.h"
+#include "utils/output_utils.h"
 #include <fmt/format.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/time_utils.h"
 
 #include "common/replication_common.h"
 #include "common/bulk_load_common.h"

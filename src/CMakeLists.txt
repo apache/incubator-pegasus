@@ -19,21 +19,12 @@ project(pegasus C CXX)
 
 set(PEGASUS_PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-if(NOT EXISTS "${DSN_ROOT}")
-    message(FATAL_ERROR "Please make sure that ${DSN_ROOT} is defined and does exists.")
-endif()
-
 dsn_common_setup()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rdsn/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/rdsn/include/dsn/cpp/serialization_helper)
-
-# Users don't have to configure CMAKE_INSTALL_PREFIX unless they want to customize
-# the destination.
-set(CMAKE_INSTALL_PREFIX ${DSN_ROOT} CACHE STRING "" FORCE)
-message (STATUS "pegasus Installation directory: CMAKE_INSTALL_PREFIX = " ${CMAKE_INSTALL_PREFIX})
+include_directories(${PEGASUS_PROJECT_DIR})
+include_directories(${PEGASUS_PROJECT_DIR}/include)
+include_directories(${PEGASUS_PROJECT_DIR}/rdsn/src)
+include_directories(${PEGASUS_PROJECT_DIR}/rdsn/src/common/serialization_helper)
 
 add_subdirectory(rdsn/src)
 add_subdirectory(base)
@@ -49,3 +40,4 @@ add_subdirectory(test/function_test)
 add_subdirectory(test/kill_test)
 add_subdirectory(test/pressure_test)
 add_subdirectory(test/bench_test)
+add_subdirectory(sample)

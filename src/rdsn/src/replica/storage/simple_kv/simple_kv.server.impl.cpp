@@ -36,7 +36,7 @@
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace replication {

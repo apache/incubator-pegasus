@@ -20,9 +20,9 @@
 #include "sasl_init.h"
 
 #include <boost/algorithm/string/join.hpp>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace security {

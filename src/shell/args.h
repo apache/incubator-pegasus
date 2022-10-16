@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <dsn/c/app_model.h>
-#include <dsn/utility/defer.h>
+#include "runtime/app_model.h"
+#include "utils/defer.h"
 
 #include "linenoise/linenoise.h"
 #include "sds/sds.h"

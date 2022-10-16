@@ -22,13 +22,13 @@
 #include <fmt/format.h>
 #include <krb5/krb5.h>
 
-#include <dsn/utility/defer.h>
-#include <dsn/utils/time_utils.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/rand.h>
+#include "utils/defer.h"
+#include "utils/time_utils.h"
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
+#include "utils/filesystem.h"
+#include "utils/smart_pointers.h"
+#include "utils/rand.h"
 
 namespace dsn {
 namespace security {

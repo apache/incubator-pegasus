@@ -18,12 +18,12 @@
 #include "hotspot_partition_calculator.h"
 
 #include <math.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/error_code.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include "utils/fmt_logging.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "utils/flags.h"
+#include "utils/error_code.h"
+#include "utils/fail_point.h"
+#include "common//duplication_common.h"
 
 namespace pegasus {
 namespace server {

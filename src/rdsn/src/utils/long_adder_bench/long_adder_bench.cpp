@@ -23,10 +23,10 @@
 
 #include <fmt/ostream.h>
 
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/long_adder.h>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utility/string_conv.h>
+#include "runtime/api_layer1.h"
+#include "utils/long_adder.h"
+#include "utils/process_utils.h"
+#include "utils/string_conv.h"
 
 // The simplest implementation of long adder: just wrap std::atomic<int64_t>.
 class simple_long_adder

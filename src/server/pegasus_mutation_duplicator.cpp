@@ -21,8 +21,8 @@
 #include "pegasus_server_impl.h"
 #include "base/pegasus_rpc_types.h"
 
-#include <dsn/cpp/message_utils.h>
-#include <dsn/utility/chrono_literals.h>
+#include "runtime/message_utils.h"
+#include "utils/chrono_literals.h"
 #include <rrdb/rrdb.client.h>
 
 namespace dsn {

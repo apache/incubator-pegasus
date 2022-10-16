@@ -22,9 +22,9 @@
 #include <iomanip> // std::setfill, std::setw
 #include <functional>
 
-#include <dsn/dist/block_service.h>
-#include <dsn/http/http_server.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "block_service/block_service.h"
+#include "http/http_server.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include <gtest/gtest_prod.h>
 
 #include "backup_engine.h"

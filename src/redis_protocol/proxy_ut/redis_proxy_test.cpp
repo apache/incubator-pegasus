@@ -22,8 +22,8 @@
 #include <string>
 #include <boost/asio.hpp>
 
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/rand.h>
+#include "utils/string_conv.h"
+#include "utils/rand.h"
 
 #include <gtest/gtest.h>
 #include <rrdb/rrdb.client.h>

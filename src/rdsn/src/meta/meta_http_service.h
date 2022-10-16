@@ -19,8 +19,8 @@
 
 #include <algorithm>
 
-#include <dsn/cpp/json_helper.h>
-#include <dsn/http/http_server.h>
+#include "common/json_helper.h"
+#include "http/http_server.h"
 
 namespace dsn {
 namespace replication {

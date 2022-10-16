@@ -45,23 +45,23 @@
 #include "disk_cleaner.h"
 
 #include <boost/algorithm/string/replace.hpp>
-#include <dsn/cpp/json_helper.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/rand.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/enum_helper.h>
+#include "common/json_helper.h"
+#include "utils/filesystem.h"
+#include "utils/rand.h"
+#include "utils/string_conv.h"
+#include "utils/command_manager.h"
+#include "replica/replication_app_base.h"
+#include "utils/enum_helper.h"
 #include <vector>
 #include <deque>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #elif defined(DSN_USE_JEMALLOC)
 #include "utils/je_ctl.h"
 #endif
-#include <dsn/utility/fail_point.h>
-#include <dsn/dist/remote_command.h>
+#include "utils/fail_point.h"
+#include "remote_cmd/remote_command.h"
 
 namespace dsn {
 namespace replication {

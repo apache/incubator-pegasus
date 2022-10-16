@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 #include "task_engine.sim.h"
 #include "runtime/scheduler.h"
 

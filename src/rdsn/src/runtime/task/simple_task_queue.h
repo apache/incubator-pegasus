@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include <dsn/tool_api.h>
-#include <dsn/utility/priority_queue.h>
+#include "runtime/tool_api.h"
+#include "utils/priority_queue.h"
 #include <boost/asio.hpp>
 
 namespace dsn {

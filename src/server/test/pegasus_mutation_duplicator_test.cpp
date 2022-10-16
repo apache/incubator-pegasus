@@ -23,8 +23,8 @@
 #include "pegasus_server_test_base.h"
 
 #include <gtest/gtest.h>
-#include <dsn/cpp/message_utils.h>
-#include <dsn/dist/replication/replica_base.h>
+#include "runtime/message_utils.h"
+#include "replica/replica_base.h"
 #include <condition_variable>
 
 namespace pegasus {

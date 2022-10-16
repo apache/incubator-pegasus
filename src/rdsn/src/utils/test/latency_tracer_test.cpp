@@ -16,8 +16,8 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utils/latency_tracer.h>
+#include "utils/fmt_logging.h"
+#include "utils/latency_tracer.h"
 
 namespace dsn {
 namespace utils {

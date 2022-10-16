@@ -37,10 +37,10 @@
 
 #include "common.h"
 
-#include <dsn/utility/singleton.h>
-#include <dsn/tool/simulator.h>
-#include <dsn/dist/replication/meta_service_app.h>
-#include <dsn/dist/replication/replication_service_app.h>
+#include "utils/singleton.h"
+#include "runtime/simulator.h"
+#include "meta/meta_service_app.h"
+#include "replica/replication_service_app.h"
 
 #include "meta/server_state.h"
 

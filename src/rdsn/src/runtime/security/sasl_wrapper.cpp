@@ -20,7 +20,7 @@
 #include "sasl_client_wrapper.h"
 
 #include <sasl/sasl.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace security {

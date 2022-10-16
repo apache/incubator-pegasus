@@ -20,8 +20,8 @@
 #include "available_detector.h"
 
 #include <algorithm>
-#include <dsn/dist/common.h>
-#include <dsn/utils/time_utils.h>
+#include "common/common.h"
+#include "utils/time_utils.h"
 #include <iomanip>
 #include <sstream>
 

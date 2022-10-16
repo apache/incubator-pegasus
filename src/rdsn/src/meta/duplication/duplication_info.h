@@ -17,12 +17,18 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/cpp/json_helper.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/dist/fmt_logging.h>
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "common/replication_other_types.h"
+#include "common//duplication_common.h"
+#include "common/json_helper.h"
+#include "utils/zlocks.h"
+#include "utils/fmt_logging.h"
 
 #include <utility>
 #include <fmt/format.h>

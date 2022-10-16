@@ -34,10 +34,14 @@
  */
 
 #include <boost/asio.hpp>
-#include <dsn/service_api_c.h>
-#include <dsn/utility/singleton_store.h>
-#include <dsn/utility/rand.h>
-#include <dsn/tool/node_scoper.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/singleton_store.h"
+#include "utils/rand.h"
+#include "runtime/node_scoper.h"
 #include "network.sim.h"
 
 namespace dsn {

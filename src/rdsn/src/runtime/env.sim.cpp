@@ -36,7 +36,7 @@
 #include "env.sim.h"
 #include "scheduler.h"
 
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 
 namespace dsn {
 namespace tools {

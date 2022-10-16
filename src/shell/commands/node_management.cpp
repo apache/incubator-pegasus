@@ -18,7 +18,7 @@
  */
 
 #include "shell/commands.h"
-#include <dsn/utility/utils.h>
+#include "utils/utils.h"
 
 bool query_cluster_info(command_executor *e, shell_context *sc, arguments args)
 {

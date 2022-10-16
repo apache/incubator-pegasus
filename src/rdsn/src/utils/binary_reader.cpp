@@ -24,9 +24,10 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/utils.h>
-#include <dsn/utility/binary_reader.h>
-#include <dsn/c/api_utilities.h>
+#include "binary_reader.h"
+
+#include "utils.h"
+#include "api_utilities.h"
 
 namespace dsn {
 

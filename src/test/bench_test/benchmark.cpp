@@ -21,11 +21,11 @@
 
 #include <sstream>
 
-#include "dsn/c/api_utilities.h"
-#include "dsn/c/app_model.h"
-#include "dsn/dist/fmt_logging.h"
-#include "dsn/utility/ports.h"
 #include "rand.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 
 namespace pegasus {
 namespace test {

@@ -23,8 +23,8 @@
 #include "server/pegasus_write_service_impl.h"
 #include "base/pegasus_key_schema.h"
 
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/defer.h>
+#include "utils/fail_point.h"
+#include "utils/defer.h"
 
 namespace pegasus {
 namespace server {

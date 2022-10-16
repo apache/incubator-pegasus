@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/output_utils.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/output_utils.h"
+#include "utils/time_utils.h"
 
 #include "builtin_http_calls.h"
 #include "http_call_registry.h"

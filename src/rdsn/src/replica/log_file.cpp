@@ -28,9 +28,9 @@
 
 #include <fcntl.h>
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/crc.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/filesystem.h"
+#include "utils/crc.h"
+#include "utils/fmt_logging.h"
 
 #include "log_file_stream.h"
 

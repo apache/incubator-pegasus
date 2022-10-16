@@ -32,12 +32,12 @@
 
 #include "rpc_engine.h"
 #include "runtime/service_engine.h"
-#include <dsn/utility/factory_store.h>
-#include <dsn/tool-api/group_address.h>
-#include <dsn/tool-api/task_queue.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/cpp/serialization.h>
-#include <dsn/utility/rand.h>
+#include "utils/factory_store.h"
+#include "runtime/rpc/group_address.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/rand.h"
 #include <set>
 
 namespace dsn {

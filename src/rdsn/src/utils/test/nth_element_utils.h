@@ -26,11 +26,11 @@
 
 #include <fmt/format.h>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/ports.h>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utility/rand.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/process_utils.h"
+#include "utils/rand.h"
 
 #include "perf_counter/perf_counter_atomic.h"
 

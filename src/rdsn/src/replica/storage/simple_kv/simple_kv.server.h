@@ -36,8 +36,8 @@
 #pragma once
 #include <iostream>
 
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/replication/storage_serverlet.h>
+#include "replica/replication_app_base.h"
+#include "common/storage_serverlet.h"
 
 #include "simple_kv.code.definition.h"
 #include "simple_kv_types.h"

@@ -16,9 +16,9 @@
 // under the License.
 
 #include "runtime/task/task_engine.h"
-#include <dsn/tool-api/file_io.h>
-#include <dsn/utility/error_code.h>
-#include <dsn/utils/latency_tracer.h>
+#include "aio/file_io.h"
+#include "utils/error_code.h"
+#include "utils/latency_tracer.h"
 
 namespace dsn {
 

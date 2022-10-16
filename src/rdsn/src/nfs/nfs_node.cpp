@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/dist/nfs_node.h>
+#include "utils/smart_pointers.h"
+#include "runtime/task/async_calls.h"
+#include "nfs/nfs_node.h"
 
 #include "nfs_node_simple.h"
 

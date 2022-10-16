@@ -17,10 +17,10 @@
 
 #include "meta_access_controller.h"
 
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/utility/flags.h>
-#include <dsn/tool-api/network.h>
-#include <dsn/dist/fmt_logging.h>
+#include "runtime/rpc/rpc_message.h"
+#include "utils/flags.h"
+#include "runtime/rpc/network.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace security {

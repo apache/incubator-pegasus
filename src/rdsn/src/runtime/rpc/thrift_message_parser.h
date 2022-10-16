@@ -26,12 +26,12 @@
 
 #pragma once
 
-#include <dsn/tool-api/message_parser.h>
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/utility/ports.h>
-#include <dsn/utility/endians.h>
+#include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/ports.h"
+#include "utils/endians.h"
 #include <gtest/gtest_prod.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
+#include "common/serialization_helper/dsn.layer2_types.h"
 
 #include "request_meta_types.h"
 

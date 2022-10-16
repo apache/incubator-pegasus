@@ -25,7 +25,7 @@
  */
 
 #include <cstring>
-#include <dsn/perf_counter/perf_counter.h>
+#include "perf_counter/perf_counter.h"
 
 static const char *ctypes[] = {
     "NUMBER", "VOLATILE_NUMBER", "RATE", "PERCENTILE", "INVALID_COUNTER"};

@@ -17,12 +17,11 @@
 
 #pragma once
 
-#include <dsn/cpp/pipeline.h>
-#include <dsn/dist/replication/replica_base.h>
-#include <dsn/dist/replication/mutation_duplicator.h>
-
+#include "replica/replica_base.h"
 #include "replica/replica.h"
 #include "replica_duplicator.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "runtime/pipeline.h"
 
 namespace dsn {
 namespace replication {

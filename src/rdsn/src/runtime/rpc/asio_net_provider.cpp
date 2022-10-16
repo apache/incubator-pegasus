@@ -24,12 +24,12 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 #include <memory>
 
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 
 namespace dsn {
 namespace tools {

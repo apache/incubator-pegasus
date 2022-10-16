@@ -33,16 +33,23 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool_api.h>
-#include <dsn/tool-api/file_io.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/filesystem.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "runtime/tool_api.h"
+#include "aio/file_io.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "utils/zlocks.h"
+#include "utils/utils.h"
+#include "utils/filesystem.h"
 #include <gtest/gtest.h>
 #include <thread>
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 #include "runtime/service_engine.h"
 
 using namespace dsn;

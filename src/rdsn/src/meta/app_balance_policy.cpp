@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/command_manager.h"
+#include "utils/fmt_logging.h"
 #include "app_balance_policy.h"
 #include "meta_service.h"
 

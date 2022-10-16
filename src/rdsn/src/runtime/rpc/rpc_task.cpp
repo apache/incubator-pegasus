@@ -25,7 +25,7 @@
  */
 
 #include "runtime/task/task_engine.h"
-#include <dsn/tool-api/task.h>
+#include "runtime/task/task.h"
 
 namespace dsn {
 

@@ -19,8 +19,8 @@
 #include "sasl_init.h"
 #include "negotiation_manager.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace security {

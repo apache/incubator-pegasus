@@ -21,13 +21,13 @@
 
 #include <stdint.h>
 #include <string>
-#include <dsn/utility/ports.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/blob.h>
-#include <dsn/utility/endians.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/crc.h>
-#include <dsn/c/api_utilities.h>
+#include "utils/ports.h"
+#include "utils/utils.h"
+#include "utils/blob.h"
+#include "utils/endians.h"
+#include "utils/utils.h"
+#include "utils/crc.h"
+#include "utils/api_utilities.h"
 
 namespace pegasus {
 

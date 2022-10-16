@@ -30,14 +30,14 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <dsn/utility/ports.h>
-#include <dsn/utility/string_view.h>
-#include <dsn/utility/fixed_size_buffer_pool.h>
+#include "utils/ports.h"
+#include "utils/string_view.h"
+#include "utils/fixed_size_buffer_pool.h"
 
-#include <dsn/c/api_utilities.h>
+#include "utils/api_utilities.h"
 
-#include <dsn/tool-api/rpc_address.h>
-#include <dsn/tool-api/group_address.h>
+#include "utils/rpc_address.h"
+#include "runtime/rpc/group_address.h"
 
 namespace dsn {
 

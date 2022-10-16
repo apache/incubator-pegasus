@@ -23,9 +23,9 @@
 #include <iomanip>
 #include <vector>
 #include <chrono>
-#include <dsn/tool-api/group_address.h>
-#include <dsn/dist/common.h>
-#include <dsn/dist/fmt_logging.h>
+#include "runtime/rpc/group_address.h"
+#include "common/common.h"
+#include "utils/fmt_logging.h"
 
 #include "base/pegasus_const.h"
 #include "result_writer.h"

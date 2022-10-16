@@ -34,7 +34,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 
 using namespace ::dsn;
 

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/cpp/message_utils.h>
+#include "runtime/message_utils.h"
 
 namespace dsn {
 

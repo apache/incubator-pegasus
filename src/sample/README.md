@@ -17,10 +17,6 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Build
-=====
-make
-
 Run
 ===
 ./run.sh <cluster_name> <app_name>
@@ -29,4 +25,3 @@ For example:
 ./run.sh onebox temp
 
 To change cluster, please modify the last line of `config.ini'.
-

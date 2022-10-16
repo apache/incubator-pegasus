@@ -19,10 +19,10 @@
 
 #include "common/replication_common.h"
 #include <fmt/format.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/utils/token_bucket_throttling_controller.h>
+#include "utils/string_conv.h"
+#include "utils/fmt_logging.h"
+#include "common/replica_envs.h"
+#include "utils/token_bucket_throttling_controller.h"
 
 namespace dsn {
 namespace replication {

@@ -28,13 +28,13 @@
 #include "replica.h"
 #include "mutation_log_utils.h"
 
-#include <dsn/utils/latency_tracer.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/crc.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/async_calls.h>
+#include "utils/latency_tracer.h"
+#include "utils/filesystem.h"
+#include "utils/crc.h"
+#include "utils/defer.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "runtime/task/async_calls.h"
 
 namespace dsn {
 namespace replication {

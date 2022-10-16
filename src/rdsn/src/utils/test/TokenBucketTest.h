@@ -17,7 +17,7 @@
 #pragma once
 
 #include <gtest/gtest.h>
-#include <dsn/utility/TokenBucket.h>
+#include "utils/TokenBucket.h"
 
 namespace folly {
 

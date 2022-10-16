@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/rpc_address.h>
-#include <dsn/tool-api/group_address.h>
+#include "utils/rpc_address.h"
+#include "runtime/rpc/group_address.h"
 #include <gtest/gtest.h>
 
 using namespace ::dsn;

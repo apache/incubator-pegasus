@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 #include <random>
 
 namespace dsn {

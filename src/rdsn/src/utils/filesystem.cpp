@@ -35,14 +35,14 @@
 
 #include <fstream>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/safe_strerror_posix.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/defer.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
+#include "utils/safe_strerror_posix.h"
 
 #include <sys/stat.h>
 #include <errno.h>

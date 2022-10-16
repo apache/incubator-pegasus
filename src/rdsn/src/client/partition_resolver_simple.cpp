@@ -24,10 +24,10 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/rand.h>
-#include <dsn/tool-api/async_calls.h>
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
+#include "utils/rand.h"
+#include "runtime/task/async_calls.h"
 #include "partition_resolver_simple.h"
 
 namespace dsn {

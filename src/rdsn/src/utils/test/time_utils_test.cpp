@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utils/time_utils.h>
+#include "utils/time_utils.h"
 #include <gtest/gtest.h>
-#include <dsn/c/api_layer1.h>
+#include "runtime/api_layer1.h"
 
 namespace dsn {
 namespace utils {

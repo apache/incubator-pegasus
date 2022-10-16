@@ -24,9 +24,9 @@
 #include <rocksdb/table.h>
 #include <rocksdb/listener.h>
 #include <rocksdb/options.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/replication/replication.codes.h>
-#include <dsn/utility/flags.h>
+#include "perf_counter/perf_counter_wrapper.h"
+#include "common/replication.codes.h"
+#include "utils/flags.h"
 #include <rrdb/rrdb_types.h>
 #include <gtest/gtest_prod.h>
 #include <rocksdb/rate_limiter.h>

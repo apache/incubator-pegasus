@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/replication/mutation_duplicator.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/filesystem.h>
+#include "replica/replication_app_base.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "utils/fmt_logging.h"
+#include "utils/filesystem.h"
 
 #include "replica/replica.h"
 #include "replica/replica_stub.h"

@@ -25,7 +25,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <dsn/cpp/json_helper.h>
+#include "common/json_helper.h"
 
 namespace dsn {
 

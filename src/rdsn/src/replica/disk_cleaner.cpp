@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include <dsn/utility/flags.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/c/api_layer1.h>
+#include "utils/flags.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "runtime/api_layer1.h"
 
 #include "disk_cleaner.h"
 

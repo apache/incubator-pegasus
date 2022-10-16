@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include "dsn/utility/output_utils.h"
+#include "utils/output_utils.h"
 
 #include <gtest/gtest.h>
 

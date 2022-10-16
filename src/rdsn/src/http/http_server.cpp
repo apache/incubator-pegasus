@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/http/http_server.h>
-#include <dsn/tool_api.h>
-#include <dsn/utils/time_utils.h>
+#include "http_server.h"
+#include "runtime/tool_api.h"
+#include "utils/time_utils.h"
 #include <boost/algorithm/string.hpp>
 #include <fmt/ostream.h>
 

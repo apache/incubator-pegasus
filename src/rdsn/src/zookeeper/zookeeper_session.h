@@ -32,9 +32,9 @@
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
 
-#include <dsn/utility/utils.h>
-#include <dsn/utility/singleton.h>
-#include <dsn/utility/synchronize.h>
+#include "utils/utils.h"
+#include "utils/singleton.h"
+#include "utils/synchronize.h"
 
 #include <thread>
 #include <zookeeper/zookeeper.h>

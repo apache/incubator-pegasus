@@ -37,9 +37,9 @@
 
 #include <memory>
 
-#include <dsn/cpp/serverlet.h>
-#include <dsn/dist/meta_state_service.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "runtime/serverlet.h"
+#include "meta/meta_state_service.h"
+#include "perf_counter/perf_counter_wrapper.h"
 
 #include "common/replication_common.h"
 #include "common/bulk_load_common.h"

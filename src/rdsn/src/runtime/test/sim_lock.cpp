@@ -33,12 +33,19 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool_api.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/synchronize.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "runtime/tool_api.h"
+#include "runtime/task/task.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "utils/utils.h"
+#include "utils/synchronize.h"
 #include <gtest/gtest.h>
 #include <thread>
 #include "runtime/service_engine.h"

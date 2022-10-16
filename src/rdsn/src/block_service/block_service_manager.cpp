@@ -20,9 +20,9 @@
 #include "block_service/hdfs/hdfs_service.h"
 #include "block_service/local/local_service.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/fmt_logging.h"
+#include "utils/factory_store.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace dist {

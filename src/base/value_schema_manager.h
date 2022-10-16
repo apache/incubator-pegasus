@@ -20,7 +20,7 @@
 #pragma once
 
 #include "pegasus_value_schema.h"
-#include <dsn/utility/singleton.h>
+#include "utils/singleton.h"
 
 namespace pegasus {
 

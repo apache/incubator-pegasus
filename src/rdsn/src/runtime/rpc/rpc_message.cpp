@@ -24,11 +24,11 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/ports.h>
-#include <dsn/utility/crc.h>
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/tool-api/network.h>
-#include <dsn/tool-api/message_parser.h>
+#include "utils/ports.h"
+#include "utils/crc.h"
+#include "runtime/rpc/rpc_message.h"
+#include "network.h"
+#include "runtime/rpc/message_parser.h"
 #include <cctype>
 
 #include "runtime/task/task_engine.h"

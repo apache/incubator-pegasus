@@ -23,10 +23,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 #include <cstring>
 #include <sstream>
 #include <openssl/md5.h>
-#include <dsn/utility/strings.h>
+#include "utils/strings.h"
 
 namespace dsn {
 namespace utils {

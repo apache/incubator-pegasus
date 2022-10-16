@@ -29,8 +29,8 @@
 #endif // defined(__linux__)
 
 #include <sstream>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utility/smart_pointers.h>
+#include "utils/process_utils.h"
+#include "utils/smart_pointers.h"
 
 #include "task_engine.h"
 

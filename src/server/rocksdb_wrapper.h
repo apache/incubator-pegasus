@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replica_base.h>
+#include "replica/replica_base.h"
 #include <gtest/gtest_prod.h>
 
 namespace rocksdb {

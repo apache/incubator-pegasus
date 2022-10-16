@@ -16,9 +16,9 @@
 // under the License.
 
 #include <boost/lexical_cast.hpp>
-#include <dsn/dist/block_service.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/filesystem.h>
+#include "block_service/block_service.h"
+#include "utils/fmt_logging.h"
+#include "utils/filesystem.h"
 
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"

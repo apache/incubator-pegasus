@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/binary_reader.h>
+#include "utils/binary_reader.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/defer.h>
+#include "utils/defer.h"
 
 namespace dsn {
 

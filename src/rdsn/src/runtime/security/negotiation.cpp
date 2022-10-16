@@ -20,9 +20,9 @@
 #include "server_negotiation.h"
 #include "negotiation_utils.h"
 
-#include <dsn/utility/flags.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/flags.h"
+#include "utils/smart_pointers.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace security {

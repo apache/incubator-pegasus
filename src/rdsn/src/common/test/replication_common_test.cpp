@@ -20,7 +20,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 
 #include "common/replication_common.h"
 

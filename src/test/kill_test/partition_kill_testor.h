@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "client/replication_ddl_client.h"
 #include <pegasus/client.h>
 
 #include "kill_testor.h"

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <dsn/dist/common.h>
+#include "common/common.h"
 #include <gtest/gtest.h>
 
 namespace dsn {

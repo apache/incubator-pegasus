@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "dsn/utils/token_bucket_throttling_controller.h"
+#include "token_bucket_throttling_controller.h"
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/string_conv.h>
+#include "api_utilities.h"
+#include "string_conv.h"
 
 namespace dsn {
 namespace utils {

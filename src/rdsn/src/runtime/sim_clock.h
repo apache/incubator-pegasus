@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <dsn/utility/clock.h>
+#include "utils/clock.h"
 #include "scheduler.h"
 
 namespace dsn {

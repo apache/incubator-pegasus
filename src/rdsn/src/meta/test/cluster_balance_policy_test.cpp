@@ -16,8 +16,8 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/defer.h"
+#include "utils/fail_point.h"
 #include "meta/cluster_balance_policy.h"
 
 namespace dsn {

@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <dsn/dist/block_service.h>
-#include <dsn/utility/singleton_store.h>
-#include <dsn/tool-api/zlocks.h>
+#include "block_service/block_service.h"
+#include "utils/singleton_store.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace dist {

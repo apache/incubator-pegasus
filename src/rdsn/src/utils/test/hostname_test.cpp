@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/utils.h>
+#include "utils/utils.h"
 
-#include <dsn/tool-api/rpc_address.h>
+#include "utils/rpc_address.h"
 #include <gtest/gtest.h>
 
 namespace dsn {
