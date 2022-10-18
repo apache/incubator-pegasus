@@ -16,7 +16,6 @@
 // under the License.
 
 #include <dsn/utility/metrics.h>
-#include <dsn/utility/rand.h>
 
 #include <chrono>
 #include <thread>
@@ -24,9 +23,14 @@
 
 #include <gtest/gtest.h>
 
+#include <dsn/utility/flags.h>
+#include <dsn/utility/rand.h>
+
 #include "percentile_utils.h"
 
 namespace dsn {
+
+DSN_DECLARE_uint64(collect_metrics_interval_ms);
 
 class my_gauge : public metric
 {
@@ -40,6 +44,17 @@ protected:
 
     virtual ~my_gauge() = default;
 
+    virtual void take_snapshot(const std::vector<metric_data_sink_ptr> &sinks,
+                               const metric_snapshot::attr_map &attrs) override
+    {
+        for (auto &sink : sinks) {
+            sink->iterate(metric_snapshot(prototype()->name(),
+                                          prototype()->type(),
+                                          static_cast<metric_snapshot::value_type>(value()),
+                                          metric_snapshot::attr_map(attrs)));
+        }
+    }
+
 private:
     friend class metric_entity;
     friend class ref_ptr<my_gauge>;
@@ -51,6 +66,74 @@ private:
 
 using my_gauge_prototype = metric_prototype_with<my_gauge>;
 using my_gauge_ptr = ref_ptr<my_gauge>;
+
+class my_data_sink : public metric_data_sink
+{
+public:
+    using metric_map = std::map<string_view, std::map<std::string, metric_snapshot>>;
+    using counter_map = std::map<string_view, std::map<std::string, counter_snapshot>>;
+
+    my_data_sink(const std::string &target_attr_key)
+        : _mtx(), _target_attr_key(target_attr_key), _actual_metrics(), _actual_counters()
+    {
+    }
+
+    virtual ~my_data_sink() = default;
+
+    virtual void iterate(const metric_snapshot &snapshot) override
+    {
+        iterate(snapshot, _actual_metrics);
+    }
+
+    virtual void iterate(const counter_snapshot &snapshot) override
+    {
+        iterate(snapshot, _actual_counters);
+    }
+
+    void check_snapshots(const metric_map &expected_metrics,
+                         const counter_map &expected_counters) const
+    {
+        std::lock_guard<std::mutex> guard(_mtx);
+        check_snapshots(_actual_metrics, expected_metrics);
+        check_snapshots(_actual_counters, expected_counters);
+    }
+
+private:
+    template <typename SnapshotType, typename SnapshotMap>
+    void iterate(const SnapshotType &snapshot, SnapshotMap &map)
+    {
+        if (snapshot.attributes().find(_target_attr_key) == snapshot.attributes().end()) {
+            return;
+        }
+
+        std::lock_guard<std::mutex> guard(_mtx);
+        map[snapshot.name()][snapshot.encode_attributes()] = snapshot;
+    }
+
+    template <typename SnapshotMap>
+    void check_snapshots(const SnapshotMap &actual_map, const SnapshotMap &expected_map) const
+    {
+        ASSERT_EQ(actual_map, expected_map);
+
+        for (const auto &snapshots : actual_map) {
+            for (const auto &snapshot : snapshots.second) {
+                ASSERT_EQ(metric_snapshot::decode_attributes(snapshot.first),
+                          snapshot.second.attributes());
+            }
+        }
+    }
+
+    mutable std::mutex _mtx;
+
+    // _target_attr_key is used to mark that the snapshot from a metric should be taken for test.
+    const std::string _target_attr_key;
+
+    metric_map _actual_metrics;
+    counter_map _actual_counters;
+
+    DISALLOW_COPY_AND_ASSIGN(my_data_sink);
+};
+using my_data_sink_ptr = ref_ptr<my_data_sink>;
 
 } // namespace dsn
 
@@ -122,7 +205,38 @@ METRIC_DEFINE_percentile_double(my_server,
 
 namespace dsn {
 
-TEST(metrics_test, create_entity)
+class metrics_test : public testing::Test
+{
+public:
+    metrics_test() = default;
+    virtual ~metrics_test() = default;
+
+    void SetUp() override {}
+
+    void TearDown() override
+    {
+        _my_data_sink.reset();
+        metric_registry::instance().unregister_data_sinks();
+    }
+
+    void register_my_data_sink(const std::string &target_attr_key)
+    {
+        _my_data_sink =
+            metric_registry::instance().register_data_sink<my_data_sink>(target_attr_key);
+    }
+
+    void check_snapshots(const my_data_sink::metric_map &expected_metrics,
+                         const my_data_sink::counter_map &expected_counters) const
+    {
+        dassert_f(_my_data_sink.get() != nullptr, "_my_data_sink should not be null");
+        _my_data_sink->check_snapshots(expected_metrics, expected_counters);
+    }
+
+private:
+    my_data_sink_ptr _my_data_sink;
+};
+
+TEST_F(metrics_test, create_entity)
 {
     // Test cases:
     // - create an entity by instantiate(id) without any attribute
@@ -181,7 +295,7 @@ TEST(metrics_test, create_entity)
     ASSERT_EQ(metric_registry::instance().entities(), entities);
 }
 
-TEST(metrics_test, recreate_entity)
+TEST_F(metrics_test, recreate_entity)
 {
     // Test cases:
     // - add an attribute to an emtpy map
@@ -192,7 +306,7 @@ TEST(metrics_test, recreate_entity)
     {
         metric_entity::attr_map entity_attrs;
     } tests[] = {
-        {{{"name", "test"}}}, {{{"name", "test"}, {"id", "2"}}}, {{{"name", "test"}}}, {{{}}}};
+        {{{"name", "test"}}}, {{{"name", "test"}, {"id", "2"}}}, {{{"name", "test"}}}, {{}}};
 
     const std::string entity_id("test");
     auto expected_entity = METRIC_ENTITY_my_table.instantiate(entity_id);
@@ -209,7 +323,7 @@ TEST(metrics_test, recreate_entity)
     }
 }
 
-TEST(metrics_test, create_metric)
+TEST_F(metrics_test, create_metric)
 {
     auto my_server_entity = METRIC_ENTITY_my_server.instantiate("server_3");
     auto my_replica_entity =
@@ -263,7 +377,7 @@ TEST(metrics_test, create_metric)
     ASSERT_EQ(actual_entities, expected_entities);
 }
 
-TEST(metrics_test, recreate_metric)
+TEST_F(metrics_test, recreate_metric)
 {
     auto my_server_entity = METRIC_ENTITY_my_server.instantiate("server_4");
 
@@ -274,7 +388,7 @@ TEST(metrics_test, recreate_metric)
     ASSERT_EQ(my_metric->value(), 5);
 }
 
-TEST(metrics_test, gauge_int64)
+TEST_F(metrics_test, gauge_int64)
 {
     // Test cases:
     // - create a gauge of int64 type without initial value, then increase
@@ -315,7 +429,7 @@ TEST(metrics_test, gauge_int64)
     }
 }
 
-TEST(metrics_test, gauge_double)
+TEST_F(metrics_test, gauge_double)
 {
     // Test cases:
     // - create a gauge of double type without initial value, then increase
@@ -490,7 +604,7 @@ void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype)
     run_gauge_increment_cases(prototype, 4);
 }
 
-TEST(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_gauge_int64); }
+TEST_F(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_gauge_int64); }
 
 template <typename Adder>
 void run_counter_cases(dsn::counter_prototype<Adder> *prototype, int64_t num_threads)
@@ -535,7 +649,7 @@ void run_counter_cases(dsn::counter_prototype<Adder> *prototype)
     run_counter_cases(prototype, 4);
 }
 
-TEST(metrics_test, counter)
+TEST_F(metrics_test, counter)
 {
     // Test both kinds of counter
     run_counter_cases<striped_long_adder>(&METRIC_test_counter);
@@ -625,7 +739,8 @@ void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototyp
     for (const auto &test : tests) {
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
 
-        auto my_metric = prototype->instantiate(my_server_entity);
+        auto my_metric =
+            prototype->instantiate(my_server_entity, false /* take_snapshot_for_volatile */);
 
         run_volatile_counter_write_and_read(
             my_metric, test.num_operations, num_threads_write, num_threads_read);
@@ -653,7 +768,7 @@ void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototyp
     run_volatile_counter_cases(prototype, 4, 2);
 }
 
-TEST(metrics_test, volatile_counter)
+TEST_F(metrics_test, volatile_counter)
 {
     // Test both kinds of volatile counter
     run_volatile_counter_cases<striped_long_adder>(&METRIC_test_volatile_counter);
@@ -866,7 +981,7 @@ public:
     }
 };
 
-TEST(metrics_test, percentile_int64)
+TEST_F(metrics_test, percentile_int64)
 {
     using value_type = int64_t;
     run_percentile_cases<value_type,
@@ -894,13 +1009,186 @@ public:
     }
 };
 
-TEST(metrics_test, percentile_double)
+TEST_F(metrics_test, percentile_double)
 {
     using value_type = double;
     run_percentile_cases<value_type,
                          floating_percentile_prototype<value_type>,
                          floating_percentile_case_generator<value_type>,
                          floating_checker<value_type>>(METRIC_test_percentile_double);
+}
+
+template <typename MetricType, typename ValueType>
+void generate_snapshots(MetricType *my_metric,
+                        ValueType value,
+                        const metric_entity::attr_map &entity_attrs,
+                        my_data_sink::metric_map &expected_snapshots)
+{
+    my_metric->set(value);
+
+    metric_snapshot snapshot(my_metric->prototype()->name(),
+                             my_metric->prototype()->type(),
+                             static_cast<metric_snapshot::value_type>(value),
+                             metric_snapshot::attr_map(entity_attrs));
+    expected_snapshots[my_metric->prototype()->name()][snapshot.encode_attributes()] =
+        std::move(snapshot);
+}
+
+template <typename MetricType>
+void generate_snapshots(MetricType *my_metric,
+                        int64_t increase,
+                        const metric_entity::attr_map &entity_attrs,
+                        my_data_sink::counter_map &expected_snapshots)
+{
+    my_metric->increment_by(increase);
+
+    // `increase` will be 0 for the second time the snapshot is taken, since the metric
+    // is just incremented for one time. Thus expected `increase` should be set to 0.
+    counter_snapshot snapshot(my_metric->prototype()->name(),
+                              my_metric->prototype()->type(),
+                              static_cast<metric_snapshot::value_type>(increase),
+                              metric_snapshot::attr_map(entity_attrs),
+                              static_cast<metric_snapshot::value_type>(0));
+    expected_snapshots[my_metric->prototype()->name()][snapshot.encode_attributes()] =
+        std::move(snapshot);
+}
+
+template <typename MetricType, typename CaseGenerator>
+void generate_snapshots(MetricType *my_metric,
+                        CaseGenerator &generator,
+                        uint64_t interval_ms,
+                        uint64_t exec_ms,
+                        const std::set<kth_percentile_type> &kth_percentiles,
+                        const metric_entity::attr_map &entity_attrs,
+                        my_data_sink::metric_map &expected_snapshots)
+{
+    using value_type = typename MetricType::value_type;
+
+    std::vector<value_type> data;
+    std::vector<value_type> values;
+    generator(data, values);
+
+    for (const auto &elem : data) {
+        my_metric->set(elem);
+    }
+
+    // Wait a while in order that computations for all percentiles can be finished.
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(my_metric->get_initial_delay_ms() + interval_ms + exec_ms));
+
+    auto kth_labels = kth_percentiles_to_labels(kth_percentiles);
+    ASSERT_EQ(kth_labels.size(), values.size());
+
+    auto val_itr = values.begin();
+    for (const auto &kth_label : kth_labels) {
+        // Add label for each percentile type to expected attributes.
+        metric_snapshot::attr_map labels({{"p", kth_label}});
+        labels.insert(entity_attrs.begin(), entity_attrs.end());
+
+        metric_snapshot snapshot(my_metric->prototype()->name(),
+                                 my_metric->prototype()->type(),
+                                 static_cast<metric_snapshot::value_type>(*val_itr++),
+                                 std::move(labels));
+        expected_snapshots[my_metric->prototype()->name()][snapshot.encode_attributes()] =
+            std::move(snapshot);
+    }
+}
+
+TEST_F(metrics_test, metric_data_sink)
+{
+    // Mark that all snapshots taken in this test should be verified in by my_data_sink.
+    const std::string target_attr_key("_DEDICATED_FOR_DATA_SINK_TEST");
+    register_my_data_sink(target_attr_key);
+
+    struct test_case
+    {
+        std::string entity_id;
+        metric_entity::attr_map entity_attrs;
+        int64_t gauge_int64_value;
+        double gauge_double_value;
+        int64_t counter_increase;
+        uint64_t percentile_interval_ms;
+        std::set<kth_percentile_type> kth_percentiles;
+        size_t percentile_sample_size;
+        size_t percentile_data_size;
+        uint64_t percentile_exec_ms;
+    } tests[] = {{"server_60",
+                  {{"empty_value", ""}, {"hello", "world"}},
+                  5,
+                  6.789,
+                  10,
+                  50,
+                  kAllKthPercentileTypes,
+                  4096,
+                  4096,
+                  10}};
+
+    my_data_sink::metric_map expected_metrics;
+    my_data_sink::counter_map expected_counters;
+    for (const auto &test : tests) {
+        auto attrs = test.entity_attrs;
+        attrs[target_attr_key] = std::string();
+
+        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id, attrs);
+
+        // Attribute "entity" is reserved and created by entity. Thus it should also be added to
+        // expected attributes for comparison with actual ones.
+        attrs["entity"] = METRIC_ENTITY_my_server.name();
+
+        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_server_entity);
+        generate_snapshots(my_gauge_int64.get(), test.gauge_int64_value, attrs, expected_metrics);
+
+        auto my_gauge_double = METRIC_test_gauge_double.instantiate(my_server_entity);
+        generate_snapshots(my_gauge_double.get(), test.gauge_double_value, attrs, expected_metrics);
+
+        auto my_counter = METRIC_test_counter.instantiate(my_server_entity);
+        generate_snapshots(my_counter.get(), test.counter_increase, attrs, expected_counters);
+
+        auto my_concurrent_counter = METRIC_test_concurrent_counter.instantiate(my_server_entity);
+        generate_snapshots(
+            my_concurrent_counter.get(), test.counter_increase, attrs, expected_counters);
+
+        auto my_percentile_int64 =
+            METRIC_test_percentile_int64.instantiate(my_server_entity,
+                                                     test.percentile_interval_ms,
+                                                     test.kth_percentiles,
+                                                     test.percentile_sample_size);
+        integral_percentile_case_generator<int64_t> int64_generator(test.percentile_data_size,
+                                                                    int64_t() /* initial_value */,
+                                                                    5 /* range_size */,
+                                                                    test.kth_percentiles);
+        generate_snapshots(my_percentile_int64.get(),
+                           int64_generator,
+                           test.percentile_interval_ms,
+                           test.percentile_exec_ms,
+                           test.kth_percentiles,
+                           attrs,
+                           expected_metrics);
+
+        auto my_percentile_double =
+            METRIC_test_percentile_double.instantiate(my_server_entity,
+                                                      test.percentile_interval_ms,
+                                                      test.kth_percentiles,
+                                                      test.percentile_sample_size);
+        floating_percentile_case_generator<double> double_generator(test.percentile_data_size,
+                                                                    double() /* initial_value */,
+                                                                    5 /* range_size */,
+                                                                    test.kth_percentiles);
+        generate_snapshots(my_percentile_double.get(),
+                           double_generator,
+                           test.percentile_interval_ms,
+                           test.percentile_exec_ms,
+                           test.kth_percentiles,
+                           attrs,
+                           expected_metrics);
+    }
+
+    // Wait for a period of time that will be long enough to finish taking snapshots from all
+    // metrics by the timer of registry.
+    std::this_thread::sleep_for(std::chrono::milliseconds(FLAGS_collect_metrics_interval_ms * 4));
+
+    // Verify if actual snapshots taken from metrics are matched with expected ones.
+    check_snapshots(expected_metrics, expected_counters);
 }
 
 } // namespace dsn

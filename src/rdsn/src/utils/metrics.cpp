@@ -17,12 +17,23 @@
 
 #include <dsn/utility/metrics.h>
 
+#include <iterator>
+
+#include <boost/algorithm/string/join.hpp>
+
 #include <dsn/c/api_utilities.h>
+#include <dsn/utility/flags.h>
 #include <dsn/utility/rand.h>
+#include <dsn/utility/strings.h>
 
 #include "shared_io_service.h"
 
 namespace dsn {
+
+DSN_DEFINE_uint64("pegasus.server",
+                  collect_metrics_interval_ms,
+                  10000,
+                  "interval(ms) at which metrics are taken snapshots and collected to data sink");
 
 std::set<kth_percentile_type> get_all_kth_percentile_types()
 {
@@ -33,8 +44,20 @@ std::set<kth_percentile_type> get_all_kth_percentile_types()
     return all_types;
 }
 
+std::set<std::string>
+kth_percentiles_to_labels(const std::set<kth_percentile_type> &kth_percentiles)
+{
+    std::set<std::string> labels;
+    std::transform(
+        kth_percentiles.begin(),
+        kth_percentiles.end(),
+        std::inserter(labels, labels.begin()),
+        [](const kth_percentile_type &type) { return kKthLabels[static_cast<size_t>(type)]; });
+    return labels;
+}
+
 metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
-    : _id(id), _attrs(std::move(attrs))
+    : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
 {
 }
 
@@ -49,7 +72,7 @@ metric_entity::~metric_entity()
 
 void metric_entity::close(close_option option)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
 
     // The reason why each metric is closed in the entity rather than in the destructor of each
     // metric is that close() for the metric will return immediately without waiting for any close
@@ -80,20 +103,29 @@ void metric_entity::close(close_option option)
 
 metric_entity::attr_map metric_entity::attributes() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
     return _attrs;
 }
 
 metric_entity::metric_map metric_entity::metrics() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
     return _metrics;
 }
 
 void metric_entity::set_attributes(attr_map &&attrs)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
     _attrs = std::move(attrs);
+}
+
+void metric_entity::collect_metrics(const std::vector<metric_data_sink_ptr> &sinks)
+{
+    utils::auto_read_lock l(_lock);
+
+    for (auto &m : _metrics) {
+        m.second->take_snapshot(sinks, _attrs);
+    }
 }
 
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id,
@@ -114,19 +146,23 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
-metric_registry::metric_registry()
+metric_registry::metric_registry() : _lock(), _sinks(), _entities(), _timer()
 {
     // We should ensure that metric_registry is destructed before shared_io_service is destructed.
     // Once shared_io_service is destructed before metric_registry is destructed,
-    // boost::asio::io_service needed by metrics in metric_registry such as percentile_timer will
+    // boost::asio::io_service needed by metrics in metric_registry such as metric_timer will
     // be released firstly, then will lead to heap-use-after-free error since percentiles in
     // metric_registry are still running but the resources they needed have been released.
     tools::shared_io_service::instance();
+
+    _timer.reset(new metric_timer(FLAGS_collect_metrics_interval_ms,
+                                  std::bind(&metric_registry::collect_metrics, this),
+                                  std::bind(&metric_registry::on_close, this)));
 }
 
 metric_registry::~metric_registry()
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
 
     // Once the registery is chosen to be destructed, all of the entities and metrics owned by it
     // will no longer be needed.
@@ -142,19 +178,54 @@ metric_registry::~metric_registry()
     for (auto &entity : _entities) {
         entity.second->close(metric_entity::close_option::kNoWait);
     }
+
+    _timer->close();
+    _timer->wait();
 }
+
+void metric_registry::on_close() {}
 
 metric_registry::entity_map metric_registry::entities() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
 
     return _entities;
 }
 
+namespace {
+
+// Since attributes may be encoded in some special characters, it's necessary to check if
+// key or value has included these reserved characters.
+void check_attribute_valid(const std::string &key, const std::string &value)
+{
+    dassert_f(!key.empty(), "attribute key should not be empty()");
+    dassert_f(
+        key.find('|') == std::string::npos, "invalid character '|' in attribute key \"{}\"", key);
+    dassert_f(
+        key.find('=') == std::string::npos, "invalid character '=' in attribute key \"{}\"", key);
+    dassert_f(value.find('|') == std::string::npos,
+              "invalid character '|' in attribute value \"{}\"",
+              value);
+    dassert_f(value.find('=') == std::string::npos,
+              "invalid character '=' in attribute value \"{}\"",
+              value);
+}
+
+void check_attributes_valid(const metric_entity::attr_map &attrs)
+{
+    for (const auto &kv : attrs) {
+        check_attribute_valid(kv.first, kv.second);
+    }
+}
+
+} // anonymous namespace
+
 metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
                                                          metric_entity::attr_map &&attrs)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    check_attributes_valid(attrs);
+
+    utils::auto_write_lock l(_lock);
 
     entity_map::const_iterator iter = _entities.find(id);
 
@@ -170,6 +241,15 @@ metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
     return entity;
 }
 
+void metric_registry::collect_metrics()
+{
+    utils::auto_read_lock l(_lock);
+
+    for (auto &entity : _entities) {
+        entity.second->collect_metrics(_sinks);
+    }
+}
+
 metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}
 
 metric_prototype::~metric_prototype() {}
@@ -178,7 +258,82 @@ metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 
-uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
+metric_snapshot::metric_snapshot(const string_view &name,
+                                 metric_type type,
+                                 value_type value,
+                                 attr_map &&attrs)
+    : _name(name), _type(type), _value(value), _attrs(std::move(attrs))
+{
+}
+
+std::string metric_snapshot::encode_attributes() const
+{
+    std::vector<std::string> kvs;
+    std::transform(
+        _attrs.begin(), _attrs.end(), std::back_inserter(kvs), [](const attr_map::value_type &kv) {
+            return fmt::format("{}={}", kv.first, kv.second);
+        });
+    return boost::join(kvs, "|");
+}
+
+metric_snapshot::attr_map metric_snapshot::decode_attributes(const std::string &str)
+{
+    std::vector<std::string> kvs;
+    utils::split_args(str.c_str(), kvs, '|');
+
+    attr_map attrs;
+    for (const auto &elem : kvs) {
+        std::vector<std::string> kv;
+        utils::split_args(elem.c_str(), kv, '=', true);
+        dcheck_eq(kv.size(), 2);
+
+        attrs[kv[0]] = kv[1];
+    }
+    return attrs;
+}
+
+bool metric_snapshot::operator==(const metric_snapshot &rhs) const
+{
+    if (_name != rhs._name) {
+        return false;
+    }
+
+    if (_type != rhs._type) {
+        return false;
+    }
+
+    floating_comparator<value_type> comp;
+    if (comp(_value, rhs._value) || comp(rhs._value, _value)) {
+        return false;
+    }
+
+    return _attrs == rhs._attrs;
+}
+
+bool metric_snapshot::operator!=(const metric_snapshot &rhs) const { return !(*this == rhs); }
+
+counter_snapshot::counter_snapshot(const string_view &name,
+                                   metric_type type,
+                                   value_type value,
+                                   attr_map &&attrs,
+                                   value_type increase)
+    : metric_snapshot(name, type, value, std::move(attrs)), _increase(increase)
+{
+}
+
+bool counter_snapshot::operator==(const counter_snapshot &rhs) const
+{
+    if (metric_snapshot::operator!=(rhs)) {
+        return false;
+    }
+
+    floating_comparator<value_type> comp;
+    return !(comp(_increase, rhs._increase) || comp(rhs._increase, _increase));
+}
+
+bool counter_snapshot::operator!=(const counter_snapshot &rhs) const { return !(*this == rhs); }
+
+uint64_t metric_timer::generate_initial_delay_ms(uint64_t interval_ms)
 {
     dcheck_gt(interval_ms, 0);
 
@@ -190,7 +345,7 @@ uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
     return (rand::next_u64() % interval_seconds + 1) * 1000 + rand::next_u64() % 1000;
 }
 
-percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close)
+metric_timer::metric_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close)
     : _initial_delay_ms(generate_initial_delay_ms(interval_ms)),
       _interval_ms(interval_ms),
       _on_exec(on_exec),
@@ -200,10 +355,10 @@ percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_
       _timer(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios))
 {
     _timer->expires_from_now(boost::posix_time::milliseconds(_initial_delay_ms));
-    _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+    _timer->async_wait(std::bind(&metric_timer::on_timer, this, std::placeholders::_1));
 }
 
-void percentile_timer::close()
+void metric_timer::close()
 {
     // If the timer has already expired when cancel() is called, then the handlers for asynchronous
     // wait operations will:
@@ -220,15 +375,15 @@ void percentile_timer::close()
     }
 }
 
-void percentile_timer::wait() { _completed.wait(); }
+void metric_timer::wait() { _completed.wait(); }
 
-void percentile_timer::on_close()
+void metric_timer::on_close()
 {
     _on_close();
     _completed.notify();
 }
 
-void percentile_timer::on_timer(const boost::system::error_code &ec)
+void metric_timer::on_timer(const boost::system::error_code &ec)
 {
 // This macro is defined for the case that handlers for asynchronous wait operations are no
 // longer cancelled. It just checks the internal state atomically (since close() can also be
@@ -251,7 +406,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
         // Cancel can only be launched by close().
         auto expected_state = state::kClosing;
         dassert_f(_state.compare_exchange_strong(expected_state, state::kClosed),
-                  "wrong state for percentile_timer: {}, while expecting closing state",
+                  "wrong state for metric_timer: {}, while expecting closing state",
                   static_cast<int>(expected_state));
         on_close();
 
@@ -263,18 +418,8 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
 
     TRY_PROCESS_TIMER_CLOSING();
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
-    _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+    _timer->async_wait(std::bind(&metric_timer::on_timer, this, std::placeholders::_1));
 #undef TRY_PROCESS_TIMER_CLOSING
-}
-
-template <>
-gauge<int64_t>::gauge(const metric_prototype *prototype) : gauge(prototype, 0)
-{
-}
-
-template <>
-gauge<double>::gauge(const metric_prototype *prototype) : gauge(prototype, 0.0)
-{
 }
 
 } // namespace dsn
