@@ -37,8 +37,6 @@ typedef std::unordered_map<::dsn::rpc_address, dsn::task_ptr> node_tasks;
 
 typedef rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>
     update_app_env_rpc;
-typedef rpc_holder<update_node_configuration_request, update_node_configuration_response>
-    update_node_configuration_rpc;
 typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
 typedef rpc_holder<query_replica_info_request, query_replica_info_response> query_replica_info_rpc;
 

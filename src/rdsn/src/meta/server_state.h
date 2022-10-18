@@ -212,8 +212,6 @@ private:
     // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
 
-    error_code update_node_configuration(const std::vector<dsn::rpc_address> &replica_nodes);
-
     error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &node_list,
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
