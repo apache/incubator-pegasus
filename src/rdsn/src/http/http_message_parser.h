@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <dsn/utility/ports.h>
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/tool-api/message_parser.h>
+#include "utils/ports.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/message_parser.h"
 #include <vector>
 #include <queue>
 

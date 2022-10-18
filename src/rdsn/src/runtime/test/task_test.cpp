@@ -15,10 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/task_code.h>
+#include "runtime/task/task.h"
+#include "runtime/task/task_code.h"
+
 #include <gtest/gtest.h>
-#include <dsn/tool-api/file_io.h>
+#include "aio/file_io.h"
 
 namespace dsn {
 

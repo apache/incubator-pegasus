@@ -25,7 +25,7 @@
 #include <model/fds_object_summary.h>
 #include <model/fds_object_listing.h>
 #include <model/delete_multi_objects_result.h>
-#include <dsn/utility/error_code.h>
+#include "utils/error_code.h"
 #include <Poco/Net/HTTPResponse.h>
 
 #include <boost/scoped_ptr.hpp>
@@ -34,12 +34,12 @@
 #include <memory>
 #include <fstream>
 #include <string.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/safe_strerror_posix.h>
-#include <dsn/utility/TokenBucket.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include "utils/defer.h"
+#include "utils/filesystem.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/TokenBucket.h"
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace dist {

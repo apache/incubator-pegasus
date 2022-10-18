@@ -24,13 +24,14 @@
  * THE SOFTWARE.
  */
 
+#include "network.h"
+
 #include "message_parser_manager.h"
 #include "runtime/rpc/rpc_engine.h"
 
-#include <dsn/tool-api/network.h>
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/flags.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/factory_store.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>

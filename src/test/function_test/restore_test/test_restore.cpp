@@ -19,9 +19,9 @@
 
 #include <libgen.h>
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "client/replication_ddl_client.h"
 #include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 #include <boost/lexical_cast.hpp>

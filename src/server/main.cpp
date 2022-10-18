@@ -26,11 +26,11 @@
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 
-#include <dsn/tool_api.h>
-#include <dsn/tool-api/command_manager.h>
+#include "runtime/tool_api.h"
+#include "utils/command_manager.h"
 
-#include <dsn/dist/replication/replication_service_app.h>
-#include <dsn/dist/replication/meta_service_app.h>
+#include "replica/replication_service_app.h"
+#include "meta/meta_service_app.h"
 
 #include <cstdio>
 #include <cstring>

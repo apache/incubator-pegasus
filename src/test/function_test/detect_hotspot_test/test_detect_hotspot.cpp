@@ -19,9 +19,13 @@
 
 #include <gtest/gtest.h>
 
-#include <dsn/service_api_c.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/utility/filesystem.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "client/replication_ddl_client.h"
+#include "utils/filesystem.h"
 
 #include "include/pegasus/client.h"
 #include "include/pegasus/error.h"

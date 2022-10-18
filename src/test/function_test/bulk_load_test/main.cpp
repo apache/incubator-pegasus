@@ -19,7 +19,7 @@
 
 #include <gtest/gtest.h>
 
-#include "dsn/service_api_c.h"
+#include "runtime/app_model.h"
 
 GTEST_API_ int main(int argc, char **argv)
 {

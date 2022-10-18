@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/aio_task.h>
-#include <dsn/utility/flags.h>
+#include "utils/fmt_logging.h"
+#include "aio/aio_task.h"
+#include "utils/flags.h"
 
 #include "disk_engine.h"
 #include "runtime/service_engine.h"

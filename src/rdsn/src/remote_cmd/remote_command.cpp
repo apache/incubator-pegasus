@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/remote_command.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/cpp/rpc_holder.h>
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/smart_pointers.h>
+#include "remote_cmd/remote_command.h"
+#include "utils/command_manager.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/api_layer1.h"
+#include "utils/smart_pointers.h"
 
 #include "command_types.h"
 

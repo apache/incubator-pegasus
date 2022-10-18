@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replication_service_app.h>
+#include "replica/replication_service_app.h"
 using ::dsn::replication::replication_service_app;
 using ::dsn::error_code;
 

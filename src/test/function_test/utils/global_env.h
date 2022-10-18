@@ -22,7 +22,7 @@
 #include <string>
 #include <sstream>
 
-#include "dsn/utility/singleton.h"
+#include "utils/singleton.h"
 
 class global_env : public dsn::utils::singleton<global_env>
 {

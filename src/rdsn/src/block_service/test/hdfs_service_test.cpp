@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/block_service.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/rand.h>
+#include "block_service/block_service.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/rand.h"
 #include <fstream>
 #include <gtest/gtest.h>
 #include <memory>

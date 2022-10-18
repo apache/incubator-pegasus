@@ -18,8 +18,8 @@
 #include "meta_test_base.h"
 #include "meta/meta_service.h"
 
-#include <dsn/utility/fail_point.h>
-#include <runtime/rpc/network.sim.h>
+#include "utils/fail_point.h"
+#include "runtime/rpc/network.sim.h"
 
 namespace dsn {
 namespace replication {

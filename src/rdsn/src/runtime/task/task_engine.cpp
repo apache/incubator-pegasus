@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/command_manager.h>
+#include "utils/fmt_logging.h"
+#include "utils/command_manager.h"
 #include <fmt/format.h>
 
 #include "task_engine.h"

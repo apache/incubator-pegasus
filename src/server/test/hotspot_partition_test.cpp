@@ -19,7 +19,7 @@
 
 #include "pegasus_server_test_base.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 
 namespace pegasus {
 namespace server {

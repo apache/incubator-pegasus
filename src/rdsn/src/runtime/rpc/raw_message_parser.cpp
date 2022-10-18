@@ -32,9 +32,13 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 #include "raw_message_parser.h"
-#include <dsn/service_api_c.h>
-#include <dsn/tool-api/task_spec.h>
-#include <dsn/tool-api/network.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "runtime/task/task_spec.h"
+#include "network.h"
 
 namespace dsn {
 

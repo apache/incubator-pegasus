@@ -108,7 +108,7 @@ jobs:
         run: |
           mv thirdparty/hadoop-bin ./
           rm -rf thirdparty
-          tar -zcvhf release__builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release__builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -222,7 +222,7 @@ jobs:
         run: |
           mv thirdparty/hadoop-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_address_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release_address_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -341,7 +341,7 @@ jobs:
 #        run: |
 #          mv thirdparty/hadoop-bin ./
 #          rm -rf thirdparty
-#          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+#          tar -zcvhf release_undefined_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v3
 #        with:
@@ -457,7 +457,7 @@ jobs:
         run: |
           mv thirdparty/hadoop-bin ./
           rm -rf thirdparty
-          tar -zcvhf release_jemalloc_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
+          tar -zcvhf release_jemalloc_builder.tar src/builder/output src/builder/bin src/builder/src/server/test/config.ini hadoop-bin --exclude='*CMakeFiles*'
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:

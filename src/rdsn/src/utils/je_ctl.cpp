@@ -25,8 +25,8 @@
 #include <boost/algorithm/string/join.hpp>
 #include <jemalloc/jemalloc.h>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
 
 #define RETURN_ARRAY_ELEM_BY_ENUM_TYPE(type, array)                                                \
     do {                                                                                           \

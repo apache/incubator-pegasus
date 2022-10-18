@@ -34,8 +34,8 @@
  */
 
 #include "runtime/message_utils.cpp"
-#include <dsn/utility/crc.h>
-#include <dsn/tool-api/rpc_message.h>
+#include "utils/crc.h"
+#include "runtime/rpc/rpc_message.h"
 #include <gtest/gtest.h>
 
 using namespace ::dsn;

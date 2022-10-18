@@ -17,14 +17,20 @@
 
 #include <string>
 
-#include <dsn/c/api_layer1.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/utility/config_api.h>
-#include <dsn/utility/output_utils.h>
-#include <dsn/utils/time_utils.h>
+#include "runtime/api_layer1.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/replica_envs.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "common//duplication_common.h"
+#include "utils/config_api.h"
+#include "utils/output_utils.h"
+#include "utils/time_utils.h"
 
 #include "meta_http_service.h"
 #include "meta_server_failure_detector.h"

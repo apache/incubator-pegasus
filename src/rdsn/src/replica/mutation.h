@@ -38,8 +38,8 @@
 #include "common/replication_common.h"
 #include <list>
 #include <atomic>
-#include <dsn/utility/link.h>
-#include <dsn/utils/latency_tracer.h>
+#include "utils/link.h"
+#include "utils/latency_tracer.h"
 
 namespace dsn {
 namespace replication {

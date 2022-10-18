@@ -20,7 +20,7 @@
 #include "pegasus_event_listener.h"
 #include "logging_utils.h"
 
-#include <dsn/c/api_utilities.h>
+#include "utils/api_utilities.h"
 
 namespace pegasus {
 namespace server {

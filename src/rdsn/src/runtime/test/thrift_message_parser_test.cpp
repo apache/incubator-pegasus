@@ -16,10 +16,10 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/utility/crc.h>
-#include <dsn/utility/endians.h>
-#include <dsn/cpp/serialization_helper/thrift_helper.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
+#include "utils/crc.h"
+#include "utils/endians.h"
+#include "common/serialization_helper/thrift_helper.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
 
 #include "runtime/rpc/thrift_message_parser.h"
 

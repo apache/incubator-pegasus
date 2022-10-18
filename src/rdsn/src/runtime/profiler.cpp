@@ -47,13 +47,17 @@ START<== queue(server) == ENQUEUE <===== net(reply) ======= REPLY <=============
   \/
  END
 */
-#include <dsn/toollet/profiler.h>
-#include <dsn/service_api_c.h>
-#include <dsn/tool-api/aio_task.h>
+#include "runtime/profiler.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "aio/aio_task.h"
 #include "utils/shared_io_service.h"
 #include "profiler_header.h"
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "utils/command_manager.h"
+#include "perf_counter/perf_counter_wrapper.h"
 
 namespace dsn {
 namespace tools {

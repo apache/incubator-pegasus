@@ -22,9 +22,9 @@
 #include "pegasus_write_service_impl.h"
 #include "capacity_unit_calculator.h"
 
-#include <dsn/cpp/message_utils.h>
-#include <dsn/dist/replication/replication.codes.h>
-#include <dsn/utility/defer.h>
+#include "runtime/message_utils.h"
+#include "common/replication.codes.h"
+#include "utils/defer.h"
 
 namespace pegasus {
 namespace server {

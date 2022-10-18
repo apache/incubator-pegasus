@@ -17,11 +17,11 @@
 
 #include "hotkey_collector.h"
 
-#include <dsn/dist/replication/replication_enums.h>
-#include <dsn/utility/smart_pointers.h>
+#include "common/replication_enums.h"
+#include "utils/smart_pointers.h"
 #include <boost/functional/hash.hpp>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 

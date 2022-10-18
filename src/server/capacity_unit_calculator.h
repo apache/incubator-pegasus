@@ -19,8 +19,9 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replica_base.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "replica/replica_base.h"
+#include "runtime/rpc/rpc_message.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include <rrdb/rrdb_types.h>
 
 namespace dsn {

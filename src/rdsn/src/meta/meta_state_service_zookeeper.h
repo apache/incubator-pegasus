@@ -34,11 +34,11 @@
 
 #pragma once
 
-#include <dsn/utility/synchronize.h>
-#include <dsn/utility/autoref_ptr.h>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/dist/meta_state_service.h>
-#include <dsn/dist/distributed_lock_service.h>
+#include "utils/synchronize.h"
+#include "utils/autoref_ptr.h"
+#include "runtime/task/task_tracker.h"
+#include "meta/meta_state_service.h"
+#include "utils/distributed_lock_service.h"
 
 namespace dsn {
 namespace dist {

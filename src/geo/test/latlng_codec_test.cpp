@@ -20,7 +20,7 @@
 #include <memory>
 #include <gtest/gtest.h>
 #include <geo/lib/latlng_codec.h>
-#include <dsn/utility/errors.h>
+#include "utils/errors.h"
 
 namespace pegasus {
 namespace geo {

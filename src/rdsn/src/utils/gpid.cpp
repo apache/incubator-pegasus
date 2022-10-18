@@ -23,8 +23,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <dsn/utility/fixed_size_buffer_pool.h>
-#include <dsn/tool-api/gpid.h>
+#include "utils/fixed_size_buffer_pool.h"
+#include "common/gpid.h"
 #include <cstring>
 
 namespace dsn {

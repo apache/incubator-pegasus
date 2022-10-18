@@ -17,9 +17,9 @@
 
 #include <iostream>
 #include <gtest/gtest.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/http/http_server.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "http/http_server.h"
+#include "utils/fail_point.h"
 
 #include "meta/meta_http_service.h"
 #include "meta/meta_service.h"

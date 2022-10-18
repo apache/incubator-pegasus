@@ -20,10 +20,10 @@
 #include "negotiation_manager.h"
 
 #include <boost/algorithm/string/join.hpp>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/flags.h>
+#include "utils/fmt_logging.h"
+#include "runtime/task/async_calls.h"
+#include "utils/smart_pointers.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace security {

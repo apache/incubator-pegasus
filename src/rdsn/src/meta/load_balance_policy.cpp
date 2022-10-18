@@ -18,9 +18,9 @@
 #include "load_balance_policy.h"
 #include "greedy_load_balancer.h"
 
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/command_manager.h"
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

@@ -20,10 +20,10 @@
 #include <fstream>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/preloadable.h>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/utils.h"
+#include "utils/preloadable.h"
+#include "utils/process_utils.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace utils {

@@ -34,7 +34,7 @@
  */
 
 #include "runtime/rpc/asio_net_provider.h"
-#include <dsn/tool/providers.common.h>
+#include "runtime/providers.common.h"
 #include "utils/lockp.std.h"
 #include "runtime/task/simple_task_queue.h"
 #include "runtime/task/hpc_task_queue.h"

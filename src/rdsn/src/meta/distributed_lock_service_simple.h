@@ -35,8 +35,8 @@
 
 #pragma once
 
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/dist/distributed_lock_service.h>
+#include "utils/zlocks.h"
+#include "utils/distributed_lock_service.h"
 
 namespace dsn {
 namespace dist {

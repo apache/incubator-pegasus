@@ -19,10 +19,10 @@
 
 #pragma once
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/rand.h>
-#include <dsn/utility/strings.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/rand.h"
+#include "utils/strings.h"
 
 #define RETRY_OPERATION(CLIENT_FUNCTION, RESULT)                                                   \
     do {                                                                                           \

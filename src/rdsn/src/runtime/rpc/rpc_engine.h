@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include <dsn/utility/synchronize.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/network.h>
-#include <dsn/tool-api/global_config.h>
+#include "utils/synchronize.h"
+#include "runtime/task/task.h"
+#include "network.h"
+#include "runtime/global_config.h"
 
 namespace dsn {
 

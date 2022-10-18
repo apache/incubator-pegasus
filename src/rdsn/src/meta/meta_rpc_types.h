@@ -17,8 +17,14 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/cpp/rpc_holder.h>
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "runtime/rpc/rpc_holder.h"
 
 namespace dsn {
 namespace replication {

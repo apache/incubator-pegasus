@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 #include "base/pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"
 #include "server/pegasus_server_write.h"

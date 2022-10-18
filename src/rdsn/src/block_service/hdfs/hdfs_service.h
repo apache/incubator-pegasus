@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <dsn/dist/block_service.h>
+#include "block_service/block_service.h"
 #include <hdfs/hdfs.h>
 
 namespace folly {

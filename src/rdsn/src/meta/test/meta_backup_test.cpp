@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
 #include <gtest/gtest.h>
 
 #include "common/backup_common.h"

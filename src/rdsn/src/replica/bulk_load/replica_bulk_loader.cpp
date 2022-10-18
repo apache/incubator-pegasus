@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/block_service.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/utility/filesystem.h>
+#include "block_service/block_service.h"
+#include "utils/fmt_logging.h"
+#include "replica/replication_app_base.h"
+#include "utils/fail_point.h"
+#include "utils/filesystem.h"
 
 #include "replica_bulk_loader.h"
 #include "replica/disk_cleaner.h"

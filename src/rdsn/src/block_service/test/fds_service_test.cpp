@@ -24,11 +24,11 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "dsn/dist/block_service.h"
-#include "dsn/dist/fmt_logging.h"
-#include "dsn/utility/filesystem.h"
-#include "dsn/utility/rand.h"
-#include "dsn/utility/utils.h"
+#include "block_service/block_service.h"
+#include "utils/fmt_logging.h"
+#include "utils/filesystem.h"
+#include "utils/rand.h"
+#include "utils/utils.h"
 
 using namespace dsn;
 using namespace dsn::dist::block_service;

@@ -24,22 +24,14 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
+#include "task_spec.h"
 
 #include <array>
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/task_spec.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/tool-api/threadpool_spec.h>
-#include <dsn/utility/smart_pointers.h>
+#include "utils/fmt_logging.h"
+#include "utils/command_manager.h"
+#include "utils/threadpool_spec.h"
+#include "utils/smart_pointers.h"
 
 namespace dsn {
 

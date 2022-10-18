@@ -18,13 +18,13 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 
-#include <dsn/utility/error_code.h>
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/utils.h>
+#include "utils/error_code.h"
+#include "utils/factory_store.h"
+#include "utils/filesystem.h"
+#include "utils/utils.h"
 
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/fmt_logging.h>
+#include "replica/replication_app_base.h"
+#include "utils/fmt_logging.h"
 
 #include "replica.h"
 #include "mutation_log.h"

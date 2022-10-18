@@ -19,7 +19,7 @@
 
 #include <fmt/format.h>
 
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace uri {

@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/http/http_server.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/output_utils.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/fmt_logging.h"
+#include "http/http_server.h"
+#include "utils/filesystem.h"
+#include "utils/output_utils.h"
+#include "utils/time_utils.h"
 
 #include "block_service/block_service_manager.h"
 #include "common/backup_common.h"

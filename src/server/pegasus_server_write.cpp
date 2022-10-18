@@ -17,9 +17,9 @@
  * under the License.
  */
 
-#include <dsn/cpp/message_utils.h>
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/utility/defer.h>
+#include "runtime/message_utils.h"
+#include "common//duplication_common.h"
+#include "utils/defer.h"
 
 #include "base/pegasus_key_schema.h"
 #include "pegasus_server_write.h"

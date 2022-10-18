@@ -26,11 +26,15 @@
 
 #include <gtest/gtest.h>
 
-#include <dsn/service_api_c.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/dist/nfs_node.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/filesystem.h"
+#include "runtime/task/task.h"
+#include "runtime/task/async_calls.h"
+#include "nfs/nfs_node.h"
 
 using namespace dsn;
 

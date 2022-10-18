@@ -30,11 +30,11 @@
 #include "replica_stub.h"
 #include "backup/replica_backup_manager.h"
 #include "duplication/replica_follower.h"
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/factory_store.h"
+#include "utils/filesystem.h"
+#include "replica/replication_app_base.h"
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

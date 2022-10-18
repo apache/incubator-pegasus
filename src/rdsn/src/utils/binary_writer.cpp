@@ -24,8 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/utils.h>
-#include <dsn/utility/binary_writer.h>
+#include "binary_writer.h"
+
+#include "utils.h"
 
 namespace dsn {
 int binary_writer::_reserved_size_per_buffer_static = 256;

@@ -23,8 +23,8 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <dsn/dist/replication/replica_test_utils.h>
-#include <dsn/utility/filesystem.h>
+#include "replica/replica_test_utils.h"
+#include "utils/filesystem.h"
 
 namespace pegasus {
 namespace server {

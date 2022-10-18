@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <dsn/cpp/pipeline.h>
-#include <dsn/dist/fmt_logging.h>
+#include "runtime/pipeline.h"
+#include "utils/fmt_logging.h"
 
 #include "meta_state_service_utils.h"
 

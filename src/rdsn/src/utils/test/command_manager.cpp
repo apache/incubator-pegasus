@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/command_manager.h>
+#include "utils/command_manager.h"
 #include <gtest/gtest.h>
 
 using namespace ::dsn;

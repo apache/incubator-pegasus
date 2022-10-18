@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/dist/fmt_logging.h>
+#include "common//duplication_common.h"
+#include "utils/fmt_logging.h"
 
 #include "replica_duplicator_manager.h"
 

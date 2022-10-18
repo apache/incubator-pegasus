@@ -17,18 +17,18 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include <dsn/utility/flags.h>
-#include <dsn/utility/config_api.h>
-#include <dsn/utility/singleton.h>
-#include <dsn/utility/errors.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/join_point.h>
-#include <dsn/c/api_utilities.h>
+#include "utils/flags.h"
+#include "utils/config_api.h"
+#include "utils/singleton.h"
+#include "utils/errors.h"
+#include "utils/string_conv.h"
+#include "utils/join_point.h"
+#include "utils/api_utilities.h"
 #include <boost/optional/optional.hpp>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 #include <map>
-#include <dsn/utility/output_utils.h>
+#include "utils/output_utils.h"
 
 namespace dsn {
 

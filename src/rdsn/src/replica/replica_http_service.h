@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/http/http_server.h>
+#include "http/http_server.h"
 
 #include "replica_stub.h"
 

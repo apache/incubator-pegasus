@@ -28,10 +28,10 @@
 
 #include <vector>
 #include <map>
-#include <dsn/utility/singleton.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/tool-api/rpc_address.h>
-#include <dsn/dist/replication/partition_resolver.h>
+#include "utils/singleton.h"
+#include "utils/zlocks.h"
+#include "utils/rpc_address.h"
+#include "client/partition_resolver.h"
 
 namespace dsn {
 namespace replication {

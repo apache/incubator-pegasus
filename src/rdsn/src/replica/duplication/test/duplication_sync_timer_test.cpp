@@ -18,8 +18,8 @@
 #include "replica/duplication/duplication_sync_timer.h"
 #include "duplication_test_base.h"
 
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/tool-api/rpc_message.h>
+#include "utils/command_manager.h"
+#include "runtime/rpc/rpc_message.h"
 
 namespace dsn {
 namespace replication {

@@ -28,9 +28,9 @@
 
 #include "aio_provider.h"
 
-#include <dsn/tool_api.h>
-#include <dsn/utility/synchronize.h>
-#include <dsn/utility/work_queue.h>
+#include "runtime/tool_api.h"
+#include "utils/synchronize.h"
+#include "utils/work_queue.h"
 
 namespace dsn {
 

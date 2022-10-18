@@ -17,7 +17,7 @@
 
 #include "partition_guardian.h"
 #include "server_load_balancer.h"
-#include <dsn/utils/time_utils.h>
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace replication {

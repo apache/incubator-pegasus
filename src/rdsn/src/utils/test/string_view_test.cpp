@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <dsn/utility/string_view.h>
+#include "utils/string_view.h"
 
 #include <gtest/gtest.h>
 

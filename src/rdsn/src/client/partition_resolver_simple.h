@@ -26,11 +26,15 @@
 
 #pragma once
 
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/service_api_c.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
-#include <dsn/dist/replication/partition_resolver.h>
+#include "runtime/task/task_tracker.h"
+#include "utils/zlocks.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "client/partition_resolver.h"
 
 namespace dsn {
 namespace replication {

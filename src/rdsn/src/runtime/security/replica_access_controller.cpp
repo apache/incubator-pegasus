@@ -17,9 +17,9 @@
 
 #include "replica_access_controller.h"
 
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/network.h>
+#include "runtime/rpc/rpc_message.h"
+#include "utils/fmt_logging.h"
+#include "runtime/rpc/network.h"
 
 namespace dsn {
 namespace security {

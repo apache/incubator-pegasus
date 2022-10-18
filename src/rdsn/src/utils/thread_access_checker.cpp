@@ -23,9 +23,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <dsn/utility/process_utils.h>
-#include <dsn/tool-api/thread_access_checker.h>
-#include <dsn/c/api_utilities.h>
+#include "utils/process_utils.h"
+#include "utils/thread_access_checker.h"
+#include "utils/api_utilities.h"
 
 namespace dsn {
 

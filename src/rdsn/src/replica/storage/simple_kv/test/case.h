@@ -37,8 +37,8 @@
 
 #include "common.h"
 
-#include <dsn/utility/singleton.h>
-#include <dsn/tool-api/zlocks.h>
+#include "utils/singleton.h"
+#include "utils/zlocks.h"
 
 #include <fstream>
 

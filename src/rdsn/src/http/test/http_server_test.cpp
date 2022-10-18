@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/http/http_server.h>
 #include <gtest/gtest.h>
 
+#include "http/http_server.h"
 #include "http/http_message_parser.h"
 #include "http/builtin_http_calls.h"
 #include "http/http_call_registry.h"

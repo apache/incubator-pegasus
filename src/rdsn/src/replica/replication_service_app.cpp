@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/replication/replication_service_app.h>
-#include <dsn/http/http_server.h>
+#include "replica/replication_service_app.h"
+#include "http/http_server.h"
 
 #include "common/replication_common.h"
 #include "replica_stub.h"

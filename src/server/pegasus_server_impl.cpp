@@ -24,15 +24,15 @@
 #include <rocksdb/convenience.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/utilities/options_util.h>
-#include <dsn/utility/chrono_literals.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication.codes.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utils/token_bucket_throttling_controller.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include "utils/chrono_literals.h"
+#include "utils/utils.h"
+#include "utils/filesystem.h"
+#include "utils/string_conv.h"
+#include "utils/fmt_logging.h"
+#include "common/replication.codes.h"
+#include "utils/flags.h"
+#include "utils/token_bucket_throttling_controller.h"
+#include "common//duplication_common.h"
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_value_schema.h"

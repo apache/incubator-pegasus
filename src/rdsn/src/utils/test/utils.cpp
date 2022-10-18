@@ -33,16 +33,16 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/utils.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/binary_reader.h>
-#include <dsn/utility/binary_writer.h>
-#include <dsn/utility/link.h>
-#include <dsn/utility/crc.h>
-#include <dsn/utility/autoref_ptr.h>
-#include <dsn/c/api_layer1.h>
+#include "utils/utils.h"
+#include "utils/strings.h"
+#include "utils/binary_reader.h"
+#include "utils/binary_writer.h"
+#include "utils/link.h"
+#include "utils/crc.h"
+#include "utils/autoref_ptr.h"
+#include "runtime/api_layer1.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 
 using namespace ::dsn;
 using namespace ::dsn::utils;

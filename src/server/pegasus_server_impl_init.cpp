@@ -20,9 +20,9 @@
 #include "pegasus_server_impl.h"
 
 #include <unordered_map>
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 #include <rocksdb/filter_policy.h>
-#include <dsn/utils/token_bucket_throttling_controller.h>
+#include "utils/token_bucket_throttling_controller.h"
 
 #include "capacity_unit_calculator.h"
 #include "hashkey_transform.h"

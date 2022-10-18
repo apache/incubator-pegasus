@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/utility/defer.h>
+#include "common/replica_envs.h"
+#include "utils/defer.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 #include "runtime/rpc/network.sim.h"
 
 #include "common/backup_common.h"

@@ -21,9 +21,10 @@
 #include "rrdb.code.definition.h"
 #include "rrdb_types.h"
 #include <iostream>
-#include <dsn/utility/optional.h>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/dist/replication/partition_resolver.h>
+#include "utils/optional.h"
+#include "runtime/rpc/rpc_holder.h"
+#include "runtime/task/task_tracker.h"
+#include "client/partition_resolver.h"
 
 namespace dsn {
 namespace apps {

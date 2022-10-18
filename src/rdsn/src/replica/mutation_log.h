@@ -32,10 +32,10 @@
 #include "log_file.h"
 
 #include <atomic>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/utility/errors.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/replication/replica_base.h>
+#include "utils/zlocks.h"
+#include "utils/errors.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/replica_base.h"
 
 namespace dsn {
 namespace replication {

@@ -19,8 +19,14 @@
 
 #include "replica_duplicator.h"
 
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "common//duplication_common.h"
 
 #include "replica/replica.h"
 #include "replica/mutation_log.h"

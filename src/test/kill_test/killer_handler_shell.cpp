@@ -25,9 +25,9 @@
 #include <sstream>
 #include <fstream>
 
-#include "dsn/c/api_utilities.h"
-#include "dsn/dist/fmt_logging.h"
-#include "dsn/utility/config_api.h"
+#include "utils/api_utilities.h"
+#include "utils/config_api.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 namespace test {

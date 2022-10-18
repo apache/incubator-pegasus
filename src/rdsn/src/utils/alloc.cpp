@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/alloc.h>
+#include "utils/alloc.h"
 
 #include <cstdlib>
 
-#include <dsn/utility/safe_strerror_posix.h>
+#include "utils/safe_strerror_posix.h"
 
 namespace dsn {
 

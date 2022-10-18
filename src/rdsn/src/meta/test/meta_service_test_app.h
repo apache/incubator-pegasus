@@ -26,10 +26,29 @@
 
 #pragma once
 
-#include <dsn/service_api_cpp.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/meta_service_app.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/serverlet.h"
+#include "runtime/service_app.h"
+#include "utils/rpc_address.h"
+#include "runtime/task/async_calls.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "meta/meta_service_app.h"
 
 #include "meta/server_state.h"
 #include "meta/meta_service.h"

@@ -17,7 +17,7 @@
 
 #include "meta_test_base.h"
 
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 #include "meta/server_load_balancer.h"
 #include "meta/meta_server_failure_detector.h"

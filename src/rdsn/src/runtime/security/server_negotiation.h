@@ -19,7 +19,7 @@
 
 #include "negotiation.h"
 
-#include <dsn/utility/errors.h>
+#include "utils/errors.h"
 
 namespace dsn {
 namespace security {

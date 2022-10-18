@@ -20,8 +20,8 @@
 #include "runtime/rpc/network.sim.h"
 
 #include <gtest/gtest.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/flags.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace security {

@@ -18,7 +18,7 @@
 src/.matchfile
 src/base/rrdb_types.cpp
 src/include/rrdb/rrdb_types.h
-src/rdsn/include/dsn/cpp/serialization_helper/dsn.layer2_types.h
+src/rdsn/src/common/serialization_helper/dsn.layer2_types.h
 src/rdsn/src/runtime/dsn.layer2_types.cpp
 src/runtime
 src/*builder
@@ -38,7 +38,6 @@ src/include/pegasus/git_commit.h
 src/sample/data
 src/sample/pegasus_cpp_sample
 test_report
-DSN_ROOT
 *.config
 *.creator
 *.creator.*

@@ -27,7 +27,7 @@
 #include "replica/mutation_log.h"
 #include "replica_test_base.h"
 
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 #include <gtest/gtest.h>
 #include <chrono>
 #include <condition_variable>

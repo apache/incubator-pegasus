@@ -18,7 +18,7 @@
  */
 
 #include "result_writer.h"
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace server {

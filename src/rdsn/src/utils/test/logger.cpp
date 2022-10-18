@@ -35,7 +35,7 @@
 
 #include "utils/simple_logger.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 
 using namespace dsn;
 using namespace dsn::tools;

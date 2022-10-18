@@ -39,11 +39,6 @@ set(THIRDPARTY_ROOT ${PROJECT_ROOT}/thirdparty)
 set(THIRDPARTY_INSTALL_DIR ${PROJECT_ROOT}/thirdparty/output)
 message(STATUS "THIRDPARTY_INSTALL_DIR = ${THIRDPARTY_INSTALL_DIR}")
 
-# TODO(yingchun): we will remove it later
-# Set DSN_ROOT to ./DSN_ROOT, this is where rdsn will be installed
-set(DSN_ROOT ${PROJECT_ROOT}/DSN_ROOT)
-message(STATUS "DSN_ROOT = ${DSN_ROOT}")
-
 set(BUILD_DIR ${PROJECT_ROOT}/src/builder)
 message(STATUS "BUILD_DIR = ${BUILD_DIR}")
 

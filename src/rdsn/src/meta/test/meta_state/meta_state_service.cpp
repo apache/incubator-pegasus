@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/meta_state_service.h>
+#include "meta/meta_state_service.h"
 #include <boost/lexical_cast.hpp>
 
 #include <gtest/gtest.h>

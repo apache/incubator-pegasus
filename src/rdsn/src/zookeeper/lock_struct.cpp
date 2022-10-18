@@ -40,8 +40,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <dsn/tool-api/thread_access_checker.h>
-#include <dsn/tool-api/async_calls.h>
+#include "utils/thread_access_checker.h"
+#include "runtime/task/async_calls.h"
 
 #include "distributed_lock_service_zookeeper.h"
 #include "lock_struct.h"

@@ -38,7 +38,7 @@
 #include "case.h"
 #include "client.h"
 #include "simple_kv.server.impl.h"
-#include <dsn/http/http_server.h>
+#include "http/http_server.h"
 
 void dsn_app_registration_simple_kv()
 {

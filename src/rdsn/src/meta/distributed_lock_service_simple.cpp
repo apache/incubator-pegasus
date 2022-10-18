@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/tool-api/async_calls.h>
+#include "runtime/task/async_calls.h"
 
 #include "common/replication_common.h"
 #include "distributed_lock_service_simple.h"

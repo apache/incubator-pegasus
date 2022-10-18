@@ -31,8 +31,8 @@
  * Revision history:
  *     2015-12-04, @shengofsun (sunweijie@xiaomi.com)
  */
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/dist/replication/replication.codes.h>
+#include "runtime/task/async_calls.h"
+#include "common/replication.codes.h"
 
 #include <zookeeper/zookeeper.h>
 #include <boost/lexical_cast.hpp>

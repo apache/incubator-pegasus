@@ -26,21 +26,19 @@
 
 #include <regex>
 
-#include <dsn/perf_counter/perf_counter.h>
-#include <dsn/perf_counter/perf_counters.h>
-#include <dsn/perf_counter/perf_counter_utils.h>
+#include "perf_counter.h"
 
-#include <dsn/cpp/service_app.h>
-#include <dsn/cpp/json_helper.h>
-
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/utility/string_view.h>
-#include <dsn/utils/time_utils.h>
-
-#include "perf_counter_atomic.h"
 #include "builtin_counters.h"
+#include "common/json_helper.h"
+#include "perf_counter_atomic.h"
+#include "perf_counter_utils.h"
+#include "perf_counters.h"
+#include "runtime/service_app.h"
 #include "runtime/service_engine.h"
+#include "runtime/task/task.h"
+#include "utils/command_manager.h"
+#include "utils/string_view.h"
+#include "utils/time_utils.h"
 
 namespace dsn {
 

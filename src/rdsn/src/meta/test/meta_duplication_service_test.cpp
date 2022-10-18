@@ -25,9 +25,9 @@
  */
 
 #include <gtest/gtest.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/common.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/fmt_logging.h"
+#include "common/common.h"
+#include "utils/time_utils.h"
 
 #include "meta/server_load_balancer.h"
 #include "meta/meta_server_failure_detector.h"
@@ -37,7 +37,7 @@
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"
-#include "dsn/utility/fail_point.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

@@ -19,7 +19,7 @@
 #include "replica/test/replica_test_base.h"
 
 #include <gtest/gtest.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

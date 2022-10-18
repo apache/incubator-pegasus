@@ -15,11 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/replication/replication_types.h>
-#include <dsn/dist/replication/duplication_common.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/singleton.h>
-#include <dsn/utils/time_utils.h>
+#include "duplication_common.h"
+
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
+#include "utils/fmt_logging.h"
+#include "utils/singleton.h"
+#include "utils/time_utils.h"
 #include <nlohmann/json.hpp>
 
 namespace dsn {

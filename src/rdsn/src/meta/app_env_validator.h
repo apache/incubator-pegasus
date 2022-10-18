@@ -20,7 +20,7 @@
 #include <functional>
 #include <map>
 #include <string>
-#include <dsn/utility/singleton.h>
+#include "utils/singleton.h"
 
 namespace dsn {
 namespace replication {

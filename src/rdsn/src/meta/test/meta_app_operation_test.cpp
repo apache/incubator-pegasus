@@ -16,10 +16,14 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/service_api_c.h>
-#include <dsn/utility/defer.h>
+#include "utils/fmt_logging.h"
+#include "common/replica_envs.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/defer.h"
 
 #include "meta_service_test_app.h"
 #include "meta_test_base.h"

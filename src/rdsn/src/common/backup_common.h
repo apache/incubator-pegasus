@@ -18,9 +18,9 @@
 #pragma once
 
 #include <string>
-#include <dsn/tool-api/gpid.h>
+#include "common/gpid.h"
 #include "backup_types.h"
-#include <dsn/cpp/rpc_holder.h>
+#include "runtime/rpc/rpc_holder.h"
 
 namespace dsn {
 namespace replication {

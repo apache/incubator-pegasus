@@ -24,7 +24,7 @@
 #include <set>
 
 #include "shell/argh.h"
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 class rpc_address;

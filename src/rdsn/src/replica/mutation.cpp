@@ -36,8 +36,8 @@
 #include "mutation.h"
 #include "mutation_log.h"
 #include "replica.h"
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {

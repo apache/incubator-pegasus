@@ -17,8 +17,8 @@
 
 #include "duplication_pipeline.h"
 
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/fmt_logging.h>
+#include "replica/replication_app_base.h"
+#include "utils/fmt_logging.h"
 
 #include "replica/replica_stub.h"
 #include "load_from_private_log.h"

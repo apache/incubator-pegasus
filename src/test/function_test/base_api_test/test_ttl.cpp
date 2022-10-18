@@ -19,7 +19,7 @@
 
 #include <thread>
 
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "client/replication_ddl_client.h"
 #include "include/pegasus/client.h"
 #include <gtest/gtest.h>
 

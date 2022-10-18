@@ -22,9 +22,22 @@
 #include <s2/s2earth.h>
 #include <s2/s2region_coverer.h>
 #include <s2/s2cap.h>
-#include <dsn/service_api_cpp.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/errors.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/serverlet.h"
+#include "runtime/service_app.h"
+#include "utils/rpc_address.h"
+#include "utils/fmt_logging.h"
+#include "utils/errors.h"
 
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"

@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#include "value_schema_manager.h"
+#include "base/value_schema_manager.h"
+
 #include <gtest/gtest.h>
 
 using namespace pegasus;

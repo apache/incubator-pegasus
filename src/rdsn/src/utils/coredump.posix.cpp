@@ -25,10 +25,10 @@
  */
 
 #include "coredump.h"
-#include <dsn/tool_api.h>
+#include "runtime/tool_api.h"
 #include <sys/types.h>
 #include <signal.h>
-#include <dsn/c/app_model.h>
+#include "runtime/app_model.h"
 
 namespace dsn {
 namespace utils {

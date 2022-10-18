@@ -39,16 +39,16 @@ thrift_description = [
         "path": "idl",
         "include_fix": {
             "_types.h": {
-                "add": ["<dsn/cpp/serialization_helper/dsn_types.h>"],
-                "remove": ["\"dsn_types.h\""]
+                "add": ["\"runtime/rpc/serialization.h\""],
+                "remove": ["dsn_types.h"]
             },
             "_types.cpp": {
-                "add": ["<dsn/cpp/serialization_helper/dsn.layer2_types.h>"],
-                "remove": ["\"dsn.layer2_types.h\""]
+                "add": ["\"common/serialization_helper/dsn.layer2_types.h\""],
+                "remove": ["dsn.layer2_types.h"]
             }
         },
         "file_move": {
-            "_types.h": "src/rdsn/include/dsn/cpp/serialization_helper",
+            "_types.h": "src/rdsn/src/common/serialization_helper",
             "_types.cpp": "src/rdsn/src/runtime"
         }
     },

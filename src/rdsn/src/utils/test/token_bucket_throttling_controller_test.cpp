@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utils/token_bucket_throttling_controller.h>
+#include "utils/token_bucket_throttling_controller.h"
 #include <gtest/gtest.h>
 
 namespace dsn {

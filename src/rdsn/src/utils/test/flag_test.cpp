@@ -16,7 +16,7 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 #include <fmt/format.h>
 
 namespace dsn {

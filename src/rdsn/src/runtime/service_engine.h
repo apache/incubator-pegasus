@@ -37,13 +37,16 @@
 
 #include <sstream>
 
-#include <dsn/utility/ports.h>
-#include <dsn/utility/singleton.h>
-#include <dsn/utility/synchronize.h>
-#include <dsn/tool-api/global_config.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/cpp/service_app.h>
+#include "utils/ports.h"
+#include "utils/singleton.h"
+#include "utils/synchronize.h"
+#include "runtime/global_config.h"
+#include "runtime/task/task.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "runtime/service_app.h"
 
 namespace dsn {
 

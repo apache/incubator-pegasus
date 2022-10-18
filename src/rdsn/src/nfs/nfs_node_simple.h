@@ -34,8 +34,8 @@
  */
 #pragma once
 
-#include <dsn/tool_api.h>
-#include <dsn/dist/nfs_node.h>
+#include "runtime/tool_api.h"
+#include "nfs/nfs_node.h"
 
 namespace dsn {
 namespace service {

@@ -18,8 +18,8 @@
 #include <numeric>
 #include <algorithm>
 #include <math.h>
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/math.h>
+#include "utils/api_utilities.h"
+#include "utils/math.h"
 
 namespace dsn {
 namespace utils {

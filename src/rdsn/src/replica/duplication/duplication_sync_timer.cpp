@@ -21,10 +21,10 @@
 #include "duplication_sync_timer.h"
 #include "replica_duplicator_manager.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/utility/output_utils.h>
-#include <dsn/utility/string_conv.h>
+#include "utils/fmt_logging.h"
+#include "utils/command_manager.h"
+#include "utils/output_utils.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {

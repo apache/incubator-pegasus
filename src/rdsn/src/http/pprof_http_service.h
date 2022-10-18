@@ -19,7 +19,7 @@
 
 #ifdef DSN_ENABLE_GPERF
 
-#include <dsn/http/http_server.h>
+#include "http_server.h"
 
 namespace dsn {
 

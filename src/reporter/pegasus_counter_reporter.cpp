@@ -33,10 +33,10 @@
 #include <event2/http.h>
 #include <event2/keyvalq_struct.h>
 
-#include <dsn/cpp/service_app.h>
-#include <dsn/dist/common.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/flags.h>
+#include "runtime/service_app.h"
+#include "common/common.h"
+#include "utils/fmt_logging.h"
+#include "utils/flags.h"
 
 #include "base/pegasus_utils.h"
 #include "pegasus_io_service.h"

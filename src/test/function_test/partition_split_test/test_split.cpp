@@ -19,7 +19,7 @@
 #include "include/pegasus/client.h"
 #include <boost/lexical_cast.hpp>
 
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "client/replication_ddl_client.h"
 
 #include "base/pegasus_const.h"
 #include "test/function_test/utils/test_util.h"

@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/dist/failure_detector.h>
-#include <dsn/tool-api/command_manager.h>
+#include "failure_detector/failure_detector.h"
+#include "utils/command_manager.h"
 #include <chrono>
 #include <ctime>
 

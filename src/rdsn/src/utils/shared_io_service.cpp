@@ -17,7 +17,7 @@
 
 #include "shared_io_service.h"
 
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 
 namespace dsn {
 namespace tools {

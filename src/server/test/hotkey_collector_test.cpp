@@ -17,10 +17,10 @@
 
 #include "server/hotkey_collector.h"
 
-#include <dsn/utility/rand.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/defer.h>
-#include <dsn/tool-api/task_tracker.h>
+#include "utils/rand.h"
+#include "utils/flags.h"
+#include "utils/defer.h"
+#include "runtime/task/task_tracker.h"
 #include "server/test/message_utils.h"
 #include "base/pegasus_key_schema.h"
 #include "pegasus_server_test_base.h"

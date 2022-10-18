@@ -38,10 +38,10 @@
 #include <iostream>
 #include <algorithm>
 
-#include <dsn/utility/utils.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/configuration.h>
+#include "utils/utils.h"
+#include "utils/filesystem.h"
+#include "utils/strings.h"
+#include "utils/configuration.h"
 
 namespace dsn {
 

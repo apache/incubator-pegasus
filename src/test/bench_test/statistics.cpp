@@ -18,7 +18,7 @@
  */
 
 #include <unordered_map>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 #include "statistics.h"
 #include "config.h"

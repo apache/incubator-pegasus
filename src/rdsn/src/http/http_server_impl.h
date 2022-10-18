@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/cpp/serverlet.h>
-#include <dsn/http/http_server.h>
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/serverlet.h"
+#include "http_server.h"
 
 namespace dsn {
 

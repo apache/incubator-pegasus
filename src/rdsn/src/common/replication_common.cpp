@@ -26,10 +26,10 @@
 
 #include <fstream>
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/filesystem.h>
+#include "utils/fmt_logging.h"
+#include "common/replica_envs.h"
+#include "utils/flags.h"
+#include "utils/filesystem.h"
 
 #include "replication_common.h"
 

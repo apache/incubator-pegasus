@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <dsn/utility/enum_helper.h>
+#include "utils/enum_helper.h"
 
 namespace pegasus {
 namespace server {

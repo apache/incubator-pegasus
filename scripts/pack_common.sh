@@ -20,7 +20,7 @@ set -e
 
 function get_stdcpp_lib()
 {
-    libname=`ldd ./DSN_ROOT/bin/pegasus_server/pegasus_server 2>/dev/null | grep libstdc++`
+    libname=`ldd ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server 2>/dev/null | grep libstdc++`
     libname=`echo $libname | cut -f1 -d" "`
     if [ $1 = "true" ]; then
         gcc_path=`which gcc`
@@ -40,7 +40,7 @@ function get_stdcpp_lib()
 # USAGE: get_system_lib server snappy
 function get_system_lib()
 {
-    libname=`ldd ./DSN_ROOT/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
+    libname=`ldd ${BUILD_DIR}/output/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
     libname=`echo $libname | cut -f1 -d" "`
     libs=(`ldconfig -p|grep $libname|awk '{print $NF}'`)
 
@@ -53,7 +53,7 @@ function get_system_lib()
     done;
 
     # if get failed by ldconfig, then just extract lib from ldd result
-    libname=`ldd ./DSN_ROOT/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
+    libname=`ldd ${BUILD_DIR}/output/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
     libname=`echo $libname | cut -f3 -d" "`
     if echo "$libname" | grep -q "lib${2}\.so"; then
         echo "$libname"
@@ -63,7 +63,7 @@ function get_system_lib()
 # USAGE: get_system_libname server snappy
 function get_system_libname()
 {
-    libname=`ldd ./DSN_ROOT/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
+    libname=`ldd ${BUILD_DIR}/output/bin/pegasus_$1/pegasus_$1 2>/dev/null | grep "lib${2}\.so"`
     libname=`echo $libname | cut -f1 -d" "`
     echo "$libname"
 }
@@ -104,7 +104,7 @@ function check_bit()
 
 function need_system_lib() {
     # return if system libname is not empty, if false, it means this library is not a dependency
-    libname=$(ldd ./DSN_ROOT/bin/pegasus_"$1"/pegasus_"$1" 2>/dev/null | grep "lib${2}\.so")
+    libname=$(ldd ${BUILD_DIR}/output/bin/pegasus_"$1"/pegasus_"$1" 2>/dev/null | grep "lib${2}\.so")
     [ -n "${libname}" ]
 }
 

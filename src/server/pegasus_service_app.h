@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <dsn/dist/replication/meta_service_app.h>
-#include <dsn/dist/replication/replication_service_app.h>
+#include "meta/meta_service_app.h"
+#include "replica/replication_service_app.h"
 #include <pegasus/version.h>
 #include <pegasus/git_commit.h>
 #include "reporter/pegasus_counter_reporter.h"

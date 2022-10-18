@@ -34,7 +34,7 @@
  */
 #include "meta_options.h"
 
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 
 namespace dsn {
 namespace replication {

@@ -24,10 +24,10 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/fail_point.h>
+#include "runtime/task/async_calls.h"
+#include "utils/filesystem.h"
+#include "utils/smart_pointers.h"
+#include "utils/fail_point.h"
 
 #include <gtest/gtest.h>
 

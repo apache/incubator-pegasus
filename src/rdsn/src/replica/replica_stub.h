@@ -34,9 +34,9 @@
 
 #include <functional>
 #include <tuple>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/failure_detector_multimaster.h>
-#include <dsn/dist/nfs_node.h>
+#include "perf_counter/perf_counter_wrapper.h"
+#include "failure_detector/failure_detector_multimaster.h"
+#include "nfs/nfs_node.h"
 
 #include "common/replication_common.h"
 #include "common/bulk_load_common.h"

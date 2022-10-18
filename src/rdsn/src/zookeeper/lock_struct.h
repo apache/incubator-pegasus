@@ -33,8 +33,8 @@
  */
 #pragma once
 
-#include <dsn/tool-api/thread_access_checker.h>
-#include <dsn/dist/distributed_lock_service.h>
+#include "utils/thread_access_checker.h"
+#include "utils/distributed_lock_service.h"
 #include <string>
 
 #include "lock_types.h"

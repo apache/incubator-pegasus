@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/string_conv.h>
+#include "utils/string_conv.h"
 #include <gtest/gtest.h>
 
 TEST(string_conv, buf2bool)

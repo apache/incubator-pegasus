@@ -22,10 +22,13 @@
 #include <string>
 #include <stdint.h>
 
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/tool-api/group_address.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "runtime/rpc/group_address.h"
+#include "common/replication_other_types.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
 #include <rrdb/rrdb.code.definition.h>
 #include <pegasus/error.h>
 #include "pegasus_client_impl.h"

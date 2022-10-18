@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "common/replica_envs.h"
+#include "utils/fail_point.h"
 
 #include "meta_bulk_load_service.h"
 

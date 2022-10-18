@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/replication/duplication_common.h>
+#include "common//duplication_common.h"
 #include <gtest/gtest.h>
 
 namespace dsn {
