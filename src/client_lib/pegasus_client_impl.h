@@ -22,7 +22,7 @@
 #include <string>
 #include <pegasus/client.h>
 #include <rrdb/rrdb.client.h>
-#include <dsn/tool-api/zlocks.h>
+#include "utils/zlocks.h"
 #include "base/pegasus_key_schema.h"
 #include "base/pegasus_utils.h"
 

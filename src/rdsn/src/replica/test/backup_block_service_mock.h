@@ -18,10 +18,13 @@
 #pragma once
 
 #include <iostream>
-#include <dsn/utility/filesystem.h>
-#include <dsn/tool-api/auto_codes.h>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/dist/block_service.h>
+#include "utils/filesystem.h"
+#include "utils/error_code.h"
+#include "utils/threadpool_code.h"
+#include "runtime/task/task_code.h"
+#include "common/gpid.h"
+#include "runtime/task/task_tracker.h"
+#include "block_service/block_service.h"
 #include "replica/replica_context.h"
 #include "replication_service_test_app.h"
 #include "block_service/test/block_service_mock.h"

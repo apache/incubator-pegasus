@@ -19,7 +19,7 @@
 
 #include <fstream>
 
-#include <dsn/dist/block_service.h>
+#include "block_service/block_service.h"
 
 namespace dsn {
 namespace dist {

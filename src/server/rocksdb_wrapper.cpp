@@ -19,7 +19,7 @@
 
 #include "rocksdb_wrapper.h"
 
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 #include <rocksdb/db.h>
 #include "pegasus_write_service_impl.h"
 #include "base/pegasus_value_schema.h"

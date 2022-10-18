@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <dsn/tool-api/task_spec.h>
+#include "runtime/task/task_spec.h"
 
 #include <rrdb/rrdb.code.definition.h>
 #include "proxy_layer.h"

@@ -33,7 +33,7 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/priority_queue.h>
+#include "utils/priority_queue.h"
 #include <gtest/gtest.h>
 #include <thread>
 

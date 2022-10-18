@@ -16,7 +16,7 @@
 
 #include "TokenBucketTest.h"
 #include <gtest/gtest.h>
-#include <dsn/utility/TokenBucket.h>
+#include "utils/TokenBucket.h"
 
 using namespace folly;
 

@@ -33,10 +33,14 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/rand.h>
-#include <dsn/tool/simulator.h>
-#include <dsn/service_api_c.h>
-#include <dsn/tool/node_scoper.h>
+#include "utils/rand.h"
+#include "runtime/simulator.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "runtime/node_scoper.h"
 #include "scheduler.h"
 #include "env.sim.h"
 #include <set>

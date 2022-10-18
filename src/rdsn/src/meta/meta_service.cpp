@@ -29,16 +29,16 @@
 #include <boost/lexical_cast.hpp>
 #include <fmt/format.h>
 
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/extensible_object.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/dist/meta_state_service.h>
-#include <dsn/dist/common.h>
-#include <dsn/dist/remote_command.h>
-#include <dsn/tool-api/command_manager.h>
+#include "utils/factory_store.h"
+#include "utils/extensible_object.h"
+#include "utils/string_conv.h"
+#include "meta/meta_state_service.h"
+#include "common/common.h"
+#include "remote_cmd/remote_command.h"
+#include "utils/command_manager.h"
 #include <algorithm> // for std::remove_if
 #include <cctype>    // for ::isspace
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 #include "meta_service.h"
 #include "server_state.h"

@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/replication/replica_test_utils.h>
+#include "replica/replica_test_utils.h"
 
 #include "replica.h"
 #include "replica_stub.h"

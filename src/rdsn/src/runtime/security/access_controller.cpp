@@ -17,9 +17,9 @@
 
 #include "access_controller.h"
 
-#include <dsn/utility/flags.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/smart_pointers.h>
+#include "utils/flags.h"
+#include "utils/strings.h"
+#include "utils/smart_pointers.h"
 #include "meta_access_controller.h"
 #include "replica_access_controller.h"
 

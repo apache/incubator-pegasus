@@ -18,7 +18,8 @@
  */
 
 #pragma once
-#include <dsn/dist/replication/replication.codes.h>
+
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace apps {

@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <dsn/utility/synchronize.h>
+#include "utils/synchronize.h"
 #include "access_controller.h"
 
 namespace dsn {

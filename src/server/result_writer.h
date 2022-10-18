@@ -19,10 +19,10 @@
 
 #pragma once
 
-#include <dsn/tool-api/task_code.h>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/tool-api/task_queue.h>
-#include <dsn/tool-api/async_calls.h>
+#include "runtime/task/task_code.h"
+#include "runtime/task/task_tracker.h"
+#include "runtime/task/task_queue.h"
+#include "runtime/task/async_calls.h"
 #include <pegasus/client.h>
 
 namespace pegasus {

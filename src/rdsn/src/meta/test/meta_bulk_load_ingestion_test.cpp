@@ -16,8 +16,8 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
 
 #include "meta_test_base.h"
 #include "meta_service_test_app.h"

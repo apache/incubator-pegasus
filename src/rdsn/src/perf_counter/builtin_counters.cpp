@@ -15,9 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/utils.h>
-#include <dsn/c/api_utilities.h>
 #include "builtin_counters.h"
+
+#include "utils/utils.h"
+#include "utils/api_utilities.h"
 
 namespace dsn {
 

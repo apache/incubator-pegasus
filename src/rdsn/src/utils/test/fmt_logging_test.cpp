@@ -24,11 +24,11 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/string_view.h>
-#include <dsn/utility/errors.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/string_view.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
 #include <gtest/gtest.h>
-#include <dsn/dist/replication/replication.codes.h>
+#include "common/replication.codes.h"
 
 namespace dsn {
 namespace replication {

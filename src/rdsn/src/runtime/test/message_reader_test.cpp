@@ -17,7 +17,7 @@
 
 #include <gtest/gtest.h>
 
-#include <dsn/tool-api/message_parser.h>
+#include "runtime/rpc/message_parser.h"
 
 namespace dsn {
 

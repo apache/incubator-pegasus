@@ -24,9 +24,10 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/utility/customizable_id.h>
-#include <dsn/tool-api/task_code.h>
-#include <dsn/tool-api/task_spec.h>
+#include "task_code.h"
+
+#include "utils/customizable_id.h"
+#include "task_spec.h"
 
 namespace dsn {
 

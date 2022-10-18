@@ -26,12 +26,12 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/output_utils.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/string_view.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/dist/replication/mutation_log_tool.h>
+#include "utils/filesystem.h"
+#include "utils/output_utils.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
+#include "client/replication_ddl_client.h"
+#include "tools/mutation_log_tool.h"
 
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>

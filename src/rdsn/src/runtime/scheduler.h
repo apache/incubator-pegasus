@@ -35,9 +35,9 @@
 
 #pragma once
 
-#include <dsn/tool_api.h>
-#include <dsn/tool/simulator.h>
-#include <dsn/utility/synchronize.h>
+#include "runtime/tool_api.h"
+#include "runtime/simulator.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
 namespace tools {

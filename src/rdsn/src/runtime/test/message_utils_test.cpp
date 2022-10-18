@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/cpp/message_utils.h>
-#include <dsn/dist/replication/replication.codes.h>
-#include <dsn/cpp/rpc_holder.h>
+#include "runtime/message_utils.h"
+#include "common/replication.codes.h"
+#include "runtime/rpc/rpc_holder.h"
 #include <gtest/gtest.h>
 
 namespace dsn {

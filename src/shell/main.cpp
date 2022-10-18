@@ -18,7 +18,7 @@
  */
 
 #include <pegasus/version.h>
-#include <dsn/utility/strings.h>
+#include "utils/strings.h"
 #include <setjmp.h>
 #include <signal.h>
 #include <algorithm>

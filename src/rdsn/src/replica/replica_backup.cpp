@@ -17,11 +17,11 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/utils/time_utils.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/flags.h>
+#include "utils/filesystem.h"
+#include "utils/time_utils.h"
+#include "utils/fmt_logging.h"
+#include "replica/replication_app_base.h"
+#include "utils/flags.h"
 
 #include "block_service/block_service_manager.h"
 #include "backup/replica_backup_manager.h"

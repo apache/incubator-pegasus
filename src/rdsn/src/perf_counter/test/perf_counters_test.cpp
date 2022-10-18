@@ -33,9 +33,9 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/perf_counter/perf_counters.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/perf_counter/perf_counter_utils.h>
+#include "perf_counter/perf_counters.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "perf_counter/perf_counter_utils.h"
 #include <gtest/gtest.h>
 
 using namespace ::dsn;

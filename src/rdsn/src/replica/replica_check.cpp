@@ -41,9 +41,9 @@
 #include "duplication/replica_duplicator_manager.h"
 #include "split/replica_split_manager.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "replica/replication_app_base.h"
+#include "utils/fail_point.h"
 
 namespace dsn {
 namespace replication {

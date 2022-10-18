@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 
 #include "common/fs_manager.h"
 

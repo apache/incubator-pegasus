@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
 
 #include "replica/duplication/replica_follower.h"
 #include "duplication_test_base.h"

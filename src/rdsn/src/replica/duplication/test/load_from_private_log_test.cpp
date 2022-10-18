@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fmt_logging.h"
+#include "utils/defer.h"
+#include "utils/fail_point.h"
 
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem/operations.hpp>

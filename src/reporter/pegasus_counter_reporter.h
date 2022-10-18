@@ -19,9 +19,9 @@
 
 #pragma once
 
-#include <dsn/utility/singleton.h>
-#include <dsn/utility/synchronize.h>
-#include <dsn/cpp/json_helper.h>
+#include "utils/singleton.h"
+#include "utils/synchronize.h"
+#include "common/json_helper.h"
 
 #include <boost/asio/deadline_timer.hpp>
 #include <event2/http.h>

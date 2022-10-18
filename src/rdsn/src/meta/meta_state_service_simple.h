@@ -34,8 +34,8 @@
  */
 
 #include <queue>
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/dist/meta_state_service.h>
+#include "utils/zlocks.h"
+#include "meta/meta_state_service.h"
 #include "common/replication_common.h"
 
 namespace dsn {

@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <dsn/dist/replication/replica_base.h>
+#include "replica/replica_base.h"
 
 #include "base/pegasus_rpc_types.h"
 #include "pegasus_write_service.h"

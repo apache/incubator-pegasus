@@ -28,10 +28,10 @@
 
 #include <gtest/gtest.h>
 
-#include "dsn/dist/fmt_logging.h"
-#include "dsn/utility/utils.h"
-#include "dsn/tool-api/rpc_address.h"
-#include "dsn/c/api_layer1.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
+#include "utils/rpc_address.h"
+#include "runtime/api_layer1.h"
 #include "test/function_test/utils/utils.h"
 
 global_env::global_env()

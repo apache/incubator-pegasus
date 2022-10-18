@@ -27,10 +27,10 @@
 #include "meta_store.h"
 #include "rocksdb_wrapper.h"
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/string_conv.h>
+#include "utils/filesystem.h"
+#include "utils/string_conv.h"
 #include <gtest/gtest_prod.h>
-#include <dsn/utility/defer.h>
+#include "utils/defer.h"
 
 namespace pegasus {
 namespace server {

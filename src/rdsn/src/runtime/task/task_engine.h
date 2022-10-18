@@ -36,10 +36,10 @@
 #pragma once
 
 #include "runtime/service_engine.h"
-#include <dsn/tool-api/task_queue.h>
-#include <dsn/tool-api/task_worker.h>
-#include <dsn/tool-api/timer_service.h>
-#include <dsn/tool-api/command_manager.h>
+#include "task_queue.h"
+#include "task_worker.h"
+#include "timer_service.h"
+#include "utils/command_manager.h"
 
 namespace dsn {
 

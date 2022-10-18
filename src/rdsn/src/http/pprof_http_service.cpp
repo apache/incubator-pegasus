@@ -26,13 +26,13 @@
 
 #include "pprof_http_service.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/timer.h>
-#include <dsn/utility/string_splitter.h>
+#include "utils/fmt_logging.h"
+#include "runtime/api_layer1.h"
+#include "utils/process_utils.h"
+#include "utils/string_conv.h"
+#include "utils/defer.h"
+#include "utils/timer.h"
+#include "utils/string_splitter.h"
 #include <gperftools/heap-profiler.h>
 #include <gperftools/malloc_extension.h>
 #include <gperftools/profiler.h>

@@ -20,8 +20,8 @@
 #include "pegasus_server_test_base.h"
 #include "server/capacity_unit_calculator.h"
 
-#include <dsn/dist/replication/replica_base.h>
-#include <dsn/utils/token_bucket_throttling_controller.h>
+#include "replica/replica_base.h"
+#include "utils/token_bucket_throttling_controller.h"
 #include "pegasus_key_schema.h"
 #include "server/hotkey_collector.h"
 

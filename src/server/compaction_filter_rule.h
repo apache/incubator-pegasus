@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <dsn/utility/enum_helper.h>
-#include <dsn/cpp/json_helper.h>
+#include "utils/enum_helper.h"
+#include "common/json_helper.h"
 #include <gtest/gtest.h>
 #include "base/pegasus_value_schema.h"
 

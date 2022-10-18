@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/replication/mutation_log_tool.h>
-#include <dsn/utils/time_utils.h>
+#include "mutation_log_tool.h"
+#include "utils/time_utils.h"
 #include "replica/mutation_log.h"
 
 namespace dsn {

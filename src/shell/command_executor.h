@@ -22,7 +22,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "client/replication_ddl_client.h"
 #include <pegasus/client.h>
 
 #include "sds/sds.h"

@@ -37,9 +37,13 @@
 #include "checker.h"
 #include "case.h"
 
-#include <dsn/toollet/fault_injector.h>
-#include <dsn/service_api_c.h>
-#include <dsn/utility/autoref_ptr.h>
+#include "runtime/fault_injector.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/autoref_ptr.h"
 
 #include <iostream>
 

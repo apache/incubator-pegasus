@@ -20,9 +20,9 @@
 #include "redis_parser.h"
 
 #include <rocksdb/status.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/utility/string_conv.h>
+#include "utils/fmt_logging.h"
+#include "common/replication_other_types.h"
+#include "utils/string_conv.h"
 
 #include <rrdb/rrdb.client.h>
 #include <pegasus/error.h>

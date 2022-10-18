@@ -26,13 +26,13 @@
 
 #include "http_message_parser.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/ports.h>
-#include <dsn/utility/crc.h>
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/cpp/serialization.h>
-#include <dsn/c/api_layer1.h>
-#include <dsn/http/http_server.h>
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/crc.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/api_layer1.h"
+#include "http_server.h"
 #include <iomanip>
 
 namespace dsn {

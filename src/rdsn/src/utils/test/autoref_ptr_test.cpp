@@ -9,7 +9,7 @@
 #include <utility>
 
 #include <gtest/gtest.h>
-#include <dsn/utility/autoref_ptr.h>
+#include "utils/autoref_ptr.h"
 
 namespace {
 

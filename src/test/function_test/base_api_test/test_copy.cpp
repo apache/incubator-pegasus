@@ -22,9 +22,13 @@
 #include <vector>
 #include <map>
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
-#include <dsn/service_api_c.h>
+#include "utils/fmt_logging.h"
+#include "client/replication_ddl_client.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
 #include <gtest/gtest.h>
 #include "include/pegasus/client.h"
 #include <unistd.h>

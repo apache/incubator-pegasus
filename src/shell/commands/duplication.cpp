@@ -21,10 +21,10 @@
 #include "shell/argh.h"
 
 #include <fmt/ostream.h>
-#include <dsn/utility/errors.h>
-#include <dsn/utility/output_utils.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/dist/replication/duplication_common.h>
+#include "utils/errors.h"
+#include "utils/output_utils.h"
+#include "utils/string_conv.h"
+#include "common//duplication_common.h"
 
 using dsn::replication::dupid_t;
 using dsn::replication::duplication_status;

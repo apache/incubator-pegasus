@@ -30,11 +30,11 @@
 
 #include "runtime/service_engine.h"
 
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/c/api_utilities.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/utils/latency_tracer.h>
+#include "runtime/task/async_calls.h"
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/fail_point.h"
+#include "utils/latency_tracer.h"
 
 namespace dsn {
 

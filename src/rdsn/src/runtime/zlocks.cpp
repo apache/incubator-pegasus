@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/factory_store.h>
-#include <dsn/tool-api/zlocks.h>
+#include "utils/factory_store.h"
+#include "utils/zlocks.h"
 #include "utils/zlock_provider.h"
 #include "runtime/service_engine.h"
 

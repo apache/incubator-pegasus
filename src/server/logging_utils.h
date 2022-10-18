@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 /// Utilities for logging the operation on rocksdb.
 

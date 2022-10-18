@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/endians.h>
+#include "utils/endians.h"
 
 #include <gtest/gtest.h>
 

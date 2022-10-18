@@ -19,7 +19,7 @@
 #include "meta/meta_data.h"
 
 #include <rapidjson/prettywriter.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

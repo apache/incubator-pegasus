@@ -18,16 +18,16 @@
 #include <algorithm>
 #include <fstream>
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/utility/error_code.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/safe_strerror_posix.h>
-#include <dsn/utility/TokenBucket.h>
-#include <dsn/utility/utils.h>
+#include "utils/fmt_logging.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "runtime/task/task_tracker.h"
+#include "utils/error_code.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/TokenBucket.h"
+#include "utils/utils.h"
 
 #include "hdfs_service.h"
 #include "block_service/directio_writable_file.h"

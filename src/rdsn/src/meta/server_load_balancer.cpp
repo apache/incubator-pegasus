@@ -25,11 +25,11 @@
  */
 
 #include "server_load_balancer.h"
-#include <dsn/utility/extensible_object.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/tool-api/command_manager.h>
+#include "utils/extensible_object.h"
+#include "utils/string_conv.h"
+#include "utils/command_manager.h"
 #include <boost/lexical_cast.hpp>
-#include <dsn/utils/time_utils.h>
+#include "utils/time_utils.h"
 
 namespace dsn {
 namespace replication {

@@ -36,10 +36,10 @@
 #pragma once
 
 #include <boost/lexical_cast.hpp>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/dist/block_service.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/tool-api/task_tracker.h>
+#include "common/replication_other_types.h"
+#include "block_service/block_service.h"
+#include "perf_counter/perf_counter_wrapper.h"
+#include "runtime/task/task_tracker.h"
 #include <gtest/gtest_prod.h>
 #include <unordered_map>
 

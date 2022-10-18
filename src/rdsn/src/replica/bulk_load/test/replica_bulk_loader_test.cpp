@@ -20,8 +20,8 @@
 
 #include <fstream>
 
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/zlocks.h"
+#include "utils/fail_point.h"
 #include <gtest/gtest.h>
 
 namespace dsn {

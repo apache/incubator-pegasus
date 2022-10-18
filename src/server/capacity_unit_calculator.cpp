@@ -19,8 +19,8 @@
 
 #include "capacity_unit_calculator.h"
 
-#include <dsn/utility/config_api.h>
-#include <dsn/utils/token_bucket_throttling_controller.h>
+#include "utils/config_api.h"
+#include "utils/token_bucket_throttling_controller.h"
 #include <rocksdb/status.h>
 #include "hotkey_collector.h"
 

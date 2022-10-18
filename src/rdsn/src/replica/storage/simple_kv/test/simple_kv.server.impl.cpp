@@ -26,7 +26,7 @@
 #include "simple_kv.server.impl.h"
 #include <fstream>
 #include <sstream>
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 
 #define VALUE_NOT_EXIST "<<not-exist>>"
 

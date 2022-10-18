@@ -27,7 +27,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 
 #include "common/replication_common.h"
 #include "misc.h"

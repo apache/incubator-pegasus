@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/utility/priority_queue.h>
-#include <dsn/tool-api/message_parser.h>
+#include "runtime/rpc/rpc_message.h"
+#include "utils/priority_queue.h"
+#include "runtime/rpc/message_parser.h"
 #include <boost/asio.hpp>
 #include "asio_net_provider.h"
 

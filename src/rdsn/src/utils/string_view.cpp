@@ -13,9 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <dsn/utility/string_view.h>
+#include "string_view.h"
+
 #include <ostream>
 
+#include "blob.h"
 #include "memutil.h"
 
 namespace dsn {
@@ -83,6 +85,8 @@ const char *memmatch(const char *phaystack, size_t haylen, const char *pneedle, 
 }
 
 } // namespace strings_internal
+
+string_view::string_view(const blob &buf) noexcept : ptr_(buf.data()), length_(buf.length()) {}
 
 string_view::size_type string_view::find(string_view s, size_type pos) const noexcept
 {

@@ -18,13 +18,13 @@
 
 set -e
 
+LOCAL_HOSTNAME=`hostname -f`
 PID=$$
 ROOT=`pwd`
-LOCAL_HOSTNAME=`hostname -f`
+export BUILD_DIR=$ROOT/src/builder
 export REPORT_DIR="$ROOT/test_report"
-export DSN_ROOT=$ROOT/DSN_ROOT
 export THIRDPARTY_ROOT=$ROOT/thirdparty
-export LD_LIBRARY_PATH=$DSN_ROOT/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$BUILD_DIR/output/lib:$THIRDPARTY_ROOT/output/lib:$LD_LIBRARY_PATH
 
 function usage()
 {
@@ -259,7 +259,6 @@ function run_build()
     python3 $ROOT/scripts/compile_thrift.py
     sh ${ROOT}/scripts/recompile_thrift.sh
 
-    mkdir -p ${DSN_ROOT}
     if [ ! -d "$BUILD_DIR" ]; then
         mkdir -p $BUILD_DIR
 
@@ -622,7 +621,7 @@ function usage_start_onebox()
     echo "   -w|--wait_healthy"
     echo "                     wait cluster to become healthy, default not wait"
     echo "   -s|--server_path <str>"
-    echo "                     server binary path, default is ${DSN_ROOT}/bin/pegasus_server"
+    echo "                     server binary path, default is ${BUILD_DIR}/output/bin/pegasus_server"
     echo "   --config_path"
     echo "                     specify the config template path, default is ./src/server/config.min.ini in non-production env"
     echo "                                                                  ./src/server/config.ini in production env"
@@ -640,7 +639,7 @@ function run_start_onebox()
     APP_NAME=temp
     PARTITION_COUNT=8
     WAIT_HEALTHY=false
-    SERVER_PATH=${DSN_ROOT}/bin/pegasus_server
+    SERVER_PATH=${BUILD_DIR}/output/bin/pegasus_server
     CONFIG_FILE=""
     USE_PRODUCT_CONFIG=false
     OPTS=""
@@ -1258,7 +1257,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
 
     # start verifier
     mkdir -p onebox/verifier && cd onebox/verifier
-    ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${BUILD_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
     echo "$PWD/pegasus_kill_test config.ini verifier &>/dev/null &"
     $PWD/pegasus_kill_test config.ini verifier &>/dev/null &
@@ -1269,7 +1268,7 @@ s+@ONEBOX_RUN_PATH@+`pwd`+g" ${ROOT}/src/test/kill_test/config.ini >$CONFIG
 
     #start killer
     mkdir -p onebox/killer && cd onebox/killer
-    ln -s -f ${DSN_ROOT}/bin/pegasus_kill_test/pegasus_kill_test
+    ln -s -f ${BUILD_DIR}/output/bin/pegasus_kill_test/pegasus_kill_test
     ln -s -f ${ROOT}/$CONFIG config.ini
     echo "$PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &"
     $PWD/pegasus_kill_test config.ini $KILLER_TYPE &>/dev/null &
@@ -1485,9 +1484,9 @@ function run_bench()
         shift
     done
     cd ${ROOT}
-    cp ${DSN_ROOT}/bin/pegasus_bench/config.ini ./config-bench.ini
+    cp ${BUILD_DIR}/output/bin/pegasus_bench/config.ini ./config-bench.ini
     fill_bench_config
-    ln -s -f ${DSN_ROOT}/bin/pegasus_bench/pegasus_bench
+    ln -s -f ${BUILD_DIR}/output/bin/pegasus_bench/pegasus_bench
     ./pegasus_bench ./config-bench.ini
     rm -f ./config-bench.ini
 }
@@ -1614,7 +1613,7 @@ function run_shell()
     fi
 
     cd ${ROOT}
-    ln -s -f ${DSN_ROOT}/bin/pegasus_shell/pegasus_shell
+    ln -s -f ${BUILD_DIR}/output/bin/pegasus_shell/pegasus_shell
     ./pegasus_shell ${CONFIG} $CLUSTER_NAME
     # because pegasus shell will catch 'Ctrl-C' signal, so the following commands will be executed
     # even user inputs 'Ctrl-C', so that the temporary config file will be cleared when exit shell.

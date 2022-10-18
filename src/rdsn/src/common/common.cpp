@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/common.h>
-#include <dsn/utility/flags.h>
+#include "common/common.h"
+#include "utils/flags.h"
 
 namespace dsn {
 DSN_DEFINE_string("replication", cluster_name, "", "name of this cluster");

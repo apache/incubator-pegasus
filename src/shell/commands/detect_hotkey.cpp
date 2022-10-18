@@ -17,7 +17,13 @@
 
 #include "shell/commands.h"
 #include "shell/argh.h"
-#include <dsn/dist/replication/replication_types.h>
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
 
 bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              const std::string &hotkey_action,

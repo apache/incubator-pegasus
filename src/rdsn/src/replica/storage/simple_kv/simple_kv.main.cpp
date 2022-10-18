@@ -38,9 +38,9 @@
 #include "simple_kv.server.impl.h"
 
 // framework specific tools
-#include <dsn/dist/replication/meta_service_app.h>
-#include <dsn/dist/replication/replication_service_app.h>
-#include <dsn/http/http_server.h>
+#include "meta/meta_service_app.h"
+#include "replica/replication_service_app.h"
+#include "http/http_server.h"
 
 static void dsn_app_registration_simple_kv()
 {

@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <dsn/cpp/serverlet.h>
-#include <dsn/http/http_server.h>
-#include <dsn/utility/errors.h>
+#include "runtime/serverlet.h"
+#include "http_server.h"
+#include "utils/errors.h"
 
 namespace dsn {
 

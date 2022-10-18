@@ -35,9 +35,9 @@
 
 #pragma once
 
-#include <dsn/tool-api/message_parser.h>
-#include <dsn/tool-api/rpc_message.h>
-#include <dsn/utility/ports.h>
+#include "runtime/rpc/message_parser.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/ports.h"
 
 namespace dsn {
 class dsn_message_parser : public message_parser

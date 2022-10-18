@@ -24,21 +24,12 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <concurrentqueue/concurrentqueue.h>
 #include <concurrentqueue/blockingconcurrentqueue.h>
 
-#include <dsn/tool-api/task_queue.h>
+#include "task_queue.h"
 
 namespace dsn {
 namespace tools {

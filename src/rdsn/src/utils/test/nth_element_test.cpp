@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/nth_element.h>
+#include "utils/nth_element.h"
 
 #include <fmt/format.h>
 #include <gtest/gtest.h>

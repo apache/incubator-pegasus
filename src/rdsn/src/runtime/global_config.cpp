@@ -35,15 +35,15 @@
 
 #include <thread>
 
-#include <dsn/utility/singleton_store.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/config_api.h>
-#include <dsn/utility/flags.h>
+#include "utils/singleton_store.h"
+#include "utils/filesystem.h"
+#include "utils/config_api.h"
+#include "utils/flags.h"
 
-#include <dsn/tool-api/global_config.h>
-#include <dsn/tool-api/task_spec.h>
-#include <dsn/tool-api/network.h>
-#include <dsn/cpp/service_app.h>
+#include "runtime/global_config.h"
+#include "runtime/task/task_spec.h"
+#include "runtime/rpc/network.h"
+#include "runtime/service_app.h"
 
 namespace dsn {
 

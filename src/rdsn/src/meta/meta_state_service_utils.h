@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <dsn/dist/meta_state_service.h>
+#include "meta/meta_state_service.h"
 
 namespace dsn {
 namespace replication {

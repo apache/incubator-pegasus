@@ -28,7 +28,7 @@
 
 #include "log_block.h"
 
-#include <dsn/tool-api/zlocks.h>
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace replication {

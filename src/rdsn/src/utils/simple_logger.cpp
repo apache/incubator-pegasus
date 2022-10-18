@@ -26,9 +26,9 @@
 
 #include "simple_logger.h"
 #include <sstream>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/time_utils.h"
 #include <fmt/format.h>
 
 namespace dsn {

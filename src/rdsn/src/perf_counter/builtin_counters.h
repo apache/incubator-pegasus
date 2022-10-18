@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "perf_counter_wrapper.h"
 
 namespace dsn {
 class builtin_counters : public dsn::utils::singleton<builtin_counters>

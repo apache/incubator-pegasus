@@ -23,7 +23,7 @@
 #include <s2/s2latlng_rect.h>
 #include <s2/s2cell_union.h>
 #include <s2/util/units/length-units.h>
-#include <dsn/tool-api/task_tracker.h>
+#include "runtime/task/task_tracker.h"
 #include <pegasus/client.h>
 #include "latlng_codec.h"
 

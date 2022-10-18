@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <dsn/cpp/service_app.h>
-#include <dsn/http/http_server.h>
+#include "runtime/service_app.h"
+#include "http/http_server.h"
 #include "info_collector.h"
 #include "available_detector.h"
 

@@ -23,10 +23,6 @@ set(DSN_BUILD_RUNTIME TRUE)
 
 dsn_common_setup()
 
-include_directories(${RDSN_PROJECT_ROOT}/include)
-include_directories(${RDSN_PROJECT_ROOT}/include/dsn/cpp/serialization_helper)
-include_directories(${RDSN_PROJECT_ROOT}/src)
-
 if(UNIX)
     add_compile_options(-fPIC)
 endif()

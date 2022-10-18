@@ -19,8 +19,8 @@
 #pragma once
 
 #include <vector>
-#include <dsn/utility/errors.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "utils/errors.h"
+#include "perf_counter/perf_counter_wrapper.h"
 
 namespace dsn {
 namespace replication {

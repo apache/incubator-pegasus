@@ -25,8 +25,8 @@
  */
 
 #include <fstream>
-#include <dsn/utility/config_api.h>
-#include <dsn/utility/configuration.h>
+#include "utils/config_api.h"
+#include "utils/configuration.h"
 
 dsn::configuration g_config;
 

@@ -40,7 +40,7 @@
 
 #include <boost/asio.hpp>
 
-#include <dsn/utility/singleton.h>
+#include "utils/singleton.h"
 
 namespace dsn {
 namespace tools {

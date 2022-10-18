@@ -19,8 +19,8 @@
 
 #include <unistd.h>
 #include <pegasus/client.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/c/app_model.h>
+#include "utils/fmt_logging.h"
+#include "runtime/app_model.h"
 
 #include "benchmark.h"
 

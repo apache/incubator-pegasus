@@ -17,7 +17,11 @@
  * under the License.
  */
 
-#include <dsn/service_api_c.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
 #include <gtest/gtest.h>
 
 GTEST_API_ int main(int argc, char **argv)

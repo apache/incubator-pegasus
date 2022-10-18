@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <dsn/utility/fail_point.h>
+#include "utils/fail_point.h"
 
 #include "replica/test/replica_disk_test_base.h"
 #include "replica/replica_disk_migrator.h"

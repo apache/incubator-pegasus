@@ -28,7 +28,7 @@
 #include <atomic>
 #include <memory>
 #include <sys/time.h>
-#include <dsn/dist/remote_command.h>
+#include "remote_cmd/remote_command.h"
 
 #include "partition_kill_testor.h"
 

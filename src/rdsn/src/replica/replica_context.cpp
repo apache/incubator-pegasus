@@ -33,8 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/utils.h>
+#include "utils/filesystem.h"
+#include "utils/utils.h"
 
 #include "replica_context.h"
 #include "replica.h"

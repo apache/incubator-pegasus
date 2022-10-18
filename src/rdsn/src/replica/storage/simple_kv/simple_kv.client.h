@@ -26,9 +26,9 @@
 
 #pragma once
 #include <iostream>
-#include <dsn/utility/optional.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/dist/replication/partition_resolver.h>
+#include "utils/optional.h"
+#include "runtime/task/async_calls.h"
+#include "client/partition_resolver.h"
 #include "simple_kv.code.definition.h"
 #include "simple_kv_types.h"
 

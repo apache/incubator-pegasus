@@ -22,9 +22,9 @@
 #include <rocksdb/slice_transform.h>
 #include <rocksdb/slice.h>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/blob.h>
-#include <dsn/utility/endians.h>
+#include "utils/api_utilities.h"
+#include "utils/blob.h"
+#include "utils/endians.h"
 
 namespace pegasus {
 namespace server {

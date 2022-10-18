@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/replication/mutation_duplicator.h>
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/duplication/mutation_duplicator.h"
 
 #include "replica/mutation.h"
 #include "replica/prepare_list.h"

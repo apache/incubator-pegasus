@@ -21,8 +21,8 @@
 
 #include <map>
 #include <rocksdb/db.h>
-#include <dsn/tool_api.h>
-#include <dsn/utility/rand.h>
+#include "runtime/tool_api.h"
+#include "utils/rand.h"
 #include <rrdb/rrdb_types.h>
 
 #include "base/pegasus_const.h"

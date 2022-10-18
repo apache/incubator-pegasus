@@ -35,9 +35,9 @@
 
 #pragma once
 
-#include <dsn/utility/priority_queue.h>
-#include <dsn/tool-api/timer_service.h>
-#include <dsn/tool-api/task_queue.h>
+#include "utils/priority_queue.h"
+#include "timer_service.h"
+#include "task_queue.h"
 #include "utils/zlock_provider.h"
 
 namespace dsn {

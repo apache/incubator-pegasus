@@ -24,9 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/cpp/rpc_holder.h>
-#include <dsn/cpp/serialization_helper/dsn.layer2_types.h>
-#include <dsn/cpp/message_utils.h>
+#include "runtime/rpc/rpc_holder.h"
+#include "common/serialization_helper/dsn.layer2_types.h"
+#include "runtime/message_utils.h"
 
 #include <gtest/gtest.h>
 

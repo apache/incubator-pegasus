@@ -31,8 +31,8 @@
 
 #include <cstdlib>
 
-#include <dsn/utility/filesystem.h>
-#include <dsn/tool-api/async_calls.h>
+#include "utils/filesystem.h"
+#include "runtime/task/async_calls.h"
 
 namespace dsn {
 namespace service {

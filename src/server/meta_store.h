@@ -20,7 +20,7 @@
 #pragma once
 
 #include <rocksdb/db.h>
-#include <dsn/dist/replication/replica_base.h>
+#include "replica/replica_base.h"
 
 #include <rrdb/rrdb_types.h>
 

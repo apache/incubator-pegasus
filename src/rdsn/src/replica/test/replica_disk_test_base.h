@@ -18,8 +18,8 @@
  */
 
 #include <gtest/gtest.h>
-#include <dsn/utility/fail_point.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 
 #include "replica/test/replica_test_base.h"
 

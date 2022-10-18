@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "dsn/utils/token_buckets.h"
+#include "token_buckets.h"
 
 namespace dsn {
 namespace utils {

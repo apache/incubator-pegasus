@@ -22,10 +22,10 @@
 #include <vector>
 #include <atomic>
 
-#include <dsn/c/api_utilities.h>
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/rand.h>
-#include <dsn/tool-api/async_calls.h>
+#include "utils/api_utilities.h"
+#include "runtime/api_layer1.h"
+#include "utils/rand.h"
+#include "runtime/task/async_calls.h"
 
 #include "pegasus/client.h"
 

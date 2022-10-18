@@ -28,7 +28,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
-#include <dsn/utility/configuration.h>
+#include "utils/configuration.h"
 
 using namespace ::dsn;
 

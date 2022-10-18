@@ -26,8 +26,8 @@
 
 #include "prepare_list.h"
 
-#include <dsn/utils/latency_tracer.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/latency_tracer.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

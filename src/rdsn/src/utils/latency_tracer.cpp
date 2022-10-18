@@ -15,12 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utils/latency_tracer.h>
-#include <dsn/perf_counter/perf_counters.h>
-#include <dsn/service_api_c.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/config_api.h>
-#include <dsn/utility/flags.h>
+#include "utils/latency_tracer.h"
+#include "perf_counter/perf_counters.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/config_api.h"
+#include "utils/flags.h"
 
 #include <utility>
 #include "lockp.std.h"

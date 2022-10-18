@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <dsn/utility/safe_strerror_posix.h>
+#include "utils/safe_strerror_posix.h"
 
 #include <errno.h>
 #include <stdio.h>

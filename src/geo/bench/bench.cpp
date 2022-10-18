@@ -26,10 +26,10 @@
 #include <rocksdb/statistics.h>
 #include <rocksdb/env.h>
 
-#include "dsn/dist/fmt_logging.h"
-#include "dsn/utility/errors.h"
-#include "dsn/utility/strings.h"
-#include "dsn/utility/string_conv.h"
+#include "utils/fmt_logging.h"
+#include "utils/errors.h"
+#include "utils/strings.h"
+#include "utils/string_conv.h"
 
 static const int data_count = 10000;
 

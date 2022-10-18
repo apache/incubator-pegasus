@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/metrics.h>
-#include <dsn/utility/rand.h>
+#include "utils/metrics.h"
+#include "utils/rand.h"
 
 #include <chrono>
 #include <thread>

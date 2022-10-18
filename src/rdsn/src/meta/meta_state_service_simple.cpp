@@ -31,9 +31,9 @@
 #include <stack>
 #include <utility>
 
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/async_calls.h>
-#include <dsn/utility/filesystem.h>
+#include "runtime/task/task.h"
+#include "runtime/task/async_calls.h"
+#include "utils/filesystem.h"
 
 namespace dsn {
 namespace dist {

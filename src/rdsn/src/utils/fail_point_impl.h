@@ -30,9 +30,9 @@
 
 #pragma once
 
-#include <dsn/utility/fail_point.h>
-#include <dsn/c/api_utilities.h>
-#include <dsn/utility/ports.h>
+#include "utils/fail_point.h"
+#include "utils/api_utilities.h"
+#include "utils/ports.h"
 #include <mutex>
 #include <unordered_map>
 #include <utility>

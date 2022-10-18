@@ -19,9 +19,9 @@
 
 #include "compaction_filter_rule.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/string_view.h>
-#include <dsn/c/api_utilities.h>
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/api_utilities.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
 

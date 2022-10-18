@@ -327,10 +327,10 @@ src/shell/argh.h - BSD-3-Clause License
 
 --------------------------------------------------------------------------------
 
-src/rdsn/include/dsn/utility/smart_pointers.h - Apache 2.0 License
-src/rdsn/include/dsn/utility/string_view.h
-src/rdsn/include/dsn/utility/absl/base/internal/invoke.h
-src/rdsn/include/dsn/utility/absl/utility/utility.h
+src/rdsn/src/utils/smart_pointers.h - Apache 2.0 License
+src/rdsn/utils/string_view.h
+src/rdsn/src/utils/absl/base/internal/invoke.h
+src/rdsn/src/utils/absl/utility/utility.h
 src/rdsn/src/utils/memutil.h
 src/rdsn/src/utils/string_view.cpp
 src/rdsn/src/utils/test/memutil_test.cpp
@@ -385,7 +385,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-src/rdsn/include/dsn/utility/TokenBucket.h - Apache License, Version 2.0
+src/rdsn/src/utils/TokenBucket.h - Apache License, Version 2.0
 src/rdsn/src/utils/test/TokenBucketTest.cpp
 src/rdsn/src/utils/test/TokenBucketTest.h
 
@@ -405,12 +405,12 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-src/rdsn/include/dsn/utility/hpc_locks/autoreseteventcondvar.h - zlib License
-src/rdsn/include/dsn/utility/hpc_locks/rwlock.h
-src/rdsn/include/dsn/utility/hpc_locks/autoresetevent.h
-src/rdsn/include/dsn/utility/hpc_locks/sema.h
-src/rdsn/include/dsn/utility/hpc_locks/bitfield.h
-src/rdsn/include/dsn/utility/hpc_locks/benaphore.h
+src/rdsn/src/utils/hpc_locks/autoreseteventcondvar.h - zlib License
+src/rdsn/src/utils/hpc_locks/rwlock.h
+src/rdsn/src/utils/hpc_locks/autoresetevent.h
+src/rdsn/src/utils/hpc_locks/sema.h
+src/rdsn/src/utils/hpc_locks/bitfield.h
+src/rdsn/src/utils/hpc_locks/benaphore.h
 
 Copyright (c) 2015 Jeff Preshing
 
@@ -532,7 +532,7 @@ SOFTWARE.
 
 --------------------------------------------------------------------------------
 
-src/rdsn/include/dsn/utility/safe_strerror_posix.h - BSD-3-Clause License
+src/rdsn/src/utils/safe_strerror_posix.h - BSD-3-Clause License
 
 Copyright (c) 2011 The Chromium Authors. All rights reserved.
 

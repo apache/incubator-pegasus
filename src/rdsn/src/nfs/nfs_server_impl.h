@@ -25,13 +25,13 @@
  */
 
 #pragma once
-#include <dsn/tool-api/task_tracker.h>
-#include <dsn/perf_counter/perf_counter_wrapper.h>
+#include "runtime/task/task_tracker.h"
+#include "perf_counter/perf_counter_wrapper.h"
 #include <iostream>
-#include <dsn/cpp/serverlet.h>
-#include <dsn/utility/flags.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/utils/token_buckets.h>
+#include "runtime/serverlet.h"
+#include "utils/flags.h"
+#include "utils/command_manager.h"
+#include "utils/token_buckets.h"
 
 #include "nfs_code_definition.h"
 #include "nfs_types.h"

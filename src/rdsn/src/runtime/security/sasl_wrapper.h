@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <dsn/utility/errors.h>
+#include "utils/errors.h"
 
 typedef struct sasl_conn sasl_conn_t;
 

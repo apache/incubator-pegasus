@@ -39,8 +39,8 @@ if [ ! -f src/include/pegasus/git_commit.h ]; then
     exit 1
 fi
 
-if [ ! -f DSN_ROOT/bin/pegasus_server/pegasus_server ]; then
-    echo "ERROR: DSN_ROOT/bin/pegasus_server/pegasus_server not found"
+if [ ! -f ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server ]; then
+    echo "ERROR: ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server not found"
     exit 1
 fi
 
@@ -110,10 +110,10 @@ while [[ $# > 0 ]]; do
 done
 
 mkdir -p ${pack}/bin
-copy_file ./DSN_ROOT/bin/pegasus_server/pegasus_server ${pack}/bin
-copy_file ./DSN_ROOT/lib/libdsn_meta_server.so ${pack}/bin
-copy_file ./DSN_ROOT/lib/libdsn_replica_server.so ${pack}/bin
-copy_file ./DSN_ROOT/lib/libdsn_utils.so ${pack}/bin
+copy_file ${BUILD_DIR}/output/bin/pegasus_server/pegasus_server ${pack}/bin
+copy_file ${BUILD_DIR}/output/lib/libdsn_meta_server.so ${pack}/bin
+copy_file ${BUILD_DIR}/output/lib/libdsn_replica_server.so ${pack}/bin
+copy_file ${BUILD_DIR}/output/lib/libdsn_utils.so ${pack}/bin
 copy_file ./thirdparty/output/lib/libPoco*.so.* ${pack}/bin
 
 if [ "$use_jemalloc" == "on" ]; then

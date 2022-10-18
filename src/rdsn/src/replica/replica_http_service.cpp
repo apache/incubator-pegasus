@@ -17,7 +17,7 @@
 
 #include <nlohmann/json.hpp>
 #include <fmt/format.h>
-#include <dsn/utility/output_utils.h>
+#include "utils/output_utils.h"
 #include "replica_http_service.h"
 #include "duplication/duplication_sync_timer.h"
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <dsn/utility/config_api.h>
+#include "utils/config_api.h"
 #include "config.h"
 
 namespace pegasus {

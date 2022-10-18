@@ -27,11 +27,11 @@
 
 #include <fmt/format.h>
 
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/nth_element.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/strings.h>
+#include "runtime/api_layer1.h"
+#include "utils/nth_element.h"
+#include "utils/smart_pointers.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 
 #include "utils/test/nth_element_utils.h"
 

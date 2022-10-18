@@ -27,20 +27,24 @@
 #include "replica.h"
 #include "mutation.h"
 #include "common/bulk_load_common.h"
-#include "dsn/dist/replication/duplication_common.h"
-#include <dsn/utils/latency_tracer.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/utility/defer.h>
-#include <dsn/utility/factory_store.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/crc.h>
-#include <dsn/service_api_c.h>
+#include "common/duplication_common.h"
+#include "utils/latency_tracer.h"
+#include "utils/fmt_logging.h"
+#include "replica/replication_app_base.h"
+#include "utils/defer.h"
+#include "utils/factory_store.h"
+#include "utils/filesystem.h"
+#include "utils/crc.h"
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
 #include <fstream>
 #include <sstream>
 #include <memory>
-#include <dsn/utility/fail_point.h>
-#include <dsn/dist/replication/replica_envs.h>
+#include "utils/fail_point.h"
+#include "common/replica_envs.h"
 
 namespace dsn {
 namespace replication {

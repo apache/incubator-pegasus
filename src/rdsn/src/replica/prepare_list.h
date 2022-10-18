@@ -28,7 +28,7 @@
 
 #include "mutation_cache.h"
 
-#include <dsn/dist/replication/replica_base.h>
+#include "replica/replica_base.h"
 
 namespace dsn {
 namespace replication {

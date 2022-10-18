@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 #include <s2/s2latlng.h>
-#include <dsn/utility/strings.h>
+#include "utils/strings.h"
 
 namespace dsn {
 class error_s;

@@ -17,11 +17,11 @@
 
 #include <atomic>
 #include <boost/make_shared.hpp>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/config_api.h>
-#include <dsn/c/api_utilities.h>
-#include <dsn/perf_counter/perf_counter.h>
-#include <dsn/utils/time_utils.h>
+#include "utils/utils.h"
+#include "utils/config_api.h"
+#include "utils/api_utilities.h"
+#include "perf_counter/perf_counter.h"
+#include "utils/time_utils.h"
 #include "utils/shared_io_service.h"
 
 namespace dsn {

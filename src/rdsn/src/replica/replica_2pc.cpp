@@ -31,9 +31,9 @@
 #include "bulk_load/replica_bulk_loader.h"
 #include "split/replica_split_manager.h"
 #include "runtime/security/access_controller.h"
-#include <dsn/utils/latency_tracer.h>
-#include <dsn/dist/replication/replication_app_base.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/latency_tracer.h"
+#include "replica/replication_app_base.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {

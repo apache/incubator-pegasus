@@ -22,7 +22,7 @@
 #include "server/compaction_filter_rule.h"
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
-#include <dsn/utility/smart_pointers.h>
+#include "utils/smart_pointers.h"
 
 namespace pegasus {
 namespace server {

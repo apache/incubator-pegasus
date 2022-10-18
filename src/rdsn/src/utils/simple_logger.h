@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <dsn/tool_api.h>
+#include "runtime/tool_api.h"
 #include <thread>
 #include <cstdio>
 

@@ -38,7 +38,7 @@
 #include "zookeeper_session.h"
 #include "zookeeper_session_mgr.h"
 
-#include <dsn/utility/flags.h>
+#include "utils/flags.h"
 
 namespace dsn {
 namespace security {

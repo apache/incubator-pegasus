@@ -19,19 +19,24 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <array>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
-#include <dsn/utility/ports.h>
-#include <dsn/utility/utils.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/utility/endians.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/service_api_c.h>
 #include <rocksdb/slice.h>
 
+#include "common/api_common.h"
+#include "utils/api_utilities.h"
+#include "utils/blob.h"
+#include "utils/endians.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/smart_pointers.h"
+#include "utils/utils.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
 #include "value_field.h"
 
 namespace pegasus {

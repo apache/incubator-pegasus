@@ -16,7 +16,7 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/utils/token_buckets.h>
+#include "utils/token_buckets.h"
 
 namespace dsn {
 namespace utils {

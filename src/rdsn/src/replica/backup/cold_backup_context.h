@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <dsn/tool-api/zlocks.h>
-#include <dsn/cpp/json_helper.h>
-#include <dsn/dist/block_service.h>
+#include "utils/zlocks.h"
+#include "common/json_helper.h"
+#include "block_service/block_service.h"
 
 #include "common/backup_common.h"
 

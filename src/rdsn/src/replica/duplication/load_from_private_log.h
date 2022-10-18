@@ -17,13 +17,13 @@
 
 #pragma once
 
-#include <dsn/cpp/pipeline.h>
-#include <dsn/utility/errors.h>
-#include <dsn/dist/replication/mutation_duplicator.h>
 #include <gtest/gtest_prod.h>
 
-#include "replica/mutation_log.h"
 #include "mutation_batch.h"
+#include "runtime/pipeline.h"
+#include "replica/duplication/mutation_duplicator.h"
+#include "replica/mutation_log.h"
+#include "utils/errors.h"
 
 namespace dsn {
 namespace replication {

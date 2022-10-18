@@ -42,12 +42,12 @@
 // which is binded to this replication partition
 //
 
-#include <dsn/tool-api/uniq_timestamp_us.h>
-#include <dsn/tool-api/thread_access_checker.h>
-#include <dsn/cpp/serverlet.h>
+#include "utils/uniq_timestamp_us.h"
+#include "utils/thread_access_checker.h"
+#include "runtime/serverlet.h"
 
-#include <dsn/perf_counter/perf_counter_wrapper.h>
-#include <dsn/dist/replication/replica_base.h>
+#include "perf_counter/perf_counter_wrapper.h"
+#include "replica/replica_base.h"
 
 #include "common/replication_common.h"
 #include "mutation.h"

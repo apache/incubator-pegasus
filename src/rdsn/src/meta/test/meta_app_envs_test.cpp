@@ -24,8 +24,14 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/dist/replication/replica_envs.h>
-#include <dsn/dist/replication/replication_types.h>
+#include "common/replica_envs.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
 #include "meta_test_base.h"
 #include "meta/meta_service.h"
 

@@ -35,7 +35,7 @@
 
 #include "runtime/task/task_engine.h"
 #include "test_utils.h"
-#include <dsn/tool_api.h>
+#include "runtime/tool_api.h"
 #include <gtest/gtest.h>
 #include <sstream>
 

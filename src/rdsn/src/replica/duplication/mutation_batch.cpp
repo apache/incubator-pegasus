@@ -15,8 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/cpp/message_utils.h>
+#include "utils/fmt_logging.h"
+#include "runtime/message_utils.h"
 
 #include "replica_duplicator.h"
 #include "mutation_batch.h"

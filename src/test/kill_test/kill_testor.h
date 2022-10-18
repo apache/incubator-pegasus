@@ -25,7 +25,7 @@
 #include <string>
 #include <memory>
 
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "client/replication_ddl_client.h"
 
 namespace pegasus {
 namespace test {

@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/http/http_server.h>
-#include <dsn/utility/errors.h>
+#include "utils/fmt_logging.h"
+#include "http_server.h"
+#include "utils/errors.h"
 
 namespace dsn {
 

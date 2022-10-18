@@ -19,8 +19,8 @@
 
 #include <gtest/gtest_prod.h>
 
-#include <dsn/perf_counter/perf_counter.h>
-#include <dsn/utility/flags.h>
+#include "perf_counter/perf_counter.h"
+#include "utils/flags.h"
 #include "hotspot_partition_stat.h"
 
 namespace pegasus {

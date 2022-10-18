@@ -23,12 +23,12 @@
 #include <s2/s2testing.h>
 #include <s2/s2earth.h>
 #include <s2/s2cell.h>
-#include <dsn/utility/strings.h>
-#include <dsn/utility/string_conv.h>
+#include "utils/strings.h"
+#include "utils/string_conv.h"
 #include <base/pegasus_key_schema.h>
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/dist/replication/replication_other_types.h>
-#include <dsn/dist/replication/replication_ddl_client.h>
+#include "utils/fmt_logging.h"
+#include "common/replication_other_types.h"
+#include "client/replication_ddl_client.h"
 #include "base/pegasus_const.h"
 
 namespace pegasus {

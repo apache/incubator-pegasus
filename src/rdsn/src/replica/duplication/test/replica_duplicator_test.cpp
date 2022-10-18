@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <dsn/utility/filesystem.h>
+#include "utils/filesystem.h"
 
 #include "replica/mutation_log_utils.h"
 #include "replica/duplication/load_from_private_log.h"

@@ -39,8 +39,8 @@
 
 #include <fmt/printf.h>
 
-#include <dsn/tool-api/task.h>
-#include <dsn/tool-api/rpc_message.h>
+#include "runtime/task/task.h"
+#include "runtime/rpc/rpc_message.h"
 #include "replica/replica_stub.h"
 #include "runtime/service_engine.h"
 #include "meta/server_load_balancer.h"

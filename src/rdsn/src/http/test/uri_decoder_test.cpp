@@ -16,7 +16,7 @@
 // under the License.
 
 #include <gtest/gtest.h>
-#include <dsn/utility/error_code.h>
+#include "utils/error_code.h"
 #include <http/uri_decoder.h>
 
 namespace dsn {

@@ -35,8 +35,8 @@
 
 #include "client.h"
 #include "case.h"
-#include <dsn/tool-api/group_address.h>
-#include <dsn/dist/replication/replication_other_types.h>
+#include "runtime/rpc/group_address.h"
+#include "common/replication_other_types.h"
 
 #include <sstream>
 

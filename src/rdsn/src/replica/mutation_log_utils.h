@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <dsn/utility/errors.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/dist/fmt_logging.h>
+#include "utils/errors.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 #include "mutation_log.h"
 

@@ -28,13 +28,13 @@
 #include "runtime/task/task_engine.h"
 #include "runtime/rpc/rpc_engine.h"
 
-#include <dsn/dist/fmt_logging.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/smart_pointers.h>
-#include <dsn/tool-api/env_provider.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/tool_api.h>
-#include <dsn/tool/node_scoper.h>
+#include "utils/fmt_logging.h"
+#include "utils/filesystem.h"
+#include "utils/smart_pointers.h"
+#include "runtime/env_provider.h"
+#include "utils/command_manager.h"
+#include "runtime/tool_api.h"
+#include "runtime/node_scoper.h"
 
 using namespace dsn::utils;
 

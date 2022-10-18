@@ -18,8 +18,10 @@
 #include "sasl_client_wrapper.h"
 
 #include <sasl/sasl.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utility/fail_point.h>
+
+#include "utils/blob.h"
+#include "utils/fail_point.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace security {

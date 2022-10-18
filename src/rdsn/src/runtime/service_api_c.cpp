@@ -32,16 +32,20 @@
 
 #include <fstream>
 
-#include <dsn/service_api_c.h>
-#include <dsn/tool_api.h>
-#include <dsn/tool-api/command_manager.h>
-#include <dsn/cpp/serialization.h>
-#include <dsn/utility/filesystem.h>
-#include <dsn/utility/process_utils.h>
-#include <dsn/utility/flags.h>
-#include <dsn/utils/time_utils.h>
-#include <dsn/utility/errors.h>
-#include <dsn/dist/fmt_logging.h>
+#include "common/api_common.h"
+#include "runtime/api_task.h"
+#include "runtime/api_layer1.h"
+#include "runtime/app_model.h"
+#include "utils/api_utilities.h"
+#include "runtime/tool_api.h"
+#include "utils/command_manager.h"
+#include "runtime/rpc/serialization.h"
+#include "utils/filesystem.h"
+#include "utils/process_utils.h"
+#include "utils/flags.h"
+#include "utils/time_utils.h"
+#include "utils/errors.h"
+#include "utils/fmt_logging.h"
 
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>

@@ -30,11 +30,11 @@
 
 #include "fail_point_impl.h"
 
-#include <dsn/c/api_layer1.h>
+#include "runtime/api_layer1.h"
 // TOOD(wutao1): use <regex> instead when our lowest compiler support
 //               advances to gcc-4.9.
 #include <boost/regex.hpp>
-#include <dsn/utility/rand.h>
+#include "utils/rand.h"
 
 namespace dsn {
 namespace fail {

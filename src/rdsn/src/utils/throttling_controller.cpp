@@ -17,9 +17,9 @@
 
 #include "throttling_controller.h"
 
-#include <dsn/c/api_layer1.h>
-#include <dsn/utility/string_conv.h>
-#include <dsn/utility/strings.h>
+#include "runtime/api_layer1.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {

@@ -24,8 +24,8 @@
  * THE SOFTWARE.
  */
 
-#include <dsn/tool-api/threadpool_code.h>
-#include <dsn/utility/customizable_id.h>
+#include "utils/threadpool_code.h"
+#include "utils/customizable_id.h"
 
 namespace dsn {
 

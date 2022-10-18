@@ -29,8 +29,8 @@
 #include <memory>
 #include <sys/time.h>
 
-#include "dsn/dist/fmt_logging.h"
-#include "dsn/dist/replication/replication_ddl_client.h"
+#include "utils/fmt_logging.h"
+#include "client/replication_ddl_client.h"
 
 #include <pegasus/client.h>
 

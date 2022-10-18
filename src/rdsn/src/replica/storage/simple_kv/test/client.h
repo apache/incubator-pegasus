@@ -35,8 +35,14 @@
 
 #pragma once
 
-#include <dsn/cpp/service_app.h>
-#include <dsn/dist/replication/replication_types.h>
+#include "runtime/service_app.h"
+#include "meta_admin_types.h"
+#include "partition_split_types.h"
+#include "duplication_types.h"
+#include "bulk_load_types.h"
+#include "backup_types.h"
+#include "consensus_types.h"
+#include "replica_admin_types.h"
 #include "replica/storage/simple_kv/simple_kv.client.h"
 
 namespace dsn {

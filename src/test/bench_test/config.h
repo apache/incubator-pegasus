@@ -21,7 +21,7 @@
 
 #include <string>
 #include <rocksdb/env.h>
-#include <dsn/utility/singleton.h>
+#include "utils/singleton.h"
 
 namespace pegasus {
 namespace test {
