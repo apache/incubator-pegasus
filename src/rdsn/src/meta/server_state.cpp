@@ -1273,16 +1273,26 @@ void server_state::do_app_rename(std::shared_ptr<app_state> &app, const std::str
         if (ERR_OK == ec) {
             zauto_write_lock l(_lock);
             _exist_apps.erase(old_app_name);
+
+            std::vector<dsn::rpc_address> replica_nodes;
+            for (auto &node : _nodes) {
+                if (node.second.alive()) {
+                    replica_nodes.emplace_back(node.first);
+                }
+            }
+            dsn::error_code err = update_node_configuration(replica_nodes);
+            if (err != ERR_OK) {
+                derror_f("Failed to update replica_server configuration update immediately, it will retry by replica_server selfly later.");
+            }
         } else if (ERR_TIMEOUT == ec) {
-            dinfo("rename app(%s) prepare timeout, continue to drop later", app->get_logname());
+            dinfo_f("rename app({}) prepare timeout, continue to try later", app->get_logname());
             tasking::enqueue(LPC_META_STATE_HIGH,
                              tracker(),
                              std::bind(&server_state::do_app_rename, this, app, old_app_name),
                              0,
                              std::chrono::seconds(1));
-        } else {
-            dassert(false, "we can't handle this, error(%s)", ec.to_string());
-        }
+        } 
+        dcheck_eq(ERR_OK, ec);
     };
 
     std::string app_path = get_app_path(*app);
@@ -1299,7 +1309,7 @@ void server_state::rename_app(dsn::message_ex *msg)
     std::string old_app_name;
 
     dsn::unmarshall(msg, request);
-    ddebug("rename app request, app_id(%d), new_app_name(%s)", request.app_id, request.new_app_name);
+    ddebug_f("rename app request, app_id({}), new_app_name({})", request.app_id, request.new_app_name);
 
     bool do_rename = false;
     {
@@ -2260,6 +2270,60 @@ error_code server_state::construct_partitions(
     } else {
         return dsn::ERR_OK;
     }
+}
+
+dsn::error_code server_state::update_node_configuration(const std::vector<dsn::rpc_address> &replica_nodes)
+{
+    int n_replicas = replica_nodes.size();
+    std::vector<update_node_configuration_response> update_configuration_responses(n_replicas);
+    std::vector<dsn::error_code> update_configuration_errors(n_replicas);
+    dsn::task_tracker tracker;
+    for (int i = 0; i < n_replicas; ++i) {
+        ddebug_f("send update configuration request to node({})", replica_nodes[i].to_string());
+
+        auto update_configuration_req = std::make_unique<update_node_configuration_request>();
+        update_configuration_req->node = replica_nodes[i];
+        update_node_configuration_rpc update_rpc(std::move(update_configuration_req), RPC_UPDATE_NODE_CONFIGURATION);
+        update_rpc.call(
+            replica_nodes[i],
+            &tracker,
+            [update_rpc, i, &replica_nodes, &update_configuration_responses, &update_configuration_errors](
+                error_code err) mutable {
+                auto resp = update_rpc.response();
+                ddebug_f("received update configuration response from node({}), err({})",
+                       replica_nodes[i].to_string(),
+                       err.to_string());
+                update_configuration_errors[i] = err;
+                if (err == dsn::ERR_OK) {
+                    update_configuration_responses[i] = std::move(resp);
+                }
+            });
+    }
+
+    tracker.wait_outstanding_tasks();
+    int failed_count = 0;
+    int succeed_count = 0;
+    for (int i = 0; i < n_replicas; ++i) {
+        error_code err = dsn::ERR_OK;
+        if (update_configuration_errors[i] != dsn::ERR_OK) {
+            dwarn("update configuration to node(%s) failed, reason: %s",
+                  replica_nodes[i].to_string(),
+                  update_configuration_errors[i].to_string());
+
+            failed_count++;
+            err = update_configuration_errors[i];
+        } else {
+            succeed_count++;
+        }
+    }
+    ddebug_f("send update configuration rpc to replica nodes done, succeed_count = {}, failed_count = {}.",
+           succeed_count,
+           failed_count);
+
+    if (failed_count > 0) {
+        return dsn::ERR_BUSY;
+    }
+    return dsn::ERR_OK;
 }
 
 dsn::error_code

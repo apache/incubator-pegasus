@@ -1346,6 +1346,20 @@ void replica_stub::get_local_replicas(std::vector<replica_info> &replicas)
     }
 }
 
+void replica_stub::on_update_local_configuration(update_node_configuration_rpc rpc)
+{
+    update_node_configuration_response &resp = rpc.response();
+    if (_state == NS_Disconnected || _config_query_task != nullptr) {
+        resp.err = ERR_INVALID_STATE;
+        return;
+    }
+
+    ddebug_f("query configuration to update local.");
+
+    query_configuration_by_node();
+    resp.err = ERR_OK;
+}
+
 // run in THREAD_POOL_META_SERVER
 // assert(_state_lock.locked())
 void replica_stub::query_configuration_by_node()
@@ -2237,6 +2251,8 @@ void replica_stub::open_service()
         RPC_GROUP_CHECK, "GroupCheck", &replica_stub::on_group_check);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_PN_DECREE, "query_decree", &replica_stub::on_query_decree);
+    register_rpc_handler_with_rpc_holder(
+        RPC_UPDATE_NODE_CONFIGURATION, "update_node configuration", &replica_stub::on_update_local_configuration);
     register_rpc_handler_with_rpc_holder(
         RPC_QUERY_REPLICA_INFO, "query_replica_info", &replica_stub::on_query_replica_info);
     register_rpc_handler_with_rpc_holder(RPC_QUERY_LAST_CHECKPOINT_INFO,

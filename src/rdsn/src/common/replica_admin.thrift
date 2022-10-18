@@ -42,6 +42,16 @@ struct query_replica_decree_response
     2:i64                 last_decree;
 }
 
+struct update_node_configuration_request
+{
+    1:dsn.rpc_address     node;
+}
+
+struct update_node_configuration_response
+{
+    1:dsn.error_code      err;
+}
+
 struct query_replica_info_request
 {
     1:dsn.rpc_address     node;

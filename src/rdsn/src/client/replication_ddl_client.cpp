@@ -222,8 +222,7 @@ dsn::error_code replication_ddl_client::rename_app(int32_t app_id, const std::st
                      (bool (*)(int))replication_ddl_client::valid_app_char))
         return ERR_INVALID_PARAMETERS;
 
-    std::shared_ptr<configuration_rename_app_request> req =
-        std::make_shared<configuration_rename_app_request>();
+    auto req = std::make_shared<configuration_rename_app_request>();
     req->app_id = app_id;
     req->new_app_name = new_app_name;
 

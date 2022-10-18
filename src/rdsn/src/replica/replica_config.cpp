@@ -1144,7 +1144,7 @@ void replica::on_config_sync(const app_info &info,
     }
 }
 
-void replica::update_app_name(std::string app_name)
+void replica::update_app_name(const std::string app_name)
 {
     if (app_name == _app_info.app_name) {
         return;
