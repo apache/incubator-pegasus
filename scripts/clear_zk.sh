@@ -34,6 +34,8 @@ then
 fi
 
 cd $INSTALL_DIR
+
+# If the old dir for zk bin exists, just use it
 ZOOKEEPER_HOME=`pwd`/apache-zookeeper-3.7.0-bin
 
 if [ -d "${ZOOKEEPER_HOME}" ]; then
