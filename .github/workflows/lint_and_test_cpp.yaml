@@ -147,7 +147,9 @@ jobs:
           - dsn_runtime_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
-          - partition_split_test
+          # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
+          # it has been optimized.
+#          - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
@@ -261,13 +263,17 @@ jobs:
           - dsn_runtime_tests
           - dsn_utils_tests
           - dsn.zookeeper.tests
-          - partition_split_test
+          # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
+          # it has been optimized.
+#          - partition_split_test
           - pegasus_geo_test
           - pegasus_rproxy_test
           - pegasus_unit_test
           - recovery_test
           - restore_test
-          - throttle_test
+          # TODO(yingchun): Disable it because we find it's too flaky, we will re-enable it after
+          # it has been optimized.
+#          - throttle_test
     needs: build_ASAN
     runs-on: ubuntu-latest
     container:
@@ -292,119 +298,122 @@ jobs:
           . ./scripts/config_hdfs.sh
           ./run.sh test -m ${{ matrix.test_module }}
 
-  build_UBSAN:
-    name: Build UBSAN
-    needs: cpp_clang_format_linter
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            /github/home/.ccache
-          key: ubsan_ccache
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            thirdparty:
-              - '.github/workflows/thirdparty-regular-push.yml'
-              - 'docker/thirdparties-src/**'
-              - 'docker/thirdparties-bin/**'
-              - 'thirdparty/**'
-      - name: Unpack prebuilt third-parties
-        if: steps.changes.outputs.thirdparty == 'false'
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Rebuild third-parties
-        if: steps.changes.outputs.thirdparty == 'true'
-        working-directory: thirdparty
-        run: |
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
-          cmake --build build/ -j $(nproc)
-          ../scripts/download_hadoop.sh hadoop-bin
-          ../scripts/download_zk.sh zookeeper-bin
-      - name: Compilation
-        run: |
-          ccache -p
-          ccache -z
-          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
-          ccache -s
-      - name: Tar files
-        run: |
-          mv thirdparty/hadoop-bin ./
-          mv thirdparty/zookeeper-bin ./
-          rm -rf thirdparty
-          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: release_undefined_artifact_${{ github.sha }}
-          path: release_undefined_builder.tar
-
-  test_UBSAN:
-    name: Test UBSAN
-    strategy:
-      fail-fast: false
-      matrix:
-        test_module:
-          - backup_restore_test
-          - base_api_test
-          - base_test
-          - bulk_load_test
-          - detect_hotspot_test
-          - dsn_aio_test
-          - dsn_block_service_test
-          - dsn.failure_detector.tests
-          - dsn_http_test
-          - dsn_meta_state_tests
-          - dsn.meta.test
-          - dsn_nfs_test
-          - dsn_perf_counter_test
-          - dsn_replica_backup_test
-          - dsn_replica_bulk_load_test
-          - dsn_replica_dup_test
-          - dsn_replica_split_test
-          - dsn.replica.test
-          - dsn_replication_common_test
-          - dsn.replication.simple_kv
-          - dsn.rep_tests.simple_kv
-          - dsn_runtime_tests
-          - dsn_utils_tests
-          - dsn.zookeeper.tests
-          - partition_split_test
-          - pegasus_geo_test
-          - pegasus_rproxy_test
-          - pegasus_unit_test
-          - recovery_test
-          - restore_test
-          - throttle_test
-    needs: build_UBSAN
-    runs-on: ubuntu-latest
-    container:
-      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
-      options: --cap-add=SYS_PTRACE
-    steps:
-      - uses: actions/checkout@v2
-      - name: Unpack prebuilt third-parties
-        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: release_undefined_artifact_${{ github.sha }}
-          path: .
-      - name: Tar files
-        run: |
-          tar -zxvf release_undefined_builder.tar
-      - name: Unit Testing
-        run: |
-          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-          ulimit -s unlimited
-          . ./scripts/config_hdfs.sh
-          ./run.sh test -m ${{ matrix.test_module }}
+# TODO(yingchun): Build and test UBSAN version would cost a very long time, we will run these tests
+#                 when we are going to release a stable version. So we disable them in regular CI
+#                 before we find any way to reduce the time cost.
+#  build_UBSAN:
+#    name: Build UBSAN
+#    needs: cpp_clang_format_linter
+#    runs-on: ubuntu-latest
+#    container:
+#      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Setup cache
+#        uses: actions/cache@v3
+#        with:
+#          path: |
+#            /github/home/.ccache
+#          key: ubsan_ccache
+#      - uses: dorny/paths-filter@v2
+#        id: changes
+#        with:
+#          filters: |
+#            thirdparty:
+#              - '.github/workflows/thirdparty-regular-push.yml'
+#              - 'docker/thirdparties-src/**'
+#              - 'docker/thirdparties-bin/**'
+#              - 'thirdparty/**'
+#      - name: Unpack prebuilt third-parties
+#        if: steps.changes.outputs.thirdparty == 'false'
+#        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+#      - name: Rebuild third-parties
+#        if: steps.changes.outputs.thirdparty == 'true'
+#        working-directory: thirdparty
+#        run: |
+#          mkdir build
+#          cmake -DCMAKE_BUILD_TYPE=Release -DROCKSDB_PORTABLE=ON -B build/
+#          cmake --build build/ -j $(nproc)
+#          ../scripts/download_hadoop.sh hadoop-bin
+#          ../scripts/download_zk.sh zookeeper-bin
+#      - name: Compilation
+#        run: |
+#          ccache -p
+#          ccache -z
+#          ./run.sh build --test --sanitizer undefined --skip_thirdparty --disable_gperf -j $(nproc)
+#          ccache -s
+#      - name: Tar files
+#        run: |
+#          mv thirdparty/hadoop-bin ./
+#          mv thirdparty/zookeeper-bin ./
+#          rm -rf thirdparty
+#          tar -zcvhf release_undefined_builder.tar DSN_ROOT/ src/builder/bin src/builder/src/server/test/config.ini hadoop-bin zookeeper-bin --exclude='*CMakeFiles*'
+#      - name: Upload Artifact
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: release_undefined_artifact_${{ github.sha }}
+#          path: release_undefined_builder.tar
+#
+#  test_UBSAN:
+#    name: Test UBSAN
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        test_module:
+#          - backup_restore_test
+#          - base_api_test
+#          - base_test
+#          - bulk_load_test
+#          - detect_hotspot_test
+#          - dsn_aio_test
+#          - dsn_block_service_test
+#          - dsn.failure_detector.tests
+#          - dsn_http_test
+#          - dsn_meta_state_tests
+#          - dsn.meta.test
+#          - dsn_nfs_test
+#          - dsn_perf_counter_test
+#          - dsn_replica_backup_test
+#          - dsn_replica_bulk_load_test
+#          - dsn_replica_dup_test
+#          - dsn_replica_split_test
+#          - dsn.replica.test
+#          - dsn_replication_common_test
+#          - dsn.replication.simple_kv
+#          - dsn.rep_tests.simple_kv
+#          - dsn_runtime_tests
+#          - dsn_utils_tests
+#          - dsn.zookeeper.tests
+#          - partition_split_test
+#          - pegasus_geo_test
+#          - pegasus_rproxy_test
+#          - pegasus_unit_test
+#          - recovery_test
+#          - restore_test
+#          - throttle_test
+#    needs: build_UBSAN
+#    runs-on: ubuntu-latest
+#    container:
+#      image: apache/pegasus:thirdparties-bin-test-ubuntu1804-${{ github.base_ref }}
+#      options: --cap-add=SYS_PTRACE
+#    steps:
+#      - uses: actions/checkout@v2
+#      - name: Unpack prebuilt third-parties
+#        run: unzip /root/thirdparties-bin.zip -d ./thirdparty
+#      - name: Download Artifact
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: release_undefined_artifact_${{ github.sha }}
+#          path: .
+#      - name: Tar files
+#        run: |
+#          tar -zxvf release_undefined_builder.tar
+#      - name: Unit Testing
+#        run: |
+#          export LD_LIBRARY_PATH=`pwd`/thirdparty/output/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
+#          ulimit -s unlimited
+#          . ./scripts/config_hdfs.sh
+#          ./run.sh test -m ${{ matrix.test_module }}
 
   build_with_jemalloc:
     name: Build with jemalloc
