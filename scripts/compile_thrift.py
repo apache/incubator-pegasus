@@ -48,8 +48,8 @@ thrift_description = [
             }
         },
         "file_move": {
-            "_types.h": "src/rdsn/src/common/serialization_helper",
-            "_types.cpp": "src/rdsn/src/runtime"
+            "_types.h": "src/common/serialization_helper",
+            "_types.cpp": "src/runtime"
         }
     },
 ]
