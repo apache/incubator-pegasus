@@ -150,7 +150,7 @@ public:
     template <typename MetricType, typename... Args>
     ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args)
     {
-        std::lock_guard<std::mutex> guard(_mtx);
+        utils::auto_write_lock l(_lock);
 
         metric_map::const_iterator iter = _metrics.find(prototype);
         if (iter != _metrics.end()) {
@@ -188,7 +188,7 @@ private:
 
     const std::string _id;
 
-    mutable std::mutex _mtx;
+    mutable utils::rw_lock_nr _lock;
     attr_map _attrs;
     metric_map _metrics;
 
@@ -231,7 +231,7 @@ private:
 
     metric_entity_ptr find_or_create_entity(const std::string &id, metric_entity::attr_map &&attrs);
 
-    mutable std::mutex _mtx;
+    mutable utils::rw_lock_nr _lock;
     entity_map _entities;
 
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
@@ -621,6 +621,8 @@ private:
     std::atomic<state> _state;
     utils::notify_event _completed;
     std::unique_ptr<boost::asio::deadline_timer> _timer;
+
+    DISALLOW_COPY_AND_ASSIGN(percentile_timer);
 };
 
 // The percentile is a metric type that samples observations. The size of samples has an upper
@@ -809,6 +811,8 @@ private:
     NthElementFinder _nth_element_finder;
 
     std::unique_ptr<percentile_timer> _timer;
+
+    DISALLOW_COPY_AND_ASSIGN(percentile);
 };
 
 template <typename T,

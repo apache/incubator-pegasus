@@ -34,7 +34,7 @@ std::set<kth_percentile_type> get_all_kth_percentile_types()
 }
 
 metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
-    : _id(id), _attrs(std::move(attrs))
+    : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
 {
 }
 
@@ -49,7 +49,7 @@ metric_entity::~metric_entity()
 
 void metric_entity::close(close_option option)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
 
     // The reason why each metric is closed in the entity rather than in the destructor of each
     // metric is that close() for the metric will return immediately without waiting for any close
@@ -80,19 +80,19 @@ void metric_entity::close(close_option option)
 
 metric_entity::attr_map metric_entity::attributes() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
     return _attrs;
 }
 
 metric_entity::metric_map metric_entity::metrics() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_read_lock l(_lock);
     return _metrics;
 }
 
 void metric_entity::set_attributes(attr_map &&attrs)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
     _attrs = std::move(attrs);
 }
 
@@ -114,7 +114,7 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
-metric_registry::metric_registry()
+metric_registry::metric_registry() : _lock(), _entities()
 {
     // We should ensure that metric_registry is destructed before shared_io_service is destructed.
     // Once shared_io_service is destructed before metric_registry is destructed,
@@ -126,7 +126,7 @@ metric_registry::metric_registry()
 
 metric_registry::~metric_registry()
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
 
     // Once the registery is chosen to be destructed, all of the entities and metrics owned by it
     // will no longer be needed.
@@ -146,15 +146,14 @@ metric_registry::~metric_registry()
 
 metric_registry::entity_map metric_registry::entities() const
 {
-    std::lock_guard<std::mutex> guard(_mtx);
-
+    utils::auto_read_lock l(_lock);
     return _entities;
 }
 
 metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
                                                          metric_entity::attr_map &&attrs)
 {
-    std::lock_guard<std::mutex> guard(_mtx);
+    utils::auto_write_lock l(_lock);
 
     entity_map::const_iterator iter = _entities.find(id);
 
