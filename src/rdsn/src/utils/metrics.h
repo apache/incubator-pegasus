@@ -389,32 +389,34 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 class gauge : public metric
 {
 public:
-    T value() const { return _value.load(std::memory_order_relaxed); }
+    using value_type = T;
 
-    void set(const T &val) { _value.store(val, std::memory_order_relaxed); }
+    value_type value() const { return _value.load(std::memory_order_relaxed); }
 
-    template <typename Int = T,
+    void set(const value_type &val) { _value.store(val, std::memory_order_relaxed); }
+
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void increment_by(Int x)
     {
         _value.fetch_add(x, std::memory_order_relaxed);
     }
 
-    template <typename Int = T,
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void decrement_by(Int x)
     {
         increment_by(-x);
     }
 
-    template <typename Int = T,
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void increment()
     {
         increment_by(1);
     }
 
-    template <typename Int = T,
+    template <typename Int = value_type,
               typename = typename std::enable_if<std::is_integral<Int>::value>::type>
     void decrement()
     {
@@ -422,20 +424,20 @@ public:
     }
 
 protected:
-    gauge(const metric_prototype *prototype, const T &initial_val)
+    gauge(const metric_prototype *prototype, const value_type &initial_val)
         : metric(prototype), _value(initial_val)
     {
     }
 
-    gauge(const metric_prototype *prototype);
+    gauge(const metric_prototype *prototype) : gauge(prototype, value_type()) {}
 
     virtual ~gauge() = default;
 
 private:
     friend class metric_entity;
-    friend class ref_ptr<gauge<T>>;
+    friend class ref_ptr<gauge<value_type>>;
 
-    std::atomic<T> _value;
+    std::atomic<value_type> _value;
 
     DISALLOW_COPY_AND_ASSIGN(gauge);
 };

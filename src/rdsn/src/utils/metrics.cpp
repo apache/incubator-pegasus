@@ -267,14 +267,4 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
 #undef TRY_PROCESS_TIMER_CLOSING
 }
 
-template <>
-gauge<int64_t>::gauge(const metric_prototype *prototype) : gauge(prototype, 0)
-{
-}
-
-template <>
-gauge<double>::gauge(const metric_prototype *prototype) : gauge(prototype, 0.0)
-{
-}
-
 } // namespace dsn
