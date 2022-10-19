@@ -1273,6 +1273,13 @@ void server_state::do_app_rename(std::shared_ptr<app_state> &app, const std::str
         if (ERR_OK == ec) {
             zauto_write_lock l(_lock);
             _exist_apps.erase(old_app_name);
+            configuration_rename_app_response response;
+            response.err = ERR_OK;
+            if (app->helpers->pending_response != nullptr) {
+                _meta_svc->reply_data(app->helpers->pending_response, response);
+                app->helpers->pending_response->release_ref();
+                app->helpers->pending_response = nullptr;
+            }
         } else if (ERR_TIMEOUT == ec) {
             dinfo_f("rename app({}) prepare timeout, continue to try later", app->get_logname());
             tasking::enqueue(LPC_META_STATE_HIGH,
@@ -1324,15 +1331,17 @@ void server_state::rename_app(dsn::message_ex *msg)
                 do_rename = true;
                 target_app->app_name = request.new_app_name;
                 _exist_apps.emplace(target_app->app_name, target_app);
+                target_app->helpers->pending_response = msg;
             }
         }
     }
 
-    if (do_rename) {
-        do_app_rename(target_app, old_app_name);
+    if (!do_rename) {
+        _meta_svc->reply_data(msg, response);
+        msg->release_ref();
+        return;
     }
-    _meta_svc->reply_data(msg, response);
-    msg->release_ref();
+    do_app_rename(target_app, old_app_name);
 }
 
 void server_state::do_app_recall(std::shared_ptr<app_state> &app)
