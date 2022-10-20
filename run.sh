@@ -491,6 +491,13 @@ function run_start_zk()
     type nc >/dev/null 2>&1 || { echo >&2 "start zk failed, need install netcat command..."; exit 1;}
 
     INSTALL_DIR=`pwd`/.zk_install
+    if [ ! -d "${INSTALL_DIR}/zookeeper-bin" ]; then
+        if [ -d "zookeeper-bin" ]; then
+            # this zookeeper-bin must have been got from github action workflows, thus just
+            # move it to ${INSTALL_DIR} to prevent from downloading
+            mv zookeeper-bin ${INSTALL_DIR}/
+        fi
+    fi
     PORT=22181
     while [[ $# > 0 ]]; do
         key="$1"
