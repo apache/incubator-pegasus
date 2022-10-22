@@ -19,7 +19,7 @@
 # Sets COMPILER_VERSION to the version
 
 include(CMakeDetermineCXXCompiler)
-message("Running rdsn/bin/compiler_info.cmake")
+message("Running CompilerInfo.cmake")
 execute_process(COMMAND env LANG=C "${CMAKE_CXX_COMPILER}" -v
                 ERROR_VARIABLE COMPILER_VERSION_FULL)
 message(${COMPILER_VERSION_FULL})

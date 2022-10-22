@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "../../../../../idl/dsn.thrift"
+include "../../../idl/dsn.thrift"
 
 namespace cpp dsn.security
 

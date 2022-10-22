@@ -18,8 +18,8 @@
 src/.matchfile
 src/base/rrdb_types.cpp
 src/include/rrdb/rrdb_types.h
-src/rdsn/src/common/serialization_helper/dsn.layer2_types.h
-src/rdsn/src/runtime/dsn.layer2_types.cpp
+src/common/serialization_helper/dsn.layer2_types.h
+src/runtime/dsn.layer2_types.cpp
 src/runtime
 src/*builder
 
