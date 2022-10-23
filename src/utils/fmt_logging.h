@@ -31,8 +31,8 @@
             dsn_log(                                                                               \
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
-#define dinfo_f(...) dlog_f(LOG_LEVEL_INFORMATION, __VA_ARGS__)
-#define ddebug_f(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define dinfo_f(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define ddebug_f(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
 #define dwarn_f(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
 #define derror_f(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
 #define dfatal_f(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)

@@ -41,7 +41,7 @@ void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const
         load_string << kv.first << ": " << kv.second << std::endl;
     }
     load_string << ">>>>>>>>>>";
-    dinfo("%s", load_string.str().c_str());
+    LOG_DEBUG("%s", load_string.str().c_str());
 }
 
 bool calc_disk_load(node_mapper &nodes,
@@ -56,17 +56,17 @@ bool calc_disk_load(node_mapper &nodes,
     dassert(ns != nullptr, "can't find node(%s) from node_state", node.to_string());
 
     auto add_one_replica_to_disk_load = [&](const gpid &pid) {
-        dinfo("add gpid(%d.%d) to node(%s) disk load",
-              pid.get_app_id(),
-              pid.get_partition_index(),
-              node.to_string());
-        const config_context &cc = *get_config_context(apps, pid);
-        auto iter = cc.find_from_serving(node);
-        if (iter == cc.serving.end()) {
-            dwarn("can't collect gpid(%d.%d)'s info from %s, which should be primary",
+        LOG_DEBUG("add gpid(%d.%d) to node(%s) disk load",
                   pid.get_app_id(),
                   pid.get_partition_index(),
                   node.to_string());
+        const config_context &cc = *get_config_context(apps, pid);
+        auto iter = cc.find_from_serving(node);
+        if (iter == cc.serving.end()) {
+            LOG_WARNING("can't collect gpid(%d.%d)'s info from %s, which should be primary",
+                        pid.get_app_id(),
+                        pid.get_partition_index(),
+                        node.to_string());
             return false;
         } else {
             load[iter->disk_tag]++;
@@ -160,13 +160,13 @@ generate_balancer_request(const app_mapper &apps,
     default:
         dassert(false, "");
     }
-    ddebug("generate balancer: %d.%d %s from %s of disk_tag(%s) to %s",
-           pc.pid.get_app_id(),
-           pc.pid.get_partition_index(),
-           ans.c_str(),
-           from.to_string(),
-           get_disk_tag(apps, from, pc.pid).c_str(),
-           to.to_string());
+    LOG_INFO("generate balancer: %d.%d %s from %s of disk_tag(%s) to %s",
+             pc.pid.get_app_id(),
+             pc.pid.get_partition_index(),
+             ans.c_str(),
+             from.to_string(),
+             get_disk_tag(apps, from, pc.pid).c_str(),
+             to.to_string());
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
@@ -365,8 +365,8 @@ bool load_balance_policy::execute_balance(
         if (!balance_checker) {
             if (!_migration_result->empty()) {
                 if (balance_in_turn) {
-                    ddebug("stop to handle more apps after we found some actions for %s",
-                           app->get_logname());
+                    LOG_INFO("stop to handle more apps after we found some actions for %s",
+                             app->get_logname());
                     return false;
                 }
             }

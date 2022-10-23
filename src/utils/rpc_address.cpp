@@ -55,7 +55,7 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
         int err = h_errno;
 
         if (hp == nullptr) {
-            derror("gethostbyname failed, name = %s, err = %d.", name, err);
+            LOG_ERROR("gethostbyname failed, name = %s, err = %d.", name, err);
             return 0;
         } else {
             memcpy((void *)&(addr.sin_addr.s_addr), (const void *)hp->h_addr, (size_t)hp->h_length);
@@ -103,22 +103,22 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
                     ret = (uint32_t)ntohl(ip_val);
                     break;
                 } else {
-                    dinfo("skip interface(%s), address(%s)",
-                          i->ifa_name,
-                          rpc_address(ip_val, 0).ipv4_str());
+                    LOG_DEBUG("skip interface(%s), address(%s)",
+                              i->ifa_name,
+                              rpc_address(ip_val, 0).ipv4_str());
                 }
             }
             i = i->ifa_next;
         }
 
         if (i == nullptr) {
-            derror("get local ip from network interfaces failed, network_interface = %s",
-                   network_interface);
+            LOG_ERROR("get local ip from network interfaces failed, network_interface = %s",
+                      network_interface);
         } else {
-            ddebug("get ip address from network interface(%s), addr(%s), input interface(\"%s\")",
-                   i->ifa_name,
-                   rpc_address(ret, 0).ipv4_str(),
-                   network_interface);
+            LOG_INFO("get ip address from network interface(%s), addr(%s), input interface(\"%s\")",
+                     i->ifa_name,
+                     rpc_address(ret, 0).ipv4_str(),
+                     network_interface);
         }
 
         if (ifa != nullptr) {

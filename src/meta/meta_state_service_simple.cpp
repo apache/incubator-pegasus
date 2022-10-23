@@ -197,7 +197,7 @@ error_code meta_state_service_simple::set_data_internal(const std::string &node,
 error_code meta_state_service_simple::apply_transaction(
     const std::shared_ptr<meta_state_service::transaction_entries> &t_entries)
 {
-    dinfo("internal operation after logged");
+    LOG_DEBUG("internal operation after logged");
     simple_transaction_entries *entries =
         dynamic_cast<simple_transaction_entries *>(t_entries.get());
     dassert(entries != nullptr, "invalid input parameter");
@@ -283,7 +283,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
 
     _log = file::open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!_log) {
-        derror("open file failed: %s", log_path.c_str());
+        LOG_ERROR("open file failed: %s", log_path.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
     return ERR_OK;

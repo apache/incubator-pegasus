@@ -197,7 +197,7 @@ replica::~replica(void)
 {
     close();
     _prepare_list = nullptr;
-    dinfo("%s: replica destroyed", name());
+    LOG_DEBUG("%s: replica destroyed", name());
 }
 
 void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
@@ -291,10 +291,10 @@ void replica::check_state_completeness()
 
 void replica::execute_mutation(mutation_ptr &mu)
 {
-    dinfo("%s: execute mutation %s: request_count = %u",
-          name(),
-          mu->name(),
-          static_cast<int>(mu->client_requests.size()));
+    LOG_DEBUG("%s: execute mutation %s: request_count = %u",
+              name(),
+              mu->name(),
+              static_cast<int>(mu->client_requests.size()));
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;
@@ -304,11 +304,11 @@ void replica::execute_mutation(mutation_ptr &mu)
         if (_app->last_committed_decree() + 1 == d) {
             err = _app->apply_mutation(mu);
         } else {
-            dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()),
-                  _app->last_committed_decree());
+            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
+                      name(),
+                      mu->name(),
+                      enum_to_string(status()),
+                      _app->last_committed_decree());
         }
         break;
     case partition_status::PS_PRIMARY: {
@@ -330,11 +330,11 @@ void replica::execute_mutation(mutation_ptr &mu)
                     d);
             err = _app->apply_mutation(mu);
         } else {
-            dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()),
-                  _app->last_committed_decree());
+            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
+                      name(),
+                      mu->name(),
+                      enum_to_string(status()),
+                      _app->last_committed_decree());
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
@@ -351,11 +351,11 @@ void replica::execute_mutation(mutation_ptr &mu)
                     d);
             err = _app->apply_mutation(mu);
         } else {
-            dinfo("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()),
-                  _app->last_committed_decree());
+            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
+                      name(),
+                      mu->name(),
+                      enum_to_string(status()),
+                      _app->last_committed_decree());
 
             // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,
@@ -375,7 +375,7 @@ void replica::execute_mutation(mutation_ptr &mu)
         dassert(false, "invalid partition_status, status = %s", enum_to_string(status()));
     }
 
-    dinfo(
+    LOG_DEBUG(
         "TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
 
     if (err != ERR_OK) {
@@ -487,7 +487,7 @@ void replica::close()
         std::unique_ptr<replication_app_base> tmp_app = std::move(_app);
         error_code err = tmp_app->close(false);
         if (err != dsn::ERR_OK) {
-            dwarn("%s: close app failed, err = %s", name(), err.to_string());
+            LOG_WARNING("%s: close app failed, err = %s", name(), err.to_string());
         }
     }
 
@@ -510,7 +510,7 @@ void replica::close()
 
     _split_mgr.reset();
 
-    ddebug("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
+    LOG_INFO("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
 }
 
 std::string replica::query_manual_compact_state() const

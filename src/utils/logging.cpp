@@ -34,10 +34,10 @@
 #include "utils/smart_pointers.h"
 #include "simple_logger.h"
 
-DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
+DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_DEBUG;
 DSN_DEFINE_string("core",
                   logging_start_level,
-                  "LOG_LEVEL_INFORMATION",
+                  "LOG_LEVEL_DEBUG",
                   "logs with level below this will not be logged");
 
 DSN_DEFINE_bool("core", logging_flush_on_exit, true, "flush log when exit system");

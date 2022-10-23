@@ -208,7 +208,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
         if (cnode->spec().role_name == std::string(app_role) && cnode->spec().index == index) {
             return true;
         } else {
-            derror("current thread is already attached to another rDSN app %s", name.c_str());
+            LOG_ERROR("current thread is already attached to another rDSN app %s", name.c_str());
             return false;
         }
     }
@@ -222,7 +222,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
         }
     }
 
-    derror("cannot find host app %s with index %d", app_role, index);
+    LOG_ERROR("cannot find host app %s with index %d", app_role, index);
     return false;
 }
 
@@ -444,10 +444,10 @@ bool run(const char *config_file,
     // prepare minimum necessary
     ::dsn::service_engine::instance().init_before_toollets(spec);
 
-    ddebug("process(%ld) start: %" PRIu64 ", date: %s",
-           getpid(),
-           dsn::utils::process_start_millis(),
-           dsn::utils::process_start_date_time_mills());
+    LOG_INFO("process(%ld) start: %" PRIu64 ", date: %s",
+             getpid(),
+             dsn::utils::process_start_millis(),
+             dsn::utils::process_start_date_time_mills());
 
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {

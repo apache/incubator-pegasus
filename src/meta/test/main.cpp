@@ -85,7 +85,7 @@ dsn::error_code meta_service_test_app::start(const std::vector<std::string> &arg
         (uint32_t)dsn_config_get_value_uint64("tools.simulator", "random_seed", 0, "random seed");
     if (seed == 0) {
         seed = time(0);
-        derror("initial seed: %u", seed);
+        LOG_ERROR("initial seed: %u", seed);
     }
     srand(seed);
 

@@ -46,37 +46,37 @@ static void tracer_on_task_create(task *caller, task *callee)
     dsn_task_type_t type = callee->spec().type;
     if (TASK_TYPE_RPC_REQUEST == type) {
         rpc_request_task *tsk = (rpc_request_task *)callee;
-        ddebug("%s CREATE, task_id = %016" PRIx64
-               ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
-               callee->spec().name.c_str(),
-               callee->id(),
-               enum_to_string(type),
-               tsk->get_request()->header->rpc_name,
-               tsk->get_request()->header->trace_id);
+        LOG_INFO("%s CREATE, task_id = %016" PRIx64
+                 ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
+                 callee->spec().name.c_str(),
+                 callee->id(),
+                 enum_to_string(type),
+                 tsk->get_request()->header->rpc_name,
+                 tsk->get_request()->header->trace_id);
     } else if (TASK_TYPE_RPC_RESPONSE == type) {
         rpc_response_task *tsk = (rpc_response_task *)callee;
-        ddebug("%s CREATE, task_id = %016" PRIx64
-               ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
-               callee->spec().name.c_str(),
-               callee->id(),
-               enum_to_string(type),
-               tsk->get_request()->header->rpc_name,
-               tsk->get_request()->header->trace_id);
+        LOG_INFO("%s CREATE, task_id = %016" PRIx64
+                 ", type = %s, rpc_name = %s, trace_id = %016" PRIx64 "",
+                 callee->spec().name.c_str(),
+                 callee->id(),
+                 enum_to_string(type),
+                 tsk->get_request()->header->rpc_name,
+                 tsk->get_request()->header->trace_id);
     } else {
-        ddebug("%s CREATE, task_id = %016" PRIx64 ", type = %s",
-               callee->spec().name.c_str(),
-               callee->id(),
-               enum_to_string(type));
+        LOG_INFO("%s CREATE, task_id = %016" PRIx64 ", type = %s",
+                 callee->spec().name.c_str(),
+                 callee->id(),
+                 enum_to_string(type));
     }
 }
 
 static void tracer_on_task_enqueue(task *caller, task *callee)
 {
-    ddebug("%s ENQUEUE, task_id = %016" PRIx64 ", delay = %d ms, queue size = %d",
-           callee->spec().name.c_str(),
-           callee->id(),
-           callee->delay_milliseconds(),
-           tls_dsn.last_worker_queue_size);
+    LOG_INFO("%s ENQUEUE, task_id = %016" PRIx64 ", delay = %d ms, queue size = %d",
+             callee->spec().name.c_str(),
+             callee->id(),
+             callee->delay_milliseconds(),
+             tls_dsn.last_worker_queue_size);
 }
 
 static void tracer_on_task_begin(task *this_)
@@ -84,25 +84,26 @@ static void tracer_on_task_begin(task *this_)
     switch (this_->spec().type) {
     case dsn_task_type_t::TASK_TYPE_COMPUTE:
     case dsn_task_type_t::TASK_TYPE_AIO:
-        ddebug("%s EXEC BEGIN, task_id = %016" PRIx64 "", this_->spec().name.c_str(), this_->id());
+        LOG_INFO(
+            "%s EXEC BEGIN, task_id = %016" PRIx64 "", this_->spec().name.c_str(), this_->id());
         break;
     case dsn_task_type_t::TASK_TYPE_RPC_REQUEST: {
         rpc_request_task *tsk = (rpc_request_task *)this_;
-        ddebug("%s EXEC BEGIN, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 "",
-               this_->spec().name.c_str(),
-               this_->id(),
-               tsk->get_request()->header->from_address.to_string(),
-               tsk->get_request()->to_address.to_string(),
-               tsk->get_request()->header->trace_id);
+        LOG_INFO("%s EXEC BEGIN, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 "",
+                 this_->spec().name.c_str(),
+                 this_->id(),
+                 tsk->get_request()->header->from_address.to_string(),
+                 tsk->get_request()->to_address.to_string(),
+                 tsk->get_request()->header->trace_id);
     } break;
     case dsn_task_type_t::TASK_TYPE_RPC_RESPONSE: {
         rpc_response_task *tsk = (rpc_response_task *)this_;
-        ddebug("%s EXEC BEGIN, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 "",
-               this_->spec().name.c_str(),
-               this_->id(),
-               tsk->get_request()->to_address.to_string(),
-               tsk->get_request()->header->from_address.to_string(),
-               tsk->get_request()->header->trace_id);
+        LOG_INFO("%s EXEC BEGIN, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64 "",
+                 this_->spec().name.c_str(),
+                 this_->id(),
+                 tsk->get_request()->to_address.to_string(),
+                 tsk->get_request()->header->from_address.to_string(),
+                 tsk->get_request()->header->trace_id);
     } break;
     default:
         break;
@@ -111,15 +112,15 @@ static void tracer_on_task_begin(task *this_)
 
 static void tracer_on_task_end(task *this_)
 {
-    ddebug("%s EXEC END, task_id = %016" PRIx64 ", err = %s",
-           this_->spec().name.c_str(),
-           this_->id(),
-           this_->error().to_string());
+    LOG_INFO("%s EXEC END, task_id = %016" PRIx64 ", err = %s",
+             this_->spec().name.c_str(),
+             this_->id(),
+             this_->error().to_string());
 }
 
 static void tracer_on_task_cancelled(task *this_)
 {
-    ddebug("%s CANCELLED, task_id = %016" PRIx64 "", this_->spec().name.c_str(), this_->id());
+    LOG_INFO("%s CANCELLED, task_id = %016" PRIx64 "", this_->spec().name.c_str(), this_->id());
 }
 
 static void tracer_on_task_wait_pre(task *caller, task *callee, uint32_t timeout_ms) {}
@@ -131,46 +132,46 @@ static void tracer_on_task_cancel_post(task *caller, task *callee, bool succ) {}
 // return true means continue, otherwise early terminate with task::set_error_code
 static void tracer_on_aio_call(task *caller, aio_task *callee)
 {
-    ddebug("%s AIO.CALL, task_id = %016" PRIx64 ", offset = %" PRIu64 ", size = %d",
-           callee->spec().name.c_str(),
-           callee->id(),
-           callee->get_aio_context()->file_offset,
-           callee->get_aio_context()->buffer_size);
+    LOG_INFO("%s AIO.CALL, task_id = %016" PRIx64 ", offset = %" PRIu64 ", size = %d",
+             callee->spec().name.c_str(),
+             callee->id(),
+             callee->get_aio_context()->file_offset,
+             callee->get_aio_context()->buffer_size);
 }
 
 static void tracer_on_aio_enqueue(aio_task *this_)
 {
-    ddebug("%s AIO.ENQUEUE, task_id = %016" PRIx64 ", queue size = %d",
-           this_->spec().name.c_str(),
-           this_->id(),
-           tls_dsn.last_worker_queue_size);
+    LOG_INFO("%s AIO.ENQUEUE, task_id = %016" PRIx64 ", queue size = %d",
+             this_->spec().name.c_str(),
+             this_->id(),
+             tls_dsn.last_worker_queue_size);
 }
 
 // return true means continue, otherwise early terminate with task::set_error_code
 static void tracer_on_rpc_call(task *caller, message_ex *req, rpc_response_task *callee)
 {
     message_header &hdr = *req->header;
-    ddebug("%s RPC.CALL: %s => %s, trace_id = %016" PRIx64 ", callback_task = %016" PRIx64
-           ", timeout = %d ms",
-           hdr.rpc_name,
-           req->header->from_address.to_string(),
-           req->to_address.to_string(),
-           hdr.trace_id,
-           callee ? callee->id() : 0,
-           hdr.client.timeout_ms);
+    LOG_INFO("%s RPC.CALL: %s => %s, trace_id = %016" PRIx64 ", callback_task = %016" PRIx64
+             ", timeout = %d ms",
+             hdr.rpc_name,
+             req->header->from_address.to_string(),
+             req->to_address.to_string(),
+             hdr.trace_id,
+             callee ? callee->id() : 0,
+             hdr.client.timeout_ms);
 }
 
 static void tracer_on_rpc_request_enqueue(rpc_request_task *callee)
 {
-    ddebug("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016" PRIx64
-           ", %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
-           callee->spec().name.c_str(),
-           callee,
-           callee->id(),
-           callee->get_request()->header->from_address.to_string(),
-           callee->get_request()->to_address.to_string(),
-           callee->get_request()->header->trace_id,
-           tls_dsn.last_worker_queue_size);
+    LOG_INFO("%s RPC.REQUEST.ENQUEUE (0x%p), task_id = %016" PRIx64
+             ", %s => %s, trace_id = %016" PRIx64 ", queue size = %d",
+             callee->spec().name.c_str(),
+             callee,
+             callee->id(),
+             callee->get_request()->header->from_address.to_string(),
+             callee->get_request()->to_address.to_string(),
+             callee->get_request()->header->trace_id,
+             tls_dsn.last_worker_queue_size);
 }
 
 // return true means continue, otherwise early terminate with task::set_error_code
@@ -178,30 +179,30 @@ static void tracer_on_rpc_reply(task *caller, message_ex *msg)
 {
     message_header &hdr = *msg->header;
 
-    ddebug("%s RPC.REPLY: %s => %s, trace_id = %016" PRIx64 "",
-           hdr.rpc_name,
-           msg->header->from_address.to_string(),
-           msg->to_address.to_string(),
-           hdr.trace_id);
+    LOG_INFO("%s RPC.REPLY: %s => %s, trace_id = %016" PRIx64 "",
+             hdr.rpc_name,
+             msg->header->from_address.to_string(),
+             msg->to_address.to_string(),
+             hdr.trace_id);
 }
 
 static void tracer_on_rpc_response_enqueue(rpc_response_task *resp)
 {
-    ddebug("%s RPC.RESPONSE.ENQUEUE, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64
-           ", queue size = %d",
-           resp->spec().name.c_str(),
-           resp->id(),
-           resp->get_request()->to_address.to_string(),
-           resp->get_request()->header->from_address.to_string(),
-           resp->get_request()->header->trace_id,
-           tls_dsn.last_worker_queue_size);
+    LOG_INFO("%s RPC.RESPONSE.ENQUEUE, task_id = %016" PRIx64 ", %s => %s, trace_id = %016" PRIx64
+             ", queue size = %d",
+             resp->spec().name.c_str(),
+             resp->id(),
+             resp->get_request()->to_address.to_string(),
+             resp->get_request()->header->from_address.to_string(),
+             resp->get_request()->header->trace_id,
+             tls_dsn.last_worker_queue_size);
 }
 
 static void tracer_on_rpc_create_response(message_ex *req, message_ex *resp)
 {
-    ddebug("%s RPC.CREATE.RESPONSE, trace_id = %016" PRIx64 "",
-           resp->header->rpc_name,
-           resp->header->trace_id);
+    LOG_INFO("%s RPC.CREATE.RESPONSE, trace_id = %016" PRIx64 "",
+             resp->header->rpc_name,
+             resp->header->trace_id);
 }
 
 enum logged_event_t

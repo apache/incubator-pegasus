@@ -113,7 +113,7 @@ void hdfs_service::close()
     // This method should be carefully called.
     // Calls to hdfsDisconnect() by individual threads would terminate
     // all other connections handed out via hdfsConnect() to the same URI.
-    ddebug("Try to disconnect hdfs.");
+    LOG_INFO("Try to disconnect hdfs.");
     int result = hdfsDisconnect(_fs);
     if (result == -1) {
         derror_f("Fail to disconnect from the hdfs file system, error: {}.",
@@ -335,7 +335,7 @@ error_code hdfs_file_object::write_data_in_batches(const char *data,
         return ERR_FS_INTERNAL;
     }
 
-    ddebug("start to synchronize meta data after successfully wrote data to hdfs");
+    LOG_INFO("start to synchronize meta data after successfully wrote data to hdfs");
     return get_file_meta();
 }
 

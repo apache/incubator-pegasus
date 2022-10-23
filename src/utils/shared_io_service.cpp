@@ -29,9 +29,10 @@ DSN_DEFINE_uint32("core",
                   "the number of threads for timer service");
 DSN_DEFINE_validator(timer_service_worker_count, [](uint32_t worker_count) -> bool {
     if (worker_count < kMinTimerServiceWorkerCount) {
-        derror("timer_service_worker_count should be at least 3, where one thread is used to "
-               "collect all metrics from registery for monitoring systems, and another two threads "
-               "are used to compute percentiles.");
+        LOG_ERROR(
+            "timer_service_worker_count should be at least 3, where one thread is used to "
+            "collect all metrics from registery for monitoring systems, and another two threads "
+            "are used to compute percentiles.");
         return false;
     }
     return true;

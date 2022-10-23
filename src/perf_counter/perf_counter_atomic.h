@@ -438,8 +438,8 @@ private:
     void on_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
                   const boost::system::error_code &ec)
     {
-        // as the callback is not in tls context, so the log system calls like ddebug, dassert will
-        // cause a lock
+        // as the callback is not in tls context, so the log system calls like LOG_INFO, dassert
+        // will cause a lock
         if (!ec) {
             calc(boost::make_shared<compute_context>());
 

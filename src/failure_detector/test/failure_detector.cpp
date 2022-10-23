@@ -69,7 +69,7 @@ protected:
         if (_send_ping_switch)
             failure_detector::send_beacon(node, time);
         else {
-            dinfo("ignore send beacon, to node[%s], time[%" PRId64 "]", node.to_string(), time);
+            LOG_DEBUG("ignore send beacon, to node[%s], time[%" PRId64 "]", node.to_string(), time);
         }
     }
 
@@ -119,10 +119,10 @@ public:
         if (_response_ping_switch)
             meta_server_failure_detector::on_ping(beacon, reply);
         else {
-            dinfo("ignore on ping, beacon msg, time[%" PRId64 "], from[%s], to[%s]",
-                  beacon.time,
-                  beacon.from_addr.to_string(),
-                  beacon.to_addr.to_string());
+            LOG_DEBUG("ignore on ping, beacon msg, time[%" PRId64 "], from[%s], to[%s]",
+                      beacon.time,
+                      beacon.from_addr.to_string(),
+                      beacon.to_addr.to_string());
         }
     }
 
@@ -181,9 +181,9 @@ public:
 
     void on_master_config(const config_master_message &request, bool &response)
     {
-        dinfo("master config: request:%s, type:%s",
-              request.master.to_string(),
-              request.is_register ? "reg" : "unreg");
+        LOG_DEBUG("master config: request:%s, type:%s",
+                  request.master.to_string(),
+                  request.is_register ? "reg" : "unreg");
         if (request.is_register)
             _worker_fd->register_master(request.master);
         else
@@ -221,7 +221,7 @@ public:
         }
 
         _master_fd->start(1, 1, 9, 10, use_allow_list);
-        dinfo("%s", _master_fd->get_allow_list(std::vector<std::string>{}).c_str());
+        LOG_DEBUG("%s", _master_fd->get_allow_list(std::vector<std::string>{}).c_str());
         ++started_apps;
 
         return ERR_OK;
@@ -329,7 +329,7 @@ void clear(test_worker *worker, std::vector<test_master *> masters)
 
 void finish(test_worker *worker, test_master *master, int master_index)
 {
-    dwarn("start to finish");
+    LOG_WARNING("start to finish");
     std::atomic_int wait_count;
     wait_count.store(2);
     worker->fd()->when_disconnected(
@@ -508,7 +508,7 @@ TEST(fd, old_master_died)
 
     worker->fd()->when_disconnected([](const std::vector<rpc_address> &masters_list) {
         ASSERT_EQ(masters_list.size(), 1);
-        dinfo("disconnect from master: %s", masters_list[0].to_string());
+        LOG_DEBUG("disconnect from master: %s", masters_list[0].to_string());
     });
 
     /*first let's stop the old master*/

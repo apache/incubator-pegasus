@@ -100,7 +100,7 @@ TEST(core, group_address_talk_to_others)
     auto typed_callback = [addr](error_code err_code, const std::string &result) {
         EXPECT_EQ(ERR_OK, err_code);
         dsn::rpc_address addr_got;
-        ddebug("talk to others callback, result: %s", result.c_str());
+        LOG_INFO("talk to others callback, result: %s", result.c_str());
         EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
         EXPECT_EQ(TEST_PORT_END, addr_got.port());
     };
@@ -121,7 +121,7 @@ TEST(core, group_address_change_leader)
         rpc_err = err_code;
         if (ERR_OK == err_code) {
             ::dsn::rpc_address addr_got;
-            ddebug("talk to others callback, result: %s", result.c_str());
+            LOG_INFO("talk to others callback, result: %s", result.c_str());
             EXPECT_TRUE(addr_got.from_string_ipv4(result.c_str()));
             EXPECT_EQ(TEST_PORT_END, addr_got.port());
         }
@@ -152,7 +152,7 @@ TEST(core, group_address_change_leader)
                                nullptr,
                                typed_callback);
     resp_task->wait();
-    ddebug("addr.leader=%s", addr.group_address()->leader().to_string());
+    LOG_INFO("addr.leader=%s", addr.group_address()->leader().to_string());
     if (rpc_err == ERR_OK) {
         EXPECT_EQ(TEST_PORT_END, addr.group_address()->leader().port());
     }

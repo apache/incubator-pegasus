@@ -47,20 +47,22 @@ __thread int zlock_shared_count;
 void check_wait_safety()
 {
     if (zlock_exclusive_count + zlock_shared_count > 0) {
-        dwarn("wait inside locks may lead to deadlocks - current thread owns %u exclusive locks "
-              "and %u shared locks now.",
-              zlock_exclusive_count,
-              zlock_shared_count);
+        LOG_WARNING(
+            "wait inside locks may lead to deadlocks - current thread owns %u exclusive locks "
+            "and %u shared locks now.",
+            zlock_exclusive_count,
+            zlock_shared_count);
     }
 }
 
 void check_dangling_lock()
 {
     if (zlock_exclusive_count + zlock_shared_count > 0) {
-        dwarn("locks should not be hold at this point - current thread owns %u exclusive locks and "
-              "%u shared locks now.",
-              zlock_exclusive_count,
-              zlock_shared_count);
+        LOG_WARNING(
+            "locks should not be hold at this point - current thread owns %u exclusive locks and "
+            "%u shared locks now.",
+            zlock_exclusive_count,
+            zlock_shared_count);
     }
 }
 } // namespace lock_checker

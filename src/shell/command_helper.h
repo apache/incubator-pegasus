@@ -990,11 +990,11 @@ inline bool get_apps_and_nodes(shell_context *sc,
 {
     dsn::error_code err = sc->ddl_client->list_apps(dsn::app_status::AS_AVAILABLE, apps);
     if (err != dsn::ERR_OK) {
-        derror("list apps failed, error = %s", err.to_string());
+        LOG_ERROR("list apps failed, error = %s", err.to_string());
         return false;
     }
     if (!fill_nodes(sc, "replica-server", nodes)) {
-        derror("get replica server node list failed");
+        LOG_ERROR("get replica server node list failed");
         return false;
     }
     return true;
@@ -1011,7 +1011,7 @@ get_app_partitions(shell_context *sc,
         dsn::error_code err = sc->ddl_client->list_app(
             app.app_name, app_id, partition_count, app_partitions[app.app_id]);
         if (err != ::dsn::ERR_OK) {
-            derror("list app %s failed, error = %s", app.app_name.c_str(), err.to_string());
+            LOG_ERROR("list app %s failed, error = %s", app.app_name.c_str(), err.to_string());
             return false;
         }
         dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
@@ -1028,20 +1028,20 @@ inline bool decode_node_perf_counter_info(const dsn::rpc_address &node_addr,
                                           dsn::perf_counter_info &info)
 {
     if (!result.first) {
-        derror("query perf counter info from node %s failed", node_addr.to_string());
+        LOG_ERROR("query perf counter info from node %s failed", node_addr.to_string());
         return false;
     }
     dsn::blob bb(result.second.data(), 0, result.second.size());
     if (!dsn::json::json_forwarder<dsn::perf_counter_info>::decode(bb, info)) {
-        derror("decode perf counter info from node %s failed, result = %s",
-               node_addr.to_string(),
-               result.second.c_str());
+        LOG_ERROR("decode perf counter info from node %s failed, result = %s",
+                  node_addr.to_string(),
+                  result.second.c_str());
         return false;
     }
     if (info.result != "OK") {
-        derror("query perf counter info from node %s returns error, error = %s",
-               node_addr.to_string(),
-               info.result.c_str());
+        LOG_ERROR("query perf counter info from node %s returns error, error = %s",
+                  node_addr.to_string(),
+                  info.result.c_str());
         return false;
     }
     return true;
@@ -1134,7 +1134,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             }
         }
         if (app_info == nullptr) {
-            derror("app %s not found", app_name.c_str());
+            LOG_ERROR("app %s not found", app_name.c_str());
             return false;
         }
     }
@@ -1197,7 +1197,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
         dsn::error_code err =
             sc->ddl_client->list_app(app_name, app_id, partition_count, partitions);
         if (err != ::dsn::ERR_OK) {
-            derror("list app %s failed, error = %s", app_name.c_str(), err.to_string());
+            LOG_ERROR("list app %s failed, error = %s", app_name.c_str(), err.to_string());
             return false;
         }
         dassert(app_id == app_info->app_id, "%d VS %d", app_id, app_info->app_id);
@@ -1257,7 +1257,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
 {
     std::vector<node_desc> nodes;
     if (!fill_nodes(sc, "replica-server", nodes)) {
-        derror("get replica server node list failed");
+        LOG_ERROR("get replica server node list failed");
         return false;
     }
 
@@ -1269,8 +1269,8 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            dwarn("decode perf counter from node(%s) failed, just ignore it",
-                  node_addr.to_string());
+            LOG_WARNING("decode perf counter from node(%s) failed, just ignore it",
+                        node_addr.to_string());
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
@@ -1312,13 +1312,13 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
     std::vector<::dsn::app_info> apps;
     std::vector<node_desc> nodes;
     if (!get_apps_and_nodes(sc, apps, nodes)) {
-        derror("get apps and nodes failed");
+        LOG_ERROR("get apps and nodes failed");
         return false;
     }
 
     std::map<int32_t, std::vector<dsn::partition_configuration>> app_partitions;
     if (!get_app_partitions(sc, apps, app_partitions)) {
-        derror("get app partitions failed");
+        LOG_ERROR("get app partitions failed");
         return false;
     }
     for (auto &kv : app_partitions) {
@@ -1337,8 +1337,8 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            dwarn("decode perf counter from node(%s) failed, just ignore it",
-                  node_addr.to_string());
+            LOG_WARNING("decode perf counter from node(%s) failed, just ignore it",
+                        node_addr.to_string());
             continue;
         }
         for (dsn::perf_counter_metric &m : info.counters) {

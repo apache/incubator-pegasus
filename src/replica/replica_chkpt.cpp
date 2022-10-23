@@ -62,17 +62,17 @@ void replica::on_checkpoint_timer()
 
     if (dsn_now_ms() > _next_checkpoint_interval_trigger_time_ms) {
         // we trigger emergency checkpoint if no checkpoint generated for a long time
-        ddebug("%s: trigger emergency checkpoint by checkpoint_max_interval_hours, "
-               "config_interval = %dh (%" PRIu64 "ms), random_interval = %" PRIu64 "ms",
-               name(),
-               _options->checkpoint_max_interval_hours,
-               _options->checkpoint_max_interval_hours * 3600000UL,
-               _next_checkpoint_interval_trigger_time_ms - _last_checkpoint_generate_time_ms);
+        LOG_INFO("%s: trigger emergency checkpoint by checkpoint_max_interval_hours, "
+                 "config_interval = %dh (%" PRIu64 "ms), random_interval = %" PRIu64 "ms",
+                 name(),
+                 _options->checkpoint_max_interval_hours,
+                 _options->checkpoint_max_interval_hours * 3600000UL,
+                 _next_checkpoint_interval_trigger_time_ms - _last_checkpoint_generate_time_ms);
         init_checkpoint(true);
     } else {
-        ddebug("%s: trigger non-emergency checkpoint",
-               name(),
-               _options->checkpoint_max_interval_hours);
+        LOG_INFO("%s: trigger non-emergency checkpoint",
+                 name(),
+                 _options->checkpoint_max_interval_hours);
         init_checkpoint(false);
     }
 
@@ -176,10 +176,10 @@ void replica::init_checkpoint(bool is_emergency)
 {
     // only applicable to primary and secondary replicas
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY) {
-        ddebug("%s: ignore doing checkpoint for status = %s, is_emergency = %s",
-               name(),
-               enum_to_string(status()),
-               (is_emergency ? "true" : "false"));
+        LOG_INFO("%s: ignore doing checkpoint for status = %s, is_emergency = %s",
+                 name(),
+                 enum_to_string(status()),
+                 (is_emergency ? "true" : "false"));
         return;
     }
 
@@ -239,14 +239,14 @@ error_code replica::background_async_checkpoint(bool is_emergency)
         if (old_durable != _app->last_durable_decree()) {
             // if no need to generate new checkpoint, async_checkpoint() also returns ERR_OK,
             // so we should check if a new checkpoint has been generated.
-            ddebug("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
-                   " => %" PRId64 ")",
-                   name(),
-                   used_time,
-                   _app->last_committed_decree(),
-                   old_durable,
-                   _app->last_durable_decree());
+            LOG_INFO("%s: call app.async_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
+                     "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
+                     " => %" PRId64 ")",
+                     name(),
+                     used_time,
+                     _app->last_committed_decree(),
+                     old_durable,
+                     _app->last_durable_decree());
             update_last_checkpoint_generate_time();
         }
 
@@ -262,10 +262,10 @@ error_code replica::background_async_checkpoint(bool is_emergency)
 
     if (err == ERR_TRY_AGAIN) {
         // already triggered memory flushing on async_checkpoint(), then try again later.
-        ddebug("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
-               ", schedule later checkpoint after 10 seconds",
-               name(),
-               used_time);
+        LOG_INFO("%s: call app.async_checkpoint() returns ERR_TRY_AGAIN, time_used_ns = %" PRIu64
+                 ", schedule later checkpoint after 10 seconds",
+                 name(),
+                 used_time);
         tasking::enqueue(LPC_PER_REPLICA_CHECKPOINT_TIMER,
                          &_tracker,
                          [this] { init_checkpoint(false); },
@@ -282,15 +282,15 @@ error_code replica::background_async_checkpoint(bool is_emergency)
     }
     if (err == ERR_WRONG_TIMING) {
         // do nothing
-        ddebug("%s: call app.async_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
-               ", just ignore",
-               name(),
-               used_time);
+        LOG_INFO("%s: call app.async_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
+                 ", just ignore",
+                 name(),
+                 used_time);
     } else {
-        derror("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-               name(),
-               used_time,
-               err.to_string());
+        LOG_ERROR("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
+                  name(),
+                  used_time,
+                  err.to_string());
     }
     return err;
 }
@@ -307,27 +307,27 @@ error_code replica::background_sync_checkpoint()
         if (old_durable != _app->last_durable_decree()) {
             // if no need to generate new checkpoint, sync_checkpoint() also returns ERR_OK,
             // so we should check if a new checkpoint has been generated.
-            ddebug("%s: call app.sync_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
-                   "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
-                   " => %" PRId64 ")",
-                   name(),
-                   used_time,
-                   _app->last_committed_decree(),
-                   old_durable,
-                   _app->last_durable_decree());
+            LOG_INFO("%s: call app.sync_checkpoint() succeed, time_used_ns = %" PRIu64 ", "
+                     "app_last_committed_decree = %" PRId64 ", app_last_durable_decree = (%" PRId64
+                     " => %" PRId64 ")",
+                     name(),
+                     used_time,
+                     _app->last_committed_decree(),
+                     old_durable,
+                     _app->last_durable_decree());
             update_last_checkpoint_generate_time();
         }
     } else if (err == ERR_WRONG_TIMING) {
         // do nothing
-        ddebug("%s: call app.sync_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
-               ", just ignore",
-               name(),
-               used_time);
+        LOG_INFO("%s: call app.sync_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = %" PRIu64
+                 ", just ignore",
+                 name(),
+                 used_time);
     } else {
-        derror("%s: call app.sync_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-               name(),
-               used_time,
-               err.to_string());
+        LOG_ERROR("%s: call app.sync_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
+                  name(),
+                  used_time,
+                  err.to_string());
     }
     return err;
 }

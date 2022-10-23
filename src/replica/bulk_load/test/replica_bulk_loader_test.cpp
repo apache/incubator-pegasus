@@ -259,14 +259,14 @@ public:
         std::ofstream os(whole_name.c_str(),
                          (std::ofstream::out | std::ios::binary | std::ofstream::trunc));
         if (!os.is_open()) {
-            derror("open file %s failed", whole_name.c_str());
+            LOG_ERROR("open file %s failed", whole_name.c_str());
             return ERR_FILE_OPERATION_FAILED;
         }
 
         blob bb = json::json_forwarder<bulk_load_metadata>::encode(_metadata);
         os.write((const char *)bb.data(), (std::streamsize)bb.length());
         if (os.bad()) {
-            derror("write file %s failed", whole_name.c_str());
+            LOG_ERROR("write file %s failed", whole_name.c_str());
             return ERR_FILE_OPERATION_FAILED;
         }
         os.close();

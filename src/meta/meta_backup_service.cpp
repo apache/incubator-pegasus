@@ -58,9 +58,10 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
     // if app is dropped when app is under backuping, we just skip backup this app this time, and
     // also we will not write backup-finish-flag on fds
     if (!app_available) {
-        dwarn("%s: can't encode app_info for app(%d), perhaps removed, treat it as backup finished",
-              _backup_sig.c_str(),
-              app_id);
+        LOG_WARNING(
+            "%s: can't encode app_info for app(%d), perhaps removed, treat it as backup finished",
+            _backup_sig.c_str(),
+            app_id);
         auto iter = _progress.unfinished_partitions_per_app.find(app_id);
         dassert(iter != _progress.unfinished_partitions_per_app.end(),
                 "%s: can't find app(%d) in unfished_map",
@@ -94,9 +95,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                       })
         ->wait();
     if (err != dsn::ERR_OK) {
-        derror("%s: create file %s failed, restart this backup later",
-               _backup_sig.c_str(),
-               create_file_req.file_name.c_str());
+        LOG_ERROR("%s: create file %s failed, restart this backup later",
+                  _backup_sig.c_str(),
+                  create_file_req.file_name.c_str());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, app_id]() {
@@ -120,9 +121,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                 dcheck_eq(resp.written_size, buffer.length());
                 {
                     zauto_lock l(_lock);
-                    ddebug("%s: successfully backup app metadata to %s",
-                           _policy.policy_name.c_str(),
-                           remote_file->file_name().c_str());
+                    LOG_INFO("%s: successfully backup app metadata to %s",
+                             _policy.policy_name.c_str(),
+                             remote_file->file_name().c_str());
                     start_backup_app_partitions_unlocked(app_id);
                 }
             } else if (resp.err == ERR_FS_INTERNAL) {
@@ -133,9 +134,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                          resp.err.to_string());
                 return;
             } else {
-                dwarn("write %s failed, reason(%s), try it later",
-                      remote_file->file_name().c_str(),
-                      resp.err.to_string());
+                LOG_WARNING("write %s failed, reason(%s), try it later",
+                            remote_file->file_name().c_str(),
+                            resp.err.to_string());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  [this, app_id]() {
@@ -165,7 +166,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                                                            dsn::task_ptr write_callback)
 {
     if (_progress.is_app_skipped[app_id]) {
-        dwarn("app is unavaliable, skip write finish flag for this app(app_id = %d)", app_id);
+        LOG_WARNING("app is unavaliable, skip write finish flag for this app(app_id = %d)", app_id);
         if (write_callback != nullptr) {
             write_callback->enqueue();
         }
@@ -200,9 +201,9 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
         ->wait();
 
     if (err != ERR_OK) {
-        derror("%s: create file %s failed, restart this backup later",
-               _backup_sig.c_str(),
-               create_file_req.file_name.c_str());
+        LOG_ERROR("%s: create file %s failed, restart this backup later",
+                  _backup_sig.c_str(),
+                  create_file_req.file_name.c_str());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, app_id, write_callback]() {
@@ -221,7 +222,7 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
     if (remote_file->get_size() > 0) {
         // we only focus whether app_backup_status file is exist, so ignore app_backup_status file's
         // context
-        ddebug("app(%d) already write finish-flag on block service", app_id);
+        LOG_INFO("app(%d) already write finish-flag on block service", app_id);
         if (write_callback != nullptr) {
             write_callback->enqueue();
         }
@@ -236,8 +237,8 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
         [this, app_id, write_callback, remote_file](
             const dist::block_service::write_response &resp) {
             if (resp.err == ERR_OK) {
-                ddebug("app(%d) finish backup and write finish-flag on block service succeed",
-                       app_id);
+                LOG_INFO("app(%d) finish backup and write finish-flag on block service succeed",
+                         app_id);
                 if (write_callback != nullptr) {
                     write_callback->enqueue();
                 }
@@ -249,9 +250,9 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                          resp.err.to_string());
                 return;
             } else {
-                dwarn("write %s failed, reason(%s), try it later",
-                      remote_file->file_name().c_str(),
-                      resp.err.to_string());
+                LOG_WARNING("write %s failed, reason(%s), try it later",
+                            remote_file->file_name().c_str(),
+                            resp.err.to_string());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  [this, app_id, write_callback]() {
@@ -266,12 +267,12 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
 
 void policy_context::finish_backup_app_unlocked(int32_t app_id)
 {
-    ddebug("%s: finish backup for app(%d), progress(%d)",
-           _backup_sig.c_str(),
-           app_id,
-           _progress.unfinished_apps);
+    LOG_INFO("%s: finish backup for app(%d), progress(%d)",
+             _backup_sig.c_str(),
+             app_id,
+             _progress.unfinished_apps);
     if (--_progress.unfinished_apps == 0) {
-        ddebug("%s: finish current backup for all apps", _backup_sig.c_str());
+        LOG_INFO("%s: finish current backup for all apps", _backup_sig.c_str());
         _cur_backup.end_time_ms = dsn_now_ms();
 
         task_ptr write_backup_info_callback =
@@ -286,8 +287,8 @@ void policy_context::finish_backup_app_unlocked(int32_t app_id)
                                 _cur_backup.backup_id);
                         _cur_backup.start_time_ms = 0;
                         _cur_backup.end_time_ms = 0;
-                        ddebug("%s: finish an old backup, try to start a new one",
-                               _backup_sig.c_str());
+                        LOG_INFO("%s: finish an old backup, try to start a new one",
+                                 _backup_sig.c_str());
                         issue_new_backup_unlocked();
                     });
                 sync_backup_to_remote_storage_unlocked(_cur_backup, start_a_new_backup, false);
@@ -317,9 +318,9 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
         ->wait();
 
     if (err != ERR_OK) {
-        derror("%s: create file %s failed, restart this backup later",
-               _backup_sig.c_str(),
-               create_file_req.file_name.c_str());
+        LOG_ERROR("%s: create file %s failed, restart this backup later",
+                  _backup_sig.c_str(),
+                  create_file_req.file_name.c_str());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, b_info, write_callback]() {
@@ -344,8 +345,8 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
         [this, b_info, write_callback, remote_file](
             const dist::block_service::write_response &resp) {
             if (resp.err == ERR_OK) {
-                ddebug("policy(%s) write backup_info to cold backup media succeed",
-                       _policy.policy_name.c_str());
+                LOG_INFO("policy(%s) write backup_info to cold backup media succeed",
+                         _policy.policy_name.c_str());
                 if (write_callback != nullptr) {
                     write_callback->enqueue();
                 }
@@ -357,9 +358,9 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
                          resp.err.to_string());
                 return;
             } else {
-                dwarn("write %s failed, reason(%s), try it later",
-                      remote_file->file_name().c_str(),
-                      resp.err.to_string());
+                LOG_WARNING("write %s failed, reason(%s), try it later",
+                            remote_file->file_name().c_str(),
+                            resp.err.to_string());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  [this, b_info, write_callback]() {
@@ -571,12 +572,12 @@ void policy_context::initialize_backup_progress_unlocked()
         const std::shared_ptr<app_state> &app = _backup_service->get_state()->get_app(app_id);
         _progress.is_app_skipped[app_id] = true;
         if (app == nullptr) {
-            dwarn("%s: app id(%d) is invalid", _policy.policy_name.c_str(), app_id);
+            LOG_WARNING("%s: app id(%d) is invalid", _policy.policy_name.c_str(), app_id);
         } else if (app->status != app_status::AS_AVAILABLE) {
-            dwarn("%s: %s is not available, status(%s)",
-                  _policy.policy_name.c_str(),
-                  app->get_logname(),
-                  enum_to_string(app->status));
+            LOG_WARNING("%s: %s is not available, status(%s)",
+                        _policy.policy_name.c_str(),
+                        app->get_logname(),
+                        enum_to_string(app->status));
         } else {
             // NOTICE: only available apps have entry in
             // unfinished_partitions_per_app & partition_progress & app_chkpt_size
@@ -615,20 +616,21 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
 
     auto callback = [this, b_info, sync_callback, create_new_node](dsn::error_code err) {
         if (dsn::ERR_OK == err || (create_new_node && ERR_NODE_ALREADY_EXIST == err)) {
-            ddebug("%s: synced backup_info(%" PRId64 ") to remote storage successfully,"
-                   " start real backup work, new_node_create(%s)",
-                   _policy.policy_name.c_str(),
-                   b_info.backup_id,
-                   create_new_node ? "true" : "false");
+            LOG_INFO("%s: synced backup_info(%" PRId64 ") to remote storage successfully,"
+                     " start real backup work, new_node_create(%s)",
+                     _policy.policy_name.c_str(),
+                     b_info.backup_id,
+                     create_new_node ? "true" : "false");
             if (sync_callback != nullptr) {
                 sync_callback->enqueue();
             } else {
-                dwarn("%s: empty callback", _policy.policy_name.c_str());
+                LOG_WARNING("%s: empty callback", _policy.policy_name.c_str());
             }
         } else if (ERR_TIMEOUT == err) {
-            derror("%s: sync backup info(" PRId64 ") to remote storage got timeout, retry it later",
-                   _policy.policy_name.c_str(),
-                   b_info.backup_id);
+            LOG_ERROR("%s: sync backup info(" PRId64
+                      ") to remote storage got timeout, retry it later",
+                      _policy.policy_name.c_str(),
+                      b_info.backup_id);
             tasking::enqueue(LPC_DEFAULT_CALLBACK,
                              &_tracker,
                              [this, b_info, sync_callback, create_new_node]() {
@@ -744,8 +746,8 @@ void policy_context::issue_new_backup_unlocked()
 {
     // before issue new backup, we check whether the policy is dropped
     if (_policy.is_disable) {
-        ddebug("%s: policy is disabled, just ignore backup, try it later",
-               _policy.policy_name.c_str());
+        LOG_INFO("%s: policy is disabled, just ignore backup, try it later",
+                 _policy.policy_name.c_str());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this]() {
@@ -766,9 +768,9 @@ void policy_context::issue_new_backup_unlocked()
                          },
                          0,
                          _backup_service->backup_option().issue_backup_interval_ms);
-        ddebug("%s: start issue new backup %" PRId64 "ms later",
-               _policy.policy_name.c_str(),
-               _backup_service->backup_option().issue_backup_interval_ms.count());
+        LOG_INFO("%s: start issue new backup %" PRId64 "ms later",
+                 _policy.policy_name.c_str(),
+                 _backup_service->backup_option().issue_backup_interval_ms.count());
         return;
     }
 
@@ -776,8 +778,8 @@ void policy_context::issue_new_backup_unlocked()
     // if all apps are dropped, we don't issue a new backup
     if (_progress.unfinished_partitions_per_app.empty()) {
         // TODO: just ignore this backup and wait next backup
-        dwarn("%s: all apps have been dropped, ignore this backup and retry it later",
-              _backup_sig.c_str());
+        LOG_WARNING("%s: all apps have been dropped, ignore this backup and retry it later",
+                    _backup_sig.c_str());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this]() {
@@ -814,17 +816,17 @@ void policy_context::start()
         "policy recent backup duration time");
 
     issue_gc_backup_info_task_unlocked();
-    ddebug("%s: start gc backup info task succeed", _policy.policy_name.c_str());
+    LOG_INFO("%s: start gc backup info task succeed", _policy.policy_name.c_str());
 }
 
 void policy_context::add_backup_history(const backup_info &info)
 {
     zauto_lock l(_lock);
     if (info.end_time_ms <= 0) {
-        ddebug("%s: encounter an unfished backup_info(%lld), start_time(%lld), continue it later",
-               _policy.policy_name.c_str(),
-               info.backup_id,
-               info.start_time_ms);
+        LOG_INFO("%s: encounter an unfished backup_info(%lld), start_time(%lld), continue it later",
+                 _policy.policy_name.c_str(),
+                 info.backup_id,
+                 info.start_time_ms);
         dassert(_cur_backup.start_time_ms == 0,
                 "%s: shouldn't have multiple unfinished backup instance in a policy, %lld vs %lld",
                 _policy.policy_name.c_str(),
@@ -840,11 +842,11 @@ void policy_context::add_backup_history(const backup_info &info)
         _backup_sig =
             _policy.policy_name + "@" + boost::lexical_cast<std::string>(_cur_backup.backup_id);
     } else {
-        ddebug("%s: add backup history, id(%lld), start_time(%lld), endtime(%lld)",
-               _policy.policy_name.c_str(),
-               info.backup_id,
-               info.start_time_ms,
-               info.end_time_ms);
+        LOG_INFO("%s: add backup history, id(%lld), start_time(%lld), endtime(%lld)",
+                 _policy.policy_name.c_str(),
+                 info.backup_id,
+                 info.start_time_ms,
+                 info.end_time_ms);
         dassert(_cur_backup.end_time_ms == 0 || info.backup_id < _cur_backup.backup_id,
                 "%s: backup_id(%lld) in history larger than current(%lld)",
                 _policy.policy_name.c_str(),
@@ -915,11 +917,11 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
     ::dsn::utils::time_ms_to_date_time(
         static_cast<uint64_t>(info_to_gc.start_time_ms), start_time, 30);
     ::dsn::utils::time_ms_to_date_time(static_cast<uint64_t>(info_to_gc.end_time_ms), end_time, 30);
-    ddebug("%s: start to gc backup info, backup_id(%" PRId64 "), start_time(%s), end_time(%s)",
-           _policy.policy_name.c_str(),
-           info_to_gc.backup_id,
-           start_time,
-           end_time);
+    LOG_INFO("%s: start to gc backup info, backup_id(%" PRId64 "), start_time(%s), end_time(%s)",
+             _policy.policy_name.c_str(),
+             info_to_gc.backup_id,
+             start_time,
+             end_time);
 
     dsn::task_ptr sync_callback =
         ::dsn::tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, info_to_gc]() {
@@ -941,11 +943,11 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
                             });
                         sync_remove_backup_info(info_to_gc, remove_local_backup_info_task);
                     } else { // ERR_FS_INTERNAL, ERR_TIMEOUT, ERR_DIR_NOT_EMPTY
-                        dwarn("%s: gc backup info, id(%" PRId64
-                              ") failed, with err = %s, just try again",
-                              _policy.policy_name.c_str(),
-                              info_to_gc.backup_id,
-                              resp.err.to_string());
+                        LOG_WARNING("%s: gc backup info, id(%" PRId64
+                                    ") failed, with err = %s, just try again",
+                                    _policy.policy_name.c_str(),
+                                    info_to_gc.backup_id,
+                                    resp.err.to_string());
                         gc_backup_info_unlocked(info_to_gc);
                     }
                 });
@@ -958,9 +960,9 @@ void policy_context::issue_gc_backup_info_task_unlocked()
     if (_backup_history.size() > _policy.backup_history_count_to_keep) {
         backup_info &info = _backup_history.begin()->second;
         info.info_status = backup_info_status::type::DELETING;
-        ddebug("%s: start to gc backup info with id(%" PRId64 ")",
-               _policy.policy_name.c_str(),
-               info.backup_id);
+        LOG_INFO("%s: start to gc backup info with id(%" PRId64 ")",
+                 _policy.policy_name.c_str(),
+                 info.backup_id);
 
         tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this, info]() {
             gc_backup_info_unlocked(info);
@@ -968,7 +970,7 @@ void policy_context::issue_gc_backup_info_task_unlocked()
     } else {
         // there is no extra backup to gc, we just issue a new task to call
         // issue_gc_backup_info_task_unlocked later
-        dinfo("%s: no need to gc backup info, start it later", _policy.policy_name.c_str());
+        LOG_DEBUG("%s: no need to gc backup info, start it later", _policy.policy_name.c_str());
         tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this]() {
             zauto_lock l(_lock);
             issue_gc_backup_info_task_unlocked();
@@ -998,16 +1000,17 @@ void policy_context::sync_remove_backup_info(const backup_info &info, dsn::task_
         _backup_service->get_backup_path(_policy.policy_name, info.backup_id);
     auto callback = [this, info, sync_callback](dsn::error_code err) {
         if (err == dsn::ERR_OK || err == dsn::ERR_OBJECT_NOT_FOUND) {
-            ddebug("%s: sync remove backup_info on remote storage successfully, backup_id(%" PRId64
-                   ")",
-                   _policy.policy_name.c_str(),
-                   info.backup_id);
+            LOG_INFO(
+                "%s: sync remove backup_info on remote storage successfully, backup_id(%" PRId64
+                ")",
+                _policy.policy_name.c_str(),
+                info.backup_id);
             if (sync_callback != nullptr) {
                 sync_callback->enqueue();
             }
         } else if (err == ERR_TIMEOUT) {
-            derror("%s: sync remove backup info on remote storage got timeout, retry it later",
-                   _policy.policy_name.c_str());
+            LOG_ERROR("%s: sync remove backup info on remote storage got timeout, retry it later",
+                      _policy.policy_name.c_str());
             tasking::enqueue(
                 LPC_DEFAULT_CALLBACK,
                 &_tracker,
@@ -1049,17 +1052,17 @@ backup_service::backup_service(meta_service *meta_svc,
 
 void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
 {
-    dinfo("create policy meta root(%s) on remote_storage", _policy_meta_root.c_str());
+    LOG_DEBUG("create policy meta root(%s) on remote_storage", _policy_meta_root.c_str());
     _meta_svc->get_remote_storage()->create_node(
         _policy_meta_root, LPC_DEFAULT_CALLBACK, [this, callback](dsn::error_code err) {
             if (err == dsn::ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
-                ddebug("create policy meta root(%s) succeed, with err(%s)",
-                       _policy_meta_root.c_str(),
-                       err.to_string());
+                LOG_INFO("create policy meta root(%s) succeed, with err(%s)",
+                         _policy_meta_root.c_str(),
+                         err.to_string());
                 callback->enqueue();
             } else if (err == dsn::ERR_TIMEOUT) {
-                derror("create policy meta root(%s) timeout, try it later",
-                       _policy_meta_root.c_str());
+                LOG_ERROR("create policy meta root(%s) timeout, try it later",
+                          _policy_meta_root.c_str());
                 dsn::tasking::enqueue(
                     LPC_DEFAULT_CALLBACK,
                     &_tracker,
@@ -1076,19 +1079,20 @@ void backup_service::start_sync_policies()
 {
     // TODO: make sync_policies_from_remote_storage function to async
     //       sync-api will leader to deadlock when the threadnum = 1 in default threadpool
-    ddebug("backup service start to sync policies from remote storage");
+    LOG_INFO("backup service start to sync policies from remote storage");
     dsn::error_code err = sync_policies_from_remote_storage();
     if (err == dsn::ERR_OK) {
         for (auto &policy_kv : _policy_states) {
-            ddebug("policy(%s) start to backup", policy_kv.first.c_str());
+            LOG_INFO("policy(%s) start to backup", policy_kv.first.c_str());
             policy_kv.second->start();
         }
         if (_policy_states.empty()) {
-            dwarn("can't sync policies from remote storage, user should config some policies");
+            LOG_WARNING(
+                "can't sync policies from remote storage, user should config some policies");
         }
         _in_initialize.store(false);
     } else if (err == dsn::ERR_TIMEOUT) {
-        derror("sync policies got timeout, retry it later");
+        LOG_ERROR("sync policies got timeout, retry it later");
         dsn::tasking::enqueue(LPC_DEFAULT_CALLBACK,
                               &_tracker,
                               std::bind(&backup_service::start_sync_policies, this),
@@ -1112,7 +1116,7 @@ error_code backup_service::sync_policies_from_remote_storage()
     auto init_backup_info = [this, &err, &tracker](const std::string &policy_name) {
         auto after_get_backup_info = [this, &err, policy_name](error_code ec, const blob &value) {
             if (ec == ERR_OK) {
-                dinfo("sync a backup string(%s) from remote storage", value.data());
+                LOG_DEBUG("sync a backup string(%s) from remote storage", value.data());
                 backup_info tbackup_info;
                 dsn::json::json_forwarder<backup_info>::decode(value, tbackup_info);
 
@@ -1130,8 +1134,8 @@ error_code backup_service::sync_policies_from_remote_storage()
                 ptr->add_backup_history(tbackup_info);
             } else {
                 err = ec;
-                ddebug("init backup_info from remote storage fail, error_code = %s",
-                       ec.to_string());
+                LOG_INFO("init backup_info from remote storage fail, error_code = %s",
+                         ec.to_string());
             }
         };
         std::string backup_info_root = get_policy_path(policy_name);
@@ -1146,9 +1150,9 @@ error_code backup_service::sync_policies_from_remote_storage()
                         for (const auto &b_id : children) {
                             int64_t backup_id = boost::lexical_cast<int64_t>(b_id);
                             std::string backup_path = get_backup_path(policy_name, backup_id);
-                            ddebug("start to acquire backup_info(%" PRId64 ") of policy(%s)",
-                                   backup_id,
-                                   policy_name.c_str());
+                            LOG_INFO("start to acquire backup_info(%" PRId64 ") of policy(%s)",
+                                     backup_id,
+                                     policy_name.c_str());
                             _meta_svc->get_remote_storage()->get_data(
                                 backup_path,
                                 TASK_CODE_EXEC_INLINED,
@@ -1157,15 +1161,16 @@ error_code backup_service::sync_policies_from_remote_storage()
                         }
                     } else // have not backup
                     {
-                        ddebug("policy has not started a backup process, policy_name = %s",
-                               policy_name.c_str());
+                        LOG_INFO("policy has not started a backup process, policy_name = %s",
+                                 policy_name.c_str());
                     }
                 } else {
                     err = ec;
-                    derror("get backup info dirs fail from remote storage, backup_dirs_root = %s, "
-                           "err = %s",
-                           get_policy_path(policy_name).c_str(),
-                           ec.to_string());
+                    LOG_ERROR(
+                        "get backup info dirs fail from remote storage, backup_dirs_root = %s, "
+                        "err = %s",
+                        get_policy_path(policy_name).c_str(),
+                        ec.to_string());
                 }
             },
             &tracker);
@@ -1174,7 +1179,7 @@ error_code backup_service::sync_policies_from_remote_storage()
     auto init_one_policy =
         [this, &err, &tracker, &init_backup_info](const std::string &policy_name) {
             auto policy_path = get_policy_path(policy_name);
-            ddebug("start to acquire the context of policy(%s)", policy_name.c_str());
+            LOG_INFO("start to acquire the context of policy(%s)", policy_name.c_str());
             _meta_svc->get_remote_storage()->get_data(
                 policy_path,
                 LPC_DEFAULT_CALLBACK, // TASK_CODE_EXEC_INLINED,
@@ -1193,9 +1198,9 @@ error_code backup_service::sync_policies_from_remote_storage()
                         init_backup_info(policy_name);
                     } else {
                         err = ec;
-                        derror("init policy fail, policy_path = %s, error_code = %s",
-                               policy_path.c_str(),
-                               ec.to_string());
+                        LOG_ERROR("init policy fail, policy_path = %s, error_code = %s",
+                                  policy_path.c_str(),
+                                  ec.to_string());
                     }
                 },
                 &tracker);
@@ -1212,7 +1217,8 @@ error_code backup_service::sync_policies_from_remote_storage()
                 }
             } else {
                 err = ec;
-                derror("get policy dirs from remote storage fail, error_code = %s", ec.to_string());
+                LOG_ERROR("get policy dirs from remote storage fail, error_code = %s",
+                          ec.to_string());
             }
         },
         &tracker);
@@ -1323,7 +1329,7 @@ void backup_service::do_add_policy(dsn::message_ex *req,
                 configuration_add_backup_policy_response resp;
                 resp.hint_message = hint_msg;
                 resp.err = ERR_OK;
-                ddebug("add backup policy succeed, policy_name = %s", policy_name.c_str());
+                LOG_INFO("add backup policy succeed, policy_name = %s", policy_name.c_str());
 
                 _meta_svc->reply_data(req, resp);
                 req->release_ref();
@@ -1333,9 +1339,9 @@ void backup_service::do_add_policy(dsn::message_ex *req,
                 }
                 p->start();
             } else if (err == ERR_TIMEOUT) {
-                derror("create backup policy on remote storage timeout, retry after %" PRId64
-                       "(ms)",
-                       _opt.meta_retry_delay_ms.count());
+                LOG_ERROR("create backup policy on remote storage timeout, retry after %" PRId64
+                          "(ms)",
+                          _opt.meta_retry_delay_ms.count());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  std::bind(&backup_service::do_add_policy, this, req, p, hint_msg),
@@ -1363,14 +1369,14 @@ void backup_service::do_update_policy_to_remote_storage(
             if (err == ERR_OK) {
                 configuration_modify_backup_policy_response resp;
                 resp.err = ERR_OK;
-                ddebug("update backup policy to remote storage succeed, policy_name = %s",
-                       p.policy_name.c_str());
+                LOG_INFO("update backup policy to remote storage succeed, policy_name = %s",
+                         p.policy_name.c_str());
                 p_context_ptr->set_policy(p);
             } else if (err == ERR_TIMEOUT) {
-                derror("update backup policy to remote storage failed, policy_name = %s, retry "
-                       "after %" PRId64 "(ms)",
-                       p.policy_name.c_str(),
-                       _opt.meta_retry_delay_ms.count());
+                LOG_ERROR("update backup policy to remote storage failed, policy_name = %s, retry "
+                          "after %" PRId64 "(ms)",
+                          p.policy_name.c_str(),
+                          _opt.meta_retry_delay_ms.count());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  std::bind(&backup_service::do_update_policy_to_remote_storage,
@@ -1498,9 +1504,9 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             const auto &app = _state->get_app(appid);
             // TODO: if app is dropped, how to process
             if (app == nullptr) {
-                dwarn("%s: add app to policy failed, because invalid app(%d), ignore it",
-                      cur_policy.policy_name.c_str(),
-                      appid);
+                LOG_WARNING("%s: add app to policy failed, because invalid app(%d), ignore it",
+                            cur_policy.policy_name.c_str(),
+                            appid);
             } else {
                 valid_app_ids_to_add.emplace_back(appid);
                 id_to_app_names.insert(std::make_pair(appid, app->app_name));
@@ -1512,23 +1518,23 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     if (request.__isset.is_disable) {
         if (request.is_disable) {
             if (is_under_backup) {
-                ddebug("%s: policy is under backuping, not allow to disable",
-                       cur_policy.policy_name.c_str());
+                LOG_INFO("%s: policy is under backuping, not allow to disable",
+                         cur_policy.policy_name.c_str());
                 response.err = ERR_BUSY;
             } else if (!cur_policy.is_disable) {
-                ddebug("%s: policy is marked to disable", cur_policy.policy_name.c_str());
+                LOG_INFO("%s: policy is marked to disable", cur_policy.policy_name.c_str());
                 cur_policy.is_disable = true;
                 have_modify_policy = true;
             } else { // cur_policy.is_disable = true
-                ddebug("%s: policy is already disabled", cur_policy.policy_name.c_str());
+                LOG_INFO("%s: policy is already disabled", cur_policy.policy_name.c_str());
             }
         } else {
             if (cur_policy.is_disable) {
                 cur_policy.is_disable = false;
-                ddebug("%s: policy is marked to enable", cur_policy.policy_name.c_str());
+                LOG_INFO("%s: policy is marked to enable", cur_policy.policy_name.c_str());
                 have_modify_policy = true;
             } else {
-                ddebug("%s: policy is already enabled", cur_policy.policy_name.c_str());
+                LOG_INFO("%s: policy is already enabled", cur_policy.policy_name.c_str());
                 response.err = ERR_OK;
                 response.hint_message = std::string("policy is already enabled");
             }
@@ -1547,35 +1553,36 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
         for (const auto &appid : request.removal_appids) {
             if (appid > 0) {
                 cur_policy.app_ids.erase(appid);
-                ddebug("%s: remove app(%d) to policy", cur_policy.policy_name.c_str(), appid);
+                LOG_INFO("%s: remove app(%d) to policy", cur_policy.policy_name.c_str(), appid);
                 have_modify_policy = true;
             } else {
-                dwarn("%s: invalid app_id(%d)", cur_policy.policy_name.c_str(), (int32_t)appid);
+                LOG_WARNING(
+                    "%s: invalid app_id(%d)", cur_policy.policy_name.c_str(), (int32_t)appid);
             }
         }
     }
 
     if (request.__isset.new_backup_interval_sec) {
         if (request.new_backup_interval_sec > 0) {
-            ddebug("%s: policy will change backup interval from %" PRId64 "(s) to %" PRId64 "(s)",
-                   cur_policy.policy_name.c_str(),
-                   cur_policy.backup_interval_seconds,
-                   request.new_backup_interval_sec);
+            LOG_INFO("%s: policy will change backup interval from %" PRId64 "(s) to %" PRId64 "(s)",
+                     cur_policy.policy_name.c_str(),
+                     cur_policy.backup_interval_seconds,
+                     request.new_backup_interval_sec);
             cur_policy.backup_interval_seconds = request.new_backup_interval_sec;
             have_modify_policy = true;
         } else {
-            dwarn("%s: invalid backup_interval_sec(%" PRId64 ")",
-                  cur_policy.policy_name.c_str(),
-                  request.new_backup_interval_sec);
+            LOG_WARNING("%s: invalid backup_interval_sec(%" PRId64 ")",
+                        cur_policy.policy_name.c_str(),
+                        request.new_backup_interval_sec);
         }
     }
 
     if (request.__isset.backup_history_count_to_keep) {
         if (request.backup_history_count_to_keep > 0) {
-            ddebug("%s: policy will change backup_history_count_to_keep from (%d) to (%d)",
-                   cur_policy.policy_name.c_str(),
-                   cur_policy.backup_history_count_to_keep,
-                   request.backup_history_count_to_keep);
+            LOG_INFO("%s: policy will change backup_history_count_to_keep from (%d) to (%d)",
+                     cur_policy.policy_name.c_str(),
+                     cur_policy.backup_history_count_to_keep,
+                     request.backup_history_count_to_keep);
             cur_policy.backup_history_count_to_keep = request.backup_history_count_to_keep;
             have_modify_policy = true;
         }
@@ -1584,10 +1591,10 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
     if (request.__isset.start_time) {
         backup_start_time t_start_time;
         if (t_start_time.parse_from(request.start_time)) {
-            ddebug("%s: policy change start_time from (%s) to (%s)",
-                   cur_policy.policy_name.c_str(),
-                   cur_policy.start_time.to_string().c_str(),
-                   t_start_time.to_string().c_str());
+            LOG_INFO("%s: policy change start_time from (%s) to (%s)",
+                     cur_policy.policy_name.c_str(),
+                     cur_policy.start_time.to_string().c_str(),
+                     t_start_time.to_string().c_str());
             cur_policy.start_time = t_start_time;
             have_modify_policy = true;
         }

@@ -45,7 +45,7 @@ namespace application {
 simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
 {
     reset_state();
-    ddebug("simple_kv_service_impl inited");
+    LOG_INFO("simple_kv_service_impl inited");
 }
 
 void simple_kv_service_impl::reset_state()
@@ -67,7 +67,7 @@ void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<
         }
     }
 
-    dinfo("read %s", r.c_str());
+    LOG_DEBUG("read %s", r.c_str());
     reply(r);
 }
 
@@ -79,7 +79,7 @@ void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int3
         _store[pr.key] = pr.value;
     }
 
-    dinfo("write %s", pr.key.c_str());
+    LOG_DEBUG("write %s", pr.key.c_str());
     reply(0);
 }
 
@@ -95,7 +95,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
             _store[pr.key] = pr.value;
     }
 
-    dinfo("append %s", pr.key.c_str());
+    LOG_DEBUG("append %s", pr.key.c_str());
     reply(0);
 }
 

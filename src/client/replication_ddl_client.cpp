@@ -382,7 +382,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             std::vector<partition_configuration> partitions;
             r = list_app(info.app_name, app_id, partition_count, partitions);
             if (r != dsn::ERR_OK) {
-                derror("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
+                LOG_ERROR("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
                 return r;
             }
             dcheck_eq(info.app_id, app_id);

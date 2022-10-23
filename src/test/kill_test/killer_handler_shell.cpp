@@ -78,9 +78,9 @@ bool killer_handler_shell::kill_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "stop");
     int res = system(cmd.c_str());
-    ddebug("kill meta command: %s", cmd.c_str());
+    LOG_INFO("kill meta command: %s", cmd.c_str());
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
         return false;
     }
     return check("meta", index, "stop");
@@ -90,9 +90,9 @@ bool killer_handler_shell::kill_replica(int index)
 {
     std::string cmd = generate_cmd(index, "replica", "stop");
     int res = system(cmd.c_str());
-    ddebug("kill replica command: %s", cmd.c_str());
+    LOG_INFO("kill replica command: %s", cmd.c_str());
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
         return false;
     }
     return check("replica", index, "stop");
@@ -108,9 +108,9 @@ bool killer_handler_shell::start_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "start");
     int res = system(cmd.c_str());
-    ddebug("start meta command: %s", cmd.c_str());
+    LOG_INFO("start meta command: %s", cmd.c_str());
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
         return false;
     }
     return check("meta", index, "start");
@@ -121,9 +121,9 @@ bool killer_handler_shell::start_replica(int index)
     std::string cmd = generate_cmd(index, "replica", "start");
 
     int res = system(cmd.c_str());
-    ddebug("start replica command: %s", cmd.c_str());
+    LOG_INFO("start replica command: %s", cmd.c_str());
     if (res != 0) {
-        ddebug("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
         return false;
     }
     return check("meta", index, "start");

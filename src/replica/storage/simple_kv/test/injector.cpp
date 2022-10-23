@@ -202,7 +202,7 @@ void test_injector::install(service_spec &svc_spec)
         spec->on_rpc_response_enqueue.put_native(inject_on_rpc_response_enqueue);
     }
 
-    // ddebug("=== test_injector installed");
+    // LOG_INFO("=== test_injector installed");
 }
 
 test_injector::test_injector(const char *name) : toollet(name) {}

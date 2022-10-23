@@ -47,8 +47,8 @@
 */
 
 typedef enum dsn_log_level_t {
-    LOG_LEVEL_INFORMATION,
     LOG_LEVEL_DEBUG,
+    LOG_LEVEL_INFO,
     LOG_LEVEL_WARNING,
     LOG_LEVEL_ERROR,
     LOG_LEVEL_FATAL,
@@ -85,11 +85,13 @@ extern DSN_API void dsn_coredump();
         if (level >= dsn_log_start_level)                                                          \
             dsn_logf(__FILENAME__, __FUNCTION__, __LINE__, level, __VA_ARGS__);                    \
     } while (false)
-#define dinfo(...) dlog(LOG_LEVEL_INFORMATION, __VA_ARGS__)
-#define ddebug(...) dlog(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define dwarn(...) dlog(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define derror(...) dlog(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define dfatal(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)
+
+#define LOG_DEBUG(...) dlog(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_INFO(...) dlog(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_WARNING(...) dlog(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOG_ERROR(...) dlog(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_FATAL(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)
+
 #define dassert(x, ...)                                                                            \
     do {                                                                                           \
         if (dsn_unlikely(!(x))) {                                                                  \
@@ -102,7 +104,7 @@ extern DSN_API void dsn_coredump();
 #define dreturn_not_ok_logged(err, ...)                                                            \
     do {                                                                                           \
         if (dsn_unlikely((err) != dsn::ERR_OK)) {                                                  \
-            derror(__VA_ARGS__);                                                                   \
+            LOG_ERROR(__VA_ARGS__);                                                                \
             return err;                                                                            \
         }                                                                                          \
     } while (0)

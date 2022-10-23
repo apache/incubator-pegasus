@@ -44,7 +44,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     // filename --> file_path such as: file --> ***/***/file
     std::map<std::string, std::string> name_to_filepath;
     if (!::dsn::utils::filesystem::get_subfiles(chkpt_dir, sub_files, false)) {
-        derror("%s: get subfile of dir(%s) failed", name(), chkpt_dir.c_str());
+        LOG_ERROR("%s: get subfile of dir(%s) failed", name(), chkpt_dir.c_str());
         return false;
     }
 
@@ -63,10 +63,10 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
             continue;
         if (::dsn::utils::filesystem::file_exists(pair.second) &&
             !::dsn::utils::filesystem::remove_path(pair.second)) {
-            derror("%s: remove useless file(%s) failed", name(), pair.second.c_str());
+            LOG_ERROR("%s: remove useless file(%s) failed", name(), pair.second.c_str());
             return false;
         }
-        ddebug("%s: remove useless file(%s) succeed", name(), pair.second.c_str());
+        LOG_INFO("%s: remove useless file(%s) succeed", name(), pair.second.c_str());
     }
     return true;
 }
@@ -75,21 +75,21 @@ bool replica::read_cold_backup_metadata(const std::string &file,
                                         cold_backup_metadata &backup_metadata)
 {
     if (!::dsn::utils::filesystem::file_exists(file)) {
-        derror("%s: checkpoint on remote storage media is damaged, coz file(%s) doesn't exist",
-               name(),
-               file.c_str());
+        LOG_ERROR("%s: checkpoint on remote storage media is damaged, coz file(%s) doesn't exist",
+                  name(),
+                  file.c_str());
         return false;
     }
     int64_t file_sz = 0;
     if (!::dsn::utils::filesystem::file_size(file, file_sz)) {
-        derror("%s: get file(%s) size failed", name(), file.c_str());
+        LOG_ERROR("%s: get file(%s) size failed", name(), file.c_str());
         return false;
     }
     std::shared_ptr<char> buf = utils::make_shared_array<char>(file_sz + 1);
 
     std::ifstream fin(file, std::ifstream::in);
     if (!fin.is_open()) {
-        derror("%s: open file(%s) failed", name(), file.c_str());
+        LOG_ERROR("%s: open file(%s) failed", name(), file.c_str());
         return false;
     }
     fin.read(buf.get(), file_sz);
@@ -105,7 +105,7 @@ bool replica::read_cold_backup_metadata(const std::string &file,
     blob bb;
     bb.assign(std::move(buf), 0, file_sz);
     if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(bb, backup_metadata)) {
-        derror("%s: file(%s) under checkpoint is damaged", name(), file.c_str());
+        LOG_ERROR("%s: file(%s) under checkpoint is damaged", name(), file.c_str());
         return false;
     }
     return true;
@@ -364,7 +364,7 @@ dsn::error_code replica::restore_checkpoint()
 
     // then create a local restore dir if it doesn't exist
     if (!utils::filesystem::directory_exists(_dir) && !utils::filesystem::create_directory(_dir)) {
-        derror("create dir %s failed", _dir.c_str());
+        LOG_ERROR("create dir %s failed", _dir.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -404,11 +404,11 @@ dsn::error_code replica::skip_restore_partition(const std::string &restore_dir)
     // it because we use restore_dir to tell storage engine that start an app from restore
     if (utils::filesystem::remove_path(restore_dir) &&
         utils::filesystem::create_directory(restore_dir)) {
-        ddebug("%s: clear restore_dir(%s) succeed", name(), restore_dir.c_str());
+        LOG_INFO("%s: clear restore_dir(%s) succeed", name(), restore_dir.c_str());
         _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
         return ERR_OK;
     } else {
-        derror("clear dir %s failed", restore_dir.c_str());
+        LOG_ERROR("clear dir %s failed", restore_dir.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 }
@@ -434,7 +434,7 @@ void replica::tell_meta_to_restore_rollback()
                       configuration_drop_app_response response;
                       ::dsn::unmarshall(resp, response);
                       if (response.err == ERR_OK) {
-                          ddebug("restore rolling backup succeed");
+                          LOG_INFO("restore rolling backup succeed");
                           return;
                       } else {
                           tell_meta_to_restore_rollback();
@@ -463,7 +463,7 @@ void replica::report_restore_status_to_meta()
                       configuration_report_restore_status_response response;
                       ::dsn::unmarshall(resp, response);
                       if (response.err == ERR_OK) {
-                          dinfo("report restore status succeed");
+                          LOG_DEBUG("report restore status succeed");
                           return;
                       }
                   } else if (err == ERR_TIMEOUT) {

@@ -69,9 +69,9 @@ public:
 
     error_code start(const std::vector<std::string> &args)
     {
-        ddebug("name: %s, argc=%u", info().full_name.c_str(), args.size());
+        LOG_INFO("name: %s, argc=%u", info().full_name.c_str(), args.size());
         for (const std::string &s : args)
-            ddebug("argv: %s", s.c_str());
+            LOG_INFO("argv: %s", s.c_str());
         while (!ss_start)
             std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -88,10 +88,10 @@ public:
                 [this](error_code ec, const std::string &name, int version) {
                     EXPECT_TRUE(ERR_OK == ec);
                     EXPECT_TRUE(name == this->info().full_name);
-                    ddebug("lock: error_code: %s, name: %s, lock version: %d",
-                           ec.to_string(),
-                           name.c_str(),
-                           version);
+                    LOG_INFO("lock: error_code: %s, name: %s, lock version: %d",
+                             ec.to_string(),
+                             name.c_str(),
+                             version);
                 },
                 DLOCK_CALLBACK,
                 [](error_code, const std::string &, int) { dassert(false, "session expired"); },
@@ -107,7 +107,7 @@ public:
             task_ptr unlock_task = _dlock_service->unlock(
                 "test_lock", info().full_name, true, DLOCK_CALLBACK, [](error_code ec) {
                     EXPECT_TRUE(ERR_OK == ec);
-                    ddebug("unlock, error code: %s", ec.to_string());
+                    LOG_INFO("unlock, error code: %s", ec.to_string());
                 });
             unlock_task->wait();
             task_pair.second->cancel(false);
@@ -146,7 +146,7 @@ TEST(distributed_lock_service_zookeeper, simple_lock_unlock)
     while (!ss_finish)
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    ddebug("actual result: %lld, expect_result:%lld", result, expect_reuslt);
+    LOG_INFO("actual result: %lld, expect_result:%lld", result, expect_reuslt);
     EXPECT_TRUE(result == expect_reuslt);
 }
 

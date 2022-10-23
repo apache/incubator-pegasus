@@ -108,7 +108,7 @@ void test_set(int32_t qps)
     atomic_int qps_quota(qps);
     ::dsn::task_ptr quota_task = ::dsn::tasking::enqueue_timer(
         LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
-    ddebug("start to test set, with qps(%d)", qps);
+    LOG_INFO("start to test set, with qps(%d)", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
             qps_quota.fetch_sub(10);
@@ -131,7 +131,7 @@ void test_get(int32_t qps)
     dsn::task_ptr quota_task = dsn::tasking::enqueue_timer(
         LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
 
-    ddebug("start to test get, with qps(%d)", qps);
+    LOG_INFO("start to test get, with qps(%d)", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
             qps_quota.fetch_sub(10);
@@ -155,11 +155,11 @@ void test_get(int32_t qps)
                             }
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
-                            // dwarn("hashkey(%s) - sortkey(%s) doesn't exist in the server",
+                            // LOG_WARNING("hashkey(%s) - sortkey(%s) doesn't exist in the server",
                             //    hashkey.c_str(), sortkey.c_str());
                         } else if (ec == PERR_TIMEOUT) {
-                            dwarn("access server failed with err(%s)",
-                                  pg_client->get_error_string(ec));
+                            LOG_WARNING("access server failed with err(%s)",
+                                        pg_client->get_error_string(ec));
                         }
                     });
                 cnt -= 1;
@@ -175,7 +175,7 @@ void test_del(int32_t qps)
     dsn::task_ptr quota_task = dsn::tasking::enqueue_timer(
         LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
 
-    ddebug("start to test get, with qps(%d)", qps);
+    LOG_INFO("start to test get, with qps(%d)", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
             qps_quota.fetch_sub(10);
@@ -226,7 +226,7 @@ int main(int argc, const char **argv)
         return -1;
     }
     initialize();
-    ddebug("Initialize client and load config.ini succeed");
+    LOG_INFO("Initialize client and load config.ini succeed");
     cluster_name =
         dsn_config_get_value_string("pressureclient", "cluster_name", "onebox", "cluster name");
 
@@ -255,7 +255,7 @@ int main(int argc, const char **argv)
     dassert(qps > 0, "qps must GT 0, but qps(%d)", qps);
     dassert(!op_name.empty(), "must assign operation name");
 
-    ddebug("pressureclient %s qps = %d", op_name.c_str(), qps);
+    LOG_INFO("pressureclient %s qps = %d", op_name.c_str(), qps);
 
     pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
 
@@ -263,7 +263,7 @@ int main(int argc, const char **argv)
 
     auto it = _all_funcs.find(op_name);
     if (it != _all_funcs.end()) {
-        ddebug("start pressureclient with %s qps(%d)", op_name.c_str(), qps);
+        LOG_INFO("start pressureclient with %s qps(%d)", op_name.c_str(), qps);
         it->second(qps);
     } else {
         dassert(false, "Unknown operation name(%s)", op_name.c_str());
