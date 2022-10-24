@@ -427,10 +427,10 @@ error_code fds_file_object::get_file_meta()
         if (ex.code() == Poco::Net::HTTPResponse::HTTP_NOT_FOUND) {
             err = ERR_OBJECT_NOT_FOUND;
         } else {
-            derror_f("fds getObjectMetadata failed: parameter({}), code({}), msg({})",
-                     _name.c_str(),
-                     ex.code(),
-                     ex.what());
+            LOG_ERROR_F("fds getObjectMetadata failed: parameter({}), code({}), msg({})",
+                        _name.c_str(),
+                        ex.code(),
+                        ex.what());
             err = ERR_FS_INTERNAL;
         }
     }
@@ -538,10 +538,10 @@ error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
                                                                  FLAGS_fds_write_limit_rate << 20,
                                                                  FLAGS_fds_write_burst_size
                                                                      << 20)) {
-        ddebug_f("the transfer count({}B) is greater than burst size({}MB), so it is rejected by "
-                 "token bucket",
-                 to_transfer_bytes,
-                 FLAGS_fds_write_burst_size);
+        LOG_INFO_F("the transfer count({}B) is greater than burst size({}MB), so it is rejected by "
+                   "token bucket",
+                   to_transfer_bytes,
+                   FLAGS_fds_write_burst_size);
         return ERR_BUSY;
     }
 
@@ -614,10 +614,11 @@ dsn::task_ptr fds_file_object::upload(const upload_request &req,
         std::ifstream is(local_file, std::ios::binary | std::ios::in);
 
         if (!is.is_open()) {
-            derror_f("fds upload failed: open local file({}) failed when upload to({}), error({})",
-                     local_file,
-                     file_name(),
-                     ::dsn::utils::safe_strerror(errno));
+            LOG_ERROR_F(
+                "fds upload failed: open local file({}) failed when upload to({}), error({})",
+                local_file,
+                file_name(),
+                ::dsn::utils::safe_strerror(errno));
             resp.err = dsn::ERR_FILE_OPERATION_FAILED;
         } else {
             resp.err = put_content(is, file_sz, resp.uploaded_size);
@@ -673,10 +674,10 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
     std::shared_ptr<std::ofstream> handle(new std::ofstream(
         req.output_local_name, std::ios::binary | std::ios::out | std::ios::trunc));
     if (!handle->is_open()) {
-        derror_f("fds download failed: fail to open localfile({}) when download({}), error({})",
-                 req.output_local_name,
-                 _fds_path,
-                 ::dsn::utils::safe_strerror(errno));
+        LOG_ERROR_F("fds download failed: fail to open localfile({}) when download({}), error({})",
+                    req.output_local_name,
+                    _fds_path,
+                    ::dsn::utils::safe_strerror(errno));
         resp.err = ERR_FILE_OPERATION_FAILED;
         resp.downloaded_size = 0;
         t->enqueue_with(resp);
@@ -695,14 +696,14 @@ dsn::task_ptr fds_file_object::download(const download_request &req,
         }
         handle->close();
         if (resp.err != ERR_OK && dsn::utils::filesystem::file_exists(req.output_local_name)) {
-            derror_f("fail to download file {} from fds, remove localfile {}",
-                     _fds_path,
-                     req.output_local_name);
+            LOG_ERROR_F("fail to download file {} from fds, remove localfile {}",
+                        _fds_path,
+                        req.output_local_name);
             dsn::utils::filesystem::remove_path(req.output_local_name);
         } else if ((resp.err = dsn::utils::filesystem::md5sum(req.output_local_name,
                                                               resp.file_md5)) != ERR_OK) {
-            derror_f("download failed when calculate the md5sum of local file {}",
-                     req.output_local_name);
+            LOG_ERROR_F("download failed when calculate the md5sum of local file {}",
+                        req.output_local_name);
         }
         t->enqueue_with(resp);
         release_ref();

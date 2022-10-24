@@ -72,9 +72,9 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
 
 void replica_backup_server::on_clear_cold_backup(const backup_clear_request &request)
 {
-    ddebug_f("receive clear cold backup request: backup({}.{})",
-             request.pid.to_string(),
-             request.policy_name.c_str());
+    LOG_INFO_F("receive clear cold backup request: backup({}.{})",
+               request.pid.to_string(),
+               request.policy_name.c_str());
 
     replica_ptr rep = _stub->get_replica(request.pid);
     if (rep != nullptr) {

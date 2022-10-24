@@ -204,7 +204,7 @@ std::shared_ptr<latency_tracer> latency_tracer::sub_tracer(const std::string &na
     if (iter != _sub_tracers.end()) {
         return iter->second;
     }
-    dwarn_f("can't find the [{}] sub tracer of {}", name, _name);
+    LOG_WARNING_F("can't find the [{}] sub tracer of {}", name, _name);
     return nullptr;
 }
 
@@ -276,7 +276,7 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
     }
 
     if (!_is_sub && total_time_used >= _threshold) {
-        dwarn_f("TRACE:the traces as fallow:\n{}", traces);
+        LOG_WARNING_F("TRACE:the traces as fallow:\n{}", traces);
         return;
     }
 }

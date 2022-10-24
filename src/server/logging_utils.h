@@ -24,14 +24,14 @@
 /// Utilities for logging the operation on rocksdb.
 
 #define derror_rocksdb(op, error, ...)                                                             \
-    derror_f("{}: rocksdb {} failed: error = {} [{}]",                                             \
-             replica_name(),                                                                       \
-             op,                                                                                   \
-             error,                                                                                \
-             fmt::format(__VA_ARGS__))
+    LOG_ERROR_F("{}: rocksdb {} failed: error = {} [{}]",                                          \
+                replica_name(),                                                                    \
+                op,                                                                                \
+                error,                                                                             \
+                fmt::format(__VA_ARGS__))
 
 #define ddebug_rocksdb(op, ...)                                                                    \
-    ddebug_f("{}: rocksdb {}: [{}]", replica_name(), op, fmt::format(__VA_ARGS__))
+    LOG_INFO_F("{}: rocksdb {}: [{}]", replica_name(), op, fmt::format(__VA_ARGS__))
 
 #define dwarn_rocksdb(op, ...)                                                                     \
-    dwarn_f("{}: rocksdb {}: [{}]", replica_name(), op, fmt::format(__VA_ARGS__))
+    LOG_WARNING_F("{}: rocksdb {}: [{}]", replica_name(), op, fmt::format(__VA_ARGS__))

@@ -83,25 +83,25 @@ error_code replica::initialize_on_new()
         new replica(stub, gpid, app, dir.c_str(), restore_if_necessary, is_duplication_follower);
     error_code err;
     if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {
-        derror_f("{}: try to restore replica failed, error({})", rep->name(), err.to_string());
+        LOG_ERROR_F("{}: try to restore replica failed, error({})", rep->name(), err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 
     if (is_duplication_follower &&
         (err = rep->get_replica_follower()->duplicate_checkpoint()) != dsn::ERR_OK) {
-        derror_f("{}: try to duplicate replica checkpoint failed, error({}) and please check "
-                 "previous detail error log",
-                 rep->name(),
-                 err.to_string());
+        LOG_ERROR_F("{}: try to duplicate replica checkpoint failed, error({}) and please check "
+                    "previous detail error log",
+                    rep->name(),
+                    err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 
     err = rep->initialize_on_new();
     if (err == ERR_OK) {
-        dinfo_f("{}: new replica succeed", rep->name());
+        LOG_DEBUG_F("{}: new replica succeed", rep->name());
         return rep;
     } else {
-        derror_f("{}: new replica failed, err = {}", rep->name(), err.to_string());
+        LOG_ERROR_F("{}: new replica failed, err = {}", rep->name(), err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 }
@@ -172,10 +172,11 @@ error_code replica::initialize_on_load()
     }
 
     if (info.partition_count < pidx) {
-        derror_f("partition[{}], count={}, this replica may be partition split garbage partition, "
-                 "ignore it",
-                 pid,
-                 info.partition_count);
+        LOG_ERROR_F(
+            "partition[{}], count={}, this replica may be partition split garbage partition, "
+            "ignore it",
+            pid,
+            info.partition_count);
         return nullptr;
     }
 

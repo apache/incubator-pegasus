@@ -328,7 +328,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        dwarn_f("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING_F("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
@@ -425,7 +425,7 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        dwarn_f("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING_F("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
@@ -468,7 +468,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        dwarn_f("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING_F("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }

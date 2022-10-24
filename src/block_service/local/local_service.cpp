@@ -53,7 +53,7 @@ bool file_metadata_from_json(std::ifstream &fin, file_metadata &fmeta) noexcept
         nlohmann::json::parse(data).get_to(fmeta);
         return true;
     } catch (nlohmann::json::exception &exp) {
-        dwarn_f("decode meta data from json failed: {} [{}]", exp.what(), data);
+        LOG_WARNING_F("decode meta data from json failed: {} [{}]", exp.what(), data);
         return false;
     }
 }

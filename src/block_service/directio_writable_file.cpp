@@ -72,7 +72,7 @@ direct_io_writable_file::~direct_io_writable_file()
 bool direct_io_writable_file::initialize()
 {
     if (posix_memalign(&_buffer, g_page_size, _buffer_size) != 0) {
-        derror_f("Allocate memaligned buffer failed, errno = {}", errno);
+        LOG_ERROR_F("Allocate memaligned buffer failed, errno = {}", errno);
         return false;
     }
 
@@ -82,7 +82,7 @@ bool direct_io_writable_file::initialize()
 #endif
     _fd = open(_file_path.c_str(), flag, S_IRUSR | S_IWUSR | S_IRGRP);
     if (_fd < 0) {
-        derror_f("Failed to open {} with flag {}, errno = {}", _file_path, flag, errno);
+        LOG_ERROR_F("Failed to open {} with flag {}, errno = {}", _file_path, flag, errno);
         free(_buffer);
         _buffer = nullptr;
         return false;
@@ -96,7 +96,8 @@ bool direct_io_writable_file::finalize()
 
     if (_offset > 0) {
         if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
-            derror_f("Failed to write last chunk, filie_path = {}, errno = {}", _file_path, errno);
+            LOG_ERROR_F(
+                "Failed to write last chunk, filie_path = {}, errno = {}", _file_path, errno);
             return false;
         }
         _offset = 0;
@@ -119,7 +120,7 @@ bool direct_io_writable_file::write(const char *s, size_t n)
         // buffer is full, flush to file
         if (_offset == _buffer_size) {
             if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
-                derror_f("Failed to write to direct_io_writable_file, errno = {}", errno);
+                LOG_ERROR_F("Failed to write to direct_io_writable_file, errno = {}", errno);
                 return false;
             }
             // reset offset

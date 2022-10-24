@@ -82,10 +82,10 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     task_spec *spec = task_spec::get(request->rpc_code());
     if (dsn_unlikely(nullptr == spec || request->rpc_code() == TASK_CODE_INVALID)) {
-        derror_f("recv message with unhandled rpc name {} from {}, trace_id = {}",
-                 request->rpc_code().to_string(),
-                 request->header->from_address.to_string(),
-                 request->header->trace_id);
+        LOG_ERROR_F("recv message with unhandled rpc name {} from {}, trace_id = {}",
+                    request->rpc_code().to_string(),
+                    request->header->from_address.to_string(),
+                    request->header->trace_id);
         response_client_write(request, ERR_HANDLER_NOT_FOUND);
         return;
     }

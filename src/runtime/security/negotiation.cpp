@@ -59,10 +59,10 @@ bool negotiation::check_status(negotiation_status::type status,
                                negotiation_status::type expected_status)
 {
     if (status != expected_status) {
-        dwarn_f("{}: get message({}) while expect({})",
-                _name,
-                enum_to_string(status),
-                enum_to_string(expected_status));
+        LOG_WARNING_F("{}: get message({}) while expect({})",
+                      _name,
+                      enum_to_string(status),
+                      enum_to_string(expected_status));
         return false;
     }
 

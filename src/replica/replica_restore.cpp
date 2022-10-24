@@ -235,7 +235,7 @@ void replica::clear_restore_useless_files(const std::string &local_chkpt_dir,
 dsn::error_code replica::find_valid_checkpoint(const configuration_restore_request &req,
                                                std::string &remote_chkpt_dir)
 {
-    ddebug_f("{}: start to find valid checkpoint of backup_id {}", name(), req.time_stamp);
+    LOG_INFO_F("{}: start to find valid checkpoint of backup_id {}", name(), req.time_stamp);
 
     // we should base on old gpid to combine the path on cold backup media
     dsn::gpid old_gpid;
@@ -255,9 +255,9 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
     block_filesystem *fs =
         _stub->_block_service_manager.get_or_create_block_filesystem(req.backup_provider_name);
     if (fs == nullptr) {
-        derror_f("{}: get block filesystem by provider {} failed",
-                 std::string(name()),
-                 req.backup_provider_name);
+        LOG_ERROR_F("{}: get block filesystem by provider {} failed",
+                    std::string(name()),
+                    req.backup_provider_name);
         return ERR_CORRUPTION;
     }
 
@@ -270,9 +270,9 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         ->wait();
 
     if (create_response.err != dsn::ERR_OK) {
-        derror_f("{}: create file of block_service failed, reason {}",
-                 name(),
-                 create_response.err.to_string());
+        LOG_ERROR_F("{}: create file of block_service failed, reason {}",
+                    name(),
+                    create_response.err.to_string());
         return create_response.err;
     }
 
@@ -286,15 +286,15 @@ dsn::error_code replica::find_valid_checkpoint(const configuration_restore_reque
         ->wait();
 
     if (r.err != dsn::ERR_OK) {
-        derror_f("{}: read file {} failed, reason {}",
-                 name(),
-                 create_response.file_handle->file_name(),
-                 r.err.to_string());
+        LOG_ERROR_F("{}: read file {} failed, reason {}",
+                    name(),
+                    create_response.file_handle->file_name(),
+                    r.err.to_string());
         return r.err;
     }
 
     std::string valid_chkpt_entry(r.buffer.data(), r.buffer.length());
-    ddebug_f("{}: got a valid chkpt {}", name(), valid_chkpt_entry);
+    LOG_INFO_F("{}: got a valid chkpt {}", name(), valid_chkpt_entry);
     remote_chkpt_dir = ::dsn::utils::filesystem::path_combine(
         cold_backup::get_replica_backup_path(backup_root, req.app_name, old_gpid, backup_id),
         valid_chkpt_entry);
@@ -353,14 +353,14 @@ dsn::error_code replica::restore_checkpoint()
         restore_req.__set_restore_path(iter->second);
     }
 
-    ddebug_f("{}: restore checkpoint(policy_name {}, backup_id {}), restore_path({}) from {} to "
-             "local dir {}",
-             name(),
-             restore_req.policy_name,
-             restore_req.time_stamp,
-             restore_req.restore_path,
-             restore_req.backup_provider_name,
-             _dir);
+    LOG_INFO_F("{}: restore checkpoint(policy_name {}, backup_id {}), restore_path({}) from {} to "
+               "local dir {}",
+               name(),
+               restore_req.policy_name,
+               restore_req.time_stamp,
+               restore_req.restore_path,
+               restore_req.backup_provider_name,
+               _dir);
 
     // then create a local restore dir if it doesn't exist
     if (!utils::filesystem::directory_exists(_dir) && !utils::filesystem::create_directory(_dir)) {
@@ -373,7 +373,7 @@ dsn::error_code replica::restore_checkpoint()
     std::string restore_dir = os.str();
     if (!utils::filesystem::directory_exists(restore_dir) &&
         !utils::filesystem::create_directory(restore_dir)) {
-        derror_f("create restore dir {} failed", restore_dir);
+        LOG_ERROR_F("create restore dir {} failed", restore_dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 
