@@ -31,6 +31,8 @@
             dsn_log(                                                                               \
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
+// TODO(yingchun): to reduce the changes in one patch, now log levels using 'fmt' are left and will
+// be refactored in a follow up patch.
 #define dinfo_f(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
 #define ddebug_f(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
 #define dwarn_f(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
