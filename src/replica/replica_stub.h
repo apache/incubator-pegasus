@@ -501,6 +501,7 @@ private:
     perf_counter_wrapper _counter_bulk_load_download_file_size;
     perf_counter_wrapper _counter_bulk_load_max_ingestion_time_ms;
     perf_counter_wrapper _counter_bulk_load_max_duration_time_ms;
+    perf_counter_wrapper _counter_bulk_load_total_downloaded_file_size;
 
     // <- Partition split Metrics ->
     perf_counter_wrapper _counter_replicas_splitting_count;

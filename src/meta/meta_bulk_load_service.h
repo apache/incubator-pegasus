@@ -20,9 +20,12 @@
 #include "meta_bulk_load_ingestion_context.h"
 #include "meta_service.h"
 #include "server_state.h"
+#include "server/result_writer.h"
 
 namespace dsn {
 namespace replication {
+
+class result_writer;
 
 DSN_DECLARE_uint32(bulk_load_max_rollback_times);
 DSN_DECLARE_bool(enable_concurrent_bulk_load);
@@ -460,6 +463,24 @@ private:
         return (_bulk_load_app_id.find(app_id) != _bulk_load_app_id.end());
     }
 
+    std::unique_ptr<result_writer> make_bulk_load_cu_client(){
+        const char * cluster_name = dsn::get_current_cluster_name();
+        const char * usage_stat_app = dsn_config_get_value_string(
+            "pegasus.collector", "usage_stat_app", "", "app for recording usage statistics");
+        // initialize the client.
+        if (!pegasus_client_factory::initialize(nullptr)) {
+            dassert(false, "Initialize the bulkload cu writer client failed");
+        }
+        auto client = pegasus_client_factory::get_client(cluster_name.c_str(), usage_stat_app.c_str());
+        dassert(client != nullptr, "Initialize the bulkload cu writer client failed");
+
+        return  dsn::make_unique<result_writer>(client);
+    }
+
+    void initialize_bulk_load_cu_writer(){
+        _bulk_load_cu_writer = make_bulk_load_cu_client();
+    }
+
 private:
     friend class bulk_load_service_test;
     friend class meta_bulk_load_http_test;
@@ -470,6 +491,7 @@ private:
     std::unique_ptr<mss::meta_storage> _sync_bulk_load_storage;
     std::unique_ptr<ingestion_context> _ingestion_context;
     task_tracker _sync_tracker;
+    std::unique_ptr<result_writer> _bulk_load_cu_writer;
 
     zrwlock_nr &app_lock() const { return _state->_lock; }
     zrwlock_nr _lock; // bulk load states lock
@@ -477,6 +499,7 @@ private:
     const std::string _bulk_load_root; // <cluster_root>/bulk_load
 
     /// bulk load states
+    std::unordered_map<app_id, int32_t> _app_total_download_file_size;
     std::unordered_set<int32_t> _bulk_load_app_id;
     std::unordered_map<app_id, app_bulk_load_info> _app_bulk_load_info;
 
@@ -491,6 +514,8 @@ private:
     // partition_index -> group bulk load states(node address -> state)
     std::unordered_map<gpid, std::map<rpc_address, partition_bulk_load_state>>
         _partitions_bulk_load_state;
+    // partition_index -> group total downloaded file size
+    std::unordered_map<gpid, int32_t> _partitions_total_downloaded_file_size;
 
     std::unordered_map<gpid, bool> _partitions_cleaned_up;
     // Used for bulk load failed and app unavailable to avoid duplicated clean up

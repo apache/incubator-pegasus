@@ -82,6 +82,7 @@ struct partition_bulk_load_state
     3:optional ingestion_status ingest_status = ingestion_status.IS_INVALID;
     4:optional bool             is_cleaned_up = false;
     5:optional bool             is_paused = false;
+    6:optional i32              downloaded_file_size = 0;
 }
 
 // meta server -> replica server
@@ -117,6 +118,7 @@ struct bulk_load_response
     8:optional bool                                     is_group_ingestion_finished;
     9:optional bool                                     is_group_bulk_load_context_cleaned_up;
     10:optional bool                                    is_group_bulk_load_paused;
+    11:optional i32                                     total_downloaded_file_size;
 }
 
 // primary -> secondary
