@@ -241,10 +241,10 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
 
         // a small window where the state is not the latest yet
         if (last_committed_decree() < _primary_states.last_prepare_decree_on_new_primary) {
-            derror_replica("last_committed_decree(%" PRId64
-                           ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
-                           last_committed_decree(),
-                           _primary_states.last_prepare_decree_on_new_primary);
+            LOG_ERROR_PREFIX("last_committed_decree(%" PRId64
+                             ") < last_prepare_decree_on_new_primary(%" PRId64 ")",
+                             last_committed_decree(),
+                             _primary_states.last_prepare_decree_on_new_primary);
             response_client_read(request, ERR_INVALID_STATE);
             return;
         }
@@ -566,7 +566,7 @@ void replica::init_disk_tag()
 {
     dsn::error_code err = _stub->_fs_manager.get_disk_tag(dir(), _disk_tag);
     if (dsn::ERR_OK != err) {
-        derror_replica("get disk tag of {} failed: {}, init it to empty ", dir(), err);
+        LOG_ERROR_PREFIX("get disk tag of {} failed: {}, init it to empty ", dir(), err);
     }
 }
 
@@ -576,7 +576,7 @@ error_code replica::store_app_info(app_info &info, const std::string &path)
     const auto &info_path = path.empty() ? utils::filesystem::path_combine(_dir, kAppInfo) : path;
     auto err = new_info.store(info_path);
     if (dsn_unlikely(err != ERR_OK)) {
-        derror_replica("failed to save app_info to {}, error = {}", info_path, err);
+        LOG_ERROR_PREFIX("failed to save app_info to {}, error = {}", info_path, err);
     }
     return err;
 }

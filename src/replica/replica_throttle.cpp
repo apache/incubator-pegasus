@@ -120,10 +120,10 @@ void replica::update_throttle_env_internal(const std::map<std::string, std::stri
                                  parse_error,
                                  throttling_changed,
                                  old_throttling)) {
-            dwarn_replica("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
-                          key,
-                          find->second,
-                          parse_error);
+            LOG_WARNING_PREFIX("parse env failed, key = \"{}\", value = \"{}\", error = \"{}\"",
+                               key,
+                               find->second,
+                               parse_error);
             // reset if parse failed
             cntl.reset(throttling_changed, old_throttling);
         }
@@ -132,7 +132,7 @@ void replica::update_throttle_env_internal(const std::map<std::string, std::stri
         cntl.reset(throttling_changed, old_throttling);
     }
     if (throttling_changed) {
-        ddebug_replica("switch {} from \"{}\" to \"{}\"", key, old_throttling, cntl.env_value());
+        LOG_INFO_PREFIX("switch {} from \"{}\" to \"{}\"", key, old_throttling, cntl.env_value());
     }
 }
 

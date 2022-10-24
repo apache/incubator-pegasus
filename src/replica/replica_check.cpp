@@ -154,13 +154,13 @@ void replica::on_group_check(const group_check_request &request,
 {
     _checker.only_one_thread_access();
 
-    ddebug_replica("process group check, primary = {}, ballot = {}, status = {}, "
-                   "last_committed_decree = {}, confirmed_decree = {}",
-                   request.config.primary.to_string(),
-                   request.config.ballot,
-                   enum_to_string(request.config.status),
-                   request.last_committed_decree,
-                   request.__isset.confirmed_decree ? request.confirmed_decree : invalid_decree);
+    LOG_INFO_PREFIX("process group check, primary = {}, ballot = {}, status = {}, "
+                    "last_committed_decree = {}, confirmed_decree = {}",
+                    request.config.primary.to_string(),
+                    request.config.ballot,
+                    enum_to_string(request.config.status),
+                    request.last_committed_decree,
+                    request.__isset.confirmed_decree ? request.confirmed_decree : invalid_decree);
 
     if (request.config.ballot < get_ballot()) {
         response.err = ERR_VERSION_OUTDATED;

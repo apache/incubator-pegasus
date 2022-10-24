@@ -51,6 +51,8 @@ struct replica_base
 
     const char *app_name() const { return _app_name.c_str(); }
 
+    const char *log_prefix() const { return _name.c_str(); }
+
 private:
     const gpid _gpid;
     const std::string _name;

@@ -68,13 +68,14 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
     if (dsn_unlikely(_stub->_max_allowed_write_size &&
                      request->body_size() > _stub->_max_allowed_write_size)) {
         std::string request_info = _app->dump_write_request(request);
-        dwarn_replica("client from {} write request body size exceed threshold, request = [{}], "
-                      "request_body_size "
-                      "= {}, max_allowed_write_size = {}, it will be rejected!",
-                      request->header->from_address.to_string(),
-                      request_info,
-                      request->body_size(),
-                      _stub->_max_allowed_write_size);
+        LOG_WARNING_PREFIX(
+            "client from {} write request body size exceed threshold, request = [{}], "
+            "request_body_size "
+            "= {}, max_allowed_write_size = {}, it will be rejected!",
+            request->header->from_address.to_string(),
+            request_info,
+            request->body_size(),
+            _stub->_max_allowed_write_size);
         _stub->_counter_recent_write_size_exceed_threshold_count->increment();
         response_client_write(request, ERR_INVALID_DATA);
         return;
@@ -126,12 +127,12 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         auto cur_bulk_load_status = _bulk_loader->get_bulk_load_status();
         if (cur_bulk_load_status != bulk_load_status::BLS_DOWNLOADED &&
             cur_bulk_load_status != bulk_load_status::BLS_INGESTING) {
-            derror_replica("receive bulk load ingestion request with wrong status({})",
-                           enum_to_string(cur_bulk_load_status));
+            LOG_ERROR_PREFIX("receive bulk load ingestion request with wrong status({})",
+                             enum_to_string(cur_bulk_load_status));
             response_client_write(request, ERR_INVALID_STATE);
             return;
         }
-        ddebug_replica("receive bulk load ingestion request");
+        LOG_INFO_PREFIX("receive bulk load ingestion request");
 
         // bulk load ingestion request requires that all secondaries should be alive
         if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
@@ -208,7 +209,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         if (update.code != dsn::apps::RPC_RRDB_RRDB_BULK_LOAD) {
             break;
         }
-        ddebug_replica("try to prepare bulk load mutation({})", mu->name());
+        LOG_INFO_PREFIX("try to prepare bulk load mutation({})", mu->name());
         if (static_cast<int>(_primary_states.membership.secondaries.size()) + 1 <
             _primary_states.membership.max_replica_count) {
             err = ERR_NOT_ENOUGH_MEMBER;
@@ -787,7 +788,7 @@ void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
 
     if (err == ERR_OK) {
         if (mu->is_child_acked()) {
-            dinfo_replica("mutation {} ack_prepare_message, err = {}", mu->name(), err);
+            LOG_DEBUG_PREFIX("mutation {} ack_prepare_message, err = {}", mu->name(), err);
             for (auto &request : prepare_requests) {
                 reply(request, resp);
             }
@@ -796,11 +797,11 @@ void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
     }
     // only happened when prepare failed during partition split child copy mutation synchronously
     if (mu->is_error_acked()) {
-        dwarn_replica("mutation {} has been ack_prepare_message, err = {}", mu->name(), err);
+        LOG_WARNING_PREFIX("mutation {} has been ack_prepare_message, err = {}", mu->name(), err);
         return;
     }
 
-    dwarn_replica("mutation {} ack_prepare_message, err = {}", mu->name(), err);
+    LOG_WARNING_PREFIX("mutation {} ack_prepare_message, err = {}", mu->name(), err);
     if (mu->is_sync_to_child()) {
         mu->set_error_acked();
     }

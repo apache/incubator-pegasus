@@ -68,11 +68,11 @@ error_code replica_follower::duplicate_checkpoint()
 {
     zauto_lock l(_lock);
     if (_duplicating_checkpoint) {
-        dwarn_replica("duplicate master[{}] checkpoint is running", master_replica_name());
+        LOG_WARNING_PREFIX("duplicate master[{}] checkpoint is running", master_replica_name());
         return ERR_BUSY;
     }
 
-    ddebug_replica("start duplicate master[{}] checkpoint", master_replica_name());
+    LOG_INFO_PREFIX("start duplicate master[{}] checkpoint", master_replica_name());
     _duplicating_checkpoint = true;
     tasking::enqueue(LPC_DUPLICATE_CHECKPOINT, &_tracker, [=]() mutable {
         async_duplicate_checkpoint_from_master_replica();
@@ -98,7 +98,7 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
     // just fetch the same partition config
     meta_config_request.partition_indices = {get_gpid().get_partition_index()};
 
-    ddebug_replica("query master[{}] replica configuration", master_replica_name());
+    LOG_INFO_PREFIX("query master[{}] replica configuration", master_replica_name());
     dsn::message_ex *msg = dsn::message_ex::create_request(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, get_gpid().thread_hash());
     dsn::marshall(msg, meta_config_request);
@@ -126,43 +126,43 @@ replica_follower::update_master_replica_config(error_code err,
 {
     error_code err_code = err != ERR_OK ? err : resp.err;
     if (dsn_unlikely(err_code != ERR_OK)) {
-        derror_replica(
+        LOG_ERROR_PREFIX(
             "query master[{}] config failed: {}", master_replica_name(), err_code.to_string());
         return err_code;
     }
 
     if (dsn_unlikely(resp.partition_count != _replica->get_app_info()->partition_count)) {
-        derror_replica("master[{}] partition count is inconsistent: local = {} vs master = {}",
-                       master_replica_name(),
-                       _replica->get_app_info()->partition_count,
-                       resp.partition_count);
+        LOG_ERROR_PREFIX("master[{}] partition count is inconsistent: local = {} vs master = {}",
+                         master_replica_name(),
+                         _replica->get_app_info()->partition_count,
+                         resp.partition_count);
         return ERR_INCONSISTENT_STATE;
     }
 
     if (dsn_unlikely(resp.partitions.size() != 1)) {
-        derror_replica("master[{}] config size must be single, but actually is {}",
-                       master_replica_name(),
-                       resp.partitions.size());
+        LOG_ERROR_PREFIX("master[{}] config size must be single, but actually is {}",
+                         master_replica_name(),
+                         resp.partitions.size());
         return ERR_INVALID_DATA;
     }
 
     if (dsn_unlikely(resp.partitions[0].pid.get_partition_index() !=
                      get_gpid().get_partition_index())) {
-        derror_replica("master[{}] partition index is inconsistent: local = {} vs master = {}",
-                       master_replica_name(),
-                       get_gpid().get_partition_index(),
-                       resp.partitions[0].pid.get_partition_index());
+        LOG_ERROR_PREFIX("master[{}] partition index is inconsistent: local = {} vs master = {}",
+                         master_replica_name(),
+                         get_gpid().get_partition_index(),
+                         resp.partitions[0].pid.get_partition_index());
         return ERR_INCONSISTENT_STATE;
     }
 
     if (dsn_unlikely(resp.partitions[0].primary == rpc_address::s_invalid_address)) {
-        derror_replica("master[{}] partition address is invalid", master_replica_name());
+        LOG_ERROR_PREFIX("master[{}] partition address is invalid", master_replica_name());
         return ERR_INVALID_STATE;
     }
 
     // since the request just specify one partition, the result size is single
     _master_replica_config = resp.partitions[0];
-    ddebug_replica(
+    LOG_INFO_PREFIX(
         "query master[{}] config successfully and update local config: remote={}, gpid={}",
         master_replica_name(),
         _master_replica_config.primary.to_string(),
@@ -173,8 +173,8 @@ replica_follower::update_master_replica_config(error_code err,
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_follower::copy_master_replica_checkpoint()
 {
-    ddebug_replica("query master[{}] replica checkpoint info and start use nfs copy the data",
-                   master_replica_name());
+    LOG_INFO_PREFIX("query master[{}] replica checkpoint info and start use nfs copy the data",
+                    master_replica_name());
     learn_request request;
     request.pid = _master_replica_config.pid;
     dsn::message_ex *msg = dsn::message_ex::create_request(
@@ -193,16 +193,16 @@ error_code replica_follower::nfs_copy_checkpoint(error_code err, learn_response 
 {
     error_code err_code = err != ERR_OK ? err : resp.err;
     if (dsn_unlikely(err_code != ERR_OK)) {
-        derror_replica("query master[{}] replica checkpoint info failed, err = {}",
-                       master_replica_name(),
-                       err_code.to_string());
+        LOG_ERROR_PREFIX("query master[{}] replica checkpoint info failed, err = {}",
+                         master_replica_name(),
+                         err_code.to_string());
         return err_code;
     }
 
     std::string dest = utils::filesystem::path_combine(
         _replica->dir(), duplication_constants::kDuplicationCheckpointRootDir);
     if (!utils::filesystem::remove_path(dest)) {
-        derror_replica(
+        LOG_ERROR_PREFIX(
             "clear master[{}] replica checkpoint dest dir {} failed", master_replica_name(), dest);
         return ERR_FILE_OPERATION_FAILED;
     }
@@ -219,7 +219,7 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
                                              std::vector<std::string> &file_list,
                                              const std::string &dest_dir)
 {
-    ddebug_replica(
+    LOG_INFO_PREFIX(
         "nfs start copy master[{}] replica checkpoint: {}", master_replica_name(), remote_dir);
     std::shared_ptr<remote_copy_request> request = std::make_shared<remote_copy_request>();
     request->source = remote_node;
@@ -240,16 +240,16 @@ void replica_follower::nfs_copy_remote_files(const rpc_address &remote_node,
                                            [&](string_view s) -> void { err = ERR_OK; });
 
             if (dsn_unlikely(err != ERR_OK)) {
-                derror_replica("nfs copy master[{}] checkpoint failed: checkpoint = {}, err = {}",
-                               master_replica_name(),
-                               remote_dir,
-                               err.to_string());
+                LOG_ERROR_PREFIX("nfs copy master[{}] checkpoint failed: checkpoint = {}, err = {}",
+                                 master_replica_name(),
+                                 remote_dir,
+                                 err.to_string());
                 return;
             }
-            ddebug_replica("nfs copy master[{}] checkpoint completed: checkpoint = {}, size = {}",
-                           master_replica_name(),
-                           remote_dir,
-                           size);
+            LOG_INFO_PREFIX("nfs copy master[{}] checkpoint completed: checkpoint = {}, size = {}",
+                            master_replica_name(),
+                            remote_dir,
+                            size);
             _tracker.set_tasks_success();
         });
 }

@@ -586,11 +586,11 @@ void replica::update_bool_envs(const std::map<std::string, std::string> &envs,
 {
     bool new_value = false;
     if (!get_bool_envs(envs, name, new_value)) {
-        dwarn_replica("invalid value of env {}", name);
+        LOG_WARNING_PREFIX("invalid value of env {}", name);
         return;
     }
     if (new_value != value) {
-        ddebug_replica("switch env[{}] from {} to {}", name, value, new_value);
+        LOG_INFO_PREFIX("switch env[{}] from {} to {}", name, value, new_value);
         value = new_value;
     }
 }
@@ -618,10 +618,10 @@ void replica::update_allow_ingest_behind(const std::map<std::string, std::string
         if (store_app_info(info) != ERR_OK) {
             return;
         }
-        ddebug_replica("switch env[{}] from {} to {}",
-                       replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND,
-                       _allow_ingest_behind,
-                       new_value);
+        LOG_INFO_PREFIX("switch env[{}] from {} to {}",
+                        replica_envs::ROCKSDB_ALLOW_INGEST_BEHIND,
+                        _allow_ingest_behind,
+                        new_value);
         _allow_ingest_behind = new_value;
     }
 }
@@ -701,7 +701,7 @@ bool replica::update_local_configuration(const replica_configuration &config,
     FAIL_POINT_INJECT_F("replica_update_local_configuration", [=](dsn::string_view) -> bool {
         auto old_status = status();
         _config = config;
-        ddebug_replica(
+        LOG_INFO_PREFIX(
             "update status from {} to {}", enum_to_string(old_status), enum_to_string(status()));
         return true;
     });
@@ -794,11 +794,11 @@ bool replica::update_local_configuration(const replica_configuration &config,
         break;
     case partition_status::PS_PARTITION_SPLIT:
         if (config.status == partition_status::PS_INACTIVE) {
-            dwarn_replica("status change from {} @ {} to {} @ {} is not allowed",
-                          enum_to_string(old_status),
-                          old_ballot,
-                          enum_to_string(config.status),
-                          config.ballot);
+            LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed",
+                               enum_to_string(old_status),
+                               old_ballot,
+                               enum_to_string(config.status),
+                               config.ballot);
             return false;
         }
         break;
@@ -1097,7 +1097,7 @@ void replica::on_config_sync(const app_info &info,
                              const partition_configuration &config,
                              split_status::type meta_split_status)
 {
-    dinfo_replica("configuration sync");
+    LOG_DEBUG_PREFIX("configuration sync");
     // no outdated update
     if (config.ballot < get_ballot())
         return;

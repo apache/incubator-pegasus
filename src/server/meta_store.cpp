@@ -152,7 +152,7 @@ std::string meta_store::get_usage_scenario() const
 {
     auto status = _db->Put(_wt_opts, _meta_cf, key, value);
     if (!status.ok()) {
-        derror_replica(
+        LOG_ERROR_PREFIX(
             "Put {}={} to meta column family failed, status {}", key, value, status.ToString());
         // TODO(yingchun): add a rocksdb io error.
         return ::dsn::ERR_LOCAL_APP_FAILURE;

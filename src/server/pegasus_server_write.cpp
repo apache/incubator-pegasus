@@ -66,9 +66,9 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
         }
     } catch (TTransportException &ex) {
         _pfc_recent_corrupt_write_count->increment();
-        derror_replica("pegasus not batch write handler failed, from = {}, exception = {}",
-                       requests[0]->header->from_address.to_string(),
-                       ex.what());
+        LOG_ERROR_PREFIX("pegasus not batch write handler failed, from = {}, exception = {}",
+                         requests[0]->header->from_address.to_string(),
+                         ex.what());
         return 0;
     }
 
@@ -110,9 +110,9 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 }
             } catch (TTransportException &ex) {
                 _pfc_recent_corrupt_write_count->increment();
-                derror_replica("pegasus batch writes handler failed, from = {}, exception = {}",
-                               requests[i]->header->from_address.to_string(),
-                               ex.what());
+                LOG_ERROR_PREFIX("pegasus batch writes handler failed, from = {}, exception = {}",
+                                 requests[i]->header->from_address.to_string(),
+                                 ex.what());
             }
 
             if (!err && local_err) {
@@ -150,12 +150,12 @@ void pegasus_server_write::request_key_check(int64_t decree,
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(key, hash_key, sort_key);
 
-        ddebug_rocksdb("Write",
-                       "decree: {}, code: {}, hash_key: {}, sort_key: {}",
-                       decree,
-                       msg->local_rpc_code.to_string(),
-                       utils::c_escape_string(hash_key),
-                       utils::c_escape_string(sort_key));
+        LOG_INFO_ROCKSDB("Write",
+                         "decree: {}, code: {}, hash_key: {}, sort_key: {}",
+                         decree,
+                         msg->local_rpc_code.to_string(),
+                         utils::c_escape_string(hash_key),
+                         utils::c_escape_string(sort_key));
     }
 }
 

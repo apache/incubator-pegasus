@@ -47,9 +47,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
     cold_backup_context_ptr new_context(
         new cold_backup_context(this, request, FLAGS_max_concurrent_uploading_file_count));
 
-    ddebug_replica("{}: received cold backup request, partition_status = {}",
-                   new_context->name,
-                   enum_to_string(status()));
+    LOG_INFO_PREFIX("{}: received cold backup request, partition_status = {}",
+                    new_context->name,
+                    enum_to_string(status()));
 
     if (status() == partition_status::type::PS_PRIMARY ||
         status() == partition_status::type::PS_SECONDARY) {

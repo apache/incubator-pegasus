@@ -96,10 +96,10 @@ void pegasus_event_listener::OnCompactionCompleted(rocksdb::DB *db,
 void pegasus_event_listener::OnStallConditionsChanged(const rocksdb::WriteStallInfo &info)
 {
     if (info.condition.cur == rocksdb::WriteStallCondition::kDelayed) {
-        derror_replica("rocksdb write delayed");
+        LOG_ERROR_PREFIX("rocksdb write delayed");
         _pfc_recent_write_change_delayed_count->increment();
     } else if (info.condition.cur == rocksdb::WriteStallCondition::kStopped) {
-        derror_replica("rocksdb write stopped");
+        LOG_ERROR_PREFIX("rocksdb write stopped");
         _pfc_recent_write_change_stopped_count->increment();
     }
 }

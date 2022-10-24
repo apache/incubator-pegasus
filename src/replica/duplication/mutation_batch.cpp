@@ -64,13 +64,13 @@ void mutation_buffer::commit(decree d, commit_type ct)
         // duplication
         // or ignore the loss.
         if (next_committed_mutation == nullptr || !next_committed_mutation->is_logged()) {
-            derror_replica("mutation[{}] is lost in prepare_list: "
-                           "prepare_last_committed_decree={}, prepare_min_decree={}, "
-                           "prepare_max_decree={}",
-                           d0,
-                           last_committed_decree(),
-                           min_decree(),
-                           max_decree());
+            LOG_ERROR_PREFIX("mutation[{}] is lost in prepare_list: "
+                             "prepare_last_committed_decree={}, prepare_min_decree={}, "
+                             "prepare_max_decree={}",
+                             d0,
+                             last_committed_decree(),
+                             min_decree(),
+                             max_decree());
             _counter_dulication_mutation_loss_count->set(min_decree() - last_committed_decree());
             // if next_commit_mutation loss, let last_commit_decree catch up  with min_decree, and
             // the next loop will commit from min_decree

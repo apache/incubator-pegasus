@@ -66,11 +66,11 @@ int rocksdb_wrapper::get(dsn::string_view raw_key, /*out*/ db_get_context *ctx)
 
     dsn::blob hash_key, sort_key;
     pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-    derror_rocksdb("Get",
-                   s.ToString(),
-                   "hash_key: {}, sort_key: {}",
-                   utils::c_escape_string(hash_key),
-                   utils::c_escape_string(sort_key));
+    LOG_ERROR_ROCKSDB("Get",
+                      s.ToString(),
+                      "hash_key: {}, sort_key: {}",
+                      utils::c_escape_string(hash_key),
+                      utils::c_escape_string(sort_key));
     return s.code();
 }
 
@@ -125,13 +125,13 @@ int rocksdb_wrapper::write_batch_put_ctx(const db_write_context &ctx,
     if (dsn_unlikely(!s.ok())) {
         ::dsn::blob hash_key, sort_key;
         pegasus_restore_key(::dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-        derror_rocksdb("WriteBatchPut",
-                       s.ToString(),
-                       "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
-                       ctx.decree,
-                       utils::c_escape_string(hash_key),
-                       utils::c_escape_string(sort_key),
-                       expire_sec);
+        LOG_ERROR_ROCKSDB("WriteBatchPut",
+                          s.ToString(),
+                          "decree: {}, hash_key: {}, sort_key: {}, expire_ts: {}",
+                          ctx.decree,
+                          utils::c_escape_string(hash_key),
+                          utils::c_escape_string(sort_key),
+                          expire_sec);
     }
     return s.code();
 }
@@ -145,16 +145,16 @@ int rocksdb_wrapper::write(int64_t decree)
     rocksdb::Status status =
         _write_batch->Put(_meta_cf, meta_store::LAST_FLUSHED_DECREE, std::to_string(decree));
     if (dsn_unlikely(!status.ok())) {
-        derror_rocksdb("Write",
-                       status.ToString(),
-                       "put decree of meta cf into batch error, decree: {}",
-                       decree);
+        LOG_ERROR_ROCKSDB("Write",
+                          status.ToString(),
+                          "put decree of meta cf into batch error, decree: {}",
+                          decree);
         return status.code();
     }
 
     status = _db->Write(*_wt_opts, _write_batch.get());
     if (dsn_unlikely(!status.ok())) {
-        derror_rocksdb("Write", status.ToString(), "write rocksdb error, decree: {}", decree);
+        LOG_ERROR_ROCKSDB("Write", status.ToString(), "write rocksdb error, decree: {}", decree);
     }
     return status.code();
 }
@@ -168,12 +168,12 @@ int rocksdb_wrapper::write_batch_delete(int64_t decree, dsn::string_view raw_key
     if (dsn_unlikely(!s.ok())) {
         dsn::blob hash_key, sort_key;
         pegasus_restore_key(dsn::blob(raw_key.data(), 0, raw_key.size()), hash_key, sort_key);
-        derror_rocksdb("write_batch_delete",
-                       s.ToString(),
-                       "decree: {}, hash_key: {}, sort_key: {}",
-                       decree,
-                       utils::c_escape_string(hash_key),
-                       utils::c_escape_string(sort_key));
+        LOG_ERROR_ROCKSDB("write_batch_delete",
+                          s.ToString(),
+                          "decree: {}, hash_key: {}, sort_key: {}",
+                          decree,
+                          utils::c_escape_string(hash_key),
+                          utils::c_escape_string(sort_key));
     }
     return s.code();
 }
@@ -189,16 +189,16 @@ int rocksdb_wrapper::ingest_files(int64_t decree,
     ifo.ingest_behind = ingest_behind;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
     if (dsn_unlikely(!s.ok())) {
-        derror_rocksdb("IngestExternalFile",
-                       s.ToString(),
-                       "decree = {}, ingest_behind = {}",
-                       decree,
-                       ingest_behind);
+        LOG_ERROR_ROCKSDB("IngestExternalFile",
+                          s.ToString(),
+                          "decree = {}, ingest_behind = {}",
+                          decree,
+                          ingest_behind);
     } else {
-        ddebug_rocksdb("IngestExternalFile",
-                       "Ingest files succeed, decree = {}, ingest_behind = {}",
-                       decree,
-                       ingest_behind);
+        LOG_INFO_ROCKSDB("IngestExternalFile",
+                         "Ingest files succeed, decree = {}, ingest_behind = {}",
+                         decree,
+                         ingest_behind);
     }
     return s.code();
 }
@@ -207,7 +207,7 @@ void rocksdb_wrapper::set_default_ttl(uint32_t ttl)
 {
     if (_default_ttl != ttl) {
         _default_ttl = ttl;
-        ddebug_replica("update _default_ttl to {}", ttl);
+        LOG_INFO_PREFIX("update _default_ttl to {}", ttl);
     }
 }
 
