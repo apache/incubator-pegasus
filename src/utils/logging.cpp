@@ -94,7 +94,7 @@ void dsn_log_init(const std::string &logging_factory_name,
     ::dsn::command_manager::instance().register_command(
         {"reset-log-start-level"},
         "reset-log-start-level - reset the log start level",
-        "reset-log-start-level [INFORMATION | DEBUG | WARNING | ERROR | FATAL]",
+        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string> &args) {
             dsn_log_level_t start_level;
             if (args.size() == 0) {
