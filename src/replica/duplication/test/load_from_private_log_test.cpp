@@ -223,7 +223,7 @@ public:
             if (err == ERR_OK) {
                 break;
             }
-            derror_f("mlog open failed, encountered error: {}", err);
+            LOG_ERROR_F("mlog open failed, encountered error: {}", err);
         }
         return mlog;
     }

@@ -789,20 +789,20 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
 error_code read_file(const std::string &fname, std::string &buf)
 {
     if (!file_exists(fname)) {
-        derror_f("file({}) doesn't exist", fname);
+        LOG_ERROR_F("file({}) doesn't exist", fname);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     int64_t file_sz = 0;
     if (!file_size(fname, file_sz)) {
-        derror_f("get file({}) size failed", fname);
+        LOG_ERROR_F("get file({}) size failed", fname);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     buf.resize(file_sz);
     std::ifstream fin(fname, std::ifstream::in);
     if (!fin.is_open()) {
-        derror_f("open file({}) failed", fname);
+        LOG_ERROR_F("open file({}) failed", fname);
         return ERR_FILE_OPERATION_FAILED;
     }
     fin.read(&buf[0], file_sz);
@@ -820,26 +820,26 @@ bool verify_file(const std::string &fname,
                  const int64_t &expected_fsize)
 {
     if (!file_exists(fname)) {
-        derror_f("file({}) is not existed", fname);
+        LOG_ERROR_F("file({}) is not existed", fname);
         return false;
     }
     int64_t f_size = 0;
     if (!file_size(fname, f_size)) {
-        derror_f("verify file({}) failed, becaused failed to get file size", fname);
+        LOG_ERROR_F("verify file({}) failed, becaused failed to get file size", fname);
         return false;
     }
     std::string md5;
     if (md5sum(fname, md5) != ERR_OK) {
-        derror_f("verify file({}) failed, becaused failed to get file md5", fname);
+        LOG_ERROR_F("verify file({}) failed, becaused failed to get file md5", fname);
         return false;
     }
     if (f_size != expected_fsize || md5 != expected_md5) {
-        derror_f("verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
-                 fname,
-                 f_size,
-                 expected_fsize,
-                 md5,
-                 expected_md5);
+        LOG_ERROR_F("verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
+                    fname,
+                    f_size,
+                    expected_fsize,
+                    md5,
+                    expected_md5);
         return false;
     }
     return true;
@@ -848,19 +848,19 @@ bool verify_file(const std::string &fname,
 bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
 {
     if (!file_exists(fname)) {
-        derror_f("file({}) is not existed", fname);
+        LOG_ERROR_F("file({}) is not existed", fname);
         return false;
     }
     int64_t f_size = 0;
     if (!file_size(fname, f_size)) {
-        derror_f("verify file({}) size failed, becaused failed to get file size", fname);
+        LOG_ERROR_F("verify file({}) size failed, becaused failed to get file size", fname);
         return false;
     }
     if (f_size != expected_fsize) {
-        derror_f("verify file({}) size failed, because file damaged, size: {} VS {}",
-                 fname,
-                 f_size,
-                 expected_fsize);
+        LOG_ERROR_F("verify file({}) size failed, because file damaged, size: {} VS {}",
+                    fname,
+                    f_size,
+                    expected_fsize);
         return false;
     }
     return true;
@@ -873,10 +873,10 @@ bool verify_data_md5(const std::string &fname,
 {
     std::string md5 = string_md5(data, data_size);
     if (md5 != expected_md5) {
-        derror_f("verify data({}) failed, because data damaged, size: md5: {} VS {}",
-                 fname,
-                 md5,
-                 expected_md5);
+        LOG_ERROR_F("verify data({}) failed, because data damaged, size: md5: {} VS {}",
+                    fname,
+                    md5,
+                    expected_md5);
         return false;
     }
     return true;
@@ -906,7 +906,7 @@ bool create_directory(const std::string &path, std::string &absolute_path, std::
 bool write_file(const std::string &fname, std::string &buf)
 {
     if (!file_exists(fname)) {
-        derror_f("file({}) doesn't exist", fname);
+        LOG_ERROR_F("file({}) doesn't exist", fname);
         return false;
     }
 

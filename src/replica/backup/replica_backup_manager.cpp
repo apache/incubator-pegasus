@@ -46,7 +46,7 @@ static bool get_policy_checkpoint_dirs(const std::string &dir,
     // list sub dirs
     std::vector<std::string> sub_dirs;
     if (!utils::filesystem::get_subdirectories(dir, sub_dirs, false)) {
-        derror_f("list sub dirs of dir {} failed", dir.c_str());
+        LOG_ERROR_F("list sub dirs of dir {} failed", dir.c_str());
         return false;
     }
 

@@ -68,7 +68,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
     for (auto &dir : data_dirs) {
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
-            dwarn_f("gc_disk: failed to get subdirectories in {}", dir);
+            LOG_WARNING_F("gc_disk: failed to get subdirectories in {}", dir);
             return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get subdirectories");
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
@@ -82,7 +82,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 
         time_t mt;
         if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
-            dwarn_f("gc_disk: failed to get last write time of {}", fpath);
+            LOG_WARNING_F("gc_disk: failed to get last write time of {}", fpath);
             continue;
         }
 
@@ -107,20 +107,20 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 
         if (last_write_time + remove_interval_seconds <= current_time_ms / 1000) {
             if (!dsn::utils::filesystem::remove_path(fpath)) {
-                dwarn_f("gc_disk: failed to delete directory '{}', time_used_ms = {}",
-                        fpath,
-                        dsn_now_ms() - current_time_ms);
+                LOG_WARNING_F("gc_disk: failed to delete directory '{}', time_used_ms = {}",
+                              fpath,
+                              dsn_now_ms() - current_time_ms);
             } else {
-                dwarn_f("gc_disk: replica_dir_op succeed to delete directory '{}'"
-                        ", time_used_ms = {}",
-                        fpath,
-                        dsn_now_ms() - current_time_ms);
+                LOG_WARNING_F("gc_disk: replica_dir_op succeed to delete directory '{}'"
+                              ", time_used_ms = {}",
+                              fpath,
+                              dsn_now_ms() - current_time_ms);
                 report.remove_dir_count++;
             }
         } else {
-            ddebug_f("gc_disk: reserve directory '{}', wait_seconds = {}",
-                     fpath,
-                     last_write_time + remove_interval_seconds - current_time_ms / 1000);
+            LOG_INFO_F("gc_disk: reserve directory '{}', wait_seconds = {}",
+                       fpath,
+                       last_write_time + remove_interval_seconds - current_time_ms / 1000);
         }
     }
     return error_s::ok();

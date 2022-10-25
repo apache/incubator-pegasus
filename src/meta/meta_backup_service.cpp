@@ -129,9 +129,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
             } else if (resp.err == ERR_FS_INTERNAL) {
                 zauto_lock l(_lock);
                 _is_backup_failed = true;
-                derror_f("write {} failed, err = {}, don't try again when got this error.",
-                         remote_file->file_name(),
-                         resp.err.to_string());
+                LOG_ERROR_F("write {} failed, err = {}, don't try again when got this error.",
+                            remote_file->file_name(),
+                            resp.err.to_string());
                 return;
             } else {
                 LOG_WARNING("write %s failed, reason(%s), try it later",
@@ -245,9 +245,9 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
             } else if (resp.err == ERR_FS_INTERNAL) {
                 zauto_lock l(_lock);
                 _is_backup_failed = true;
-                derror_f("write {} failed, err = {}, don't try again when got this error.",
-                         remote_file->file_name(),
-                         resp.err.to_string());
+                LOG_ERROR_F("write {} failed, err = {}, don't try again when got this error.",
+                            remote_file->file_name(),
+                            resp.err.to_string());
                 return;
             } else {
                 LOG_WARNING("write %s failed, reason(%s), try it later",
@@ -353,9 +353,9 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
             } else if (resp.err == ERR_FS_INTERNAL) {
                 zauto_lock l(_lock);
                 _is_backup_failed = true;
-                derror_f("write {} failed, err = {}, don't try again when got this error.",
-                         remote_file->file_name(),
-                         resp.err.to_string());
+                LOG_ERROR_F("write {} failed, err = {}, don't try again when got this error.",
+                            remote_file->file_name(),
+                            resp.err.to_string());
                 return;
             } else {
                 LOG_WARNING("write %s failed, reason(%s), try it later",
@@ -379,32 +379,33 @@ bool policy_context::update_partition_progress_unlocked(gpid pid,
 {
     int32_t &local_progress = _progress.partition_progress[pid];
     if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
-        dwarn_f("{}: backup of partition {} has been finished, ignore the backup response from {} ",
-                _backup_sig,
-                pid.to_string(),
-                source.to_string());
+        LOG_WARNING_F(
+            "{}: backup of partition {} has been finished, ignore the backup response from {} ",
+            _backup_sig,
+            pid.to_string(),
+            source.to_string());
         return true;
     }
 
     if (progress < local_progress) {
-        dwarn_f("{}: local backup progress {} is larger than progress {} from server {} for "
-                "partition {}, perhaps it's primary has changed",
-                _backup_sig,
-                local_progress,
-                progress,
-                source.to_string(),
-                pid.to_string());
+        LOG_WARNING_F("{}: local backup progress {} is larger than progress {} from server {} for "
+                      "partition {}, perhaps it's primary has changed",
+                      _backup_sig,
+                      local_progress,
+                      progress,
+                      source.to_string(),
+                      pid.to_string());
     }
 
     local_progress = progress;
-    dinfo_f(
+    LOG_DEBUG_F(
         "{}: update partition {} backup progress to {}.", _backup_sig, pid.to_string(), progress);
     if (local_progress == cold_backup_constant::PROGRESS_FINISHED) {
-        ddebug_f("{}: finish backup for partition {}, the app has {} unfinished backup "
-                 "partition now.",
-                 _backup_sig,
-                 pid.to_string(),
-                 _progress.unfinished_partitions_per_app[pid.get_app_id()]);
+        LOG_INFO_F("{}: finish backup for partition {}, the app has {} unfinished backup "
+                   "partition now.",
+                   _backup_sig,
+                   pid.to_string(),
+                   _progress.unfinished_partitions_per_app[pid.get_app_id()]);
 
         // update the progress-chain: partition => app => current_backup_instance
         if (--_progress.unfinished_partitions_per_app[pid.get_app_id()] == 0) {
@@ -434,7 +435,7 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         const app_state *app = _backup_service->get_state()->get_app(pid.get_app_id()).get();
 
         if (app == nullptr || app->status == app_status::AS_DROPPED) {
-            dwarn_f(
+            LOG_WARNING_F(
                 "{}: app {} is not available, skip to backup it.", _backup_sig, pid.get_app_id());
             _progress.is_app_skipped[pid.get_app_id()] = true;
             update_partition_progress_unlocked(
@@ -444,9 +445,9 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         partition_primary = app->partitions[pid.get_partition_index()].primary;
     }
     if (partition_primary.is_invalid()) {
-        dwarn_f("{}: partition {} doesn't have a primary now, retry to backup it later",
-                _backup_sig,
-                pid.to_string());
+        LOG_WARNING_F("{}: partition {} doesn't have a primary now, retry to backup it later",
+                      _backup_sig,
+                      pid.to_string());
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this, pid]() {
@@ -472,10 +473,10 @@ void policy_context::start_backup_partition_unlocked(gpid pid)
         [this, pid, partition_primary](error_code err, backup_response &&response) {
             on_backup_reply(err, std::move(response), pid, partition_primary);
         });
-    ddebug_f("{}: send backup command to partition {}, target_addr = {}",
-             _backup_sig,
-             pid.to_string(),
-             partition_primary.to_string());
+    LOG_INFO_F("{}: send backup command to partition {}, target_addr = {}",
+               _backup_sig,
+               pid.to_string(),
+               partition_primary.to_string());
     _backup_service->get_meta_service()->send_request(request, partition_primary, rpc_callback);
 }
 
@@ -484,10 +485,10 @@ void policy_context::on_backup_reply(error_code err,
                                      gpid pid,
                                      const rpc_address &primary)
 {
-    ddebug_f("{}: receive backup response for partition {} from server {}.",
-             _backup_sig,
-             pid.to_string(),
-             primary.to_string());
+    LOG_INFO_F("{}: receive backup response for partition {} from server {}.",
+               _backup_sig,
+               pid.to_string(),
+               primary.to_string());
     if (err == dsn::ERR_OK && response.err == dsn::ERR_OK) {
         dassert(response.policy_name == _policy.policy_name,
                 "policy name(%s vs %s) don't match, pid(%d.%d), replica_server(%s)",
@@ -513,13 +514,14 @@ void policy_context::on_backup_reply(error_code err,
                 pid.get_partition_index());
 
         if (response.backup_id < _cur_backup.backup_id) {
-            dwarn_f("{}: got a backup response of partition {} from server {}, whose backup id "
-                    "{} is smaller than current backup id {},  maybe it is a stale message",
-                    _backup_sig,
-                    pid.to_string(),
-                    primary.to_string(),
-                    response.backup_id,
-                    _cur_backup.backup_id);
+            LOG_WARNING_F(
+                "{}: got a backup response of partition {} from server {}, whose backup id "
+                "{} is smaller than current backup id {},  maybe it is a stale message",
+                _backup_sig,
+                pid.to_string(),
+                primary.to_string(),
+                response.backup_id,
+                _cur_backup.backup_id);
         } else {
             zauto_lock l(_lock);
             record_partition_checkpoint_size_unlock(pid, response.checkpoint_total_size);
@@ -531,20 +533,21 @@ void policy_context::on_backup_reply(error_code err,
     } else if (response.err == dsn::ERR_LOCAL_APP_FAILURE) {
         zauto_lock l(_lock);
         _is_backup_failed = true;
-        derror_f("{}: backup got error {} for partition {} from {}, don't try again when got "
-                 "this error.",
-                 _backup_sig.c_str(),
-                 response.err.to_string(),
-                 pid.to_string(),
-                 primary.to_string());
+        LOG_ERROR_F("{}: backup got error {} for partition {} from {}, don't try again when got "
+                    "this error.",
+                    _backup_sig.c_str(),
+                    response.err.to_string(),
+                    pid.to_string(),
+                    primary.to_string());
         return;
     } else {
-        dwarn_f("{}: backup got error for partition {} from {}, rpc error {}, response error {}",
-                _backup_sig.c_str(),
-                pid.to_string(),
-                primary.to_string(),
-                err.to_string(),
-                response.err.to_string());
+        LOG_WARNING_F(
+            "{}: backup got error for partition {} from {}, rpc error {}, response error {}",
+            _backup_sig.c_str(),
+            pid.to_string(),
+            primary.to_string(),
+            err.to_string(),
+            response.err.to_string());
     }
 
     // retry to backup the partition.
@@ -660,8 +663,8 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
 void policy_context::continue_current_backup_unlocked()
 {
     if (_policy.is_disable) {
-        ddebug_f("{}: policy is disabled, ignore this backup and try it later",
-                 _policy.policy_name);
+        LOG_INFO_F("{}: policy is disabled, ignore this backup and try it later",
+                   _policy.policy_name);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this]() {
@@ -1262,9 +1265,9 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
         for (auto &app_id : request.app_ids) {
             const std::shared_ptr<app_state> &app = _state->get_app(app_id);
             if (app == nullptr) {
-                derror_f("app {} doesn't exist, policy {} shouldn't be added.",
-                         app_id,
-                         request.policy_name);
+                LOG_ERROR_F("app {} doesn't exist, policy {} shouldn't be added.",
+                            app_id,
+                            request.policy_name);
                 response.err = ERR_INVALID_PARAMETERS;
                 response.hint_message = "invalid app " + std::to_string(app_id);
                 _meta_svc->reply_data(msg, response);
@@ -1298,7 +1301,7 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
         return;
     }
 
-    ddebug_f("start to add backup polciy {}.", request.policy_name);
+    LOG_INFO_F("start to add backup polciy {}.", request.policy_name);
     std::shared_ptr<policy_context> policy_context_ptr = _factory(this);
     dassert(policy_context_ptr != nullptr, "invalid policy_context");
     policy p;

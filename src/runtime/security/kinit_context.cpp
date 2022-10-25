@@ -226,9 +226,9 @@ error_s kinit_context::get_credentials()
                                                    _opt),
                         "get_init_cred");
     if (!err.is_ok()) {
-        dwarn_f("get credentials of {} from KDC failed, reason({})",
-                FLAGS_krb5_principal,
-                err.description());
+        LOG_WARNING_F("get credentials of {} from KDC failed, reason({})",
+                      FLAGS_krb5_principal,
+                      err.description());
         return err;
     }
     auto cleanup = dsn::defer([&]() { krb5_free_cred_contents(_krb5_context, &creds); });
@@ -236,23 +236,23 @@ error_s kinit_context::get_credentials()
     // store credentials into _ccache.
     err = wrap_krb5_err(krb5_cc_store_cred(_krb5_context, _ccache, &creds), "store_cred");
     if (!err.is_ok()) {
-        dwarn_f("store credentials of {} to cache failed, err({})",
-                FLAGS_krb5_principal,
-                err.description());
+        LOG_WARNING_F("store credentials of {} to cache failed, err({})",
+                      FLAGS_krb5_principal,
+                      err.description());
         return err;
     }
 
     _cred_expire_timestamp = creds.times.endtime;
-    ddebug_f("get credentials of {} from KDC ok, expires at {}",
-             FLAGS_krb5_principal,
-             utils::time_s_to_date_time(_cred_expire_timestamp));
+    LOG_INFO_F("get credentials of {} from KDC ok, expires at {}",
+               FLAGS_krb5_principal,
+               utils::time_s_to_date_time(_cred_expire_timestamp));
     return err;
 }
 
 void kinit_context::schedule_renew_credentials()
 {
     int64_t renew_gap = get_next_renew_interval();
-    ddebug_f("schedule to renew credentials in {} seconds later", renew_gap);
+    LOG_INFO_F("schedule to renew credentials in {} seconds later", renew_gap);
 
     // why don't we use timers in rDSN framework?
     //  1. currently the rdsn framework may not started yet.

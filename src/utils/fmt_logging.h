@@ -31,13 +31,12 @@
             dsn_log(                                                                               \
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
-// TODO(yingchun): to reduce the changes in one patch, now log levels using 'fmt' are left and will
-// be refactored in a follow up patch.
-#define dinfo_f(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define ddebug_f(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
-#define dwarn_f(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define derror_f(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define dfatal_f(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
+
+#define LOG_DEBUG_F(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_INFO_F(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_WARNING_F(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOG_ERROR_F(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_FATAL_F(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
 #define dassert_f(x, ...)                                                                          \
     do {                                                                                           \
         if (dsn_unlikely(!(x))) {                                                                  \
@@ -48,11 +47,11 @@
     } while (false)
 
 // Macros for writing log message prefixed by gpid and address.
-#define dinfo_replica(...) dinfo_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define ddebug_replica(...) ddebug_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define dwarn_replica(...) dwarn_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define derror_replica(...) derror_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define dfatal_replica(...) dfatal_f("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
+#define dinfo_replica(...) LOG_DEBUG_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
+#define ddebug_replica(...) LOG_INFO_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
+#define dwarn_replica(...) LOG_WARNING_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
+#define derror_replica(...) LOG_ERROR_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
+#define dfatal_replica(...) LOG_FATAL_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
 #define dassert_replica(x, ...) dassert_f(x, "[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
 
 // Macros to check expected condition. It will abort the application
@@ -73,7 +72,7 @@
 #define ERR_LOG_AND_RETURN_NOT_TRUE(s, err, ...)                                                   \
     do {                                                                                           \
         if (dsn_unlikely(!(s))) {                                                                  \
-            derror_f("{}: {}", err, fmt::format(__VA_ARGS__));                                     \
+            LOG_ERROR_F("{}: {}", err, fmt::format(__VA_ARGS__));                                  \
             return err;                                                                            \
         }                                                                                          \
     } while (0)

@@ -74,10 +74,10 @@ public:
         if (is_duplicating_checkpoint) {
             return alter_status(duplication_status::DS_PREPARE);
         }
-        dwarn_f("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
-                id,
-                follower_cluster_name,
-                app_name);
+        LOG_WARNING_F("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
+                      id,
+                      follower_cluster_name,
+                      app_name);
         return alter_status(duplication_status::DS_LOG);
     }
 
@@ -168,7 +168,7 @@ public:
                             return item.second.checkpoint_prepared;
                         });
         if (!completed) {
-            dwarn_f("replica checkpoint still running: {}/{}", prepared, _progress.size());
+            LOG_WARNING_F("replica checkpoint still running: {}/{}", prepared, _progress.size());
         }
         return completed;
     }
@@ -249,13 +249,13 @@ extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::
 
 // Macros for writing log message prefixed by appid and dupid.
 #define ddebug_dup(_dup_, ...)                                                                     \
-    ddebug_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
+    LOG_INFO_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 #define dwarn_dup(_dup_, ...)                                                                      \
-    dwarn_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
+    LOG_WARNING_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 #define derror_dup(_dup_, ...)                                                                     \
-    derror_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
+    LOG_ERROR_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 #define dfatal_dup(_dup_, ...)                                                                     \
-    dfatal_f("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
+    LOG_FATAL_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 #define dassert_dup(_pred_, _dup_, ...)                                                            \
     dassert_f(_pred_, "[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 

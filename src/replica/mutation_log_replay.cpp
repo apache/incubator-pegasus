@@ -155,7 +155,7 @@ namespace replication {
 
     error_s error = log_utils::check_log_files_continuity(logs);
     if (!error.is_ok()) {
-        derror_f("check_log_files_continuity failed: {}", error);
+        LOG_ERROR_F("check_log_files_continuity failed: {}", error);
         return error.code();
     }
 

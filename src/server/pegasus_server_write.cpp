@@ -103,9 +103,9 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
                 } else {
                     if (_non_batch_write_handlers.find(rpc_code) !=
                         _non_batch_write_handlers.end()) {
-                        dfatal_f("rpc code not allow batch: {}", rpc_code.to_string());
+                        LOG_FATAL_F("rpc code not allow batch: {}", rpc_code.to_string());
                     } else {
-                        dfatal_f("rpc code not handled: {}", rpc_code.to_string());
+                        LOG_FATAL_F("rpc code not handled: {}", rpc_code.to_string());
                     }
                 }
             } catch (TTransportException &ex) {

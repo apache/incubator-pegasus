@@ -108,7 +108,7 @@ void pegasus_counter_reporter::prometheus_initialize()
         dsn::make_unique<prometheus::Exposer>(fmt::format("0.0.0.0:{}", FLAGS_prometheus_port));
     _exposer->RegisterCollectable(_registry);
 
-    ddebug_f("prometheus exposer [0.0.0.0:{}] started", FLAGS_prometheus_port);
+    LOG_INFO_F("prometheus exposer [0.0.0.0:{}] started", FLAGS_prometheus_port);
 }
 
 void pegasus_counter_reporter::falcon_initialize()

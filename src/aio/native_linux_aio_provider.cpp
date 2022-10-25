@@ -84,11 +84,11 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
                           aio_ctx.file_offset + buffer_offset);
         if (dsn_unlikely(ret < 0)) {
             if (errno == EINTR) {
-                dwarn_f("write failed with errno={} and will retry it.", strerror(errno));
+                LOG_WARNING_F("write failed with errno={} and will retry it.", strerror(errno));
                 continue;
             }
             resp = ERR_FILE_OPERATION_FAILED;
-            derror_f("write failed with errno={}, return {}.", strerror(errno), resp);
+            LOG_ERROR_F("write failed with errno={}, return {}.", strerror(errno), resp);
             return resp;
         }
 
@@ -101,11 +101,12 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
 
         buffer_offset += ret;
         if (dsn_unlikely(buffer_offset != aio_ctx.buffer_size)) {
-            dwarn_f("write incomplete, request_size={}, total_write_size={}, this_write_size={}, "
-                    "and will retry it.",
-                    aio_ctx.buffer_size,
-                    buffer_offset,
-                    ret);
+            LOG_WARNING_F(
+                "write incomplete, request_size={}, total_write_size={}, this_write_size={}, "
+                "and will retry it.",
+                aio_ctx.buffer_size,
+                buffer_offset,
+                ret);
         }
     } while (dsn_unlikely(buffer_offset < aio_ctx.buffer_size));
 

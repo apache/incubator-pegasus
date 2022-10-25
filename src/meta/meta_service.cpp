@@ -191,19 +191,19 @@ bool meta_service::try_lock_meta_op_status(meta_op_status op_status)
 {
     meta_op_status expected = meta_op_status::FREE;
     if (!_meta_op_status.compare_exchange_strong(expected, op_status)) {
-        derror_f("LOCK meta op status failed, meta "
-                 "server is busy, current op status is {}",
-                 enum_to_string(expected));
+        LOG_ERROR_F("LOCK meta op status failed, meta "
+                    "server is busy, current op status is {}",
+                    enum_to_string(expected));
         return false;
     }
 
-    ddebug_f("LOCK meta op status to {}", enum_to_string(op_status));
+    LOG_INFO_F("LOCK meta op status to {}", enum_to_string(op_status));
     return true;
 }
 
 void meta_service::unlock_meta_op_status()
 {
-    ddebug_f("UNLOCK meta op status from {}", enum_to_string(_meta_op_status.load()));
+    LOG_INFO_F("UNLOCK meta op status from {}", enum_to_string(_meta_op_status.load()));
     _meta_op_status.store(meta_op_status::FREE);
 }
 
@@ -647,10 +647,10 @@ void meta_service::on_query_configuration_by_index(configuration_query_by_index_
 
     _state->query_configuration_by_index(rpc.request(), response);
     if (ERR_OK == response.err) {
-        ddebug_f("client {} queried an available app {} with appid {}",
-                 rpc.dsn_request()->header->from_address.to_string(),
-                 rpc.request().app_name,
-                 response.app_id);
+        LOG_INFO_F("client {} queried an available app {} with appid {}",
+                   rpc.dsn_request()->header->from_address.to_string(),
+                   rpc.request().app_name,
+                   response.app_id);
     }
 }
 
@@ -1001,7 +1001,7 @@ void meta_service::on_start_partition_split(start_split_rpc rpc)
         return;
     }
     if (_split_svc == nullptr) {
-        derror_f("meta doesn't support partition split");
+        LOG_ERROR_F("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1018,7 +1018,7 @@ void meta_service::on_control_partition_split(control_split_rpc rpc)
     }
 
     if (_split_svc == nullptr) {
-        derror_f("meta doesn't support partition split");
+        LOG_ERROR_F("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1035,7 +1035,7 @@ void meta_service::on_query_partition_split(query_split_rpc rpc)
     }
 
     if (_split_svc == nullptr) {
-        derror_f("meta doesn't support partition split");
+        LOG_ERROR_F("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1060,7 +1060,7 @@ void meta_service::on_notify_stop_split(notify_stop_split_rpc rpc)
         return;
     }
     if (_split_svc == nullptr) {
-        derror_f("meta doesn't support partition split");
+        LOG_ERROR_F("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1076,7 +1076,7 @@ void meta_service::on_query_child_state(query_child_state_rpc rpc)
         return;
     }
     if (_split_svc == nullptr) {
-        derror_f("meta doesn't support partition split");
+        LOG_ERROR_F("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1090,7 +1090,7 @@ void meta_service::on_start_bulk_load(start_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        derror_f("meta doesn't support bulk load");
+        LOG_ERROR_F("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1104,7 +1104,7 @@ void meta_service::on_control_bulk_load(control_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        derror_f("meta doesn't support bulk load");
+        LOG_ERROR_F("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1121,7 +1121,7 @@ void meta_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        derror_f("meta doesn't support bulk load");
+        LOG_ERROR_F("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1135,7 +1135,7 @@ void meta_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        derror_f("meta doesn't support bulk load");
+        LOG_ERROR_F("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1151,7 +1151,7 @@ void meta_service::on_start_backup_app(start_backup_app_rpc rpc)
         return;
     }
     if (_backup_handler == nullptr) {
-        derror_f("meta doesn't enable backup service");
+        LOG_ERROR_F("meta doesn't enable backup service");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1164,7 +1164,7 @@ void meta_service::on_query_backup_status(query_backup_status_rpc rpc)
         return;
     }
     if (_backup_handler == nullptr) {
-        derror_f("meta doesn't enable backup service");
+        LOG_ERROR_F("meta doesn't enable backup service");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }

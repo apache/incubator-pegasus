@@ -550,7 +550,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     uint64_t start_time = dsn_now_ms();
     for (auto &dir : dir_list) {
         if (dsn::replication::is_data_dir_invalid(dir)) {
-            ddebug_f("ignore dir {}", dir);
+            LOG_INFO_F("ignore dir {}", dir);
             continue;
         }
 
@@ -677,7 +677,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             pmax_commit = it->second->private_log()->max_commit_on_disk();
         }
 
-        ddebug_f(
+        LOG_INFO_F(
             "{}: load replica done, err = {}, durable = {}, committed = {}, "
             "prepared = {}, ballot = {}, "
             "valid_offset_in_plog = {}, max_decree_in_plog = {}, max_commit_on_disk_in_plog = {}, "
@@ -771,13 +771,13 @@ void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
         if (dsn_unlikely(!utils::filesystem::create_directory(dir, cdir, err_msg) ||
                          !utils::filesystem::check_dir_rw(dir, err_msg))) {
             if (FLAGS_ignore_broken_disk) {
-                dwarn_f("data dir[{}] is broken, ignore it, error:{}", dir, err_msg);
+                LOG_WARNING_F("data dir[{}] is broken, ignore it, error:{}", dir, err_msg);
             } else {
                 dassert_f(false, "{}", err_msg);
             }
             continue;
         }
-        ddebug_f("data_dirs[{}] = {}", count, cdir);
+        LOG_INFO_F("data_dirs[{}] = {}", count, cdir);
         available_dirs.emplace_back(cdir);
         available_dir_tags.emplace_back(data_dir_tags[i]);
         count++;
@@ -1179,7 +1179,7 @@ void replica_stub::on_add_new_disk(add_new_disk_rpc rpc)
             return;
         }
 
-        ddebug_f("Add a new disk in fs_manager, data_dir={}, tag={}", cdir, data_dir_tags[i]);
+        LOG_INFO_F("Add a new disk in fs_manager, data_dir={}, tag={}", cdir, data_dir_tags[i]);
         _fs_manager.add_new_dir_node(cdir, data_dir_tags[i]);
     }
 }
@@ -1444,10 +1444,10 @@ void replica_stub::on_node_query_reply(error_code err,
             return;
         }
 
-        ddebug_f("process query node partitions response for resp.err = ERR_OK, "
-                 "partitions_count({}), gc_replicas_count({})",
-                 resp.partitions.size(),
-                 resp.gc_replicas.size());
+        LOG_INFO_F("process query node partitions response for resp.err = ERR_OK, "
+                   "partitions_count({}), gc_replicas_count({})",
+                   resp.partitions.size(),
+                   resp.gc_replicas.size());
 
         replicas rs;
         {
@@ -2034,10 +2034,11 @@ void replica_stub::open_replica(
                 id,
                 false);
             if (!origin_tmp_dir.empty()) {
-                ddebug_f("mark the dir {} is garbage, start revert and load disk migration origin "
-                         "replica data({})",
-                         dir,
-                         origin_tmp_dir);
+                LOG_INFO_F(
+                    "mark the dir {} is garbage, start revert and load disk migration origin "
+                    "replica data({})",
+                    dir,
+                    origin_tmp_dir);
                 dsn::utils::filesystem::rename_path(dir,
                                                     fmt::format("{}{}", dir, kFolderSuffixGar));
 
@@ -2763,7 +2764,7 @@ static int64_t get_tcmalloc_numeric_property(const char *prop)
 {
     size_t value;
     if (!::MallocExtension::instance()->GetNumericProperty(prop, &value)) {
-        derror_f("Failed to get tcmalloc property {}", prop);
+        LOG_ERROR_F("Failed to get tcmalloc property {}", prop);
         return -1;
     }
     return value;
@@ -2779,7 +2780,7 @@ uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
     }
 
     if (_is_releasing_memory.load()) {
-        dwarn_f("This node is releasing memory...");
+        LOG_WARNING_F("This node is releasing memory...");
         return tcmalloc_released_bytes;
     }
 
@@ -2797,7 +2798,7 @@ uint64_t replica_stub::gc_tcmalloc_memory(bool release_all)
     if (reserved_bytes > max_reserved_bytes) {
         int64_t release_bytes = reserved_bytes - max_reserved_bytes;
         tcmalloc_released_bytes = release_bytes;
-        ddebug_f("Memory release started, almost {} bytes will be released", release_bytes);
+        LOG_INFO_F("Memory release started, almost {} bytes will be released", release_bytes);
         while (release_bytes > 0) {
             // tcmalloc releasing memory will lock page heap, release 1MB at a time to avoid locking
             // page heap for long time
@@ -2823,7 +2824,7 @@ void replica_stub::create_child_replica(rpc_address primary_address,
 {
     replica_ptr child_replica = create_child_replica_if_not_found(child_gpid, &app, parent_dir);
     if (child_replica != nullptr) {
-        ddebug_f("app({}), create child replica ({}) succeed", app.app_name, child_gpid);
+        LOG_INFO_F("app({}), create child replica ({}) succeed", app.app_name, child_gpid);
         tasking::enqueue(LPC_PARTITION_SPLIT,
                          child_replica->tracker(),
                          std::bind(&replica_split_manager::child_init_replica,
@@ -2833,7 +2834,8 @@ void replica_stub::create_child_replica(rpc_address primary_address,
                                    init_ballot),
                          child_gpid.thread_hash());
     } else {
-        dwarn_f("failed to create child replica ({}), ignore it and wait next run", child_gpid);
+        LOG_WARNING_F("failed to create child replica ({}), ignore it and wait next run",
+                      child_gpid);
         split_replica_error_handler(
             parent_gpid,
             std::bind(&replica_split_manager::parent_cleanup_split_context, std::placeholders::_1));
@@ -2849,7 +2851,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
                             replica *rep = new replica(this, child_pid, *app, "./", false);
                             rep->_config.status = partition_status::PS_INACTIVE;
                             _replicas.insert(replicas::value_type(child_pid, rep));
-                            ddebug_f("mock create_child_replica_if_not_found succeed");
+                            LOG_INFO_F("mock create_child_replica_if_not_found succeed");
                             return rep;
                         });
 
@@ -2859,10 +2861,10 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
         return it->second;
     } else {
         if (_opening_replicas.find(child_pid) != _opening_replicas.end()) {
-            dwarn_f("failed create child replica({}) because it is under open", child_pid);
+            LOG_WARNING_F("failed create child replica({}) because it is under open", child_pid);
             return nullptr;
         } else if (_closing_replicas.find(child_pid) != _closing_replicas.end()) {
-            dwarn_f("failed create child replica({}) because it is under close", child_pid);
+            LOG_WARNING_F("failed create child replica({}) because it is under close", child_pid);
             return nullptr;
         } else {
             replica *rep = replica::newr(this, child_pid, *app, false, false, parent_dir);
@@ -2896,7 +2898,7 @@ replica_stub::split_replica_exec(dsn::task_code code, gpid pid, local_execution 
                          pid.thread_hash());
         return ERR_OK;
     }
-    dwarn_f("replica({}) is invalid", pid);
+    LOG_WARNING_F("replica({}) is invalid", pid);
     return ERR_OBJECT_NOT_FOUND;
 }
 
@@ -2955,12 +2957,12 @@ void replica_stub::on_bulk_load(bulk_load_rpc rpc)
     const bulk_load_request &request = rpc.request();
     bulk_load_response &response = rpc.response();
 
-    ddebug_f("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
+    LOG_INFO_F("[{}@{}]: receive bulk load request", request.pid, _primary_address_str);
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
         rep->get_bulk_loader()->on_bulk_load(request, response);
     } else {
-        derror_f("replica({}) is not existed", request.pid);
+        LOG_ERROR_F("replica({}) is not existed", request.pid);
         response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
@@ -2970,19 +2972,19 @@ void replica_stub::on_group_bulk_load(group_bulk_load_rpc rpc)
     const group_bulk_load_request &request = rpc.request();
     group_bulk_load_response &response = rpc.response();
 
-    ddebug_f("[{}@{}]: received group bulk load request, primary = {}, ballot = {}, "
-             "meta_bulk_load_status = {}",
-             request.config.pid,
-             _primary_address_str,
-             request.config.primary.to_string(),
-             request.config.ballot,
-             enum_to_string(request.meta_bulk_load_status));
+    LOG_INFO_F("[{}@{}]: received group bulk load request, primary = {}, ballot = {}, "
+               "meta_bulk_load_status = {}",
+               request.config.pid,
+               _primary_address_str,
+               request.config.primary.to_string(),
+               request.config.ballot,
+               enum_to_string(request.meta_bulk_load_status));
 
     replica_ptr rep = get_replica(request.config.pid);
     if (rep != nullptr) {
         rep->get_bulk_loader()->on_group_bulk_load(request, response);
     } else {
-        derror_f("replica({}) is not existed", request.config.pid);
+        LOG_ERROR_F("replica({}) is not existed", request.config.pid);
         response.err = ERR_OBJECT_NOT_FOUND;
     }
 }
@@ -2992,11 +2994,11 @@ void replica_stub::on_detect_hotkey(detect_hotkey_rpc rpc)
     const auto &request = rpc.request();
     auto &response = rpc.response();
 
-    ddebug_f("[{}@{}]: received detect hotkey request, hotkey_type = {}, detect_action = {}",
-             request.pid,
-             _primary_address_str,
-             enum_to_string(request.type),
-             enum_to_string(request.action));
+    LOG_INFO_F("[{}@{}]: received detect hotkey request, hotkey_type = {}, detect_action = {}",
+               request.pid,
+               _primary_address_str,
+               enum_to_string(request.type),
+               enum_to_string(request.action));
 
     replica_ptr rep = get_replica(request.pid);
     if (rep != nullptr) {
@@ -3044,9 +3046,9 @@ void replica_stub::update_disks_status()
                     continue;
                 }
                 replica->set_disk_status(dir_node->status);
-                ddebug_f("{} update disk_status to {}",
-                         replica->name(),
-                         enum_to_string(replica->get_disk_status()));
+                LOG_INFO_F("{} update disk_status to {}",
+                           replica->name(),
+                           enum_to_string(replica->get_disk_status()));
             }
         }
     }

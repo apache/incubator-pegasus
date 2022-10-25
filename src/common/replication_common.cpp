@@ -494,13 +494,13 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
         if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
             addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
         } else if (!addr.from_string_ipv4(s.c_str())) {
-            derror_f("invalid address '{}' specified in config [{}].{}", s, section, key);
+            LOG_ERROR_F("invalid address '{}' specified in config [{}].{}", s, section, key);
             return false;
         }
         servers.push_back(addr);
     }
     if (servers.empty()) {
-        derror_f("no meta server specified in config [{}].{}", section, key);
+        LOG_ERROR_F("no meta server specified in config [{}].{}", section, key);
         return false;
     }
     return true;
@@ -562,7 +562,7 @@ replication_options::get_data_dir_and_tag(const std::string &config_dirs_str,
 
     for (unsigned i = 0; i < dirs.size(); ++i) {
         const std::string &dir = dirs[i];
-        ddebug_f("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
+        LOG_INFO_F("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
         data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
         data_dir_tags.push_back(dir_tags[i]);
     }
@@ -574,11 +574,11 @@ replication_options::get_data_dirs_in_black_list(const std::string &fname,
                                                  /*out*/ std::vector<std::string> &dirs)
 {
     if (fname.empty() || !utils::filesystem::file_exists(fname)) {
-        ddebug_f("data_dirs_black_list_file[{}] not found, ignore it", fname);
+        LOG_INFO_F("data_dirs_black_list_file[{}] not found, ignore it", fname);
         return;
     }
 
-    ddebug_f("data_dirs_black_list_file[{}] found, apply it", fname);
+    LOG_INFO_F("data_dirs_black_list_file[{}] found, apply it", fname);
     std::ifstream file(fname);
     if (!file) {
         dassert_f(false, "open data_dirs_black_list_file failed: {}", fname);
@@ -596,7 +596,7 @@ replication_options::get_data_dirs_in_black_list(const std::string &fname,
         }
         dirs.push_back(str2);
         count++;
-        ddebug_f("black_list[{}] = [{}]", count, str2);
+        LOG_INFO_F("black_list[{}] = [{}]", count, str2);
     }
 }
 
