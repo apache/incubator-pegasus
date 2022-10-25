@@ -62,7 +62,8 @@ public:
           follower_cluster_name(std::move(follower_cluster_name)),
           follower_cluster_metas(std::move(follower_cluster_metas)),
           store_path(std::move(meta_store_path)),
-          create_timestamp_ms(create_now_ms)
+          create_timestamp_ms(create_now_ms),
+          prefix_for_log(fmt::format("a{}d{}", app_id, id))
     {
         for (int i = 0; i < partition_count; i++) {
             _progress[i] = {};
@@ -185,7 +186,7 @@ public:
     // To json encoded string.
     std::string to_string() const;
 
-    const string &log_prefix() const { return fmt::format("a{}d{}", app_id, id); }
+    const char *log_prefix() const { return prefix_for_log.c_str(); }
 
 private:
     friend class duplication_info_test;
@@ -239,6 +240,7 @@ public:
     const std::vector<rpc_address> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
+    const std::string prefix_for_log;
 };
 
 extern void json_encode(dsn::json::JsonWriter &out, const duplication_status::type &s);
