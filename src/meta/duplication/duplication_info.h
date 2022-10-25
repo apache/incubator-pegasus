@@ -185,7 +185,7 @@ public:
     // To json encoded string.
     std::string to_string() const;
 
-    const char *log_prefix() const { return fmt::format("a{}d{}", app_id, id).c_str(); }
+    const string &log_prefix() const { return fmt::format("a{}d{}", app_id, id); }
 
 private:
     friend class duplication_info_test;
