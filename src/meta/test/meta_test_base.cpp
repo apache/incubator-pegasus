@@ -123,9 +123,9 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
     if (!nodes.empty()) {
         auto node_count = static_cast<int>(nodes.size());
         CHECK(node_count >= min_node_count,
-                  "there should be at least {} alive nodes, now we just have {} alive nodes",
-                  min_node_count,
-                  node_count);
+              "there should be at least {} alive nodes, now we just have {} alive nodes",
+              min_node_count,
+              node_count);
 
         LOG_DEBUG_F("already exists {} alive nodes: ", nodes.size());
         for (const auto &node : nodes) {

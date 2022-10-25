@@ -37,7 +37,7 @@
 #define LOG_WARNING_F(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
 #define LOG_ERROR_F(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
 #define LOG_FATAL_F(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
-#define CHECK(x, ...)                                                                          \
+#define CHECK(x, ...)                                                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(x))) {                                                                  \
             dlog_f(LOG_LEVEL_FATAL, "assertion expression: " #x);                                  \

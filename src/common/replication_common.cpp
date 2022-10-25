@@ -481,16 +481,16 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
         uint32_t ip = 0;
         utils::split_args(s.c_str(), hostname_port, ':');
         CHECK(2 == hostname_port.size(),
-                  "invalid address '{}' specified in config [{}].{}",
-                  s.c_str(),
-                  section,
-                  key);
+              "invalid address '{}' specified in config [{}].{}",
+              s.c_str(),
+              section,
+              key);
         uint32_t port_num = 0;
         CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
-                  "invalid address '{}' specified in config [{}].{}",
-                  s.c_str(),
-                  section,
-                  key);
+              "invalid address '{}' specified in config [{}].{}",
+              s.c_str(),
+              section,
+              key);
         if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
             addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
         } else if (!addr.from_string_ipv4(s.c_str())) {

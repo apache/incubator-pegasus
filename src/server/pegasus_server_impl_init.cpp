@@ -336,14 +336,14 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         "'per_level:[none|snappy|zstd|lz4],[none|snappy|zstd|lz4],...' for each level 0,1,..., the "
         "last compression type will be used for levels not specified in the list.");
     CHECK(parse_compression_types(compression_str, _data_cf_opts.compression_per_level),
-            "parse rocksdb_compression_type failed.");
+          "parse rocksdb_compression_type failed.");
 
     _meta_cf_opts = _data_cf_opts;
     // Set level0_file_num_compaction_trigger of meta CF as 10 to reduce frequent compaction.
     _meta_cf_opts.level0_file_num_compaction_trigger = 10;
     // Data in meta CF is very little, disable compression to save CPU load.
     CHECK(parse_compression_types("none", _meta_cf_opts.compression_per_level),
-            "parse rocksdb_compression_type failed.");
+          "parse rocksdb_compression_type failed.");
 
     rocksdb::BlockBasedTableOptions tbl_opts;
     tbl_opts.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
@@ -561,7 +561,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                             "version supported since rocksdb "
                                             "v6.6.4");
         CHECK(format_version == 2 || format_version == 5,
-                "[pegasus.server]rocksdb_format_version should be either '2' or '5'.");
+              "[pegasus.server]rocksdb_format_version should be either '2' or '5'.");
         tbl_opts.format_version = format_version;
         tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(bits_per_key, false));
 
@@ -571,7 +571,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         "prefix",
                                         "Bloom filter type, should be either 'common' or 'prefix'");
         CHECK(filter_type == "common" || filter_type == "prefix",
-                "[pegasus.server]rocksdb_filter_type should be either 'common' or 'prefix'.");
+              "[pegasus.server]rocksdb_filter_type should be either 'common' or 'prefix'.");
         if (filter_type == "prefix") {
             _data_cf_opts.prefix_extractor.reset(new HashkeyTransform());
             _data_cf_opts.memtable_prefix_bloom_size_ratio = 0.1;

@@ -3375,15 +3375,15 @@ void server_state::set_max_replica_count_env_updating(std::shared_ptr<app_state>
             zauto_write_lock l(_lock);
 
             CHECK(ec == ERR_OK,
-                      "An error that can't be handled occurs while updating remote env of "
-                      "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                      "new_max_replica_count={}, {}={}",
-                      ec.to_string(),
-                      app->app_name,
-                      app->app_id,
-                      new_max_replica_count,
-                      replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                      app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
+                  "An error that can't be handled occurs while updating remote env of "
+                  "max_replica_count: error_code={}, app_name={}, app_id={}, "
+                  "new_max_replica_count={}, {}={}",
+                  ec.to_string(),
+                  app->app_name,
+                  app->app_id,
+                  new_max_replica_count,
+                  replica_envs::UPDATE_MAX_REPLICA_COUNT,
+                  app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
 
             app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT] =
                 fmt::format("updating;{}", new_max_replica_count);
@@ -3421,15 +3421,15 @@ void server_state::do_update_max_replica_count(std::shared_ptr<app_state> &app,
 
         auto uncompleted = --app->helpers->partitions_in_progress;
         CHECK(uncompleted >= 0,
-                  "the uncompleted number should be >= 0 while updating partition-level"
-                  "max_replica_count: uncompleted={}, app_name={}, app_id={}, "
-                  "partition_index={}, partition_count={}, new_max_replica_count={}",
-                  uncompleted,
-                  app_name,
-                  app->app_id,
-                  partition_index,
-                  app->partition_count,
-                  new_max_replica_count);
+              "the uncompleted number should be >= 0 while updating partition-level"
+              "max_replica_count: uncompleted={}, app_name={}, app_id={}, "
+              "partition_index={}, partition_count={}, new_max_replica_count={}",
+              uncompleted,
+              app_name,
+              app->app_id,
+              partition_index,
+              app->partition_count,
+              new_max_replica_count);
 
         if (uncompleted > 0) {
             return;
@@ -3441,15 +3441,15 @@ void server_state::do_update_max_replica_count(std::shared_ptr<app_state> &app,
             }
 
             CHECK(false,
-                      "An error that can't be handled occurs while updating partition-level"
-                      "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                      "partition_index={}, partition_count={}, new_max_replica_count={}",
-                      ec.to_string(),
-                      app_name,
-                      app->app_id,
-                      i,
-                      app->partition_count,
-                      new_max_replica_count);
+                  "An error that can't be handled occurs while updating partition-level"
+                  "max_replica_count: error_code={}, app_name={}, app_id={}, "
+                  "partition_index={}, partition_count={}, new_max_replica_count={}",
+                  ec.to_string(),
+                  app_name,
+                  app->app_id,
+                  i,
+                  app->partition_count,
+                  new_max_replica_count);
         }
 
         LOG_INFO_F("all partitions have been changed to the new max_replica_count, ready to update "
@@ -3500,27 +3500,27 @@ void server_state::update_app_max_replica_count(std::shared_ptr<app_state> &app,
         zauto_write_lock l(_lock);
 
         CHECK(ec == ERR_OK,
-                  "An error that can't be handled occurs while updating remote app-level "
-                  "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                  "old_max_replica_count={}, new_max_replica_count={}, {}={}",
-                  ec.to_string(),
-                  app->app_name,
-                  app->app_id,
-                  old_max_replica_count,
-                  new_max_replica_count,
-                  replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                  app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
+              "An error that can't be handled occurs while updating remote app-level "
+              "max_replica_count: error_code={}, app_name={}, app_id={}, "
+              "old_max_replica_count={}, new_max_replica_count={}, {}={}",
+              ec.to_string(),
+              app->app_name,
+              app->app_id,
+              old_max_replica_count,
+              new_max_replica_count,
+              replica_envs::UPDATE_MAX_REPLICA_COUNT,
+              app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
 
         CHECK(old_max_replica_count == app->max_replica_count,
-                  "app-level max_replica_count has been updated to remote storage, however "
-                  "old_max_replica_count from response is not consistent with current local "
-                  "max_replica_count: app_name={}, app_id={}, old_max_replica_count={}, "
-                  "local_max_replica_count={}, new_max_replica_count={}",
-                  app->app_name,
-                  app->app_id,
-                  old_max_replica_count,
-                  app->max_replica_count,
-                  new_max_replica_count);
+              "app-level max_replica_count has been updated to remote storage, however "
+              "old_max_replica_count from response is not consistent with current local "
+              "max_replica_count: app_name={}, app_id={}, old_max_replica_count={}, "
+              "local_max_replica_count={}, new_max_replica_count={}",
+              app->app_name,
+              app->app_id,
+              old_max_replica_count,
+              app->max_replica_count,
+              new_max_replica_count);
 
         app->max_replica_count = new_max_replica_count;
         app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
@@ -3544,13 +3544,13 @@ void server_state::update_partition_max_replica_count(std::shared_ptr<app_state>
                                                       partition_callback on_partition_updated)
 {
     CHECK(partition_index < app->partition_count,
-              "partition_index should be < partition_count: app_name={}, app_id={}, "
-              "partition_index={}, partition_count={}, new_max_replica_count={}",
-              app->app_name,
-              app->app_id,
-              partition_index,
-              app->partition_count,
-              new_max_replica_count);
+          "partition_index should be < partition_count: app_name={}, app_id={}, "
+          "partition_index={}, partition_count={}, new_max_replica_count={}",
+          app->app_name,
+          app->app_id,
+          partition_index,
+          app->partition_count,
+          new_max_replica_count);
 
     const auto &old_partition_config = app->partitions[partition_index];
     const auto old_max_replica_count = old_partition_config.max_replica_count;
@@ -3588,13 +3588,13 @@ void server_state::update_partition_max_replica_count(std::shared_ptr<app_state>
     }
 
     CHECK(context.stage == config_status::not_pending,
-              "invalid config status while updating max_replica_count: context.stage={}, "
-              "app_name={}, app_id={}, partition_index={}, new_max_replica_count={}",
-              enum_to_string(context.stage),
-              app->app_name,
-              app->app_id,
-              partition_index,
-              new_max_replica_count);
+          "invalid config status while updating max_replica_count: context.stage={}, "
+          "app_name={}, app_id={}, partition_index={}, new_max_replica_count={}",
+          enum_to_string(context.stage),
+          app->app_name,
+          app->app_id,
+          partition_index,
+          new_max_replica_count);
 
     context.stage = config_status::pending_remote_sync;
     context.pending_sync_request.reset();
@@ -3748,16 +3748,16 @@ void server_state::update_partition_max_replica_count_locally(
     const auto old_ballot = old_partition_config.ballot;
 
     CHECK(old_ballot + 1 == new_ballot,
-              "invalid ballot while updating local max_replica_count: app_name={}, app_id={}, "
-              "partition_id={}, old_max_replica_count={}, new_max_replica_count={}, "
-              "old_ballot={}, new_ballot={}",
-              app->app_name,
-              app->app_id,
-              partition_index,
-              old_max_replica_count,
-              new_max_replica_count,
-              old_ballot,
-              new_ballot);
+          "invalid ballot while updating local max_replica_count: app_name={}, app_id={}, "
+          "partition_id={}, old_max_replica_count={}, new_max_replica_count={}, "
+          "old_ballot={}, new_ballot={}",
+          app->app_name,
+          app->app_id,
+          partition_index,
+          old_max_replica_count,
+          new_max_replica_count,
+          old_ballot,
+          new_ballot);
 
     std::string old_config_str(boost::lexical_cast<std::string>(old_partition_config));
     std::string new_config_str(boost::lexical_cast<std::string>(new_partition_config));
@@ -3801,13 +3801,13 @@ void server_state::recover_from_max_replica_count_env()
             if (args.size() < 2 || !dsn::buf2int32(args[1], max_replica_count) ||
                 max_replica_count <= 0) {
                 CHECK(false,
-                          "invalid max_replica_count_env: app_name={}, app_id={}, "
-                          "max_replica_count={}, {}={}",
-                          app->app_name,
-                          app->app_id,
-                          app->max_replica_count,
-                          replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                          iter->second);
+                      "invalid max_replica_count_env: app_name={}, app_id={}, "
+                      "max_replica_count={}, {}={}",
+                      app->app_name,
+                      app->app_id,
+                      app->max_replica_count,
+                      replica_envs::UPDATE_MAX_REPLICA_COUNT,
+                      iter->second);
             }
 
             tasks.emplace_back(app, max_replica_count);
@@ -3874,28 +3874,28 @@ void server_state::recover_all_partitions_max_replica_count(std::shared_ptr<app_
                 std::string new_pc_str(boost::lexical_cast<std::string>(new_pc));
 
                 CHECK(ec == ERR_OK,
-                          "An error that can't be handled occurs while recovering remote "
-                          "partition-level max_replica_count: error_code={}, app_name={}, "
-                          "app_id={}, partition_index={}, partition_count={}, "
-                          "old_partition_config={}, new_partition_config={}",
-                          ec.to_string(),
-                          app->app_name,
-                          app->app_id,
-                          i,
-                          app->partition_count,
-                          old_pc_str,
-                          new_pc_str);
+                      "An error that can't be handled occurs while recovering remote "
+                      "partition-level max_replica_count: error_code={}, app_name={}, "
+                      "app_id={}, partition_index={}, partition_count={}, "
+                      "old_partition_config={}, new_partition_config={}",
+                      ec.to_string(),
+                      app->app_name,
+                      app->app_id,
+                      i,
+                      app->partition_count,
+                      old_pc_str,
+                      new_pc_str);
 
                 CHECK(old_pc.ballot + 1 == new_pc.ballot,
-                          "invalid ballot while recovering max_replica_count: app_name={}, "
-                          "app_id={}, partition_index={}, partition_count={}, "
-                          "old_partition_config={}, new_partition_config={}",
-                          app->app_name,
-                          app->app_id,
-                          i,
-                          app->partition_count,
-                          old_pc_str,
-                          new_pc_str);
+                      "invalid ballot while recovering max_replica_count: app_name={}, "
+                      "app_id={}, partition_index={}, partition_count={}, "
+                      "old_partition_config={}, new_partition_config={}",
+                      app->app_name,
+                      app->app_id,
+                      i,
+                      app->partition_count,
+                      old_pc_str,
+                      new_pc_str);
 
                 old_pc = new_pc;
 
@@ -3943,14 +3943,14 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
 
             auto old_max_replica_count = app->max_replica_count;
             CHECK(ec == ERR_OK,
-                      "An error that can't be handled occurs while recovering remote "
-                      "app-level max_replica_count: error_code={}, app_name={}, app_id={}, "
-                      "old_max_replica_count={}, new_max_replica_count={}",
-                      ec.to_string(),
-                      app->app_name,
-                      app->app_id,
-                      old_max_replica_count,
-                      new_max_replica_count);
+                  "An error that can't be handled occurs while recovering remote "
+                  "app-level max_replica_count: error_code={}, app_name={}, app_id={}, "
+                  "old_max_replica_count={}, new_max_replica_count={}",
+                  ec.to_string(),
+                  app->app_name,
+                  app->app_id,
+                  old_max_replica_count,
+                  new_max_replica_count);
 
             app->max_replica_count = new_max_replica_count;
             app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);

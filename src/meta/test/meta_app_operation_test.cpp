@@ -406,9 +406,9 @@ TEST_F(meta_app_operation_test, create_app)
         set_min_live_node_count_for_unfreeze(test.min_live_node_count_for_unfreeze);
 
         CHECK(total_node_count >= test.alive_node_count,
-                  "total_node_count({}) should be >= alive_node_count({})",
-                  total_node_count,
-                  test.alive_node_count);
+              "total_node_count({}) should be >= alive_node_count({})",
+              total_node_count,
+              test.alive_node_count);
         for (int i = 0; i < total_node_count - test.alive_node_count; i++) {
             _ms->set_node_state({nodes[i]}, false);
         }
@@ -750,9 +750,9 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
 
         // set some nodes unalive to match the expected number of alive ndoes
         CHECK(total_node_count >= test.alive_node_count,
-                  "total_node_count({}) should be >= alive_node_count({})",
-                  total_node_count,
-                  test.alive_node_count);
+              "total_node_count({}) should be >= alive_node_count({})",
+              total_node_count,
+              test.alive_node_count);
         for (int i = 0; i < total_node_count - test.alive_node_count; i++) {
             _ms->set_node_state({nodes[i]}, false);
         }

@@ -244,14 +244,14 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
 
     if (dsn_unlikely(!!ec)) {
         CHECK(ec == boost::system::errc::operation_canceled,
-                  "failed to exec on_timer with an error that cannot be handled: {}",
-                  ec.message());
+              "failed to exec on_timer with an error that cannot be handled: {}",
+              ec.message());
 
         // Cancel can only be launched by close().
         auto expected_state = state::kClosing;
         CHECK(_state.compare_exchange_strong(expected_state, state::kClosed),
-                  "wrong state for percentile_timer: {}, while expecting closing state",
-                  static_cast<int>(expected_state));
+              "wrong state for percentile_timer: {}, while expecting closing state",
+              static_cast<int>(expected_state));
         on_close();
 
         return;

@@ -55,8 +55,8 @@ DSN_DEFINE_string("security", service_name, "", "service name");
 error_s check_configuration()
 {
     CHECK(FLAGS_enable_auth || FLAGS_enable_zookeeper_kerberos,
-            "There is no need to check configuration if FLAGS_enable_auth"
-            " and FLAGS_enable_zookeeper_kerberos both are not true");
+          "There is no need to check configuration if FLAGS_enable_auth"
+          " and FLAGS_enable_zookeeper_kerberos both are not true");
 
     if (0 == strlen(FLAGS_krb5_keytab) || !utils::filesystem::file_exists(FLAGS_krb5_keytab)) {
         return error_s::make(ERR_INVALID_PARAMETERS,

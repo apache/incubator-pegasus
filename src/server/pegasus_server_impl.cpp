@@ -1123,7 +1123,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             // following flags has been updated.
             CHECK(!_data_cf_opts.prefix_extractor || rd_opts.total_order_seek, "Invalid option");
             CHECK(!_data_cf_opts.prefix_extractor || !rd_opts.prefix_same_as_start,
-                    "Invalid option");
+                  "Invalid option");
         }
     }
 
@@ -1731,8 +1731,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
-        CHECK(kServerStatUpdateTimeSec.count() != 0,
-                  "kServerStatUpdateTimeSec shouldn't be zero");
+        CHECK(kServerStatUpdateTimeSec.count() != 0, "kServerStatUpdateTimeSec shouldn't be zero");
         _update_server_rdb_stat = dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later

@@ -843,9 +843,9 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size,
         if (create_file) {
             auto ec = create_new_log_file();
             CHECK(ec == ERR_OK,
-                      "{} create new log file failed: {}",
-                      _is_private ? _private_gpid.to_string() : "",
-                      ec);
+                  "{} create new log file failed: {}",
+                  _is_private ? _private_gpid.to_string() : "",
+                  ec);
             _switch_file_hint = false;
             _switch_file_demand = false;
         }

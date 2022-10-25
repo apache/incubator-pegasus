@@ -147,11 +147,11 @@ void test_get(int32_t qps)
                         if (ec == PERR_OK) {
                             if (!verify(hashkey, sortkey, val)) {
                                 CHECK(false,
-                                        "hashkey({}) - sortkey({}) - value({}), but value({})",
-                                        hashkey,
-                                        sortkey,
-                                        get_value(hashkey, sortkey, value_len).c_str(),
-                                        val);
+                                      "hashkey({}) - sortkey({}) - value({}), but value({})",
+                                      hashkey,
+                                      sortkey,
+                                      get_value(hashkey, sortkey, value_len).c_str(),
+                                      val);
                             }
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
@@ -189,10 +189,10 @@ void test_del(int32_t qps)
                     [hashkey, sortkey](int ec, pegasus_client::internal_info &&info) {
                         if (ec != PERR_OK && ec != PERR_NOT_FOUND && ec != PERR_TIMEOUT) {
                             CHECK(false,
-                                    "del hashkey({}) - sortkey({}) failed with err({})",
-                                    hashkey,
-                                    sortkey,
-                                    pg_client->get_error_string(ec));
+                                  "del hashkey({}) - sortkey({}) failed with err({})",
+                                  hashkey,
+                                  sortkey,
+                                  pg_client->get_error_string(ec));
                         }
                     });
                 cnt -= 1;

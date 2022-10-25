@@ -60,12 +60,11 @@ public:
           _rand(Rand())
     {
         CHECK(std::is_sorted(_nths.begin(), _nths.end()),
-                  "nth indexes({}) is not sorted",
-                  fmt::join(_nths, " "));
+              "nth indexes({}) is not sorted",
+              fmt::join(_nths, " "));
 
         for (const auto &nth : _nths) {
-            CHECK(
-                nth >= 0 && nth < _array_size, "nth should be in the range [0, {})", _array_size);
+            CHECK(nth >= 0 && nth < _array_size, "nth should be in the range [0, {})", _array_size);
         }
     }
 

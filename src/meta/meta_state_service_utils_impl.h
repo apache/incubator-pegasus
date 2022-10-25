@@ -54,8 +54,8 @@ struct op_type
         };
 
         CHECK(v != OP_NONE && v <= (sizeof(op_type_to_string_map) / sizeof(char *)),
-                  "invalid type: {}",
-                  v);
+              "invalid type: {}",
+              v);
         return op_type_to_string_map[v - 1];
     }
 };
@@ -82,10 +82,10 @@ struct operation : pipeline::environment
             return;
         }
         CHECK(false,
-                  "request({}) on path({}) encountered an unexpected error({})",
-                  op_type::to_string(type),
-                  path,
-                  ec.to_string());
+              "request({}) on path({}) encountered an unexpected error({})",
+              op_type::to_string(type),
+              path,
+              ec.to_string());
     }
 
     dist::meta_state_service *remote_storage() const { return _ms->_remote; }

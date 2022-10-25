@@ -279,11 +279,11 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
     std::list<dsn::gpid> potential_moving = calc_potential_moving(app, from, to);
     auto potential_moving_size = potential_moving.size();
     CHECK(plan_moving <= potential_moving_size,
-              "from({}) to({}) plan({}), can_move({})",
-              from.to_string(),
-              to.to_string(),
-              plan_moving,
-              potential_moving_size);
+          "from({}) to({}) plan({}), can_move({})",
+          from.to_string(),
+          to.to_string(),
+          plan_moving,
+          potential_moving_size);
 
     while (plan_moving-- > 0) {
         dsn::gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);
@@ -334,9 +334,9 @@ dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_mov
     }
 
     CHECK(selected != potential_moving.end(),
-              "can't find gpid to move from({}) to({})",
-              from.to_string(),
-              to.to_string());
+          "can't find gpid to move from({}) to({})",
+          from.to_string(),
+          to.to_string());
     auto res = *selected;
     potential_moving.erase(selected);
     return res;
@@ -555,8 +555,8 @@ void ford_fulkerson::update_decree(int node_id, const node_state &ns)
         for (const auto &secondary : pc.secondaries) {
             auto i = _address_id.find(secondary);
             CHECK(i != _address_id.end(),
-                      "invalid secondary address, address = {}",
-                      secondary.to_string());
+                  "invalid secondary address, address = {}",
+                  secondary.to_string());
             _network[node_id][i->second]++;
         }
         return true;
@@ -739,8 +739,8 @@ gpid copy_replica_operation::select_partition(migration_list *result)
     int id_max = *_ordered_address_ids.rbegin();
     const node_state &ns = _nodes.find(_address_vec[id_max])->second;
     CHECK(partitions != nullptr && !partitions->empty(),
-              "max load({}) shouldn't empty",
-              ns.addr().to_string());
+          "max load({}) shouldn't empty",
+          ns.addr().to_string());
 
     return select_max_load_gpid(partitions, result);
 }

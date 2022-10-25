@@ -783,8 +783,7 @@ void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
         count++;
     }
 
-    CHECK(available_dirs.size() > 0,
-              "initialize fs manager failed, no available data directory");
+    CHECK(available_dirs.size() > 0, "initialize fs manager failed, no available data directory");
     error_code err = _fs_manager.initialize(available_dirs, available_dir_tags, false);
     CHECK(err == dsn::ERR_OK, "initialize fs manager failed, err({})", err);
 }
@@ -2059,15 +2058,15 @@ void replica_stub::open_replica(
         // 0, or the last_committed_decree > 0, start replica will fail
         if ((configuration_update != nullptr) && (configuration_update->info.is_stateful)) {
             CHECK(configuration_update->config.ballot == 0 &&
-                          configuration_update->config.last_committed_decree == 0,
-                      "{}@{}: cannot load replica({}.{}), ballot = {}, "
-                      "last_committed_decree = {}, but it does not existed!",
-                      id.to_string(),
-                      _primary_address_str,
-                      id.to_string(),
-                      app.app_type.c_str(),
-                      configuration_update->config.ballot,
-                      configuration_update->config.last_committed_decree);
+                      configuration_update->config.last_committed_decree == 0,
+                  "{}@{}: cannot load replica({}.{}), ballot = {}, "
+                  "last_committed_decree = {}, but it does not existed!",
+                  id.to_string(),
+                  _primary_address_str,
+                  id.to_string(),
+                  app.app_type.c_str(),
+                  configuration_update->config.ballot,
+                  configuration_update->config.last_committed_decree);
         }
 
         // NOTICE: only new_replica_group's assign_primary will execute this; if server restart when
@@ -2142,13 +2141,13 @@ void replica_stub::open_replica(
 task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
     CHECK(r->status() == partition_status::PS_ERROR ||
-                  r->status() == partition_status::PS_INACTIVE ||
-                  r->disk_migrator()->status() >= disk_migration_status::MOVED,
-              "invalid state(partition_status={}, migration_status={}) when calling "
-              "replica({}) close",
-              enum_to_string(r->status()),
-              enum_to_string(r->disk_migrator()->status()),
-              r->name());
+              r->status() == partition_status::PS_INACTIVE ||
+              r->disk_migrator()->status() >= disk_migration_status::MOVED,
+          "invalid state(partition_status={}, migration_status={}) when calling "
+          "replica({}) close",
+          enum_to_string(r->status()),
+          enum_to_string(r->disk_migrator()->status()),
+          r->name());
 
     gpid id = r->get_gpid();
 

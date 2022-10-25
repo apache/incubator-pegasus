@@ -545,10 +545,10 @@ bool app_state_helper::get_manual_compact_progress(/*out*/ int32_t &progress) co
 {
     int32_t total_replica_count = owner->partition_count * owner->max_replica_count;
     CHECK(total_replica_count > 0,
-              "invalid app metadata, app({}), partition_count({}), max_replica_count({})",
-              owner->app_name,
-              owner->partition_count,
-              owner->max_replica_count);
+          "invalid app metadata, app({}), partition_count({}), max_replica_count({})",
+          owner->app_name,
+          owner->partition_count,
+          owner->max_replica_count);
     int32_t finish_count = 0, idle_count = 0;
     for (const auto &cc : contexts) {
         for (const auto &r : cc.serving) {

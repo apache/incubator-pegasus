@@ -71,8 +71,8 @@ public:
     {
         _nths = nths;
         CHECK(std::is_sorted(_nths.begin(), _nths.end()),
-                  "nth indexes({}) is not sorted",
-                  fmt::join(_nths, " "));
+              "nth indexes({}) is not sorted",
+              fmt::join(_nths, " "));
 
         _elements.assign(_nths.size(), value_type{});
     }

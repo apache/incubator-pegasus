@@ -447,8 +447,8 @@ public:
                         decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
                 } else {
                     CHECK(m.operation == ::dsn::apps::mutate_operation::MO_DELETE,
-                              "m.operation = %d",
-                              m.operation);
+                          "m.operation = %d",
+                          m.operation);
                     resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
                 }
 

@@ -62,9 +62,9 @@ inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
 inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
 {
     CHECK(version <= PEGASUS_DATA_VERSION_MAX,
-              "data version({}) must be <= {}",
-              version,
-              PEGASUS_DATA_VERSION_MAX);
+          "data version({}) must be <= {}",
+          version,
+          PEGASUS_DATA_VERSION_MAX);
 
     return dsn::data_input(value).read_u32();
 }
@@ -77,9 +77,9 @@ inline void
 pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
     CHECK(version <= PEGASUS_DATA_VERSION_MAX,
-              "data version({}) must be <= {}",
-              version,
-              PEGASUS_DATA_VERSION_MAX);
+          "data version({}) must be <= {}",
+          version,
+          PEGASUS_DATA_VERSION_MAX);
 
     auto *s = new std::string(std::move(raw_value));
     dsn::data_input input(*s);

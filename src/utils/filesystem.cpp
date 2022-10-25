@@ -807,10 +807,10 @@ error_code read_file(const std::string &fname, std::string &buf)
     }
     fin.read(&buf[0], file_sz);
     CHECK(file_sz == fin.gcount(),
-              "read file({}) failed, file_size = {} but read size = {}",
-              fname,
-              file_sz,
-              fin.gcount());
+          "read file({}) failed, file_size = {} but read size = {}",
+          fname,
+          file_sz,
+          fin.gcount());
     fin.close();
     return ERR_OK;
 }

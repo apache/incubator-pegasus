@@ -61,7 +61,7 @@ public:
     case type_enum:                                                                                \
         value<type>() = dsn_config_get_value_##suffix(_section, _name, value<type>(), _desc);      \
         if (_validator) {                                                                          \
-            CHECK(_validator(), "validation failed: {}", _name);                               \
+            CHECK(_validator(), "validation failed: {}", _name);                                   \
         }                                                                                          \
         break
 
@@ -275,8 +275,7 @@ public:
     void add_group_validator(const char *name, group_validator_fn &validator)
     {
         auto it = _group_flag_validators.find(name);
-        CHECK(
-            it == _group_flag_validators.end(), "duplicate group flag validator \"{}\"", name);
+        CHECK(it == _group_flag_validators.end(), "duplicate group flag validator \"{}\"", name);
         _group_flag_validators[name] = validator;
     }
 

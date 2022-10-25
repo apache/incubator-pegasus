@@ -190,10 +190,10 @@ public:
         const auto reserved_max_replica_count = _app_info.max_replica_count;
         const int32_t target_max_replica_count = 5;
         CHECK(target_max_replica_count != reserved_max_replica_count,
-                  "target_max_replica_count should not be equal to reserved_max_replica_count:"
-                  "target_max_replica_count={}, reserved_max_replica_count={}",
-                  target_max_replica_count,
-                  reserved_max_replica_count);
+              "target_max_replica_count should not be equal to reserved_max_replica_count:"
+              "target_max_replica_count={}, reserved_max_replica_count={}",
+              target_max_replica_count,
+              reserved_max_replica_count);
 
         // store new max_replica_count into file
         _mock_replica->update_app_max_replica_count(target_max_replica_count);

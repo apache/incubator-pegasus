@@ -234,11 +234,11 @@ void service_engine::start_node(service_app_spec &app_spec)
             auto it = app_name_by_port.find(p);
             if (it != app_name_by_port.end()) {
                 CHECK(false,
-                          "network port {} usage confliction for {} vs {}, "
-                          "please reconfig",
-                          p,
-                          it->second,
-                          app_spec.full_name);
+                      "network port {} usage confliction for {} vs {}, "
+                      "please reconfig",
+                      p,
+                      it->second,
+                      app_spec.full_name);
             }
             app_name_by_port.emplace(p, app_spec.full_name);
         }

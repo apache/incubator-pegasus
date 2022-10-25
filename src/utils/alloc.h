@@ -52,15 +52,15 @@ cacheline_aligned_ptr<T> cacheline_aligned_alloc_array(size_t len)
         for (size_t i = 0; i < len; ++i) {
             T *elem = &(array[i]);
             CHECK((reinterpret_cast<const uintptr_t>(elem) & (sizeof(T) - 1)) == 0,
-                      "unaligned array element for cache line: array={}, length={}, index={}, "
-                      "elem={}, elem_size={}, mask={}, cacheline_size={}",
-                      fmt::ptr(array),
-                      len,
-                      i,
-                      fmt::ptr(elem),
-                      sizeof(T),
-                      sizeof(T) - 1,
-                      CACHELINE_SIZE);
+                  "unaligned array element for cache line: array={}, length={}, index={}, "
+                  "elem={}, elem_size={}, mask={}, cacheline_size={}",
+                  fmt::ptr(array),
+                  len,
+                  i,
+                  fmt::ptr(elem),
+                  sizeof(T),
+                  sizeof(T) - 1,
+                  CACHELINE_SIZE);
         }
     }
 #endif

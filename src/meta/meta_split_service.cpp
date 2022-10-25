@@ -177,9 +177,9 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
             child_gpid);
         const auto &child_config = app->partitions[child_gpid.get_partition_index()];
         CHECK(child_config.ballot > 0,
-                  "app({}) partition({}) should have been registered",
-                  app_name,
-                  child_gpid);
+              "app({}) partition({}) should have been registered",
+              app_name,
+              child_gpid);
         response.err = ERR_CHILD_REGISTERED;
         response.parent_config = parent_config;
         return;
@@ -471,9 +471,9 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     CHECK(app != nullptr, "app({}) is not existed", request.app_name);
     CHECK(app->is_stateful, "app({}) is stateless currently", request.app_name);
     CHECK(request.meta_split_status == split_status::PAUSING ||
-                  request.meta_split_status == split_status::CANCELING,
-              "invalid split_status({})",
-              dsn::enum_to_string(request.meta_split_status));
+              request.meta_split_status == split_status::CANCELING,
+          "invalid split_status({})",
+          dsn::enum_to_string(request.meta_split_status));
 
     const std::string &stop_type =
         rpc.request().meta_split_status == split_status::PAUSING ? "pause" : "cancel";
@@ -514,9 +514,9 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
 
     // canceling split
     CHECK(request.partition_count * 2 == app->partition_count,
-              "wrong partition_count, request({}) vs meta({})",
-              request.partition_count,
-              app->partition_count);
+          "wrong partition_count, request({}) vs meta({})",
+          request.partition_count,
+          app->partition_count);
     app->helpers->split_states.status.erase(request.parent_gpid.get_partition_index());
     response.err = ERR_OK;
     // when all partitions finish, partition_count should be updated
@@ -564,8 +564,8 @@ void meta_split_service::query_child_state(query_child_state_rpc rpc)
     }
 
     CHECK(app->partition_count == request.partition_count * 2,
-              "app({}) has invalid partition_count",
-              app_name);
+          "app({}) has invalid partition_count",
+          app_name);
 
     auto child_pidx = parent_pid.get_partition_index() + request.partition_count;
     if (app->partitions[child_pidx].ballot == invalid_ballot) {

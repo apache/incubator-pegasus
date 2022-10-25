@@ -39,8 +39,7 @@ capacity_unit_calculator::capacity_unit_calculator(
 {
     CHECK(_read_hotkey_collector, "read hotkey collector is a nullptr");
     CHECK(_write_hotkey_collector, "write hotkey collector is a nullptr");
-    CHECK(_read_size_throttling_controller,
-            "_read_size_throttling_controller is a nullptr");
+    CHECK(_read_size_throttling_controller, "_read_size_throttling_controller is a nullptr");
 
     _read_capacity_unit_size =
         dsn_config_get_value_uint64("pegasus.server",
@@ -53,9 +52,9 @@ capacity_unit_calculator::capacity_unit_calculator(
                                     4 * 1024,
                                     "capacity unit size of write requests, default 4KB");
     CHECK(powerof2(_read_capacity_unit_size),
-            "'perf_counter_read_capacity_unit_size' must be a power of 2");
+          "'perf_counter_read_capacity_unit_size' must be a power of 2");
     CHECK(powerof2(_write_capacity_unit_size),
-            "'perf_counter_write_capacity_unit_size' must be a power of 2");
+          "'perf_counter_write_capacity_unit_size' must be a power of 2");
     _log_read_cu_size = log(_read_capacity_unit_size) / log(2);
     _log_write_cu_size = log(_write_capacity_unit_size) / log(2);
 
