@@ -84,7 +84,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
         _write_svc->batch_prepare(_decree);
 
         for (int i = 0; i < count; ++i) {
-            dassert(requests[i] != nullptr, "request[%d] is null", i);
+            CHECK(requests[i], "request[{}] is null", i);
 
             // Make sure all writes are batched even if they are failed,
             // since we need to record the total qps and rpc latencies,

@@ -54,7 +54,7 @@ void global_env::get_dirs()
     std::cout << "Pegasus project root: " << _pegasus_root << std::endl;
 
     char task_target[512] = {0};
-    dassert_f(getcwd(task_target, sizeof(task_target)), "");
+    CHECK(getcwd(task_target, sizeof(task_target)), "");
     _working_dir = task_target;
     std::cout << "working dir: " << _working_dir << std::endl;
 }
@@ -65,6 +65,6 @@ void global_env::get_hostip()
     uint32_t ipnet = htonl(ip);
     char buffer[512] = {0};
     memset(buffer, 0, sizeof(buffer));
-    dassert_f(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)), "");
+    CHECK(inet_ntop(AF_INET, &ipnet, buffer, sizeof(buffer)), "");
     _host_ip = buffer;
 }

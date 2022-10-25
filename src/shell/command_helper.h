@@ -258,7 +258,7 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         }
     }
     default:
-        dassert(false, "unsupported filter type: %d", filter_type);
+        CHECK(false, "unsupported filter type: {}", filter_type);
     }
     return false;
 }
@@ -571,7 +571,7 @@ inline void scan_data_next(scan_data_context *context)
                         }
                         break;
                     default:
-                        dassert(false, "op = %d", context->op);
+                        CHECK(false, "op = {}", context->op);
                         break;
                     }
                 } else {

@@ -141,7 +141,7 @@ void replication_options::initialize()
     std::string error_msg = "";
     bool flag = get_data_dir_and_tag(
         dirs_str, app_dir, app_name, config_data_dirs, config_data_dir_tags, error_msg);
-    dassert_f(flag, error_msg);
+    CHECK(flag, error_msg);
 
     // check if data_dir in black list, data_dirs doesn't contain dir in black list
     std::string black_list_file =
@@ -160,7 +160,7 @@ void replication_options::initialize()
     }
 
     if (data_dirs.empty()) {
-        dassert_f(false, "no replica data dir found, maybe not set or excluded by black list");
+        CHECK(false, "no replica data dir found, maybe not set or excluded by black list");
     }
 
     deny_client_on_start = dsn_config_get_value_bool("replication",
@@ -409,7 +409,7 @@ void replication_options::initialize()
 
     max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
-    dassert_f(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
+    CHECK(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
 
     sanity_check();
 }
@@ -486,11 +486,11 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
                   section,
                   key);
         uint32_t port_num = 0;
-        dassert_f(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
-                  "invalid address '{}' specified in config [{}].{}",
-                  s.c_str(),
-                  section,
-                  key);
+        CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
+              "invalid address '{}' specified in config [{}].{}",
+              s,
+              section,
+              key);
         if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
             addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
         } else if (!addr.from_string_ipv4(s.c_str())) {
@@ -581,7 +581,7 @@ replication_options::get_data_dirs_in_black_list(const std::string &fname,
     LOG_INFO_F("data_dirs_black_list_file[{}] found, apply it", fname);
     std::ifstream file(fname);
     if (!file) {
-        dassert_f(false, "open data_dirs_black_list_file failed: {}", fname);
+        CHECK(false, "open data_dirs_black_list_file failed: {}", fname);
     }
 
     std::string str;

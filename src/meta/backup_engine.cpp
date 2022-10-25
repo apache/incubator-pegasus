@@ -103,9 +103,7 @@ error_code backup_engine::write_backup_file(const std::string &file_name,
         LOG_INFO_F("create file {} failed", file_name);
         return err;
     }
-    dassert_f(remote_file != nullptr,
-              "create file {} succeed, but can't get handle",
-              create_file_req.file_name);
+    CHECK(remote_file, "create file {} succeed, but can't get handle", create_file_req.file_name);
     remote_file
         ->write(dist::block_service::write_request{write_buffer},
                 TASK_CODE_EXEC_INLINED,

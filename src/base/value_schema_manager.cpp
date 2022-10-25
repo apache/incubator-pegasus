@@ -57,7 +57,7 @@ value_schema *value_schema_manager::get_value_schema(uint32_t meta_cf_data_versi
     } else {
         auto schema = get_value_schema(meta_cf_data_version);
         if (nullptr == schema) {
-            dassert_f(false, "data version({}) in meta cf is not supported", meta_cf_data_version);
+            CHECK(false, "data version({}) in meta cf is not supported", meta_cf_data_version);
         }
         return schema;
     }

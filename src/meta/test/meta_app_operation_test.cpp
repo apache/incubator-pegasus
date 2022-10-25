@@ -128,7 +128,7 @@ public:
                                          int32_t max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         auto &partition_config = app->partitions[partition_index];
         partition_config.max_replica_count = max_replica_count;
@@ -137,7 +137,7 @@ public:
     void set_max_replica_count_env(const std::string &app_name, const std::string &env)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         if (env.empty()) {
             app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
@@ -176,7 +176,7 @@ public:
                                                       int32_t max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {

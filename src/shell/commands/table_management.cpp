@@ -260,7 +260,7 @@ bool app_disk(command_executor *e, shell_context *sc, arguments args)
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
                 m.name, app_id_x, partition_index_x, counter_name);
-            dassert(parse_ret, "name = %s", m.name.c_str());
+            CHECK(parse_ret, "name = {}", m.name);
             if (m.name.find("sst(MB)") != std::string::npos) {
                 disk_map[nodes[i].address][partition_index_x] = m.value;
             } else if (m.name.find("sst.count") != std::string::npos) {

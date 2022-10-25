@@ -114,7 +114,7 @@ void pegasus_server_impl::parse_checkpoints()
 pegasus_server_impl::~pegasus_server_impl()
 {
     if (_is_open) {
-        dassert(_db != nullptr, "");
+        CHECK(_db, "");
         release_db();
     }
 }
@@ -258,15 +258,15 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    dsn::message_ex **requests,
                                                    int count)
 {
-    dassert(_is_open, "");
-    dassert(requests != nullptr, "");
+    CHECK(_is_open, "");
+    CHECK(requests, "");
 
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
 
 void pegasus_server_impl::on_get(get_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
     _pfc_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
@@ -350,7 +350,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
 
 void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
     _pfc_multi_get_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
@@ -780,7 +780,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
 
 void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
     _pfc_batch_get_qps->increment();
     int64_t start_time = dsn_now_ns();
 
@@ -897,7 +897,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
 
 void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
 
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
@@ -981,7 +981,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
 
 void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
 
     const auto &key = rpc.request();
     auto &resp = rpc.response();
@@ -1048,7 +1048,7 @@ void pegasus_server_impl::on_ttl(ttl_rpc rpc)
 
 void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
 
@@ -1121,9 +1121,9 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
             // hashkey, we should not seek this prefix by prefix bloom filter. However, it only
             // happen when do full scan (scanners got by get_unordered_scanners), in which case the
             // following flags has been updated.
-            dassert(!_data_cf_opts.prefix_extractor || rd_opts.total_order_seek, "Invalid option");
-            dassert(!_data_cf_opts.prefix_extractor || !rd_opts.prefix_same_as_start,
-                    "Invalid option");
+            CHECK(!_data_cf_opts.prefix_extractor || rd_opts.total_order_seek, "Invalid option");
+            CHECK(!_data_cf_opts.prefix_extractor || !rd_opts.prefix_same_as_start,
+                  "Invalid option");
         }
     }
 
@@ -1312,7 +1312,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
 
 void pegasus_server_impl::on_scan(scan_rpc rpc)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
     _pfc_scan_qps->increment();
     uint64_t start_time = dsn_now_ns();
     const auto &request = rpc.request();
@@ -1761,7 +1761,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 void pegasus_server_impl::cancel_background_work(bool wait)
 {
     if (_is_open) {
-        dassert(_db != nullptr, "");
+        CHECK(_db, "");
         rocksdb::CancelAllBackgroundWork(_db, wait);
     }
 }
@@ -1769,7 +1769,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
 {
     if (!_is_open) {
-        dassert(_db == nullptr, "");
+        dassert(!_db, "");
         dassert(!clear_state, "should not be here if do clear");
         return ::dsn::ERR_OK;
     }
@@ -2132,7 +2132,7 @@ private:
                                                       const dsn::blob &learn_request,
                                                       dsn::replication::learn_state &state)
 {
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
 
     int64_t ci = last_durable_decree();
     if (ci == 0) {

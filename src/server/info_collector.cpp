@@ -69,13 +69,13 @@ info_collector::info_collector()
 
     _usage_stat_app = dsn_config_get_value_string(
         "pegasus.collector", "usage_stat_app", "", "app for recording usage statistics");
-    dassert(!_usage_stat_app.empty(), "");
+    CHECK(!_usage_stat_app.empty(), "");
     // initialize the _client.
     if (!pegasus_client_factory::initialize(nullptr)) {
-        dassert(false, "Initialize the pegasus client failed");
+        CHECK(false, "Initialize the pegasus client failed");
     }
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _usage_stat_app.c_str());
-    dassert(_client != nullptr, "Initialize the client failed");
+    CHECK(_client, "Initialize the client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
 
     _capacity_unit_fetch_interval_seconds =
