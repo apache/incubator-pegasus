@@ -144,9 +144,9 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
 
     std::vector<dropped_replica> &drop_list = cc.dropped;
     if (drop_list.empty()) {
-        dwarn("construct for (%d.%d) failed, coz no replicas collected",
-              pid.get_app_id(),
-              pid.get_partition_index());
+        LOG_WARNING("construct for (%d.%d) failed, coz no replicas collected",
+                    pid.get_app_id(),
+                    pid.get_partition_index());
         return false;
     }
 
@@ -160,14 +160,14 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     pc.partition_flags = 0;
     pc.max_replica_count = max_replica_count;
 
-    ddebug("construct for (%d.%d), select %s as primary, ballot(%" PRId64
-           "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
-           pid.get_app_id(),
-           pid.get_partition_index(),
-           server.node.to_string(),
-           server.ballot,
-           server.last_committed_decree,
-           server.last_prepared_decree);
+    LOG_INFO("construct for (%d.%d), select %s as primary, ballot(%" PRId64
+             "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+             pid.get_app_id(),
+             pid.get_partition_index(),
+             server.node.to_string(),
+             server.ballot,
+             server.last_committed_decree,
+             server.last_prepared_decree);
 
     drop_list.pop_back();
 
@@ -183,14 +183,14 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
             break;
         // similar to cc.drop_list, pc.last_drop is also a stack structure
         pc.last_drops.insert(pc.last_drops.begin(), iter->node);
-        ddebug("construct for (%d.%d), select %s into last_drops, ballot(%" PRId64
-               "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
-               pid.get_app_id(),
-               pid.get_partition_index(),
-               iter->node.to_string(),
-               iter->ballot,
-               iter->last_committed_decree,
-               iter->last_prepared_decree);
+        LOG_INFO("construct for (%d.%d), select %s into last_drops, ballot(%" PRId64
+                 "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+                 pid.get_app_id(),
+                 pid.get_partition_index(),
+                 iter->node.to_string(),
+                 iter->ballot,
+                 iter->last_committed_decree,
+                 iter->last_prepared_decree);
     }
 
     cc.prefered_dropped = (int)drop_list.size() - 1;
@@ -249,16 +249,16 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
             // if we've collected inforamtions for the learner, then it claims it's down
             // we will treat the learning process failed
             if (current_learner.ballot != invalid_ballot) {
-                ddebug("%d.%d: a learner's is down to status(%s), perhaps learn failed",
-                       info.pid.get_app_id(),
-                       info.pid.get_partition_index(),
-                       dsn::enum_to_string(info.status));
+                LOG_INFO("%d.%d: a learner's is down to status(%s), perhaps learn failed",
+                         info.pid.get_app_id(),
+                         info.pid.get_partition_index(),
+                         dsn::enum_to_string(info.status));
                 learning_progress_abnormal_detected = true;
             } else {
-                dinfo("%d.%d: ignore abnormal status of %s, perhaps learn not start",
-                      info.pid.get_app_id(),
-                      info.pid.get_partition_index(),
-                      node.to_string());
+                LOG_DEBUG("%d.%d: ignore abnormal status of %s, perhaps learn not start",
+                          info.pid.get_app_id(),
+                          info.pid.get_partition_index(),
+                          node.to_string());
             }
         } else if (info.status == partition_status::PS_POTENTIAL_SECONDARY) {
             if (current_learner.ballot > info.ballot ||
@@ -266,10 +266,10 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
                 current_learner.last_prepared_decree > info.last_prepared_decree) {
 
                 // TODO: need to add a perf counter here
-                dwarn("%d.%d: learner(%s)'s progress step back, please trace this carefully",
-                      info.pid.get_app_id(),
-                      info.pid.get_partition_index(),
-                      node.to_string());
+                LOG_WARNING("%d.%d: learner(%s)'s progress step back, please trace this carefully",
+                            info.pid.get_app_id(),
+                            info.pid.get_partition_index(),
+                            node.to_string());
             }
 
             // NOTICE: the flag may be abormal currently. it's balancer's duty to make use of the
@@ -437,22 +437,22 @@ bool config_context::check_order()
         return true;
     for (unsigned int i = 0; i < dropped.size() - 1; ++i) {
         if (dropped_cmp(dropped[i], dropped[i + 1]) > 0) {
-            derror("check dropped order for gpid(%d.%d) failed, [%s,%llu,%lld,%lld,%lld@%d] vs "
-                   "[%s,%llu,%lld,%lld,%lld@%d]",
-                   config_owner->pid.get_app_id(),
-                   config_owner->pid.get_partition_index(),
-                   dropped[i].node.to_string(),
-                   dropped[i].time,
-                   dropped[i].ballot,
-                   dropped[i].last_committed_decree,
-                   dropped[i].last_prepared_decree,
-                   i,
-                   dropped[i].node.to_string(),
-                   dropped[i].time,
-                   dropped[i].ballot,
-                   dropped[i].last_committed_decree,
-                   dropped[i].last_prepared_decree,
-                   i + 1);
+            LOG_ERROR("check dropped order for gpid(%d.%d) failed, [%s,%llu,%lld,%lld,%lld@%d] vs "
+                      "[%s,%llu,%lld,%lld,%lld@%d]",
+                      config_owner->pid.get_app_id(),
+                      config_owner->pid.get_partition_index(),
+                      dropped[i].node.to_string(),
+                      dropped[i].time,
+                      dropped[i].ballot,
+                      dropped[i].last_committed_decree,
+                      dropped[i].last_prepared_decree,
+                      i,
+                      dropped[i].node.to_string(),
+                      dropped[i].time,
+                      dropped[i].ballot,
+                      dropped[i].last_committed_decree,
+                      dropped[i].last_prepared_decree,
+                      i + 1);
             return false;
         }
     }

@@ -63,7 +63,7 @@
 #define log_error_and_return(buffer, length)                                                       \
     do {                                                                                           \
         ::dsn::utils::safe_strerror_r(errno, buffer, length);                                      \
-        derror("append file failed, reason(%s)", buffer);                                          \
+        LOG_ERROR("append file failed, reason(%s)", buffer);                                       \
         return -1;                                                                                 \
     } while (0)
 
@@ -141,8 +141,8 @@ public:
             size_t cnt = fread(raw_mem + len, 1, hdr.length - len, _file_handle);
             if (len + cnt < hdr.length) {
                 if (feof(_file_handle)) {
-                    derror("unexpected file end, start offset of this block (%u)",
-                           ftell(_file_handle) - len - sizeof(hdr));
+                    LOG_ERROR("unexpected file end, start offset of this block (%u)",
+                              ftell(_file_handle) - len - sizeof(hdr));
                     return -1;
                 } else if (errno != EINTR) {
                     log_error_and_return(msg_buffer, 128);
@@ -152,9 +152,9 @@ public:
         }
         _crc = dsn::utils::crc32_calc(raw_mem, len, _crc);
         if (_crc != hdr.crc32) {
-            derror("file %s data error, block offset(%ld)",
-                   _filename.c_str(),
-                   ftell(_file_handle) - hdr.length - sizeof(hdr));
+            LOG_ERROR("file %s data error, block offset(%ld)",
+                      _filename.c_str(),
+                      ftell(_file_handle) - hdr.length - sizeof(hdr));
             return -1;
         }
 

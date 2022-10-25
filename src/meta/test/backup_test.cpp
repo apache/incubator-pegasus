@@ -77,7 +77,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name()                                                                             \
     {                                                                                              \
-        ddebug("%s is called", #method_name);                                                      \
+        LOG_INFO("%s is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -93,7 +93,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name(type1 arg1)                                                                   \
     {                                                                                              \
-        ddebug("%s is called", #method_name);                                                      \
+        LOG_INFO("%s is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -109,7 +109,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name(type1 arg1, type2 arg2)                                                       \
     {                                                                                              \
-        ddebug("%s is called", #method_name);                                                      \
+        LOG_INFO("%s is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -125,7 +125,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name(type1 arg1, type2 arg2, type3, arg3)                                          \
     {                                                                                              \
-        ddebug("%s is called", #method_name);                                                      \
+        LOG_INFO("%s is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \

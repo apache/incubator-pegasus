@@ -121,7 +121,7 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
         if (err == dsn::ERR_OK && leader->from_string_ipv4(lock_owner.c_str())) {
             return (*leader) == dsn_primary_address();
         } else {
-            dwarn("query leader from cache got error(%s)", err.to_string());
+            LOG_WARNING("query leader from cache got error(%s)", err.to_string());
             leader->set_invalid();
             return false;
         }
@@ -143,10 +143,10 @@ void meta_server_failure_detector::acquire_leader_lock()
             // lock granted
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [this, &err](error_code ec, const std::string &owner, uint64_t version) {
-                ddebug("leader lock granted callback: err(%s), owner(%s), version(%llu)",
-                       ec.to_string(),
-                       owner.c_str(),
-                       version);
+                LOG_INFO("leader lock granted callback: err(%s), owner(%s), version(%llu)",
+                         ec.to_string(),
+                         owner.c_str(),
+                         version);
                 err = ec;
                 if (err == dsn::ERR_OK) {
                     leader_initialize(owner);
@@ -156,10 +156,10 @@ void meta_server_failure_detector::acquire_leader_lock()
             // lease expire
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [](error_code ec, const std::string &owner, uint64_t version) {
-                derror("leader lock expired callback: err(%s), owner(%s), version(%llu)",
-                       ec.to_string(),
-                       owner.c_str(),
-                       version);
+                LOG_ERROR("leader lock expired callback: err(%s), owner(%s), version(%llu)",
+                          ec.to_string(),
+                          owner.c_str(),
+                          version);
                 // let's take the easy way right now
                 dsn_exit(0);
             },
@@ -185,11 +185,11 @@ void meta_server_failure_detector::reset_stability_stat(const rpc_address &node)
     if (iter == _stablity.end())
         return;
     else {
-        ddebug("old stability stat: node(%s), start_time(%lld), unstable_count(%d), will reset "
-               "unstable count to 0",
-               node.to_string(),
-               iter->second.last_start_time_ms,
-               iter->second.unstable_restart_count);
+        LOG_INFO("old stability stat: node(%s), start_time(%lld), unstable_count(%d), will reset "
+                 "unstable count to 0",
+                 node.to_string(),
+                 iter->second.last_start_time_ms,
+                 iter->second.unstable_restart_count);
         iter->second.unstable_restart_count = 0;
     }
 }
@@ -218,41 +218,41 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
     } else {
         worker_stability &w = iter->second;
         if (beacon.start_time == w.last_start_time_ms) {
-            dinfo("%s isn't restarted, last_start_time(%lld)",
-                  beacon.from_addr.to_string(),
-                  w.last_start_time_ms);
+            LOG_DEBUG("%s isn't restarted, last_start_time(%lld)",
+                      beacon.from_addr.to_string(),
+                      w.last_start_time_ms);
             if (dsn_now_ms() - w.last_start_time_ms >=
                     _fd_opts->stable_rs_min_running_seconds * 1000 &&
                 w.unstable_restart_count > 0) {
-                ddebug("%s has stably run for a while, reset it's unstable count(%d) to 0",
-                       beacon.from_addr.to_string(),
-                       w.unstable_restart_count);
+                LOG_INFO("%s has stably run for a while, reset it's unstable count(%d) to 0",
+                         beacon.from_addr.to_string(),
+                         w.unstable_restart_count);
                 w.unstable_restart_count = 0;
             }
         } else if (beacon.start_time > w.last_start_time_ms) {
-            ddebug("check %s restarted, last_time(%lld), this_time(%lld)",
-                   beacon.from_addr.to_string(),
-                   w.last_start_time_ms,
-                   beacon.start_time);
+            LOG_INFO("check %s restarted, last_time(%lld), this_time(%lld)",
+                     beacon.from_addr.to_string(),
+                     w.last_start_time_ms,
+                     beacon.start_time);
             if (beacon.start_time - w.last_start_time_ms <
                 _fd_opts->stable_rs_min_running_seconds * 1000) {
                 w.unstable_restart_count++;
-                dwarn("%s encounter an unstable restart, total_count(%d)",
-                      beacon.from_addr.to_string(),
-                      w.unstable_restart_count);
+                LOG_WARNING("%s encounter an unstable restart, total_count(%d)",
+                            beacon.from_addr.to_string(),
+                            w.unstable_restart_count);
             } else if (w.unstable_restart_count > 0) {
-                ddebug("%s restart in %lld ms after last restart, may recover ok, reset "
-                       "it's unstable count(%d) to 0",
-                       beacon.from_addr.to_string(),
-                       beacon.start_time - w.last_start_time_ms,
-                       w.unstable_restart_count);
+                LOG_INFO("%s restart in %lld ms after last restart, may recover ok, reset "
+                         "it's unstable count(%d) to 0",
+                         beacon.from_addr.to_string(),
+                         beacon.start_time - w.last_start_time_ms,
+                         w.unstable_restart_count);
                 w.unstable_restart_count = 0;
             }
 
             w.last_start_time_ms = beacon.start_time;
         } else {
-            dwarn("%s: possible encounter a staled message, ignore it",
-                  beacon.from_addr.to_string());
+            LOG_WARNING("%s: possible encounter a staled message, ignore it",
+                        beacon.from_addr.to_string());
         }
         return w.unstable_restart_count < _fd_opts->max_succssive_unstable_restart;
     }
@@ -267,7 +267,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
     ack.allowed = true;
 
     if (beacon.__isset.start_time && !update_stability_stat(beacon)) {
-        dwarn("%s is unstable, don't response to it's beacon", beacon.from_addr.to_string());
+        LOG_WARNING("%s is unstable, don't response to it's beacon", beacon.from_addr.to_string());
         return;
     }
 
@@ -281,13 +281,13 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
         failure_detector::on_ping_internal(beacon, ack);
     }
 
-    ddebug("on_ping, beacon send time[%ld], is_master(%s), from_node(%s), this_node(%s), "
-           "primary_node(%s)",
-           ack.time,
-           ack.is_master ? "true" : "false",
-           beacon.from_addr.to_string(),
-           ack.this_node.to_string(),
-           ack.primary_node.to_string());
+    LOG_INFO("on_ping, beacon send time[%ld], is_master(%s), from_node(%s), this_node(%s), "
+             "primary_node(%s)",
+             ack.time,
+             ack.is_master ? "true" : "false",
+             beacon.from_addr.to_string(),
+             ack.this_node.to_string(),
+             ack.primary_node.to_string());
 
     reply(ack);
 }
@@ -296,7 +296,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
 meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_address,
                                                            bool is_myself_leader)
 {
-    ddebug("set %s as leader", leader_address.to_string());
+    LOG_INFO("set %s as leader", leader_address.to_string());
     _lock_svc = nullptr;
     _is_leader.store(is_myself_leader);
 }
@@ -304,7 +304,7 @@ meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_ad
 void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address,
                                                        bool is_myself_leader)
 {
-    ddebug("set %s as leader", leader_address.to_string());
+    LOG_INFO("set %s as leader", leader_address.to_string());
     _is_leader.store(is_myself_leader);
 }
 

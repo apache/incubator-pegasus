@@ -120,11 +120,11 @@ void simple_kv_client_app::begin_write(int id,
                                        const std::string &value,
                                        int timeout_ms)
 {
-    ddebug("=== on_begin_write:id=%d,key=%s,value=%s,timeout=%d",
-           id,
-           key.c_str(),
-           value.c_str(),
-           timeout_ms);
+    LOG_INFO("=== on_begin_write:id=%d,key=%s,value=%s,timeout=%d",
+             id,
+             key.c_str(),
+             value.c_str(),
+             timeout_ms);
     std::shared_ptr<write_context> ctx(new write_context());
     ctx->id = id;
     ctx->req.key = key;
@@ -168,7 +168,7 @@ struct read_context
 
 void simple_kv_client_app::begin_read(int id, const std::string &key, int timeout_ms)
 {
-    ddebug("=== on_begin_read:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
+    LOG_INFO("=== on_begin_read:id=%d,key=%s,timeout=%d", id, key.c_str(), timeout_ms);
     std::shared_ptr<read_context> ctx(new read_context());
     ctx->id = id;
     ctx->key = key;

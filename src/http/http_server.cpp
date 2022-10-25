@@ -46,7 +46,7 @@ DSN_DEFINE_bool("http", enable_http_server, true, "whether to enable the embedde
     case http_status_code::internal_server_error:
         return "500 Internal Server Error";
     default:
-        dfatal("invalid code: %d", code);
+        LOG_FATAL("invalid code: %d", code);
         __builtin_unreachable();
     }
 }

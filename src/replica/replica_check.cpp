@@ -55,7 +55,7 @@ void replica::init_group_check()
 
     _checker.only_one_thread_access();
 
-    ddebug("%s: init group check", name());
+    LOG_INFO("%s: init group check", name());
 
     if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
         return;
@@ -75,13 +75,14 @@ void replica::broadcast_group_check()
 
     dassert(nullptr != _primary_states.group_check_task, "");
 
-    ddebug("%s: start to broadcast group check", name());
+    LOG_INFO("%s: start to broadcast group check", name());
 
     if (_primary_states.group_check_pending_replies.size() > 0) {
-        dwarn("%s: %u group check replies are still pending when doing next round check, cancel "
-              "first",
-              name(),
-              static_cast<int>(_primary_states.group_check_pending_replies.size()));
+        LOG_WARNING(
+            "%s: %u group check replies are still pending when doing next round check, cancel "
+            "first",
+            name(),
+            static_cast<int>(_primary_states.group_check_pending_replies.size()));
 
         for (auto it = _primary_states.group_check_pending_replies.begin();
              it != _primary_states.group_check_pending_replies.end();
@@ -119,10 +120,10 @@ void replica::broadcast_group_check()
             request->config.learner_signature = it->second.signature;
         }
 
-        ddebug("%s: send group check to %s with state %s",
-               name(),
-               addr.to_string(),
-               enum_to_string(it->second));
+        LOG_INFO("%s: send group check to %s with state %s",
+                 name(),
+                 addr.to_string(),
+                 enum_to_string(it->second));
 
         dsn::task_ptr callback_task =
             rpc::call(addr,
@@ -163,12 +164,12 @@ void replica::on_group_check(const group_check_request &request,
 
     if (request.config.ballot < get_ballot()) {
         response.err = ERR_VERSION_OUTDATED;
-        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
         return;
     } else if (request.config.ballot > get_ballot()) {
         if (!update_local_configuration(request.config)) {
             response.err = ERR_INVALID_STATE;
-            dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
+            LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
             return;
         }
     } else if (is_same_ballot_status_change_allowed(status(), request.config.status)) {
@@ -202,7 +203,7 @@ void replica::on_group_check(const group_check_request &request,
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
-        dwarn("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
     }
 
     response.last_committed_decree_in_app = _app->last_committed_decree();

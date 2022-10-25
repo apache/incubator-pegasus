@@ -81,19 +81,19 @@ void task_spec::register_task_code(task_code code,
         }
 
         if (spec->priority != pri) {
-            dwarn("overwrite priority for task %s from %s to %s",
-                  code.to_string(),
-                  enum_to_string(spec->priority),
-                  enum_to_string(pri));
+            LOG_WARNING("overwrite priority for task %s from %s to %s",
+                        code.to_string(),
+                        enum_to_string(spec->priority),
+                        enum_to_string(pri));
             spec->priority = pri;
         }
 
         if (spec->pool_code != pool) {
             if (spec->pool_code != THREAD_POOL_INVALID) {
-                dwarn("overwrite default thread pool for task %s from %s to %s",
-                      code.to_string(),
-                      spec->pool_code.to_string(),
-                      pool.to_string());
+                LOG_WARNING("overwrite default thread pool for task %s from %s to %s",
+                            code.to_string(),
+                            spec->pool_code.to_string(),
+                            pool.to_string());
             }
             spec->pool_code = pool;
         }
@@ -219,8 +219,8 @@ bool task_spec::init()
 
         if (spec->rpc_request_throttling_mode != TM_NONE) {
             if (spec->type != TASK_TYPE_RPC_REQUEST) {
-                derror("%s: only rpc request type can have non TM_NONE throttling_mode",
-                       spec->name.c_str());
+                LOG_ERROR("%s: only rpc request type can have non TM_NONE throttling_mode",
+                          spec->name.c_str());
                 return false;
             }
         }

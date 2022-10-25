@@ -177,7 +177,7 @@ void greedy_balancer_perfect_move_primary()
     migration_list ml;
 
     glb.check({&apps, &nodes}, ml);
-    dinfo("balance checker operation count = %d", ml.size());
+    LOG_DEBUG("balance checker operation count = %d", ml.size());
     int i = 0;
 
     while (glb.balance({&apps, &nodes}, ml)) {
@@ -188,7 +188,7 @@ void greedy_balancer_perfect_move_primary()
             }
         }
         glb.check({&apps, &nodes}, ml);
-        dinfo("round %d: balance checker operation count = %d", ++i, ml.size());
+        LOG_DEBUG("round %d: balance checker operation count = %d", ++i, ml.size());
     }
 }
 

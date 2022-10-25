@@ -167,7 +167,7 @@ bool perf_counters::remove_counter(const char *full_name)
         }
     }
 
-    dinfo("performance counter %s is removed, remaining reference (%d)", full_name, remain_ref);
+    LOG_DEBUG("performance counter %s is removed, remaining reference (%d)", full_name, remain_ref);
     return true;
 }
 

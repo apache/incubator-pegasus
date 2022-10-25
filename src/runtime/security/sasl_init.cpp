@@ -33,8 +33,6 @@ DSN_DEFINE_string("security", sasl_plugin_path, "/usr/lib/sasl2", "path to searc
 
 dsn_log_level_t get_dsn_log_level(int level)
 {
-    // The log levels of LOG_LEVEL_DEBUG and LOG_LEVEL_INFORMATION are in reverse order.
-    // So here we should compatible with this case.
     switch (level) {
     case SASL_LOG_ERR:
         return LOG_LEVEL_ERROR;
@@ -42,9 +40,9 @@ dsn_log_level_t get_dsn_log_level(int level)
     case SASL_LOG_WARN:
         return LOG_LEVEL_WARNING;
     case SASL_LOG_NOTE:
-        return LOG_LEVEL_DEBUG;
+        return LOG_LEVEL_INFO;
     default:
-        return LOG_LEVEL_INFORMATION;
+        return LOG_LEVEL_DEBUG;
     }
 }
 

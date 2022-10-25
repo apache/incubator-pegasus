@@ -62,7 +62,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
     case fail_point::Void:
         return "Void";
     default:
-        dfatal("unexpected type: %d", t);
+        LOG_FATAL("unexpected type: %d", t);
         __builtin_unreachable();
     }
 }
@@ -71,12 +71,12 @@ inline const char *task_type_to_string(fail_point::task_type t)
 {
     fail_point &p = REGISTRY.create_if_not_exists(name);
     p.set_action(action);
-    ddebug("add fail_point [name: %s, task: %s(%s), frequency: %d%, max_count: %d]",
-           name.data(),
-           task_type_to_string(p.get_task()),
-           p.get_arg().data(),
-           p.get_frequency(),
-           p.get_max_count());
+    LOG_INFO("add fail_point [name: %s, task: %s(%s), frequency: %d%, max_count: %d]",
+             name.data(),
+             task_type_to_string(p.get_task()),
+             p.get_arg().data(),
+             p.get_frequency(),
+             p.get_max_count());
 }
 
 /*static*/ bool _S_FAIL_POINT_ENABLED = false;
@@ -92,7 +92,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
 void fail_point::set_action(string_view action)
 {
     if (!parse_from_string(action)) {
-        dfatal("unrecognized command: %s", action.data());
+        LOG_FATAL("unrecognized command: %s", action.data());
     }
 }
 
@@ -152,7 +152,7 @@ const std::string *fail_point::eval()
         return nullptr;
     }
     _max_cnt--;
-    ddebug("fail on %s", _name.data());
+    LOG_INFO("fail on %s", _name.data());
 
     switch (_task) {
     case Off:
@@ -161,7 +161,7 @@ const std::string *fail_point::eval()
     case Return:
         return &_arg;
     case Print:
-        ddebug(_arg.data());
+        LOG_INFO(_arg.data());
         break;
     }
     return nullptr;

@@ -43,10 +43,10 @@ namespace replication {
 
 void replica::handle_local_failure(error_code error)
 {
-    ddebug("%s: handle local failure error %s, status = %s",
-           name(),
-           error.to_string(),
-           enum_to_string(status()));
+    LOG_INFO("%s: handle local failure error %s, status = %s",
+             name(),
+             error.to_string(),
+             enum_to_string(status()));
 
     if (status() == partition_status::PS_PRIMARY) {
         _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
@@ -60,12 +60,12 @@ void replica::handle_remote_failure(partition_status::type st,
                                     error_code error,
                                     const std::string &caused_by)
 {
-    derror("%s: handle remote failure caused by %s, error = %s, status = %s, node = %s",
-           name(),
-           caused_by.c_str(),
-           error.to_string(),
-           enum_to_string(st),
-           node.to_string());
+    LOG_ERROR("%s: handle remote failure caused by %s, error = %s, status = %s, node = %s",
+              name(),
+              caused_by.c_str(),
+              error.to_string(),
+              enum_to_string(st),
+              node.to_string());
 
     dassert(status() == partition_status::PS_PRIMARY,
             "invalid partition_status, status = %s",
@@ -88,7 +88,7 @@ void replica::handle_remote_failure(partition_status::type st,
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY: {
-        ddebug("%s: remove learner %s for remote failure", name(), node.to_string());
+        LOG_INFO("%s: remove learner %s for remote failure", name(), node.to_string());
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
         _primary_states.learners.erase(node);
@@ -105,7 +105,7 @@ void replica::handle_remote_failure(partition_status::type st,
 
 void replica::on_meta_server_disconnected()
 {
-    ddebug("%s: meta server disconnected", name());
+    LOG_INFO("%s: meta server disconnected", name());
 
     auto old_status = status();
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);

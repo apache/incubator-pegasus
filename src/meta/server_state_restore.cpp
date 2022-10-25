@@ -42,7 +42,7 @@ void server_state::sync_app_from_backup_media(
         _meta_svc->get_block_service_manager().get_or_create_block_filesystem(
             request.backup_provider_name);
     if (blk_fs == nullptr) {
-        derror("acquire block_filesystem(%s) failed", request.backup_provider_name.c_str());
+        LOG_ERROR("acquire block_filesystem(%s) failed", request.backup_provider_name.c_str());
         callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, dsn::blob());
         return;
     }
@@ -151,7 +151,8 @@ void server_state::restore_app(dsn::message_ex *msg)
             dsn::error_code ec = ERR_OK;
             // if err != ERR_OK, then sync_app_from_backup_media ecounter some error
             if (err != ERR_OK) {
-                derror("sync app_info_data from backup media failed with err(%s)", err.to_string());
+                LOG_ERROR("sync app_info_data from backup media failed with err(%s)",
+                          err.to_string());
                 ec = err;
             } else {
                 auto pair = restore_app_info(msg, request, app_info_data);
@@ -199,11 +200,11 @@ void server_state::on_recv_restore_report(configuration_report_restore_status_rp
         if (request.__isset.reason) {
             r_state.reason = request.reason;
         }
-        ddebug("%d.%d restore report: restore_status(%s), progress(%d)",
-               request.pid.get_app_id(),
-               request.pid.get_partition_index(),
-               request.restore_status.to_string(),
-               request.progress);
+        LOG_INFO("%d.%d restore report: restore_status(%s), progress(%d)",
+                 request.pid.get_app_id(),
+                 request.pid.get_partition_index(),
+                 request.restore_status.to_string(),
+                 request.progress);
     }
 }
 

@@ -60,7 +60,7 @@ public:
             err = _node->start_app();
             dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
         } else {
-            ddebug("stop app result(%s)", _node->stop_app(_cleanup).to_string());
+            LOG_INFO("stop app result(%s)", _node->stop_app(_cleanup).to_string());
         }
     }
 

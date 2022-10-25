@@ -118,11 +118,11 @@ void app_balance_policy::unregister_ctrl_commands()
 bool app_balance_policy::need_balance_secondaries(bool balance_checker)
 {
     if (!balance_checker && !_migration_result->empty()) {
-        ddebug("stop to do secondary balance coz we already have actions to do");
+        LOG_INFO("stop to do secondary balance coz we already have actions to do");
         return false;
     }
     if (_only_primary_balancer) {
-        ddebug("stop to do secondary balancer coz it is not allowed");
+        LOG_INFO("stop to do secondary balancer coz it is not allowed");
         return false;
     }
     return true;

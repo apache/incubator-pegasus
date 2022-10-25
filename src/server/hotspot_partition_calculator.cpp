@@ -107,7 +107,7 @@ void hotspot_partition_calculator::stat_histories_analyse(uint32_t data_type,
         }
     }
     if (sample_count <= 1) {
-        ddebug("_partitions_stat_histories size <= 1, not enough data for calculation");
+        LOG_INFO("_partitions_stat_histories size <= 1, not enough data for calculation");
         return;
     }
     table_qps_avg = table_qps_sum / sample_count;

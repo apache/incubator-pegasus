@@ -34,10 +34,10 @@
 #include "utils/smart_pointers.h"
 #include "simple_logger.h"
 
-DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFORMATION;
+DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_DEBUG;
 DSN_DEFINE_string("core",
                   logging_start_level,
-                  "LOG_LEVEL_INFORMATION",
+                  "LOG_LEVEL_DEBUG",
                   "logs with level below this will not be logged");
 
 DSN_DEFINE_bool("core", logging_flush_on_exit, true, "flush log when exit system");
@@ -94,7 +94,7 @@ void dsn_log_init(const std::string &logging_factory_name,
     ::dsn::command_manager::instance().register_command(
         {"reset-log-start-level"},
         "reset-log-start-level - reset the log start level",
-        "reset-log-start-level [INFORMATION | DEBUG | WARNING | ERROR | FATAL]",
+        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
         [](const std::vector<std::string> &args) {
             dsn_log_level_t start_level;
             if (args.size() == 0) {

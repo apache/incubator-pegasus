@@ -40,20 +40,20 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
     const backup_request &request = rpc.request();
     backup_response &response = rpc.response();
 
-    ddebug("received cold backup request: backup{%s.%s.%" PRId64 "}",
-           request.pid.to_string(),
-           request.policy.policy_name.c_str(),
-           request.backup_id);
+    LOG_INFO("received cold backup request: backup{%s.%s.%" PRId64 "}",
+             request.pid.to_string(),
+             request.policy.policy_name.c_str(),
+             request.backup_id);
     response.pid = request.pid;
     response.policy_name = request.policy.policy_name;
     response.backup_id = request.backup_id;
 
     if (_stub->options().cold_backup_root.empty()) {
-        derror("backup{%s.%s.%" PRId64
-               "}: cold_backup_root is empty, response ERR_OPERATION_DISABLED",
-               request.pid.to_string(),
-               request.policy.policy_name.c_str(),
-               request.backup_id);
+        LOG_ERROR("backup{%s.%s.%" PRId64
+                  "}: cold_backup_root is empty, response ERR_OPERATION_DISABLED",
+                  request.pid.to_string(),
+                  request.policy.policy_name.c_str(),
+                  request.backup_id);
         response.err = ERR_OPERATION_DISABLED;
         return;
     }
@@ -62,10 +62,10 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
     if (rep != nullptr) {
         rep->on_cold_backup(request, response);
     } else {
-        derror("backup{%s.%s.%" PRId64 "}: replica not found, response ERR_OBJECT_NOT_FOUND",
-               request.pid.to_string(),
-               request.policy.policy_name.c_str(),
-               request.backup_id);
+        LOG_ERROR("backup{%s.%s.%" PRId64 "}: replica not found, response ERR_OBJECT_NOT_FOUND",
+                  request.pid.to_string(),
+                  request.policy.policy_name.c_str(),
+                  request.backup_id);
         response.err = ERR_OBJECT_NOT_FOUND;
     }
 }

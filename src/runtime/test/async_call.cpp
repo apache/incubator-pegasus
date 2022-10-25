@@ -166,12 +166,12 @@ class simple_task : public dsn::raw_task
 public:
     simple_task(dsn::task_code code, const task_handler &h) : dsn::raw_task(code, h, 0, nullptr)
     {
-        ddebug("simple task %p created", this);
+        LOG_INFO("simple task %p created", this);
         allocate_count++;
     }
     virtual ~simple_task() override
     {
-        ddebug("simple task %p is deallocated", this);
+        LOG_INFO("simple task %p is deallocated", this);
         allocate_count--;
     }
     static std::atomic_int allocate_count;
@@ -189,12 +189,12 @@ public:
     simple_rpc_response_task(dsn::message_ex *m, const rpc_response_handler &h)
         : dsn::rpc_response_task(m, h)
     {
-        ddebug("simple rpc response task(%p) created", this);
+        LOG_INFO("simple rpc response task(%p) created", this);
         allocate_count++;
     }
     virtual ~simple_rpc_response_task() override
     {
-        ddebug("simple rpc repsonse task(%p) is dealloate", this);
+        LOG_INFO("simple rpc repsonse task(%p) is dealloate", this);
         allocate_count--;
     }
     static std::atomic_int allocate_count;
@@ -247,7 +247,8 @@ TEST(async_call, task_destructor)
 
     {
         dsn::ref_ptr<simple_task_container> c(new simple_task_container());
-        c->t = new simple_task(LPC_TEST_CLIENTLET, [c]() { ddebug("cycle link reference test"); });
+        c->t =
+            new simple_task(LPC_TEST_CLIENTLET, [c]() { LOG_INFO("cycle link reference test"); });
 
         c->t->enqueue();
         c->t->wait();
@@ -256,7 +257,8 @@ TEST(async_call, task_destructor)
 
     {
         dsn::ref_ptr<simple_task_container> c(new simple_task_container());
-        c->t = new simple_task(LPC_TEST_CLIENTLET, [c]() { ddebug("cycle link reference test"); });
+        c->t =
+            new simple_task(LPC_TEST_CLIENTLET, [c]() { LOG_INFO("cycle link reference test"); });
 
         ASSERT_TRUE(c->t->cancel(false));
     }

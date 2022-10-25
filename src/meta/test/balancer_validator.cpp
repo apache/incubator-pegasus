@@ -263,25 +263,25 @@ void meta_service_test_app::balancer_validator()
     migration_list ml;
 
     for (auto &iter : nodes) {
-        dinfo("node(%s) have %d primaries, %d partitions",
-              iter.first.to_string(),
-              iter.second.primary_count(),
-              iter.second.partition_count());
+        LOG_DEBUG("node(%s) have %d primaries, %d partitions",
+                  iter.first.to_string(),
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
     }
 
     // iterate 1000000 times
     for (int i = 0; i < 1000000 && glb.balance({&apps, &nodes}, ml); ++i) {
-        dinfo("the %dth round of balancer", i);
+        LOG_DEBUG("the %dth round of balancer", i);
         migration_check_and_apply(apps, nodes, ml, &manager);
         glb.check({&apps, &nodes}, ml);
-        dinfo("balance checker operation count = %d", ml.size());
+        LOG_DEBUG("balance checker operation count = %d", ml.size());
     }
 
     for (auto &iter : nodes) {
-        dinfo("node(%s) have %d primaries, %d partitions",
-              iter.first.to_string(),
-              iter.second.primary_count(),
-              iter.second.partition_count());
+        LOG_DEBUG("node(%s) have %d primaries, %d partitions",
+                  iter.first.to_string(),
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
     }
 
     std::shared_ptr<app_state> &the_app = apps[1];
@@ -369,10 +369,10 @@ void meta_service_test_app::balance_config_file()
 
         // iterate 1000 times
         for (int i = 0; i < 1000 && lb->balance({&apps, &nodes}, ml); ++i) {
-            dinfo("the %dth round of balancer", i);
+            LOG_DEBUG("the %dth round of balancer", i);
             migration_check_and_apply(apps, nodes, ml, nullptr);
             lb->check({&apps, &nodes}, ml);
-            dinfo("balance checker operation count = %d", ml.size());
+            LOG_DEBUG("balance checker operation count = %d", ml.size());
         }
     }
 }

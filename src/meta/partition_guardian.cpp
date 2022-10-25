@@ -185,11 +185,11 @@ bool partition_guardian::from_proposals(meta_view &view,
 invalid_action:
     std::stringstream ss;
     ss << action;
-    ddebug("proposal action(%s) for gpid(%d.%d) is invalid, clear all proposal actions: %s",
-           ss.str().c_str(),
-           gpid.get_app_id(),
-           gpid.get_partition_index(),
-           reason);
+    LOG_INFO("proposal action(%s) for gpid(%d.%d) is invalid, clear all proposal actions: %s",
+             ss.str().c_str(),
+             gpid.get_app_id(),
+             gpid.get_partition_index(),
+             reason);
     action.type = config_type::CT_INVALID;
 
     while (!cc.lb_actions.empty()) {
@@ -236,8 +236,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         }
 
         if (action.node.is_invalid()) {
-            derror("all nodes for gpid(%s) are dead, waiting for some secondary to come back....",
-                   gpid_name);
+            LOG_ERROR(
+                "all nodes for gpid(%s) are dead, waiting for some secondary to come back....",
+                gpid_name);
             result = pc_status::dead;
         } else {
             action.type = config_type::CT_UPGRADE_TO_PRIMARY;
@@ -278,9 +279,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     }
     // well, all replicas in this partition is dead
     else {
-        dwarn("%s enters DDD state, we are waiting for all replicas to come back, "
-              "and select primary according to informations collected",
-              gpid_name);
+        LOG_WARNING("%s enters DDD state, we are waiting for all replicas to come back, "
+                    "and select primary according to informations collected",
+                    gpid_name);
         // when considering how to handle the DDD state, we must keep in mind that our
         // shared/private-log data only write to OS-cache.
         // so the last removed replica can't act as primary directly.
@@ -291,17 +292,17 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             const dropped_replica &dr = cc.dropped[i];
             char time_buf[30];
             ::dsn::utils::time_ms_to_string(dr.time, time_buf);
-            ddebug("%s: config_context.dropped[%d]: "
-                   "node(%s), time(%" PRIu64 "){%s}, ballot(%" PRId64 "), "
-                   "commit_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
-                   gpid_name,
-                   i,
-                   dr.node.to_string(),
-                   dr.time,
-                   time_buf,
-                   dr.ballot,
-                   dr.last_committed_decree,
-                   dr.last_prepared_decree);
+            LOG_INFO("%s: config_context.dropped[%d]: "
+                     "node(%s), time(%" PRIu64 "){%s}, ballot(%" PRId64 "), "
+                     "commit_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
+                     gpid_name,
+                     i,
+                     dr.node.to_string(),
+                     dr.time,
+                     time_buf,
+                     dr.ballot,
+                     dr.last_committed_decree,
+                     dr.last_prepared_decree);
         }
 
         for (int i = 0; i < pc.last_drops.size(); ++i) {
@@ -312,27 +313,27 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                     break;
                 }
             }
-            ddebug("%s: config_context.last_drops[%d]: node(%s), dropped_index(%d)",
-                   gpid_name,
-                   i,
-                   pc.last_drops[i].to_string(),
-                   dropped_index);
+            LOG_INFO("%s: config_context.last_drops[%d]: node(%s), dropped_index(%d)",
+                     gpid_name,
+                     i,
+                     pc.last_drops[i].to_string(),
+                     dropped_index);
         }
 
         if (pc.last_drops.size() == 1) {
-            dwarn("%s: the only node(%s) is dead, waiting it to come back",
-                  gpid_name,
-                  pc.last_drops.back().to_string());
+            LOG_WARNING("%s: the only node(%s) is dead, waiting it to come back",
+                        gpid_name,
+                        pc.last_drops.back().to_string());
             action.node = pc.last_drops.back();
         } else {
             std::vector<dsn::rpc_address> nodes(pc.last_drops.end() - 2, pc.last_drops.end());
             std::vector<dropped_replica> collected_info(2);
             bool ready = true;
 
-            ddebug("%s: last two drops are %s and %s (the latest dropped)",
-                   gpid_name,
-                   nodes[0].to_string(),
-                   nodes[1].to_string());
+            LOG_INFO("%s: last two drops are %s and %s (the latest dropped)",
+                     gpid_name,
+                     nodes[0].to_string(),
+                     nodes[1].to_string());
 
             for (unsigned int i = 0; i < nodes.size(); ++i) {
                 node_state *ns = get_node_state(*view.nodes, nodes[i], false);
@@ -340,15 +341,15 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                     ready = false;
                     reason = "the last dropped node(" + nodes[i].to_std_string() +
                              ") haven't come back yet";
-                    dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
+                    LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
                 } else {
                     std::vector<dropped_replica>::iterator it = cc.find_from_dropped(nodes[i]);
                     if (it == cc.dropped.end() || it->ballot == invalid_ballot) {
                         if (ns->has_collected()) {
-                            ddebug("%s: ignore %s's replica info as it doesn't exist on replica "
-                                   "server",
-                                   gpid_name,
-                                   nodes[i].to_string());
+                            LOG_INFO("%s: ignore %s's replica info as it doesn't exist on replica "
+                                     "server",
+                                     gpid_name,
+                                     nodes[i].to_string());
                             collected_info[i] = {nodes[i], 0, -1, -1, -1};
                         } else {
                             ready = false;
@@ -359,7 +360,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                             } else {
                                 reason += "replica info has not been collected from the node";
                             }
-                            dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
+                            LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
                         }
                     } else {
                         collected_info[i] = *it;
@@ -370,7 +371,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             if (ready && collected_info[0].ballot == -1 && collected_info[1].ballot == -1) {
                 ready = false;
                 reason = "no replica info collected from the last two drops";
-                dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
+                LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
             }
 
             if (ready) {
@@ -401,7 +402,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                                               ? previous_dead.node
                                               : recent_dead.node;
                         }
-                        ddebug(
+                        LOG_INFO(
                             "%s: select %s as a new primary", gpid_name, action.node.to_string());
                     } else {
                         char buf[1000];
@@ -412,12 +413,12 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                                 larger_pd,
                                 pc.last_committed_decree,
                                 larger_cd);
-                        dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
+                        LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
                     }
                 } else {
                     reason = "for the last two drops, the node with larger ballot has smaller last "
                              "committed decree";
-                    dwarn("%s: don't select primary: %s", gpid_name, reason.c_str());
+                    LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
                 }
             }
         }
@@ -429,9 +430,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             get_newly_partitions(*view.nodes, action.node)
                 ->newly_add_primary(gpid.get_app_id(), false);
         } else {
-            dwarn("%s: don't select any node for security reason, administrator can select "
-                  "a proper one by shell",
-                  gpid_name);
+            LOG_WARNING("%s: don't select any node for security reason, administrator can select "
+                        "a proper one by shell",
+                        gpid_name);
             _recent_choose_primary_fail_count->increment();
             ddd_partition_info pinfo;
             pinfo.config = pc;
@@ -483,25 +484,25 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         // when max_replica_count == 2, even if there is only 1 replica alive now, we will still
         // wait for replica_assign_delay_ms_for_dropouts before recover the second replica.
         is_emergency = true;
-        ddebug("gpid(%s): is emergency due to too few replicas", gpid.to_string());
+        LOG_INFO("gpid(%s): is emergency due to too few replicas", gpid.to_string());
     } else if (cc.dropped.empty()) {
         is_emergency = true;
-        ddebug("gpid(%s): is emergency due to no dropped candidate", gpid.to_string());
+        LOG_INFO("gpid(%s): is emergency due to no dropped candidate", gpid.to_string());
     } else if (has_milliseconds_expired(cc.dropped.back().time +
                                         _replica_assign_delay_ms_for_dropouts)) {
         is_emergency = true;
         char time_buf[30];
         ::dsn::utils::time_ms_to_string(cc.dropped.back().time, time_buf);
-        ddebug("gpid(%s): is emergency due to lose secondary for a long time, "
-               "last_dropped_node(%s), drop_time(%s), delay_ms(%" PRIu64 ")",
-               gpid.to_string(),
-               cc.dropped.back().node.to_string(),
-               time_buf,
-               _replica_assign_delay_ms_for_dropouts);
+        LOG_INFO("gpid(%s): is emergency due to lose secondary for a long time, "
+                 "last_dropped_node(%s), drop_time(%s), delay_ms(%" PRIu64 ")",
+                 gpid.to_string(),
+                 cc.dropped.back().node.to_string(),
+                 time_buf,
+                 _replica_assign_delay_ms_for_dropouts);
     } else if (in_black_list(cc.dropped.back().node)) {
-        ddebug("gpid(%s) is emergency due to recent dropped(%s) is in black list",
-               gpid.to_string(),
-               cc.dropped.back().node.to_string());
+        LOG_INFO("gpid(%s) is emergency due to recent dropped(%s) is in black list",
+                 gpid.to_string(),
+                 cc.dropped.back().node.to_string());
         is_emergency = true;
     }
     action.node.set_invalid();
@@ -513,51 +514,51 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
                 oss << ",";
             oss << cc.dropped[i].node.to_string();
         }
-        ddebug("gpid(%s): try to choose node in dropped list, dropped_list(%s), "
-               "prefered_dropped(%d)",
-               gpid.to_string(),
-               oss.str().c_str(),
-               cc.prefered_dropped);
+        LOG_INFO("gpid(%s): try to choose node in dropped list, dropped_list(%s), "
+                 "prefered_dropped(%d)",
+                 gpid.to_string(),
+                 oss.str().c_str(),
+                 cc.prefered_dropped);
         if (cc.prefered_dropped < 0 || cc.prefered_dropped >= (int)cc.dropped.size()) {
-            ddebug("gpid(%s): prefered_dropped(%d) is invalid according to drop_list(size %d), "
-                   "reset it to %d (drop_list.size - 1)",
-                   gpid.to_string(),
-                   cc.prefered_dropped,
-                   (int)cc.dropped.size(),
-                   (int)cc.dropped.size() - 1);
+            LOG_INFO("gpid(%s): prefered_dropped(%d) is invalid according to drop_list(size %d), "
+                     "reset it to %d (drop_list.size - 1)",
+                     gpid.to_string(),
+                     cc.prefered_dropped,
+                     (int)cc.dropped.size(),
+                     (int)cc.dropped.size() - 1);
             cc.prefered_dropped = (int)cc.dropped.size() - 1;
         }
 
         while (cc.prefered_dropped >= 0) {
             const dropped_replica &server = cc.dropped[cc.prefered_dropped];
             if (is_node_alive(*view.nodes, server.node)) {
-                ddebug("gpid(%s): node(%s) at cc.dropped[%d] is alive now, choose it, "
-                       "and forward prefered_dropped from (%d) to (%d)",
-                       gpid.to_string(),
-                       server.node.to_string(),
-                       cc.prefered_dropped,
-                       cc.prefered_dropped,
-                       cc.prefered_dropped - 1);
+                LOG_INFO("gpid(%s): node(%s) at cc.dropped[%d] is alive now, choose it, "
+                         "and forward prefered_dropped from (%d) to (%d)",
+                         gpid.to_string(),
+                         server.node.to_string(),
+                         cc.prefered_dropped,
+                         cc.prefered_dropped,
+                         cc.prefered_dropped - 1);
                 action.node = server.node;
                 cc.prefered_dropped--;
                 break;
             } else {
-                ddebug("gpid(%s): node(%s) at cc.dropped[%d] is not alive now, "
-                       "changed prefered_dropped from (%d) to (%d)",
-                       gpid.to_string(),
-                       server.node.to_string(),
-                       cc.prefered_dropped,
-                       cc.prefered_dropped,
-                       cc.prefered_dropped - 1);
+                LOG_INFO("gpid(%s): node(%s) at cc.dropped[%d] is not alive now, "
+                         "changed prefered_dropped from (%d) to (%d)",
+                         gpid.to_string(),
+                         server.node.to_string(),
+                         cc.prefered_dropped,
+                         cc.prefered_dropped,
+                         cc.prefered_dropped - 1);
                 cc.prefered_dropped--;
             }
         }
 
         if (action.node.is_invalid() || in_black_list(action.node)) {
             if (!action.node.is_invalid()) {
-                ddebug("gpid(%s) refuse to use selected node(%s) as it is in black list",
-                       gpid.to_string(),
-                       action.node.to_string());
+                LOG_INFO("gpid(%s) refuse to use selected node(%s) as it is in black list",
+                         gpid.to_string(),
+                         action.node.to_string());
             }
             newly_partitions *min_server_np = nullptr;
             for (auto &pairs : *view.nodes) {
@@ -573,14 +574,14 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
             }
 
             if (!action.node.is_invalid()) {
-                ddebug("gpid(%s): can't find valid node in dropped list to add as secondary, "
-                       "choose new node(%s) with minimal partitions serving",
-                       gpid.to_string(),
-                       action.node.to_string());
+                LOG_INFO("gpid(%s): can't find valid node in dropped list to add as secondary, "
+                         "choose new node(%s) with minimal partitions serving",
+                         gpid.to_string(),
+                         action.node.to_string());
             } else {
-                ddebug("gpid(%s): can't find valid node in dropped list to add as secondary, "
-                       "but also we can't find a new node to add as secondary",
-                       gpid.to_string());
+                LOG_INFO("gpid(%s): can't find valid node in dropped list to add as secondary, "
+                         "but also we can't find a new node to add as secondary",
+                         gpid.to_string());
             }
         }
     } else {
@@ -594,15 +595,15 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         }
 
         if (!action.node.is_invalid()) {
-            ddebug("gpid(%s): choose node(%s) as secondary coz it is last_dropped_node and is "
-                   "alive now",
-                   gpid.to_string(),
-                   server.node.to_string());
+            LOG_INFO("gpid(%s): choose node(%s) as secondary coz it is last_dropped_node and is "
+                     "alive now",
+                     gpid.to_string(),
+                     server.node.to_string());
         } else {
-            ddebug("gpid(%s): can't add secondary coz last_dropped_node(%s) is not alive now, "
-                   "ignore this as not in emergency",
-                   gpid.to_string(),
-                   server.node.to_string());
+            LOG_INFO("gpid(%s): can't add secondary coz last_dropped_node(%s) is not alive now, "
+                     "ignore this as not in emergency",
+                     gpid.to_string(),
+                     server.node.to_string());
         }
     }
 
@@ -650,9 +651,9 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
 {
     newly_partitions *np = get_newly_partitions(*(view.nodes), act.node);
     if (np == nullptr) {
-        ddebug("can't get the newly_partitions extension structure for node(%s), "
-               "the node may be dead and removed",
-               act.node.to_string());
+        LOG_INFO("can't get the newly_partitions extension structure for node(%s), "
+                 "the node may be dead and removed",
+                 act.node.to_string());
     } else {
         if (act.type == config_type::CT_ASSIGN_PRIMARY) {
             np->newly_remove_primary(gpid.get_app_id(), false);

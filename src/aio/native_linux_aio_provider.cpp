@@ -46,7 +46,7 @@ dsn_handle_t native_linux_aio_provider::open(const char *file_name, int flag, in
 {
     dsn_handle_t fh = (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
     if (fh == DSN_INVALID_FILE_HANDLE) {
-        derror("create file failed, err = %s", strerror(errno));
+        LOG_ERROR("create file failed, err = %s", strerror(errno));
     }
     return fh;
 }
@@ -56,7 +56,7 @@ error_code native_linux_aio_provider::close(dsn_handle_t fh)
     if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0) {
         return ERR_OK;
     } else {
-        derror("close file failed, err = %s", strerror(errno));
+        LOG_ERROR("close file failed, err = %s", strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
 }
@@ -66,7 +66,7 @@ error_code native_linux_aio_provider::flush(dsn_handle_t fh)
     if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0) {
         return ERR_OK;
     } else {
-        derror("flush file failed, err = %s", strerror(errno));
+        LOG_ERROR("flush file failed, err = %s", strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
 }

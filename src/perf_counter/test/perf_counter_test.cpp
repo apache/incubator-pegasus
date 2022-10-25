@@ -97,19 +97,19 @@ TEST(perf_counter, perf_counter_atomic)
         "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
-    ddebug("%lf", counter->get_value());
+    LOG_INFO("%lf", counter->get_value());
 
     counter = new perf_counter_volatile_number_atomic(
         "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_VOLATILE_NUMBER, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
-    ddebug("%lf", counter->get_value());
+    LOG_INFO("%lf", counter->get_value());
 
     counter =
         new perf_counter_rate_atomic("", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_RATE, "");
     perf_counter_inc_dec(counter);
     perf_counter_add(counter, vec);
-    ddebug("%lf", counter->get_value());
+    LOG_INFO("%lf", counter->get_value());
 
     counter = new perf_counter_number_percentile_atomic(
         "", "", "", dsn_perf_counter_type_t::COUNTER_TYPE_NUMBER_PERCENTILES, "");
@@ -119,7 +119,7 @@ TEST(perf_counter, perf_counter_atomic)
             counter->set(rand() % 10000);
         // std::this_thread::sleep_for(std::chrono::seconds(sleep_interval));
         for (int i = 0; i != COUNTER_PERCENTILE_COUNT; ++i)
-            ddebug("%lf", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
+            LOG_INFO("%lf", counter->get_percentile((dsn_perf_counter_percentile_type_t)i));
     }
 }
 

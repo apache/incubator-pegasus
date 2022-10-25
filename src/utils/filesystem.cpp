@@ -335,7 +335,7 @@ static bool remove_directory(const std::string &npath)
     boost::filesystem::remove_all(npath, ec);
     // TODO(wutao1): return the specific error to caller
     if (dsn_unlikely(bool(ec))) {
-        dwarn("remove %s failed, err = %s", npath.c_str(), ec.message().c_str());
+        LOG_WARNING("remove %s failed, err = %s", npath.c_str(), ec.message().c_str());
         return false;
     }
     return true;
@@ -358,7 +358,8 @@ bool remove_path(const std::string &path)
     if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
         if (!ret) {
-            dwarn("remove file %s failed, err = %s", path.c_str(), safe_strerror(errno).c_str());
+            LOG_WARNING(
+                "remove file %s failed, err = %s", path.c_str(), safe_strerror(errno).c_str());
         }
         return ret;
     } else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
@@ -374,10 +375,10 @@ bool rename_path(const std::string &path1, const std::string &path2)
 
     ret = (::rename(path1.c_str(), path2.c_str()) == 0);
     if (!ret) {
-        dwarn("rename from '%s' to '%s' failed, err = %s",
-              path1.c_str(),
-              path2.c_str(),
-              safe_strerror(errno).c_str());
+        LOG_WARNING("rename from '%s' to '%s' failed, err = %s",
+                    path1.c_str(),
+                    path2.c_str(),
+                    safe_strerror(errno).c_str());
     }
 
     return ret;
@@ -482,10 +483,10 @@ bool create_directory(const std::string &path)
     return true;
 
 out_error:
-    dwarn("create_directory %s failed due to cannot create the component: %s, err = %s",
-          path.c_str(),
-          cpath.c_str(),
-          safe_strerror(err).c_str());
+    LOG_WARNING("create_directory %s failed due to cannot create the component: %s, err = %s",
+                path.c_str(),
+                cpath.c_str(),
+                safe_strerror(err).c_str());
     return false;
 }
 
@@ -530,12 +531,12 @@ bool create_file(const std::string &path)
     fd = ::creat(npath.c_str(), mode);
     if (fd == -1) {
         err = errno;
-        dwarn("create_file %s failed, err = %s", path.c_str(), safe_strerror(err).c_str());
+        LOG_WARNING("create_file %s failed, err = %s", path.c_str(), safe_strerror(err).c_str());
         return false;
     }
 
     if (::close_(fd) != 0) {
-        dwarn("create_file %s, failed to close the file handle.", path.c_str());
+        LOG_WARNING("create_file %s, failed to close the file handle.", path.c_str());
     }
 
     return true;
@@ -698,7 +699,7 @@ bool get_disk_space_info(const std::string &path, disk_space_info &info)
     boost::system::error_code ec;
     boost::filesystem::space_info in = boost::filesystem::space(path, ec);
     if (ec) {
-        derror(
+        LOG_ERROR(
             "get disk space info failed: path = %s, err = %s", path.c_str(), ec.message().c_str());
         return false;
     } else {
@@ -724,13 +725,13 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
     result.clear();
     // if file not exist, we return ERR_OBJECT_NOT_FOUND
     if (!::dsn::utils::filesystem::file_exists(file_path)) {
-        derror("md5sum error: file %s not exist", file_path.c_str());
+        LOG_ERROR("md5sum error: file %s not exist", file_path.c_str());
         return ERR_OBJECT_NOT_FOUND;
     }
 
     FILE *fp = fopen(file_path.c_str(), "rb");
     if (fp == nullptr) {
-        derror("md5sum error: open file %s failed", file_path.c_str());
+        LOG_ERROR("md5sum error: open file %s failed", file_path.c_str());
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -749,10 +750,10 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
                 break;
             } else {
                 int err = ferror(fp);
-                derror("md5sum error: read file %s failed: errno = %d (%s)",
-                       file_path.c_str(),
-                       err,
-                       safe_strerror(err).c_str());
+                LOG_ERROR("md5sum error: read file %s failed: errno = %d (%s)",
+                          file_path.c_str(),
+                          err,
+                          safe_strerror(err).c_str());
                 fclose(fp);
                 MD5_Final(out, &c);
                 return ERR_FILE_OPERATION_FAILED;

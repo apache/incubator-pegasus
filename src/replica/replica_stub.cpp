@@ -486,7 +486,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 {
     _primary_address = dsn_primary_address();
     strcpy(_primary_address_str, _primary_address.to_string());
-    ddebug("primary_address = %s", _primary_address_str);
+    LOG_INFO("primary_address = %s", _primary_address_str);
 
     set_options(opts);
     std::ostringstream oss;
@@ -495,7 +495,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             oss << ",";
         oss << _options.meta_servers[i].to_string();
     }
-    ddebug("meta_servers = %s", oss.str().c_str());
+    LOG_INFO("meta_servers = %s", oss.str().c_str());
 
     _deny_client = _options.deny_client_on_start;
     _verbose_client_log = _options.verbose_client_log_on_start;
@@ -530,10 +530,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                                    _options.log_shared_file_size_mb,
                                    _options.log_shared_force_flush,
                                    &_counter_shared_log_recent_write_size);
-    ddebug("slog_dir = %s", _options.slog_dir.c_str());
+    LOG_INFO("slog_dir = %s", _options.slog_dir.c_str());
 
     // init rps
-    ddebug("start to load replicas");
+    LOG_INFO("start to load replicas");
 
     std::vector<std::string> dir_list;
     for (auto &dir : _fs_manager.get_available_data_dirs()) {
@@ -558,18 +558,18 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             LPC_REPLICATION_INIT_LOAD,
             &_tracker,
             [this, dir, &rps, &rps_lock] {
-                ddebug("process dir %s", dir.c_str());
+                LOG_INFO("process dir %s", dir.c_str());
 
                 auto r = replica::load(this, dir.c_str());
                 if (r != nullptr) {
-                    ddebug("%s@%s: load replica '%s' success, <durable, commit> = <%" PRId64
-                           ", %" PRId64 ">, last_prepared_decree = %" PRId64,
-                           r->get_gpid().to_string(),
-                           dsn_primary_address().to_string(),
-                           dir.c_str(),
-                           r->last_durable_decree(),
-                           r->last_committed_decree(),
-                           r->last_prepared_decree());
+                    LOG_INFO("%s@%s: load replica '%s' success, <durable, commit> = <%" PRId64
+                             ", %" PRId64 ">, last_prepared_decree = %" PRId64,
+                             r->get_gpid().to_string(),
+                             dsn_primary_address().to_string(),
+                             dir.c_str(),
+                             r->last_durable_decree(),
+                             r->last_committed_decree(),
+                             r->last_prepared_decree());
 
                     utils::auto_lock<utils::ex_lock> l(rps_lock);
 
@@ -593,12 +593,12 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     dir_list.clear();
     load_tasks.clear();
-    ddebug("load replicas succeed, replica_count = %d, time_used = %" PRIu64 " ms",
-           static_cast<int>(rps.size()),
-           finish_time - start_time);
+    LOG_INFO("load replicas succeed, replica_count = %d, time_used = %" PRIu64 " ms",
+             static_cast<int>(rps.size()),
+             finish_time - start_time);
 
     // init shared prepare log
-    ddebug("start to replay shared log");
+    LOG_INFO("start to replay shared log");
 
     std::map<gpid, decree> replay_condition;
     for (auto it = rps.begin(); it != rps.end(); ++it) {
@@ -620,11 +620,12 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     finish_time = dsn_now_ms();
 
     if (err == ERR_OK) {
-        ddebug("replay shared log succeed, time_used = %" PRIu64 " ms", finish_time - start_time);
+        LOG_INFO("replay shared log succeed, time_used = %" PRIu64 " ms", finish_time - start_time);
     } else {
-        derror("replay shared log failed, err = %s, time_used = %" PRIu64 " ms, clear all logs ...",
-               err.to_string(),
-               finish_time - start_time);
+        LOG_ERROR("replay shared log failed, err = %s, time_used = %" PRIu64
+                  " ms, clear all logs ...",
+                  err.to_string(),
+                  finish_time - start_time);
 
         // we must delete or update meta server the error for all replicas
         // before we fix the logs
@@ -641,9 +642,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
             bool ret = dsn::utils::filesystem::rename_path(dir, rename_dir);
             dassert(ret, "init_replica: failed to move directory '%s' to '%s'", dir, rename_dir);
-            dwarn("init_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
-                  dir,
-                  rename_dir);
+            LOG_WARNING("init_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
+                        dir,
+                        rename_dir);
             _counter_replicas_recent_replica_move_error_count->increment();
         }
         rps.clear();
@@ -695,8 +696,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // we will mark all replicas inactive not transient unless all logs are complete
     if (!is_log_complete) {
-        derror("logs are not complete for some replicas, which means that shared log is truncated, "
-               "mark all replicas as inactive");
+        LOG_ERROR(
+            "logs are not complete for some replicas, which means that shared log is truncated, "
+            "mark all replicas as inactive");
         for (auto it = rps.begin(); it != rps.end(); ++it) {
             it->second->set_inactive_state_transient(false);
         }
@@ -742,7 +744,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             (_options.fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
         if (now_time_ms < dsn::utils::process_start_millis() + delay_time_ms) {
             uint64_t delay = dsn::utils::process_start_millis() + delay_time_ms - now_time_ms;
-            ddebug("delay for %" PRIu64 "ms to make failure detector timeout", delay);
+            LOG_INFO("delay for %" PRIu64 "ms to make failure detector timeout", delay);
             tasking::enqueue(LPC_REPLICA_SERVER_DELAY_START,
                              &_tracker,
                              [this]() { this->initialize_start(); },
@@ -848,7 +850,7 @@ void replica_stub::initialize_start()
 
 dsn::error_code replica_stub::on_kill_replica(gpid id)
 {
-    ddebug("kill replica: gpid = %s", id.to_string());
+    LOG_INFO("kill replica: gpid = %s", id.to_string());
     if (id.get_app_id() == -1 || id.get_partition_index() == -1) {
         replicas rs;
         {
@@ -905,12 +907,12 @@ void replica_stub::on_client_write(gpid id, dsn::message_ex *request)
         return;
     }
     if (_verbose_client_log && request) {
-        ddebug("%s@%s: client = %s, code = %s, timeout = %d",
-               id.to_string(),
-               _primary_address_str,
-               request->header->from_address.to_string(),
-               request->header->rpc_name,
-               request->header->client.timeout_ms);
+        LOG_INFO("%s@%s: client = %s, code = %s, timeout = %d",
+                 id.to_string(),
+                 _primary_address_str,
+                 request->header->from_address.to_string(),
+                 request->header->rpc_name,
+                 request->header->client.timeout_ms);
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
@@ -927,12 +929,12 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
         return;
     }
     if (_verbose_client_log && request) {
-        ddebug("%s@%s: client = %s, code = %s, timeout = %d",
-               id.to_string(),
-               _primary_address_str,
-               request->header->from_address.to_string(),
-               request->header->rpc_name,
-               request->header->client.timeout_ms);
+        LOG_INFO("%s@%s: client = %s, code = %s, timeout = %d",
+                 id.to_string(),
+                 _primary_address_str,
+                 request->header->from_address.to_string(),
+                 request->header->rpc_name,
+                 request->header->client.timeout_ms);
     }
     replica_ptr rep = get_replica(id);
     if (rep != nullptr) {
@@ -945,19 +947,19 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
 void replica_stub::on_config_proposal(const configuration_update_request &proposal)
 {
     if (!is_connected()) {
-        dwarn("%s@%s: received config proposal %s for %s: not connected, ignore",
-              proposal.config.pid.to_string(),
-              _primary_address_str,
-              enum_to_string(proposal.type),
-              proposal.node.to_string());
+        LOG_WARNING("%s@%s: received config proposal %s for %s: not connected, ignore",
+                    proposal.config.pid.to_string(),
+                    _primary_address_str,
+                    enum_to_string(proposal.type),
+                    proposal.node.to_string());
         return;
     }
 
-    ddebug("%s@%s: received config proposal %s for %s",
-           proposal.config.pid.to_string(),
-           _primary_address_str,
-           enum_to_string(proposal.type),
-           proposal.node.to_string());
+    LOG_INFO("%s@%s: received config proposal %s for %s",
+             proposal.config.pid.to_string(),
+             _primary_address_str,
+             enum_to_string(proposal.type),
+             proposal.node.to_string());
 
     replica_ptr rep = get_replica(proposal.config.pid);
     if (rep == nullptr) {
@@ -1105,7 +1107,7 @@ void replica_stub::on_query_app_info(query_app_info_rpc rpc)
     const query_app_info_request &req = rpc.request();
     query_app_info_response &resp = rpc.response();
 
-    ddebug("got query app info request from (%s)", req.meta_server.to_string());
+    LOG_INFO("got query app info request from (%s)", req.meta_server.to_string());
     resp.err = dsn::ERR_OK;
     std::set<app_id> visited_apps;
     {
@@ -1202,20 +1204,20 @@ void replica_stub::on_group_check(group_check_rpc rpc)
     const group_check_request &request = rpc.request();
     group_check_response &response = rpc.response();
     if (!is_connected()) {
-        dwarn("%s@%s: received group check: not connected, ignore",
-              request.config.pid.to_string(),
-              _primary_address_str);
+        LOG_WARNING("%s@%s: received group check: not connected, ignore",
+                    request.config.pid.to_string(),
+                    _primary_address_str);
         return;
     }
 
-    ddebug("%s@%s: received group check, primary = %s, ballot = %" PRId64
-           ", status = %s, last_committed_decree = %" PRId64,
-           request.config.pid.to_string(),
-           _primary_address_str,
-           request.config.primary.to_string(),
-           request.config.ballot,
-           enum_to_string(request.config.status),
-           request.last_committed_decree);
+    LOG_INFO("%s@%s: received group check, primary = %s, ballot = %" PRId64
+             ", status = %s, last_committed_decree = %" PRId64,
+             request.config.pid.to_string(),
+             _primary_address_str,
+             request.config.primary.to_string(),
+             request.config.ballot,
+             enum_to_string(request.config.status),
+             request.last_committed_decree);
 
     replica_ptr rep = get_replica(request.config.pid);
     if (rep != nullptr) {
@@ -1266,21 +1268,21 @@ void replica_stub::on_learn_completion_notification(learn_completion_notificatio
 void replica_stub::on_add_learner(const group_check_request &request)
 {
     if (!is_connected()) {
-        dwarn("%s@%s: received add learner: not connected, ignore",
-              request.config.pid.to_string(),
-              _primary_address_str,
-              request.config.primary.to_string());
+        LOG_WARNING("%s@%s: received add learner: not connected, ignore",
+                    request.config.pid.to_string(),
+                    _primary_address_str,
+                    request.config.primary.to_string());
         return;
     }
 
-    ddebug("%s@%s: received add learner, primary = %s, ballot = %" PRId64
-           ", status = %s, last_committed_decree = %" PRId64,
-           request.config.pid.to_string(),
-           _primary_address_str,
-           request.config.primary.to_string(),
-           request.config.ballot,
-           enum_to_string(request.config.status),
-           request.last_committed_decree);
+    LOG_INFO("%s@%s: received add learner, primary = %s, ballot = %" PRId64
+             ", status = %s, last_committed_decree = %" PRId64,
+             request.config.pid.to_string(),
+             _primary_address_str,
+             request.config.primary.to_string(),
+             request.config.ballot,
+             enum_to_string(request.config.status),
+             request.last_committed_decree);
 
     replica_ptr rep = get_replica(request.config.pid);
     if (rep != nullptr) {
@@ -1312,7 +1314,7 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
 
     dsn::error_code err = _fs_manager.get_disk_tag(r->dir(), info.disk_tag);
     if (dsn::ERR_OK != err) {
-        dwarn("get disk tag of %s failed: %s", r->dir().c_str(), err.to_string());
+        LOG_WARNING("get disk tag of %s failed: %s", r->dir().c_str(), err.to_string());
     }
 
     info.__set_manual_compact_status(r->get_manual_compact_status());
@@ -1369,8 +1371,8 @@ void replica_stub::query_configuration_by_node()
 
     ::dsn::marshall(msg, req);
 
-    ddebug("send query node partitions request to meta server, stored_replicas_count = %d",
-           (int)req.stored_replicas.size());
+    LOG_INFO("send query node partitions request to meta server, stored_replicas_count = %d",
+             (int)req.stored_replicas.size());
 
     rpc_address target(_failure_detector->get_servers());
     _config_query_task =
@@ -1384,7 +1386,7 @@ void replica_stub::query_configuration_by_node()
 
 void replica_stub::on_meta_server_connected()
 {
-    ddebug("meta server connected");
+    LOG_INFO("meta server connected");
 
     zauto_lock l(_state_lock);
     if (_state == NS_Disconnected) {
@@ -1401,7 +1403,7 @@ void replica_stub::on_node_query_reply(error_code err,
                                        dsn::message_ex *request,
                                        dsn::message_ex *response)
 {
-    ddebug("query node partitions replied, err = %s", err.to_string());
+    LOG_INFO("query node partitions replied, err = %s", err.to_string());
 
     zauto_lock l(_state_lock);
     _config_query_task = nullptr;
@@ -1423,8 +1425,8 @@ void replica_stub::on_node_query_reply(error_code err,
 
         if (resp.err == ERR_BUSY) {
             int delay_ms = 500;
-            ddebug("resend query node partitions request after %d ms for resp.err = ERR_BUSY",
-                   delay_ms);
+            LOG_INFO("resend query node partitions request after %d ms for resp.err = ERR_BUSY",
+                     delay_ms);
             _config_query_task = tasking::enqueue(LPC_QUERY_CONFIGURATION_ALL,
                                                   &_tracker,
                                                   [this]() {
@@ -1437,7 +1439,8 @@ void replica_stub::on_node_query_reply(error_code err,
             return;
         }
         if (resp.err != ERR_OK) {
-            ddebug("ignore query node partitions response for resp.err = %s", resp.err.to_string());
+            LOG_INFO("ignore query node partitions response for resp.err = %s",
+                     resp.err.to_string());
             return;
         }
 
@@ -1520,15 +1523,16 @@ void replica_stub::on_node_query_reply_scatter(replica_stub_ptr this_,
                                                               : split_status::NOT_SPLIT);
     } else {
         if (req.config.primary == _primary_address) {
-            ddebug("%s@%s: replica not exists on replica server, which is primary, remove it "
-                   "from meta server",
-                   req.config.pid.to_string(),
-                   _primary_address_str);
+            LOG_INFO("%s@%s: replica not exists on replica server, which is primary, remove it "
+                     "from meta server",
+                     req.config.pid.to_string(),
+                     _primary_address_str);
             remove_replica_on_meta_server(req.info, req.config);
         } else {
-            ddebug("%s@%s: replica not exists on replica server, which is not primary, just ignore",
-                   req.config.pid.to_string(),
-                   _primary_address_str);
+            LOG_INFO(
+                "%s@%s: replica not exists on replica server, which is not primary, just ignore",
+                req.config.pid.to_string(),
+                _primary_address_str);
         }
     }
 }
@@ -1542,11 +1546,11 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
         if (replica->status() == partition_status::PS_INACTIVE &&
             dsn_now_ms() - replica->create_time_milliseconds() <
                 _options.gc_memory_replica_interval_ms) {
-            ddebug("%s: replica not exists on meta server, wait to close", replica->name());
+            LOG_INFO("%s: replica not exists on meta server, wait to close", replica->name());
             return;
         }
 
-        ddebug("%s: replica not exists on meta server, remove", replica->name());
+        LOG_INFO("%s: replica not exists on meta server, remove", replica->name());
 
         // TODO: set PS_INACTIVE instead for further state reuse
         replica->update_local_configuration_with_no_ballot_change(partition_status::PS_ERROR);
@@ -1583,7 +1587,7 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
 
 void replica_stub::on_meta_server_disconnected()
 {
-    ddebug("meta server disconnected");
+    LOG_INFO("meta server disconnected");
 
     zauto_lock l(_state_lock);
     if (NS_Disconnected == _state)
@@ -1638,15 +1642,15 @@ void replica_stub::response_client(gpid id,
             _counter_recent_read_fail_count->increment();
         else
             _counter_recent_write_fail_count->increment();
-        derror("%s@%s: %s fail: client = %s, code = %s, timeout = %d, status = %s, error = %s",
-               id.to_string(),
-               _primary_address_str,
-               is_read ? "read" : "write",
-               request == nullptr ? "null" : request->header->from_address.to_string(),
-               request == nullptr ? "null" : request->header->rpc_name,
-               request == nullptr ? 0 : request->header->client.timeout_ms,
-               enum_to_string(status),
-               error.to_string());
+        LOG_ERROR("%s@%s: %s fail: client = %s, code = %s, timeout = %d, status = %s, error = %s",
+                  id.to_string(),
+                  _primary_address_str,
+                  is_read ? "read" : "write",
+                  request == nullptr ? "null" : request->header->from_address.to_string(),
+                  request == nullptr ? "null" : request->header->rpc_name,
+                  request == nullptr ? 0 : request->header->client.timeout_ms,
+                  enum_to_string(status),
+                  error.to_string());
     }
 
     if (request != nullptr) {
@@ -1682,17 +1686,18 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
 
     replica_path = get_replica_dir(closed_info.first.app_type.c_str(), id, false);
     if (replica_path.empty()) {
-        dwarn("gc closed replica(%s.%s) failed, no exist data",
-              id.to_string(),
-              closed_info.first.app_type.c_str());
+        LOG_WARNING("gc closed replica(%s.%s) failed, no exist data",
+                    id.to_string(),
+                    closed_info.first.app_type.c_str());
         return;
     }
 
-    ddebug("start to move replica(%s) as garbage, path: %s", id.to_string(), replica_path.c_str());
+    LOG_INFO(
+        "start to move replica(%s) as garbage, path: %s", id.to_string(), replica_path.c_str());
     char rename_path[1024];
     sprintf(rename_path, "%s.%" PRIu64 ".gar", replica_path.c_str(), dsn_now_us());
     if (!dsn::utils::filesystem::rename_path(replica_path, rename_path)) {
-        dwarn(
+        LOG_WARNING(
             "gc_replica: failed to move directory '%s' to '%s'", replica_path.c_str(), rename_path);
 
         // if gc the replica failed, add it back
@@ -1700,9 +1705,9 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
         _fs_manager.add_replica(id, replica_path);
         _closed_replicas.emplace(id, closed_info);
     } else {
-        dwarn("gc_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
-              replica_path.c_str(),
-              rename_path);
+        LOG_WARNING("gc_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
+                    replica_path.c_str(),
+                    rename_path);
         _counter_replicas_recent_replica_move_garbage_count->increment();
     }
 }
@@ -1735,7 +1740,7 @@ void replica_stub::on_gc()
         }
     }
 
-    ddebug("start to garbage collection, replica_count = %d", (int)rs.size());
+    LOG_INFO("start to garbage collection, replica_count = %d", (int)rs.size());
 
     // gc shared prepare log
     //
@@ -1769,21 +1774,23 @@ void replica_stub::on_gc()
 
                 decree plog_max_commit_on_disk = plog->max_commit_on_disk();
                 ri.max_decree = std::min(kv.second.last_durable_decree, plog_max_commit_on_disk);
-                ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
-                       rep->name(),
-                       enum_to_string(kv.second.status),
-                       ri.max_decree,
-                       kv.second.last_durable_decree,
-                       plog_max_commit_on_disk);
+                LOG_INFO(
+                    "gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
+                    ", last_durable_decree= %" PRId64 ", plog_max_commit_on_disk = %" PRId64 "",
+                    rep->name(),
+                    enum_to_string(kv.second.status),
+                    ri.max_decree,
+                    kv.second.last_durable_decree,
+                    plog_max_commit_on_disk);
             } else {
                 ri.max_decree = kv.second.last_durable_decree;
-                ddebug("gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
-                       ", last_durable_decree = %" PRId64 "",
-                       rep->name(),
-                       enum_to_string(kv.second.status),
-                       ri.max_decree,
-                       kv.second.last_durable_decree);
+                LOG_INFO(
+                    "gc_shared: gc condition for %s, status = %s, garbage_max_decree = %" PRId64
+                    ", last_durable_decree = %" PRId64 "",
+                    rep->name(),
+                    enum_to_string(kv.second.status),
+                    ri.max_decree,
+                    kv.second.last_durable_decree);
             }
             ri.valid_start_offset = kv.second.init_offset_in_shared_log;
             gc_condition[kv.first] = ri;
@@ -1793,11 +1800,11 @@ void replica_stub::on_gc()
         int reserved_log_count = _log->garbage_collection(
             gc_condition, _options.log_shared_file_count_limit, prevent_gc_replicas);
         if (reserved_log_count > _options.log_shared_file_count_limit * 2) {
-            ddebug("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
-                   "file_count_limit = %d, reserved_log_count = %d, trigger all replicas to do "
-                   "checkpoint",
-                   _options.log_shared_file_count_limit,
-                   reserved_log_count);
+            LOG_INFO("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
+                     "file_count_limit = %d, reserved_log_count = %d, trigger all replicas to do "
+                     "checkpoint",
+                     _options.log_shared_file_count_limit,
+                     reserved_log_count);
             for (auto &kv : rs) {
                 tasking::enqueue(
                     LPC_PER_REPLICA_CHECKPOINT_TIMER,
@@ -1815,13 +1822,14 @@ void replica_stub::on_gc()
                 oss << i.to_string();
                 c++;
             }
-            ddebug("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
-                   "file_count_limit = %d, reserved_log_count = %d, prevent_gc_replica_count = %d, "
-                   "trigger them to do checkpoint: { %s }",
-                   _options.log_shared_file_count_limit,
-                   reserved_log_count,
-                   (int)prevent_gc_replicas.size(),
-                   oss.str().c_str());
+            LOG_INFO(
+                "gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
+                "file_count_limit = %d, reserved_log_count = %d, prevent_gc_replica_count = %d, "
+                "trigger them to do checkpoint: { %s }",
+                _options.log_shared_file_count_limit,
+                reserved_log_count,
+                (int)prevent_gc_replicas.size(),
+                oss.str().c_str());
             for (auto &id : prevent_gc_replicas) {
                 auto find = rs.find(id);
                 if (find != rs.end()) {
@@ -1904,12 +1912,12 @@ void replica_stub::on_gc()
     _counter_replicas_splitting_max_async_learn_time_ms->set(splitting_max_async_learn_time_ms);
     _counter_replicas_splitting_max_copy_file_size->set(splitting_max_copy_file_size);
 
-    ddebug("finish to garbage collection, time_used_ns = %" PRIu64, dsn_now_ns() - start);
+    LOG_INFO("finish to garbage collection, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
 
 void replica_stub::on_disk_stat()
 {
-    ddebug("start to update disk stat");
+    LOG_INFO("start to update disk stat");
     uint64_t start = dsn_now_ns();
     disk_cleaning_report report{};
 
@@ -1924,7 +1932,7 @@ void replica_stub::on_disk_stat()
     _counter_replicas_origin_replica_dir_count->set(report.disk_migrate_origin_count);
     _counter_replicas_recent_replica_remove_dir_count->add(report.remove_dir_count);
 
-    ddebug("finish to update disk stat, time_used_ns = %" PRIu64, dsn_now_ns() - start);
+    LOG_INFO("finish to update disk stat, time_used_ns = %" PRIu64, dsn_now_ns() - start);
 }
 
 task_ptr replica_stub::begin_open_replica(
@@ -1937,17 +1945,17 @@ task_ptr replica_stub::begin_open_replica(
 
     if (_replicas.find(id) != _replicas.end()) {
         _replicas_lock.unlock_write();
-        ddebug("open replica '%s.%s' failed coz replica is already opened",
-               app.app_type.c_str(),
-               id.to_string());
+        LOG_INFO("open replica '%s.%s' failed coz replica is already opened",
+                 app.app_type.c_str(),
+                 id.to_string());
         return nullptr;
     }
 
     if (_opening_replicas.find(id) != _opening_replicas.end()) {
         _replicas_lock.unlock_write();
-        ddebug("open replica '%s.%s' failed coz replica is under opening",
-               app.app_type.c_str(),
-               id.to_string());
+        LOG_INFO("open replica '%s.%s' failed coz replica is under opening",
+                 app.app_type.c_str(),
+                 id.to_string());
         return nullptr;
     }
 
@@ -1968,9 +1976,9 @@ task_ptr replica_stub::begin_open_replica(
             // unlock here to avoid dead lock
             _replicas_lock.unlock_write();
 
-            ddebug("open replica '%s.%s' which is to be closed, reopen it",
-                   app.app_type.c_str(),
-                   id.to_string());
+            LOG_INFO("open replica '%s.%s' which is to be closed, reopen it",
+                     app.app_type.c_str(),
+                     id.to_string());
 
             // open by add learner
             if (group_check != nullptr) {
@@ -1978,9 +1986,9 @@ task_ptr replica_stub::begin_open_replica(
             }
         } else {
             _replicas_lock.unlock_write();
-            ddebug("open replica '%s.%s' failed coz replica is under closing",
-                   app.app_type.c_str(),
-                   id.to_string());
+            LOG_INFO("open replica '%s.%s' failed coz replica is under closing",
+                     app.app_type.c_str(),
+                     id.to_string());
         }
         return nullptr;
     }
@@ -2010,11 +2018,11 @@ void replica_stub::open_replica(
         // NOTICE: if partition is DDD, and meta select one replica as primary, it will execute the
         // load-process because of a.b.pegasus is exist, so it will never execute the restore
         // process below
-        ddebug("%s@%s: start to load replica %s group check, dir = %s",
-               id.to_string(),
-               _primary_address_str,
-               group_check ? "with" : "without",
-               dir.c_str());
+        LOG_INFO("%s@%s: start to load replica %s group check, dir = %s",
+                 id.to_string(),
+                 _primary_address_str,
+                 group_check ? "with" : "without",
+                 dir.c_str());
         rep = replica::load(this, dir.c_str());
 
         // if load data failed, re-open the `*.ori` folder which is the origin replica dir of disk
@@ -2093,9 +2101,9 @@ void replica_stub::open_replica(
     }
 
     if (rep == nullptr) {
-        ddebug("%s@%s: open replica failed, erase from opening replicas",
-               id.to_string(),
-               _primary_address_str);
+        LOG_INFO("%s@%s: open replica failed, erase from opening replicas",
+                 id.to_string(),
+                 _primary_address_str);
         zauto_write_lock l(_replicas_lock);
         auto ret = _opening_replicas.erase(id);
         dassert(ret > 0, "replica %s is not in _opening_replicas", id.to_string());
@@ -2151,9 +2159,9 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
         int delay_ms = 0;
         if (r->status() == partition_status::PS_INACTIVE) {
             delay_ms = _options.gc_memory_replica_interval_ms;
-            ddebug("%s: delay %d milliseconds to close replica, status = PS_INACTIVE",
-                   r->name(),
-                   delay_ms);
+            LOG_INFO("%s: delay %d milliseconds to close replica, status = PS_INACTIVE",
+                     r->name(),
+                     delay_ms);
         }
 
         app_info a_info = *(r->get_app_info());
@@ -2174,7 +2182,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
 
 void replica_stub::close_replica(replica_ptr r)
 {
-    ddebug("%s: start to close replica", r->name());
+    LOG_INFO("%s: start to close replica", r->name());
 
     gpid id = r->get_gpid();
     std::string name = r->name();
@@ -2193,7 +2201,7 @@ void replica_stub::close_replica(replica_ptr r)
         _counter_replicas_closing_count->decrement();
     }
 
-    ddebug("%s: finish to close replica", name.c_str());
+    LOG_INFO("%s: finish to close replica", name.c_str());
 }
 
 void replica_stub::notify_replica_state_update(const replica_configuration &config, bool is_closing)
@@ -2217,7 +2225,7 @@ void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
 
 void replica_stub::handle_log_failure(error_code err)
 {
-    derror("handle log failure: %s", err.to_string());
+    LOG_ERROR("handle log failure: %s", err.to_string());
     if (!s_not_exit_on_log_failure) {
         dassert(false, "TODO: better log failure handling ...");
     }

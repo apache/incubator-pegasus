@@ -65,7 +65,7 @@ using namespace dsn::literals::chrono_literals;
         dsn::from_blob_to_thrift(data, thrift_request);
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
-    dfatal("unexpected task code: %s", tc.to_string());
+    LOG_FATAL("unexpected task code: %s", tc.to_string());
     __builtin_unreachable();
 }
 
