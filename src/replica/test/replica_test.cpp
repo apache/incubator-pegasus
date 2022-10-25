@@ -189,7 +189,7 @@ public:
     {
         const auto reserved_max_replica_count = _app_info.max_replica_count;
         const int32_t target_max_replica_count = 5;
-        dassert_f(target_max_replica_count != reserved_max_replica_count,
+        CHECK(target_max_replica_count != reserved_max_replica_count,
                   "target_max_replica_count should not be equal to reserved_max_replica_count:"
                   "target_max_replica_count={}, reserved_max_replica_count={}",
                   target_max_replica_count,

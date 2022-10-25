@@ -496,7 +496,7 @@ public:
     // NOTICE: x MUST be a non-negative integer.
     void increment_by(int64_t x)
     {
-        dassert_f(x >= 0, "delta({}) by increment for counter must be a non-negative integer", x);
+        CHECK(x >= 0, "delta({}) by increment for counter must be a non-negative integer", x);
         _adder.increment_by(x);
     }
 

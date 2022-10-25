@@ -37,9 +37,9 @@ capacity_unit_calculator::capacity_unit_calculator(
       _write_hotkey_collector(write_hotkey_collector),
       _read_size_throttling_controller(read_size_throttling_controller)
 {
-    dassert(_read_hotkey_collector != nullptr, "read hotkey collector is a nullptr");
-    dassert(_write_hotkey_collector != nullptr, "write hotkey collector is a nullptr");
-    dassert(_read_size_throttling_controller != nullptr,
+    CHECK(_read_hotkey_collector, "read hotkey collector is a nullptr");
+    CHECK(_write_hotkey_collector, "write hotkey collector is a nullptr");
+    CHECK(_read_size_throttling_controller,
             "_read_size_throttling_controller is a nullptr");
 
     _read_capacity_unit_size =
@@ -52,9 +52,9 @@ capacity_unit_calculator::capacity_unit_calculator(
                                     "perf_counter_write_capacity_unit_size",
                                     4 * 1024,
                                     "capacity unit size of write requests, default 4KB");
-    dassert(powerof2(_read_capacity_unit_size),
+    CHECK(powerof2(_read_capacity_unit_size),
             "'perf_counter_read_capacity_unit_size' must be a power of 2");
-    dassert(powerof2(_write_capacity_unit_size),
+    CHECK(powerof2(_write_capacity_unit_size),
             "'perf_counter_write_capacity_unit_size' must be a power of 2");
     _log_read_cu_size = log(_read_capacity_unit_size) / log(2);
     _log_write_cu_size = log(_write_capacity_unit_size) / log(2);

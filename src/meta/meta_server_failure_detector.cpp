@@ -91,14 +91,14 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
         // get leader addr
         auto addr_part = str.substr(pos + 1, str.length() - pos - 1);
         if (!leader->from_string_ipv4(addr_part.data())) {
-            dassert_f(false, "parse {} to rpc_address failed", addr_part);
+            CHECK(false, "parse {} to rpc_address failed", addr_part);
         }
 
         // get the return value which implies whether the current node is primary or not
         bool is_leader = true;
         auto is_leader_part = str.substr(0, pos);
         if (!dsn::buf2bool(is_leader_part, is_leader)) {
-            dassert_f(false, "parse {} to bool failed", is_leader_part);
+            CHECK(false, "parse {} to bool failed", is_leader_part);
         }
         return is_leader;
     });

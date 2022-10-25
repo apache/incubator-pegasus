@@ -102,13 +102,13 @@ private:
                     cluster.data());
             _group.emplace(cluster, static_cast<uint8_t>(cluster_id));
         }
-        dassert_f(clusters.size() == _group.size(),
+        CHECK(clusters.size() == _group.size(),
                   "there might be duplicate cluster_name in configuration");
 
         for (const auto &kv : _group) {
             _distinct_cids.insert(kv.second);
         }
-        dassert_f(_distinct_cids.size() == _group.size(),
+        CHECK(_distinct_cids.size() == _group.size(),
                   "there might be duplicate cluster_id in configuration");
     }
     ~duplication_group_registry() = default;

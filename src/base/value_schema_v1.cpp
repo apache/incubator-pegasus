@@ -37,7 +37,7 @@ std::unique_ptr<value_field> value_schema_v1::extract_field(dsn::string_view val
         field = extract_time_tag(value);
         break;
     default:
-        dassert_f(false, "Unsupported field type: {}", type);
+        CHECK(false, "Unsupported field type: {}", type);
     }
     return field;
 }
@@ -56,7 +56,7 @@ void value_schema_v1::update_field(std::string &value, std::unique_ptr<value_fie
         update_expire_ts(value, std::move(field));
         break;
     default:
-        dassert_f(false, "Unsupported update field type: {}", type);
+        CHECK(false, "Unsupported update field type: {}", type);
     }
 }
 
@@ -70,7 +70,7 @@ rocksdb::SliceParts value_schema_v1::generate_value(const value_params &params)
         static_cast<user_data_field *>(params.fields[value_field_type::USER_DATA].get());
     if (dsn_unlikely(expire_ts_field == nullptr || data_field == nullptr ||
                      timetag_field == nullptr)) {
-        dassert_f(false, "USER_DATA or EXPIRE_TIMESTAMP or TIME_TAG is not provided");
+        CHECK(false, "USER_DATA or EXPIRE_TIMESTAMP or TIME_TAG is not provided");
         return {nullptr, 0};
     }
 
@@ -103,7 +103,7 @@ std::unique_ptr<value_field> value_schema_v1::extract_time_tag(dsn::string_view 
 
 void value_schema_v1::update_expire_ts(std::string &value, std::unique_ptr<value_field> field)
 {
-    dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
+    CHECK(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
     auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
     auto new_expire_ts = dsn::endian::hton(expire_field->expire_ts);

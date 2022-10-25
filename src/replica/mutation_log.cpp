@@ -842,7 +842,7 @@ std::pair<log_file_ptr, int64_t> mutation_log::mark_new_offset(size_t size,
 
         if (create_file) {
             auto ec = create_new_log_file();
-            dassert_f(ec == ERR_OK,
+            CHECK(ec == ERR_OK,
                       "{} create new log file failed: {}",
                       _is_private ? _private_gpid.to_string() : "",
                       ec);
@@ -967,7 +967,7 @@ error_code mutation_log::reset_from(const std::string &dir,
             if (!utils::filesystem::rename_path(temp_dir, _dir)) {
                 // rollback failed means old log files are not be recovered, it may be lost if only
                 // LOG_ERROR,  dassert for manual resolve it
-                dassert_f("rollback {} to {} failed", temp_dir, _dir);
+                CHECK("rollback {} to {} failed", temp_dir, _dir);
             }
         } else {
             if (!dsn::utils::filesystem::remove_path(temp_dir)) {

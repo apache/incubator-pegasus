@@ -129,8 +129,8 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
 
     zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+    CHECK(app != nullptr, "app({}) is not existed", app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", app_name);
 
     const gpid &parent_gpid = request.parent_config.pid;
     const gpid &child_gpid = request.child_config.pid;
@@ -176,7 +176,7 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
             app_name,
             child_gpid);
         const auto &child_config = app->partitions[child_gpid.get_partition_index()];
-        dassert_f(child_config.ballot > 0,
+        CHECK(child_config.ballot > 0,
                   "app({}) partition({}) should have been registered",
                   app_name,
                   child_gpid);
@@ -245,8 +245,8 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
 
     zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+    CHECK(app != nullptr, "app({}) is not existed", app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", app_name);
 
     const gpid &parent_gpid = request.parent_config.pid;
     const gpid &child_gpid = request.child_config.pid;
@@ -267,7 +267,7 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
                              std::chrono::seconds(delay));
         return;
     }
-    dassert_f(ec == ERR_OK, "we can't handle this right now, err = {}", ec);
+    CHECK(ec == ERR_OK, "we can't handle this right now, err = {}", ec);
 
     LOG_INFO_F("parent({}) resgiter child({}) on remote storage succeed", parent_gpid, child_gpid);
 
@@ -468,9 +468,9 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     auto &response = rpc.response();
     zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(request.app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", request.app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", request.app_name);
-    dassert_f(request.meta_split_status == split_status::PAUSING ||
+    CHECK(app != nullptr, "app({}) is not existed", request.app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", request.app_name);
+    CHECK(request.meta_split_status == split_status::PAUSING ||
                   request.meta_split_status == split_status::CANCELING,
               "invalid split_status({})",
               dsn::enum_to_string(request.meta_split_status));
@@ -513,7 +513,7 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     }
 
     // canceling split
-    dassert_f(request.partition_count * 2 == app->partition_count,
+    CHECK(request.partition_count * 2 == app->partition_count,
               "wrong partition_count, request({}) vs meta({})",
               request.partition_count,
               app->partition_count);
@@ -554,8 +554,8 @@ void meta_split_service::query_child_state(query_child_state_rpc rpc)
 
     zauto_read_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+    CHECK(app != nullptr, "app({}) is not existed", app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", app_name);
 
     if (app->partition_count == request.partition_count) {
         response.err = ERR_INVALID_STATE;
@@ -563,7 +563,7 @@ void meta_split_service::query_child_state(query_child_state_rpc rpc)
         return;
     }
 
-    dassert_f(app->partition_count == request.partition_count * 2,
+    CHECK(app->partition_count == request.partition_count * 2,
               "app({}) has invalid partition_count",
               app_name);
 

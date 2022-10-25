@@ -70,7 +70,7 @@ public:
     void set_nths(const nth_container_type &nths)
     {
         _nths = nths;
-        dassert_f(std::is_sorted(_nths.begin(), _nths.end()),
+        CHECK(std::is_sorted(_nths.begin(), _nths.end()),
                   "nth indexes({}) is not sorted",
                   fmt::join(_nths, " "));
 
@@ -89,7 +89,7 @@ public:
     {
         for (size_type i = 0; i < _nths.size();) {
             auto nth_iter = begin + _nths[i];
-            dassert_f(nth_iter >= first && nth_iter < last, "Invalid iterators for nth_element()");
+            CHECK(nth_iter >= first && nth_iter < last, "Invalid iterators for nth_element()");
             std::nth_element(first, nth_iter, last, _comp);
             _elements[i] = *nth_iter;
 

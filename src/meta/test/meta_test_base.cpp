@@ -122,7 +122,7 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
     std::vector<dsn::rpc_address> nodes(get_alive_nodes());
     if (!nodes.empty()) {
         auto node_count = static_cast<int>(nodes.size());
-        dassert_f(node_count >= min_node_count,
+        CHECK(node_count >= min_node_count,
                   "there should be at least {} alive nodes, now we just have {} alive nodes",
                   min_node_count,
                   node_count);

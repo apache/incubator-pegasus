@@ -278,7 +278,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
 {
     std::list<dsn::gpid> potential_moving = calc_potential_moving(app, from, to);
     auto potential_moving_size = potential_moving.size();
-    dassert_f(plan_moving <= potential_moving_size,
+    CHECK(plan_moving <= potential_moving_size,
               "from({}) to({}) plan({}), can_move({})",
               from.to_string(),
               to.to_string(),
@@ -293,7 +293,7 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
             selected,
             generate_balancer_request(
                 *_global_view->apps, pc, balance_type::MOVE_PRIMARY, from, to));
-        dassert_f(balancer_result.second, "gpid({}) already inserted as an action", selected);
+        CHECK(balancer_result.second, "gpid({}) already inserted as an action", selected);
 
         --(*prev_load)[get_disk_tag(*_global_view->apps, from, selected)];
         ++(*current_load)[get_disk_tag(*_global_view->apps, to, selected)];
@@ -333,7 +333,7 @@ dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_mov
         }
     }
 
-    dassert_f(selected != potential_moving.end(),
+    CHECK(selected != potential_moving.end(),
               "can't find gpid to move from({}) to({})",
               from.to_string(),
               to.to_string());
@@ -554,7 +554,7 @@ void ford_fulkerson::update_decree(int node_id, const node_state &ns)
         const partition_configuration &pc = _app->partitions[pid.get_partition_index()];
         for (const auto &secondary : pc.secondaries) {
             auto i = _address_id.find(secondary);
-            dassert_f(i != _address_id.end(),
+            CHECK(i != _address_id.end(),
                       "invalid secondary address, address = {}",
                       secondary.to_string());
             _network[node_id][i->second]++;
@@ -738,7 +738,7 @@ gpid copy_replica_operation::select_partition(migration_list *result)
 
     int id_max = *_ordered_address_ids.rbegin();
     const node_state &ns = _nodes.find(_address_vec[id_max])->second;
-    dassert_f(partitions != nullptr && !partitions->empty(),
+    CHECK(partitions != nullptr && !partitions->empty(),
               "max load({}) shouldn't empty",
               ns.addr().to_string());
 

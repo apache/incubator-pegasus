@@ -280,7 +280,7 @@ void hotkey_collector::on_start_detect(dsn::replication::detect_hotkey_response 
         resp.err = dsn::ERR_INVALID_STATE;
         resp.__set_err_hint(hint);
         LOG_ERROR_PREFIX(hint);
-        dassert(false, "invalid collector state");
+        CHECK(false, "invalid collector state");
     }
     resp.__set_err_hint(hint);
     LOG_WARNING_PREFIX(hint);

@@ -673,8 +673,8 @@ void run_percentile(const metric_entity_ptr &my_entity,
                     const std::vector<T> &expected_elements,
                     Checker checker)
 {
-    dassert_f(num_threads > 0, "Invalid num_threads({})", num_threads);
-    dassert_f(data.size() <= sample_size && data.size() % num_threads == 0,
+    CHECK(num_threads > 0, "Invalid num_threads({})", num_threads);
+    CHECK(data.size() <= sample_size && data.size() % num_threads == 0,
               "Invalid arguments, data_size={}, sample_size={}, num_threads={}",
               data.size(),
               sample_size,

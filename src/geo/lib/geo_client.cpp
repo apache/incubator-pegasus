@@ -67,13 +67,13 @@ geo_client::geo_client(const char *config_file,
                        const char *geo_app_name)
 {
     bool ok = pegasus_client_factory::initialize(config_file);
-    dassert(ok, "init pegasus client factory failed");
+    CHECK(ok, "init pegasus client factory failed");
 
     _common_data_client = pegasus_client_factory::get_client(cluster_name, common_app_name);
-    dassert(_common_data_client != nullptr, "init pegasus _common_data_client failed");
+    CHECK(_common_data_client, "init pegasus _common_data_client failed");
 
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
-    dassert(_geo_data_client != nullptr, "init pegasus _geo_data_client failed");
+    CHECK(_geo_data_client, "init pegasus _geo_data_client failed");
 
     _min_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "min_level", 12, "min cell level for scan");
@@ -81,7 +81,7 @@ geo_client::geo_client(const char *config_file,
     _max_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "max_level", 16, "max cell level for scan");
 
-    dassert_f(_min_level < _max_level,
+    CHECK(_min_level < _max_level,
               "_min_level({}) must be less than _max_level({})",
               _min_level,
               _max_level);
@@ -93,7 +93,7 @@ geo_client::geo_client(const char *config_file,
         "geo_client.lib", "longitude_index", 4, "longitude index in value");
 
     dsn::error_s s = _codec.set_latlng_indices(latitude_index, longitude_index);
-    dassert_f(s.is_ok(), "set_latlng_indices({}, {}) failed", latitude_index, longitude_index);
+    CHECK(s.is_ok(), "set_latlng_indices({}, {}) failed", latitude_index, longitude_index);
 }
 
 dsn::error_s geo_client::set_max_level(int level)
@@ -649,7 +649,7 @@ void geo_client::async_get_result_from_cells(const S2CellUnion &cids,
                 }
             }
 
-            dassert(!start_stop_sort_keys.first.empty(), "");
+            CHECK(!start_stop_sort_keys.first.empty(), "");
             // the last sub slice of current `cid` on `_max_level` in Hilbert curve covered by `cap`
             if (start_stop_sort_keys.second.empty()) {
                 start_stop_sort_keys.second = gen_stop_sort_key(pre, hash_key);

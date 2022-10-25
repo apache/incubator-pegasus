@@ -61,7 +61,7 @@ inline uint64_t extract_timestamp_from_timetag(uint64_t timetag)
 /// \return expire_ts in host endian
 inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view value)
 {
-    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
+    CHECK(version <= PEGASUS_DATA_VERSION_MAX,
               "data version({}) must be <= {}",
               version,
               PEGASUS_DATA_VERSION_MAX);
@@ -76,7 +76,7 @@ inline uint32_t pegasus_extract_expire_ts(uint32_t version, dsn::string_view val
 inline void
 pegasus_extract_user_data(uint32_t version, std::string &&raw_value, ::dsn::blob &user_data)
 {
-    dassert_f(version <= PEGASUS_DATA_VERSION_MAX,
+    CHECK(version <= PEGASUS_DATA_VERSION_MAX,
               "data version({}) must be <= {}",
               version,
               PEGASUS_DATA_VERSION_MAX);
@@ -110,7 +110,7 @@ inline uint64_t pegasus_extract_timetag(int version, dsn::string_view value)
 inline void pegasus_update_expire_ts(uint32_t version, std::string &value, uint32_t new_expire_ts)
 {
     if (version == 0 || version == 1) {
-        dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
+        CHECK(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
 
         new_expire_ts = dsn::endian::hton(new_expire_ts);
         memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));

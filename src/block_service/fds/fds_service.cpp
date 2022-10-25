@@ -206,19 +206,19 @@ dsn::task_ptr fds_service::list_dir(const ls_request &req,
                 // fds listing's objects are with full-path, we must extract the postfix to emulate
                 // the filesystem structure
                 for (const galaxy::fds::FDSObjectSummary &obj : objs) {
-                    dassert(fds_path.empty() || boost::starts_with(obj.objectName(), fds_path),
-                            "invalid path(%s) in parent(%s)",
-                            obj.objectName().c_str(),
-                            fds_path.c_str());
+                    CHECK(fds_path.empty() || boost::starts_with(obj.objectName(), fds_path),
+                            "invalid path({}) in parent({})",
+                            obj.objectName(),
+                            fds_path);
                     resp.entries->push_back(
                         {utils::path_from_fds(obj.objectName().substr(fds_path.size()), false),
                          false});
                 }
                 for (const std::string &s : common_prefix) {
-                    dassert(fds_path.empty() || boost::starts_with(s, fds_path),
-                            "invalid path(%s) in parent(%s)",
-                            s.c_str(),
-                            fds_path.c_str());
+                    CHECK(fds_path.empty() || boost::starts_with(s, fds_path),
+                            "invalid path({}) in parent({})",
+                            s,
+                            fds_path);
                     resp.entries->push_back(
                         {utils::path_from_fds(s.substr(fds_path.size()), true), true});
                 }
@@ -407,16 +407,16 @@ error_code fds_file_object::get_file_meta()
 
         // get file length
         auto iter = meta.find(fds_service::FILE_LENGTH_CUSTOM_KEY);
-        dassert_f(iter != meta.end(),
+        CHECK(iter != meta.end(),
                   "can't find {} in object({})'s metadata",
                   fds_service::FILE_LENGTH_CUSTOM_KEY.c_str(),
                   _fds_path.c_str());
         bool valid = dsn::buf2uint64(iter->second, _size);
-        dassert_f(valid, "error to get file size");
+        CHECK(valid, "error to get file size");
 
         // get md5 key
         iter = meta.find(fds_service::FILE_MD5_KEY);
-        dassert_f(iter != meta.end(),
+        CHECK(iter != meta.end(),
                   "can't find {} in object({})'s metadata",
                   fds_service::FILE_MD5_KEY.c_str(),
                   _fds_path.c_str());

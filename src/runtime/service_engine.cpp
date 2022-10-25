@@ -233,7 +233,7 @@ void service_engine::start_node(service_app_spec &app_spec)
             // union to existing node if any port is shared
             auto it = app_name_by_port.find(p);
             if (it != app_name_by_port.end()) {
-                dassert_f(false,
+                CHECK(false,
                           "network port {} usage confliction for {} vs {}, "
                           "please reconfig",
                           p,
@@ -245,7 +245,7 @@ void service_engine::start_node(service_app_spec &app_spec)
 
         auto node = std::make_shared<service_node>(app_spec);
         error_code err = node->start();
-        dassert_f(err == ERR_OK, "service node start failed, err = {}", err.to_string());
+        CHECK(err == ERR_OK, "service node start failed, err = {}", err.to_string());
 
         _nodes_by_app_id[node->id()] = node;
     }

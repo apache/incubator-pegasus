@@ -544,7 +544,7 @@ void app_state_helper::reset_manual_compact_status()
 bool app_state_helper::get_manual_compact_progress(/*out*/ int32_t &progress) const
 {
     int32_t total_replica_count = owner->partition_count * owner->max_replica_count;
-    dassert_f(total_replica_count > 0,
+    CHECK(total_replica_count > 0,
               "invalid app metadata, app({}), partition_count({}), max_replica_count({})",
               owner->app_name,
               owner->partition_count,

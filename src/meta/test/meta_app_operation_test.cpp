@@ -128,7 +128,7 @@ public:
                                          int32_t max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app != nullptr, "app({}) does not exist", app_name);
 
         auto &partition_config = app->partitions[partition_index];
         partition_config.max_replica_count = max_replica_count;
@@ -137,7 +137,7 @@ public:
     void set_max_replica_count_env(const std::string &app_name, const std::string &env)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app != nullptr, "app({}) does not exist", app_name);
 
         if (env.empty()) {
             app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
@@ -176,7 +176,7 @@ public:
                                                       int32_t max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app != nullptr, "app({}) does not exist", app_name);
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {
@@ -217,7 +217,7 @@ public:
                                                  int32_t expected_max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app != nullptr, "app({}) does not exist", app_name);
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {
@@ -251,7 +251,7 @@ public:
                                       int32_t expected_max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app != nullptr, "app({}) does not exist", app_name);
 
         // verify local max_replica_count of the app
         ASSERT_EQ(app->max_replica_count, expected_max_replica_count);
@@ -405,7 +405,7 @@ TEST_F(meta_app_operation_test, create_app)
 
         set_min_live_node_count_for_unfreeze(test.min_live_node_count_for_unfreeze);
 
-        dassert_f(total_node_count >= test.alive_node_count,
+        CHECK(total_node_count >= test.alive_node_count,
                   "total_node_count({}) should be >= alive_node_count({})",
                   total_node_count,
                   test.alive_node_count);
@@ -749,7 +749,7 @@ TEST_F(meta_app_operation_test, set_max_replica_count)
         FLAGS_max_allowed_replica_count = test.max_allowed_replica_count;
 
         // set some nodes unalive to match the expected number of alive ndoes
-        dassert_f(total_node_count >= test.alive_node_count,
+        CHECK(total_node_count >= test.alive_node_count,
                   "total_node_count({}) should be >= alive_node_count({})",
                   total_node_count,
                   test.alive_node_count);

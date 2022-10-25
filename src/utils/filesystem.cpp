@@ -806,7 +806,7 @@ error_code read_file(const std::string &fname, std::string &buf)
         return ERR_FILE_OPERATION_FAILED;
     }
     fin.read(&buf[0], file_sz);
-    dassert_f(file_sz == fin.gcount(),
+    CHECK(file_sz == fin.gcount(),
               "read file({}) failed, file_size = {} but read size = {}",
               fname,
               file_sz,

@@ -33,15 +33,15 @@ block_service_registry::block_service_registry()
     bool ans;
     ans = utils::factory_store<block_filesystem>::register_factory(
         "fds_service", block_filesystem::create<fds_service>, PROVIDER_TYPE_MAIN);
-    dassert(ans, "register fds_service failed");
+    CHECK(ans, "register fds_service failed");
 
     ans = utils::factory_store<block_filesystem>::register_factory(
         "hdfs_service", block_filesystem::create<hdfs_service>, PROVIDER_TYPE_MAIN);
-    dassert(ans, "register hdfs_service failed");
+    CHECK(ans, "register hdfs_service failed");
 
     ans = utils::factory_store<block_filesystem>::register_factory(
         "local_service", block_filesystem::create<local_service>, PROVIDER_TYPE_MAIN);
-    dassert(ans, "register local_service failed");
+    CHECK(ans, "register local_service failed");
 }
 
 block_service_manager::block_service_manager()

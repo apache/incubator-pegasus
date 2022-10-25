@@ -32,7 +32,7 @@ aio_task::aio_task(dsn::task_code code, aio_handler &&cb, int hash, service_node
 {
     _is_null = (_cb == nullptr);
 
-    dassert_f(TASK_TYPE_AIO == spec().type,
+    CHECK(TASK_TYPE_AIO == spec().type,
               "{} is not of AIO type, please use DEFINE_TASK_CODE_AIO to define the task code",
               spec().name);
     set_error_code(ERR_IO_PENDING);

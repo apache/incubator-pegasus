@@ -54,7 +54,7 @@ DSN_DEFINE_string("security", service_name, "", "service name");
 // will not pass.
 error_s check_configuration()
 {
-    dassert(FLAGS_enable_auth || FLAGS_enable_zookeeper_kerberos,
+    CHECK(FLAGS_enable_auth || FLAGS_enable_zookeeper_kerberos,
             "There is no need to check configuration if FLAGS_enable_auth"
             " and FLAGS_enable_zookeeper_kerberos both are not true");
 
@@ -269,7 +269,7 @@ void kinit_context::schedule_renew_credentials()
         } else if (err == boost::system::errc::operation_canceled) {
             LOG_WARNING("the renew credentials timer is cancelled");
         } else {
-            dassert_f(false, "unhandled error({})", err.message());
+            CHECK(false, "unhandled error({})", err.message());
         }
     });
 }

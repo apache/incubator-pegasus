@@ -99,7 +99,7 @@ void metric_entity::set_attributes(attr_map &&attrs)
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id,
                                                        metric_entity::attr_map attrs) const
 {
-    dassert_f(attrs.find("entity") == attrs.end(), "{}'s attribute \"entity\" is reserved", id);
+    CHECK(attrs.find("entity") == attrs.end(), "{}'s attribute \"entity\" is reserved", id);
 
     attrs["entity"] = _name;
     return metric_registry::instance().find_or_create_entity(id, std::move(attrs));
@@ -243,13 +243,13 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
     } while (0)
 
     if (dsn_unlikely(!!ec)) {
-        dassert_f(ec == boost::system::errc::operation_canceled,
+        CHECK(ec == boost::system::errc::operation_canceled,
                   "failed to exec on_timer with an error that cannot be handled: {}",
                   ec.message());
 
         // Cancel can only be launched by close().
         auto expected_state = state::kClosing;
-        dassert_f(_state.compare_exchange_strong(expected_state, state::kClosed),
+        CHECK(_state.compare_exchange_strong(expected_state, state::kClosed),
                   "wrong state for percentile_timer: {}, while expecting closing state",
                   static_cast<int>(expected_state));
         on_close();

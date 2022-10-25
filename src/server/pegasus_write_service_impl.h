@@ -446,7 +446,7 @@ public:
                     resp.error = _rocksdb_wrapper->write_batch_put(
                         decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
                 } else {
-                    dassert_f(m.operation == ::dsn::apps::mutate_operation::MO_DELETE,
+                    CHECK(m.operation == ::dsn::apps::mutate_operation::MO_DELETE,
                               "m.operation = %d",
                               m.operation);
                     resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
@@ -674,7 +674,7 @@ private:
             }
         }
         default:
-            dassert(false, "unsupported check type: %d", check_type);
+            CHECK(false, "unsupported check type: {}", check_type);
         }
         return false;
     }

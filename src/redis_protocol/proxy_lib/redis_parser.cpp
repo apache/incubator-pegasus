@@ -103,9 +103,9 @@ void redis_parser::prepare_current_buffer()
     void *msg_buffer;
     if (_current_buffer == nullptr) {
         dsn::message_ex *first_msg = _recv_buffers.front();
-        dassert(
+        CHECK(
             first_msg->read_next(&msg_buffer, &_current_buffer_length),
-            "read dsn::message_ex* failed, msg from_address = %s, to_address = %s, rpc_name = %s",
+            "read dsn::message_ex* failed, msg from_address = {}, to_address = {}, rpc_name = {}",
             first_msg->header->from_address.to_string(),
             first_msg->to_address.to_string(),
             first_msg->header->rpc_name);
@@ -369,7 +369,7 @@ void redis_parser::reply_all_ready()
     std::vector<dsn::message_ex *> ready_responses;
     fetch_and_dequeue_messages(ready_responses, true);
     for (dsn::message_ex *m : ready_responses) {
-        dassert(m != nullptr, "");
+        CHECK(m, "");
         dsn_rpc_reply(m, ::dsn::ERR_OK);
         // added when message is created
         m->release_ref();
@@ -1355,7 +1355,7 @@ void redis_parser::redis_simple_string::marshalling(::dsn::binary_writer &write_
 
 void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_stream) const
 {
-    dassert_f((-1 == length && data.length() == 0) || data.length() == length,
+    CHECK((-1 == length && data.length() == 0) || data.length() == length,
               "{} VS {}",
               data.length(),
               length);
@@ -1373,7 +1373,7 @@ void redis_parser::redis_bulk_string::marshalling(::dsn::binary_writer &write_st
 
 void redis_parser::redis_array::marshalling(::dsn::binary_writer &write_stream) const
 {
-    dassert_f((-1 == count && array.size() == 0) || array.size() == count,
+    CHECK((-1 == count && array.size() == 0) || array.size() == count,
               "{} VS {}",
               array.size(),
               count);

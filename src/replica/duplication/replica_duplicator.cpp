@@ -215,7 +215,7 @@ void replica_duplicator::verify_start_decree(decree start_decree)
     decree confirmed_decree = progress().confirmed_decree;
     decree last_decree = progress().last_decree;
     decree max_gced_decree = get_max_gced_decree();
-    dassert_f(max_gced_decree < start_decree,
+    CHECK(max_gced_decree < start_decree,
               "the logs haven't yet duplicated were accidentally truncated "
               "[max_gced_decree: {}, start_decree: {}, confirmed_decree: {}, last_decree: {}]",
               max_gced_decree,

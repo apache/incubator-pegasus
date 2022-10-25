@@ -61,7 +61,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     try {
         auto iter = _non_batch_write_handlers.find(requests[0]->rpc_code());
         if (iter != _non_batch_write_handlers.end()) {
-            dassert_f(count == 1, "count = {}", count);
+            CHECK(count == 1, "count = {}", count);
             return iter->second(requests[0]);
         }
     } catch (TTransportException &ex) {
@@ -84,7 +84,7 @@ int pegasus_server_write::on_batched_writes(dsn::message_ex **requests, int coun
         _write_svc->batch_prepare(_decree);
 
         for (int i = 0; i < count; ++i) {
-            dassert(requests[i] != nullptr, "request[%d] is null", i);
+            CHECK(requests[i], "request[%d] is null", i);
 
             // Make sure all writes are batched even if they are failed,
             // since we need to record the total qps and rpc latencies,

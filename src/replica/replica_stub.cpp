@@ -521,7 +521,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     std::string cdir;
     std::string err_msg;
     if (!dsn::utils::filesystem::create_directory(_options.slog_dir, cdir, err_msg)) {
-        dassert_f(false, "{}", err_msg);
+        CHECK(false, "{}", err_msg);
     }
     _options.slog_dir = cdir;
     initialize_fs_manager(_options.data_dirs, _options.data_dir_tags);
@@ -773,7 +773,7 @@ void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
             if (FLAGS_ignore_broken_disk) {
                 LOG_WARNING_F("data dir[{}] is broken, ignore it, error:{}", dir, err_msg);
             } else {
-                dassert_f(false, "{}", err_msg);
+                CHECK(false, "{}", err_msg);
             }
             continue;
         }
@@ -783,10 +783,10 @@ void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
         count++;
     }
 
-    dassert_f(available_dirs.size() > 0,
+    CHECK(available_dirs.size() > 0,
               "initialize fs manager failed, no available data directory");
     error_code err = _fs_manager.initialize(available_dirs, available_dir_tags, false);
-    dassert_f(err == dsn::ERR_OK, "initialize fs manager failed, err({})", err);
+    CHECK(err == dsn::ERR_OK, "initialize fs manager failed, err({})", err);
 }
 
 void replica_stub::initialize_start()
@@ -2058,7 +2058,7 @@ void replica_stub::open_replica(
         // NOTICE: if dir a.b.pegasus does not exist, or .app-info does not exist, but the ballot >
         // 0, or the last_committed_decree > 0, start replica will fail
         if ((configuration_update != nullptr) && (configuration_update->info.is_stateful)) {
-            dassert_f(configuration_update->config.ballot == 0 &&
+            CHECK(configuration_update->config.ballot == 0 &&
                           configuration_update->config.last_committed_decree == 0,
                       "{}@{}: cannot load replica({}.{}), ballot = {}, "
                       "last_committed_decree = {}, but it does not existed!",
@@ -2141,7 +2141,7 @@ void replica_stub::open_replica(
 
 task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
-    dassert_f(r->status() == partition_status::PS_ERROR ||
+    CHECK(r->status() == partition_status::PS_ERROR ||
                   r->status() == partition_status::PS_INACTIVE ||
                   r->disk_migrator()->status() >= disk_migration_status::MOVED,
               "invalid state(partition_status={}, migration_status={}) when calling "
@@ -2752,7 +2752,7 @@ replica_stub::get_child_dir(const char *app_type, gpid child_pid, const std::str
             break;
         }
     }
-    dassert_f(!child_dir.empty(), "can not find parent_dir {} in data_dirs", parent_dir);
+    CHECK(!child_dir.empty(), "can not find parent_dir {} in data_dirs", parent_dir);
     return child_dir;
 }
 
@@ -2870,7 +2870,7 @@ replica_ptr replica_stub::create_child_replica_if_not_found(gpid child_pid,
             replica *rep = replica::newr(this, child_pid, *app, false, false, parent_dir);
             if (rep != nullptr) {
                 auto pr = _replicas.insert(replicas::value_type(child_pid, rep));
-                dassert_f(pr.second, "child replica {} has been existed", rep->name());
+                CHECK(pr.second, "child replica {} has been existed", rep->name());
                 _counter_replicas_count->increment();
                 _closed_replicas.erase(child_pid);
             }
