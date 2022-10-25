@@ -119,6 +119,7 @@ public:
     void on_query_replica_info(query_replica_info_rpc rpc);
     void on_query_app_info(query_app_info_rpc rpc);
     void on_bulk_load(bulk_load_rpc rpc);
+    void on_query_decree(query_app_name_on_replica_rpc rpc);
 
     //
     //    messages from peers (primary or secondary)

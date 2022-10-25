@@ -1154,10 +1154,7 @@ void replica::update_app_name(const std::string app_name)
     _app_info.app_name = app_name;
 
     auto ec = store_app_info(_app_info);
-    dassert_replica(ec == ERR_OK,
-                    "store_app_info for app_name failed: error_code={}, app_name={}, app_id={}",
-                    ec.to_string(),
-                    _app_info.app_name,
+    dcheck_eq_replica(ec, ERR_OK);
                     _app_info.app_id);
 }
 

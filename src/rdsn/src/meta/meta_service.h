@@ -195,7 +195,7 @@ private:
     void on_create_app(dsn::message_ex *req);
     void on_drop_app(dsn::message_ex *req);
     void on_recall_app(dsn::message_ex *req);
-    void on_rename_app(dsn::message_ex *req);
+    void on_rename_app(configuration_rename_app_rpc rpc);
     void on_list_apps(configuration_list_apps_rpc rpc);
     void on_list_nodes(configuration_list_nodes_rpc rpc);
 

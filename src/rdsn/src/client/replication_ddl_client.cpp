@@ -215,32 +215,6 @@ dsn::error_code replication_ddl_client::drop_app(const std::string &app_name, in
     return dsn::ERR_OK;
 }
 
-dsn::error_code replication_ddl_client::rename_app(int32_t app_id, const std::string &new_app_name)
-{
-    if (!std::all_of(new_app_name.cbegin(),
-                     new_app_name.cend(),
-                     (bool (*)(int))replication_ddl_client::valid_app_char))
-        return ERR_INVALID_PARAMETERS;
-
-    auto req = std::make_shared<configuration_rename_app_request>();
-    req->app_id = app_id;
-    req->new_app_name = new_app_name;
-
-    auto resp_task = request_meta<configuration_rename_app_request>(RPC_CM_RENAME_APP, req);
-    resp_task->wait();
-    if (resp_task->error() != dsn::ERR_OK) {
-        return resp_task->error();
-    }
-
-    dsn::replication::configuration_rename_app_response resp;
-    dsn::unmarshall(resp_task->get_response(), resp);
-    if (resp.err != dsn::ERR_OK) {
-        return resp.err;
-    }
-    std::cout << "rename app ok, id(" << app_id << "), " << "name(" << new_app_name << ")" << std::endl;
-    return dsn::ERR_OK;
-}
-
 dsn::error_code replication_ddl_client::recall_app(int32_t app_id, const std::string &new_app_name)
 {
     if (!std::all_of(new_app_name.cbegin(),
@@ -1764,5 +1738,20 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
         configuration_set_max_replica_count_rpc(std::move(req), RPC_CM_SET_MAX_REPLICA_COUNT));
 }
 
+replication_ddl_client::error_with<configuration_rename_app_response>
+rename_app(int32_t app_id, const std::string &new_app_name);
+{
+    if (!std::all_of(new_app_name.cbegin(),
+                     new_app_name.cend(),
+                     (bool (*)(int))replication_ddl_client::valid_app_char))
+        return ERR_INVALID_PARAMETERS;
+
+    auto req = std::make_unique<configuration_rename_app_request>();
+    req->__set_app_id(app_id);
+    req->__set_new_app_name(new_app_name);
+
+    return call_rpc_sync(
+        configuration_set_max_replica_count_rpc(std::move(req), RPC_CM_RENAME_APP));
+}
 } // namespace replication
 } // namespace dsn

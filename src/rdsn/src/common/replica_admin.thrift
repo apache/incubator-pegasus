@@ -42,6 +42,18 @@ struct query_replica_decree_response
     2:i64                 last_decree;
 }
 
+struct query_replica_app_mame_on_replica_request
+{
+    1:dsn.rpc_address     node;
+    1:dsn.gpid pid;
+}
+
+struct query_replica_app_mame_on_replica_reponse
+{
+    1:dsn.error_code      err;
+    2:string app_name;
+}
+
 struct query_replica_info_request
 {
     1:dsn.rpc_address     node;

@@ -536,17 +536,15 @@ void meta_service::on_drop_app(dsn::message_ex *req)
                      server_state::sStateHash);
 }
 
-void meta_service::on_rename_app(dsn::message_ex *req)
+void meta_service::on_rename_app(configuration_rename_app_rpc rpc)
 {
-    configuration_rename_app_response response;
-    if (!check_status_with_msg(req, response)) {
+    if (!check_status(rpc)) {
         return;
     }
 
-    req->add_ref();
     tasking::enqueue(LPC_META_STATE_NORMAL,
-                     nullptr,
-                     std::bind(&server_state::rename_app, _state.get(), req),
+                     tracker(),
+                     std::bind(&server_state::rename_app, _state.get(), rpc),
                      server_state::sStateHash);
 }
 
