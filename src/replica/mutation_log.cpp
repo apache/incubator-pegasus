@@ -939,30 +939,30 @@ error_code mutation_log::reset_from(const std::string &dir,
                                     replay_callback replay_error_callback,
                                     io_failure_callback write_error_callback)
 {
-    // close for flushing current log and be ready to open new log files after reset
+    // close for flushing current log and get ready to open new log files after reset.
     close();
 
-    // make sure logs in `dir` (such as /learn) are valid.
+    // ensure that log files in `dir` (such as "/learn") are valid.
     error_s es = log_utils::check_log_files_continuity(dir);
     if (!es.is_ok()) {
-        LOG_ERROR_F("the log of source dir {} is invalid:{}, will remove it.", dir, es);
+        LOG_ERROR_F("the log files of source dir {} are invalid: {}, will remove it", dir, es);
         if (!utils::filesystem::remove_path(dir)) {
-            LOG_ERROR_F("remove {} failed", dir);
+            LOG_ERROR_F("remove source dir {} failed", dir);
             return ERR_FILE_OPERATION_FAILED;
         }
         return es.code();
     }
 
-    std::string temp_dir = _dir + '.' + std::to_string(dsn_now_ns());
+    std::string temp_dir = fmt::format("{}.{}", _dir, dsn_now_ns());
     if (!utils::filesystem::rename_path(_dir, temp_dir)) {
-        LOG_ERROR_F("rename {} to {} failed", _dir, temp_dir);
+        LOG_ERROR_F("rename current log dir {} to temp dir {} failed", _dir, temp_dir);
         return ERR_FILE_OPERATION_FAILED;
     }
-    LOG_INFO_F("moved current log dir {}  to tmp_dir {}", _dir, temp_dir);
+    LOG_INFO_F("rename current log dir {} to temp dir {}", _dir, temp_dir);
 
     error_code err = ERR_OK;
 
-    // define `defer` for rollback temp_dir when failed or remove temp_dir when success
+    // define `defer` for rollback temp_dir when failed or remove temp_dir when success.
     auto temp_dir_resolve = dsn::defer([this, temp_dir, &err]() {
         if (err == ERR_OK) {
             if (!dsn::utils::filesystem::remove_path(temp_dir)) {
