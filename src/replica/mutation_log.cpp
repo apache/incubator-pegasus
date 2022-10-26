@@ -939,8 +939,6 @@ error_code mutation_log::reset_from(const std::string &dir,
                                     replay_callback replay_error_callback,
                                     io_failure_callback write_error_callback)
 {
-    error_code err = ERR_FILE_OPERATION_FAILED;
-
     // close for flushing current log and be ready to open new log files after reset
     close();
 
@@ -950,7 +948,7 @@ error_code mutation_log::reset_from(const std::string &dir,
         LOG_ERROR_F("the log of source dir {} is invalid:{}, will remove it.", dir, es);
         if (!utils::filesystem::remove_path(dir)) {
             LOG_ERROR_F("remove {} failed", dir);
-            return err;
+            return ERR_FILE_OPERATION_FAILED;
         }
         return es.code();
     }
@@ -958,22 +956,23 @@ error_code mutation_log::reset_from(const std::string &dir,
     std::string temp_dir = _dir + '.' + std::to_string(dsn_now_ns());
     if (!utils::filesystem::rename_path(_dir, temp_dir)) {
         LOG_ERROR_F("rename {} to {} failed", _dir, temp_dir);
-        return err;
+        return ERR_FILE_OPERATION_FAILED;
     }
     LOG_INFO_F("moved current log dir {}  to tmp_dir {}", _dir, temp_dir);
+
+    error_code err = ERR_OK;
+
     // define `defer` for rollback temp_dir when failed or remove temp_dir when success
-    auto temp_dir_resolve = dsn::defer([this, err, temp_dir]() {
-        if (err != ERR_OK) {
-            if (!utils::filesystem::rename_path(temp_dir, _dir)) {
-                // rollback failed means old log files are not be recovered, it may be lost if only
-                // LOG_ERROR,  dassert for manual resolve it
-                dassert_f("rollback {} to {} failed", temp_dir, _dir);
-            }
-        } else {
+    auto temp_dir_resolve = dsn::defer([this, temp_dir, &err]() {
+        if (err == ERR_OK) {
             if (!dsn::utils::filesystem::remove_path(temp_dir)) {
                 // temp dir allow delete failed, it's only garbage
                 LOG_ERROR_F("remove temp dir {} failed", temp_dir);
             }
+        } else {
+            // rollback failed means old log files are not be recovered, it may be lost if only
+            // LOG_ERROR,  dassert for manual resolve it
+            dassert_f(utils::filesystem::rename_path(temp_dir, _dir), "rollback from {} to {} failed", temp_dir, _dir);
         }
     });
 
@@ -984,8 +983,14 @@ error_code mutation_log::reset_from(const std::string &dir,
     }
     LOG_INFO_F("move {} to {} as our new log directory", dir, _dir);
 
+    auto dir_resolve = dsn::defer([this, dir, &err]() {
+        if (err != ERR_OK) {
+            dassert_f(utils::filesystem::rename_path(_dir, dir), "rollback from {} to {} failed", _dir, dir);
+        }
+    });
+
     // - make sure logs in moved dir(such as /plog) are valid and can be opened successfully.
-    // - re-open new log files  for loading the new log file and register the files into replica,
+    // - re-open new log files for loading the new log file and register the files into replica,
     // please make sure the old log files has been closed
     err = open(replay_error_callback, write_error_callback);
     if (err != ERR_OK) {
