@@ -52,7 +52,7 @@ bool load_from_private_log::switch_to_next_log_file()
         log_file_ptr file;
         error_s es = log_utils::open_read(next_file_it->second->path(), file);
         if (!es.is_ok()) {
-            derror_replica("{}", es);
+            LOG_ERROR_PREFIX("{}", es);
             _current = nullptr;
             return false;
         }
@@ -76,11 +76,12 @@ void load_from_private_log::run()
     // valid status
     if (_mutation_batch.last_decree() == invalid_decree) {
         if (_duplicator->progress().confirmed_decree == invalid_decree) {
-            dwarn_replica("duplication status hasn't been sync completed, try next for delay 1s, "
-                          "last_commit_decree={}, "
-                          "confirmed_decree={}",
-                          _duplicator->progress().last_decree,
-                          _duplicator->progress().confirmed_decree);
+            LOG_WARNING_PREFIX(
+                "duplication status hasn't been sync completed, try next for delay 1s, "
+                "last_commit_decree={}, "
+                "confirmed_decree={}",
+                _duplicator->progress().last_decree,
+                _duplicator->progress().confirmed_decree);
             repeat(1_s);
 
             FAIL_POINT_INJECT_NOT_RETURN_F("duplication_sync_complete", [&](string_view s) -> void {
@@ -99,7 +100,7 @@ void load_from_private_log::run()
     if (_current == nullptr) {
         find_log_file_to_start();
         if (_current == nullptr) {
-            ddebug_replica("no private log file is currently available");
+            LOG_INFO_PREFIX("no private log file is currently available");
             repeat(_repeat_delay);
             return;
         }
@@ -120,7 +121,7 @@ void load_from_private_log::find_log_file_to_start()
         log_file_ptr file;
         error_s es = log_utils::open_read(pr.second->path(), file);
         if (!es.is_ok()) {
-            derror_replica("{}", es);
+            LOG_ERROR_PREFIX("{}", es);
             return;
         }
         new_file_map.emplace(pr.first, file);
@@ -133,7 +134,7 @@ void load_from_private_log::find_log_file_to_start(std::map<int, log_file_ptr> l
 {
     _current = nullptr;
     if (dsn_unlikely(log_file_map.empty())) {
-        derror_replica("unable to start duplication since no log file is available");
+        LOG_ERROR_PREFIX("unable to start duplication since no log file is available");
         return;
     }
 
@@ -179,7 +180,7 @@ void load_from_private_log::replay_log_block()
         //   2. fail-slow, retry reading this file until human interference.
         _err_block_repeats_num++;
         if (_err_block_repeats_num >= MAX_ALLOWED_BLOCK_REPEATS) {
-            derror_replica(
+            LOG_ERROR_PREFIX(
                 "loading mutation logs failed for {} times: [err: {}, file: {}, start_offset: {}]",
                 _err_block_repeats_num,
                 err,
@@ -189,9 +190,9 @@ void load_from_private_log::replay_log_block()
             _err_file_repeats_num++;
             if (dsn_unlikely(will_fail_skip())) {
                 // skip this file
-                derror_replica("failed loading for {} times, abandon file {} and try next",
-                               _err_file_repeats_num,
-                               _current->path());
+                LOG_ERROR_PREFIX("failed loading for {} times, abandon file {} and try next",
+                                 _err_file_repeats_num,
+                                 _current->path());
                 _err_file_repeats_num = 0;
 
                 auto prev_offset = _current_global_end_offset;
@@ -271,7 +272,7 @@ void load_from_private_log::set_start_decree(decree start_decree)
 
 void load_from_private_log::start_from_log_file(log_file_ptr f)
 {
-    ddebug_replica("start loading from log file {}", f->path());
+    LOG_INFO_PREFIX("start loading from log file {}", f->path());
 
     _current = std::move(f);
     _start_offset = 0;

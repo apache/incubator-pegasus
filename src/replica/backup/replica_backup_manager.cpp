@@ -76,7 +76,7 @@ void replica_backup_manager::on_clear_cold_backup(const backup_clear_request &re
     if (find != _replica->_cold_backup_contexts.end()) {
         cold_backup_context_ptr backup_context = find->second;
         if (backup_context->is_checkpointing()) {
-            ddebug_replica(
+            LOG_INFO_PREFIX(
                 "{}: delay clearing obsoleted cold backup context, cause backup_status == "
                 "ColdBackupCheckpointing",
                 backup_context->name);
@@ -143,9 +143,9 @@ void replica_backup_manager::collect_backup_info()
 
 void replica_backup_manager::background_clear_backup_checkpoint(const std::string &policy_name)
 {
-    ddebug_replica("schedule to clear all checkpoint dirs of policy({}) after {} minutes",
-                   policy_name,
-                   _replica->options()->cold_backup_checkpoint_reserve_minutes);
+    LOG_INFO_PREFIX("schedule to clear all checkpoint dirs of policy({}) after {} minutes",
+                    policy_name,
+                    _replica->options()->cold_backup_checkpoint_reserve_minutes);
     tasking::enqueue(
         LPC_BACKGROUND_COLD_BACKUP,
         &_replica->_tracker,
@@ -157,7 +157,7 @@ void replica_backup_manager::background_clear_backup_checkpoint(const std::strin
 // clear all checkpoint dirs of the policy
 void replica_backup_manager::clear_backup_checkpoint(const std::string &policy_name)
 {
-    ddebug_replica("clear all checkpoint dirs of policy({})", policy_name);
+    LOG_INFO_PREFIX("clear all checkpoint dirs of policy({})", policy_name);
     auto backup_dir = _replica->_app->backup_dir();
     if (!utils::filesystem::directory_exists(backup_dir)) {
         return;
@@ -166,7 +166,7 @@ void replica_backup_manager::clear_backup_checkpoint(const std::string &policy_n
     // Find the corresponding checkpoint dirs with policy name
     std::vector<std::string> chkpt_dirs;
     if (!get_policy_checkpoint_dirs(backup_dir, policy_name, chkpt_dirs)) {
-        dwarn_replica("get checkpoint dirs in backup dir({}) failed", backup_dir);
+        LOG_WARNING_PREFIX("get checkpoint dirs in backup dir({}) failed", backup_dir);
         return;
     }
 
@@ -174,9 +174,9 @@ void replica_backup_manager::clear_backup_checkpoint(const std::string &policy_n
     for (const std::string &dirname : chkpt_dirs) {
         std::string full_path = utils::filesystem::path_combine(backup_dir, dirname);
         if (utils::filesystem::remove_path(full_path)) {
-            ddebug_replica("remove backup checkpoint dir({}) succeed", full_path);
+            LOG_INFO_PREFIX("remove backup checkpoint dir({}) succeed", full_path);
         } else {
-            dwarn_replica("remove backup checkpoint dir({}) failed", full_path);
+            LOG_WARNING_PREFIX("remove backup checkpoint dir({}) failed", full_path);
         }
     }
 }

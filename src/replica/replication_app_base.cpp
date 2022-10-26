@@ -358,8 +358,8 @@ int replication_app_base::on_batched_write_requests(int64_t decree,
         // TODO(yingchun): better to return error_code
         int e = on_request(requests[i]);
         if (e != 0) {
-            derror_replica("got storage error when handler request({})",
-                           requests[i]->header->rpc_name);
+            LOG_ERROR_PREFIX("got storage error when handler request({})",
+                             requests[i]->header->rpc_name);
             storage_error = e;
         }
     }
@@ -387,7 +387,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
     for (int i = 0; i < request_count; i++) {
         const mutation_update &update = mu->data.updates[i];
         message_ex *req = mu->client_requests[i];
-        dinfo_replica("mutation {} #{}: dispatch rpc call {}", mu->name(), i, update.code);
+        LOG_DEBUG_PREFIX("mutation {} #{}: dispatch rpc call {}", mu->name(), i, update.code);
         if (update.code != RPC_REPLICATION_WRITE_EMPTY) {
             if (req == nullptr) {
                 req = message_ex::create_received_request(
@@ -414,7 +414,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
     }
 
     if (perror != 0) {
-        derror_replica("mutation {}: get internal error {}", mu->name(), perror);
+        LOG_ERROR_PREFIX("mutation {}: get internal error {}", mu->name(), perror);
         // for normal write requests, if got rocksdb error, this replica will be set error and evoke
         // learn for ingestion requests, should not do as normal write requests, there are two
         // reasons:
@@ -451,7 +451,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
             dassert_replica(false, "status = {}", enum_to_string(status));
             __builtin_unreachable();
         }
-        ddebug_replica(
+        LOG_INFO_PREFIX(
             "mutation {} committed on {}, batched_count = {}", mu->name(), str, batched_count);
     }
 

@@ -35,9 +35,9 @@ replica_duplicator_manager::get_duplication_confirms_to_update() const
         if (p.last_decree != p.confirmed_decree ||
             (kv.second->status() == duplication_status::DS_PREPARE && p.checkpoint_has_prepared)) {
             if (p.last_decree < p.confirmed_decree) {
-                derror_replica("invalid decree state: p.last_decree({}) < p.confirmed_decree({})",
-                               p.last_decree,
-                               p.confirmed_decree);
+                LOG_ERROR_PREFIX("invalid decree state: p.last_decree({}) < p.confirmed_decree({})",
+                                 p.last_decree,
+                                 p.confirmed_decree);
                 continue;
             }
             duplication_confirm_entry entry;
@@ -69,8 +69,8 @@ void replica_duplicator_manager::sync_duplication(const duplication_entry &ent)
         if (!is_duplication_status_invalid(next_status)) {
             dup = make_unique<replica_duplicator>(ent, _replica);
         } else {
-            derror_replica("illegal duplication status: {}",
-                           duplication_status_to_string(next_status));
+            LOG_ERROR_PREFIX("illegal duplication status: {}",
+                             duplication_status_to_string(next_status));
         }
     } else {
         // update progress

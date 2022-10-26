@@ -62,7 +62,8 @@ public:
           follower_cluster_name(std::move(follower_cluster_name)),
           follower_cluster_metas(std::move(follower_cluster_metas)),
           store_path(std::move(meta_store_path)),
-          create_timestamp_ms(create_now_ms)
+          create_timestamp_ms(create_now_ms),
+          prefix_for_log(fmt::format("a{}d{}", app_id, id))
     {
         for (int i = 0; i < partition_count; i++) {
             _progress[i] = {};
@@ -185,6 +186,8 @@ public:
     // To json encoded string.
     std::string to_string() const;
 
+    const char *log_prefix() const { return prefix_for_log.c_str(); }
+
 private:
     friend class duplication_info_test;
     friend class meta_duplication_service_test;
@@ -237,6 +240,7 @@ public:
     const std::vector<rpc_address> follower_cluster_metas;
     const std::string store_path; // store path on meta service = get_duplication_path(app, dupid)
     const uint64_t create_timestamp_ms{0}; // the time when this dup is created.
+    const std::string prefix_for_log;
 };
 
 extern void json_encode(dsn::json::JsonWriter &out, const duplication_status::type &s);
@@ -247,15 +251,7 @@ extern void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode:
 
 extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &s);
 
-// Macros for writing log message prefixed by appid and dupid.
-#define ddebug_dup(_dup_, ...)                                                                     \
-    LOG_INFO_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define dwarn_dup(_dup_, ...)                                                                      \
-    LOG_WARNING_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define derror_dup(_dup_, ...)                                                                     \
-    LOG_ERROR_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
-#define dfatal_dup(_dup_, ...)                                                                     \
-    LOG_FATAL_F("[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
+// TODO(yingchun): remember to update it when refactor dassert_f
 #define dassert_dup(_pred_, _dup_, ...)                                                            \
     dassert_f(_pred_, "[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 

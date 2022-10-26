@@ -89,22 +89,22 @@ void replica::on_checkpoint_timer()
             // cleanable_decree is the only GC trigger.
             valid_start_offset = 0;
             if (min_confirmed_decree < last_durable_decree) {
-                ddebug_replica("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
-                               "last_durable_decree({})",
-                               enum_to_string(status()),
-                               min_confirmed_decree,
-                               last_durable_decree);
+                LOG_INFO_PREFIX("gc_private {}: delay gc for duplication: min_confirmed_decree({}) "
+                                "last_durable_decree({})",
+                                enum_to_string(status()),
+                                min_confirmed_decree,
+                                last_durable_decree);
                 cleanable_decree = min_confirmed_decree;
             } else {
-                ddebug_replica("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
-                               enum_to_string(status()),
-                               min_confirmed_decree,
-                               last_durable_decree);
+                LOG_INFO_PREFIX("gc_private {}: min_confirmed_decree({}) last_durable_decree({})",
+                                enum_to_string(status()),
+                                min_confirmed_decree,
+                                last_durable_decree);
             }
         } else if (is_duplication_master()) {
             // unsure if the logs can be dropped, because min_confirmed_decree
             // is currently unavailable
-            ddebug_replica(
+            LOG_INFO_PREFIX(
                 "gc_private {}: skip gc because confirmed duplication progress is unknown",
                 enum_to_string(status()));
             return;
@@ -137,14 +137,14 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
     _checker.only_one_thread_access();
 
     if (_app == nullptr) {
-        derror_replica("app hasn't been init or has been released");
+        LOG_ERROR_PREFIX("app hasn't been init or has been released");
         return ERR_LOCAL_APP_FAILURE;
     }
 
     if (old_decree <= _app->last_durable_decree()) {
-        ddebug_replica("checkpoint has been completed: old = {} vs latest = {}",
-                       old_decree,
-                       _app->last_durable_decree());
+        LOG_INFO_PREFIX("checkpoint has been completed: old = {} vs latest = {}",
+                        old_decree,
+                        _app->last_durable_decree());
         _is_manual_emergency_checkpointing = false;
         _stub->_manual_emergency_checkpointing_count == 0
             ? 0
@@ -153,15 +153,16 @@ error_code replica::trigger_manual_emergency_checkpoint(decree old_decree)
     }
 
     if (_is_manual_emergency_checkpointing) {
-        dwarn_replica("replica is checkpointing, last_durable_decree = {}",
-                      _app->last_durable_decree());
+        LOG_WARNING_PREFIX("replica is checkpointing, last_durable_decree = {}",
+                           _app->last_durable_decree());
         return ERR_BUSY;
     }
 
     if (++_stub->_manual_emergency_checkpointing_count >
         FLAGS_max_concurrent_manual_emergency_checkpointing_count) {
-        dwarn_replica("please try again later because checkpointing exceed max running count[{}]",
-                      FLAGS_max_concurrent_manual_emergency_checkpointing_count);
+        LOG_WARNING_PREFIX(
+            "please try again later because checkpointing exceed max running count[{}]",
+            FLAGS_max_concurrent_manual_emergency_checkpointing_count);
         --_stub->_manual_emergency_checkpointing_count;
         return ERR_TRY_AGAIN;
     }

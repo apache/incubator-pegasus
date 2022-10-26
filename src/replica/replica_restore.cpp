@@ -147,7 +147,7 @@ error_code replica::download_checkpoint(const configuration_restore_request &req
                 }
 
                 if (download_err != ERR_OK) {
-                    derror_replica(
+                    LOG_ERROR_PREFIX(
                         "failed to download file({}), error = {}", f_meta.name, download_err);
                     // ERR_CORRUPTION means we should rollback restore, so we can't change err if it
                     // is ERR_CORRUPTION now, otherwise it will be overridden by other errors
@@ -189,10 +189,10 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
                                                     fs,
                                                     download_file_size);
     if (err != ERR_OK && err != ERR_PATH_ALREADY_EXIST) {
-        derror_replica("download backup_metadata failed, file({}), reason({})",
-                       utils::filesystem::path_combine(remote_chkpt_dir,
-                                                       cold_backup_constant::BACKUP_METADATA),
-                       err);
+        LOG_ERROR_PREFIX("download backup_metadata failed, file({}), reason({})",
+                         utils::filesystem::path_combine(remote_chkpt_dir,
+                                                         cold_backup_constant::BACKUP_METADATA),
+                         err);
         return err;
     }
 
@@ -200,12 +200,13 @@ error_code replica::get_backup_metadata(block_filesystem *fs,
     const std::string local_backup_metada_file =
         utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
     if (!read_cold_backup_metadata(local_backup_metada_file, backup_metadata)) {
-        derror_replica("read cold_backup_metadata from file({}) failed", local_backup_metada_file);
+        LOG_ERROR_PREFIX("read cold_backup_metadata from file({}) failed",
+                         local_backup_metada_file);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     _chkpt_total_size = backup_metadata.checkpoint_total_size;
-    ddebug_replica(
+    LOG_INFO_PREFIX(
         "recover cold_backup_metadata from file({}) succeed, total checkpoint size({}), file "
         "count({})",
         local_backup_metada_file,
@@ -218,17 +219,17 @@ void replica::clear_restore_useless_files(const std::string &local_chkpt_dir,
                                           const cold_backup_metadata &metadata)
 {
     if (!remove_useless_file_under_chkpt(local_chkpt_dir, metadata)) {
-        dwarn_replica("remove useless file failed, chkpt = {}", local_chkpt_dir);
+        LOG_WARNING_PREFIX("remove useless file failed, chkpt = {}", local_chkpt_dir);
     } else {
-        ddebug_replica("remove useless file succeed, chkpt = {}", local_chkpt_dir);
+        LOG_INFO_PREFIX("remove useless file succeed, chkpt = {}", local_chkpt_dir);
     }
 
     const std::string metadata_file =
         utils::filesystem::path_combine(local_chkpt_dir, cold_backup_constant::BACKUP_METADATA);
     if (!utils::filesystem::remove_path(metadata_file)) {
-        dwarn_replica("remove backup_metadata failed, file = {}", metadata_file);
+        LOG_WARNING_PREFIX("remove backup_metadata failed, file = {}", metadata_file);
     } else {
-        ddebug_replica("remove backup_metadata succeed, file = {}", metadata_file);
+        LOG_INFO_PREFIX("remove backup_metadata succeed, file = {}", metadata_file);
     }
 }
 
@@ -476,7 +477,7 @@ void replica::report_restore_status_to_meta()
 void replica::update_restore_progress(uint64_t f_size)
 {
     if (_chkpt_total_size <= 0) {
-        derror_replica("cold_backup_metadata has invalid file_total_size({})", _chkpt_total_size);
+        LOG_ERROR_PREFIX("cold_backup_metadata has invalid file_total_size({})", _chkpt_total_size);
         return;
     }
 
@@ -485,10 +486,10 @@ void replica::update_restore_progress(uint64_t f_size)
     auto cur_download_size = static_cast<double>(_cur_download_size.load());
     auto cur_porgress = static_cast<int32_t>((cur_download_size / total_size) * 1000);
     _restore_progress.store(cur_porgress);
-    ddebug_replica("total_size = {}, cur_downloaded_size = {}, progress = {}",
-                   total_size,
-                   cur_download_size,
-                   cur_porgress);
+    LOG_INFO_PREFIX("total_size = {}, cur_downloaded_size = {}, progress = {}",
+                    total_size,
+                    cur_download_size,
+                    cur_porgress);
 }
 }
 }

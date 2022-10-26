@@ -299,7 +299,7 @@ decree replica::get_learn_start_decree(const learn_request &request) // on prima
         decree local_gced = max_gced_decree_no_lock();
         if (local_gced == invalid_decree) {
             // abnormal case
-            dwarn_replica("no plog to be learned for duplication, continue as normal");
+            LOG_WARNING_PREFIX("no plog to be learned for duplication, continue as normal");
         } else {
             learn_start_decree_for_dup = local_gced + 1;
         }
@@ -312,11 +312,11 @@ decree replica::get_learn_start_decree(const learn_request &request) // on prima
         // see replica::get_max_gced_decree_for_learn for details.
         if (learn_start_decree_for_dup < learn_start_decree_no_dup) {
             learn_start_decree = learn_start_decree_for_dup;
-            ddebug_replica("learn_start_decree steps back to {} to ensure learner having enough "
-                           "logs for duplication [confirmed_decree={}, learner_gced_decree={}]",
-                           learn_start_decree,
-                           min_confirmed_decree,
-                           request.max_gced_decree);
+            LOG_INFO_PREFIX("learn_start_decree steps back to {} to ensure learner having enough "
+                            "logs for duplication [confirmed_decree={}, learner_gced_decree={}]",
+                            learn_start_decree,
+                            min_confirmed_decree,
+                            request.max_gced_decree);
         }
     }
     dcheck_le_replica(learn_start_decree, local_committed_decree + 1);
@@ -571,7 +571,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         return;
     }
 
-    ddebug_replica(
+    LOG_INFO_PREFIX(
         "on_learn_reply_start[{}]: learnee = {}, learn_duration ={} ms, response_err = "
         "{}, remote_committed_decree = {}, prepare_start_decree = {}, learn_type = {} "
         "learned_buffer_size = {}, learned_file_count = {},to_decree_included = "
@@ -1483,16 +1483,16 @@ void replica::on_learn_completion_notification_reply(error_code err,
 
 void replica::on_add_learner(const group_check_request &request)
 {
-    ddebug_replica("process add learner, primary = {}, ballot ={}, status ={}, "
-                   "last_committed_decree = {}, duplicating = {}",
-                   request.config.primary.to_string(),
-                   request.config.ballot,
-                   enum_to_string(request.config.status),
-                   request.last_committed_decree,
-                   request.app.duplicating);
+    LOG_INFO_PREFIX("process add learner, primary = {}, ballot ={}, status ={}, "
+                    "last_committed_decree = {}, duplicating = {}",
+                    request.config.primary.to_string(),
+                    request.config.ballot,
+                    enum_to_string(request.config.status),
+                    request.last_committed_decree,
+                    request.app.duplicating);
 
     if (request.config.ballot < get_ballot()) {
-        dwarn_replica("on_add_learner ballot is old, skipped");
+        LOG_WARNING_PREFIX("on_add_learner ballot is old, skipped");
         return;
     }
 
@@ -1534,10 +1534,10 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
     // after applied:    [---------------log----------------]
     if (duplicating && state.__isset.learn_start_decree &&
         state.learn_start_decree < _app->last_committed_decree() + 1) {
-        ddebug_replica("learn_start_decree({}) < _app->last_committed_decree() + 1({}),   learn "
-                       "must stepped back to include all the unconfirmed ",
-                       state.learn_start_decree,
-                       _app->last_committed_decree() + 1);
+        LOG_INFO_PREFIX("learn_start_decree({}) < _app->last_committed_decree() + 1({}),   learn "
+                        "must stepped back to include all the unconfirmed ",
+                        state.learn_start_decree,
+                        _app->last_committed_decree() + 1);
 
         // move the `learn/` dir to working dir (`plog/`) to replace current log files to replay
         error_code err = _private_log->reset_from(
@@ -1550,7 +1550,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
                                  get_gpid().thread_hash());
             });
         if (err != ERR_OK) {
-            derror_replica("failed to reset this private log with logs in learn/ dir: {}", err);
+            LOG_ERROR_PREFIX("failed to reset this private log with logs in learn/ dir: {}", err);
             return err;
         }
 
@@ -1619,19 +1619,20 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
         _potential_secondary_states.first_learn_start_decree = state.learn_start_decree;
     }
 
-    ddebug_replica("apply_learned_state_from_private_log[{}]: duplicating={}, step_back={}, "
-                   "learnee = {}, learn_duration = {} ms, apply private log files done, file_count "
-                   "={}, first_learn_start_decree ={}, learn_start_decree = {}, "
-                   "app_committed_decree = {}",
-                   _potential_secondary_states.learning_version,
-                   duplicating,
-                   step_back,
-                   _config.primary.to_string(),
-                   _potential_secondary_states.duration_ms(),
-                   state.files.size(),
-                   _potential_secondary_states.first_learn_start_decree,
-                   state.learn_start_decree,
-                   _app->last_committed_decree());
+    LOG_INFO_PREFIX(
+        "apply_learned_state_from_private_log[{}]: duplicating={}, step_back={}, "
+        "learnee = {}, learn_duration = {} ms, apply private log files done, file_count "
+        "={}, first_learn_start_decree ={}, learn_start_decree = {}, "
+        "app_committed_decree = {}",
+        _potential_secondary_states.learning_version,
+        duplicating,
+        step_back,
+        _config.primary.to_string(),
+        _potential_secondary_states.duration_ms(),
+        state.files.size(),
+        _potential_secondary_states.first_learn_start_decree,
+        state.learn_start_decree,
+        _app->last_committed_decree());
 
     // apply in-buffer private logs
     if (err == ERR_OK) {
@@ -1653,24 +1654,24 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
         }
 
         if (state.to_decree_included > last_committed_decree()) {
-            ddebug_replica("apply_learned_state_from_private_log[{}]: learnee ={}, "
-                           "learned_to_decree_included({}) > last_committed_decree({}), commit to "
-                           "to_decree_included",
-                           _potential_secondary_states.learning_version,
-                           _config.primary.to_string(),
-                           state.to_decree_included,
-                           last_committed_decree());
+            LOG_INFO_PREFIX("apply_learned_state_from_private_log[{}]: learnee ={}, "
+                            "learned_to_decree_included({}) > last_committed_decree({}), commit to "
+                            "to_decree_included",
+                            _potential_secondary_states.learning_version,
+                            _config.primary.to_string(),
+                            state.to_decree_included,
+                            last_committed_decree());
             plist.commit(state.to_decree_included, COMMIT_TO_DECREE_SOFT);
         }
 
-        ddebug_replica(" apply_learned_state_from_private_log[{}]: learnee ={}, "
-                       "learn_duration ={} ms, apply in-buffer private logs done, "
-                       "replay_count ={}, app_committed_decree = {}",
-                       _potential_secondary_states.learning_version,
-                       _config.primary.to_string(),
-                       _potential_secondary_states.duration_ms(),
-                       replay_count,
-                       _app->last_committed_decree());
+        LOG_INFO_PREFIX(" apply_learned_state_from_private_log[{}]: learnee ={}, "
+                        "learn_duration ={} ms, apply in-buffer private logs done, "
+                        "replay_count ={}, app_committed_decree = {}",
+                        _potential_secondary_states.learning_version,
+                        _config.primary.to_string(),
+                        _potential_secondary_states.duration_ms(),
+                        replay_count,
+                        _app->last_committed_decree());
     }
 
     // awaits for unfinished mutation writes.

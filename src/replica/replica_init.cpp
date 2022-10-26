@@ -212,7 +212,7 @@ error_code replica::initialize_on_load()
 decree replica::get_replay_start_decree()
 {
     decree replay_start_decree = _app->last_committed_decree();
-    ddebug_replica("start to replay private log [replay_start_decree: {}]", replay_start_decree);
+    LOG_INFO_PREFIX("start to replay private log [replay_start_decree: {}]", replay_start_decree);
     return replay_start_decree;
 }
 

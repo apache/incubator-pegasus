@@ -199,8 +199,8 @@ void meta_duplication_service::do_add_duplication(std::shared_ptr<app_state> &ap
     std::queue<std::string> nodes({get_duplication_path(*app), std::to_string(dup->id)});
     _meta_svc->get_meta_storage()->create_node_recursively(
         std::move(nodes), std::move(value), [app, this, dup, rpc]() mutable {
-            ddebug_dup(dup,
-                       "add duplication successfully [app_name: {}, follower: {}]",
+            LOG_INFO_F("[{}] add duplication successfully [app_name: {}, follower: {}]",
+                       dup->log_prefix(),
                        app->app_name,
                        dup->follower_cluster_name);
 
@@ -590,19 +590,20 @@ void meta_duplication_service::do_restore_duplication_progress(
 
                 int64_t confirmed_decree = invalid_decree;
                 if (!buf2int64(value, confirmed_decree)) {
-                    derror_dup(dup,
-                               "invalid confirmed_decree {} on partition_idx {}",
-                               value.to_string(),
-                               partition_idx);
+                    LOG_ERROR_F("[{}] invalid confirmed_decree {} on partition_idx {}",
+                                dup->log_prefix(),
+                                value.to_string(),
+                                partition_idx);
                     return; // fail fast
                 }
 
                 dup->init_progress(partition_idx, confirmed_decree);
 
-                ddebug_dup(dup,
-                           "initialize progress from metastore [partition_idx: {}, confirmed: {}]",
-                           partition_idx,
-                           confirmed_decree);
+                LOG_INFO_F(
+                    "[{}] initialize progress from metastore [partition_idx: {}, confirmed: {}]",
+                    dup->log_prefix(),
+                    partition_idx,
+                    confirmed_decree);
             });
     }
 }

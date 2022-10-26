@@ -45,10 +45,10 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
     } else {
         _progress.last_decree = _progress.confirmed_decree = it->second;
     }
-    ddebug_replica("initialize replica_duplicator[{}] [dupid:{}, meta_confirmed_decree:{}]",
-                   duplication_status_to_string(_status),
-                   id(),
-                   it->second);
+    LOG_INFO_PREFIX("initialize replica_duplicator[{}] [dupid:{}, meta_confirmed_decree:{}]",
+                    duplication_status_to_string(_status),
+                    id(),
+                    it->second);
     thread_pool(LPC_REPLICATION_LOW).task_tracker(tracker()).thread_hash(get_gpid().thread_hash());
 
     if (_status == duplication_status::DS_PREPARE) {
@@ -60,11 +60,11 @@ replica_duplicator::replica_duplicator(const duplication_entry &ent, replica *r)
 
 void replica_duplicator::prepare_dup()
 {
-    ddebug_replica("start prepare checkpoint to catch up with latest durable decree: "
-                   "start_point_decree({}) < last_durable_decree({}) = {}",
-                   _start_point_decree,
-                   _replica->last_durable_decree(),
-                   _start_point_decree < _replica->last_durable_decree());
+    LOG_INFO_PREFIX("start prepare checkpoint to catch up with latest durable decree: "
+                    "start_point_decree({}) < last_durable_decree({}) = {}",
+                    _start_point_decree,
+                    _replica->last_durable_decree(),
+                    _start_point_decree < _replica->last_durable_decree());
 
     tasking::enqueue(
         LPC_REPLICATION_COMMON,
@@ -75,10 +75,10 @@ void replica_duplicator::prepare_dup()
 
 void replica_duplicator::start_dup_log()
 {
-    ddebug_replica("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
-                   to_string(),
-                   _progress.last_decree,
-                   _progress.confirmed_decree);
+    LOG_INFO_PREFIX("starting duplication {} [last_decree: {}, confirmed_decree: {}]",
+                    to_string(),
+                    _progress.last_decree,
+                    _progress.confirmed_decree);
 
     /// ===== pipeline declaration ===== ///
 
@@ -95,7 +95,7 @@ void replica_duplicator::start_dup_log()
 
 void replica_duplicator::pause_dup_log()
 {
-    ddebug_replica("pausing duplication: {}", to_string());
+    LOG_INFO_PREFIX("pausing duplication: {}", to_string());
 
     pause();
     cancel_all();
@@ -104,7 +104,7 @@ void replica_duplicator::pause_dup_log()
     _ship.reset();
     _load_private.reset();
 
-    ddebug_replica("duplication paused: {}", to_string());
+    LOG_INFO_PREFIX("duplication paused: {}", to_string());
 }
 
 std::string replica_duplicator::to_string() const
@@ -131,8 +131,8 @@ std::string replica_duplicator::to_string() const
 void replica_duplicator::update_status_if_needed(duplication_status::type next_status)
 {
     if (is_duplication_status_invalid(next_status)) {
-        derror_replica("unexpected duplication status ({})",
-                       duplication_status_to_string(next_status));
+        LOG_ERROR_PREFIX("unexpected duplication status ({})",
+                         duplication_status_to_string(next_status));
         return;
     }
 
@@ -142,7 +142,7 @@ void replica_duplicator::update_status_if_needed(duplication_status::type next_s
         return;
     }
 
-    ddebug_replica(
+    LOG_INFO_PREFIX(
         "update duplication status: {}=>{}[start_point={}, last_commit={}, last_durable={}]",
         duplication_status_to_string(_status),
         duplication_status_to_string(next_status),
@@ -177,7 +177,7 @@ replica_duplicator::~replica_duplicator()
 {
     pause();
     cancel_all();
-    ddebug_replica("closing duplication {}", to_string());
+    LOG_INFO_PREFIX("closing duplication {}", to_string());
 }
 
 error_s replica_duplicator::update_progress(const duplication_progress &p)

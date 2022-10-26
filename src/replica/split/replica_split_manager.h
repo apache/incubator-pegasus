@@ -185,7 +185,7 @@ private:
     {
         auto target_pidx = get_partition_version() & partition_hash;
         if (dsn_unlikely(target_pidx != get_gpid().get_partition_index())) {
-            derror_replica(
+            LOG_ERROR_PREFIX(
                 "receive {} request with wrong partition_hash({}), partition_version = {}, "
                 "target_pidx = {}",
                 op,

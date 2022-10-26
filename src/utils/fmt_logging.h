@@ -46,13 +46,13 @@
         }                                                                                          \
     } while (false)
 
-// Macros for writing log message prefixed by gpid and address.
-#define dinfo_replica(...) LOG_DEBUG_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define ddebug_replica(...) LOG_INFO_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define dwarn_replica(...) LOG_WARNING_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define derror_replica(...) LOG_ERROR_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define dfatal_replica(...) LOG_FATAL_F("[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
-#define dassert_replica(x, ...) dassert_f(x, "[{}] {}", replica_name(), fmt::format(__VA_ARGS__))
+// Macros for writing log message prefixed by log_prefix().
+#define LOG_DEBUG_PREFIX(...) LOG_DEBUG_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_INFO_PREFIX(...) LOG_INFO_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_WARNING_PREFIX(...) LOG_WARNING_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_ERROR_PREFIX(...) LOG_ERROR_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_FATAL_PREFIX(...) LOG_FATAL_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define dassert_replica(x, ...) dassert_f(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.

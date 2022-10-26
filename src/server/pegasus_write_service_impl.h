@@ -118,9 +118,9 @@ public:
         resp.server = _primary_address;
 
         if (update.kvs.empty()) {
-            derror_replica("invalid argument for multi_put: decree = {}, error = {}",
-                           decree,
-                           "request.kvs is empty");
+            LOG_ERROR_PREFIX("invalid argument for multi_put: decree = {}, error = {}",
+                             decree,
+                             "request.kvs is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -152,9 +152,9 @@ public:
         resp.server = _primary_address;
 
         if (update.sort_keys.empty()) {
-            derror_replica("invalid argument for multi_remove: decree = {}, error = {}",
-                           decree,
-                           "request.sort_keys is empty");
+            LOG_ERROR_PREFIX("invalid argument for multi_remove: decree = {}, error = {}",
+                             decree,
+                             "request.sort_keys is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -211,10 +211,10 @@ public:
                 int64_t old_value_int;
                 if (!dsn::buf2int64(old_value, old_value_int)) {
                     // invalid old value
-                    derror_replica("incr failed: decree = {}, error = "
-                                   "old value \"{}\" is not an integer or out of range",
-                                   decree,
-                                   utils::c_escape_string(old_value));
+                    LOG_ERROR_PREFIX("incr failed: decree = {}, error = "
+                                     "old value \"{}\" is not an integer or out of range",
+                                     decree,
+                                     utils::c_escape_string(old_value));
                     resp.error = rocksdb::Status::kInvalidArgument;
                     // we should write empty record to update rocksdb's last flushed decree
                     return empty_put(decree);
@@ -223,11 +223,11 @@ public:
                 if ((update.increment > 0 && new_value < old_value_int) ||
                     (update.increment < 0 && new_value > old_value_int)) {
                     // new value is out of range, return old value by 'new_value'
-                    derror_replica("incr failed: decree = {}, error = "
-                                   "new value is out of range, old_value = {}, increment = {}",
-                                   decree,
-                                   old_value_int,
-                                   update.increment);
+                    LOG_ERROR_PREFIX("incr failed: decree = {}, error = "
+                                     "new value is out of range, old_value = {}, increment = {}",
+                                     decree,
+                                     old_value_int,
+                                     update.increment);
                     resp.error = rocksdb::Status::kInvalidArgument;
                     resp.new_value = old_value_int;
                     // we should write empty record to update rocksdb's last flushed decree
@@ -268,10 +268,10 @@ public:
         resp.server = _primary_address;
 
         if (!is_check_type_supported(update.check_type)) {
-            derror_replica("invalid argument for check_and_set: decree = {}, error = {}",
-                           decree,
-                           "check type {} not supported",
-                           update.check_type);
+            LOG_ERROR_PREFIX("invalid argument for check_and_set: decree = {}, error = {}",
+                             decree,
+                             "check type {} not supported",
+                             update.check_type);
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -285,11 +285,11 @@ public:
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != 0) {
             // read check value failed
-            derror_rocksdb("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
-                           "check_sort_key: {}",
-                           decree,
-                           utils::c_escape_string(update.hash_key),
-                           utils::c_escape_string(update.check_sort_key));
+            LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndSet decree: {}, hash_key: {}, "
+                              "check_sort_key: {}",
+                              decree,
+                              utils::c_escape_string(update.hash_key),
+                              utils::c_escape_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
@@ -365,9 +365,9 @@ public:
         resp.server = _primary_address;
 
         if (update.mutate_list.empty()) {
-            derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
-                           decree,
-                           "mutate list is empty");
+            LOG_ERROR_PREFIX("invalid argument for check_and_mutate: decree = {}, error = {}",
+                             decree,
+                             "mutate list is empty");
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -377,11 +377,11 @@ public:
             auto &mu = update.mutate_list[i];
             if (mu.operation != ::dsn::apps::mutate_operation::MO_PUT &&
                 mu.operation != ::dsn::apps::mutate_operation::MO_DELETE) {
-                derror_replica("invalid argument for check_and_mutate: decree = {}, error = "
-                               "mutation[{}] uses invalid operation {}",
-                               decree,
-                               i,
-                               mu.operation);
+                LOG_ERROR_PREFIX("invalid argument for check_and_mutate: decree = {}, error = "
+                                 "mutation[{}] uses invalid operation {}",
+                                 decree,
+                                 i,
+                                 mu.operation);
                 resp.error = rocksdb::Status::kInvalidArgument;
                 // we should write empty record to update rocksdb's last flushed decree
                 return empty_put(decree);
@@ -389,10 +389,10 @@ public:
         }
 
         if (!is_check_type_supported(update.check_type)) {
-            derror_replica("invalid argument for check_and_mutate: decree = {}, error = {}",
-                           decree,
-                           "check type {} not supported",
-                           update.check_type);
+            LOG_ERROR_PREFIX("invalid argument for check_and_mutate: decree = {}, error = {}",
+                             decree,
+                             "check type {} not supported",
+                             update.check_type);
             resp.error = rocksdb::Status::kInvalidArgument;
             // we should write empty record to update rocksdb's last flushed decree
             return empty_put(decree);
@@ -406,11 +406,11 @@ public:
         int err = _rocksdb_wrapper->get(check_raw_key, &get_context);
         if (err != 0) {
             // read check value failed
-            derror_rocksdb("Error to GetCheckValue for CheckAndMutate decree: {}, hash_key: {}, "
-                           "check_sort_key: {}",
-                           decree,
-                           utils::c_escape_string(update.hash_key),
-                           utils::c_escape_string(update.check_sort_key));
+            LOG_ERROR_ROCKSDB("Error to GetCheckValue for CheckAndMutate decree: {}, hash_key: {}, "
+                              "check_sort_key: {}",
+                              decree,
+                              utils::c_escape_string(update.hash_key),
+                              utils::c_escape_string(update.check_sort_key));
             resp.error = err;
             return resp.error;
         }
@@ -493,10 +493,10 @@ public:
 
         // if ballot updated, ignore this request
         if (req_ballot < current_ballot) {
-            dwarn_replica("out-dated ingestion request, ballot changed, request({}) vs "
-                          "current({}), ignore it",
-                          req_ballot,
-                          current_ballot);
+            LOG_WARNING_PREFIX("out-dated ingestion request, ballot changed, request({}) vs "
+                               "current({}), ignore it",
+                               req_ballot,
+                               current_ballot);
             return dsn::ERR_INVALID_VERSION;
         }
 
@@ -647,20 +647,20 @@ private:
             int64_t check_value_int;
             if (!dsn::buf2int64(value, check_value_int)) {
                 // invalid check value
-                derror_replica("check failed: decree = {}, error = "
-                               "check value \"{}\" is not an integer or out of range",
-                               decree,
-                               utils::c_escape_string(value));
+                LOG_ERROR_PREFIX("check failed: decree = {}, error = "
+                                 "check value \"{}\" is not an integer or out of range",
+                                 decree,
+                                 utils::c_escape_string(value));
                 invalid_argument = true;
                 return false;
             }
             int64_t check_operand_int;
             if (!dsn::buf2int64(check_operand, check_operand_int)) {
                 // invalid check operand
-                derror_replica("check failed: decree = {}, error = "
-                               "check operand \"{}\" is not an integer or out of range",
-                               decree,
-                               utils::c_escape_string(check_operand));
+                LOG_ERROR_PREFIX("check failed: decree = {}, error = "
+                                 "check operand \"{}\" is not an integer or out of range",
+                                 decree,
+                                 utils::c_escape_string(check_operand));
                 invalid_argument = true;
                 return false;
             }

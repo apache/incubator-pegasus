@@ -87,11 +87,11 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                     ret.get_error());
     _remote_cluster_id = static_cast<uint8_t>(ret.get_value());
 
-    ddebug_replica("initialize mutation duplicator for local cluster [id:{}], "
-                   "remote cluster [id:{}, addr:{}]",
-                   get_current_cluster_id(),
-                   _remote_cluster_id,
-                   remote_cluster);
+    LOG_INFO_PREFIX("initialize mutation duplicator for local cluster [id:{}], "
+                    "remote cluster [id:{}, addr:{}]",
+                    get_current_cluster_id(),
+                    _remote_cluster_id,
+                    remote_cluster);
 
     // never possible to duplicate data to itself
     dassert_replica(get_current_cluster_id() != _remote_cluster_id,
@@ -145,9 +145,9 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
         // errors are acceptable.
         // TODO(wutao1): print the entire request for future debugging.
         if (dsn::rand::next_double01() <= 0.01) {
-            derror_replica("duplicate_rpc failed: {} [size:{}]",
-                           err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
-                           rpc.request().entries.size());
+            LOG_ERROR_PREFIX("duplicate_rpc failed: {} [size:{}]",
+                             err == dsn::ERR_OK ? _client->get_error_string(perr) : err.to_string(),
+                             rpc.request().entries.size());
         }
         // duplicating an illegal write to server is unacceptable, fail fast.
         dassert_replica(perr != PERR_INVALID_ARGUMENT, rpc.response().error_hint);
