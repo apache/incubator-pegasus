@@ -269,7 +269,7 @@ void kinit_context::schedule_renew_credentials()
         } else if (err == boost::system::errc::operation_canceled) {
             LOG_WARNING("the renew credentials timer is cancelled");
         } else {
-            dassert_f(false, "unhandled error({})", err.message());
+            CHECK(false, "unhandled error({})", err.message());
         }
     });
 }

@@ -129,8 +129,8 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
 
     zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+    CHECK(app, "app({}) is not existed", app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", app_name);
 
     const gpid &parent_gpid = request.parent_config.pid;
     const gpid &child_gpid = request.child_config.pid;
@@ -245,8 +245,8 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
 
     zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+    CHECK(app, "app({}) is not existed", app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", app_name);
 
     const gpid &parent_gpid = request.parent_config.pid;
     const gpid &child_gpid = request.child_config.pid;

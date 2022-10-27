@@ -53,7 +53,7 @@ process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(
         dsn_config_get_value_string(section, "killer_handler", "", "killer handler");
     dassert(killer_name.size() > 0, "");
     _killer_handler.reset(killer_handler::new_handler(killer_name.c_str()));
-    dassert(_killer_handler.get() != nullptr, "invalid killer_name(%s)", killer_name.c_str());
+    CHECK(_killer_handler, "invalid killer_name({})", killer_name);
 
     _job_types = {META, REPLICA, ZOOKEEPER};
     _job_index_to_kill.resize(JOB_LENGTH);
@@ -68,7 +68,7 @@ process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(
         section, "total_zookeeper_count", 0, "total zookeeper count");
 
     if (_total_meta_count == 0 && _total_replica_count == 0 && _total_zookeeper_count == 0) {
-        dassert(false, "total number of meta/replica/zookeeper is 0");
+        CHECK(false, "total number of meta/replica/zookeeper is 0");
     }
 
     _kill_replica_max_count = (int32_t)dsn_config_get_value_uint64(
@@ -219,7 +219,7 @@ bool process_kill_testor::start_job_by_index(job_type type, int index)
 void process_kill_testor::stop_verifier_and_exit(const char *msg)
 {
     system("ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9");
-    dassert(false, "%s", msg);
+    CHECK(false, "{}", msg);
 }
 
 bool process_kill_testor::check_coredump()

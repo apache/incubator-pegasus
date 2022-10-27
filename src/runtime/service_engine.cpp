@@ -233,12 +233,12 @@ void service_engine::start_node(service_app_spec &app_spec)
             // union to existing node if any port is shared
             auto it = app_name_by_port.find(p);
             if (it != app_name_by_port.end()) {
-                dassert_f(false,
-                          "network port {} usage confliction for {} vs {}, "
-                          "please reconfig",
-                          p,
-                          it->second,
-                          app_spec.full_name);
+                CHECK(false,
+                      "network port {} usage confliction for {} vs {}, "
+                      "please reconfig",
+                      p,
+                      it->second,
+                      app_spec.full_name);
             }
             app_name_by_port.emplace(p, app_spec.full_name);
         }

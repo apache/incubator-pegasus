@@ -61,7 +61,7 @@ public:
     case type_enum:                                                                                \
         value<type>() = dsn_config_get_value_##suffix(_section, _name, value<type>(), _desc);      \
         if (_validator) {                                                                          \
-            dassert_f(_validator(), "validation failed: {}", _name);                               \
+            CHECK(_validator(), "validation failed: {}", _name);                                   \
         }                                                                                          \
         break
 
@@ -289,7 +289,7 @@ public:
 
         std::string total_message;
         if (!run_group_validators(&total_message)) {
-            dassert_f(false, "{}", total_message);
+            CHECK(false, "{}", total_message);
         }
     }
 

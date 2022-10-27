@@ -296,7 +296,7 @@ message_ex *thrift_message_parser::get_message_on_receive(message_reader *reader
     case 1:
         return parse_request_body_v1(reader, read_next);
     default:
-        dassert_f(false, "invalid header version: {}", _header_version);
+        CHECK(false, "invalid header version: {}", _header_version);
     }
 
     return nullptr;

@@ -80,7 +80,7 @@ int sasl_get_username(void *context, int id, const char **result, unsigned *len)
         }
         return SASL_OK;
     default:
-        dassert_f(false, "unexpected SASL callback type: {}", id);
+        CHECK(false, "unexpected SASL callback type: {}", id);
         return SASL_BADPARAM;
     }
 }

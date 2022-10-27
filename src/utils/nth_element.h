@@ -70,9 +70,9 @@ public:
     void set_nths(const nth_container_type &nths)
     {
         _nths = nths;
-        dassert_f(std::is_sorted(_nths.begin(), _nths.end()),
-                  "nth indexes({}) is not sorted",
-                  fmt::join(_nths, " "));
+        CHECK(std::is_sorted(_nths.begin(), _nths.end()),
+              "nth indexes({}) is not sorted",
+              fmt::join(_nths, " "));
 
         _elements.assign(_nths.size(), value_type{});
     }
