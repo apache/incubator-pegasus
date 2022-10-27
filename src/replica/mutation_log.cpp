@@ -967,7 +967,8 @@ error_code mutation_log::reset_from(const std::string &dir,
             if (!utils::filesystem::rename_path(temp_dir, _dir)) {
                 // rollback failed means old log files are not be recovered, it may be lost if only
                 // LOG_ERROR,  dassert for manual resolve it
-                CHECK(false, "rollback {} to {} failed", temp_dir, _dir);
+                // TODO(yingchun): will be fixed later
+                // CHECK(false, "rollback {} to {} failed", temp_dir, _dir);
             }
         } else {
             if (!dsn::utils::filesystem::remove_path(temp_dir)) {

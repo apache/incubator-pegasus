@@ -146,14 +146,12 @@ void test_get(int32_t qps)
                     sortkey,
                     [hashkey, sortkey](int ec, string &&val, pegasus_client::internal_info &&info) {
                         if (ec == PERR_OK) {
-                            if (!verify(hashkey, sortkey, val)) {
-                                CHECK(false,
-                                      "hashkey({}) - sortkey({}) - value({}), but value({})",
-                                      hashkey,
-                                      sortkey,
-                                      get_value(hashkey, sortkey, value_len).c_str(),
-                                      val);
-                            }
+                            CHECK(verify(hashkey, sortkey, val),
+                                  "hashkey({}) - sortkey({}) - value({}), but value({})",
+                                  hashkey,
+                                  sortkey,
+                                  get_value(hashkey, sortkey, value_len),
+                                  val);
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
                             // LOG_WARNING("hashkey(%s) - sortkey(%s) doesn't exist in the server",

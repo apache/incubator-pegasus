@@ -71,9 +71,7 @@ info_collector::info_collector()
         "pegasus.collector", "usage_stat_app", "", "app for recording usage statistics");
     CHECK(!_usage_stat_app.empty(), "");
     // initialize the _client.
-    if (!pegasus_client_factory::initialize(nullptr)) {
-        CHECK(false, "Initialize the pegasus client failed");
-    }
+    CHECK(!pegasus_client_factory::initialize(nullptr), "Initialize the pegasus client failed");
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _usage_stat_app.c_str());
     CHECK_NOTNULL(_client, "Initialize the client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
