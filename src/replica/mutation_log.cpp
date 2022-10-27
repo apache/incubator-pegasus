@@ -966,15 +966,15 @@ error_code mutation_log::reset_from(const std::string &dir,
     auto temp_dir_resolve = dsn::defer([this, temp_dir, &err]() {
         if (err == ERR_OK) {
             if (!dsn::utils::filesystem::remove_path(temp_dir)) {
-                // removing temp dir failed is allowed, it's just garbage.
+                // Removing temp dir failed is allowed, it's just garbage.
                 LOG_ERROR_F("remove temp dir {} failed", temp_dir);
             }
         } else {
             // Once rollback failed, dir should be recovered manually in case data is lost.
-            dassert_f(utils::filesystem::rename_path(temp_dir, _dir),
-                      "rename temp dir {} back to current dir {} failed",
-                      temp_dir,
-                      _dir);
+            CHECK(utils::filesystem::rename_path(temp_dir, _dir),
+                  "rename temp dir {} back to current dir {} failed",
+                  temp_dir,
+                  _dir);
         }
     });
 
@@ -987,10 +987,10 @@ error_code mutation_log::reset_from(const std::string &dir,
 
     auto dir_resolve = dsn::defer([this, dir, &err]() {
         if (err != ERR_OK) {
-            dassert_f(utils::filesystem::rename_path(_dir, dir),
-                      "rename current dir {} back to source dir {} failed",
-                      _dir,
-                      dir);
+            CHECK(utils::filesystem::rename_path(_dir, dir),
+                  "rename current dir {} back to source dir {} failed",
+                  _dir,
+                  dir);
         }
     });
 

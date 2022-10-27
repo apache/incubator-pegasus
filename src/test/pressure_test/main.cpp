@@ -24,6 +24,7 @@
 
 #include "utils/api_utilities.h"
 #include "runtime/api_layer1.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "runtime/task/async_calls.h"
 
@@ -145,14 +146,12 @@ void test_get(int32_t qps)
                     sortkey,
                     [hashkey, sortkey](int ec, string &&val, pegasus_client::internal_info &&info) {
                         if (ec == PERR_OK) {
-                            if (!verify(hashkey, sortkey, val)) {
-                                dassert(false,
-                                        "hashkey(%s) - sortkey(%s) - value(%s), but value(%s)",
-                                        hashkey.c_str(),
-                                        sortkey.c_str(),
-                                        get_value(hashkey, sortkey, value_len).c_str(),
-                                        val.c_str());
-                            }
+                            CHECK(verify(hashkey, sortkey, val),
+                                  "hashkey({}) - sortkey({}) - value({}), but value({})",
+                                  hashkey,
+                                  sortkey,
+                                  get_value(hashkey, sortkey, value_len),
+                                  val);
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
                             // LOG_WARNING("hashkey(%s) - sortkey(%s) doesn't exist in the server",
@@ -187,13 +186,11 @@ void test_del(int32_t qps)
                     hashkey,
                     sortkey,
                     [hashkey, sortkey](int ec, pegasus_client::internal_info &&info) {
-                        if (ec != PERR_OK && ec != PERR_NOT_FOUND && ec != PERR_TIMEOUT) {
-                            dassert(false,
-                                    "del hashkey(%s) - sortkey(%s) failed with err(%s)",
-                                    hashkey.c_str(),
-                                    sortkey.c_str(),
-                                    pg_client->get_error_string(ec));
-                        }
+                        CHECK(ec == PERR_OK || ec == PERR_NOT_FOUND || ec == PERR_TIMEOUT,
+                              "del hashkey({}) - sortkey({}) failed with err({})",
+                              hashkey,
+                              sortkey,
+                              pg_client->get_error_string(ec));
                     });
                 cnt -= 1;
             }
@@ -202,7 +199,7 @@ void test_del(int32_t qps)
     quota_task->cancel(false);
 }
 
-void test_scan(int32_t qps) { dassert(false, "not implemented"); }
+void test_scan(int32_t qps) { CHECK(false, "not implemented"); }
 
 static std::map<std::string, std::function<void(int32_t)>> _all_funcs;
 
@@ -253,20 +250,19 @@ int main(int argc, const char **argv)
         (int32_t)dsn_config_get_value_uint64("pressureclient", "value_len", 64, "value length");
 
     dassert(qps > 0, "qps must GT 0, but qps(%d)", qps);
-    dassert(!op_name.empty(), "must assign operation name");
+    CHECK(!op_name.empty(), "must assign operation name");
 
     LOG_INFO("pressureclient %s qps = %d", op_name.c_str(), qps);
 
     pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
-
-    dassert(pg_client != nullptr, "initialize pg_client failed");
+    CHECK_NOTNULL(pg_client, "initialize pg_client failed");
 
     auto it = _all_funcs.find(op_name);
     if (it != _all_funcs.end()) {
         LOG_INFO("start pressureclient with %s qps(%d)", op_name.c_str(), qps);
         it->second(qps);
     } else {
-        dassert(false, "Unknown operation name(%s)", op_name.c_str());
+        CHECK(false, "Unknown operation name({})", op_name);
     }
     return 0;
 }

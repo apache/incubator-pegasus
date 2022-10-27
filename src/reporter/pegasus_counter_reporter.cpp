@@ -355,7 +355,7 @@ void pegasus_counter_reporter::on_report_timer(std::shared_ptr<boost::asio::dead
         timer->async_wait(std::bind(
             &pegasus_counter_reporter::on_report_timer, this, timer, std::placeholders::_1));
     } else if (boost::system::errc::operation_canceled != ec) {
-        dassert(false, "pegasus report timer error!!!");
+        CHECK(false, "pegasus report timer error!!!");
     }
 }
 } // namespace server

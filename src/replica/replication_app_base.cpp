@@ -75,7 +75,7 @@ error_code write_blob_to_file(const std::string &file, const blob &data)
                                        sz = s;
                                    },
                                    0);
-    dassert_f(tsk, "create file::write task failed");
+    CHECK_NOTNULL(tsk, "create file::write task failed");
     tracker.wait_outstanding_tasks();
     file::flush(hfile);
     file::close(hfile);
@@ -95,7 +95,7 @@ error_code write_blob_to_file(const std::string &file, const blob &data)
 error_code replica_init_info::load(const std::string &dir)
 {
     std::string info_path = utils::filesystem::path_combine(dir, kInitInfo);
-    dassert_f(utils::filesystem::path_exists(info_path), "file({}) not exist", info_path);
+    CHECK(utils::filesystem::path_exists(info_path), "file({}) not exist", info_path);
     ERR_LOG_AND_RETURN_NOT_OK(
         load_json(info_path), "load replica_init_info from {} failed", info_path);
     LOG_INFO_F("load replica_init_info from {} succeed: {}", info_path, to_string());
@@ -281,9 +281,8 @@ error_code replication_app_base::open_new_internal(replica *r,
                                                    int64_t shared_log_start,
                                                    int64_t private_log_start)
 {
-    dassert_f(utils::filesystem::remove_path(_dir_data), "remove data dir {} failed", _dir_data);
-    dassert_f(
-        utils::filesystem::create_directory(_dir_data), "create data dir {} failed", _dir_data);
+    CHECK(utils::filesystem::remove_path(_dir_data), "remove data dir {} failed", _dir_data);
+    CHECK(utils::filesystem::create_directory(_dir_data), "create data dir {} failed", _dir_data);
     ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::directory_exists(_dir_data),
                                 ERR_FILE_OPERATION_FAILED,
                                 "[{}]: create replica data dir {} failed",

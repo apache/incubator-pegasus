@@ -567,7 +567,7 @@ void register_all_commands()
 {
     for (int i = 0; commands[i].name != nullptr; ++i) {
         auto pr = s_commands_map.emplace(commands[i].name, &commands[i]);
-        dassert(pr.second, "the command '%s' is already registered!!!", commands[i].name);
+        CHECK(pr.second, "the command '{}' is already registered!!!", commands[i].name);
         s_max_name_length = std::max(s_max_name_length, strlen(commands[i].name));
     }
 }
