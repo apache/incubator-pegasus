@@ -1216,7 +1216,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name);
-                CHECK(parse_ret, "name = %s", m.name.c_str());
+                CHECK(parse_ret, "name = {}", m.name);
                 dassert(app_id_x == app_id, "name = %s", m.name.c_str());
                 dassert(partition_index_x < partition_count, "name = %s", m.name.c_str());
                 if (partitions[partition_index_x].primary != node_addr)

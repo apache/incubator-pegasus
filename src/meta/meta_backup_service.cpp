@@ -110,8 +110,8 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
     }
     CHECK_NOTNULL(remote_file,
                   "{}: create file({}) succeed, but can't get handle",
-                  _backup_sig.c_str(),
-                  create_file_req.file_name.c_str());
+                  _backup_sig,
+                  create_file_req.file_name);
 
     remote_file->write(
         dist::block_service::write_request{buffer},
@@ -646,7 +646,7 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
         } else {
             CHECK(false,
                   "{}: we can't handle this right now, error({})",
-                  _backup_sig.c_str(),
+                  _backup_sig,
                   err.to_string());
         }
     };
@@ -836,8 +836,8 @@ void policy_context::add_backup_history(const backup_info &info)
                 _cur_backup.backup_id,
                 info.backup_id);
         CHECK(_backup_history.empty() || info.backup_id > _backup_history.rbegin()->first,
-              "%s: backup_id(%lld) in history larger than current(%lld)",
-              _policy.policy_name.c_str(),
+              "{}: backup_id({}) in history larger than current({})",
+              _policy.policy_name,
               _backup_history.rbegin()->first,
               info.backup_id);
         _cur_backup = info;
@@ -851,8 +851,8 @@ void policy_context::add_backup_history(const backup_info &info)
                  info.start_time_ms,
                  info.end_time_ms);
         CHECK(_cur_backup.end_time_ms == 0 || info.backup_id < _cur_backup.backup_id,
-              "%s: backup_id(%lld) in history larger than current(%lld)",
-              _policy.policy_name.c_str(),
+              "{}: backup_id({}) in history larger than current({})",
+              _policy.policy_name,
               info.backup_id,
               _cur_backup.backup_id);
 
