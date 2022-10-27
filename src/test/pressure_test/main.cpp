@@ -186,13 +186,11 @@ void test_del(int32_t qps)
                     hashkey,
                     sortkey,
                     [hashkey, sortkey](int ec, pegasus_client::internal_info &&info) {
-                        if (ec != PERR_OK && ec != PERR_NOT_FOUND && ec != PERR_TIMEOUT) {
-                            CHECK(false,
-                                  "del hashkey({}) - sortkey({}) failed with err({})",
-                                  hashkey,
-                                  sortkey,
-                                  pg_client->get_error_string(ec));
-                        }
+                        CHECK(ec != PERR_OK && ec != PERR_NOT_FOUND && ec != PERR_TIMEOUT,
+                              "del hashkey({}) - sortkey({}) failed with err({})",
+                              hashkey,
+                              sortkey,
+                              pg_client->get_error_string(ec));
                     });
                 cnt -= 1;
             }
