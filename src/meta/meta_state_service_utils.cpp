@@ -44,7 +44,7 @@ namespace mss {
 meta_storage::meta_storage(dist::meta_state_service *remote_storage, task_tracker *tracker)
     : _remote(remote_storage), _tracker(tracker)
 {
-    dassert(tracker != nullptr, "must set task tracker");
+    CHECK_NOTNULL(tracker, "must set task tracker");
 }
 
 meta_storage::~meta_storage() = default;
@@ -53,7 +53,7 @@ void meta_storage::create_node_recursively(std::queue<std::string> &&nodes,
                                            blob &&value,
                                            std::function<void()> &&cb)
 {
-    dassert(!nodes.empty(), "");
+    CHECK(!nodes.empty(), "");
 
     on_create_recursively op;
     op.initialize(this);

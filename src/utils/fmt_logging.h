@@ -55,15 +55,15 @@
 #define LOG_WARNING_PREFIX(...) LOG_WARNING_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 #define LOG_ERROR_PREFIX(...) LOG_ERROR_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 #define LOG_FATAL_PREFIX(...) LOG_FATAL_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
-#define dassert_replica(x, ...) dassert_f(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define dassert_replica(x, ...) CHECK(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
-#define dcheck_eq(var1, var2) dassert_f(var1 == var2, "{} vs {}", var1, var2)
-#define dcheck_ge(var1, var2) dassert_f(var1 >= var2, "{} vs {}", var1, var2)
-#define dcheck_le(var1, var2) dassert_f(var1 <= var2, "{} vs {}", var1, var2)
-#define dcheck_gt(var1, var2) dassert_f(var1 > var2, "{} vs {}", var1, var2)
-#define dcheck_lt(var1, var2) dassert_f(var1 < var2, "{} vs {}", var1, var2)
+#define dcheck_eq(var1, var2) CHECK(var1 == var2, "{} vs {}", var1, var2)
+#define dcheck_ge(var1, var2) CHECK(var1 >= var2, "{} vs {}", var1, var2)
+#define dcheck_le(var1, var2) CHECK(var1 <= var2, "{} vs {}", var1, var2)
+#define dcheck_gt(var1, var2) CHECK(var1 > var2, "{} vs {}", var1, var2)
+#define dcheck_lt(var1, var2) CHECK(var1 < var2, "{} vs {}", var1, var2)
 
 #define dcheck_eq_replica(var1, var2) dassert_replica(var1 == var2, "{} vs {}", var1, var2)
 #define dcheck_ge_replica(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)

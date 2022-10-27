@@ -31,9 +31,10 @@
 #include <stack>
 #include <utility>
 
-#include "runtime/task/task.h"
 #include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace dist {
@@ -78,7 +79,7 @@ void meta_state_service_simple::write_log(blob &&log_blob,
     uint64_t log_offset = _offset;
     _offset += log_blob.length();
     auto continuation_task = std::unique_ptr<operation>(new operation(false, [=](bool log_succeed) {
-        dassert(log_succeed, "we cannot handle logging failure now");
+        CHECK(log_succeed, "we cannot handle logging failure now");
         __err_cb_bind_and_enqueue(task, internal_operation(), 0);
     }));
     auto continuation_task_ptr = continuation_task.get();
@@ -92,8 +93,8 @@ void meta_state_service_simple::write_log(blob &&log_blob,
                 LPC_META_STATE_SERVICE_SIMPLE_INTERNAL,
                 &_tracker,
                 [=](error_code err, size_t bytes) {
-                    dassert(err == ERR_OK && bytes == log_blob.length(),
-                            "we cannot handle logging failure now");
+                    CHECK(err == ERR_OK && bytes == log_blob.length(),
+                          "we cannot handle logging failure now");
                     _log_lock.lock();
                     continuation_task_ptr->done = true;
                     while (!_task_queue.empty()) {
@@ -200,7 +201,7 @@ error_code meta_state_service_simple::apply_transaction(
     LOG_DEBUG("internal operation after logged");
     simple_transaction_entries *entries =
         dynamic_cast<simple_transaction_entries *>(t_entries.get());
-    dassert(entries != nullptr, "invalid input parameter");
+    CHECK_NOTNULL(entries, "invalid input parameter");
     error_code ec;
     for (int i = 0; i != entries->_offset; ++i) {
         operation_entry &e = entries->_ops[i];
@@ -215,7 +216,7 @@ error_code meta_state_service_simple::apply_transaction(
             ec = set_data_internal(e._node, e._value);
             break;
         default:
-            dassert(false, "unsupported operation");
+            CHECK(false, "unsupported operation");
         }
         dassert(ec == ERR_OK, "unexpected error when applying, err=%s", ec.to_string());
     }
@@ -274,7 +275,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
                 default:
                     // The log is complete but its content is modified by cosmic ray. This is
                     // unacceptable
-                    dassert(false, "meta state server log corrupted");
+                    CHECK(false, "meta state server log corrupted");
                 }
             }
             fclose(fd);
@@ -370,7 +371,7 @@ task_ptr meta_state_service_simple::submit_transaction(
             }
         } break;
         default:
-            dassert(false, "not supported operation");
+            CHECK(false, "not supported operation");
             break;
         }
 

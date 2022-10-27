@@ -50,8 +50,8 @@ pc_status partition_guardian::cure(meta_view view,
     const partition_configuration &pc = *get_config(*(view.apps), gpid);
     const proposal_actions &acts = get_config_context(*view.apps, gpid)->lb_actions;
 
-    dassert(app->is_stateful, "");
-    dassert(acts.empty(), "");
+    CHECK(app->is_stateful, "");
+    CHECK(acts.empty(), "");
 
     pc_status status;
     if (pc.primary.is_invalid())
@@ -79,10 +79,10 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
     config_context *cc = get_config_context(*(view.apps), gpid);
     if (!cc->lb_actions.empty()) {
         const configuration_proposal_action *current = cc->lb_actions.front();
-        dassert(current != nullptr && current->type != config_type::CT_INVALID,
-                "invalid proposal for gpid(%d.%d)",
-                gpid.get_app_id(),
-                gpid.get_partition_index());
+        CHECK(current != nullptr && current->type != config_type::CT_INVALID,
+              "invalid proposal for gpid({}.{})",
+              gpid.get_app_id(),
+              gpid.get_partition_index());
         // if the valid proposal is from cure
         if (!cc->lb_actions.is_from_balancer()) {
             finish_cure_proposal(view, gpid, *current);
@@ -108,9 +108,9 @@ void partition_guardian::reconfig(meta_view view, const configuration_update_req
             } else {
                 cc->remove_from_serving(request.node);
 
-                dassert(cc->record_drop_history(request.node),
-                        "node(%s) has been in the dropped",
-                        request.node.to_string());
+                CHECK(cc->record_drop_history(request.node),
+                      "node({}) has been in the dropped",
+                      request.node.to_string());
             }
         });
     }
@@ -220,9 +220,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
 
         for (int i = 0; i < pc.secondaries.size(); ++i) {
             node_state *ns = get_node_state(*(view.nodes), pc.secondaries[i], false);
-            dassert(ns != nullptr,
-                    "invalid secondary address, address = %s",
-                    pc.secondaries[i].to_string());
+            CHECK_NOTNULL(
+                ns, "invalid secondary address, address = {}", pc.secondaries[i].to_string());
             if (!ns->alive())
                 continue;
 
@@ -588,9 +587,9 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         // if not emergency, only try to recover last dropped server
         const dropped_replica &server = cc.dropped.back();
         if (is_node_alive(*view.nodes, server.node)) {
-            dassert(!server.node.is_invalid(),
-                    "invalid server address, address = %s",
-                    server.node.to_string());
+            CHECK(!server.node.is_invalid(),
+                  "invalid server address, address = {}",
+                  server.node.to_string());
             action.node = server.node;
         }
 
@@ -612,7 +611,7 @@ pc_status partition_guardian::on_missing_secondary(meta_view &view, const dsn::g
         action.target = pc.primary;
 
         newly_partitions *np = get_newly_partitions(*(view.nodes), action.node);
-        dassert(np != nullptr, "");
+        CHECK_NOTNULL(np, "");
         np->newly_add_partition(gpid.get_app_id());
 
         cc.lb_actions.assign_cure_proposal(action);

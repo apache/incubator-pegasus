@@ -34,9 +34,9 @@
 
 using namespace dsn::replication;
 
-#define ASSERT_EQ(left, right) dassert((left) == (right), "")
-#define ASSERT_TRUE(exp) dassert((exp), "")
-#define ASSERT_FALSE(exp) dassert(!(exp), "")
+#define ASSERT_EQ(left, right) CHECK((left) == (right), "")
+#define ASSERT_TRUE(exp) CHECK((exp), "")
+#define ASSERT_FALSE(exp) CHECK(!(exp), "")
 
 uint32_t random32(uint32_t min, uint32_t max)
 {

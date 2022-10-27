@@ -30,8 +30,9 @@
 
 #include <queue>
 
-#include "utils/filesystem.h"
 #include "utils/command_manager.h"
+#include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace service {
@@ -449,9 +450,7 @@ void nfs_client_impl::continue_write()
     std::string file_path =
         dsn::utils::filesystem::path_combine(fc->user_req->file_size_req.dst_dir, fc->file_name);
     std::string path = dsn::utils::filesystem::remove_file_name(file_path.c_str());
-    if (!dsn::utils::filesystem::create_directory(path)) {
-        dassert(false, "create directory %s failed", path.c_str());
-    }
+    CHECK(dsn::utils::filesystem::create_directory(path), "create directory {} failed");
 
     if (!fc->file_holder->file_handle) {
         // double check

@@ -71,18 +71,18 @@ namespace replication {
 #undef ASSERT_EQ
 #endif
 
-#define ASSERT_EQ(left, right) dassert((left) == (right), "")
+#define ASSERT_EQ(left, right) CHECK((left) == (right), "")
 
 #ifdef ASSERT_TRUE
 #undef ASSERT_TRUE
 #endif
 
-#define ASSERT_TRUE(exp) dassert((exp), "")
+#define ASSERT_TRUE(exp) CHECK((exp), "")
 
 #ifdef ASSERT_FALSE
 #undef ASSERT_FALSE
 #endif
-#define ASSERT_FALSE(exp) dassert(!(exp), "")
+#define ASSERT_FALSE(exp) CHECK(!(exp), "")
 
 static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_configuration &pc)
 {

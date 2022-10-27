@@ -24,22 +24,13 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
-#include "failure_detector/failure_detector.h"
-#include "utils/distributed_lock_service.h"
-
 #include "common/replication_common.h"
+#include "failure_detector/failure_detector.h"
 #include "meta_options.h"
+#include "utils/distributed_lock_service.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace replication {
@@ -86,9 +77,9 @@ public:
     // client side
     virtual void on_master_disconnected(const std::vector<rpc_address> &)
     {
-        dassert(false, "unsupported method");
+        CHECK(false, "unsupported method");
     }
-    virtual void on_master_connected(rpc_address) { dassert(false, "unsupported method"); }
+    virtual void on_master_connected(rpc_address) { CHECK(false, "unsupported method"); }
 
     // server side
     // it is in the protection of failure_detector::_lock

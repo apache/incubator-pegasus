@@ -197,9 +197,9 @@ void meta_server_failure_detector::reset_stability_stat(const rpc_address &node)
 void meta_server_failure_detector::leader_initialize(const std::string &lock_service_owner)
 {
     dsn::rpc_address addr;
-    dassert(addr.from_string_ipv4(lock_service_owner.c_str()),
-            "parse %s to rpc_address failed",
-            lock_service_owner.c_str());
+    CHECK(addr.from_string_ipv4(lock_service_owner.c_str()),
+          "parse {} to rpc_address failed",
+          lock_service_owner);
     dassert(addr == dsn_primary_address(),
             "acquire leader return success, but owner not match: %s vs %s",
             addr.to_string(),

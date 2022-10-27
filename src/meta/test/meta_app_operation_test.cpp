@@ -217,7 +217,7 @@ public:
                                                  int32_t expected_max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         auto partition_size = static_cast<int>(app->partitions.size());
         for (int i = 0; i < partition_size; ++i) {
@@ -251,7 +251,7 @@ public:
                                       int32_t expected_max_replica_count)
     {
         auto app = find_app(app_name);
-        dassert_f(app != nullptr, "app({}) does not exist", app_name);
+        CHECK(app, "app({}) does not exist", app_name);
 
         // verify local max_replica_count of the app
         ASSERT_EQ(app->max_replica_count, expected_max_replica_count);

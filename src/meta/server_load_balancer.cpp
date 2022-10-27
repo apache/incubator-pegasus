@@ -190,10 +190,10 @@ void server_load_balancer::apply_balancer(meta_view view, const migration_list &
             register_proposals(view, *pairs.second, resp);
             if (resp.err != dsn::ERR_OK) {
                 const dsn::gpid &pid = pairs.first;
-                dassert(false,
-                        "apply balancer for gpid(%d.%d) failed",
-                        pid.get_app_id(),
-                        pid.get_partition_index());
+                CHECK(false,
+                      "apply balancer for gpid(%d.%d) failed",
+                      pid.get_app_id(),
+                      pid.get_partition_index());
             }
         }
     }

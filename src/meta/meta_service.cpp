@@ -303,7 +303,7 @@ void meta_service::start_service()
 // the start function is executed in threadpool default
 error_code meta_service::start()
 {
-    dassert(!_started, "meta service is already started");
+    CHECK(!_started, "meta service is already started");
     register_ctrl_commands();
 
     error_code err;
@@ -337,7 +337,7 @@ error_code meta_service::start()
     dist::cmd::register_remote_command_rpc();
 
     _failure_detector->acquire_leader_lock();
-    dassert(_failure_detector->get_leader(nullptr), "must be primary at this point");
+    CHECK(_failure_detector->get_leader(nullptr), "must be primary at this point");
     LOG_INFO("%s got the primary lock, start to recover server state from remote storage",
              dsn_primary_address().to_string());
 
