@@ -186,7 +186,7 @@ void test_del(int32_t qps)
                     hashkey,
                     sortkey,
                     [hashkey, sortkey](int ec, pegasus_client::internal_info &&info) {
-                        CHECK(ec != PERR_OK && ec != PERR_NOT_FOUND && ec != PERR_TIMEOUT,
+                        CHECK(ec == PERR_OK || ec == PERR_NOT_FOUND || ec == PERR_TIMEOUT,
                               "del hashkey({}) - sortkey({}) failed with err({})",
                               hashkey,
                               sortkey,
