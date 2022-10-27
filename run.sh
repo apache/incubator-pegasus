@@ -17,6 +17,7 @@
 # under the License.
 
 set -e
+set -x
 
 LOCAL_HOSTNAME=`hostname -f`
 PID=$$
@@ -491,8 +492,12 @@ function run_start_zk()
     type nc >/dev/null 2>&1 || { echo >&2 "start zk failed, need install netcat command..."; exit 1;}
 
     INSTALL_DIR=`pwd`/.zk_install
+    echo "install0 dir is `ls`"
+    echo "installa dir is `ls ${INSTALL_DIR}`"
     if [ ! -d "${INSTALL_DIR}/zookeeper-bin" ]; then
+        echo "check installb zk bin"
         if [ -d "zookeeper-bin" ]; then
+            echo "check installc zk bin"
             # this zookeeper-bin must have been got from github action workflows, thus just
             # move it to ${INSTALL_DIR} to prevent from downloading
             mv zookeeper-bin ${INSTALL_DIR}/
