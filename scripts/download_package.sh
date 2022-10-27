@@ -18,7 +18,6 @@
 # under the License.
 
 set -e
-set -x
 
 if [ $# -lt 2 ]; then
     echo "Invalid arguments !"
@@ -28,9 +27,6 @@ fi
 
 DIR_NAME=$1
 PACKAGE_MD5=$2
-
-echo "downpack pwd: `pwd`"
-echo "downpack ls: `ls`"
 
 if [ $# -lt 3 ]; then
     echo "TARGET_PATH is not provided, thus do not try to download ${DIR_NAME}"

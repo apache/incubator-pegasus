@@ -17,7 +17,6 @@
 # under the License.
 
 set -e
-set -x
 
 LOCAL_HOSTNAME=`hostname -f`
 PID=$$
@@ -492,17 +491,6 @@ function run_start_zk()
     type nc >/dev/null 2>&1 || { echo >&2 "start zk failed, need install netcat command..."; exit 1;}
 
     INSTALL_DIR=`pwd`/.zk_install
-    echo "install0 dir is `ls`"
-    echo "installa dir is `ls ${INSTALL_DIR}`"
-    if [ ! -d "${INSTALL_DIR}/zookeeper-bin" ]; then
-        echo "check installb zk bin"
-        if [ -d "zookeeper-bin" ]; then
-            echo "check installc zk bin"
-            # this zookeeper-bin must have been got from github action workflows, thus just
-            # move it to ${INSTALL_DIR} to prevent from downloading
-            mv zookeeper-bin ${INSTALL_DIR}/
-        fi
-    fi
     PORT=22181
     while [[ $# > 0 ]]; do
         key="$1"
@@ -528,6 +516,23 @@ function run_start_zk()
         esac
         shift
     done
+
+    if [ ! -d "${INSTALL_DIR}/zookeeper-bin" ]; then
+        echo "zookeeper-bin cannot be found under ${INSTALL_DIR}, thus try to find an existing one"
+
+        if [ -d "zookeeper-bin" ]; then
+            echo "zookeeper-bin is found under current work dir `pwd`, just use this one"
+
+            if ! mkdir -p "${INSTALL_DIR}"; then
+                echo "ERROR: mkdir ${INSTALL_DIR} failed"
+                exit 1
+            fi
+
+            # this zookeeper-bin must have been got from github action workflows, thus just
+            # move it to ${INSTALL_DIR} to prevent from downloading
+            mv zookeeper-bin ${INSTALL_DIR}/
+        fi
+    fi
 
     INSTALL_DIR="$INSTALL_DIR" PORT="$PORT" $ROOT/scripts/start_zk.sh
 }
