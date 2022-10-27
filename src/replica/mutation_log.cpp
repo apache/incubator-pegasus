@@ -939,10 +939,10 @@ error_code mutation_log::reset_from(const std::string &dir,
                                     replay_callback replay_error_callback,
                                     io_failure_callback write_error_callback)
 {
-    // close for flushing current log and get ready to open new log files after reset.
+    // Close for flushing current log and get ready to open new log files after reset.
     close();
 
-    // ensure that log files in `dir` (such as "/learn") are valid.
+    // Ensure that log files in `dir` (such as "/learn") are valid.
     error_s es = log_utils::check_log_files_continuity(dir);
     if (!es.is_ok()) {
         LOG_ERROR_F("the log files of source dir {} are invalid: {}, will remove it", dir, es);
@@ -962,45 +962,45 @@ error_code mutation_log::reset_from(const std::string &dir,
 
     error_code err = ERR_OK;
 
-    // define `defer` for rollback temp_dir when failed or remove temp_dir when success.
+    // If successful, just remove temp dir; otherwise, rename temp dir back to current dir.
     auto temp_dir_resolve = dsn::defer([this, temp_dir, &err]() {
         if (err == ERR_OK) {
             if (!dsn::utils::filesystem::remove_path(temp_dir)) {
-                // temp dir allow delete failed, it's only garbage
+                // removing temp dir failed is allowed, it's just garbage.
                 LOG_ERROR_F("remove temp dir {} failed", temp_dir);
             }
         } else {
-            // rollback failed means old log files are not be recovered, it may be lost if only
-            // LOG_ERROR,  dassert for manual resolve it
+            // Once rollback failed, dir should be recovered manually in case data is lost.
             dassert_f(utils::filesystem::rename_path(temp_dir, _dir),
-                      "rollback from {} to {} failed",
+                      "rename temp dir {} back to current dir {} failed",
                       temp_dir,
                       _dir);
         }
     });
 
-    // move source dir to target dir
+    // Rename source dir to current dir.
     if (!utils::filesystem::rename_path(dir, _dir)) {
-        LOG_ERROR_F("rename {} to {} failed", dir, _dir);
+        LOG_ERROR_F("rename source dir {} to current dir {} failed", dir, _dir);
         return err;
     }
-    LOG_INFO_F("move {} to {} as our new log directory", dir, _dir);
+    LOG_INFO_F("rename source dir {} to current dir {} successfully", dir, _dir);
 
     auto dir_resolve = dsn::defer([this, dir, &err]() {
         if (err != ERR_OK) {
             dassert_f(utils::filesystem::rename_path(_dir, dir),
-                      "rollback from {} to {} failed",
+                      "rename current dir {} back to source dir {} failed",
                       _dir,
                       dir);
         }
     });
 
-    // - make sure logs in moved dir(such as /plog) are valid and can be opened successfully.
-    // - re-open new log files for loading the new log file and register the files into replica,
-    // please make sure the old log files has been closed
+    // 1. ensure that logs in current dir(such as "/plog") are valid and can be opened
+    // successfully;
+    // 2. reopen, load and register new log files into replica;
+    // 3. be sure that the old log files should have been closed.
     err = open(replay_error_callback, write_error_callback);
     if (err != ERR_OK) {
-        LOG_ERROR_F("the logs of moved dir {} are invalid and open failed:{}", _dir, err);
+        LOG_ERROR_F("the log files of current dir {} are invalid, thus open failed: {}", _dir, err);
     }
     return err;
 }
