@@ -972,7 +972,10 @@ error_code mutation_log::reset_from(const std::string &dir,
         } else {
             // rollback failed means old log files are not be recovered, it may be lost if only
             // LOG_ERROR,  dassert for manual resolve it
-            dassert_f(utils::filesystem::rename_path(temp_dir, _dir), "rollback from {} to {} failed", temp_dir, _dir);
+            dassert_f(utils::filesystem::rename_path(temp_dir, _dir),
+                      "rollback from {} to {} failed",
+                      temp_dir,
+                      _dir);
         }
     });
 
@@ -985,7 +988,10 @@ error_code mutation_log::reset_from(const std::string &dir,
 
     auto dir_resolve = dsn::defer([this, dir, &err]() {
         if (err != ERR_OK) {
-            dassert_f(utils::filesystem::rename_path(_dir, dir), "rollback from {} to {} failed", _dir, dir);
+            dassert_f(utils::filesystem::rename_path(_dir, dir),
+                      "rollback from {} to {} failed",
+                      _dir,
+                      dir);
         }
     });
 
