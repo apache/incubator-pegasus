@@ -18,6 +18,7 @@
 # under the License.
 
 set -e
+set -x
 
 CWD=$(cd $(dirname $0) && pwd)
 
