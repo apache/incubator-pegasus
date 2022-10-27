@@ -159,9 +159,7 @@ void replication_options::initialize()
         data_dir_tags.emplace_back(config_data_dir_tags[i]);
     }
 
-    if (data_dirs.empty()) {
-        CHECK(false, "no replica data dir found, maybe not set or excluded by black list");
-    }
+    CHECK(!data_dirs.empty(), "no replica data dir found, maybe not set or excluded by black list");
 
     deny_client_on_start = dsn_config_get_value_bool("replication",
                                                      "deny_client_on_start",
@@ -580,9 +578,7 @@ replication_options::get_data_dirs_in_black_list(const std::string &fname,
 
     LOG_INFO_F("data_dirs_black_list_file[{}] found, apply it", fname);
     std::ifstream file(fname);
-    if (!file) {
-        CHECK(false, "open data_dirs_black_list_file failed: {}", fname);
-    }
+    CHECK(file, "open data_dirs_black_list_file failed: {}", fname);
 
     std::string str;
     int count = 0;

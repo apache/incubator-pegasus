@@ -47,6 +47,7 @@
     } while (false)
 
 #define CHECK dassert_f
+#define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().
 #define LOG_DEBUG_PREFIX(...) LOG_DEBUG_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))

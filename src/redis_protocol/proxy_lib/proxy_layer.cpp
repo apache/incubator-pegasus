@@ -106,7 +106,7 @@ void proxy_stub::remove_session(dsn::rpc_address remote_address)
 proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
     : _stub(op), _is_session_reset(false), _backup_one_request(first_msg)
 {
-    CHECK(first_msg, "null msg when create session");
+    CHECK_NOTNULL(first_msg, "null msg when create session");
     _backup_one_request->add_ref();
 
     _remote_address = _backup_one_request->header->from_address;

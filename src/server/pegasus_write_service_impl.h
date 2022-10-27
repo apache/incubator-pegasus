@@ -674,7 +674,7 @@ private:
             }
         }
         default:
-            CHECK(false, "unsupported check type: %d", check_type);
+            CHECK(false, "unsupported check type: {}", check_type);
         }
         return false;
     }

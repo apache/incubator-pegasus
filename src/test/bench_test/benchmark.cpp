@@ -33,7 +33,7 @@ benchmark::benchmark()
 {
     _client = pegasus_client_factory::get_client(config::instance().pegasus_cluster_name.c_str(),
                                                  config::instance().pegasus_app_name.c_str());
-    CHECK(_client, "");
+    CHECK_NOTNULL(_client, "");
 
     // init operation method map
     _operation_method = {{kUnknown, nullptr},
@@ -60,7 +60,7 @@ void benchmark::run_benchmark(int thread_count, operation_type op_type)
 {
     // get method by operation type
     bench_method method = _operation_method[op_type];
-    CHECK(method, "");
+    CHECK_NOTNULL(method, "");
 
     // create histogram statistic
     std::shared_ptr<rocksdb::Statistics> hist_stats = rocksdb::CreateDBStatistics();

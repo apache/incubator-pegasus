@@ -75,7 +75,7 @@ error_code write_blob_to_file(const std::string &file, const blob &data)
                                        sz = s;
                                    },
                                    0);
-    CHECK(tsk, "create file::write task failed");
+    CHECK_NOTNULL(tsk, "create file::write task failed");
     tracker.wait_outstanding_tasks();
     file::flush(hfile);
     file::close(hfile);

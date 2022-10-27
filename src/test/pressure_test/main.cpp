@@ -259,8 +259,7 @@ int main(int argc, const char **argv)
     LOG_INFO("pressureclient %s qps = %d", op_name.c_str(), qps);
 
     pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
-
-    CHECK(pg_client, "initialize pg_client failed");
+    CHECK_NOTNULL(pg_client, "initialize pg_client failed");
 
     auto it = _all_funcs.find(op_name);
     if (it != _all_funcs.end()) {

@@ -75,7 +75,7 @@ info_collector::info_collector()
         CHECK(false, "Initialize the pegasus client failed");
     }
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _usage_stat_app.c_str());
-    CHECK(_client, "Initialize the client failed");
+    CHECK_NOTNULL(_client, "Initialize the client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
 
     _capacity_unit_fetch_interval_seconds =

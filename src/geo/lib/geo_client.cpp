@@ -70,10 +70,10 @@ geo_client::geo_client(const char *config_file,
     CHECK(ok, "init pegasus client factory failed");
 
     _common_data_client = pegasus_client_factory::get_client(cluster_name, common_app_name);
-    CHECK(_common_data_client, "init pegasus _common_data_client failed");
+    CHECK_NOTNULL(_common_data_client, "init pegasus _common_data_client failed");
 
     _geo_data_client = pegasus_client_factory::get_client(cluster_name, geo_app_name);
-    CHECK(_geo_data_client, "init pegasus _geo_data_client failed");
+    CHECK_NOTNULL(_geo_data_client, "init pegasus _geo_data_client failed");
 
     _min_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "min_level", 12, "min cell level for scan");

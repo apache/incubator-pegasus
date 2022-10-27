@@ -114,7 +114,7 @@ void pegasus_server_impl::parse_checkpoints()
 pegasus_server_impl::~pegasus_server_impl()
 {
     if (_is_open) {
-        CHECK(_db, "");
+        CHECK_NOTNULL(_db, "");
         release_db();
     }
 }
@@ -259,7 +259,7 @@ int pegasus_server_impl::on_batched_write_requests(int64_t decree,
                                                    int count)
 {
     CHECK(_is_open, "");
-    CHECK(requests, "");
+    CHECK_NOTNULL(requests, "");
 
     return _server_write->on_batched_write_requests(requests, count, decree, timestamp);
 }
@@ -1761,7 +1761,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 void pegasus_server_impl::cancel_background_work(bool wait)
 {
     if (_is_open) {
-        CHECK(_db, "");
+        CHECK_NOTNULL(_db, "");
         rocksdb::CancelAllBackgroundWork(_db, wait);
     }
 }
@@ -1769,7 +1769,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
 {
     if (!_is_open) {
-        dassert(!_db, "");
+        dassert(_db == nullptr, "");
         dassert(!clear_state, "should not be here if do clear");
         return ::dsn::ERR_OK;
     }

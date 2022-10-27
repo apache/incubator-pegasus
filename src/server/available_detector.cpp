@@ -82,10 +82,10 @@ available_detector::available_detector()
         CHECK(false, "Initialize the pegasus client failed");
     }
     _client = pegasus_client_factory::get_client(_cluster_name.c_str(), _app_name.c_str());
-    CHECK(_client, "Initialize the _client failed");
+    CHECK_NOTNULL(_client, "Initialize the _client failed");
     _result_writer = dsn::make_unique<result_writer>(_client);
     _ddl_client.reset(new replication_ddl_client(_meta_list));
-    CHECK(_ddl_client, "Initialize the _ddl_client failed");
+    CHECK_NOTNULL(_ddl_client, "Initialize the _ddl_client failed");
     if (!_alert_email_address.empty()) {
         _send_alert_email_cmd = "cd " + _alert_script_dir + "; bash sendmail.sh alert " +
                                 _alert_email_address + " " + _cluster_name + " " + _app_name + " ";
