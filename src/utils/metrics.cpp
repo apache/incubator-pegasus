@@ -179,7 +179,7 @@ closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(p
 
 uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
 {
-    dcheck_gt(interval_ms, 0);
+    CHECK_GT(interval_ms, 0);
 
     if (interval_ms < 1000) {
         return rand::next_u64() % interval_ms + 50;

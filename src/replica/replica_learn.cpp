@@ -267,7 +267,7 @@ decree replica::get_max_gced_decree_for_learn() const // on learner
 decree replica::get_learn_start_decree(const learn_request &request) // on primary
 {
     decree local_committed_decree = last_committed_decree();
-    dcheck_le_replica(request.last_committed_decree_in_app, local_committed_decree);
+    CHECK_LE_PREFIX(request.last_committed_decree_in_app, local_committed_decree);
 
     decree learn_start_decree_no_dup = request.last_committed_decree_in_app + 1;
     if (!is_duplication_master()) {
@@ -319,8 +319,8 @@ decree replica::get_learn_start_decree(const learn_request &request) // on prima
                             request.max_gced_decree);
         }
     }
-    dcheck_le_replica(learn_start_decree, local_committed_decree + 1);
-    dcheck_gt_replica(learn_start_decree, 0); // learn_start_decree can never be invalid_decree
+    CHECK_LE_PREFIX(learn_start_decree, local_committed_decree + 1);
+    CHECK_GT_PREFIX(learn_start_decree, 0); // learn_start_decree can never be invalid_decree
     return learn_start_decree;
 }
 

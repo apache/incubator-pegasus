@@ -51,8 +51,8 @@ void task_spec::register_task_code(task_code code,
                                    dsn_task_priority_t pri,
                                    dsn::threadpool_code pool)
 {
-    dcheck_ge(code, 0);
-    dcheck_lt(code, TASK_SPEC_STORE_CAPACITY);
+    CHECK_GE(code, 0);
+    CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
     if (!s_task_spec_store[code]) {
         s_task_spec_store[code] = make_unique<task_spec>(code, code.to_string(), type, pri, pool);
         auto &spec = s_task_spec_store[code];
@@ -121,8 +121,8 @@ void task_spec::register_storage_task_code(task_code code,
 
 task_spec *task_spec::get(int code)
 {
-    dcheck_ge(code, 0);
-    dcheck_lt(code, TASK_SPEC_STORE_CAPACITY);
+    CHECK_GE(code, 0);
+    CHECK_LT(code, TASK_SPEC_STORE_CAPACITY);
     return s_task_spec_store[code].get();
 }
 

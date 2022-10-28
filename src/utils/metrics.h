@@ -660,7 +660,7 @@ public:
     bool get(kth_percentile_type type, value_type &val) const
     {
         const auto index = static_cast<size_t>(type);
-        dcheck_lt(index, static_cast<size_t>(kth_percentile_type::COUNT));
+        CHECK_LT(index, static_cast<size_t>(kth_percentile_type::COUNT));
 
         val = _full_nth_elements[index].load(std::memory_order_relaxed);
         return _kth_percentile_bitset.test(index);
@@ -712,7 +712,7 @@ protected:
             return;
         }
 #else
-        dcheck_gt(interval_ms, 0);
+        CHECK_GT(interval_ms, 0);
 #endif
 
         // Increment ref count of percentile, since it will be referenced by timer.

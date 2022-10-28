@@ -74,7 +74,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
                                  bool secondary_commit)
 {
     decree d = mu->data.header.decree;
-    dcheck_gt_replica(d, last_committed_decree());
+    CHECK_GT_PREFIX(d, last_committed_decree());
 
     ADD_POINT(mu->_tracer);
     error_code err;
@@ -156,7 +156,7 @@ void prepare_list::commit(decree d, commit_type ct)
 
             dassert_replica(
                 mu != nullptr && mu->is_logged(), "mutation {} is missing in prepare list", d0);
-            dcheck_ge_replica(mu->data.header.ballot, last_bt);
+            CHECK_GE_PREFIX(mu->data.header.ballot, last_bt);
 
             _last_committed_decree++;
             last_bt = mu->data.header.ballot;

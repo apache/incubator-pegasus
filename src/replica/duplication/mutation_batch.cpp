@@ -78,7 +78,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
             return;
         }
 
-        dcheck_ge_replica(next_committed_mutation->data.header.ballot, last_bt);
+        CHECK_GE_PREFIX(next_committed_mutation->data.header.ballot, last_bt);
         _last_committed_decree++;
         last_bt = next_committed_mutation->data.header.ballot;
         _committer(next_committed_mutation);

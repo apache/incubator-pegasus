@@ -71,7 +71,7 @@ DSN_TAG_VARIABLE(max_seconds_to_detect_hotkey, FT_MUTABLE);
 /*extern*/ bool
 find_outlier_index(const std::vector<uint64_t> &captured_keys, int threshold, int &hot_index)
 {
-    dcheck_gt(captured_keys.size(), 2);
+    CHECK_GT(captured_keys.size(), 2);
     int data_size = captured_keys.size();
     // empirical rule to calculate hot point of each partition
     // same algorithm as hotspot_partition_calculator::stat_histories_analyse

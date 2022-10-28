@@ -371,7 +371,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
 
     CHECK_EQ_PREFIX(mu->data.header.decree, last_committed_decree() + 1);
     CHECK_EQ_PREFIX(mu->data.updates.size(), mu->client_requests.size());
-    dcheck_gt_replica(mu->data.updates.size(), 0);
+    CHECK_GT_PREFIX(mu->data.updates.size(), 0);
 
     if (_replica->status() == partition_status::PS_PRIMARY) {
         ADD_POINT(mu->_tracer);

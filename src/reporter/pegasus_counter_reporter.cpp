@@ -246,7 +246,7 @@ void pegasus_counter_reporter::update()
             if (lv.size() > 1) {
                 std::list<std::string> lv1;
                 ::dsn::utils::split_args(lv.back().c_str(), lv1, '.');
-                dcheck_le(lv1.size(), 3);
+                CHECK_LE(lv1.size(), 3);
                 int i = 0;
                 for (auto &v : lv1) {
                     app[i] = v;

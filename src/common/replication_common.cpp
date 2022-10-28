@@ -422,7 +422,7 @@ void replication_options::sanity_check()
 
 int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
 {
-    dcheck_gt(app_max_replica_count, 0);
+    CHECK_GT(app_max_replica_count, 0);
     if (mutation_2pc_min_replica_count > 0) { //  >0 means use the user config
         return mutation_2pc_min_replica_count;
     } else { // otherwise, the value based on the table max_replica_count

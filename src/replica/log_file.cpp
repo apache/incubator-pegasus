@@ -263,7 +263,7 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
                                          int hash)
 {
     dassert(!_is_read, "log file must be of write mode");
-    dcheck_gt(pending.size(), 0);
+    CHECK_GT(pending.size(), 0);
 
     zauto_lock lock(_write_lock);
     if (!_handle) {
