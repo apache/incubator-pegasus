@@ -60,16 +60,16 @@
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
 #define CHECK_EQ(var1, var2) CHECK(var1 == var2, "{} vs {}", var1, var2)
-#define dcheck_ge(var1, var2) CHECK(var1 >= var2, "{} vs {}", var1, var2)
-#define dcheck_le(var1, var2) CHECK(var1 <= var2, "{} vs {}", var1, var2)
-#define dcheck_gt(var1, var2) CHECK(var1 > var2, "{} vs {}", var1, var2)
-#define dcheck_lt(var1, var2) CHECK(var1 < var2, "{} vs {}", var1, var2)
+#define CHECK_GE(var1, var2) CHECK(var1 >= var2, "{} vs {}", var1, var2)
+#define CHECK_LE(var1, var2) CHECK(var1 <= var2, "{} vs {}", var1, var2)
+#define CHECK_GT(var1, var2) CHECK(var1 > var2, "{} vs {}", var1, var2)
+#define CHECK_LT(var1, var2) CHECK(var1 < var2, "{} vs {}", var1, var2)
 
 #define CHECK_EQ_PREFIX(var1, var2) dassert_replica(var1 == var2, "{} vs {}", var1, var2)
-#define dcheck_ge_replica(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)
-#define dcheck_le_replica(var1, var2) dassert_replica(var1 <= var2, "{} vs {}", var1, var2)
-#define dcheck_gt_replica(var1, var2) dassert_replica(var1 > var2, "{} vs {}", var1, var2)
-#define dcheck_lt_replica(var1, var2) dassert_replica(var1 < var2, "{} vs {}", var1, var2)
+#define CHECK_GE_PREFIX(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)
+#define CHECK_LE_PREFIX(var1, var2) dassert_replica(var1 <= var2, "{} vs {}", var1, var2)
+#define CHECK_GT_PREFIX(var1, var2) dassert_replica(var1 > var2, "{} vs {}", var1, var2)
+#define CHECK_LT_PREFIX(var1, var2) dassert_replica(var1 < var2, "{} vs {}", var1, var2)
 
 // Return the given status if condition is not true.
 #define ERR_LOG_AND_RETURN_NOT_TRUE(s, err, ...)                                                   \

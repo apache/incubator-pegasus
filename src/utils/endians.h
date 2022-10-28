@@ -148,7 +148,7 @@ private:
         _size -= sz;
     }
 
-    void ensure(size_t sz) { dcheck_ge(_size, sz); }
+    void ensure(size_t sz) { CHECK_GE(_size, sz); }
 
 private:
     const char *_p{nullptr};

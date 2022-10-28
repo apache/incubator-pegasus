@@ -239,8 +239,8 @@ void replica_split_manager::parent_prepare_states(const std::string &dir) // on 
     plist->truncate(last_committed_decree());
 
     CHECK_EQ(last_committed_decree(), checkpoint_decree);
-    dcheck_ge(mutation_list.size(), 0);
-    dcheck_ge(files.size(), 0);
+    CHECK_GE(mutation_list.size(), 0);
+    CHECK_GE(files.size(), 0);
     LOG_INFO_PREFIX("prepare state succeed: {} mutations, {} private log files, total file size = "
                     "{}, last_committed_decree = {}",
                     mutation_list.size(),
@@ -1037,7 +1037,7 @@ void replica_split_manager::on_register_child_on_meta_reply(
                     get_ballot(),
                     enum_to_string(status()));
 
-    dcheck_ge_replica(response.parent_config.ballot, get_ballot());
+    CHECK_GE_PREFIX(response.parent_config.ballot, get_ballot());
     CHECK_EQ_PREFIX(_replica->_app_info.partition_count * 2, response.app.partition_count);
 
     _stub->split_replica_exec(LPC_PARTITION_SPLIT,

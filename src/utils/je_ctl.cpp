@@ -31,7 +31,7 @@
 #define RETURN_ARRAY_ELEM_BY_ENUM_TYPE(type, array)                                                \
     do {                                                                                           \
         const auto index = static_cast<size_t>(type);                                              \
-        dcheck_lt(index, sizeof(array) / sizeof(array[0]));                                        \
+        CHECK_LT(index, sizeof(array) / sizeof(array[0]));                                         \
         return array[index];                                                                       \
     } while (0);
 
