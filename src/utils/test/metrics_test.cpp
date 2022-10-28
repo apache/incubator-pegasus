@@ -16,7 +16,6 @@
 // under the License.
 
 #include "utils/metrics.h"
-#include "utils/rand.h"
 
 #include <chrono>
 #include <thread>
@@ -25,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include "percentile_utils.h"
+#include "utils/rand.h"
 
 namespace dsn {
 
@@ -901,6 +901,52 @@ TEST(metrics_test, percentile_double)
                          floating_percentile_prototype<value_type>,
                          floating_percentile_case_generator<value_type>,
                          floating_checker<value_type>>(METRIC_test_percentile_double);
+}
+
+std::string take_snapshot_and_get_json_string(metric *m)
+{
+    std::stringstream out;
+    rapidjson::OStreamWrapper wrapper(out);
+    json::JsonWriter writer(wrapper);
+
+    m->take_snapshot(writer);
+
+    return out.str();
+}
+
+template <typename T>
+void extract_metric_snapshot_map(const std::string &json_string, std::unordered_map<std::string, T> &snapshot_map)
+{
+    rapidjson::Document doc;
+    doc.Parse(json_string);
+
+    ASSERT_TRUE(doc.IsObject());
+    ASSERT_TRUE(json::json_decode(doc, snapshot_map));
+}
+
+TEST(metrics_test, take_snapshot_gauge_int64)
+{
+    struct test_case
+    {
+        std::string entity_id;
+        int64_t expected_value;
+    } tests[] {{
+    }};
+
+    for (const auto &test : tests) {
+        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
+
+        auto my_gauge = METRIC_test_gauge_int64.instantiate(my_server_entity);
+        my_gauge.set(test.expected_value);
+
+        auto json_string = take_snapshot_and_get_json_string(&my_gauge);
+
+        std::unordered_map<std::string, int64_t> actual_snapshot_map;
+        extract_metric_snapshot_map(json_string, actual_snapshot_map);
+
+        std::unordered_map<std::string, int64_t> expected_snapshot_map = {
+            {"name", my_gauge.prototype()->name()}, {"value", test.expected_value}};
+    }
 }
 
 } // namespace dsn

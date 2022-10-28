@@ -33,11 +33,12 @@
 #include <boost/asio/deadline_timer.hpp>
 
 #include "api_utilities.h"
-#include "fmt_logging.h"
 #include "alloc.h"
 #include "autoref_ptr.h"
 #include "casts.h"
+#include "common/json_helper.h"
 #include "enum_helper.h"
+#include "fmt_logging.h"
 #include "long_adder.h"
 #include "nth_element.h"
 #include "ports.h"
@@ -344,6 +345,9 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
+    // Take snapshot from the metric to json format.
+    virtual void take_snapshot(dsn::json::JsonWriter &writer) = 0;
+
 protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
@@ -392,6 +396,19 @@ public:
     using value_type = T;
 
     value_type value() const { return _value.load(std::memory_order_relaxed); }
+
+    virtual void take_snapshot(json::JsonWriter &writer) override
+    {
+        writer.StartObject();
+
+        writer.Key("name");
+        json::json_encode(writer, prototype()->name());
+
+        writer.Key("value");
+        json::json_encode(writer, value());
+
+        writer.EndObject();
+    }
 
     void set(const value_type &val) { _value.store(val, std::memory_order_relaxed); }
 
@@ -493,6 +510,19 @@ public:
         return _adder.fetch_and_reset();
     }
 
+    virtual void take_snapshot(json::JsonWriter &writer) override
+    {
+        writer.StartObject();
+
+        writer.Key("name");
+        json::json_encode(writer, prototype()->name());
+
+        writer.Key("value");
+        json::json_encode(writer, value());
+
+        writer.EndObject();
+    }
+
     // NOTICE: x MUST be a non-negative integer.
     void increment_by(int64_t x)
     {
@@ -559,6 +589,7 @@ ENUM_REG(kth_percentile_type::P999)
 ENUM_END(kth_percentile_type)
 
 const std::vector<double> kKthDecimals = {0.5, 0.9, 0.95, 0.99, 0.999};
+const std::vector<std::string> kKthNames = {"p50", "p90", "p95", "p99", "p999"};
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
@@ -662,8 +693,27 @@ public:
         const auto index = static_cast<size_t>(type);
         CHECK_LT(index, static_cast<size_t>(kth_percentile_type::COUNT));
 
-        val = _full_nth_elements[index].load(std::memory_order_relaxed);
+        val = value(index);
         return _kth_percentile_bitset.test(index);
+    }
+
+    virtual void take_snapshot(json::JsonWriter &writer) override
+    {
+        writer.StartObject();
+
+        writer.Key("name");
+        json::json_encode(writer, prototype()->name());
+
+        for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
+            if (!_kth_percentile_bitset.test(i)) {
+                continue;
+            }
+
+            writer.Key(kKthNames[i]);
+            json::json_encode(writer, value(i));
+        }
+
+        writer.EndObject();
     }
 
     bool timer_enabled() const { return !!_timer; }
@@ -757,6 +807,11 @@ private:
         // This will be called back after timer is closed, which means the percentile is
         // no longer needed by timer and can be destructed safely.
         release_ref();
+    }
+
+    value_type value(size_t index) const
+    {
+        return _full_nth_elements[index].load(std::memory_order_relaxed);
     }
 
     void find_nth_elements()
