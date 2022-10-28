@@ -994,10 +994,10 @@ error_code mutation_log::reset_from(const std::string &dir,
         }
     });
 
-    // 1. ensure that logs in current dir(such as "/plog") are valid and can be opened
+    // 1. Ensure that logs in current dir(such as "/plog") are valid and can be opened
     // successfully;
-    // 2. reopen, load and register new log files into replica;
-    // 3. be sure that the old log files should have been closed.
+    // 2. Reopen, load and register new log files into replica;
+    // 3. Be sure that the old log files should have been closed.
     err = open(replay_error_callback, write_error_callback);
     if (err != ERR_OK) {
         LOG_ERROR_F("the log files of current dir {} are invalid, thus open failed: {}", _dir, err);
