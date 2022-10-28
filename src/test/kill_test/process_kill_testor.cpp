@@ -87,7 +87,7 @@ bool process_kill_testor::verifier_process_alive()
     std::stringstream output;
     int process_count;
 
-    dcheck_eq(dsn::utils::pipe_execute(command, output), 0);
+    CHECK_EQ(dsn::utils::pipe_execute(command, output), 0);
     output >> process_count;
 
     // one for the verifier, one for command

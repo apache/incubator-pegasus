@@ -100,7 +100,7 @@ dsn::error_code replication_ddl_client::wait_app_ready(const std::string &app_na
                       << std::endl;
             return query_resp.err;
         }
-        dcheck_eq(partition_count, query_resp.partition_count);
+        CHECK_EQ(partition_count, query_resp.partition_count);
         int ready_count = 0;
         for (int i = 0; i < partition_count; i++) {
             const partition_configuration &pc = query_resp.partitions[i];
@@ -385,8 +385,8 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
                 LOG_ERROR("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
                 return r;
             }
-            dcheck_eq(info.app_id, app_id);
-            dcheck_eq(info.partition_count, partition_count);
+            CHECK_EQ(info.app_id, app_id);
+            CHECK_EQ(info.partition_count, partition_count);
             int fully_healthy = 0;
             int write_unhealthy = 0;
             int read_unhealthy = 0;

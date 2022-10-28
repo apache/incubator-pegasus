@@ -80,7 +80,7 @@ error_code write_blob_to_file(const std::string &file, const blob &data)
     file::flush(hfile);
     file::close(hfile);
     ERR_LOG_AND_RETURN_NOT_OK(err, "write file {} failed", tmp_file);
-    dcheck_eq(data.length(), sz);
+    CHECK_EQ(data.length(), sz);
     // TODO(yingchun): need fsync too？
     ERR_LOG_AND_RETURN_NOT_TRUE(utils::filesystem::rename_path(tmp_file, file),
                                 ERR_FILE_OPERATION_FAILED,
@@ -323,7 +323,7 @@ error_code replication_app_base::open()
             argv[idx++] = (char *)(kv.second.c_str());
         }
     }
-    dcheck_eq(argc, idx);
+    CHECK_EQ(argc, idx);
 
     return start(argc, argv);
 }
@@ -369,8 +369,8 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
 {
     FAIL_POINT_INJECT_F("replication_app_base_apply_mutation", [](string_view) { return ERR_OK; });
 
-    dcheck_eq_replica(mu->data.header.decree, last_committed_decree() + 1);
-    dcheck_eq_replica(mu->data.updates.size(), mu->client_requests.size());
+    CHECK_EQ_PREFIX(mu->data.header.decree, last_committed_decree() + 1);
+    CHECK_EQ_PREFIX(mu->data.updates.size(), mu->client_requests.size());
     dcheck_gt_replica(mu->data.updates.size(), 0);
 
     if (_replica->status() == partition_status::PS_PRIMARY) {

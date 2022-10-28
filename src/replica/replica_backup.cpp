@@ -81,7 +81,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                                               : _options->cold_backup_root;
         }
 
-        dcheck_eq_replica(backup_context->request.policy.policy_name, policy_name);
+        CHECK_EQ_PREFIX(backup_context->request.policy.policy_name, policy_name);
         cold_backup_status backup_status = backup_context->status();
 
         if (backup_context->request.backup_id < backup_id || backup_status == ColdBackupCanceled) {

@@ -249,7 +249,7 @@ public:
         std::stringstream ss;
         int ret = dsn::utils::pipe_execute(cmd.c_str(), ss);
         std::cout << cmd << " output: " << ss.str() << std::endl;
-        dcheck_eq(ret, 0);
+        CHECK_EQ(ret, 0);
         std::string result = ss.str();
         // should remove \n character
         int32_t index = result.size();

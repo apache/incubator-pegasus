@@ -102,7 +102,7 @@ void FDSClientTest::SetUp()
         fclose(fp);
 
         std::stringstream ss;
-        dcheck_eq(utils::pipe_execute((std::string("md5sum ") + f1.filename).c_str(), ss), 0);
+        CHECK_EQ(utils::pipe_execute((std::string("md5sum ") + f1.filename).c_str(), ss), 0);
         ss >> f1.md5;
         // well, the string of each line in _test_file is 32
         f1.length = 32 * lines;
@@ -118,7 +118,7 @@ void FDSClientTest::SetUp()
         fclose(fp);
 
         std::stringstream ss;
-        dcheck_eq(utils::pipe_execute((std::string("md5sum ") + f2.filename).c_str(), ss), 0);
+        CHECK_EQ(utils::pipe_execute((std::string("md5sum ") + f2.filename).c_str(), ss), 0);
         ss >> f2.md5;
         // well, the string of each line in _test_file is 32
         f2.length = 32 * lines;

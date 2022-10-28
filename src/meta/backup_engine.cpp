@@ -197,8 +197,8 @@ void backup_engine::backup_app_partition(const gpid &pid)
 inline void backup_engine::handle_replica_backup_failed(const backup_response &response,
                                                         const gpid pid)
 {
-    dcheck_eq(response.pid, pid);
-    dcheck_eq(response.backup_id, _cur_backup.backup_id);
+    CHECK_EQ(response.pid, pid);
+    CHECK_EQ(response.backup_id, _cur_backup.backup_id);
 
     LOG_ERROR_F("backup_id({}): backup for partition {} failed, response.err: {}",
                 _cur_backup.backup_id,
@@ -256,8 +256,8 @@ void backup_engine::on_backup_reply(const error_code err,
     };
 
     if (response.progress == cold_backup_constant::PROGRESS_FINISHED) {
-        dcheck_eq(response.pid, pid);
-        dcheck_eq(response.backup_id, _cur_backup.backup_id);
+        CHECK_EQ(response.pid, pid);
+        CHECK_EQ(response.backup_id, _cur_backup.backup_id);
         LOG_INFO_F("backup_id({}): backup for partition {} completed.",
                    _cur_backup.backup_id,
                    pid.to_string());

@@ -372,7 +372,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
         if (!reqs2.empty()) {
             if (_app_partition_count != -1) {
                 for (auto &req : reqs2) {
-                    dcheck_eq(req->partition_index, -1);
+                    CHECK_EQ(req->partition_index, -1);
                     req->partition_index =
                         get_partition_index(_app_partition_count, req->partition_hash);
                 }

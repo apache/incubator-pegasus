@@ -188,7 +188,7 @@ void server_load_balancer::apply_balancer(meta_view view, const migration_list &
         configuration_balancer_response resp;
         for (auto &pairs : ml) {
             register_proposals(view, *pairs.second, resp);
-            // TODO(yingchun): use dcheck_eq instead
+            // TODO(yingchun): use CHECK_EQ instead
             if (resp.err != dsn::ERR_OK) {
                 const dsn::gpid &pid = pairs.first;
                 CHECK(false,

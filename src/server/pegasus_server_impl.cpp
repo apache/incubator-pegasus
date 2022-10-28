@@ -1652,9 +1652,9 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
         LOG_ERROR_PREFIX("rocksdb::DB::Open failed, error = {}", status.ToString());
         return dsn::ERR_LOCAL_APP_FAILURE;
     }
-    dcheck_eq_replica(2, handles_opened.size());
-    dcheck_eq_replica(handles_opened[0]->GetName(), DATA_COLUMN_FAMILY_NAME);
-    dcheck_eq_replica(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+    CHECK_EQ_PREFIX(2, handles_opened.size());
+    CHECK_EQ_PREFIX(handles_opened[0]->GetName(), DATA_COLUMN_FAMILY_NAME);
+    CHECK_EQ_PREFIX(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
     _data_cf = handles_opened[0];
     _meta_cf = handles_opened[1];
 
@@ -1705,7 +1705,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             release_db();
             return err;
         }
-        dcheck_eq_replica(last_flushed, last_durable_decree());
+        CHECK_EQ_PREFIX(last_flushed, last_durable_decree());
     }
 
     LOG_INFO_PREFIX("open app succeed, pegasus_data_version = {}, last_durable_decree = {}",
@@ -1913,7 +1913,7 @@ private:
         ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
         dcheck_gt_replica(last_commit, last_durable_decree());
         int64_t last_flushed = static_cast<int64_t>(_meta_store->get_last_flushed_decree());
-        dcheck_eq_replica(last_commit, last_flushed);
+        CHECK_EQ_PREFIX(last_commit, last_flushed);
         if (!_checkpoints.empty()) {
             dcheck_gt_replica(last_commit, _checkpoints.back());
         }
@@ -1946,8 +1946,8 @@ private:
     // case 1: last_durable == last_flushed == last_commit
     // no need to do checkpoint
     if (last_durable == last_commit) {
-        dcheck_eq_replica(last_durable, last_flushed);
-        dcheck_eq_replica(last_flushed, last_commit);
+        CHECK_EQ_PREFIX(last_durable, last_flushed);
+        CHECK_EQ_PREFIX(last_flushed, last_commit);
         LOG_INFO_PREFIX(
             "no need to checkpoint because last_durable_decree = last_committed_decree = {}",
             last_durable);
@@ -2116,8 +2116,8 @@ private:
             cleanup(true);
             return ::dsn::ERR_LOCAL_APP_FAILURE;
         }
-        dcheck_eq_replica(handles_opened.size(), 2);
-        dcheck_eq_replica(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
+        CHECK_EQ_PREFIX(handles_opened.size(), 2);
+        CHECK_EQ_PREFIX(handles_opened[1]->GetName(), META_COLUMN_FAMILY_NAME);
         uint64_t last_flushed_decree =
             _meta_store->get_decree_from_readonly_db(snapshot_db, handles_opened[1]);
         *checkpoint_decree = last_flushed_decree;
