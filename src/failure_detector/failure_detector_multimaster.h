@@ -26,10 +26,12 @@
 
 #pragma once
 
-#include "runtime/rpc/group_address.h"
-#include "utils/zlocks.h"
-#include "failure_detector/failure_detector.h"
 #include <functional>
+
+#include "failure_detector/failure_detector.h"
+#include "runtime/rpc/group_address.h"
+#include "utils/fmt_logging.h"
+#include "utils/zlocks.h"
 
 namespace dsn {
 namespace dist {
@@ -51,11 +53,11 @@ public:
     // server side
     void on_worker_disconnected(const std::vector<::dsn::rpc_address> &nodes) override
     {
-        dassert(false, "invalid execution flow");
+        CHECK(false, "invalid execution flow");
     }
     void on_worker_connected(::dsn::rpc_address node) override
     {
-        dassert(false, "invalid execution flow");
+        CHECK(false, "invalid execution flow");
     }
 
     ::dsn::rpc_address current_server_contact() const;

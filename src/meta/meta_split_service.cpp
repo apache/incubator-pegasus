@@ -468,12 +468,12 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     auto &response = rpc.response();
     zauto_write_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(request.app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", request.app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", request.app_name);
-    dassert_f(request.meta_split_status == split_status::PAUSING ||
-                  request.meta_split_status == split_status::CANCELING,
-              "invalid split_status({})",
-              dsn::enum_to_string(request.meta_split_status));
+    CHECK(app, "app({}) is not existed", request.app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", request.app_name);
+    CHECK(request.meta_split_status == split_status::PAUSING ||
+              request.meta_split_status == split_status::CANCELING,
+          "invalid split_status({})",
+          dsn::enum_to_string(request.meta_split_status));
 
     const std::string &stop_type =
         rpc.request().meta_split_status == split_status::PAUSING ? "pause" : "cancel";
@@ -554,8 +554,8 @@ void meta_split_service::query_child_state(query_child_state_rpc rpc)
 
     zauto_read_lock l(app_lock());
     std::shared_ptr<app_state> app = _state->get_app(app_name);
-    dassert_f(app != nullptr, "app({}) is not existed", app_name);
-    dassert_f(app->is_stateful, "app({}) is stateless currently", app_name);
+    CHECK(app, "app({}) is not existed", app_name);
+    CHECK(app->is_stateful, "app({}) is stateless currently", app_name);
 
     if (app->partition_count == request.partition_count) {
         response.err = ERR_INVALID_STATE;

@@ -1769,8 +1769,8 @@ void pegasus_server_impl::cancel_background_work(bool wait)
 ::dsn::error_code pegasus_server_impl::stop(bool clear_state)
 {
     if (!_is_open) {
-        dassert(_db == nullptr, "");
-        dassert(!clear_state, "should not be here if do clear");
+        CHECK(_db == nullptr, "");
+        CHECK(!clear_state, "should not be here if do clear");
         return ::dsn::ERR_OK;
     }
 
@@ -2242,7 +2242,7 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
         return err;
     }
 
-    dassert(_is_open, "");
+    CHECK(_is_open, "");
     dassert(ci == last_durable_decree(), "%" PRId64 " VS %" PRId64 "", ci, last_durable_decree());
 
     LOG_INFO("%s: apply checkpoint succeed, last_durable_decree = %" PRId64,
@@ -2276,7 +2276,7 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
         }
     }
     default:
-        dassert(false, "unsupported filter type: %d", filter_type);
+        CHECK(false, "unsupported filter type: %d", filter_type);
     }
     return false;
 }

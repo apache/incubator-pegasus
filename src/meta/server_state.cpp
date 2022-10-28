@@ -133,7 +133,7 @@ void server_state::register_cli_commands()
             }
             return std::string(err.to_string());
         });
-    dassert(_cli_dump_handle != nullptr, "register cli handler failed");
+    CHECK_NOTNULL(_cli_dump_handle, "register cli handler failed");
 
     _ctrl_add_secondary_enable_flow_control = dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_enable_flow_control"},
@@ -143,7 +143,7 @@ void server_state::register_cli_commands()
             return remote_command_set_bool_flag(
                 _add_secondary_enable_flow_control, "lb.add_secondary_enable_flow_control", args);
         });
-    dassert(_ctrl_add_secondary_enable_flow_control, "register cli handler failed");
+    CHECK(_ctrl_add_secondary_enable_flow_control, "register cli handler failed");
 
     _ctrl_add_secondary_max_count_for_one_node = dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_max_count_for_one_node"},
@@ -168,7 +168,7 @@ void server_state::register_cli_commands()
             }
             return result;
         });
-    dassert(_ctrl_add_secondary_max_count_for_one_node, "register cli handler failed");
+    CHECK(_ctrl_add_secondary_max_count_for_one_node, "register cli handler failed");
 }
 
 void server_state::initialize(meta_service *meta_svc, const std::string &apps_root)
@@ -278,10 +278,10 @@ void server_state::transition_staging_state(std::shared_ptr<app_state> &app)
         resp.info = *app;
         send_response(_meta_svc, app->helpers->pending_response, resp);
     } else {
-        dassert(false,
-                "app(%s) not in staging state(%s)",
-                app->get_logname(),
-                enum_to_string(app->status));
+        CHECK(false,
+              "app({}) not in staging state({})",
+              app->get_logname(),
+              enum_to_string(app->status));
     }
 
     LOG_INFO("app(%s) transfer from %s to %s",
@@ -303,7 +303,7 @@ void server_state::process_one_partition(std::shared_ptr<app_state> &app)
     } else if (ans == 0) {
         transition_staging_state(app);
     } else {
-        dassert(false, "partitions in progress(%d) shouldn't be negetive", ans);
+        CHECK(false, "partitions in progress({}) shouldn't be negetive", ans);
     }
 }
 
@@ -3440,16 +3440,16 @@ void server_state::do_update_max_replica_count(std::shared_ptr<app_state> &app,
                 continue;
             }
 
-            dassert_f(false,
-                      "An error that can't be handled occurs while updating partition-level"
-                      "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                      "partition_index={}, partition_count={}, new_max_replica_count={}",
-                      ec.to_string(),
-                      app_name,
-                      app->app_id,
-                      i,
-                      app->partition_count,
-                      new_max_replica_count);
+            CHECK(false,
+                  "An error that can't be handled occurs while updating partition-level"
+                  "max_replica_count: error_code={}, app_name={}, app_id={}, "
+                  "partition_index={}, partition_count={}, new_max_replica_count={}",
+                  ec.to_string(),
+                  app_name,
+                  app->app_id,
+                  i,
+                  app->partition_count,
+                  new_max_replica_count);
         }
 
         LOG_INFO_F("all partitions have been changed to the new max_replica_count, ready to update "
@@ -3800,14 +3800,14 @@ void server_state::recover_from_max_replica_count_env()
             int32_t max_replica_count = 0;
             if (args.size() < 2 || !dsn::buf2int32(args[1], max_replica_count) ||
                 max_replica_count <= 0) {
-                dassert_f(false,
-                          "invalid max_replica_count_env: app_name={}, app_id={}, "
-                          "max_replica_count={}, {}={}",
-                          app->app_name,
-                          app->app_id,
-                          app->max_replica_count,
-                          replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                          iter->second);
+                CHECK(false,
+                      "invalid max_replica_count_env: app_name={}, app_id={}, "
+                      "max_replica_count={}, {}={}",
+                      app->app_name,
+                      app->app_id,
+                      app->max_replica_count,
+                      replica_envs::UPDATE_MAX_REPLICA_COUNT,
+                      iter->second);
             }
 
             tasks.emplace_back(app, max_replica_count);

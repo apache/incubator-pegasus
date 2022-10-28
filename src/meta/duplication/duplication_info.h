@@ -253,7 +253,7 @@ extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::
 
 // TODO(yingchun): remember to update it when refactor dassert_f
 #define dassert_dup(_pred_, _dup_, ...)                                                            \
-    dassert_f(_pred_, "[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
+    CHECK(_pred_, "[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 
 } // namespace replication
 } // namespace dsn

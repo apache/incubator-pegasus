@@ -933,7 +933,7 @@ void redis_parser::decr_by(message_entry &entry) { counter_internal(entry); }
 
 void redis_parser::counter_internal(message_entry &entry)
 {
-    dassert(!entry.request.sub_requests.empty(), "");
+    CHECK(!entry.request.sub_requests.empty(), "");
     dassert(entry.request.sub_requests[0].length > 0, "");
     const char *command = entry.request.sub_requests[0].data.data();
     int64_t increment = 1;

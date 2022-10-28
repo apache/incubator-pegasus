@@ -25,6 +25,7 @@
  */
 
 #include "meta/meta_state_service.h"
+
 #include <boost/lexical_cast.hpp>
 
 #include <gtest/gtest.h>
@@ -33,6 +34,7 @@
 
 #include "meta/meta_state_service_simple.h"
 #include "meta/meta_state_service_zookeeper.h"
+#include "utils/fmt_logging.h"
 
 using namespace dsn;
 using namespace dsn::dist;
@@ -62,9 +64,9 @@ void provider_basic_test(const service_creator_func &service_creator,
         service->get_children("/1",
                               META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
                               [](error_code ec, const std::vector<std::string> &children) {
-                                  dassert(ec == ERR_OK && children.size() == 1 &&
-                                              *children.begin() == "1",
-                                          "unexpected child");
+                                  CHECK(ec == ERR_OK && children.size() == 1 &&
+                                            *children.begin() == "1",
+                                        "unexpected child");
                               });
         service->node_exist("/1/1", META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_ok)->wait();
         service->delete_node("/1", false, META_STATE_SERVICE_SIMPLE_TEST_CALLBACK, expect_err)

@@ -1216,7 +1216,7 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 std::string counter_name;
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name);
-                dassert(parse_ret, "name = %s", m.name.c_str());
+                CHECK(parse_ret, "name = {}", m.name);
                 dassert(app_id_x == app_id, "name = %s", m.name.c_str());
                 dassert(partition_index_x < partition_count, "name = %s", m.name.c_str());
                 if (partitions[partition_index_x].primary != node_addr)
@@ -1279,7 +1279,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
             int32_t app_id, pidx;
             std::string counter_name;
             bool r = parse_app_pegasus_perf_counter_name(m.name, app_id, pidx, counter_name);
-            dassert(r, "name = %s", m.name.c_str());
+            CHECK(r, "name = {}", m.name);
             if (counter_name == "recent.read.cu") {
                 nodes_stat[i].cu_value_by_app[app_id].first += (int64_t)m.value;
             } else if (counter_name == "recent.write.cu") {
@@ -1346,7 +1346,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
             std::string counter_name;
             bool parse_ret = parse_app_pegasus_perf_counter_name(
                 m.name, app_id_x, partition_index_x, counter_name);
-            dassert(parse_ret, "name = %s", m.name.c_str());
+            CHECK(parse_ret, "name = {}", m.name);
             if (counter_name != "disk.storage.sst(MB)")
                 continue;
             auto find = app_partitions.find(app_id_x);

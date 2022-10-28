@@ -240,7 +240,7 @@ void greedy_load_balancer::report(const dsn::replication::migration_list &list,
             counters[COPY_SEC_COUNT]++;
             break;
         default:
-            dassert(false, "");
+            CHECK(false, "");
         }
     }
     ::memcpy(t_operation_counters, counters, sizeof(counters));

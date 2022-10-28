@@ -209,7 +209,7 @@ void http_message_parser::prepare_on_send(message_ex *msg)
     const message_header *header = msg->header;
     std::vector<blob> &buffers = msg->buffers;
 
-    dassert(!header->context.u.is_request, "send response only");
+    CHECK(!header->context.u.is_request, "send response only");
 
     unsigned int dsn_size = sizeof(message_header) + header->body_length;
     int dsn_buf_count = 0;

@@ -24,19 +24,13 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "failure_detector/failure_detector.h"
-#include "utils/command_manager.h"
+
 #include <chrono>
 #include <ctime>
+
+#include "utils/command_manager.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace fd {
@@ -320,7 +314,7 @@ bool failure_detector::remove_from_allow_list(::dsn::rpc_address node)
 
 void failure_detector::set_allow_list(const std::vector<std::string> &replica_addrs)
 {
-    dassert(!_is_started, "FD is already started, the allow list should really not be modified");
+    CHECK(!_is_started, "FD is already started, the allow list should really not be modified");
 
     std::vector<rpc_address> nodes;
     for (auto &addr : replica_addrs) {
