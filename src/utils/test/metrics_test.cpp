@@ -18,6 +18,7 @@
 #include "utils/metrics.h"
 
 #include <chrono>
+#include <sstream>
 #include <thread>
 #include <vector>
 
@@ -915,13 +916,38 @@ std::string take_snapshot_and_get_json_string(metric *m)
 }
 
 template <typename T>
-void extract_metric_snapshot_map(const std::string &json_string, std::unordered_map<std::string, T> &snapshot_map)
+void check_metric_snapshot_from_json_string(const std::string &json_string,
+                                              const std::string &expected_metric_name,
+                                              const typename std::unordered_map<std::string, T> &expected_value_map,
+                                              const bool is_integral = true)
 {
     rapidjson::Document doc;
-    doc.Parse(json_string);
+    ASSERT_TRUE(doc.Parse(json_string));
+
+    typename std::unordered_map<std::string, T> actual_value_map;
 
     ASSERT_TRUE(doc.IsObject());
-    ASSERT_TRUE(json::json_decode(doc, snapshot_map));
+    for (const auto &elem : doc.GetObject()) {
+        ASSERT_TRUE(elem.name.IsString());
+
+        if (elem.value.IsString()) {
+            ASSERT_EQ(elem.name.GetString(), "name");
+
+            ASSERT_EQ(elem.value.GetString(), expected_metric_name);
+        } else {
+            T value;
+            if (is_integral) {
+                ASSERT_EQ(elem.value.IsInt64());
+                value = elem.value.GetInt64();
+            } else {
+                ASSERT_EQ(elem.value.IsDouble());
+                value = elem.value.GetDouble();
+            }
+            actual_value_map[elem.name.GetString()] = value;
+        }
+    }
+
+    // Check value map
 }
 
 TEST(metrics_test, take_snapshot_gauge_int64)
@@ -930,8 +956,7 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     {
         std::string entity_id;
         int64_t expected_value;
-    } tests[] {{
-    }};
+    } tests[] {{"server_60", 5}};
 
     for (const auto &test : tests) {
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
@@ -941,11 +966,9 @@ TEST(metrics_test, take_snapshot_gauge_int64)
 
         auto json_string = take_snapshot_and_get_json_string(&my_gauge);
 
-        std::unordered_map<std::string, int64_t> actual_snapshot_map;
-        extract_metric_snapshot_map(json_string, actual_snapshot_map);
-
-        std::unordered_map<std::string, int64_t> expected_snapshot_map = {
-            {"name", my_gauge.prototype()->name()}, {"value", test.expected_value}};
+        std::unordered_map<std::string, int64_t> expected_value_map = {
+            {"value", test.expected_value}};
+        check_metric_snapshot_from_json_string(json_string, my_gauge.prototype()->name(), expected_value_map);
     }
 }
 
