@@ -916,10 +916,11 @@ std::string take_snapshot_and_get_json_string(metric *m)
 }
 
 template <typename T>
-void check_metric_snapshot_from_json_string(const std::string &json_string,
-                                              const std::string &expected_metric_name,
-                                              const typename std::unordered_map<std::string, T> &expected_value_map,
-                                              const bool is_integral = true)
+void check_metric_snapshot_from_json_string(
+    const std::string &json_string,
+    const std::string &expected_metric_name,
+    const typename std::unordered_map<std::string, T> &expected_value_map,
+    const bool is_integral = true)
 {
     rapidjson::Document doc;
     ASSERT_TRUE(doc.Parse(json_string));
@@ -956,7 +957,7 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     {
         std::string entity_id;
         int64_t expected_value;
-    } tests[] {{"server_60", 5}};
+    } tests[]{{"server_60", 5}};
 
     for (const auto &test : tests) {
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
@@ -968,7 +969,8 @@ TEST(metrics_test, take_snapshot_gauge_int64)
 
         std::unordered_map<std::string, int64_t> expected_value_map = {
             {"value", test.expected_value}};
-        check_metric_snapshot_from_json_string(json_string, my_gauge.prototype()->name(), expected_value_map);
+        check_metric_snapshot_from_json_string(
+            json_string, my_gauge.prototype()->name(), expected_value_map);
     }
 }
 
