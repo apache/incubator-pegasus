@@ -218,12 +218,12 @@ decree replica::get_replay_start_decree()
 
 error_code replica::init_app_and_prepare_list(bool create_new)
 {
-    dassert(nullptr == _app, "");
+    CHECK(nullptr == _app, "");
     error_code err;
     std::string log_dir = utils::filesystem::path_combine(dir(), "plog");
 
     _app.reset(replication_app_base::new_storage_instance(_app_info.app_type, this));
-    dassert(nullptr == _private_log, "private log must not be initialized yet");
+    CHECK(nullptr == _private_log, "");
 
     if (create_new) {
         err = _app->open_new_internal(this, _stub->_log->on_partition_reset(get_gpid(), 0), 0);
@@ -240,10 +240,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     } else {
         err = _app->open_internal(this);
         if (err == ERR_OK) {
-            dassert(_app->last_committed_decree() == _app->last_durable_decree(),
-                    "invalid app state, %" PRId64 " VS %" PRId64 "",
-                    _app->last_committed_decree(),
-                    _app->last_durable_decree());
+            CHECK_EQ(_app->last_committed_decree(), _app->last_durable_decree());
             _config.ballot = _app->init_info().init_ballot;
             _prepare_list->reset(_app->last_committed_decree());
 

@@ -176,7 +176,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
     is.read((char *)&count, sizeof(count));
     is.read((char *)&magic, sizeof(magic));
-    dassert(magic == 0xdeadbeef, "invalid checkpoint");
+    CHECK_EQ_MSG(magic, 0xdeadbeef, "invalid checkpoint");
 
     for (uint64_t i = 0; i < count; i++) {
         std::string key;
@@ -291,9 +291,8 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         // PRId64 "", last_committed_decree());
         return ERR_OK;
     } else {
-        dassert(replication_app_base::chkpt_apply_mode::copy == mode, "invalid mode %d", (int)mode);
-        dassert(state.to_decree_included > last_durable_decree(),
-                "checkpoint's decree is smaller than current");
+        CHECK_EQ_MSG(replication_app_base::chkpt_apply_mode::copy, mode, "invalid mode");
+        CHECK_GT(state.to_decree_included, last_durable_decree());
 
         char name[256];
         sprintf(name, "%s/checkpoint.%" PRId64, data_dir().c_str(), state.to_decree_included);

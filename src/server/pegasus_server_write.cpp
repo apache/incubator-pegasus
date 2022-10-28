@@ -61,7 +61,7 @@ int pegasus_server_write::on_batched_write_requests(dsn::message_ex **requests,
     try {
         auto iter = _non_batch_write_handlers.find(requests[0]->rpc_code());
         if (iter != _non_batch_write_handlers.end()) {
-            dassert_f(count == 1, "count = {}", count);
+            CHECK_EQ(count, 1);
             return iter->second(requests[0]);
         }
     } catch (TTransportException &ex) {
@@ -140,10 +140,10 @@ void pegasus_server_write::request_key_check(int64_t decree,
     // TODO(wutao1): server should not assert when client's hash is incorrect.
     if (msg->header->client.partition_hash != 0) {
         uint64_t partition_hash = pegasus_key_hash(key);
-        dassert(msg->header->client.partition_hash == partition_hash,
-                "inconsistent partition hash");
+        CHECK_EQ_MSG(
+            msg->header->client.partition_hash, partition_hash, "inconsistent partition hash");
         int thread_hash = get_gpid().thread_hash();
-        dassert(msg->header->client.thread_hash == thread_hash, "inconsistent thread hash");
+        CHECK_EQ_MSG(msg->header->client.thread_hash, thread_hash, "inconsistent thread hash");
     }
 
     if (_verbose_log) {

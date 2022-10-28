@@ -535,10 +535,7 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
             backup_context->checkpoint_decree = last_committed_decree();
         } else { // backup_context->durable_decree_when_checkpoint != durable_decree
             // checkpoint generated, but is behind checkpoint_decree, need trigger again
-            dassert(backup_context->durable_decree_when_checkpoint < durable_decree,
-                    "durable_decree_when_checkpoint(%" PRId64 ") < durable_decree(%" PRId64 ")",
-                    backup_context->durable_decree_when_checkpoint,
-                    durable_decree);
+            CHECK_LT(backup_context->durable_decree_when_checkpoint, durable_decree);
             LOG_INFO("%s: need trigger async checkpoint again", backup_context->name);
         }
         backup_context->checkpoint_timestamp = dsn_now_ms();
@@ -651,10 +648,7 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
             0,
             std::chrono::seconds(10));
     } else {
-        dassert(last_decree >= backup_context->checkpoint_decree,
-                "%" PRId64 " VS %" PRId64 "",
-                last_decree,
-                backup_context->checkpoint_decree);
+        CHECK_GE(last_decree, backup_context->checkpoint_decree);
         backup_context->checkpoint_decree = last_decree; // update to real decree
         std::string backup_checkpoint_dir_path = utils::filesystem::path_combine(
             _app->backup_dir(),

@@ -110,9 +110,7 @@ proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
     _backup_one_request->add_ref();
 
     _remote_address = _backup_one_request->header->from_address;
-    dassert(_remote_address.type() == HOST_TYPE_IPV4,
-            "invalid rpc_address type, type = %d",
-            (int)_remote_address.type());
+    CHECK_EQ_MSG(_remote_address.type(), HOST_TYPE_IPV4, "invalid rpc_address type");
 }
 
 proxy_session::~proxy_session()

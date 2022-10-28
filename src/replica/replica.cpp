@@ -279,14 +279,8 @@ void replica::response_client_write(dsn::message_ex *request, error_code error)
 void replica::check_state_completeness()
 {
     /* prepare commit durable */
-    dassert(max_prepared_decree() >= last_committed_decree(),
-            "%" PRId64 " VS %" PRId64 "",
-            max_prepared_decree(),
-            last_committed_decree());
-    dassert(last_committed_decree() >= last_durable_decree(),
-            "%" PRId64 " VS %" PRId64 "",
-            last_committed_decree(),
-            last_durable_decree());
+    CHECK_GE(max_prepared_decree(), last_committed_decree());
+    CHECK_GE(last_committed_decree(), last_durable_decree());
 }
 
 void replica::execute_mutation(mutation_ptr &mu)
@@ -314,20 +308,14 @@ void replica::execute_mutation(mutation_ptr &mu)
     case partition_status::PS_PRIMARY: {
         ADD_POINT(mu->_tracer);
         check_state_completeness();
-        dassert(_app->last_committed_decree() + 1 == d,
-                "app commit: %" PRId64 ", mutation decree: %" PRId64 "",
-                _app->last_committed_decree(),
-                d);
+        CHECK_EQ(_app->last_committed_decree() + 1, d);
         err = _app->apply_mutation(mu);
     } break;
 
     case partition_status::PS_SECONDARY:
         if (!_secondary_states.checkpoint_is_running) {
             check_state_completeness();
-            dassert(_app->last_committed_decree() + 1 == d,
-                    "%" PRId64 " VS %" PRId64 "",
-                    _app->last_committed_decree() + 1,
-                    d);
+            CHECK_EQ(_app->last_committed_decree() + 1, d);
             err = _app->apply_mutation(mu);
         } else {
             LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
@@ -345,10 +333,7 @@ void replica::execute_mutation(mutation_ptr &mu)
         if (_potential_secondary_states.learning_status == learner_status::LearningSucceeded ||
             _potential_secondary_states.learning_status ==
                 learner_status::LearningWithPrepareTransient) {
-            dassert(_app->last_committed_decree() + 1 == d,
-                    "%" PRId64 " VS %" PRId64 "",
-                    _app->last_committed_decree() + 1,
-                    d);
+            CHECK_EQ(_app->last_committed_decree() + 1, d);
             err = _app->apply_mutation(mu);
         } else {
             LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,

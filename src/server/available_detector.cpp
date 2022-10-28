@@ -49,12 +49,12 @@ available_detector::available_detector()
     _cluster_name = dsn::get_current_cluster_name();
     _app_name = dsn_config_get_value_string(
         "pegasus.collector", "available_detect_app", "", "available detector app name");
-    dassert(_app_name.size() > 0, "");
+    CHECK(!_app_name.empty(), "");
     _alert_script_dir = dsn_config_get_value_string("pegasus.collector",
                                                     "available_detect_alert_script_dir",
                                                     ".",
                                                     "available detect alert script dir");
-    dassert(_alert_script_dir.size() > 0, "");
+    CHECK(!_alert_script_dir.empty(), "");
     _alert_email_address = dsn_config_get_value_string(
         "pegasus.collector",
         "available_detect_alert_email_address",
@@ -62,7 +62,7 @@ available_detector::available_detector()
         "available detect alert email address, empty means not send email");
     _meta_list.clear();
     dsn::replication::replica_helper::load_meta_servers(_meta_list);
-    dassert(_meta_list.size() > 0, "");
+    CHECK(!_meta_list.empty(), "");
     _detect_interval_seconds =
         (uint32_t)dsn_config_get_value_uint64("pegasus.collector",
                                               "available_detect_interval_seconds",

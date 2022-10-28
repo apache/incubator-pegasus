@@ -30,6 +30,7 @@
 #include "asio_net_provider.h"
 #include "asio_rpc_session.h"
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace tools {
@@ -95,9 +96,9 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
     _acceptor = nullptr;
 
-    dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
-            "invalid given channel %s",
-            channel.to_string());
+    CHECK(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
+          "invalid given channel {}",
+          channel.to_string());
 
     _address.assign_ipv4(get_local_ipv4(), port);
 
@@ -190,13 +191,13 @@ void asio_udp_provider::send_message(message_ex *request)
     auto lcount = parser->get_buffer_count_on_send(request);
     std::unique_ptr<message_parser::send_buf[]> bufs(new message_parser::send_buf[lcount]);
     auto rcount = parser->get_buffers_on_send(request, bufs.get());
-    dassert(lcount >= rcount, "%d VS %d", lcount, rcount);
+    CHECK_GE(lcount, rcount);
 
     size_t tlen = 0, offset = 0;
     for (int i = 0; i < rcount; i++) {
         tlen += bufs[i].sz;
     }
-    dassert(tlen <= max_udp_packet_size, "the message is too large to send via a udp channel");
+    CHECK_LE_MSG(tlen, max_udp_packet_size, "the message is too large to send via a udp channel");
 
     std::unique_ptr<char[]> packet_buffer(new char[tlen]);
     for (int i = 0; i < rcount; i++) {
@@ -265,8 +266,9 @@ void asio_udp_provider::do_receive()
 
     _recv_reader.truncate_read();
     auto buffer_ptr = _recv_reader.read_buffer_ptr(max_udp_packet_size);
-    dassert(_recv_reader.read_buffer_capacity() >= max_udp_packet_size,
-            "failed to load enough buffer in parser");
+    CHECK_GE_MSG(_recv_reader.read_buffer_capacity(),
+                 max_udp_packet_size,
+                 "failed to load enough buffer in parser");
 
     _socket->async_receive_from(
         ::boost::asio::buffer(buffer_ptr, max_udp_packet_size),
@@ -329,7 +331,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
                                          1,
                                          "thread number for io service (timer and boost network)");
 
-    dassert(channel == RPC_CHANNEL_UDP, "invalid given channel %s", channel.to_string());
+    CHECK_EQ(channel, RPC_CHANNEL_UDP);
 
     if (client_only) {
         do {

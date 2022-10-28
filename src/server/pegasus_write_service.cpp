@@ -234,8 +234,8 @@ int pegasus_write_service::check_and_mutate(int64_t decree,
 
 void pegasus_write_service::batch_prepare(int64_t decree)
 {
-    dassert(_batch_start_time == 0,
-            "batch_prepare and batch_commit/batch_abort must be called in pair");
+    CHECK_EQ_MSG(
+        _batch_start_time, 0, "batch_prepare and batch_commit/batch_abort must be called in pair");
 
     _batch_start_time = dsn_now_ns();
 }

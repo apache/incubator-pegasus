@@ -1064,7 +1064,7 @@ void cold_backup_context::file_upload_uncomplete(const std::string &filename)
 {
     zauto_lock l(_lock);
 
-    dassert(_cur_upload_file_cnt >= 1, "cur_upload_file_cnt = %d", _cur_upload_file_cnt);
+    CHECK_GE(_cur_upload_file_cnt, 1);
     _cur_upload_file_cnt -= 1;
     _file_remain_cnt += 1;
     _file_status[filename] = file_status::FileUploadUncomplete;
@@ -1074,7 +1074,7 @@ void cold_backup_context::file_upload_complete(const std::string &filename)
 {
     zauto_lock l(_lock);
 
-    dassert(_cur_upload_file_cnt >= 1, "cur_upload_file_cnt = %d", _cur_upload_file_cnt);
+    CHECK_GE(_cur_upload_file_cnt, 1);
     _cur_upload_file_cnt -= 1;
     _file_status[filename] = file_status::FileUploadComplete;
 }

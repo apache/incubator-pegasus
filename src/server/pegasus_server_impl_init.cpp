@@ -169,7 +169,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
         100000000,
         "get/multi-get operation duration exceed this threshold will be logged");
     _slow_query_threshold_ns = _slow_query_threshold_ns_in_config;
-    dassert(_slow_query_threshold_ns > 0, "slow query threshold must be greater than 0");
+    CHECK_GT(_slow_query_threshold_ns, 0);
     _abnormal_get_size_threshold = dsn_config_get_value_uint64(
         "pegasus.server",
         "rocksdb_abnormal_get_size_threshold",

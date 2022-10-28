@@ -246,10 +246,7 @@ std::string state_snapshot::diff_string(const state_snapshot &other) const
             oss << add_mark << cur_it->second.to_string() << std::endl;
             ++cur_it;
         } else {
-            dassert(oth_it->first == cur_it->first,
-                    "invalid replica_id, %s VS %s",
-                    oth_it->first.to_string().c_str(),
-                    cur_it->first.to_string().c_str());
+            CHECK_EQ(oth_it->first, cur_it->first);
             if (oth_it->second != cur_it->second) {
                 oss << chg_mark << cur_it->second.to_string()
                     << " <= " << oth_it->second.to_string() << std::endl;

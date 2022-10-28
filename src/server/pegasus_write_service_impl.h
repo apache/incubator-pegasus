@@ -446,9 +446,7 @@ public:
                     resp.error = _rocksdb_wrapper->write_batch_put(
                         decree, key, m.value, static_cast<uint32_t>(m.set_expire_ts_seconds));
                 } else {
-                    dassert_f(m.operation == ::dsn::apps::mutate_operation::MO_DELETE,
-                              "m.operation = %d",
-                              m.operation);
+                    CHECK_EQ(m.operation, ::dsn::apps::mutate_operation::MO_DELETE);
                     resp.error = _rocksdb_wrapper->write_batch_delete(decree, key);
                 }
 

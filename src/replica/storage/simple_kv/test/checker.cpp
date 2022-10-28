@@ -290,7 +290,7 @@ void test_checker::get_current_states(state_snapshot &states)
 
         for (auto &kv : app->_stub->_replicas) {
             replica_ptr r = kv.second;
-            dassert(kv.first == r->get_gpid(), "");
+            CHECK_EQ(kv.first, r->get_gpid());
             replica_id id(r->get_gpid(), app->info().full_name);
             replica_state &rs = states.state_map[id];
             rs.id = id;

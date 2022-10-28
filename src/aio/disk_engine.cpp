@@ -107,7 +107,7 @@ aio_task *disk_file::write(aio_task *tsk, void *ctx)
 
 aio_task *disk_file::on_read_completed(aio_task *wk, error_code err, size_t size)
 {
-    dassert(wk->next == nullptr, "");
+    CHECK(wk->next == nullptr, "");
     auto ret = _read_queue.on_work_completed(wk, nullptr);
     wk->enqueue(err, size);
     wk->release_ref(); // added in above read
@@ -138,7 +138,7 @@ aio_task *disk_file::on_write_completed(aio_task *wk, void *ctx, error_code err,
     }
 
     if (err == ERR_OK) {
-        dassert(size == 0, "written buffer size does not equal to input buffer's size");
+        CHECK_EQ_MSG(size, 0, "written buffer size does not equal to input buffer's size");
     }
 
     return ret;

@@ -354,11 +354,11 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     int dsn_buf_count = 0;
     while (dsn_size > 0 && dsn_buf_count < buffers.size()) {
         blob &buf = buffers[dsn_buf_count];
-        dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
+        CHECK_GE(dsn_size, buf.length());
         dsn_size -= buf.length();
         ++dsn_buf_count;
     }
-    dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
+    CHECK_EQ(dsn_size, 0);
 
     // put header_bb and end_bb at the end
     buffers.resize(dsn_buf_count);
@@ -379,7 +379,7 @@ int thrift_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf
     int dsn_buf_count = 0;
     while (dsn_size > 0 && dsn_buf_count < msg_buffers.size()) {
         blob &buf = msg_buffers[dsn_buf_count];
-        dassert(dsn_size >= buf.length(), "%u VS %u", dsn_size, buf.length());
+        CHECK_GE(dsn_size, buf.length());
         dsn_size -= buf.length();
         ++dsn_buf_count;
 
@@ -392,8 +392,8 @@ int thrift_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf
         offset = 0;
         ++i;
     }
-    dassert(dsn_size == 0, "dsn_size = %u", dsn_size);
-    dassert(dsn_buf_count + 2 == msg_buffers.size(), "must have 2 more blob at the end");
+    CHECK_EQ(dsn_size, 0);
+    CHECK_EQ_MSG(dsn_buf_count + 2, msg_buffers.size(), "must have 2 more blob at the end");
 
     // set header
     blob &header_bb = msg_buffers[dsn_buf_count];

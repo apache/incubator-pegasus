@@ -196,7 +196,7 @@ struct scan_data_context
     {
         // max_batch_count should > 1 because scan may be terminated
         // when split_request_count = 1
-        dassert(max_batch_count > 1, "");
+        CHECK_GT(max_batch_count, 1);
     }
     void set_sort_key_filter(pegasus::pegasus_client::filter_type type, const std::string &pattern)
     {
@@ -1014,11 +1014,8 @@ get_app_partitions(shell_context *sc,
             LOG_ERROR("list app %s failed, error = %s", app.app_name.c_str(), err.to_string());
             return false;
         }
-        dassert(app_id == app.app_id, "%d VS %d", app_id, app.app_id);
-        dassert(partition_count == app.partition_count,
-                "%d VS %d",
-                partition_count,
-                app.partition_count);
+        CHECK_EQ(app_id, app.app_id);
+        CHECK_EQ(partition_count, app.partition_count);
     }
     return true;
 }
@@ -1200,11 +1197,8 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
             LOG_ERROR("list app %s failed, error = %s", app_name.c_str(), err.to_string());
             return false;
         }
-        dassert(app_id == app_info->app_id, "%d VS %d", app_id, app_info->app_id);
-        dassert(partition_count == app_info->partition_count,
-                "%d VS %d",
-                partition_count,
-                app_info->partition_count);
+        CHECK_EQ(app_id, app_info->app_id);
+        CHECK_EQ(partition_count, app_info->partition_count);
 
         for (int i = 0; i < nodes.size(); ++i) {
             dsn::rpc_address node_addr = nodes[i].address;
@@ -1217,8 +1211,8 @@ get_app_stat(shell_context *sc, const std::string &app_name, std::vector<row_dat
                 bool parse_ret = parse_app_pegasus_perf_counter_name(
                     m.name, app_id_x, partition_index_x, counter_name);
                 CHECK(parse_ret, "name = {}", m.name);
-                dassert(app_id_x == app_id, "name = %s", m.name.c_str());
-                dassert(partition_index_x < partition_count, "name = %s", m.name.c_str());
+                CHECK_EQ_MSG(app_id_x, app_id, "name = {}", m.name);
+                CHECK_LT_MSG(partition_index_x, partition_count, "name = {}", m.name);
                 if (partitions[partition_index_x].primary != node_addr)
                     continue;
                 update_app_pegasus_perf_counter(rows[partition_index_x], counter_name, m.value);

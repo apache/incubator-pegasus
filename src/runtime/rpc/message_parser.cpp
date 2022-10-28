@@ -161,12 +161,7 @@ char *message_reader::read_buffer_ptr(unsigned int read_next)
             _buffer_occupied = rb.length();
         }
 
-        dassert(read_next + _buffer_occupied <= _buffer.length(),
-                "%u(%u + %u) VS %u",
-                read_next + _buffer_occupied,
-                read_next,
-                _buffer_occupied,
-                _buffer.length());
+        CHECK_LE(read_next + _buffer_occupied, _buffer.length());
     }
 
     return (char *)(_buffer.data() + _buffer_occupied);

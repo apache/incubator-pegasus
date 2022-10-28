@@ -281,11 +281,11 @@ void fs_manager::remove_replica(const gpid &pid)
     unsigned remove_count = 0;
     for (auto &n : _dir_nodes) {
         unsigned r = n->remove(pid);
-        dassert(remove_count + r <= 1,
-                "gpid(%d.%d) found in dir(%s), which was removed before",
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                n->tag.c_str());
+        CHECK_LE_MSG(remove_count + r,
+                     1,
+                     "gpid({}) found in dir({}), which was removed before",
+                     pid,
+                     n->tag);
         if (r != 0) {
             LOG_INFO("%s: remove gpid(%d.%d) from dir(%s)",
                      dsn_primary_address().to_string(),

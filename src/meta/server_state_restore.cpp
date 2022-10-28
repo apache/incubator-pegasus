@@ -96,11 +96,8 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
     }
     int32_t old_app_id = info.app_id;
     std::string old_app_name = info.app_name;
-    dassert(old_app_id == req.app_id, "invalid app_id, %d VS %d", old_app_id, req.app_id);
-    dassert(old_app_name == req.app_name,
-            "invalid app_name, %s VS %s",
-            old_app_name.c_str(),
-            req.app_name.c_str());
+    CHECK_EQ_MSG(old_app_id, req.app_id, "invalid app id");
+    CHECK_EQ_MSG(old_app_name, req.app_name, "invalid app name");
     std::shared_ptr<app_state> app = nullptr;
 
     if (!req.new_app_name.empty()) {

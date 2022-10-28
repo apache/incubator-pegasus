@@ -319,8 +319,8 @@ error_code server_state::dump_app_states(const char *local_path,
     file->append_buffer("binary", 6);
     app_state *app;
     while ((app = iterator()) != nullptr) {
-        dassert(app->status == app_status::AS_AVAILABLE || app->status == app_status::AS_DROPPED,
-                "invalid app status");
+        CHECK(app->status == app_status::AS_AVAILABLE || app->status == app_status::AS_DROPPED,
+              "invalid app status");
         binary_writer writer;
         dsn::marshall(writer, *app, DSF_THRIFT_BINARY);
         file->append_buffer(writer.get_buffer());
@@ -391,13 +391,13 @@ error_code server_state::restore_from_local_storage(const char *local_path)
     }
 
     blob data;
-    dassert(file->read_next_buffer(data) == 1, "read format header fail");
+    CHECK_EQ_MSG(file->read_next_buffer(data), 1, "read format header failed");
     _all_apps.clear();
 
-    dassert(memcmp(data.data(), "binary", 6) == 0, "");
+    CHECK_EQ(memcmp(data.data(), "binary", 6), 0);
     while (true) {
         int ans = file->read_next_buffer(data);
-        dassert(ans != -1, "read file failed");
+        CHECK_NE_MSG(ans, -1, "read file failed");
         if (ans == 0) // file end
             break;
 
@@ -410,13 +410,14 @@ error_code server_state::restore_from_local_storage(const char *local_path)
         for (unsigned int i = 0; i != app->partition_count; ++i) {
             ans = file->read_next_buffer(data);
             binary_reader reader(data);
-            dassert(ans == 1, "unexpect read buffer, ret(%d)", ans);
+            CHECK_EQ_MSG(ans, 1, "unexpect read buffer");
             unmarshall(reader, app->partitions[i], DSF_THRIFT_BINARY);
-            dassert(app->partitions[i].pid.get_partition_index() == i,
-                    "uncorrect partition data, gpid(%d.%d), appname(%s)",
-                    app->app_id,
-                    i,
-                    app->app_name.c_str());
+            CHECK_EQ_MSG(app->partitions[i].pid.get_partition_index(),
+                         i,
+                         "uncorrect partition data, gpid({}.{}), appname({})",
+                         app->app_id,
+                         i,
+                         app->app_name);
         }
     }
 
@@ -424,9 +425,7 @@ error_code server_state::restore_from_local_storage(const char *local_path)
         if (iter.second->status == app_status::AS_AVAILABLE)
             iter.second->status = app_status::AS_CREATING;
         else {
-            dassert(iter.second->status == app_status::AS_DROPPED,
-                    "invalid app_status, status = %s",
-                    enum_to_string(iter.second->status));
+            CHECK_EQ(iter.second->status, app_status::AS_DROPPED);
             iter.second->status = app_status::AS_DROPPING;
         }
     }
@@ -470,9 +469,9 @@ error_code server_state::initialize_default_apps()
             std::string envs_str = dsn_config_get_value_string(s, "envs", "", "app envs");
             bool parse = dsn::utils::parse_kv_map(envs_str.c_str(), default_app.envs, ',', '=');
 
-            dassert(default_app.app_type.length() > 0, "'[%s] app_type' not specified", s);
-            dassert(default_app.partition_count > 0, "'[%s] partition_count' should > 0", s);
-            dassert(parse, "'[%s] envs' is invalid, envs = %s", s, envs_str.c_str());
+            CHECK_GT_MSG(default_app.app_type.length(), 0, "'[{}] app_type' not specified", s);
+            CHECK_GT(default_app.partition_count, 0);
+            CHECK(parse, "'[{}] envs' is invalid, envs = {}", s, envs_str);
 
             std::shared_ptr<app_state> app = app_state::create(default_app);
             _all_apps.emplace(app->app_id, app);
@@ -493,9 +492,9 @@ error_code server_state::sync_apps_to_remote_storage()
     _exist_apps.clear();
     for (auto &kv_pair : _all_apps) {
         if (kv_pair.second->status == app_status::AS_CREATING) {
-            dassert(_exist_apps.find(kv_pair.second->app_name) == _exist_apps.end(),
-                    "invalid app name, name = %s",
-                    kv_pair.second->app_name.c_str());
+            CHECK(_exist_apps.find(kv_pair.second->app_name) == _exist_apps.end(),
+                  "invalid app name, name = {}",
+                  kv_pair.second->app_name);
             _exist_apps.emplace(kv_pair.second->app_name, kv_pair.second);
         }
     }
@@ -524,8 +523,8 @@ error_code server_state::sync_apps_to_remote_storage()
         std::shared_ptr<app_state> &app = kv.second;
         std::string path = get_app_path(*app);
 
-        dassert(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING,
-                "invalid app status");
+        CHECK(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING,
+              "invalid app status");
         blob value = app->to_json(app_status::AS_CREATING == app->status ? app_status::AS_AVAILABLE
                                                                          : app_status::AS_DROPPED);
         storage->create_node(path,
@@ -591,9 +590,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                     partition_configuration pc;
                     dsn::json::json_forwarder<partition_configuration>::decode(value, pc);
 
-                    dassert(pc.pid.get_app_id() == app->app_id &&
-                                pc.pid.get_partition_index() == partition_id,
-                            "invalid partition config");
+                    CHECK(pc.pid.get_app_id() == app->app_id &&
+                              pc.pid.get_partition_index() == partition_id,
+                          "invalid partition config");
                     {
                         zauto_write_lock l(_lock);
                         app->partitions[partition_id] = pc;
@@ -655,8 +654,8 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
             [this, app_path, &err, &sync_partition](error_code ec, const blob &value) {
                 if (ec == ERR_OK) {
                     app_info info;
-                    dassert(dsn::json::json_forwarder<app_info>::decode(value, info),
-                            "invalid json data");
+                    CHECK(dsn::json::json_forwarder<app_info>::decode(value, info),
+                          "invalid json data");
                     std::shared_ptr<app_state> app = app_state::create(info);
                     {
                         zauto_write_lock l(_lock);
@@ -667,10 +666,10 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         } else if (app->status == app_status::AS_DROPPED) {
                             app->status = app_status::AS_DROPPING;
                         } else {
-                            dassert(false,
-                                    "invalid status(%s) for app(%s) in remote storage",
-                                    enum_to_string(app->status),
-                                    app->get_logname());
+                            CHECK(false,
+                                  "invalid status({}) for app({}) in remote storage",
+                                  enum_to_string(app->status),
+                                  app->get_logname());
                         }
                     }
                     app->helpers->split_states.splitting_count = 0;
@@ -706,10 +705,10 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
 
     if (ERR_OBJECT_NOT_FOUND == err)
         return err;
-    dassert(ERR_OK == err, "can't handle this error (%s)", err.to_string());
-    dassert(transaction_state == std::string(unlock_state) || transaction_state.empty(),
-            "invalid transaction state(%s)",
-            transaction_state.c_str());
+    CHECK_EQ_MSG(ERR_OK, err, "can't handle this error");
+    CHECK(transaction_state == std::string(unlock_state) || transaction_state.empty(),
+          "invalid transaction state({})",
+          transaction_state);
 
     storage->get_children(
         _apps_root,
@@ -745,7 +744,7 @@ void server_state::initialize_node_state()
                 ns->put_partition(pc.pid, true);
             }
             for (auto &ep : pc.secondaries) {
-                dassert(!ep.is_invalid(), "invalid secondary address, addr = %s", ep.to_string());
+                CHECK(!ep.is_invalid(), "invalid secondary address, addr = {}", ep.to_string());
                 node_state *ns = get_node_state(_nodes, ep, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -774,9 +773,9 @@ error_code server_state::initialize_data_structure()
         }
     } else if (err == ERR_OK) {
         if (_meta_svc->get_meta_options().recover_from_replica_server) {
-            dassert(false,
-                    "find apps from remote storage, but "
-                    "[meta_server].recover_from_replica_server = true");
+            CHECK(false,
+                  "find apps from remote storage, but "
+                  "[meta_server].recover_from_replica_server = true");
         } else {
             LOG_INFO(
                 "sync apps from remote storage ok, get %d apps, init the node state accordingly",
@@ -825,7 +824,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
             response.partitions.resize(ns->partition_count());
             ns->for_each_partition([&, this](const gpid &pid) {
                 std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-                dassert(app != nullptr, "invalid app_id, app_id = %d", pid.get_app_id());
+                CHECK(app, "invalid app_id, app_id = {}", pid.get_app_id());
                 config_context &cc = app->helpers->contexts[pid.get_partition_index()];
 
                 // config sync need the newest data to keep the perfect FD,
@@ -890,11 +889,11 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                             rep.pid);
                     } else {
                         // app is not recognized or partition is not recognized
-                        dassert(false,
-                                "gpid({}) on node({}) is not exist on meta server, administrator "
-                                "should check consistency of meta data",
-                                rep.pid,
-                                request.node.to_string());
+                        CHECK(false,
+                              "gpid({}) on node({}) is not exist on meta server, administrator "
+                              "should check consistency of meta data",
+                              rep.pid,
+                              request.node.to_string());
                     }
                 } else if (app->status == app_status::AS_DROPPED) {
                     if (app->expire_second == 0) {
@@ -1049,11 +1048,11 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
                 0,
                 std::chrono::milliseconds(1000));
         } else {
-            dassert(false,
-                    "we can't handle this error in init app partition nodes err(%s), gpid(%d.%d)",
-                    ec.to_string(),
-                    app->app_id,
-                    pidx);
+            CHECK(false,
+                  "we can't handle this error in init app partition nodes err({}), gpid({}.{})",
+                  ec.to_string(),
+                  app->app_id,
+                  pidx);
         }
     };
 
@@ -1080,7 +1079,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
                              0,
                              std::chrono::seconds(1));
         } else {
-            dassert(false, "we can't handle this right now, err(%s)", ec.to_string());
+            CHECK(false, "we can't handle this right now, err({})", ec.to_string());
         }
     };
 
@@ -1204,7 +1203,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
                              0,
                              std::chrono::seconds(1));
         } else {
-            dassert(false, "we can't handle this, error(%s)", ec.to_string());
+            CHECK(false, "we can't handle this, error({})", ec.to_string());
         }
     };
 
@@ -1247,9 +1246,7 @@ void server_state::drop_app(dsn::message_ex *msg)
                                          _meta_svc->get_meta_options().hold_seconds_for_dropped_app;
                 }
                 app->helpers->pending_response = msg;
-                dassert(app->helpers->partitions_in_progress.load() == 0,
-                        "partition_in_progress_cnt = %d",
-                        app->helpers->partitions_in_progress.load());
+                CHECK_EQ(app->helpers->partitions_in_progress.load(), 0);
                 app->helpers->partitions_in_progress.store(app->partition_count);
 
                 break;
@@ -1261,8 +1258,7 @@ void server_state::drop_app(dsn::message_ex *msg)
                 response.err = ERR_BUSY_DROPPING;
                 break;
             default:
-                dassert(
-                    false, "invalid app status, status = %s", ::dsn::enum_to_string(app->status));
+                CHECK(false, "invalid app status, status = {}", ::dsn::enum_to_string(app->status));
                 break;
             }
         }
@@ -1325,9 +1321,7 @@ void server_state::recall_app(dsn::message_ex *msg)
                     do_recalling = true;
                     target_app->app_name = new_app_name;
                     target_app->status = app_status::AS_RECALLING;
-                    dassert(target_app->helpers->partitions_in_progress.load() == 0,
-                            "partition_in_progress_cnt = %d",
-                            target_app->helpers->partitions_in_progress.load());
+                    CHECK_EQ(target_app->helpers->partitions_in_progress.load(), 0);
                     target_app->helpers->partitions_in_progress.store(target_app->partition_count);
                     target_app->helpers->pending_response = msg;
 
@@ -1393,54 +1387,39 @@ void server_state::request_check(const partition_configuration &old,
 
     switch (request.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        dassert(old.primary != request.node,
-                "%s VS %s",
-                old.primary.to_string(),
-                request.node.to_string());
-        dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
-                    old.secondaries.end(),
-                "");
+        CHECK_NE(old.primary, request.node);
+        CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
+                  old.secondaries.end(),
+              "");
         break;
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        dassert(old.primary != request.node,
-                "%s VS %s",
-                old.primary.to_string(),
-                request.node.to_string());
-        dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) !=
-                    old.secondaries.end(),
-                "");
+        CHECK_NE(old.primary, request.node);
+        CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) !=
+                  old.secondaries.end(),
+              "");
         break;
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        dassert(old.primary == request.node,
-                "%s VS %s",
-                old.primary.to_string(),
-                request.node.to_string());
-        dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
-                    old.secondaries.end(),
-                "");
+        CHECK_EQ(old.primary, request.node);
+        CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
+                  old.secondaries.end(),
+              "");
         break;
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
     case config_type::CT_REMOVE:
-        dassert(old.primary == request.node ||
-                    std::find(old.secondaries.begin(), old.secondaries.end(), request.node) !=
-                        old.secondaries.end(),
-                "");
+        CHECK(old.primary == request.node ||
+                  std::find(old.secondaries.begin(), old.secondaries.end(), request.node) !=
+                      old.secondaries.end(),
+              "");
         break;
     case config_type::CT_UPGRADE_TO_SECONDARY:
-        dassert(old.primary != request.node,
-                " %s VS %s",
-                old.primary.to_string(),
-                request.node.to_string());
-        dassert(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
-                    old.secondaries.end(),
-                "");
+        CHECK_NE(old.primary, request.node);
+        CHECK(std::find(old.secondaries.begin(), old.secondaries.end(), request.node) ==
+                  old.secondaries.end(),
+              "");
         break;
     case config_type::CT_PRIMARY_FORCE_UPDATE_BALLOT:
-        dassert(old.primary == new_config.primary,
-                "%s VS %s",
-                old.primary.to_string(),
-                new_config.primary.to_string());
-        dassert(old.secondaries == new_config.secondaries, "");
+        CHECK_EQ(old.primary, new_config.primary);
+        CHECK(old.secondaries == new_config.secondaries, "");
         break;
     default:
         break;
@@ -1460,18 +1439,16 @@ void server_state::update_configuration_locally(
     health_status new_health_status = partition_health_status(new_cfg, min_2pc_count);
 
     if (app.is_stateful) {
-        dassert(old_cfg.ballot == invalid_ballot || old_cfg.ballot + 1 == new_cfg.ballot,
-                "invalid configuration update request, old ballot %" PRId64 ", new ballot %" PRId64
-                "",
-                old_cfg.ballot,
-                new_cfg.ballot);
+        CHECK(old_cfg.ballot == invalid_ballot || old_cfg.ballot + 1 == new_cfg.ballot,
+              "invalid configuration update request, old ballot {}, new ballot {}",
+              old_cfg.ballot,
+              new_cfg.ballot);
 
         node_state *ns = nullptr;
         if (config_request->type != config_type::CT_DROP_PARTITION) {
             ns = get_node_state(_nodes, config_request->node, false);
-            dassert(ns != nullptr,
-                    "invalid node address, address = %s",
-                    config_request->node.to_string());
+            CHECK_NOTNULL(
+                ns, "invalid node address, address = {}", config_request->node.to_string());
         }
 #ifndef NDEBUG
         request_check(old_cfg, *config_request);
@@ -1508,7 +1485,7 @@ void server_state::update_configuration_locally(
 
         case config_type::CT_ADD_SECONDARY:
         case config_type::CT_ADD_SECONDARY_FOR_LB:
-            dassert(false, "invalid execution work flow");
+            CHECK(false, "invalid execution work flow");
             break;
         case config_type::CT_REGISTER_CHILD: {
             ns->put_partition(gpid, true);
@@ -1519,14 +1496,11 @@ void server_state::update_configuration_locally(
             break;
         }
         default:
-            dassert(false, "");
+            CHECK(false, "");
             break;
         }
     } else {
-        dassert(old_cfg.ballot == new_cfg.ballot,
-                "invalid ballot, %" PRId64 " VS %" PRId64 "",
-                old_cfg.ballot,
-                new_cfg.ballot);
+        CHECK_EQ(old_cfg.ballot, new_cfg.ballot);
 
         new_cfg = old_cfg;
         partition_configuration_stateless pcs(new_cfg);
@@ -1543,9 +1517,9 @@ void server_state::update_configuration_locally(
         }
 
         auto it = _nodes.find(config_request->host_node);
-        dassert(it != _nodes.end(),
-                "invalid node address, address = %s",
-                config_request->host_node.to_string());
+        CHECK(it != _nodes.end(),
+              "invalid node address, address = {}",
+              config_request->host_node.to_string());
         if (config_type::CT_REMOVE == config_request->type) {
             it->second.remove_partition(gpid, false);
         } else {
@@ -1631,8 +1605,8 @@ void server_state::on_update_configuration_on_remote_reply(
     config_context &cc = app->helpers->contexts[gpid.get_partition_index()];
 
     // if multiple threads exist in the thread pool, the check may be failed
-    dassert(app->status == app_status::AS_AVAILABLE || app->status == app_status::AS_DROPPING,
-            "if app removed, this task should be cancelled");
+    CHECK(app->status == app_status::AS_AVAILABLE || app->status == app_status::AS_DROPPING,
+          "if app removed, this task should be cancelled");
     if (ec == ERR_TIMEOUT) {
         cc.pending_sync_task =
             tasking::enqueue(LPC_META_STATE_HIGH,
@@ -1677,7 +1651,7 @@ void server_state::on_update_configuration_on_remote_reply(
             }
         }
     } else {
-        dassert(false, "we can't handle this right now, err = %s", ec.to_string());
+        CHECK(false, "we can't handle this right now, err = {}", ec.to_string());
     }
 }
 
@@ -1695,12 +1669,12 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
                              server_state::sStateHash,
                              std::chrono::seconds(1));
         } else {
-            dassert(false, "unable to handle this(%s) right now", error.to_string());
+            CHECK(false, "unable to handle this({}) right now", error.to_string());
         }
     };
 
     partition_configuration &pc = app->partitions[pidx];
-    dassert((pc.partition_flags & pc_flags::dropped), "");
+    CHECK((pc.partition_flags & pc_flags::dropped), "");
 
     pc.partition_flags = 0;
     blob json_partition = dsn::json::json_forwarder<partition_configuration>::encode(pc);
@@ -1732,7 +1706,7 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     request.config.primary.set_invalid();
     request.config.secondaries.clear();
 
-    dassert((pc.partition_flags & pc_flags::dropped) == 0, "");
+    CHECK_EQ((pc.partition_flags & pc_flags::dropped), 0);
     request.config.partition_flags |= pc_flags::dropped;
 
     // NOTICE this mis-understanding: if a old state is DDD, we may not need to udpate the ballot.
@@ -1764,10 +1738,11 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
 
     if (config_status::pending_remote_sync == cc.stage) {
         if (cc.pending_sync_request->type == config_type::CT_DROP_PARTITION) {
-            dassert(app->status == app_status::AS_DROPPING,
-                    "app(%s) not in dropping state (%s)",
-                    app->get_logname(),
-                    enum_to_string(app->status));
+            CHECK_EQ_MSG(app->status,
+                         app_status::AS_DROPPING,
+                         "app({}) not in dropping state ({})",
+                         app->get_logname(),
+                         enum_to_string(app->status));
             LOG_WARNING(
                 "stop downgrade primary as the partitions(%d.%d) is dropping", app->app_id, pidx);
             return;
@@ -1806,7 +1781,7 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
     partition_configuration &pc = app->partitions[pidx];
     config_context &cc = app->helpers->contexts[pidx];
 
-    dassert(!pc.primary.is_invalid(), "this shouldn't be called if the primary is invalid");
+    CHECK(!pc.primary.is_invalid(), "this shouldn't be called if the primary is invalid");
     if (config_status::pending_remote_sync != cc.stage) {
         configuration_update_request request;
         request.info = *app;
@@ -1844,7 +1819,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
             break;
         }
     }
-    dassert(!req->node.is_invalid(), "invalid node address, address = %s", req->node.to_string());
+    CHECK(!req->node.is_invalid(), "invalid node address, address = {}", req->node.to_string());
     // remove host_node & node from secondaries/last_drops, as it will be sync to remote storage
     for (++i; i < pc.secondaries.size(); ++i) {
         pc.secondaries[i - 1] = pc.secondaries[i];
@@ -1880,8 +1855,8 @@ void server_state::on_update_configuration(
     configuration_update_response response;
     response.err = ERR_IO_PENDING;
 
-    dassert(app != nullptr, "get get app for app id(%d)", gpid.get_app_id());
-    dassert(app->is_stateful, "don't support stateless apps currently, id(%d)", gpid.get_app_id());
+    CHECK(app, "get get app for app id({})", gpid.get_app_id());
+    CHECK(app->is_stateful, "don't support stateless apps currently, id({})", gpid.get_app_id());
     auto find_name = _config_type_VALUES_TO_NAMES.find(cfg_request->type);
     if (find_name != _config_type_VALUES_TO_NAMES.end()) {
         LOG_INFO("recv update config request: type(%s), %s",
@@ -1932,9 +1907,9 @@ void server_state::on_update_configuration(
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
     } else {
-        dassert(config_status::not_pending == cc.stage,
-                "invalid config status, cc.stage = %s",
-                enum_to_string(cc.stage));
+        CHECK(config_status::not_pending == cc.stage,
+              "invalid config status, cc.stage = {}",
+              enum_to_string(cc.stage));
         cc.stage = config_status::pending_remote_sync;
         cc.pending_sync_request = cfg_request;
         cc.msg = msg;
@@ -1961,9 +1936,9 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
                     pc.pid.get_partition_index(),
                     address.to_string());
             } else {
-                dassert(false,
-                        "no primary/secondary on this node, node address = %s",
-                        address.to_string());
+                CHECK(false,
+                      "no primary/secondary on this node, node address = {}",
+                      address.to_string());
             }
         }
     } else {
@@ -1985,9 +1960,9 @@ void server_state::on_change_node_state(rpc_address node, bool is_alive)
             ns.set_replicas_collect_flag(false);
             ns.for_each_partition([&, this](const dsn::gpid &pid) {
                 std::shared_ptr<app_state> app = get_app(pid.get_app_id());
-                dassert(app != nullptr && app->status != app_status::AS_DROPPED,
-                        "invalid app, app_id = %d",
-                        pid.get_app_id());
+                CHECK(app != nullptr && app->status != app_status::AS_DROPPED,
+                      "invalid app, app_id = {}",
+                      pid.get_app_id());
                 on_partition_node_dead(app, pid.get_partition_index(), node);
                 return true;
             });
@@ -2031,7 +2006,7 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
             continue;
 
         for (const app_info &info : query_resp.apps) {
-            dassert(info.app_id >= 1, "invalid app_id, app_id = %d", info.app_id);
+            CHECK_GE_MSG(info.app_id, 1, "invalid app id");
             auto iter = _all_apps.find(info.app_id);
             if (iter == _all_apps.end()) {
                 std::shared_ptr<app_state> app = app_state::create(info);
@@ -2050,15 +2025,12 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
                 {
                     // compatible for app.duplicating different between primary and secondaries in
                     // 2.1.x, 2.2.x and 2.3.x release
-                    if (!app_info_compatible_equal(info, *old_info)) {
-                        dassert(
-                            false,
-                            "conflict app info from (%s) for id(%d): new_info(%s), old_info(%s)",
-                            replica_nodes[i].to_string(),
-                            info.app_id,
-                            boost::lexical_cast<std::string>(info).c_str(),
-                            boost::lexical_cast<std::string>(*old_info).c_str());
-                    }
+                    CHECK(app_info_compatible_equal(info, *old_info),
+                          "conflict app info from ({}) for id({}): new_info({}), old_info({})",
+                          replica_nodes[i].to_string(),
+                          info.app_id,
+                          boost::lexical_cast<std::string>(info),
+                          boost::lexical_cast<std::string>(*old_info));
                 }
             }
         }
@@ -2092,7 +2064,7 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
     // check conflict table name
     std::map<std::string, int32_t> checked_names;
     for (int app_id = max_app_id; app_id >= 1; --app_id) {
-        dassert(_all_apps.find(app_id) != _all_apps.end(), "invalid app_id, app_id = %d", app_id);
+        CHECK(_all_apps.find(app_id) != _all_apps.end(), "invalid app_id, app_id = {}", app_id);
         std::shared_ptr<app_state> &app = _all_apps[app_id];
         std::string old_name = app->app_name;
         while (checked_names.find(app->app_name) != checked_names.end()) {
@@ -2128,7 +2100,7 @@ error_code server_state::construct_partitions(
             continue;
 
         for (replica_info &r : query_resp.replicas) {
-            dassert(_all_apps.find(r.pid.get_app_id()) != _all_apps.end(), "");
+            CHECK(_all_apps.find(r.pid.get_app_id()) != _all_apps.end(), "");
             bool is_accepted = collect_replica({&_all_apps, &_nodes}, replica_nodes[i], r);
             if (is_accepted) {
                 LOG_INFO("accept replica(%s) from node(%s)",
@@ -2146,9 +2118,9 @@ error_code server_state::construct_partitions(
     int failed_count = 0;
     for (auto &app_kv : _all_apps) {
         std::shared_ptr<app_state> &app = app_kv.second;
-        dassert(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING,
-                "invalid app status, status = %s",
-                enum_to_string(app->status));
+        CHECK(app->status == app_status::AS_CREATING || app->status == app_status::AS_DROPPING,
+              "invalid app status, status = {}",
+              enum_to_string(app->status));
         if (app->status == app_status::AS_DROPPING) {
             LOG_INFO("ignore constructing partitions for dropping app(%d)", app->app_id);
         } else {
@@ -2347,12 +2319,11 @@ void server_state::on_start_recovery(const configuration_recovery_request &req,
     }
 
     resp.err = sync_apps_to_remote_storage();
-    if (resp.err != dsn::ERR_OK) {
-        dassert(false,
-                "sync apps to remote storage failed when do recovery, err = %s, "
-                "need to manually clear things from remote storage and restart the service",
-                resp.err.to_string());
-    }
+    CHECK_EQ_MSG(resp.err,
+                 dsn::ERR_OK,
+                 "sync apps to remote storage failed when do recovery, need "
+                 "to manually clear contents from remote storage and "
+                 "restart the service");
 
     initialize_node_state();
 }
@@ -2606,10 +2577,7 @@ void server_state::get_cluster_balance_score(double &primary_stddev, double &tot
 void server_state::check_consistency(const dsn::gpid &gpid)
 {
     auto iter = _all_apps.find(gpid.get_app_id());
-    dassert(iter != _all_apps.end(),
-            "invalid gpid(%d.%d)",
-            gpid.get_app_id(),
-            gpid.get_partition_index());
+    CHECK(iter != _all_apps.end(), "invalid gpid({})", gpid);
 
     app_state &app = *(iter->second);
     partition_configuration &config = app.partitions[gpid.get_partition_index()];
@@ -2617,44 +2585,32 @@ void server_state::check_consistency(const dsn::gpid &gpid)
     if (app.is_stateful) {
         if (config.primary.is_invalid() == false) {
             auto it = _nodes.find(config.primary);
-            dassert(it != _nodes.end(),
-                    "invalid primary address, address = %s",
-                    config.primary.to_string());
-            dassert(it->second.served_as(gpid) == partition_status::PS_PRIMARY,
-                    "node should serve as PS_PRIMARY, but status = %s",
-                    dsn::enum_to_string(it->second.served_as(gpid)));
-
-            auto it2 =
-                std::find(config.last_drops.begin(), config.last_drops.end(), config.primary);
-            dassert(it2 == config.last_drops.end(),
-                    "primary shouldn't appear in last_drops, address = %s",
-                    config.primary.to_string());
+            CHECK(it != _nodes.end(),
+                  "invalid primary address, address = {}",
+                  config.primary.to_string());
+            CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);
+            CHECK(std::find(config.last_drops.begin(), config.last_drops.end(), config.primary) ==
+                      config.last_drops.end(),
+                  "primary shouldn't appear in last_drops, address = {}",
+                  config.primary.to_string());
         }
 
         for (auto &ep : config.secondaries) {
             auto it = _nodes.find(ep);
-            dassert(it != _nodes.end(), "invalid secondary address, address = %s", ep.to_string());
-            dassert(it->second.served_as(gpid) == partition_status::PS_SECONDARY,
-                    "node should serve as PS_SECONDARY, but status = %s",
-                    dsn::enum_to_string(it->second.served_as(gpid)));
-
-            auto it2 = std::find(config.last_drops.begin(), config.last_drops.end(), ep);
-            dassert(it2 == config.last_drops.end(),
-                    "secondary shouldn't appear in last_drops, address = %s",
-                    ep.to_string());
+            CHECK(it != _nodes.end(), "invalid secondary address, address = {}", ep.to_string());
+            CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
+            CHECK(std::find(config.last_drops.begin(), config.last_drops.end(), ep) ==
+                      config.last_drops.end(),
+                  "secondary shouldn't appear in last_drops, address = {}",
+                  ep.to_string());
         }
     } else {
         partition_configuration_stateless pcs(config);
-        dassert(pcs.hosts().size() == pcs.workers().size(),
-                "%d VS %d",
-                pcs.hosts().size(),
-                pcs.workers().size());
+        CHECK_EQ(pcs.hosts().size(), pcs.workers().size());
         for (auto &ep : pcs.hosts()) {
             auto it = _nodes.find(ep);
-            dassert(it != _nodes.end(), "invalid host, address = %s", ep.to_string());
-            dassert(it->second.served_as(gpid) == partition_status::PS_SECONDARY,
-                    "node should serve as PS_SECONDARY, but status = %s",
-                    dsn::enum_to_string(it->second.served_as(gpid)));
+            CHECK(it != _nodes.end(), "invalid host, address = {}", ep.to_string());
+            CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
         }
     }
 }
@@ -2693,7 +2649,7 @@ void server_state::do_update_app_info(const std::string &app_path,
                 0,
                 std::chrono::seconds(1));
         } else {
-            dassert(false, "we can't handle this, error(%s)", ec.to_string());
+            CHECK(false, "we can't handle this, error({})", ec.to_string());
         }
     };
     // TODO(cailiuyang): callback scheduling order may be undefined if multiple requests are
@@ -2751,8 +2707,7 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         ainfo.envs[keys[idx]] = values[idx];
     }
     do_update_app_info(app_path, ainfo, [this, app_name, keys, values, env_rpc](error_code ec) {
-        dassert(
-            ec == ERR_OK, "update app_info to remote storage failed with err = %s", ec.to_string());
+        CHECK_EQ_MSG(ec, ERR_OK, "update app info to remote storage failed");
 
         zauto_write_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
@@ -2824,8 +2779,7 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
     }
 
     do_update_app_info(app_path, ainfo, [this, app_name, keys, env_rpc](error_code ec) {
-        dassert(
-            ec == ERR_OK, "update app_info to remote storage failed with err = %s", ec.to_string());
+        CHECK_EQ_MSG(ec, ERR_OK, "update app info to remote storage failed");
 
         zauto_write_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
@@ -2917,9 +2871,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
 
     do_update_app_info(
         app_path, ainfo, [this, app_name, prefix, erase_keys, env_rpc](error_code ec) {
-            dassert(ec == ERR_OK,
-                    "update app_info to remote storage failed with err = %s",
-                    ec.to_string());
+            CHECK_EQ_MSG(ec, ERR_OK, "update app info to remote storage failed");
 
             zauto_write_lock l(_lock);
             std::shared_ptr<app_state> app = get_app(app_name);
@@ -3102,7 +3054,7 @@ void server_state::update_compaction_envs_on_remote_storage(start_manual_compact
         ainfo.envs[keys[idx]] = values[idx];
     }
     do_update_app_info(app_path, ainfo, [this, app_name, keys, values, rpc](error_code ec) {
-        dassert_f(ec == ERR_OK, "update app_info to remote storage failed with err = {}", ec);
+        CHECK_EQ_MSG(ec, ERR_OK, "update app_info to remote storage failed");
 
         zauto_write_lock l(_lock);
         auto app = get_app(app_name);
@@ -3374,16 +3326,17 @@ void server_state::set_max_replica_count_env_updating(std::shared_ptr<app_state>
 
             zauto_write_lock l(_lock);
 
-            dassert_f(ec == ERR_OK,
-                      "An error that can't be handled occurs while updating remote env of "
-                      "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                      "new_max_replica_count={}, {}={}",
-                      ec.to_string(),
-                      app->app_name,
-                      app->app_id,
-                      new_max_replica_count,
-                      replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                      app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
+            CHECK_EQ_MSG(ec,
+                         ERR_OK,
+                         "An error that can't be handled occurs while updating remote env of "
+                         "max_replica_count: error_code={}, app_name={}, app_id={}, "
+                         "new_max_replica_count={}, {}={}",
+                         ec.to_string(),
+                         app->app_name,
+                         app->app_id,
+                         new_max_replica_count,
+                         replica_envs::UPDATE_MAX_REPLICA_COUNT,
+                         app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
 
             app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT] =
                 fmt::format("updating;{}", new_max_replica_count);
@@ -3420,16 +3373,17 @@ void server_state::do_update_max_replica_count(std::shared_ptr<app_state> &app,
         results->at(partition_index) = ec;
 
         auto uncompleted = --app->helpers->partitions_in_progress;
-        dassert_f(uncompleted >= 0,
-                  "the uncompleted number should be >= 0 while updating partition-level"
-                  "max_replica_count: uncompleted={}, app_name={}, app_id={}, "
-                  "partition_index={}, partition_count={}, new_max_replica_count={}",
-                  uncompleted,
-                  app_name,
-                  app->app_id,
-                  partition_index,
-                  app->partition_count,
-                  new_max_replica_count);
+        CHECK_GE_MSG(uncompleted,
+                     0,
+                     "the uncompleted number should be >= 0 while updating partition-level"
+                     "max_replica_count: uncompleted={}, app_name={}, app_id={}, "
+                     "partition_index={}, partition_count={}, new_max_replica_count={}",
+                     uncompleted,
+                     app_name,
+                     app->app_id,
+                     partition_index,
+                     app->partition_count,
+                     new_max_replica_count);
 
         if (uncompleted > 0) {
             return;
@@ -3499,28 +3453,30 @@ void server_state::update_app_max_replica_count(std::shared_ptr<app_state> &app,
 
         zauto_write_lock l(_lock);
 
-        dassert_f(ec == ERR_OK,
-                  "An error that can't be handled occurs while updating remote app-level "
-                  "max_replica_count: error_code={}, app_name={}, app_id={}, "
-                  "old_max_replica_count={}, new_max_replica_count={}, {}={}",
-                  ec.to_string(),
-                  app->app_name,
-                  app->app_id,
-                  old_max_replica_count,
-                  new_max_replica_count,
-                  replica_envs::UPDATE_MAX_REPLICA_COUNT,
-                  app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
+        CHECK_EQ_MSG(ec,
+                     ERR_OK,
+                     "An error that can't be handled occurs while updating remote app-level "
+                     "max_replica_count: error_code={}, app_name={}, app_id={}, "
+                     "old_max_replica_count={}, new_max_replica_count={}, {}={}",
+                     ec.to_string(),
+                     app->app_name,
+                     app->app_id,
+                     old_max_replica_count,
+                     new_max_replica_count,
+                     replica_envs::UPDATE_MAX_REPLICA_COUNT,
+                     app->envs[replica_envs::UPDATE_MAX_REPLICA_COUNT]);
 
-        dassert_f(old_max_replica_count == app->max_replica_count,
-                  "app-level max_replica_count has been updated to remote storage, however "
-                  "old_max_replica_count from response is not consistent with current local "
-                  "max_replica_count: app_name={}, app_id={}, old_max_replica_count={}, "
-                  "local_max_replica_count={}, new_max_replica_count={}",
-                  app->app_name,
-                  app->app_id,
-                  old_max_replica_count,
-                  app->max_replica_count,
-                  new_max_replica_count);
+        CHECK_EQ_MSG(old_max_replica_count,
+                     app->max_replica_count,
+                     "app-level max_replica_count has been updated to remote storage, however "
+                     "old_max_replica_count from response is not consistent with current local "
+                     "max_replica_count: app_name={}, app_id={}, old_max_replica_count={}, "
+                     "local_max_replica_count={}, new_max_replica_count={}",
+                     app->app_name,
+                     app->app_id,
+                     old_max_replica_count,
+                     app->max_replica_count,
+                     new_max_replica_count);
 
         app->max_replica_count = new_max_replica_count;
         app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);
@@ -3543,14 +3499,15 @@ void server_state::update_partition_max_replica_count(std::shared_ptr<app_state>
                                                       int32_t new_max_replica_count,
                                                       partition_callback on_partition_updated)
 {
-    dassert_f(partition_index < app->partition_count,
-              "partition_index should be < partition_count: app_name={}, app_id={}, "
-              "partition_index={}, partition_count={}, new_max_replica_count={}",
-              app->app_name,
-              app->app_id,
-              partition_index,
-              app->partition_count,
-              new_max_replica_count);
+    CHECK_LT_MSG(partition_index,
+                 app->partition_count,
+                 "partition_index should be < partition_count: app_name={}, app_id={}, "
+                 "partition_index={}, partition_count={}, new_max_replica_count={}",
+                 app->app_name,
+                 app->app_id,
+                 partition_index,
+                 app->partition_count,
+                 new_max_replica_count);
 
     const auto &old_partition_config = app->partitions[partition_index];
     const auto old_max_replica_count = old_partition_config.max_replica_count;
@@ -3587,14 +3544,14 @@ void server_state::update_partition_max_replica_count(std::shared_ptr<app_state>
         return;
     }
 
-    dassert_f(context.stage == config_status::not_pending,
-              "invalid config status while updating max_replica_count: context.stage={}, "
-              "app_name={}, app_id={}, partition_index={}, new_max_replica_count={}",
-              enum_to_string(context.stage),
-              app->app_name,
-              app->app_id,
-              partition_index,
-              new_max_replica_count);
+    CHECK(context.stage == config_status::not_pending,
+          "invalid config status while updating max_replica_count: context.stage={}, "
+          "app_name={}, app_id={}, partition_index={}, new_max_replica_count={}",
+          enum_to_string(context.stage),
+          app->app_name,
+          app->app_id,
+          partition_index,
+          new_max_replica_count);
 
     context.stage = config_status::pending_remote_sync;
     context.pending_sync_request.reset();
@@ -3747,17 +3704,18 @@ void server_state::update_partition_max_replica_count_locally(
     const auto old_max_replica_count = old_partition_config.max_replica_count;
     const auto old_ballot = old_partition_config.ballot;
 
-    dassert_f(old_ballot + 1 == new_ballot,
-              "invalid ballot while updating local max_replica_count: app_name={}, app_id={}, "
-              "partition_id={}, old_max_replica_count={}, new_max_replica_count={}, "
-              "old_ballot={}, new_ballot={}",
-              app->app_name,
-              app->app_id,
-              partition_index,
-              old_max_replica_count,
-              new_max_replica_count,
-              old_ballot,
-              new_ballot);
+    CHECK_EQ_MSG(old_ballot + 1,
+                 new_ballot,
+                 "invalid ballot while updating local max_replica_count: app_name={}, app_id={}, "
+                 "partition_id={}, old_max_replica_count={}, new_max_replica_count={}, "
+                 "old_ballot={}, new_ballot={}",
+                 app->app_name,
+                 app->app_id,
+                 partition_index,
+                 old_max_replica_count,
+                 new_max_replica_count,
+                 old_ballot,
+                 new_ballot);
 
     std::string old_config_str(boost::lexical_cast<std::string>(old_partition_config));
     std::string new_config_str(boost::lexical_cast<std::string>(new_partition_config));
@@ -3873,29 +3831,31 @@ void server_state::recover_all_partitions_max_replica_count(std::shared_ptr<app_
                 std::string old_pc_str(boost::lexical_cast<std::string>(old_pc));
                 std::string new_pc_str(boost::lexical_cast<std::string>(new_pc));
 
-                dassert_f(ec == ERR_OK,
-                          "An error that can't be handled occurs while recovering remote "
-                          "partition-level max_replica_count: error_code={}, app_name={}, "
-                          "app_id={}, partition_index={}, partition_count={}, "
-                          "old_partition_config={}, new_partition_config={}",
-                          ec.to_string(),
-                          app->app_name,
-                          app->app_id,
-                          i,
-                          app->partition_count,
-                          old_pc_str,
-                          new_pc_str);
+                CHECK_EQ_MSG(ec,
+                             ERR_OK,
+                             "An error that can't be handled occurs while recovering remote "
+                             "partition-level max_replica_count: error_code={}, app_name={}, "
+                             "app_id={}, partition_index={}, partition_count={}, "
+                             "old_partition_config={}, new_partition_config={}",
+                             ec.to_string(),
+                             app->app_name,
+                             app->app_id,
+                             i,
+                             app->partition_count,
+                             old_pc_str,
+                             new_pc_str);
 
-                dassert_f(old_pc.ballot + 1 == new_pc.ballot,
-                          "invalid ballot while recovering max_replica_count: app_name={}, "
-                          "app_id={}, partition_index={}, partition_count={}, "
-                          "old_partition_config={}, new_partition_config={}",
-                          app->app_name,
-                          app->app_id,
-                          i,
-                          app->partition_count,
-                          old_pc_str,
-                          new_pc_str);
+                CHECK_EQ_MSG(old_pc.ballot + 1,
+                             new_pc.ballot,
+                             "invalid ballot while recovering max_replica_count: app_name={}, "
+                             "app_id={}, partition_index={}, partition_count={}, "
+                             "old_partition_config={}, new_partition_config={}",
+                             app->app_name,
+                             app->app_id,
+                             i,
+                             app->partition_count,
+                             old_pc_str,
+                             new_pc_str);
 
                 old_pc = new_pc;
 
@@ -3942,15 +3902,16 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
             zauto_write_lock l(_lock);
 
             auto old_max_replica_count = app->max_replica_count;
-            dassert_f(ec == ERR_OK,
-                      "An error that can't be handled occurs while recovering remote "
-                      "app-level max_replica_count: error_code={}, app_name={}, app_id={}, "
-                      "old_max_replica_count={}, new_max_replica_count={}",
-                      ec.to_string(),
-                      app->app_name,
-                      app->app_id,
-                      old_max_replica_count,
-                      new_max_replica_count);
+            CHECK_EQ_MSG(ec,
+                         ERR_OK,
+                         "An error that can't be handled occurs while recovering remote "
+                         "app-level max_replica_count: error_code={}, app_name={}, app_id={}, "
+                         "old_max_replica_count={}, new_max_replica_count={}",
+                         ec.to_string(),
+                         app->app_name,
+                         app->app_id,
+                         old_max_replica_count,
+                         new_max_replica_count);
 
             app->max_replica_count = new_max_replica_count;
             app->envs.erase(replica_envs::UPDATE_MAX_REPLICA_COUNT);

@@ -114,9 +114,9 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
     {
         zauto_lock l(_lock);
         if (clear_state) {
-            if (!dsn::utils::filesystem::remove_path(_dir_data)) {
-                dassert(false, "Fail to delete directory %s.", _dir_data.c_str());
-            }
+            CHECK(dsn::utils::filesystem::remove_path(_dir_data),
+                  "Fail to delete directory {}",
+                  _dir_data);
             reset_state();
         }
     }
@@ -136,9 +136,9 @@ void simple_kv_service_impl::recover()
 
     std::vector<std::string> sub_list;
     std::string path = _dir_data;
-    if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false)) {
-        dassert(false, "Fail to get subfiles in %s.", path.c_str());
-    }
+    CHECK(dsn::utils::filesystem::get_subfiles(path, sub_list, false),
+          "Fail to get subfiles in {}",
+          path);
     for (auto &fpath : sub_list) {
         auto &&s = dsn::utils::filesystem::get_file_name(fpath);
         if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))
@@ -173,7 +173,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
 
     is.read((char *)&count, sizeof(count));
     is.read((char *)&magic, sizeof(magic));
-    dassert(magic == 0xdeadbeef, "invalid checkpoint");
+    CHECK_EQ_MSG(magic, 0xdeadbeef, "invalid checkpoint");
 
     for (uint64_t i = 0; i < count; i++) {
         std::string key;
@@ -204,7 +204,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     zauto_lock l(_lock);
 
     if (last_commit == last_durable_decree()) {
-        dassert(utils::filesystem::file_exists(name), "checkpoint file %s is missing!", name);
+        CHECK(utils::filesystem::file_exists(name), "checkpoint file {} is missing!", name);
         return ERR_OK;
     }
 
@@ -269,9 +269,8 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         recover(state.files[0], state.to_decree_included);
         return ERR_OK;
     } else {
-        dassert(chkpt_apply_mode::copy == mode, "invalid mode %d", (int)mode);
-        dassert(state.to_decree_included > last_durable_decree(),
-                "checkpoint's decree is smaller than current");
+        CHECK_EQ_MSG(chkpt_apply_mode::copy, mode, "invalid mode");
+        CHECK_GT(state.to_decree_included, last_durable_decree());
 
         char name[256];
         sprintf(name, "%s/checkpoint.%" PRId64, _dir_data.c_str(), state.to_decree_included);

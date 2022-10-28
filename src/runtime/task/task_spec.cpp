@@ -165,11 +165,12 @@ task_spec::task_spec(int code,
       on_rpc_response_enqueue((std::string(name) + std::string(".rpc.response.enqueue")).c_str()),
       on_rpc_create_response((std::string(name) + std::string(".rpc.response.create")).c_str())
 {
-    dassert(strlen(name) < DSN_MAX_TASK_CODE_NAME_LENGTH,
-            "task code name '%s' is too long: length must be smaller than "
-            "DSN_MAX_TASK_CODE_NAME_LENGTH (%u)",
-            name,
-            DSN_MAX_TASK_CODE_NAME_LENGTH);
+    CHECK_LT_MSG(strlen(name),
+                 DSN_MAX_TASK_CODE_NAME_LENGTH,
+                 "task code name '{}' is too long: length must be smaller than "
+                 "DSN_MAX_TASK_CODE_NAME_LENGTH ({})",
+                 name,
+                 DSN_MAX_TASK_CODE_NAME_LENGTH);
 
     rpc_call_channel = RPC_CHANNEL_TCP;
     rpc_timeout_milliseconds = 5 * 1000; // 5 seconds
@@ -210,9 +211,9 @@ bool task_spec::init()
             spec->allow_inline = true;
         }
 
-        dassert(spec->rpc_request_delays_milliseconds.size() == 0 ||
-                    spec->rpc_request_delays_milliseconds.size() == 6,
-                "invalid length of rpc_request_delays_milliseconds, must be of length 6");
+        CHECK(spec->rpc_request_delays_milliseconds.size() == 0 ||
+                  spec->rpc_request_delays_milliseconds.size() == 6,
+              "invalid length of rpc_request_delays_milliseconds, must be of length 6");
         if (spec->rpc_request_delays_milliseconds.size() > 0) {
             spec->rpc_request_delayer.initialize(spec->rpc_request_delays_milliseconds);
         }

@@ -569,13 +569,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                              r->last_prepared_decree());
 
                     utils::auto_lock<utils::ex_lock> l(rps_lock);
-
-                    if (rps.find(r->get_gpid()) != rps.end()) {
-                        dassert(false,
-                                "conflict replica dir: %s <--> %s",
-                                r->dir().c_str(),
-                                rps[r->get_gpid()]->dir().c_str());
-                    }
+                    CHECK(rps.find(r->get_gpid()) == rps.end(),
+                          "conflict replica dir: {} <--> {}",
+                          r->dir(),
+                          rps[r->get_gpid()]->dir());
 
                     rps[r->get_gpid()] = r;
                 }
@@ -637,8 +634,10 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             const char *dir = it->second->dir().c_str();
             char rename_dir[1024];
             sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
-            bool ret = dsn::utils::filesystem::rename_path(dir, rename_dir);
-            dassert(ret, "init_replica: failed to move directory '%s' to '%s'", dir, rename_dir);
+            CHECK(dsn::utils::filesystem::rename_path(dir, rename_dir),
+                  "init_replica: failed to move directory '{}' to '{}'",
+                  dir,
+                  rename_dir);
             LOG_WARNING("init_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
                         dir,
                         rename_dir);
@@ -649,21 +648,21 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
         // restart log service
         _log->close();
         _log = nullptr;
-        if (!utils::filesystem::remove_path(_options.slog_dir)) {
-            dassert(false, "remove directory %s failed", _options.slog_dir.c_str());
-        }
+        CHECK(utils::filesystem::remove_path(_options.slog_dir),
+              "remove directory {} failed",
+              _options.slog_dir);
         _log = new mutation_log_shared(_options.slog_dir,
                                        _options.log_shared_file_size_mb,
                                        _options.log_shared_force_flush,
                                        &_counter_shared_log_recent_write_size);
-        auto lerr = _log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); });
-        dassert(lerr == ERR_OK, "restart log service must succeed");
+        CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
+                     ERR_OK,
+                     "restart log service failed");
     }
 
     bool is_log_complete = true;
     for (auto it = rps.begin(); it != rps.end(); ++it) {
-        auto err = it->second->background_sync_checkpoint();
-        dassert(err == ERR_OK, "sync checkpoint failed, err = %s", err.to_string());
+        CHECK_EQ_MSG(it->second->background_sync_checkpoint(), ERR_OK, "sync checkpoint failed");
 
         it->second->reset_prepare_list_after_replay();
 
@@ -780,10 +779,11 @@ void replica_stub::initialize_fs_manager(std::vector<std::string> &data_dirs,
         count++;
     }
 
-    dassert_f(available_dirs.size() > 0,
-              "initialize fs manager failed, no available data directory");
-    error_code err = _fs_manager.initialize(available_dirs, available_dir_tags, false);
-    dassert_f(err == dsn::ERR_OK, "initialize fs manager failed, err({})", err);
+    CHECK_GT_MSG(
+        available_dirs.size(), 0, "initialize fs manager failed, no available data directory");
+    CHECK_EQ_MSG(_fs_manager.initialize(available_dirs, available_dir_tags, false),
+                 dsn::ERR_OK,
+                 "initialize fs manager failed");
 }
 
 void replica_stub::initialize_start()
@@ -824,18 +824,19 @@ void replica_stub::initialize_start()
     _backup_server = dsn::make_unique<replica_backup_server>(this);
 
     // init liveness monitor
-    dassert(NS_Disconnected == _state, "");
+    CHECK_EQ(NS_Disconnected, _state);
     if (_options.fd_disabled == false) {
         _failure_detector = std::make_shared<dsn::dist::slave_failure_detector_with_multimaster>(
             _options.meta_servers,
             [this]() { this->on_meta_server_disconnected(); },
             [this]() { this->on_meta_server_connected(); });
 
-        auto err = _failure_detector->start(_options.fd_check_interval_seconds,
-                                            _options.fd_beacon_interval_seconds,
-                                            _options.fd_lease_seconds,
-                                            _options.fd_grace_seconds);
-        dassert(err == ERR_OK, "FD start failed, err = %s", err.to_string());
+        CHECK_EQ_MSG(_failure_detector->start(_options.fd_check_interval_seconds,
+                                              _options.fd_beacon_interval_seconds,
+                                              _options.fd_lease_seconds,
+                                              _options.fd_grace_seconds),
+                     ERR_OK,
+                     "FD start failed");
 
         _failure_detector->register_master(_failure_detector->current_server_contact());
     } else {
@@ -1488,7 +1489,7 @@ void replica_stub::set_meta_server_connected_for_test(
     const configuration_query_by_node_response &resp)
 {
     zauto_lock l(_state_lock);
-    dassert(_state != NS_Connected, "");
+    CHECK_NE(_state, NS_Connected);
     _state = NS_Connected;
 
     for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
@@ -1657,7 +1658,7 @@ void replica_stub::response_client(gpid id,
 
 void replica_stub::init_gc_for_test()
 {
-    dassert(_options.gc_disabled, "");
+    CHECK(_options.gc_disabled, "");
 
     _gc_timer_task = tasking::enqueue(LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
                                       &_tracker,
@@ -2055,16 +2056,16 @@ void replica_stub::open_replica(
         // NOTICE: if dir a.b.pegasus does not exist, or .app-info does not exist, but the ballot >
         // 0, or the last_committed_decree > 0, start replica will fail
         if ((configuration_update != nullptr) && (configuration_update->info.is_stateful)) {
-            dassert_f(configuration_update->config.ballot == 0 &&
-                          configuration_update->config.last_committed_decree == 0,
-                      "{}@{}: cannot load replica({}.{}), ballot = {}, "
-                      "last_committed_decree = {}, but it does not existed!",
-                      id.to_string(),
-                      _primary_address_str,
-                      id.to_string(),
-                      app.app_type.c_str(),
-                      configuration_update->config.ballot,
-                      configuration_update->config.last_committed_decree);
+            CHECK(configuration_update->config.ballot == 0 &&
+                      configuration_update->config.last_committed_decree == 0,
+                  "{}@{}: cannot load replica({}.{}), ballot = {}, "
+                  "last_committed_decree = {}, but it does not existed!",
+                  id.to_string(),
+                  _primary_address_str,
+                  id.to_string(),
+                  app.app_type.c_str(),
+                  configuration_update->config.ballot,
+                  configuration_update->config.last_committed_decree);
         }
 
         // NOTICE: only new_replica_group's assign_primary will execute this; if server restart when
@@ -2090,10 +2091,9 @@ void replica_stub::open_replica(
         // replica(if contain valid data, it will execute load-process)
 
         if (!restore_if_necessary && ::dsn::utils::filesystem::directory_exists(dir)) {
-            if (!::dsn::utils::filesystem::remove_path(dir)) {
-                dassert(false, "remove useless directory(%s) failed", dir.c_str());
-                return;
-            }
+            CHECK(::dsn::utils::filesystem::remove_path(dir),
+                  "remove useless directory({}) failed",
+                  dir);
         }
         rep = replica::newr(this, id, app, restore_if_necessary, is_duplication_follower);
     }
@@ -2103,20 +2103,25 @@ void replica_stub::open_replica(
                  id.to_string(),
                  _primary_address_str);
         zauto_write_lock l(_replicas_lock);
-        auto ret = _opening_replicas.erase(id);
-        dassert(ret > 0, "replica %s is not in _opening_replicas", id.to_string());
+        CHECK_GT_MSG(_opening_replicas.erase(id),
+                     0,
+                     "replica {} is not in _opening_replicas",
+                     id.to_string());
         _counter_replicas_opening_count->decrement();
         return;
     }
 
     {
         zauto_write_lock l(_replicas_lock);
-        auto ret = _opening_replicas.erase(id);
-        dassert(ret > 0, "replica %s is not in _opening_replicas", id.to_string());
+        CHECK_GT_MSG(_opening_replicas.erase(id),
+                     0,
+                     "replica {} is not in _opening_replicas",
+                     id.to_string());
         _counter_replicas_opening_count->decrement();
 
-        auto it = _replicas.find(id);
-        dassert(it == _replicas.end(), "replica %s is already in _replicas", id.to_string());
+        CHECK(_replicas.find(id) == _replicas.end(),
+              "replica {} is already in _replicas",
+              id.to_string());
         _replicas.insert(replicas::value_type(rep->get_gpid(), rep));
         _counter_replicas_count->increment();
 
@@ -2138,14 +2143,14 @@ void replica_stub::open_replica(
 
 task_ptr replica_stub::begin_close_replica(replica_ptr r)
 {
-    dassert_f(r->status() == partition_status::PS_ERROR ||
-                  r->status() == partition_status::PS_INACTIVE ||
-                  r->disk_migrator()->status() >= disk_migration_status::MOVED,
-              "invalid state(partition_status={}, migration_status={}) when calling "
-              "replica({}) close",
-              enum_to_string(r->status()),
-              enum_to_string(r->disk_migrator()->status()),
-              r->name());
+    CHECK(r->status() == partition_status::PS_ERROR ||
+              r->status() == partition_status::PS_INACTIVE ||
+              r->disk_migrator()->status() >= disk_migration_status::MOVED,
+          "invalid state(partition_status={}, migration_status={}) when calling "
+          "replica({}) close",
+          enum_to_string(r->status()),
+          enum_to_string(r->disk_migrator()->status()),
+          r->name());
 
     gpid id = r->get_gpid();
 
@@ -2190,9 +2195,7 @@ void replica_stub::close_replica(replica_ptr r)
     {
         zauto_write_lock l(_replicas_lock);
         auto find = _closing_replicas.find(id);
-        dassert(find != _closing_replicas.end(),
-                "replica %s is not in _closing_replicas",
-                name.c_str());
+        CHECK(find != _closing_replicas.end(), "replica {} is not in _closing_replicas", name);
         _closed_replicas.emplace(
             id, std::make_pair(std::get<2>(find->second), std::get<3>(find->second)));
         _closing_replicas.erase(find);
@@ -2224,9 +2227,7 @@ void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
 void replica_stub::handle_log_failure(error_code err)
 {
     LOG_ERROR("handle log failure: %s", err.to_string());
-    if (!s_not_exit_on_log_failure) {
-        dassert(false, "TODO: better log failure handling ...");
-    }
+    CHECK(s_not_exit_on_log_failure, "");
 }
 
 void replica_stub::open_service()
@@ -2685,9 +2686,10 @@ void replica_stub::close()
             _replicas_lock.lock_write();
             // task will automatically remove this replica from _closing_replicas
             if (!_closing_replicas.empty()) {
-                dassert(tmp_gpid != _closing_replicas.begin()->first,
-                        "this replica '%s' should have been removed from _closing_replicas",
-                        tmp_gpid.to_string());
+                CHECK_NE_MSG(tmp_gpid,
+                             _closing_replicas.begin()->first,
+                             "this replica '{}' should has been removed",
+                             tmp_gpid.to_string());
             }
         }
 
@@ -2720,10 +2722,7 @@ std::string replica_stub::get_replica_dir(const char *app_type, gpid id, bool cr
     for (const std::string &data_dir : _fs_manager.get_available_data_dirs()) {
         std::string dir = utils::filesystem::path_combine(data_dir, gpid_str);
         if (utils::filesystem::directory_exists(dir)) {
-            if (is_dir_exist) {
-                dassert(
-                    false, "replica dir conflict: %s <--> %s", dir.c_str(), replica_dir.c_str());
-            }
+            CHECK(!is_dir_exist, "replica dir conflict: {} <--> {}", dir, replica_dir);
             replica_dir = dir;
             is_dir_exist = true;
         }

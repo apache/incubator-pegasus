@@ -163,9 +163,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
 void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_committed_mutations)
 {
-    dassert(partition_status::PS_PRIMARY == status(),
-            "invalid partition_status, status = %s",
-            enum_to_string(status()));
+    CHECK_EQ(partition_status::PS_PRIMARY, status());
 
     mu->_tracer->set_description("primary");
     ADD_POINT(mu->_tracer);
@@ -230,10 +228,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         goto ErrOut;
     }
 
-    dassert(mu->data.header.decree > last_committed_decree(),
-            "%" PRId64 " VS %" PRId64 "",
-            mu->data.header.decree,
-            last_committed_decree());
+    CHECK_GT(mu->data.header.decree, last_committed_decree());
 
     // local prepare
     err = _prepare_list->prepare(mu, partition_status::PS_PRIMARY, pop_all_committed_mutations);
@@ -276,10 +271,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     if (mu->is_logged()) {
         do_possible_commit_on_primary(mu);
     } else {
-        dassert(mu->data.header.log_offset == invalid_offset,
-                "invalid log offset, offset = %" PRId64,
-                mu->data.header.log_offset);
-        dassert(mu->log_task() == nullptr, "");
+        CHECK_EQ(mu->data.header.log_offset, invalid_offset);
+        CHECK(mu->log_task() == nullptr, "");
         int64_t pending_size;
         mu->log_task() = _private_log->append(mu,
                                               LPC_WRITE_REPLICATION_LOG,
@@ -362,13 +355,8 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
 
 void replica::do_possible_commit_on_primary(mutation_ptr &mu)
 {
-    dassert(_config.ballot == mu->data.header.ballot,
-            "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
-            _config.ballot,
-            mu->data.header.ballot);
-    dassert(partition_status::PS_PRIMARY == status(),
-            "invalid partition_status, status = %s",
-            enum_to_string(status()));
+    CHECK_EQ(_config.ballot, mu->data.header.ballot);
+    CHECK_EQ(partition_status::PS_PRIMARY, status());
 
     if (mu->is_ready_for_commit()) {
         _prepare_list->commit(mu->data.header.decree, COMMIT_ALL_READY);
@@ -400,16 +388,8 @@ void replica::on_prepare(dsn::message_ex *request)
     mu->_tracer->set_description("secondary");
     ADD_POINT(mu->_tracer);
 
-    dassert(mu->data.header.pid == rconfig.pid,
-            "(%d.%d) VS (%d.%d)",
-            mu->data.header.pid.get_app_id(),
-            mu->data.header.pid.get_partition_index(),
-            rconfig.pid.get_app_id(),
-            rconfig.pid.get_partition_index());
-    dassert(mu->data.header.ballot == rconfig.ballot,
-            "invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
-            mu->data.header.ballot,
-            rconfig.ballot);
+    CHECK_EQ(mu->data.header.pid, rconfig.pid);
+    CHECK_EQ(mu->data.header.ballot, rconfig.ballot);
 
     if (mu->data.header.ballot < get_ballot()) {
         LOG_ERROR("%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
@@ -477,10 +457,7 @@ void replica::on_prepare(dsn::message_ex *request)
         }
     }
 
-    dassert(rconfig.status == status(),
-            "invalid status, %s VS %s",
-            enum_to_string(rconfig.status),
-            enum_to_string(status()));
+    CHECK_EQ(rconfig.status, status());
     if (decree <= last_committed_decree()) {
         ack_prepare_message(ERR_OK, mu);
         return;
@@ -501,7 +478,7 @@ void replica::on_prepare(dsn::message_ex *request)
     }
 
     error_code err = _prepare_list->prepare(mu, status(), pop_all_committed_mutations);
-    dassert(err == ERR_OK, "prepare mutation failed, err = %s", err.to_string());
+    CHECK_EQ_MSG(err, ERR_OK, "prepare mutation failed");
 
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
         partition_status::PS_SECONDARY == status()) {
@@ -525,7 +502,7 @@ void replica::on_prepare(dsn::message_ex *request)
         _split_mgr->copy_mutation(mu);
     }
 
-    dassert(mu->log_task() == nullptr, "");
+    CHECK(mu->log_task() == nullptr, "");
     mu->log_task() = _private_log->append(mu,
                                           LPC_WRITE_REPLICATION_LOG,
                                           &_tracker,
@@ -614,11 +591,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
         mu->get_decree() <= last_committed_decree())
         return;
 
-    dassert(mu->data.header.ballot == get_ballot(),
-            "%s: invalid mutation ballot, %" PRId64 " VS %" PRId64 "",
-            mu->name(),
-            mu->data.header.ballot,
-            get_ballot());
+    CHECK_EQ_MSG(mu->data.header.ballot, get_ballot(), "{}: invalid mutation ballot", mu->name());
 
     ::dsn::rpc_address node = request->to_address;
     partition_status::type st = _primary_states.get_node_status(node);
@@ -659,29 +632,21 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     }
 
     if (resp.err == ERR_OK) {
-        dassert(resp.ballot == get_ballot(),
-                "invalid response ballot, %" PRId64 " VS %" PRId64 "",
-                resp.ballot,
-                get_ballot());
-        dassert(resp.decree == mu->data.header.decree,
-                "invalid response decree, %" PRId64 " VS %" PRId64 "",
-                resp.decree,
-                mu->data.header.decree);
+        CHECK_EQ(resp.ballot, get_ballot());
+        CHECK_EQ(resp.decree, mu->data.header.decree);
 
         switch (target_status) {
         case partition_status::PS_SECONDARY:
             dassert(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
                     "invalid secondary node address, address = %s",
                     node.to_string());
-            dassert(mu->left_secondary_ack_count() > 0, "%u", mu->left_secondary_ack_count());
+            CHECK_GT(mu->left_secondary_ack_count(), 0);
             if (0 == mu->decrease_left_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
             }
             break;
         case partition_status::PS_POTENTIAL_SECONDARY:
-            dassert(mu->left_potential_secondary_ack_count() > 0,
-                    "%u",
-                    mu->left_potential_secondary_ack_count());
+            CHECK_GT(mu->left_potential_secondary_ack_count(), 0);
             if (0 == mu->decrease_left_potential_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
             }
@@ -757,9 +722,7 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
 
         // note targetStatus and (curent) status may diff
         if (target_status == partition_status::PS_POTENTIAL_SECONDARY) {
-            dassert(mu->left_potential_secondary_ack_count() > 0,
-                    "%u",
-                    mu->left_potential_secondary_ack_count());
+            CHECK_GT(mu->left_potential_secondary_ack_count(), 0);
             if (0 == mu->decrease_left_potential_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
             }

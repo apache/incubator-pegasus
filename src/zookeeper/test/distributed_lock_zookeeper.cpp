@@ -77,7 +77,7 @@ public:
 
         _dlock_service = new distributed_lock_service_zookeeper();
         auto err = _dlock_service->initialize({"/dsn/tests/simple_adder_server"});
-        dassert(err == ERR_OK, "err = %s", err.to_string());
+        CHECK_EQ(err, ERR_OK);
 
         distributed_lock_service::lock_options opt = {true, true};
         while (!ss_finish) {

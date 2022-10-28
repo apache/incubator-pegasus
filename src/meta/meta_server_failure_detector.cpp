@@ -58,7 +58,7 @@ meta_server_failure_detector::meta_server_failure_detector(meta_service *svc)
     _lock_svc = dsn::utils::factory_store<dist::distributed_lock_service>::create(
         _fd_opts->distributed_lock_service_type.c_str(), PROVIDER_TYPE_MAIN);
     error_code err = _lock_svc->initialize(_fd_opts->distributed_lock_service_args);
-    dassert(err == ERR_OK, "init distributed_lock_service failed, err = %s", err.to_string());
+    CHECK_EQ_MSG(err, ERR_OK, "init distributed_lock_service failed");
 }
 
 meta_server_failure_detector::~meta_server_failure_detector()
@@ -200,10 +200,7 @@ void meta_server_failure_detector::leader_initialize(const std::string &lock_ser
     CHECK(addr.from_string_ipv4(lock_service_owner.c_str()),
           "parse {} to rpc_address failed",
           lock_service_owner);
-    dassert(addr == dsn_primary_address(),
-            "acquire leader return success, but owner not match: %s vs %s",
-            addr.to_string(),
-            dsn_primary_address().to_string());
+    CHECK_EQ_MSG(addr, dsn_primary_address(), "acquire leader return success, but owner not match");
     _is_leader.store(true);
     _election_moment.store(dsn_now_ms());
 }

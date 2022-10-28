@@ -671,7 +671,7 @@ error_code get_process_image_path(int pid, std::string &path)
 
     err = snprintf_p(
         tmp, ARRAYSIZE(tmp), "/proc/%s/exe", (pid == -1) ? "self" : std::to_string(pid).c_str());
-    dassert(err >= 0, "snprintf_p failed.");
+    CHECK_GE(err, 0);
 
     err = (int)readlink(tmp, tls_path_buffer, TLS_PATH_BUFFER_SIZE);
     if (err == -1) {
@@ -806,11 +806,12 @@ error_code read_file(const std::string &fname, std::string &buf)
         return ERR_FILE_OPERATION_FAILED;
     }
     fin.read(&buf[0], file_sz);
-    dassert_f(file_sz == fin.gcount(),
-              "read file({}) failed, file_size = {} but read size = {}",
-              fname,
-              file_sz,
-              fin.gcount());
+    CHECK_EQ_MSG(file_sz,
+                 fin.gcount(),
+                 "read file({}) failed, file_size = {} but read size = {}",
+                 fname,
+                 file_sz,
+                 fin.gcount());
     fin.close();
     return ERR_OK;
 }

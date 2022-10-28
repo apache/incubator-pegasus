@@ -60,7 +60,7 @@ void replica::init_group_check()
     if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
         return;
 
-    dassert(nullptr == _primary_states.group_check_task, "");
+    CHECK(nullptr == _primary_states.group_check_task, "");
     _primary_states.group_check_task =
         tasking::enqueue_timer(LPC_GROUP_CHECK,
                                &_tracker,
@@ -223,7 +223,7 @@ void replica::on_group_check_reply(error_code err,
     }
 
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
-    dassert(r == 1, "invalid node address, address = %s", req->node.to_string());
+    CHECK_EQ_MSG(r, 1, "invalid node address, address = {}", req->node.to_string());
 
     if (err != ERR_OK || resp->err != ERR_OK) {
         if (ERR_OK == err) {

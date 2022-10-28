@@ -59,11 +59,27 @@
 
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
+#define CHECK_NE(var1, var2) CHECK(var1 != var2, "{} vs {}", var1, var2)
 #define CHECK_EQ(var1, var2) CHECK(var1 == var2, "{} vs {}", var1, var2)
 #define CHECK_GE(var1, var2) CHECK(var1 >= var2, "{} vs {}", var1, var2)
 #define CHECK_LE(var1, var2) CHECK(var1 <= var2, "{} vs {}", var1, var2)
 #define CHECK_GT(var1, var2) CHECK(var1 > var2, "{} vs {}", var1, var2)
 #define CHECK_LT(var1, var2) CHECK(var1 < var2, "{} vs {}", var1, var2)
+
+#define CHECK_NE_MSG(var1, var2, ...)                                                              \
+    CHECK(var1 != var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+#define CHECK_EQ_MSG(var1, var2, ...)                                                              \
+    CHECK(var1 == var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+#define CHECK_GE_MSG(var1, var2, ...)                                                              \
+    CHECK(var1 >= var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+#define CHECK_LE_MSG(var1, var2, ...)                                                              \
+    CHECK(var1 <= var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+#define CHECK_GT_MSG(var1, var2, ...)                                                              \
+    CHECK(var1 > var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+#define CHECK_LT_MSG(var1, var2, ...)                                                              \
+    CHECK(var1 < var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+
+// TODO(yingchun): add CHECK_NULL(ptr), CHECK_OK(err), CHECK(cond)
 
 #define CHECK_EQ_PREFIX(var1, var2) dassert_replica(var1 == var2, "{} vs {}", var1, var2)
 #define CHECK_GE_PREFIX(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)

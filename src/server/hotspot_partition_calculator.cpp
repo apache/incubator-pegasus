@@ -146,10 +146,12 @@ void hotspot_partition_calculator::update_hot_point(uint32_t data_type,
 
 void hotspot_partition_calculator::data_analyse()
 {
-    dassert(_partitions_stat_histories.back().size() == _hot_points.size(),
-            "The number of partitions in this table has changed, and hotspot analysis cannot be "
-            "performed,in %s",
-            _app_name.c_str());
+    CHECK_EQ_MSG(
+        _partitions_stat_histories.back().size(),
+        _hot_points.size(),
+        "The number of partitions in this table has changed, and hotspot analysis cannot be "
+        "performed, in {}",
+        _app_name);
 
     std::vector<int> read_hot_points;
     stat_histories_analyse(READ_HOTSPOT_DATA, read_hot_points);

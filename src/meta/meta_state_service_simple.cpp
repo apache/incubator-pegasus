@@ -157,7 +157,7 @@ error_code meta_state_service_simple::delete_node_internal(const std::string &no
         auto &node_pair = delete_stack.top();
         if (node_pair.node->children.end() == node_pair.next_child_to_delete) {
             auto delnum = _quick_map.erase(node_pair.path);
-            dassert(delnum == 1, "inconsistent state between quick map and tree");
+            CHECK_EQ_MSG(delnum, 1, "inconsistent state between quick map and tree");
             delete node_pair.node;
             delete_stack.pop();
         } else {
@@ -176,11 +176,11 @@ error_code meta_state_service_simple::delete_node_internal(const std::string &no
     }
 
     auto parent_it = _quick_map.find(parent);
-    dassert(parent_it != _quick_map.end(), "unable to find parent node");
+    CHECK(parent_it != _quick_map.end(), "unable to find parent node");
     // XXX we cannot delete root, right?
 
     auto erase_num = parent_it->second->children.erase(name);
-    dassert(erase_num == 1, "inconsistent state between quick map and tree");
+    CHECK_EQ_MSG(erase_num, 1, "inconsistent state between quick map and tree");
     return ERR_OK;
 }
 
@@ -218,7 +218,7 @@ error_code meta_state_service_simple::apply_transaction(
         default:
             CHECK(false, "unsupported operation");
         }
-        dassert(ec == ERR_OK, "unexpected error when applying, err=%s", ec.to_string());
+        CHECK_EQ_MSG(ec, ERR_OK, "unexpected error when applying");
     }
 
     return ERR_OK;
@@ -392,7 +392,7 @@ task_ptr meta_state_service_simple::submit_transaction(
             memcpy(dest, entry.data(), entry.length());
             dest += entry.length();
         });
-        dassert(dest - batch.get() == total_size, "memcpy error");
+        CHECK_EQ_MSG(dest - batch.get(), total_size, "memcpy error");
         task_ptr task(new error_code_future(cb_code, cb_transaction, 0));
         task->set_tracker(tracker);
         write_log(blob(batch, total_size),

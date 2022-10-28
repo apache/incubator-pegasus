@@ -2570,7 +2570,7 @@ bool count_data(command_executor *e, shell_context *sc, arguments args)
 std::string unescape_str(const char *escaped)
 {
     std::string dst, src = escaped;
-    dassert(pegasus::utils::c_unescape_string(src, dst) >= 0, "");
+    CHECK_GE(pegasus::utils::c_unescape_string(src, dst), 0);
     return dst;
 }
 

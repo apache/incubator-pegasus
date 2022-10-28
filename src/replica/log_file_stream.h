@@ -178,7 +178,7 @@ private:
                 _task->wait();
                 _have_ongoing_task = false;
                 _end += _task->get_transferred_size();
-                dassert(_end <= block_size_bytes, "invalid io_size.");
+                CHECK_LE_MSG(_end, block_size_bytes, "invalid io_size");
                 return _task->error();
             } else {
                 return ERR_OK;

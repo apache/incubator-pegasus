@@ -183,6 +183,11 @@ public:
         }
     }
 
+    friend std::ostream &operator<<(std::ostream &os, const rpc_address &addr)
+    {
+        return os << addr.to_string();
+    }
+
     // for serialization in thrift format
     uint32_t read(::apache::thrift::protocol::TProtocol *iprot);
     uint32_t write(::apache::thrift::protocol::TProtocol *oprot) const;

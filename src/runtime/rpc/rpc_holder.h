@@ -240,8 +240,8 @@ public:
     using mail_box_u_ptr = std::unique_ptr<mail_box_t>;
     static void enable_mocking()
     {
-        dassert(_mail_box == nullptr && _forward_mail_box == nullptr,
-                "remember to call clear_mocking_env after testing");
+        CHECK(_mail_box == nullptr && _forward_mail_box == nullptr,
+              "remember to call clear_mocking_env after testing");
         _mail_box = make_unique<mail_box_t>();
         _forward_mail_box = make_unique<mail_box_t>();
     }

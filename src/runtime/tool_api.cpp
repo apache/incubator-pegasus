@@ -58,7 +58,7 @@ public:
         if (_start) {
             error_code err;
             err = _node->start_app();
-            dassert(err == ERR_OK, "start app failed, err = %s", err.to_string());
+            CHECK_EQ_MSG(err, ERR_OK, "start app failed");
         } else {
             LOG_INFO("stop app result(%s)", _node->stop_app(_cleanup).to_string());
         }

@@ -541,7 +541,7 @@ public:
     // NOTICE: x MUST be a non-negative integer.
     void increment_by(int64_t x)
     {
-        dassert_f(x >= 0, "delta({}) by increment for counter must be a non-negative integer", x);
+        CHECK_GE_MSG(x, 0, "delta({}) by increment for counter must be a non-negative integer", x);
         _adder.increment_by(x);
     }
 
@@ -782,10 +782,9 @@ protected:
           _nth_element_finder(),
           _timer()
     {
-        dassert(_sample_size > 0 && (_sample_size & (_sample_size - 1)) == 0,
-                "sample_sizes should be > 0 and power of 2");
-
-        dassert(_samples, "_samples should be valid pointer");
+        CHECK(_sample_size > 0 && (_sample_size & (_sample_size - 1)) == 0,
+              "sample_sizes should be > 0 and power of 2");
+        CHECK(_samples, "");
 
         for (const auto &kth : kth_percentiles) {
             _kth_percentile_bitset.set(static_cast<size_t>(kth));

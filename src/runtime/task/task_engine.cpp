@@ -120,8 +120,8 @@ void task_worker_pool::stop()
 
 void task_worker_pool::add_timer(task *t)
 {
-    dassert(t->delay_milliseconds() > 0,
-            "task delayed should be dispatched to timer service first");
+    CHECK_GT_MSG(
+        t->delay_milliseconds(), 0, "task delayed should be dispatched to timer service first");
 
     unsigned int idx = (_spec.partitioned
                             ? static_cast<unsigned int>(t->hash()) %
@@ -132,15 +132,15 @@ void task_worker_pool::add_timer(task *t)
 
 void task_worker_pool::enqueue(task *t)
 {
-    dassert(t->spec().pool_code == spec().pool_code || t->spec().type == TASK_TYPE_RPC_RESPONSE,
-            "Invalid thread pool used");
-    dassert(t->delay_milliseconds() == 0,
-            "task delayed should be dispatched to timer service first");
+    CHECK(t->spec().pool_code == spec().pool_code || t->spec().type == TASK_TYPE_RPC_RESPONSE,
+          "Invalid thread pool used");
+    CHECK_EQ_MSG(
+        t->delay_milliseconds(), 0, "task delayed should be dispatched to timer service first");
 
-    dassert(_is_running,
-            "worker pool %s must be started before enqueue task %s",
-            spec().name.c_str(),
-            t->spec().name.c_str());
+    CHECK(_is_running,
+          "worker pool {} must be started before enqueue task {}",
+          spec().name,
+          t->spec().name);
     unsigned int idx =
         (_spec.partitioned
              ? static_cast<unsigned int>(t->hash()) % static_cast<unsigned int>(_queues.size())

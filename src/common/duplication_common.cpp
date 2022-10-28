@@ -96,20 +96,22 @@ private:
         for (std::string &cluster : clusters) {
             int64_t cluster_id =
                 dsn_config_get_value_int64("duplication-group", cluster.data(), 0, "");
-            dassert(cluster_id < 128 && cluster_id > 0,
-                    "cluster_id(%zd) for %s should be in [1, 127]",
-                    cluster_id,
-                    cluster.data());
+            CHECK(cluster_id < 128 && cluster_id > 0,
+                  "cluster_id({}) for {} should be in [1, 127]",
+                  cluster_id,
+                  cluster.data());
             _group.emplace(cluster, static_cast<uint8_t>(cluster_id));
         }
-        dassert_f(clusters.size() == _group.size(),
-                  "there might be duplicate cluster_name in configuration");
+        CHECK_EQ_MSG(clusters.size(),
+                     _group.size(),
+                     "there might be duplicate cluster_name in configuration");
 
         for (const auto &kv : _group) {
             _distinct_cids.insert(kv.second);
         }
-        dassert_f(_distinct_cids.size() == _group.size(),
-                  "there might be duplicate cluster_id in configuration");
+        CHECK_EQ_MSG(_distinct_cids.size(),
+                     _group.size(),
+                     "there might be duplicate cluster_id in configuration");
     }
     ~duplication_group_registry() = default;
 

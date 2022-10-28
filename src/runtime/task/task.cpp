@@ -57,10 +57,10 @@ __thread uint16_t tls_dsn_lower32_task_id_mask = 0;
         tls_dsn.node_id = node->id();
 
         if (worker != nullptr) {
-            dassert(worker->pool()->node() == node,
-                    "worker not belonging to the given node: %s vs %s",
-                    worker->pool()->node()->full_name(),
-                    node->full_name());
+            CHECK(worker->pool()->node() == node,
+                  "worker not belonging to the given node: {} vs {}",
+                  worker->pool()->node()->full_name(),
+                  node->full_name());
         }
 
         tls_dsn.node = node;
@@ -161,7 +161,8 @@ void task::exec_internal()
 
     if (_state.compare_exchange_strong(
             READY_STATE, TASK_STATE_RUNNING, std::memory_order_relaxed)) {
-        dassert(tls_dsn.magic == 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
+        CHECK_EQ_MSG(
+            tls_dsn.magic, 0xdeadbeef, "thread is not inited with task::set_tls_dsn_context");
 
         task *parent_task = tls_dsn.current_task;
         tls_dsn.current_task = this;
@@ -405,7 +406,7 @@ void task::enqueue(task_worker_pool *pool)
 
     // fast execution
     if (_is_null) {
-        dassert(_node == task::get_current_node(), "");
+        CHECK(_node == task::get_current_node(), "");
         exec_internal();
         return;
     }

@@ -118,9 +118,9 @@ void maintain_drops(std::vector<rpc_address> &drops, const rpc_address &node, co
                 drops.erase(it);
             }
         } else {
-            dassert(it == drops.end(),
-                    "the node(%s) cannot be in drops set before this update",
-                    node.to_string());
+            CHECK(it == drops.end(),
+                  "the node({}) cannot be in drops set before this update",
+                  node.to_string());
             drops.push_back(node);
             if (drops.size() > 3) {
                 drops.erase(drops.begin());
@@ -135,12 +135,8 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     partition_configuration &pc = *get_config(*view.apps, pid);
     config_context &cc = *get_config_context(*view.apps, pid);
 
-    dassert(replica_count(pc) == 0,
-            "replica count of gpid(%d.%d) must be 0",
-            pid.get_app_id(),
-            pid.get_partition_index());
-    dassert(
-        max_replica_count > 0, "max replica count is %d, should be at lease 1", max_replica_count);
+    CHECK_EQ(replica_count(pc), 0);
+    CHECK_GT(max_replica_count, 0);
 
     std::vector<dropped_replica> &drop_list = cc.dropped;
     if (drop_list.empty()) {
@@ -544,11 +540,12 @@ void app_state_helper::reset_manual_compact_status()
 bool app_state_helper::get_manual_compact_progress(/*out*/ int32_t &progress) const
 {
     int32_t total_replica_count = owner->partition_count * owner->max_replica_count;
-    dassert_f(total_replica_count > 0,
-              "invalid app metadata, app({}), partition_count({}), max_replica_count({})",
-              owner->app_name,
-              owner->partition_count,
-              owner->max_replica_count);
+    CHECK_GT_MSG(total_replica_count,
+                 0,
+                 "invalid app metadata, app({}), partition_count({}), max_replica_count({})",
+                 owner->app_name,
+                 owner->partition_count,
+                 owner->max_replica_count);
     int32_t finish_count = 0, idle_count = 0;
     for (const auto &cc : contexts) {
         for (const auto &r : cc.serving) {
@@ -671,11 +668,7 @@ bool node_state::for_each_primary(app_id id, const std::function<bool(const gpid
         return true;
     }
     for (const gpid &pid : *pri) {
-        dassert(id == pid.get_app_id(),
-                "invalid gpid(%d.%d), app_id must be %d",
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                id);
+        CHECK_EQ_MSG(id, pid.get_app_id(), "invalid gpid({}), app_id must be {}", pid, id);
         if (!f(pid))
             return false;
     }
@@ -689,11 +682,7 @@ bool node_state::for_each_partition(app_id id, const std::function<bool(const gp
         return true;
     }
     for (const gpid &pid : *par) {
-        dassert(id == pid.get_app_id(),
-                "invalid gpid(%d.%d), app_id must be %d",
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                id);
+        CHECK_EQ_MSG(id, pid.get_app_id(), "invalid gpid({}), app_id must be {}", pid, id);
         if (!f(pid))
             return false;
     }

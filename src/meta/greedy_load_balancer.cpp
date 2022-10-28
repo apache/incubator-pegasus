@@ -172,8 +172,8 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
 
 void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 {
-    dassert(t_alive_nodes >= FLAGS_min_live_node_count_for_unfreeze,
-            "too few nodes will be freezed");
+    CHECK_GE_MSG(
+        t_alive_nodes, FLAGS_min_live_node_count_for_unfreeze, "too few nodes will be freezed");
 
     for (auto &kv : *(t_global_view->nodes)) {
         node_state &ns = kv.second;

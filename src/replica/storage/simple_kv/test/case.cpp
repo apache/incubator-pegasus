@@ -903,7 +903,7 @@ void client_case_line::get_write_params(int &id,
                                         std::string &value,
                                         int &timeout_ms) const
 {
-    dassert(_type == begin_write, "");
+    CHECK_EQ(_type, begin_write);
     id = _id;
     key = _key;
     value = _value;
@@ -912,7 +912,7 @@ void client_case_line::get_write_params(int &id,
 
 void client_case_line::get_read_params(int &id, std::string &key, int &timeout_ms) const
 {
-    dassert(_type == begin_read, "");
+    CHECK_EQ(_type, begin_read);
     id = _id;
     key = _key;
     timeout_ms = _timeout;
@@ -922,7 +922,7 @@ void client_case_line::get_replica_config_params(rpc_address &receiver,
                                                  dsn::replication::config_type::type &type,
                                                  rpc_address &node) const
 {
-    dassert(_type == replica_config, "");
+    CHECK_EQ(_type, replica_config);
     receiver = _config_receiver;
     type = _config_type;
     node = _config_node;
@@ -1039,7 +1039,7 @@ bool test_case::init(const std::string &case_input)
 void test_case::forward()
 {
     _null_loop_count = 0; // reset null loop count
-    dassert(_next < _case_lines.size(), "");
+    CHECK_LT(_next, _case_lines.size());
     while (true) {
         case_line *cl = _case_lines[_next];
         if (cl != nullptr) {
@@ -1078,7 +1078,7 @@ void test_case::forward()
 void test_case::fail(const std::string &other)
 {
     _null_loop_count = 0; // reset null loop count
-    dassert(_next < _case_lines.size(), "");
+    CHECK_LT(_next, _case_lines.size());
     case_line *cl = _case_lines[_next];
     output(other);
     print(cl, other);
@@ -1097,8 +1097,8 @@ void test_case::output(const std::string &line)
 void test_case::print(case_line *cl, const std::string &other, bool is_skip)
 {
     if (is_skip) {
-        dassert(cl == nullptr, "");
-        dassert(!other.empty(), "");
+        CHECK(cl == nullptr, "");
+        CHECK(!other.empty(), "");
         std::cout << "    s  " << other << std::endl;
         return;
     }
@@ -1395,7 +1395,7 @@ void test_case::on_state_change(const state_snapshot &last, const state_snapshot
 
 void test_case::internal_register_creator(const std::string &name, case_line_creator creator)
 {
-    dassert(_creators.find(name) == _creators.end(), "");
+    CHECK(_creators.find(name) == _creators.end(), "");
     _creators[name] = creator;
 }
 }

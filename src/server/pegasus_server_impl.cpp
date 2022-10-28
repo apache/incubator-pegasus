@@ -2165,25 +2165,16 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
     int64_t ci = state.to_decree_included;
 
     if (mode == chkpt_apply_mode::copy) {
-        dassert(ci > last_durable_decree(),
-                "state.to_decree_included(%" PRId64 ") <= last_durable_decree(%" PRId64 ")",
-                ci,
-                last_durable_decree());
+        CHECK_GT(ci, last_durable_decree());
 
         auto learn_dir = ::dsn::utils::filesystem::remove_file_name(state.files[0]);
         auto chkpt_dir = ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(ci));
         if (::dsn::utils::filesystem::rename_path(learn_dir, chkpt_dir)) {
             ::dsn::utils::auto_lock<::dsn::utils::ex_lock_nr> l(_checkpoints_lock);
-            dassert(ci > last_durable_decree(),
-                    "%" PRId64 " VS %" PRId64 "",
-                    ci,
-                    last_durable_decree());
+            CHECK_GT(ci, last_durable_decree());
             _checkpoints.push_back(ci);
             if (!_checkpoints.empty()) {
-                dassert(ci > _checkpoints.back(),
-                        "%" PRId64 " VS %" PRId64 "",
-                        ci,
-                        _checkpoints.back());
+                CHECK_GT(ci, _checkpoints.back());
             }
             set_last_durable_decree(ci);
             err = ::dsn::ERR_OK;
@@ -2243,7 +2234,7 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
     }
 
     CHECK(_is_open, "");
-    dassert(ci == last_durable_decree(), "%" PRId64 " VS %" PRId64 "", ci, last_durable_decree());
+    CHECK_EQ(ci, last_durable_decree());
 
     LOG_INFO("%s: apply checkpoint succeed, last_durable_decree = %" PRId64,
              replica_name(),

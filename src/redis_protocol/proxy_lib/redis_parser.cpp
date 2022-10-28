@@ -934,7 +934,7 @@ void redis_parser::decr_by(message_entry &entry) { counter_internal(entry); }
 void redis_parser::counter_internal(message_entry &entry)
 {
     CHECK(!entry.request.sub_requests.empty(), "");
-    dassert(entry.request.sub_requests[0].length > 0, "");
+    CHECK_GT(entry.request.sub_requests[0].length, 0);
     const char *command = entry.request.sub_requests[0].data.data();
     int64_t increment = 1;
     if (strcasecmp(command, "INCR") == 0 || strcasecmp(command, "DECR") == 0) {
@@ -1327,9 +1327,7 @@ void redis_parser::handle_command(std::unique_ptr<message_entry> &&entry)
               e.sequence_id);
     enqueue_pending_response(std::move(entry));
 
-    dassert(request.sub_request_count > 0,
-            "invalid request, request.length = %d",
-            request.sub_request_count);
+    CHECK_GT_MSG(request.sub_request_count, 0, "invalid request");
     ::dsn::blob &command = request.sub_requests[0].data;
     redis_call_handler handler = redis_parser::get_handler(command.data(), command.length());
     handler(this, e);

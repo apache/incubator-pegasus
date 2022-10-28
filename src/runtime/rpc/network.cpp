@@ -50,8 +50,8 @@ rpc_session::~rpc_session()
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
-        dassert(0 == _sending_msgs.size(), "sending queue is not cleared yet");
-        dassert(0 == _message_count, "sending queue is not cleared yet");
+        CHECK_EQ_MSG(0, _sending_msgs.size(), "sending queue is not cleared yet");
+        CHECK_EQ_MSG(0, _message_count, "sending queue is not cleared yet");
     }
 }
 
@@ -187,7 +187,7 @@ inline bool rpc_session::unlink_message_for_send()
 
         _sending_buffers.resize(bcount + lcount);
         auto rcount = _parser->get_buffers_on_send(lmsg, &_sending_buffers[bcount]);
-        dassert(lcount >= rcount, "%d VS %d", lcount, rcount);
+        CHECK_GE(lcount, rcount);
         if (lcount != rcount)
             _sending_buffers.resize(bcount + rcount);
         bcount += rcount;
@@ -308,13 +308,14 @@ void rpc_session::on_send_completed(uint64_t signature)
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
         if (signature != 0) {
-            dassert(_is_sending_next && signature == _message_sent + 1, "sent msg must be sending");
+            CHECK(_is_sending_next && signature == _message_sent + 1, "sent msg must be sending");
             _is_sending_next = false;
 
             // the _sending_msgs may have been cleared when reading of the rpc_session is failed.
             if (_sending_msgs.size() == 0) {
-                dassert(_connect_state == SS_DISCONNECTED,
-                        "assume sending queue is cleared due to session closed");
+                CHECK_EQ_MSG(_connect_state,
+                             SS_DISCONNECTED,
+                             "assume sending queue is cleared due to session closed");
                 return;
             }
 
@@ -423,7 +424,7 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
         if (is_client() && msg->header->from_address == _net.engine()->primary_address()) {
             LOG_ERROR("self connection detected, address = %s",
                       msg->header->from_address.to_string());
-            dassert(msg->get_count() == 0, "message should not be referenced by anybody so far");
+            CHECK_EQ_MSG(msg->get_count(), 0, "message should not be referenced by anybody so far");
             delete msg;
             return false;
         }

@@ -37,7 +37,7 @@ killer_handler_shell::killer_handler_shell()
     const char *section = "killer.handler.shell";
     _run_script_path = dsn_config_get_value_string(
         section, "onebox_run_path", "~/pegasus/run.sh", "onebox run path");
-    dassert(_run_script_path.size() > 0, "");
+    CHECK(!_run_script_path.empty(), "");
 }
 
 bool killer_handler_shell::has_meta_dumped_core(int index)

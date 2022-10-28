@@ -63,10 +63,10 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
             _backup_sig.c_str(),
             app_id);
         auto iter = _progress.unfinished_partitions_per_app.find(app_id);
-        dassert(iter != _progress.unfinished_partitions_per_app.end(),
-                "%s: can't find app(%d) in unfished_map",
-                _backup_sig.c_str(),
-                app_id);
+        CHECK(iter != _progress.unfinished_partitions_per_app.end(),
+              "{}: can't find app({}) in unfished_map",
+              _backup_sig,
+              app_id);
         _progress.is_app_skipped[app_id] = true;
         int total_partitions = iter->second;
         for (int32_t pidx = 0; pidx < total_partitions; ++pidx) {
@@ -153,10 +153,10 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
 void policy_context::start_backup_app_partitions_unlocked(int32_t app_id)
 {
     auto iter = _progress.unfinished_partitions_per_app.find(app_id);
-    dassert(iter != _progress.unfinished_partitions_per_app.end(),
-            "%s: can't find app(%d) in unfinished apps",
-            _backup_sig.c_str(),
-            app_id);
+    CHECK(iter != _progress.unfinished_partitions_per_app.end(),
+          "{}: can't find app({}) in unfinished apps",
+          _backup_sig,
+          app_id);
     for (int32_t i = 0; i < iter->second; ++i) {
         start_backup_partition_unlocked(gpid(app_id, i));
     }
@@ -490,28 +490,23 @@ void policy_context::on_backup_reply(error_code err,
                pid.to_string(),
                primary.to_string());
     if (err == dsn::ERR_OK && response.err == dsn::ERR_OK) {
-        dassert(response.policy_name == _policy.policy_name,
-                "policy name(%s vs %s) don't match, pid(%d.%d), replica_server(%s)",
-                _policy.policy_name.c_str(),
-                response.policy_name.c_str(),
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                primary.to_string());
-        dassert(response.pid == pid,
-                "%s: backup pid[(%d.%d) vs (%d.%d)] don't match, replica_server(%s)",
-                _policy.policy_name.c_str(),
-                response.pid.get_app_id(),
-                response.pid.get_partition_index(),
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                primary.to_string());
-        dassert(response.backup_id <= _cur_backup.backup_id,
-                "%s: replica server(%s) has bigger backup_id(%lld), gpid(%d.%d)",
-                _backup_sig.c_str(),
-                primary.to_string(),
-                response.backup_id,
-                pid.get_app_id(),
-                pid.get_partition_index());
+        CHECK_EQ_MSG(response.policy_name,
+                     _policy.policy_name,
+                     "policy names don't match, pid({}), replica_server({})",
+                     pid,
+                     primary.to_string());
+        CHECK_EQ_MSG(response.pid,
+                     pid,
+                     "{}: backup pids don't match, replica_server({})",
+                     _policy.policy_name,
+                     primary.to_string());
+        CHECK_LE_MSG(response.backup_id,
+                     _cur_backup.backup_id,
+                     "{}: replica server({}) has bigger backup_id({}), gpid({})",
+                     _backup_sig,
+                     primary.to_string(),
+                     response.backup_id,
+                     pid);
 
         if (response.backup_id < _cur_backup.backup_id) {
             LOG_WARNING_F(
@@ -830,11 +825,13 @@ void policy_context::add_backup_history(const backup_info &info)
                  _policy.policy_name.c_str(),
                  info.backup_id,
                  info.start_time_ms);
-        dassert(_cur_backup.start_time_ms == 0,
-                "%s: shouldn't have multiple unfinished backup instance in a policy, %lld vs %lld",
-                _policy.policy_name.c_str(),
-                _cur_backup.backup_id,
-                info.backup_id);
+
+        CHECK_EQ_MSG(_cur_backup.start_time_ms,
+                     0,
+                     "{}: shouldn't have multiple unfinished backup instance in a policy, {} vs {}",
+                     _policy.policy_name,
+                     _cur_backup.backup_id,
+                     info.backup_id);
         CHECK(_backup_history.empty() || info.backup_id > _backup_history.rbegin()->first,
               "{}: backup_id({}) in history larger than current({})",
               _policy.policy_name,

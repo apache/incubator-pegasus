@@ -124,9 +124,7 @@ DSN_API bool dsn_rpc_unregiser_handler(dsn::task_code code)
 
 DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
 {
-    dassert(rpc_call->spec().type == TASK_TYPE_RPC_RESPONSE,
-            "invalid task_type, type = %s",
-            enum_to_string(rpc_call->spec().type));
+    CHECK_EQ_MSG(rpc_call->spec().type, TASK_TYPE_RPC_RESPONSE, "invalid task_type");
 
     auto msg = rpc_call->get_request();
     msg->server_address = server;
@@ -200,7 +198,7 @@ NORETURN DSN_API void dsn_exit(int code)
 DSN_API bool dsn_mimic_app(const char *app_role, int index)
 {
     auto worker = ::dsn::task::get_current_worker2();
-    dassert(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
+    CHECK(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
 
     auto cnode = ::dsn::task::get_current_node2();
     if (cnode != nullptr) {

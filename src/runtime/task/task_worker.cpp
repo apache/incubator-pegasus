@@ -135,13 +135,15 @@ void task_worker::set_priority(worker_priority_t pri)
 void task_worker::set_affinity(uint64_t affinity)
 {
 #if defined(__linux__)
-    dassert(affinity > 0, "affinity cannot be 0.");
+    CHECK_GT(affinity, 0);
 
     int nr_cpu = static_cast<int>(std::thread::hardware_concurrency());
     if (nr_cpu < 64) {
-        dassert(affinity <= (((uint64_t)1 << nr_cpu) - 1),
-                "There are %d cpus in total, while setting thread affinity to a nonexistent one.",
-                nr_cpu);
+        CHECK_LE_MSG(
+            affinity,
+            (((uint64_t)1 << nr_cpu) - 1),
+            "There are {} cpus in total, while setting thread affinity to a nonexistent one.",
+            nr_cpu);
     }
 
     int err = 0;
@@ -229,10 +231,7 @@ void task_worker::loop()
         }
 
 #ifndef NDEBUG
-        dassert(count == batch_size,
-                "returned task count and batch size do not match: %d vs %d",
-                count,
-                batch_size);
+        CHECK_EQ_MSG(count, batch_size, "returned task count and batch size do not match");
 #endif
 
         _processed_task_count += batch_size;

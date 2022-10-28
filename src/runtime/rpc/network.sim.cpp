@@ -172,9 +172,9 @@ sim_network_provider::sim_network_provider(rpc_engine *rpc, network *inner_provi
 
 error_code sim_network_provider::start(rpc_channel channel, int port, bool client_only)
 {
-    dassert(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
-            "invalid given channel %s",
-            channel.to_string());
+    CHECK(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
+          "invalid given channel {}",
+          channel.to_string());
 
     _address = ::dsn::rpc_address("localhost", port);
     auto hostname = boost::asio::ip::host_name();

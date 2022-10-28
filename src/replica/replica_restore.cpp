@@ -93,12 +93,13 @@ bool replica::read_cold_backup_metadata(const std::string &file,
         return false;
     }
     fin.read(buf.get(), file_sz);
-    dassert(file_sz == fin.gcount(),
-            "%s: read file(%s) failed, need %" PRId64 ", but read %" PRId64 "",
-            name(),
-            file.c_str(),
-            file_sz,
-            fin.gcount());
+    CHECK_EQ_MSG(file_sz,
+                 fin.gcount(),
+                 "{}: read file({}) failed, need {}, but read {}",
+                 name(),
+                 file,
+                 file_sz,
+                 fin.gcount());
     fin.close();
 
     buf.get()[fin.gcount()] = '\0';
