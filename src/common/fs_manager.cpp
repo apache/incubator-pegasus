@@ -171,7 +171,7 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
                                        bool for_test)
 {
     // create all dir_nodes
-    dcheck_eq(data_dirs.size(), tags.size());
+    CHECK_EQ(data_dirs.size(), tags.size());
     for (unsigned i = 0; i < data_dirs.size(); ++i) {
         std::string norm_path;
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);

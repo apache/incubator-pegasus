@@ -118,7 +118,7 @@ void mutation_log_shared::write_pending_mutations(bool release_lock_required)
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write->size() > 0, "pending write size = %d", (int)_pending_write->size());
     auto pr = mark_new_offset(_pending_write->size(), false);
-    dcheck_eq(pr.second, _pending_write->start_offset());
+    CHECK_EQ(pr.second, _pending_write->start_offset());
 
     _is_writing.store(true, std::memory_order_release);
 
@@ -157,7 +157,7 @@ void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
             }
 
             if (err == ERR_OK) {
-                dcheck_eq(sz, pending->size());
+                CHECK_EQ(sz, pending->size());
 
                 if (_force_flush) {
                     // flush to ensure that shared log data synced to disk
@@ -372,7 +372,7 @@ void mutation_log_private::write_pending_mutations(bool release_lock_required)
     dassert(_pending_write != nullptr, "");
     dassert(_pending_write->size() > 0, "pending write size = %d", (int)_pending_write->size());
     auto pr = mark_new_offset(_pending_write->size(), false);
-    dcheck_eq_replica(pr.second, _pending_write->start_offset());
+    CHECK_EQ_PREFIX(pr.second, _pending_write->start_offset());
 
     _is_writing.store(true, std::memory_order_release);
 
@@ -433,7 +433,7 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                 }
                 return;
             }
-            dcheck_eq(sz, pending->size());
+            CHECK_EQ(sz, pending->size());
 
             // flush to ensure that there is no gap between private log and in-memory buffer
             // so that we can get all mutations in learning process.
@@ -1065,7 +1065,7 @@ void mutation_log::update_max_decree_no_lock(gpid gpid, decree d)
             dassert(false, "replica has not been registered in the log before");
         }
     } else {
-        dcheck_eq(gpid, _private_gpid);
+        CHECK_EQ(gpid, _private_gpid);
         if (d > _private_log_info.max_decree) {
             _private_log_info.max_decree = d;
         }
@@ -1199,7 +1199,7 @@ void mutation_log::get_parent_mutations_and_logs(gpid pid,
                                                  uint64_t &total_file_size) const
 {
     dassert(_is_private, "this method is only valid for private logs");
-    dcheck_eq(_private_gpid, pid);
+    CHECK_EQ(_private_gpid, pid);
 
     mutation_list.clear();
     files.clear();
@@ -1382,7 +1382,7 @@ int mutation_log::garbage_collection(gpid gpid,
     for (auto it = files.begin(); it != files.end() && it->second->index() <= largest_to_delete;
          ++it) {
         log_file_ptr log = it->second;
-        dcheck_eq(it->first, log->index());
+        CHECK_EQ(it->first, log->index());
 
         // close first
         log->close();

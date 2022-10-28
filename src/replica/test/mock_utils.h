@@ -142,8 +142,8 @@ public:
             new mutation_log_private(log_dir, _options->log_private_file_size_mb, get_gpid(), this);
 
         error_code err =
-            _private_log->open(nullptr, [this](error_code err) { dcheck_eq_replica(err, ERR_OK); });
-        dcheck_eq_replica(err, ERR_OK);
+            _private_log->open(nullptr, [this](error_code err) { CHECK_EQ_PREFIX(err, ERR_OK); });
+        CHECK_EQ_PREFIX(err, ERR_OK);
     }
 
     void init_private_log(mutation_log_ptr log) { _private_log = std::move(log); }

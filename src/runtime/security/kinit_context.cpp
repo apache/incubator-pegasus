@@ -166,7 +166,7 @@ void kinit_context::init_krb5_ctx()
     static std::once_flag once;
     std::call_once(once, [&]() {
         int64_t err = krb5_init_context(&_krb5_context);
-        dcheck_eq(err, 0);
+        CHECK_EQ(err, 0);
     });
 }
 

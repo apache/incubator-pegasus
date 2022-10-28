@@ -238,7 +238,7 @@ void replica_split_manager::parent_prepare_states(const std::string &dir) // on 
         std::make_shared<prepare_list>(_replica, *_replica->_prepare_list);
     plist->truncate(last_committed_decree());
 
-    dcheck_eq(last_committed_decree(), checkpoint_decree);
+    CHECK_EQ(last_committed_decree(), checkpoint_decree);
     dcheck_ge(mutation_list.size(), 0);
     dcheck_ge(files.size(), 0);
     LOG_INFO_PREFIX("prepare state succeed: {} mutations, {} private log files, total file size = "
@@ -724,7 +724,7 @@ void replica_split_manager::parent_send_update_partition_count_request(
 {
     FAIL_POINT_INJECT_F("replica_parent_update_partition_count_request", [](dsn::string_view) {});
 
-    dcheck_eq_replica(status(), partition_status::PS_PRIMARY);
+    CHECK_EQ_PREFIX(status(), partition_status::PS_PRIMARY);
 
     auto request = make_unique<update_child_group_partition_count_request>();
     request->new_partition_count = new_partition_count;
@@ -772,7 +772,7 @@ void replica_split_manager::on_update_child_group_partition_count(
         return;
     }
 
-    dcheck_eq_replica(_replica->_app_info.partition_count * 2, request.new_partition_count);
+    CHECK_EQ_PREFIX(_replica->_app_info.partition_count * 2, request.new_partition_count);
     update_local_partition_count(request.new_partition_count);
     response.err = ERR_OK;
 }
@@ -935,7 +935,7 @@ void replica_split_manager::parent_send_register_request(
 {
     FAIL_POINT_INJECT_F("replica_parent_send_register_request", [](dsn::string_view) {});
 
-    dcheck_eq_replica(status(), partition_status::PS_INACTIVE);
+    CHECK_EQ_PREFIX(status(), partition_status::PS_INACTIVE);
     LOG_INFO_PREFIX(
         "send register child({}) request to meta_server, current ballot = {}, child ballot = {}",
         request.child_config.pid,
@@ -1038,7 +1038,7 @@ void replica_split_manager::on_register_child_on_meta_reply(
                     enum_to_string(status()));
 
     dcheck_ge_replica(response.parent_config.ballot, get_ballot());
-    dcheck_eq_replica(_replica->_app_info.partition_count * 2, response.app.partition_count);
+    CHECK_EQ_PREFIX(_replica->_app_info.partition_count * 2, response.app.partition_count);
 
     _stub->split_replica_exec(LPC_PARTITION_SPLIT,
                               response.child_config.pid,
@@ -1129,8 +1129,8 @@ void replica_split_manager::trigger_primary_parent_split(
     const int32_t meta_partition_count,
     const split_status::type meta_split_status) // on primary parent partition
 {
-    dcheck_eq_replica(status(), partition_status::PS_PRIMARY);
-    dcheck_eq_replica(_replica->_app_info.partition_count * 2, meta_partition_count);
+    CHECK_EQ_PREFIX(status(), partition_status::PS_PRIMARY);
+    CHECK_EQ_PREFIX(_replica->_app_info.partition_count * 2, meta_partition_count);
     LOG_INFO_PREFIX(
         "app({}) partition count changed, local({}) VS meta({}), split_status local({}) "
         "VS meta({})",

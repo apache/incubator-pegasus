@@ -43,7 +43,7 @@ uint64_t meta_store::get_last_flushed_decree() const
 {
     uint64_t last_flushed_decree = 0;
     auto ec = get_value_from_meta_cf(true, LAST_FLUSHED_DECREE, &last_flushed_decree);
-    dcheck_eq_replica(::dsn::ERR_OK, ec);
+    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
     return last_flushed_decree;
 }
 
@@ -51,7 +51,7 @@ uint32_t meta_store::get_data_version() const
 {
     uint64_t pegasus_data_version = 0;
     auto ec = get_value_from_meta_cf(false, DATA_VERSION, &pegasus_data_version);
-    dcheck_eq_replica(::dsn::ERR_OK, ec);
+    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
     return static_cast<uint32_t>(pegasus_data_version);
 }
 
@@ -60,7 +60,7 @@ uint64_t meta_store::get_last_manual_compact_finish_time() const
     uint64_t last_manual_compact_finish_time = 0;
     auto ec = get_value_from_meta_cf(
         false, LAST_MANUAL_COMPACT_FINISH_TIME, &last_manual_compact_finish_time);
-    dcheck_eq_replica(::dsn::ERR_OK, ec);
+    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
     return last_manual_compact_finish_time;
 }
 
@@ -69,7 +69,7 @@ uint64_t meta_store::get_decree_from_readonly_db(rocksdb::DB *db,
 {
     uint64_t last_flushed_decree = 0;
     auto ec = get_value_from_meta_cf(db, meta_cf, true, LAST_FLUSHED_DECREE, &last_flushed_decree);
-    dcheck_eq_replica(::dsn::ERR_OK, ec);
+    CHECK_EQ_PREFIX(::dsn::ERR_OK, ec);
     return last_flushed_decree;
 }
 
@@ -162,25 +162,25 @@ std::string meta_store::get_usage_scenario() const
 
 void meta_store::set_last_flushed_decree(uint64_t decree) const
 {
-    dcheck_eq_replica(::dsn::ERR_OK, set_value_to_meta_cf(LAST_FLUSHED_DECREE, decree));
+    CHECK_EQ_PREFIX(::dsn::ERR_OK, set_value_to_meta_cf(LAST_FLUSHED_DECREE, decree));
 }
 
 void meta_store::set_data_version(uint32_t version) const
 {
-    dcheck_eq_replica(::dsn::ERR_OK, set_value_to_meta_cf(DATA_VERSION, version));
+    CHECK_EQ_PREFIX(::dsn::ERR_OK, set_value_to_meta_cf(DATA_VERSION, version));
 }
 
 void meta_store::set_last_manual_compact_finish_time(uint64_t last_manual_compact_finish_time) const
 {
-    dcheck_eq_replica(
+    CHECK_EQ_PREFIX(
         ::dsn::ERR_OK,
         set_value_to_meta_cf(LAST_MANUAL_COMPACT_FINISH_TIME, last_manual_compact_finish_time));
 }
 
 void meta_store::set_usage_scenario(const std::string &usage_scenario) const
 {
-    dcheck_eq_replica(::dsn::ERR_OK,
-                      set_string_value_to_meta_cf(ROCKSDB_ENV_USAGE_SCENARIO_KEY, usage_scenario));
+    CHECK_EQ_PREFIX(::dsn::ERR_OK,
+                    set_string_value_to_meta_cf(ROCKSDB_ENV_USAGE_SCENARIO_KEY, usage_scenario));
 }
 
 } // namespace server

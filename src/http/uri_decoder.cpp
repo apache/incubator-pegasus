@@ -40,7 +40,7 @@ error_with<char> from_hex(const char c)
 
 error_with<char> decode_char(const string_view &hex)
 {
-    dcheck_eq(2, hex.size());
+    CHECK_EQ(2, hex.size());
 
     auto high = from_hex(hex[0]);
     auto low = from_hex(hex[1]);

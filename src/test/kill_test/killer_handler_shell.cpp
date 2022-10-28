@@ -51,7 +51,7 @@ bool killer_handler_shell::has_meta_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    dcheck_eq(dsn::utils::pipe_execute(find_core, output), 0);
+    CHECK_EQ(dsn::utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;
@@ -68,7 +68,7 @@ bool killer_handler_shell::has_replica_dumped_core(int index)
 
     std::stringstream output;
     int core_count;
-    dcheck_eq(dsn::utils::pipe_execute(find_core, output), 0);
+    CHECK_EQ(dsn::utils::pipe_execute(find_core, output), 0);
     output >> core_count;
 
     return core_count != 0;

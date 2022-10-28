@@ -47,7 +47,7 @@ public:
     {
         auto call = std::shared_ptr<http_call>(call_uptr.release());
         std::lock_guard<std::mutex> guard(_mu);
-        dcheck_eq(_call_map.count(call->path), 0);
+        CHECK_EQ(_call_map.count(call->path), 0);
         _call_map[call->path] = call;
     }
 

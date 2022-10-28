@@ -132,7 +132,7 @@ void hotspot_partition_calculator::stat_histories_analyse(uint32_t data_type,
 void hotspot_partition_calculator::update_hot_point(uint32_t data_type,
                                                     const std::vector<int> &hot_points)
 {
-    dcheck_eq(_hot_points.size(), hot_points.size());
+    CHECK_EQ(_hot_points.size(), hot_points.size());
     int size = hot_points.size();
     uint32_t hotspot_count = 0;
     for (int i = 0; i < size; i++) {

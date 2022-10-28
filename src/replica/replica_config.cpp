@@ -636,7 +636,7 @@ void replica::update_deny_client(const std::map<std::string, std::string> &envs)
 
     std::vector<std::string> sub_sargs;
     utils::split_args(env_iter->second.c_str(), sub_sargs, '*', true);
-    dcheck_eq_replica(sub_sargs.size(), 2);
+    CHECK_EQ_PREFIX(sub_sargs.size(), 2);
 
     _deny_client.reconfig = (sub_sargs[0] == "reconfig");
     _deny_client.read = (sub_sargs[1] == "read" || sub_sargs[1] == "all");

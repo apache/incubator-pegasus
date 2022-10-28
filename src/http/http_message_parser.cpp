@@ -219,7 +219,7 @@ void http_message_parser::prepare_on_send(message_ex *msg)
         dsn_size -= buf.length();
         ++dsn_buf_count;
     }
-    dcheck_eq(dsn_size, 0);
+    CHECK_EQ(dsn_size, 0);
 
     buffers.resize(dsn_buf_count);
 }

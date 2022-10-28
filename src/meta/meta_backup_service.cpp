@@ -118,7 +118,7 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
         LPC_DEFAULT_CALLBACK,
         [this, remote_file, buffer, app_id](const dist::block_service::write_response &resp) {
             if (resp.err == dsn::ERR_OK) {
-                dcheck_eq(resp.written_size, buffer.length());
+                CHECK_EQ(resp.written_size, buffer.length());
                 {
                     zauto_lock l(_lock);
                     LOG_INFO("%s: successfully backup app metadata to %s",

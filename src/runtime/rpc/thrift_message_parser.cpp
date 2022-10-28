@@ -218,7 +218,7 @@ message_ex *thrift_message_parser::parse_request_body_v0(message_reader *reader,
                      : HEADER_LENGTH_V0 - reader->_buffer_occupied);
 
     msg->header->body_length = _meta_v0->body_length;
-    dcheck_eq(msg->header->body_length, msg->buffers[1].size());
+    CHECK_EQ(msg->header->body_length, msg->buffers[1].size());
     msg->header->gpid.set_app_id(_meta_v0->app_id);
     msg->header->gpid.set_partition_index(_meta_v0->partition_index);
     msg->header->client.timeout_ms = _meta_v0->client_timeout;
@@ -267,7 +267,7 @@ message_ex *thrift_message_parser::parse_request_body_v1(message_reader *reader,
                      : HEADER_LENGTH_V1 - reader->_buffer_occupied);
 
     msg->header->body_length = _v1_specific_vars->_body_length;
-    dcheck_eq(msg->header->body_length, msg->buffers[1].size());
+    CHECK_EQ(msg->header->body_length, msg->buffers[1].size());
     msg->header->gpid.set_app_id(_v1_specific_vars->_meta_v1->app_id);
     msg->header->gpid.set_partition_index(_v1_specific_vars->_meta_v1->partition_index);
     msg->header->client.timeout_ms = _v1_specific_vars->_meta_v1->client_timeout;

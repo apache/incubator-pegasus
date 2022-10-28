@@ -45,7 +45,7 @@ public:
         CHECK(ok, "load_meta_servers failed");
         auto ddl_client = new dsn::replication::replication_ddl_client(meta_list);
         dsn::error_code error = ddl_client->create_app("temp_geo", "pegasus", 4, 3, {}, false);
-        dcheck_eq(dsn::ERR_OK, error);
+        CHECK_EQ(dsn::ERR_OK, error);
         _geo_client.reset(new pegasus::geo::geo_client("config.ini", "onebox", "temp", "temp_geo"));
     }
 
