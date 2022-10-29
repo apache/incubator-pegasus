@@ -915,17 +915,20 @@ std::string take_snapshot_and_get_json_string(metric *m)
     return out.str();
 }
 
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+using metric_value_map = std::map<std::string, T>;
+
 template <typename T>
 void check_metric_snapshot_from_json_string(
     const std::string &json_string,
     const std::string &expected_metric_name,
-    const typename std::unordered_map<std::string, T> &expected_value_map,
+    const metric_value_map<T> &expected_value_map,
     const bool is_integral = true)
 {
     rapidjson::Document doc;
     ASSERT_TRUE(doc.Parse(json_string));
 
-    typename std::unordered_map<std::string, T> actual_value_map;
+    metric_value_map<T> actual_value_map;
 
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
@@ -948,7 +951,50 @@ void check_metric_snapshot_from_json_string(
         }
     }
 
-    // Check value map
+    if (is_integral) {
+        ASSERT_EQ(actual_value_map, expected_value_map);
+        return;
+    }
+
+    ASSERT_EQ(actual_value_map.size(), expected_value_map.size());
+
+    typename metric_value_map<T>::const_iterator actual_iter = actual_value_map.begin();
+    typename metric_value_map<T>::const_iterator expected_iter = expected_value_map.begin();
+    for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end(); ++actual_iter, ++expected_iter) {
+        ASSERT_EQ(actual_iter->first, expected_iter->first);
+
+        floating_comparator<T> comp;
+        ASSERT_TRUE((!comp(actual_iter->second, expected_iter->second)) && (!comp(expected_iter->second, actual_iter->second));
+    }
+}
+
+template <typename MetricPrototype, typename T>
+void test_metric_snapshot_with_single_value(const std::string &entity_id,
+    const MetricPrototype &prototype,
+    const T &expected_value)
+{
+    auto my_server_entity = METRIC_ENTITY_my_server.instantiate(entity_id);
+
+    auto my_metric = prototype.instantiate(my_server_entity);
+    switch (my_metric->type()) {
+    case metric_type::kGauge:
+        my_metric->set(expected_value);
+        break;
+    case metric_type::kCounter:
+    case metric_type::kVolatileCounter:
+        my_metric->increment(expected_value);
+        break;
+    default:
+        ASSERT_TRUE(false);
+        break;
+    }
+
+    auto json_string = take_snapshot_and_get_json_string(&my_gauge);
+
+    metric_value_map<T> expected_value_map = {
+        {"value", expected_value}};
+    check_metric_snapshot_from_json_string(
+        json_string, my_gauge.prototype()->name().data(), expected_value_map);
 }
 
 TEST(metrics_test, take_snapshot_gauge_int64)
@@ -960,17 +1006,7 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     } tests[]{{"server_60", 5}};
 
     for (const auto &test : tests) {
-        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
-
-        auto my_gauge = METRIC_test_gauge_int64.instantiate(my_server_entity);
-        my_gauge.set(test.expected_value);
-
-        auto json_string = take_snapshot_and_get_json_string(&my_gauge);
-
-        std::unordered_map<std::string, int64_t> expected_value_map = {
-            {"value", test.expected_value}};
-        check_metric_snapshot_from_json_string(
-            json_string, my_gauge.prototype()->name(), expected_value_map);
+        test_metric_snapshot_with_single_value(test.entity_id, METRIC_test_gauge_int64, test.expected_value);
     }
 }
 
