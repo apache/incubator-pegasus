@@ -972,27 +972,10 @@ void check_metric_snapshot_from_json_string(const std::string &json_string,
 }
 
 template <typename MetricPrototype, typename T>
-void test_metric_snapshot_with_single_value(const std::string &entity_id,
-                                            const MetricPrototype &prototype,
-                                            const T &expected_value)
+void test_metric_snapshot_with_single_value(metric *my_metric,
+                                            const T expected_value)
 {
-    auto my_server_entity = METRIC_ENTITY_my_server.instantiate(entity_id);
-
-    auto my_metric = prototype.instantiate(my_server_entity);
-    switch (my_metric->prototype->type()) {
-    case metric_type::kGauge:
-        my_metric->set(expected_value);
-        break;
-    case metric_type::kCounter:
-    case metric_type::kVolatileCounter:
-        my_metric->increment(expected_value);
-        break;
-    default:
-        ASSERT_TRUE(false);
-        break;
-    }
-
-    auto json_string = take_snapshot_and_get_json_string(&my_metric);
+    auto json_string = take_snapshot_and_get_json_string(my_metric);
 
     metric_value_map<T> expected_value_map = {{"value", expected_value}};
     check_metric_snapshot_from_json_string(
@@ -1008,8 +991,10 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     } tests[]{{"server_60", 5}};
 
     for (const auto &test : tests) {
+        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
+        auto my_metric = METRIC_test_gauge_int64.instantiate(my_server_entity);
         test_metric_snapshot_with_single_value(
-            test.entity_id, METRIC_test_gauge_int64, test.expected_value);
+            my_metric.get(), test.expected_value);
     }
 }
 
