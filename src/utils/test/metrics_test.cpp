@@ -919,11 +919,10 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 using metric_value_map = std::map<std::string, T>;
 
 template <typename T>
-void check_metric_snapshot_from_json_string(
-    const std::string &json_string,
-    const std::string &expected_metric_name,
-    const metric_value_map<T> &expected_value_map,
-    const bool is_integral = true)
+void check_metric_snapshot_from_json_string(const std::string &json_string,
+                                            const std::string &expected_metric_name,
+                                            const metric_value_map<T> &expected_value_map,
+                                            const bool is_integral = true)
 {
     rapidjson::Document doc;
     ASSERT_TRUE(doc.Parse(json_string));
@@ -960,7 +959,8 @@ void check_metric_snapshot_from_json_string(
 
     typename metric_value_map<T>::const_iterator actual_iter = actual_value_map.begin();
     typename metric_value_map<T>::const_iterator expected_iter = expected_value_map.begin();
-    for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end(); ++actual_iter, ++expected_iter) {
+    for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end();
+         ++actual_iter, ++expected_iter) {
         ASSERT_EQ(actual_iter->first, expected_iter->first);
 
         floating_comparator<T> comp;
@@ -970,8 +970,8 @@ void check_metric_snapshot_from_json_string(
 
 template <typename MetricPrototype, typename T>
 void test_metric_snapshot_with_single_value(const std::string &entity_id,
-    const MetricPrototype &prototype,
-    const T &expected_value)
+                                            const MetricPrototype &prototype,
+                                            const T &expected_value)
 {
     auto my_server_entity = METRIC_ENTITY_my_server.instantiate(entity_id);
 
@@ -991,8 +991,7 @@ void test_metric_snapshot_with_single_value(const std::string &entity_id,
 
     auto json_string = take_snapshot_and_get_json_string(&my_gauge);
 
-    metric_value_map<T> expected_value_map = {
-        {"value", expected_value}};
+    metric_value_map<T> expected_value_map = {{"value", expected_value}};
     check_metric_snapshot_from_json_string(
         json_string, my_gauge.prototype()->name().data(), expected_value_map);
 }
@@ -1006,7 +1005,8 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     } tests[]{{"server_60", 5}};
 
     for (const auto &test : tests) {
-        test_metric_snapshot_with_single_value(test.entity_id, METRIC_test_gauge_int64, test.expected_value);
+        test_metric_snapshot_with_single_value(
+            test.entity_id, METRIC_test_gauge_int64, test.expected_value);
     }
 }
 
