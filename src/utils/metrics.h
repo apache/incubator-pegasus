@@ -402,7 +402,7 @@ public:
         writer.StartObject();
 
         writer.Key("name");
-        json::json_encode(writer, prototype()->name());
+        json::json_encode(writer, prototype()->name().data());
 
         writer.Key("value");
         json::json_encode(writer, value());
@@ -515,7 +515,7 @@ public:
         writer.StartObject();
 
         writer.Key("name");
-        json::json_encode(writer, prototype()->name());
+        json::json_encode(writer, prototype()->name().data());
 
         writer.Key("value");
         json::json_encode(writer, value());
@@ -702,14 +702,14 @@ public:
         writer.StartObject();
 
         writer.Key("name");
-        json::json_encode(writer, prototype()->name());
+        json::json_encode(writer, prototype()->name().data());
 
         for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
             if (!_kth_percentile_bitset.test(i)) {
                 continue;
             }
 
-            writer.Key(kKthNames[i]);
+            writer.Key(kKthNames[i].c_str());
             json::json_encode(writer, value(i));
         }
 
