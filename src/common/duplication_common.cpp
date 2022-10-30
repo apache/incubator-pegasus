@@ -48,18 +48,18 @@ const std::string duplication_constants::kDuplicationEnvMasterMetasKey /*NOLINT*
 /*extern*/ const char *duplication_status_to_string(duplication_status::type status)
 {
     auto it = _duplication_status_VALUES_TO_NAMES.find(status);
-    dassert(it != _duplication_status_VALUES_TO_NAMES.end(),
-            "unexpected type of duplication_status: %d",
-            status);
+    CHECK(it != _duplication_status_VALUES_TO_NAMES.end(),
+          "unexpected type of duplication_status: {}",
+          status);
     return it->second;
 }
 
 /*extern*/ const char *duplication_fail_mode_to_string(duplication_fail_mode::type fmode)
 {
     auto it = _duplication_fail_mode_VALUES_TO_NAMES.find(fmode);
-    dassert(it != _duplication_fail_mode_VALUES_TO_NAMES.end(),
-            "unexpected type of duplication_fail_mode: %d",
-            fmode);
+    CHECK(it != _duplication_fail_mode_VALUES_TO_NAMES.end(),
+          "unexpected type of duplication_fail_mode: {}",
+          fmode);
     return it->second;
 }
 

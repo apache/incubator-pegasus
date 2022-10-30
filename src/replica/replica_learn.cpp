@@ -110,9 +110,9 @@ void replica::init_learn(uint64_t signature)
 
         // learned state (app state) completed
         case learner_status::LearningWithPrepare:
-            dassert(_app->last_durable_decree() + 1 >=
-                        _potential_secondary_states.learning_start_prepare_decree,
-                    "learned state is incomplete");
+            CHECK_GE_MSG(_app->last_durable_decree() + 1,
+                         _potential_secondary_states.learning_start_prepare_decree,
+                         "learned state is incomplete");
             {
                 // check missing state due to _app->flush to checkpoint the learned state
                 auto ac = _app->last_committed_decree();
@@ -125,9 +125,7 @@ void replica::init_learn(uint64_t signature)
                     if (_prepare_list->count() > 0 && ac + 1 >= _prepare_list->min_decree()) {
                         for (auto d = ac + 1; d <= pc; d++) {
                             auto mu = _prepare_list->get_mutation_by_decree(d);
-                            dassert(nullptr != mu,
-                                    "mutation must not be nullptr, decree = %" PRId64 "",
-                                    d);
+                            CHECK_NOTNULL(mu, "mutation must not be nullptr, decree = {}", d);
                             auto err = _app->apply_mutation(mu);
                             if (ERR_OK != err) {
                                 handle_learning_error(err, true);
@@ -172,9 +170,9 @@ void replica::init_learn(uint64_t signature)
         case learner_status::LearningWithoutPrepare:
             break;
         default:
-            dassert(false,
-                    "invalid learner_status, status = %s",
-                    enum_to_string(_potential_secondary_states.learning_status));
+            CHECK(false,
+                  "invalid learner_status, status = {}",
+                  enum_to_string(_potential_secondary_states.learning_status));
         }
     }
 
@@ -614,8 +612,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                  name(),
                  req.signature,
                  resp.config.primary.to_string());
-        bool ret = update_local_configuration(resp.config);
-        dassert(ret, "");
+        CHECK(update_local_configuration(resp.config), "");
     }
 
     if (status() != partition_status::PS_POTENTIAL_SECONDARY) {
@@ -658,18 +655,14 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             if (dsn::utils::filesystem::directory_exists(old_dir)) {
                 char rename_dir[1024];
                 sprintf(rename_dir, "%s.%" PRIu64 ".discarded", old_dir.c_str(), dsn_now_us());
-                if (dsn::utils::filesystem::rename_path(old_dir, rename_dir)) {
-                    LOG_WARNING("%s: {replica_dir_op} succeed to move directory from '%s' to '%s'",
-                                name(),
-                                old_dir.c_str(),
-                                rename_dir);
-                } else {
-                    dassert(false,
-                            "%s: failed to move directory from '%s' to '%s'",
-                            name(),
-                            old_dir.c_str(),
-                            rename_dir);
-                }
+                CHECK(dsn::utils::filesystem::rename_path(old_dir, rename_dir),
+                      "{}: failed to move directory from '{}' to '{}'",
+                      name(),
+                      old_dir,
+                      rename_dir);
+                LOG_WARNING_PREFIX("{replica_dir_op} succeed to move directory from '{}' to '{}'",
+                                   old_dir,
+                                   rename_dir);
             }
         }
 
@@ -851,9 +844,9 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         CHECK(resp.state.files.empty(), "");
 
         // all state is complete
-        dassert(_app->last_committed_decree() + 1 >=
-                    _potential_secondary_states.learning_start_prepare_decree,
-                "state is incomplete");
+        CHECK_GE_MSG(_app->last_committed_decree() + 1,
+                     _potential_secondary_states.learning_start_prepare_decree,
+                     "state is incomplete");
 
         // go to next stage
         _potential_secondary_states.learning_status = learner_status::LearningWithPrepare;
@@ -988,7 +981,7 @@ bool replica::prepare_cached_learn_state(const learn_request &request,
         int count = 0;
         for (decree d = learn_start_decree; d < response.prepare_start_decree; d++) {
             auto mu = _prepare_list->get_mutation_by_decree(d);
-            dassert(mu != nullptr, "mutation must not be nullptr, decree = %" PRId64 "", d);
+            CHECK_NOTNULL(mu, "mutation must not be nullptr, decree = {}", d);
             mu->write_to(writer, nullptr);
             count++;
         }

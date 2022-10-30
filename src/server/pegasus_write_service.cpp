@@ -244,7 +244,7 @@ int pegasus_write_service::batch_put(const db_write_context &ctx,
                                      const dsn::apps::update_request &update,
                                      dsn::apps::update_response &resp)
 {
-    dassert(_batch_start_time != 0, "batch_put must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_put must be called after batch_prepare");
 
     _batch_qps_perfcounters.push_back(_pfc_put_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_put_latency.get());
@@ -261,7 +261,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
                                         const dsn::blob &key,
                                         dsn::apps::update_response &resp)
 {
-    dassert(_batch_start_time != 0, "batch_remove must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_remove must be called after batch_prepare");
 
     _batch_qps_perfcounters.push_back(_pfc_remove_qps.get());
     _batch_latency_perfcounters.push_back(_pfc_remove_latency.get());
@@ -276,7 +276,7 @@ int pegasus_write_service::batch_remove(int64_t decree,
 
 int pegasus_write_service::batch_commit(int64_t decree)
 {
-    dassert(_batch_start_time != 0, "batch_commit must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_commit must be called after batch_prepare");
 
     int err = _impl->batch_commit(decree);
     clear_up_batch_states();
@@ -285,7 +285,7 @@ int pegasus_write_service::batch_commit(int64_t decree)
 
 void pegasus_write_service::batch_abort(int64_t decree, int err)
 {
-    dassert(_batch_start_time != 0, "batch_abort must be called after batch_prepare");
+    CHECK_GT_MSG(_batch_start_time, 0, "batch_abort must be called after batch_prepare");
     CHECK(err, "must abort on non-zero err");
 
     _impl->batch_abort(decree, err);

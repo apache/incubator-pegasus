@@ -37,7 +37,8 @@
 #define LOG_WARNING_F(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
 #define LOG_ERROR_F(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
 #define LOG_FATAL_F(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
-#define dassert_f(x, ...)                                                                          \
+
+#define CHECK(x, ...)                                                                              \
     do {                                                                                           \
         if (dsn_unlikely(!(x))) {                                                                  \
             dlog_f(LOG_LEVEL_FATAL, "assertion expression: " #x);                                  \
@@ -46,7 +47,13 @@
         }                                                                                          \
     } while (false)
 
-#define CHECK dassert_f
+// TODO(yingchun): use DCHECK instead of dbg_dassert
+#ifndef NDEBUG
+#define dbg_dassert CHECK
+#else
+#define dbg_dassert(x, ...)
+#endif
+
 #define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().

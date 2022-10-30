@@ -108,12 +108,12 @@ void sim_client_session::send(uint64_t sig)
             {
                 node_scoper ns(rnet->node());
 
-                bool ret = server_session->on_recv_message(recv_msg,
-                                                           recv_msg->to_address ==
-                                                                   recv_msg->header->from_address
-                                                               ? 0
-                                                               : rnet->net_delay_milliseconds());
-                dassert(ret, "");
+                CHECK(server_session->on_recv_message(recv_msg,
+                                                      recv_msg->to_address ==
+                                                              recv_msg->header->from_address
+                                                          ? 0
+                                                          : rnet->net_delay_milliseconds()),
+                      "");
             }
         }
     }
@@ -138,12 +138,12 @@ void sim_server_session::send(uint64_t sig)
         {
             node_scoper ns(_client->net().node());
 
-            bool ret = _client->on_recv_message(
-                recv_msg,
-                recv_msg->to_address == recv_msg->header->from_address
-                    ? 0
-                    : (static_cast<sim_network_provider *>(&_net))->net_delay_milliseconds());
-            dassert(ret, "");
+            CHECK(_client->on_recv_message(
+                      recv_msg,
+                      recv_msg->to_address == recv_msg->header->from_address
+                          ? 0
+                          : (static_cast<sim_network_provider *>(&_net))->net_delay_milliseconds()),
+                  "");
         }
     }
 

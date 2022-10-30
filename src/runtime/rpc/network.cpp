@@ -57,7 +57,7 @@ rpc_session::~rpc_session()
 
 bool rpc_session::set_connecting()
 {
-    dassert(is_client(), "must be client session");
+    CHECK(is_client(), "must be client session");
 
     utils::auto_lock<utils::ex_lock_nr> l(_lock);
     if (_connect_state == SS_DISCONNECTED) {
@@ -70,7 +70,7 @@ bool rpc_session::set_connecting()
 
 void rpc_session::set_connected()
 {
-    dassert(is_client(), "must be client session");
+    CHECK(is_client(), "must be client session");
 
     {
         utils::auto_lock<utils::ex_lock_nr> l(_lock);
@@ -261,7 +261,7 @@ void rpc_session::send_message(message_ex *msg)
         return;
     }
 
-    dassert(_parser, "parser should not be null when send");
+    CHECK(_parser, "parser should not be null when send");
     _parser->prepare_on_send(msg);
 
     uint64_t sig;
@@ -548,7 +548,7 @@ void network::on_recv_reply(uint64_t id, message_ex *msg, int delay_ms)
 message_parser *network::new_message_parser(network_header_format hdr_format)
 {
     message_parser *parser = message_parser_manager::instance().create_parser(hdr_format);
-    dassert(parser, "message parser '%s' not registerd or invalid!", hdr_format.to_string());
+    CHECK(parser, "message parser '{}' not registerd or invalid!", hdr_format);
     return parser;
 }
 
@@ -580,9 +580,8 @@ uint32_t network::get_local_ipv4()
 
     if (0 == ip) {
         char name[128];
-        if (gethostname(name, sizeof(name)) != 0) {
-            dassert(false, "gethostname failed, err = %s", strerror(errno));
-        }
+        CHECK_EQ_MSG(
+            gethostname(name, sizeof(name)), 0, "gethostname failed, err = {}", strerror(errno));
         ip = rpc_address::ipv4_from_host(name);
     }
 
@@ -608,7 +607,7 @@ void connection_oriented_network::inject_drop_message(message_ex *msg, bool is_s
         // - but if is_send == true, there may be is_session != nullptr, when it is a
         //   normal (not forwarding) reply message from server to client, in which case
         //   the io_session has also been set.
-        dassert(is_send, "received message should always has io_session set");
+        CHECK(is_send, "received message should always has io_session set");
         utils::auto_read_lock l(_clients_lock);
         auto it = _clients.find(msg->to_address);
         if (it != _clients.end()) {

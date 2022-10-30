@@ -499,7 +499,7 @@ void replica_split_manager::child_catch_up_states() // on child partition
                                _replica->_prepare_list->min_decree());
             for (decree d = local_decree + 1; d <= goal_decree; ++d) {
                 auto mu = _replica->_prepare_list->get_mutation_by_decree(d);
-                dassert(mu != nullptr, "");
+                CHECK_NOTNULL(mu, "");
                 error_code ec = _replica->_app->apply_mutation(mu);
                 if (ec != ERR_OK) {
                     child_handle_split_error("child_catchup failed because apply mutation failed");

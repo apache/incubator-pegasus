@@ -131,8 +131,7 @@ static void profiler_on_task_enqueue(task *caller, task *callee)
 
     if (caller != nullptr) {
         auto caller_code = caller->spec().code;
-        dassert(
-            caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code.code());
+        CHECK(caller_code >= 0 && caller_code <= s_task_code_max, "code = {}", caller_code.code());
 
         auto &prof = s_spec_profilers[caller_code];
         if (prof.collect_call_count) {
@@ -203,8 +202,7 @@ static void profiler_on_aio_call(task *caller, aio_task *callee)
 {
     if (nullptr != caller) {
         auto caller_code = caller->spec().code;
-        dassert(
-            caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code.code());
+        CHECK(caller_code >= 0 && caller_code <= s_task_code_max, "code = {}", caller_code.code());
 
         auto &prof = s_spec_profilers[caller_code];
         if (prof.collect_call_count) {
@@ -243,8 +241,7 @@ static void profiler_on_rpc_call(task *caller, message_ex *req, rpc_response_tas
 {
     if (nullptr != caller) {
         auto caller_code = caller->spec().code;
-        dassert(
-            caller_code >= 0 && caller_code <= s_task_code_max, "code = %d", caller_code.code());
+        CHECK(caller_code >= 0 && caller_code <= s_task_code_max, "code = {}", caller_code.code());
 
         auto &prof = s_spec_profilers[caller_code];
         if (prof.collect_call_count) {
@@ -311,7 +308,7 @@ static void profiler_on_rpc_reply(task *caller, message_ex *msg)
     uint64_t qts = message_ext_for_profiler::get(msg);
     uint64_t now = dsn_now_ns();
     task_spec *spec = task_spec::get(msg->local_rpc_code);
-    dassert(spec != nullptr, "task_spec cannot be null, code = %d", msg->local_rpc_code.code());
+    CHECK_NOTNULL(spec, "task_spec cannot be null, code = {}", msg->local_rpc_code.code());
     auto code = spec->rpc_paired_code;
     CHECK(code >= 0 && code <= s_task_code_max, "code = {}", code.code());
     auto ptr = s_spec_profilers[code].ptr[RPC_SERVER_LATENCY_NS].get();
@@ -371,7 +368,7 @@ void profiler::install(service_spec &)
         std::string name(dsn::task_code(i).to_string());
         std::string section_name = std::string("task.") + name;
         task_spec *spec = task_spec::get(i);
-        dassert(spec != nullptr, "task_spec cannot be null");
+        CHECK_NOTNULL(spec, "");
 
         s_spec_profilers[i].collect_call_count = dsn_config_get_value_bool(
             section_name.c_str(),

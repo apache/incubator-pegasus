@@ -50,7 +50,7 @@ const char *cold_backup_status_to_string(cold_backup_status status)
     case ColdBackupFailed:
         return "ColdBackupFailed";
     default:
-        dassert(false, "");
+        CHECK(false, "");
     }
     return "ColdBackupXXX";
 }
@@ -195,7 +195,7 @@ void cold_backup_context::check_backup_on_remote()
                 ignore_check();
             } else if (resp.err == ERR_OK) {
                 const dist::block_service::block_file_ptr &file_handle = resp.file_handle;
-                dassert(file_handle != nullptr, "");
+                CHECK_NOTNULL(file_handle, "");
                 if (file_handle->get_md5sum().empty() && file_handle->get_size() <= 0) {
                     LOG_INFO("%s: check backup on remote, current_checkpoint file %s is not exist",
                              name,
@@ -421,7 +421,7 @@ void cold_backup_context::upload_checkpoint_to_remote()
         LPC_BACKGROUND_COLD_BACKUP,
         [this, metadata](const dist::block_service::create_file_response &resp) {
             if (resp.err == ERR_OK) {
-                dassert(resp.file_handle != nullptr, "");
+                CHECK_NOTNULL(resp.file_handle, "");
                 if (resp.file_handle->get_md5sum().empty() && resp.file_handle->get_size() <= 0) {
                     _upload_status.store(UploadUncomplete);
                     LOG_INFO("%s: check upload_status complete, cold_backup_metadata isn't exist, "
@@ -650,7 +650,7 @@ void cold_backup_context::upload_file(const std::string &local_filename)
         [this, local_filename](const dist::block_service::create_file_response &resp) {
             if (resp.err == ERR_OK) {
                 const dist::block_service::block_file_ptr &file_handle = resp.file_handle;
-                dassert(file_handle != nullptr, "");
+                CHECK_NOTNULL(file_handle, "");
                 int64_t local_file_size = _file_infos.at(local_filename).first;
                 std::string md5 = _file_infos.at(local_filename).second;
                 std::string full_path_local_file =
@@ -735,9 +735,8 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
             if (resp.err == ERR_OK) {
                 std::string local_filename =
                     ::dsn::utils::filesystem::get_file_name(full_path_local_file);
-                dassert(_file_infos.at(local_filename).first ==
-                            static_cast<int64_t>(resp.uploaded_size),
-                        "");
+                CHECK_EQ(_file_infos.at(local_filename).first,
+                         static_cast<int64_t>(resp.uploaded_size));
                 LOG_INFO("%s: upload checkpoint file complete, file = %s",
                          name,
                          full_path_local_file.c_str());
@@ -803,7 +802,7 @@ void cold_backup_context::write_backup_metadata()
         LPC_BACKGROUND_COLD_BACKUP,
         [this, metadata](const dist::block_service::create_file_response &resp) {
             if (resp.err == ERR_OK) {
-                dassert(resp.file_handle != nullptr, "");
+                CHECK_NOTNULL(resp.file_handle, "");
                 blob buffer = json::json_forwarder<cold_backup_metadata>::encode(_metadata);
                 // hold itself until callback is executed
                 add_ref();
@@ -887,7 +886,7 @@ void cold_backup_context::write_current_chkpt_file(const std::string &value)
         LPC_BACKGROUND_COLD_BACKUP,
         [this, value, current_chkpt_file](const dist::block_service::create_file_response &resp) {
             if (resp.err == ERR_OK) {
-                dassert(resp.file_handle != nullptr, "");
+                CHECK_NOTNULL(resp.file_handle, "");
                 auto len = value.length();
                 std::shared_ptr<char> buf = utils::make_shared_array<char>(len);
                 ::memcpy(buf.get(), value.c_str(), len);
@@ -940,7 +939,7 @@ void cold_backup_context::on_write(const dist::block_service::block_file_ptr &fi
                                    const blob &value,
                                    const std::function<void(bool)> &callback)
 {
-    dassert(file_handle != nullptr, "");
+    CHECK_NOTNULL(file_handle, "");
     dist::block_service::write_request req;
     req.buffer = value;
 
@@ -1021,7 +1020,7 @@ void cold_backup_context::on_upload_file_complete(const std::string &local_filen
         }
         return;
     } else {
-        dassert(total != 0.0, "total = %" PRId64 "", total);
+        CHECK_GT(total, 0.0);
         update_progress(static_cast<int>(complete_size / total * 1000));
         LOG_INFO("%s: the progress of upload checkpoint is %d", name, _progress.load());
     }

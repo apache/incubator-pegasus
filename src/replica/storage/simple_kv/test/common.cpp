@@ -66,7 +66,7 @@ const char *partition_status_to_short_string(partition_status::type s)
     case partition_status::PS_INVALID:
         return "inv";
     default:
-        dassert(false, "invalid partition_status, status = %s", ::dsn::enum_to_string(s));
+        CHECK(false, "invalid partition_status, status = {}", ::dsn::enum_to_string(s));
         return "";
     }
 }
@@ -85,7 +85,7 @@ partition_status::type partition_status_from_short_string(const std::string &str
         return partition_status::PS_POTENTIAL_SECONDARY;
     if (str == "inv")
         return partition_status::PS_INVALID;
-    dassert(false, "");
+    CHECK(false, "");
     return partition_status::PS_INVALID;
 }
 
@@ -93,7 +93,7 @@ std::string address_to_node(rpc_address addr)
 {
     if (addr.is_invalid())
         return "-";
-    dassert(test_checker::s_inited, "");
+    CHECK(test_checker::s_inited, "");
     return test_checker::instance().address_to_node_name(addr);
 }
 
@@ -101,7 +101,7 @@ rpc_address node_to_address(const std::string &name)
 {
     if (name == "-")
         return rpc_address();
-    dassert(test_checker::s_inited, "");
+    CHECK(test_checker::s_inited, "");
     return test_checker::instance().node_name_to_address(name);
 }
 

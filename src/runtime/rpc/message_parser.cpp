@@ -112,12 +112,11 @@ std::string header_type::debug_string() const
 {
     auto it = s_fmt_map.find(sig);
     if (it != s_fmt_map.end()) {
-        if (it->second != type) {
-            dassert(false,
-                    "signature %08x is already registerd for header type %s",
-                    sig,
-                    type.to_string());
-        }
+        CHECK_EQ_MSG(it->second,
+                     type,
+                     "signature {:#010x} is already registerd for header type {}",
+                     sig,
+                     type);
     } else {
         s_fmt_map.emplace(sig, type);
     }

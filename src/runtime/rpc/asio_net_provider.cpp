@@ -88,9 +88,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
             boost::asio::io_service::work work(*_io_services[i]);
             boost::system::error_code ec;
             _io_services[i]->run(ec);
-            if (ec) {
-                dassert(false, "boost::asio::io_service run failed: err(%s)", ec.message().data());
-            }
+            CHECK(!ec, "boost::asio::io_service run failed: err({})", ec.message().data());
         }));
     }
 
@@ -396,9 +394,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             boost::asio::io_service::work work(_io_service);
             boost::system::error_code ec;
             _io_service.run(ec);
-            if (ec) {
-                dassert(false, "boost::asio::io_service run failed: err(%s)", ec.message().data());
-            }
+            CHECK(!ec, "boost::asio::io_service run failed: err({})", ec.message().data());
         }));
     }
 

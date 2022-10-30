@@ -94,7 +94,7 @@ public:
                              version);
                 },
                 DLOCK_CALLBACK,
-                [](error_code, const std::string &, int) { dassert(false, "session expired"); },
+                [](error_code, const std::string &, int) { CHECK(false, "session expired"); },
                 opt);
             task_pair.first->wait();
             for (int i = 0; i < 1000; ++i) {

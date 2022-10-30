@@ -159,8 +159,7 @@ void mutation::add_client_request(task_code code, dsn::message_ex *request)
 
         void *ptr;
         size_t size;
-        bool r = request->read_next(&ptr, &size);
-        dassert(r, "payload is not present");
+        CHECK(request->read_next(&ptr, &size), "payload is not present");
         request->read_commit(0); // so we can re-read the request buffer in replicated app
         update.data.assign((char *)ptr, 0, (int)size);
 
@@ -235,7 +234,7 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
         std::string name;
         reader.read(name);
         ::dsn::task_code code = dsn::task_code::try_get(name, TASK_CODE_INVALID);
-        dassert(code != TASK_CODE_INVALID, "invalid mutation task code: %s", name.c_str());
+        CHECK_NE_MSG(code, TASK_CODE_INVALID, "invalid mutation task code: {}", name);
         mu->data.updates[i].code = code;
 
         int type = 0;
@@ -312,7 +311,7 @@ void mutation::write_to(binary_writer &writer, dsn::message_ex * /*to*/) const
         reader.read_pod(isset);
         header.timestamp = 0;
     } else {
-        dassert(false, "invalid mutation log version: 0x%" PRIx64, version);
+        CHECK(false, "invalid mutation log version: {:#018x}", version);
     }
 }
 
@@ -343,7 +342,7 @@ mutation_queue::mutation_queue(gpid gpid,
 {
     _current_op_count = 0;
     _pending_mutation = nullptr;
-    dassert(gpid.get_app_id() != 0, "invalid gpid");
+    CHECK_NE_MSG(gpid.get_app_id(), 0, "invalid gpid");
     _pcount = dsn_task_queue_virtual_length_ptr(RPC_PREPARE, gpid.thread_hash());
 }
 
@@ -392,7 +391,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, 
     if (_current_op_count >= _max_concurrent_op)
         return nullptr;
     else if (_hdr.is_empty()) {
-        dassert(_pending_mutation != nullptr, "pending mutation cannot be null");
+        CHECK_NOTNULL(_pending_mutation, "pending mutation cannot be null");
 
         auto ret = _pending_mutation;
         _pending_mutation = nullptr;

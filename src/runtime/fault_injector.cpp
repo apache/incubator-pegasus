@@ -318,7 +318,7 @@ void fault_injector::install(service_spec &spec)
         std::string section_name =
             std::string("task.") + std::string(dsn::task_code(i).to_string());
         task_spec *spec = task_spec::get(i);
-        dassert(spec != nullptr, "task_spec cannot be null");
+        CHECK_NOTNULL(spec, "");
 
         fj_opt &lopt = s_fj_opts[i];
         read_config(section_name.c_str(), lopt, &default_opt);

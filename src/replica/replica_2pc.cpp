@@ -284,7 +284,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                                                         std::placeholders::_2),
                                               get_gpid().thread_hash(),
                                               &pending_size);
-        dassert(nullptr != mu->log_task(), "");
+        CHECK_NOTNULL(mu->log_task(), "");
         if (_options->log_shared_pending_size_throttling_threshold_kb > 0 &&
             _options->log_shared_pending_size_throttling_delay_ms > 0 &&
             pending_size >= _options->log_shared_pending_size_throttling_threshold_kb * 1024) {
@@ -482,13 +482,8 @@ void replica::on_prepare(dsn::message_ex *request)
 
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
         partition_status::PS_SECONDARY == status()) {
-        dassert(mu->data.header.decree <=
-                    last_committed_decree() + _options->max_mutation_count_in_prepare_list,
-                "%" PRId64 " VS %" PRId64 "(%" PRId64 " + %d)",
-                mu->data.header.decree,
-                last_committed_decree() + _options->max_mutation_count_in_prepare_list,
-                last_committed_decree(),
-                _options->max_mutation_count_in_prepare_list);
+        CHECK_LE(mu->data.header.decree,
+                 last_committed_decree() + _options->max_mutation_count_in_prepare_list);
     } else {
         LOG_ERROR("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
                   name(),
@@ -512,7 +507,7 @@ void replica::on_prepare(dsn::message_ex *request)
                                                     std::placeholders::_1,
                                                     std::placeholders::_2),
                                           get_gpid().thread_hash());
-    dassert(nullptr != mu->log_task(), "");
+    CHECK_NOTNULL(mu->log_task(), "");
 }
 
 void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t size)
@@ -565,7 +560,7 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
         case partition_status::PS_ERROR:
             break;
         default:
-            dassert(false, "invalid partition_status, status = %s", enum_to_string(status()));
+            CHECK(false, "invalid partition_status, status = {}", enum_to_string(status()));
             break;
         }
     }
@@ -637,9 +632,9 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
 
         switch (target_status) {
         case partition_status::PS_SECONDARY:
-            dassert(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
-                    "invalid secondary node address, address = %s",
-                    node.to_string());
+            CHECK(_primary_states.check_exist(node, partition_status::PS_SECONDARY),
+                  "invalid secondary node address, address = {}",
+                  node);
             CHECK_GT(mu->left_secondary_ack_count(), 0);
             if (0 == mu->decrease_left_secondary_ack_count()) {
                 do_possible_commit_on_primary(mu);
@@ -747,7 +742,7 @@ void replica::ack_prepare_message(error_code err, mutation_ptr &mu)
     resp.last_committed_decree_in_prepare_list = last_committed_decree();
 
     const std::vector<dsn::message_ex *> &prepare_requests = mu->prepare_requests();
-    dassert(!prepare_requests.empty(), "mutation = %s", mu->name());
+    CHECK(!prepare_requests.empty(), "mutation = {}", mu->name());
 
     if (err == ERR_OK) {
         if (mu->is_child_acked()) {

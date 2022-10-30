@@ -59,7 +59,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
         //                |                                |
         //             n+m(m>1)            n+k(k>=m)
         //
-        // just LOG_ERROR but not dassert if mutation loss or other problem, it's different from
+        // just LOG_ERROR but not CHECK if mutation loss or other problem, it's different from
         // base class implement. And from the error and perf-counter, we can choose restart
         // duplication
         // or ignore the loss.

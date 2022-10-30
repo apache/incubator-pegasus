@@ -318,9 +318,9 @@ void thrift_message_parser::prepare_on_send(message_ex *msg)
     auto &header = msg->header;
     auto &buffers = msg->buffers;
 
-    dassert(!header->context.u.is_request, "only support send response");
-    dassert(header->server.error_name[0], "error name should be set");
-    dassert(!buffers.empty(), "buffers can not be empty");
+    CHECK(!header->context.u.is_request, "only support send response");
+    CHECK(header->server.error_name[0], "error name should be set");
+    CHECK(!buffers.empty(), "buffers can not be empty");
 
     // write thrift response header and thrift message begin
     binary_writer header_writer;

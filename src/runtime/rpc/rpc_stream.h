@@ -56,9 +56,8 @@ public:
         _msg = msg;
         if (nullptr != _msg) {
             ::dsn::blob bb;
-            bool r = ((::dsn::message_ex *)_msg)->read_next(bb);
-            dassert(r, "read msg must have one segment of buffer ready");
-
+            CHECK(((::dsn::message_ex *)_msg)->read_next(bb),
+                  "read msg must have one segment of buffer ready");
             init(std::move(bb));
         }
     }

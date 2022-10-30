@@ -285,7 +285,7 @@ void scheduler::schedule()
 
                     t->release_ref(); // added by previous t->enqueue from app
                 } else {
-                    dassert(e.system_task != nullptr, "app and system tasks cannot be both empty");
+                    CHECK_NOTNULL(e.system_task, "app and system tasks cannot be both empty");
                     e.system_task();
                 }
             }

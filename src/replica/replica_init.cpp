@@ -196,8 +196,10 @@ error_code replica::initialize_on_load()
         if (dsn::utils::filesystem::directory_exists(dir)) {
             char rename_dir[1024];
             sprintf(rename_dir, "%s.%" PRIu64 ".err", dir, dsn_now_us());
-            bool ret = dsn::utils::filesystem::rename_path(dir, rename_dir);
-            dassert(ret, "load_replica: failed to move directory '%s' to '%s'", dir, rename_dir);
+            CHECK(dsn::utils::filesystem::rename_path(dir, rename_dir),
+                  "load_replica: failed to move directory '{}' to '{}'",
+                  dir,
+                  rename_dir);
             LOG_WARNING("load_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
                         dir,
                         rename_dir);
@@ -330,12 +332,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
         if (nullptr == _private_log) {
             LOG_INFO("%s: clear private log, dir = %s", name(), log_dir.c_str());
-            if (!dsn::utils::filesystem::remove_path(log_dir)) {
-                dassert(false, "Fail to delete directory %s.", log_dir.c_str());
-            }
-            if (!::dsn::utils::filesystem::create_directory(log_dir)) {
-                dassert(false, "Fail to create directory %s.", log_dir.c_str());
-            }
+            CHECK(dsn::utils::filesystem::remove_path(log_dir),
+                  "Fail to delete directory {}",
+                  log_dir);
+            CHECK(dsn::utils::filesystem::create_directory(log_dir),
+                  "Fail to create directory {}",
+                  log_dir);
 
             _private_log = new mutation_log_private(
                 log_dir, _options->log_private_file_size_mb, get_gpid(), this);
@@ -378,8 +380,7 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
     // for example, the recovery need it to select a proper primary
     if (mu->data.header.ballot > get_ballot()) {
         _config.ballot = mu->data.header.ballot;
-        bool ret = update_local_configuration(_config, true);
-        dassert(ret, "");
+        CHECK(update_local_configuration(_config, true), "");
     }
 
     if (is_private && offset < _app->init_info().init_offset_in_private_log) {

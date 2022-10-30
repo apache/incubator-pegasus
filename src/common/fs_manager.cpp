@@ -243,11 +243,7 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
     unsigned least_total_replicas_count = 0;
 
     for (auto &n : _dir_nodes) {
-        dassert(!n->has(pid),
-                "gpid(%d.%d) already in dir_node(%s)",
-                pid.get_app_id(),
-                pid.get_partition_index(),
-                n->tag.c_str());
+        CHECK(!n->has(pid), "gpid({}) already in dir_node({})", pid, n->tag);
         unsigned app_replicas = n->replicas_count(pid.get_app_id());
         unsigned total_replicas = n->replicas_count();
 

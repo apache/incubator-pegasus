@@ -522,7 +522,7 @@ inline void json_encode(JsonWriter &out, const std::shared_ptr<T> &t)
 {
     // when a smart ptr is encoded, caller should ensure the ptr is not nullptr
     // TODO: encoded to null?
-    dassert(t.get(), "");
+    CHECK(t, "");
     json_encode(out, *t);
 }
 

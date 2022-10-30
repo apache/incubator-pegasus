@@ -235,7 +235,7 @@ error_code replica::background_async_checkpoint(bool is_emergency)
     decree old_durable = _app->last_durable_decree();
     auto err = _app->async_checkpoint(is_emergency);
     uint64_t used_time = dsn_now_ns() - start_time;
-    dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
+    CHECK_NE(err, ERR_NOT_IMPLEMENTED);
     if (err == ERR_OK) {
         if (old_durable != _app->last_durable_decree()) {
             // if no need to generate new checkpoint, async_checkpoint() also returns ERR_OK,
@@ -303,7 +303,7 @@ error_code replica::background_sync_checkpoint()
     decree old_durable = _app->last_durable_decree();
     auto err = _app->sync_checkpoint();
     uint64_t used_time = dsn_now_ns() - start_time;
-    dassert(err != ERR_NOT_IMPLEMENTED, "err == ERR_NOT_IMPLEMENTED");
+    CHECK_NE(err, ERR_NOT_IMPLEMENTED);
     if (err == ERR_OK) {
         if (old_durable != _app->last_durable_decree()) {
             // if no need to generate new checkpoint, sync_checkpoint() also returns ERR_OK,
@@ -390,7 +390,7 @@ void replica::on_checkpoint_completed(error_code err)
         if (_app->last_committed_decree() > _prepare_list->min_decree()) {
             for (auto d = _app->last_committed_decree() + 1; d <= c; d++) {
                 auto mu = _prepare_list->get_mutation_by_decree(d);
-                dassert(nullptr != mu, "invalid mutation, decree = %" PRId64, d);
+                CHECK_NOTNULL(mu, "invalid mutation, decree = {}", d);
                 err = _app->apply_mutation(mu);
                 if (ERR_OK != err) {
                     _secondary_states.checkpoint_is_running = false;

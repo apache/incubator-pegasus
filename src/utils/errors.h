@@ -26,12 +26,13 @@
 
 #pragma once
 
+#include <sstream>
+
+#include "utils/api_utilities.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/smart_pointers.h"
 #include "utils/string_view.h"
-#include "utils/api_utilities.h"
-
-#include <sstream>
 
 namespace dsn {
 
@@ -194,13 +195,13 @@ public:
 
     const T &get_value() const
     {
-        dassert(_err.is_ok(), "%s", get_error().description().data());
+        CHECK(_err.is_ok(), get_error().description().data());
         return *_value;
     }
 
     T &get_value()
     {
-        dassert(_err.is_ok(), "%s", get_error().description().data());
+        CHECK(_err.is_ok(), get_error().description().data());
         return *_value;
     }
 

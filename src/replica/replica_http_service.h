@@ -65,7 +65,7 @@ public:
         case manual_compaction_status::FINISHED:
             return "finished";
         default:
-            dassert(false, "invalid status({})", status);
+            CHECK(false, "invalid status({})", status);
             __builtin_unreachable();
         }
     }

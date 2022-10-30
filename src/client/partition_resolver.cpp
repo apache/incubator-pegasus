@@ -74,11 +74,11 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                     dynamic_cast<rpc_response_task *>(task::get_current_task());
                 partition_resolver_ptr r(this);
 
-                dassert(ctask != nullptr, "current task must be rpc_response_task");
+                CHECK_NOTNULL(ctask, "current task must be rpc_response_task");
                 ctask->replace_callback(std::move(oc));
-                dassert(ctask->set_retry(false),
-                        "rpc_response_task set retry failed, state = %s",
-                        enum_to_string(ctask->state()));
+                CHECK(ctask->set_retry(false),
+                      "rpc_response_task set retry failed, state = {}",
+                      enum_to_string(ctask->state()));
 
                 // sleep gap milliseconds before retry
                 tasking::enqueue(LPC_RPC_DELAY_CALL,

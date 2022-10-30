@@ -251,7 +251,7 @@ extern void json_encode(dsn::json::JsonWriter &out, const duplication_fail_mode:
 
 extern bool json_decode(const dsn::json::JsonObject &in, duplication_fail_mode::type &s);
 
-// TODO(yingchun): remember to update it when refactor dassert_f
+// TODO(yingchun): remember to cleanup dassert_dup
 #define dassert_dup(_pred_, _dup_, ...)                                                            \
     CHECK(_pred_, "[a{}d{}] {}", _dup_->app_id, _dup_->id, fmt::format(__VA_ARGS__));
 

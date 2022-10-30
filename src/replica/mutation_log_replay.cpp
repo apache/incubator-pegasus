@@ -93,7 +93,7 @@ namespace replication {
     while (!reader->is_eof()) {
         auto old_size = reader->get_remaining_size();
         mutation_ptr mu = mutation::read_from(*reader, nullptr);
-        dassert(nullptr != mu, "");
+        CHECK_NOTNULL(mu, "");
         mu->set_logged();
 
         if (mu->data.header.log_offset != end_offset) {
@@ -131,8 +131,7 @@ namespace replication {
             }
         }
 
-        dassert(
-            logs.find(log->index()) == logs.end(), "invalid log_index, index = %d", log->index());
+        CHECK(logs.find(log->index()) == logs.end(), "invalid log index, index = {}", log->index());
         logs[log->index()] = log;
     }
 

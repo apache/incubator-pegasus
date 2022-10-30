@@ -69,8 +69,9 @@ void dsn_log_init(const std::string &logging_factory_name,
     dsn_log_start_level =
         enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
 
-    dassert(dsn_log_start_level != dsn_log_level_t::LOG_LEVEL_INVALID,
-            "invalid [core] logging_start_level specified");
+    CHECK_NE_MSG(dsn_log_start_level,
+                 dsn_log_level_t::LOG_LEVEL_INVALID,
+                 "invalid [core] logging_start_level specified");
 
     // register log flush on exit
     if (FLAGS_logging_flush_on_exit) {

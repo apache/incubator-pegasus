@@ -78,8 +78,9 @@ cacheline_aligned_int64 *const kCellsLocked = reinterpret_cast<cacheline_aligned
     cacheline_aligned_int64 *array = new (buffer) cacheline_aligned_int64[size];
     for (uint32_t i = 0; i < size; ++i) {
         cacheline_aligned_int64 *elem = &(array[i]);
-        dassert_f(
-            (reinterpret_cast<const uintptr_t>(elem) & (sizeof(cacheline_aligned_int64) - 1)) == 0,
+        CHECK_EQ_MSG(
+            (reinterpret_cast<const uintptr_t>(elem) & (sizeof(cacheline_aligned_int64) - 1)),
+            0,
             "unaligned cacheline_aligned_int64: array={}, index={}, elem={}, mask={}",
             fmt::ptr(array),
             i,
@@ -185,8 +186,9 @@ void striped_long_adder::increment_by(int64_t x)
     cacheline_aligned_int64 *cells = _cells.load(std::memory_order_acquire);
     if (cells != nullptr && cells != kCellsLocked) {
         cacheline_aligned_int64 *cell = &(cells[get_tls_hashcode() & kCellMask]);
-        dassert_f(
-            (reinterpret_cast<const uintptr_t>(cell) & (sizeof(cacheline_aligned_int64) - 1)) == 0,
+        CHECK_EQ_MSG(
+            (reinterpret_cast<const uintptr_t>(cell) & (sizeof(cacheline_aligned_int64) - 1)),
+            0,
             "unaligned cacheline_aligned_int64 not allowed for striped64: cell={}, mask={}",
             fmt::ptr(cell),
             sizeof(cacheline_aligned_int64) - 1);

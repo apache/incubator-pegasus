@@ -15,15 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/common.h"
+#include "common.h"
+
 #include "utils/flags.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 DSN_DEFINE_string("replication", cluster_name, "", "name of this cluster");
 
 /*extern*/ const char *get_current_cluster_name()
 {
-    dassert(strlen(FLAGS_cluster_name) != 0, "cluster_name is not set");
+    CHECK_GT_MSG(strlen(FLAGS_cluster_name), 0, "cluster_name is not set");
     return FLAGS_cluster_name;
 }
 } // namespace dsn

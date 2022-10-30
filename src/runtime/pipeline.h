@@ -108,7 +108,7 @@ struct result
     //
     void step_down_next_stage(Args &&... args)
     {
-        dassert(__func != nullptr, "no next stage is linked");
+        CHECK_NOTNULL(__func, "no next stage is linked");
         __func(std::make_tuple(std::forward<Args>(args)...));
     }
 
@@ -264,7 +264,7 @@ struct when : environment
 
 inline void base::run_pipeline()
 {
-    dassert(__conf.tracker != nullptr, "must configure task tracker");
+    CHECK_NOTNULL(__conf.tracker, "must configure task tracker");
 
     _paused.store(false, std::memory_order_release);
 

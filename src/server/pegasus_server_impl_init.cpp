@@ -451,9 +451,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     "binary_search",
                                     "The index type that will be used for this table.");
     auto index_type_item = INDEX_TYPE_STRING_MAP.find(index_type);
-    dassert(index_type_item != INDEX_TYPE_STRING_MAP.end(),
-            "[pegasus.server]rocksdb_index_type should be one among binary_search, "
-            "hash_search, two_level_index_search or binary_search_with_first_key.");
+    CHECK(index_type_item != INDEX_TYPE_STRING_MAP.end(),
+          "[pegasus.server]rocksdb_index_type should be one among binary_search, "
+          "hash_search, two_level_index_search or binary_search_with_first_key.");
     tbl_opts.index_type = index_type_item->second;
     LOG_INFO_PREFIX("rocksdb_index_type = {}", index_type.c_str());
 

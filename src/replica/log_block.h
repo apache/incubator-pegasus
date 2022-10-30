@@ -60,7 +60,7 @@ public:
     // ```
     blob &front()
     {
-        dassert(!_data.empty(), "trying to get first blob out of an empty log block");
+        CHECK(!_data.empty(), "trying to get first blob out of an empty log block");
         return _data.front();
     }
 

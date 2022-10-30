@@ -65,7 +65,7 @@ error_code service_node::init_rpc_engine()
 
 dsn::error_code service_node::start_app()
 {
-    dassert(_entity.get(), "entity hasn't initialized");
+    CHECK(_entity, "entity hasn't initialized");
     _entity->set_address(rpc()->primary_address());
 
     std::vector<std::string> args;
@@ -80,7 +80,7 @@ dsn::error_code service_node::start_app()
 
 dsn::error_code service_node::stop_app(bool cleanup)
 {
-    dassert(_entity.get(), "entity hasn't initialized");
+    CHECK(_entity, "entity hasn't initialized");
     dsn::error_code res = _entity->stop(cleanup);
     if (res == dsn::ERR_OK) {
         _entity->set_started(false);
@@ -111,7 +111,7 @@ error_code service_node::start()
     // init task engine
     _computation = make_unique<task_engine>(this);
     _computation->create(_app_spec.pools);
-    dassert(!_computation->is_started(), "task engine must not be started at this point");
+    CHECK(!_computation->is_started(), "task engine must not be started at this point");
 
     // init rpc
     err = init_rpc_engine();
@@ -120,7 +120,7 @@ error_code service_node::start()
 
     // start task engine
     _computation->start();
-    dassert(_computation->is_started(), "task engine must be started at this point");
+    CHECK(_computation->is_started(), "task engine must be started at this point");
 
     // create service_app
     {
