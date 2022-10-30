@@ -921,15 +921,14 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 using metric_value_map = std::map<std::string, T>;
 
 template <typename T>
-void check_metric_snapshot_from_json_string(const std::string &json_string,
-                                            const std::string &expected_metric_name,
-                                            const metric_value_map<T> &expected_value_map,
-                                            const bool is_integral = true)
+void check_and_extract_metric_value_map_from_json_string(const std::string &json_string,
+                                                         const std::string &metric_name,
+                                                         const bool is_integral,
+                                                         metric_value_map<T> &value_map)
 {
     rapidjson::Document doc;
-    ASSERT_TRUE(doc.Parse(json_string.c_str()));
-
-    metric_value_map<T> actual_value_map;
+    rapidjson::ParseResult result = doc.Parse(json_string.c_str());
+    ASSERT_FALSE(result.IsError());
 
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
@@ -938,7 +937,7 @@ void check_metric_snapshot_from_json_string(const std::string &json_string,
         if (elem.value.IsString()) {
             ASSERT_EQ(elem.name.GetString(), "name");
 
-            ASSERT_EQ(elem.value.GetString(), expected_metric_name);
+            ASSERT_EQ(elem.value.GetString(), metric_name);
         } else {
             T value;
             if (is_integral) {
@@ -948,38 +947,19 @@ void check_metric_snapshot_from_json_string(const std::string &json_string,
                 ASSERT_TRUE(elem.value.IsDouble());
                 value = elem.value.GetDouble();
             }
-            actual_value_map[elem.name.GetString()] = value;
+            value_map[elem.name.GetString()] = value;
         }
-    }
-
-    if (is_integral) {
-        ASSERT_EQ(actual_value_map, expected_value_map);
-        return;
-    }
-
-    ASSERT_EQ(actual_value_map.size(), expected_value_map.size());
-
-    typename metric_value_map<T>::const_iterator actual_iter = actual_value_map.begin();
-    typename metric_value_map<T>::const_iterator expected_iter = expected_value_map.begin();
-    for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end();
-         ++actual_iter, ++expected_iter) {
-        ASSERT_EQ(actual_iter->first, expected_iter->first);
-
-        floating_comparator<T> comp;
-        ASSERT_TRUE((!comp(actual_iter->second, expected_iter->second)) &&
-                    (!comp(expected_iter->second, actual_iter->second)));
     }
 }
 
-template <typename MetricPrototype, typename T>
-void test_metric_snapshot_with_single_value(metric *my_metric,
-                                            const T expected_value)
+template <typename T>
+void generate_metric_value_map(metric *my_metric,
+                               const bool is_integral,
+                               metric_value_map<T> &value_map)
 {
     auto json_string = take_snapshot_and_get_json_string(my_metric);
-
-    metric_value_map<T> expected_value_map = {{"value", expected_value}};
-    check_metric_snapshot_from_json_string(
-        json_string, my_metric->prototype()->name().data(), expected_value_map);
+    check_and_extract_metric_value_map_from_json_string(
+        json_string, my_metric->prototype()->name().data(), is_integral, value_map);
 }
 
 TEST(metrics_test, take_snapshot_gauge_int64)
@@ -993,8 +973,31 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     for (const auto &test : tests) {
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
         auto my_metric = METRIC_test_gauge_int64.instantiate(my_server_entity);
-        test_metric_snapshot_with_single_value(
-            my_metric.get(), test.expected_value);
+        my_metric->set(test.expected_value);
+
+        metric_value_map<int64_t> actual_value_map;
+        generate_metric_value_map(my_metric.get(), true, actual_value_map);
+
+        const metric_value_map<int64_t> expected_value_map = {{"value", test.expected_value}};
+        ASSERT_EQ(actual_value_map, expected_value_map);
+    }
+}
+
+template <typename T, typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
+void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_map,
+                                       const metric_value_map<T> &expected_value_map)
+{
+    ASSERT_EQ(actual_value_map.size(), expected_value_map.size());
+
+    typename metric_value_map<T>::const_iterator actual_iter = actual_value_map.begin();
+    typename metric_value_map<T>::const_iterator expected_iter = expected_value_map.begin();
+    for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end();
+         ++actual_iter, ++expected_iter) {
+        ASSERT_EQ(actual_iter->first, expected_iter->first);
+
+        floating_comparator<T> comp;
+        ASSERT_TRUE((!comp(actual_iter->second, expected_iter->second)) &&
+                    (!comp(expected_iter->second, actual_iter->second)));
     }
 }
 
