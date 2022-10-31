@@ -1150,4 +1150,12 @@ TEST(metrics_test, take_snapshot_percentile_int64)
                                        compare_integral_metric_value_map);
 }
 
+TEST(metrics_test, take_snapshot_percentile_double)
+{
+    run_cases_with_percentile_snapshot(METRIC_test_percentile_double,
+                                       floating_percentile_case_generator<double>,
+                                       false,
+                                       compare_floating_metric_value_map);
+}
+
 } // namespace dsn
