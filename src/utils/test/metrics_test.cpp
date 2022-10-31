@@ -1001,6 +1001,19 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+#define run_cases_with_counter_snapshot(metric_prototype)                                                    \
+    do {                                                                                           \
+    struct test_case \
+    {\
+        std::string entity_id;\
+        int64_t expected_value;\
+    } tests[]{{"server_60", 10}};\
+\
+    for (const auto &test : tests) {\
+        test_metric_snapshot_with_counter(metric_prototype);\
+    } \
+    } while (0)
+
 TEST(metrics_test, take_snapshot_gauge_int64)
 {
     struct test_case
@@ -1031,16 +1044,22 @@ TEST(metrics_test, take_snapshot_gauge_double)
 
 TEST(metrics_test, take_snapshot_counter)
 {
-    struct test_case
-    {
-        std::string entity_id;
-        int64_t expected_value;
-    } tests[]{{"server_60", 10}};
+    run_cases_with_counter_snapshot(METRIC_test_counter);
+}
 
-    for (const auto &test : tests) {
-        test_metric_snapshot_with_single_value(
-            METRIC_test_counter, increment_by, int64_t, true, compare_integral_metric_value_map);
-    }
+TEST(metrics_test, take_snapshot_concurrent_counter)
+{
+    run_cases_with_counter_snapshot(METRIC_test_concurrent_counter);
+}
+
+TEST(metrics_test, take_snapshot_volatile_counter)
+{
+    run_cases_with_counter_snapshot(METRIC_test_volatile_counter);
+}
+
+TEST(metrics_test, take_snapshot_concurrent_volatile_counter)
+{
+    run_cases_with_counter_snapshot(METRIC_test_concurrent_volatile_counter);
 }
 
 } // namespace dsn
