@@ -973,20 +973,6 @@ template <typename T, typename = typename std::enable_if<std::is_floating_point<
 void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_map,
                                        const metric_value_map<T> &expected_value_map)
 {
-    std::cout.precision(std::numeric_limits<T>::max_digits10);
-
-    std::cout << "  actual: ";
-    for (const auto &value : actual_value_map) {
-        std::cout << value.first << ":" << value.second << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "expected: ";
-    for (const auto &value : expected_value_map) {
-        std::cout << value.first << ":" << value.second << ", ";
-    }
-    std::cout << std::endl;
-
     ASSERT_EQ(actual_value_map.size(), expected_value_map.size());
 
     typename metric_value_map<T>::const_iterator actual_iter = actual_value_map.begin();
@@ -994,12 +980,6 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
     for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end();
          ++actual_iter, ++expected_iter) {
         ASSERT_EQ(actual_iter->first, expected_iter->first);
-
-        std::cout << actual_iter->first << std::endl;
-        std::cout << actual_iter->second - expected_iter->second << " | "
-                  << std::numeric_limits<T>::epsilon() << std::endl;
-        std::cout << expected_iter->second - actual_iter->second << " | "
-                  << std::numeric_limits<T>::epsilon() << std::endl;
         ASSERT_DOUBLE_EQ(actual_iter->second, expected_iter->second);
     }
 }
