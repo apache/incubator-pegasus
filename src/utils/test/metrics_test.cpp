@@ -962,25 +962,11 @@ void generate_metric_value_map(metric *my_metric,
         json_string, my_metric->prototype()->name().data(), is_integral, value_map);
 }
 
-TEST(metrics_test, take_snapshot_gauge_int64)
+template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
+void compare_integral_metric_value_map(const metric_value_map<T> &actual_value_map,
+                                       const metric_value_map<T> &expected_value_map)
 {
-    struct test_case
-    {
-        std::string entity_id;
-        int64_t expected_value;
-    } tests[]{{"server_60", 5}};
-
-    for (const auto &test : tests) {
-        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);
-        auto my_metric = METRIC_test_gauge_int64.instantiate(my_server_entity);
-        my_metric->set(test.expected_value);
-
-        metric_value_map<int64_t> actual_value_map;
-        generate_metric_value_map(my_metric.get(), true, actual_value_map);
-
-        const metric_value_map<int64_t> expected_value_map = {{"value", test.expected_value}};
-        ASSERT_EQ(actual_value_map, expected_value_map);
-    }
+    ASSERT_EQ(actual_value_map, expected_value_map);
 }
 
 template <typename T, typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
@@ -996,8 +982,36 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         ASSERT_EQ(actual_iter->first, expected_iter->first);
 
         floating_comparator<T> comp;
-        ASSERT_TRUE((!comp(actual_iter->second, expected_iter->second)) &&
-                    (!comp(expected_iter->second, actual_iter->second)));
+        ASSERT_FALSE(comp(actual_iter->second, expected_iter->second) ||
+                     comp(expected_iter->second, actual_iter->second));
+    }
+}
+
+#define test_metric_snapshot_with_single_value(                                                    \
+    metric_prototype, value_type, is_integral, value_comparator)                                   \
+    do {                                                                                           \
+        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
+        auto my_metric = metric_prototype.instantiate(my_server_entity);                           \
+        my_metric->set(test.expected_value);                                                       \
+                                                                                                   \
+        metric_value_map<value_type> actual_value_map;                                             \
+        generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
+                                                                                                   \
+        const metric_value_map<value_type> expected_value_map = {{"value", test.expected_value}};  \
+        value_comparator(actual_value_map, expected_value_map);                                    \
+    } while (0)
+
+TEST(metrics_test, take_snapshot_gauge_int64)
+{
+    struct test_case
+    {
+        std::string entity_id;
+        int64_t expected_value;
+    } tests[]{{"server_60", 5}};
+
+    for (const auto &test : tests) {
+        test_metric_snapshot_with_single_value(
+            METRIC_test_gauge_int64, int64_t, true, compare_integral_metric_value_map);
     }
 }
 
