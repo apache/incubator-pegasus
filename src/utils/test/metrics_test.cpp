@@ -988,17 +988,17 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
 }
 
 #define test_metric_snapshot_with_single_value(                                                    \
-    metric_prototype, value_type, is_integral, value_comparator)                                   \
+    metric_prototype, updater, value_type, is_integral, value_map_comparator)                                   \
     do {                                                                                           \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(my_server_entity);                           \
-        my_metric->set(test.expected_value);                                                       \
+        my_metric->updater(test.expected_value);                                                       \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
         generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
                                                                                                    \
         const metric_value_map<value_type> expected_value_map = {{"value", test.expected_value}};  \
-        value_comparator(actual_value_map, expected_value_map);                                    \
+        value_map_comparator(actual_value_map, expected_value_map);                                    \
     } while (0)
 
 TEST(metrics_test, take_snapshot_gauge_int64)
@@ -1011,7 +1011,35 @@ TEST(metrics_test, take_snapshot_gauge_int64)
 
     for (const auto &test : tests) {
         test_metric_snapshot_with_single_value(
-            METRIC_test_gauge_int64, int64_t, true, compare_integral_metric_value_map);
+            METRIC_test_gauge_int64, set, int64_t, true, compare_integral_metric_value_map);
+    }
+}
+
+TEST(metrics_test, take_snapshot_gauge_double)
+{
+    struct test_case
+    {
+        std::string entity_id;
+        double expected_value;
+    } tests[]{{"server_60", 6.789}};
+
+    for (const auto &test : tests) {
+        test_metric_snapshot_with_single_value(
+            METRIC_test_gauge_double, set, double, false, compare_floating_metric_value_map);
+    }
+}
+
+TEST(metrics_test, take_snapshot_counter)
+{
+    struct test_case
+    {
+        std::string entity_id;
+        int64_t expected_value;
+    } tests[]{{"server_60", 10}};
+
+    for (const auto &test : tests) {
+        test_metric_snapshot_with_single_value(
+            METRIC_test_counter, increment_by, int64_t, true, compare_integral_metric_value_map);
     }
 }
 
