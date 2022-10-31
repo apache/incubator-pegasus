@@ -608,6 +608,12 @@ inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
 std::set<kth_percentile_type> get_all_kth_percentile_types();
 const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
 
+inline std::string kth_percentile_to_name(const kth_percentile_type &type) {
+    auto index = static_cast<size_t>(type);
+    CHECK_LT(index, kKthNames.size());
+    return kKthNames[index];
+}
+
 // `percentile_timer` is a timer class that encapsulates the details how each percentile is
 // computed periodically.
 //

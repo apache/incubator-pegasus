@@ -920,7 +920,7 @@ std::string take_snapshot_and_get_json_string(metric *m)
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 using metric_value_map = std::map<std::string, T>;
 
-template <typename T>
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 void check_and_extract_metric_value_map_from_json_string(const std::string &json_string,
                                                          const std::string &metric_name,
                                                          const bool is_integral,
@@ -952,7 +952,7 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
     }
 }
 
-template <typename T>
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
                                metric_value_map<T> &value_map)
@@ -993,11 +993,12 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(my_server_entity);                           \
         my_metric->updater(test.expected_value);                                                   \
+\
+        const metric_value_map<value_type> expected_value_map = {{"value", test.expected_value}};  \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
         generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
                                                                                                    \
-        const metric_value_map<value_type> expected_value_map = {{"value", test.expected_value}};  \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
@@ -1063,6 +1064,76 @@ TEST(metrics_test, take_snapshot_volatile_counter)
 TEST(metrics_test, take_snapshot_concurrent_volatile_counter)
 {
     run_cases_with_counter_snapshot(METRIC_test_concurrent_volatile_counter);
+}
+
+template <typename MetricType, typename CaseGenerator>
+void generate_metric_value_map(MetricType *my_metric,
+        CaseGenerator &generator,
+                        const uint64_t interval_ms,
+                        const uint64_t exec_ms,
+                        const std::set<kth_percentile_type> &kth_percentiles,
+                               metric_value_map<T> &value_map)
+{
+    using value_type = typename MetricType::value_type;
+
+    std::vector<value_type> data;
+    std::vector<value_type> values;
+    generator(data, values);
+
+    for (const auto &elem : data) {
+        my_metric->set(elem);
+    }
+
+    ASSERT_EQ(kth_percentiles.size(), values.size());
+
+    // Wait a while in order that computations for all percentiles can be finished.
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(my_metric->get_initial_delay_ms() + interval_ms + exec_ms));
+
+    auto value = values.begin();
+    for (const auto &type: kth_percentiles) {
+        auto name = kth_percentile_to_name(type);
+        value_map[name] = *value++;
+    }
+}
+
+#define test_metric_snapshot_with_percentile(                                                    \
+    metric_prototype, is_integral, value_map_comparator)                      \
+    do {                                                                                           \
+        using value_type =  case_generator::value_type;\
+        auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
+        auto my_metric = metric_prototype.instantiate(my_server_entity, test.interval_ms,test.kth_percentiles,test.sample_size);                           \
+\
+        case_generator generator(test.data_size, value_type()/* initial_value */, 5 /* range_size */, test.kth_percentiles); \
+        metric_value_map<value_type> expected_value_map;  \
+        generate_metric_value_map(my_metric.get(), generator, test.interval_ms, test.exec_ms, test.kth_percentiles, expected_value_map); \
+                                                                                                   \
+        metric_value_map<value_type> actual_value_map;                                             \
+        generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
+                                                                                                   \
+        value_map_comparator(actual_value_map, expected_value_map);                                \
+    } while (0)
+
+#define run_cases_with_percentile_snapshot(metric_prototype, is_integral)                                          \
+    do {                                                                                           \
+        struct test_case                                                                           \
+        {                                                                                          \
+            std::string entity_id;                                                                 \
+                    uint64_t interval_ms; \
+        std::set<kth_percentile_type> kth_percentiles; \
+        size_t sample_size; \
+        size_t data_size; \
+        uint64_t exec_ms; \
+        } tests[]{{"server_60", 50, kAllKthPercentileTypes, 4096, 4096, 10}};                      \
+                                                                                                   \
+        for (const auto &test : tests) {                                                           \
+            test_metric_snapshot_with_percentile(metric_prototype, is_integral, value_map_comparator);                                   \
+        }                                                                                          \
+    } while (0)
+
+TEST(metrics_test, take_snapshot_percentile_int64)
+{
+    run_cases_with_counter_snapshot(METRIC_test_percentile_int64, true, compare_integral_metric_value_map);
 }
 
 } // namespace dsn
