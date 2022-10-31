@@ -1001,17 +1001,17 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
-#define run_cases_with_counter_snapshot(metric_prototype)                                                    \
+#define run_cases_with_counter_snapshot(metric_prototype)                                          \
     do {                                                                                           \
-    struct test_case \
-    {\
-        std::string entity_id;\
-        int64_t expected_value;\
-    } tests[]{{"server_60", 10}};\
-\
-    for (const auto &test : tests) {\
-        test_metric_snapshot_with_counter(metric_prototype);\
-    } \
+        struct test_case                                                                           \
+        {                                                                                          \
+            std::string entity_id;                                                                 \
+            int64_t expected_value;                                                                \
+        } tests[]{{"server_60", 10}};                                                              \
+                                                                                                   \
+        for (const auto &test : tests) {                                                           \
+            test_metric_snapshot_with_counter(metric_prototype);                                   \
+        }                                                                                          \
     } while (0)
 
 TEST(metrics_test, take_snapshot_gauge_int64)
@@ -1042,10 +1042,7 @@ TEST(metrics_test, take_snapshot_gauge_double)
     }
 }
 
-TEST(metrics_test, take_snapshot_counter)
-{
-    run_cases_with_counter_snapshot(METRIC_test_counter);
-}
+TEST(metrics_test, take_snapshot_counter) { run_cases_with_counter_snapshot(METRIC_test_counter); }
 
 TEST(metrics_test, take_snapshot_concurrent_counter)
 {
