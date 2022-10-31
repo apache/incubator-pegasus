@@ -935,9 +935,9 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
-            ASSERT_EQ(elem.name.GetString(), "name");
+            ASSERT_STREQ(elem.name.GetString(), "name");
 
-            ASSERT_EQ(elem.value.GetString(), metric_name);
+            ASSERT_STREQ(elem.value.GetString(), metric_name.c_str());
         } else {
             T value;
             if (is_integral) {
