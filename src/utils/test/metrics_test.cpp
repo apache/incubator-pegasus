@@ -1029,10 +1029,10 @@ TEST(metrics_test, take_snapshot_gauge_double)
     }
 }
 
-#define test_metric_snapshot_with_counter(metric_prototype) \
+#define test_metric_snapshot_with_counter(metric_prototype)                                        \
     do {                                                                                           \
-        test_metric_snapshot_with_single_value( \
-            metric_prototype, increment_by, int64_t, true, compare_integral_metric_value_map); \
+        test_metric_snapshot_with_single_value(                                                    \
+            metric_prototype, increment_by, int64_t, true, compare_integral_metric_value_map);     \
     } while (0)
 
 #define run_cases_with_counter_snapshot(metric_prototype)                                          \
