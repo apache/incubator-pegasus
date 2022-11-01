@@ -975,8 +975,8 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
 {
     ASSERT_EQ(actual_value_map.size(), expected_value_map.size());
 
-    typename metric_value_map<T>::const_iterator actual_iter = actual_value_map.begin();
-    typename metric_value_map<T>::const_iterator expected_iter = expected_value_map.begin();
+    auto actual_iter = actual_value_map.begin();
+    auto expected_iter = expected_value_map.begin();
     for (; actual_iter != actual_value_map.end() && expected_iter != expected_value_map.end();
          ++actual_iter, ++expected_iter) {
         ASSERT_EQ(actual_iter->first, expected_iter->first);
@@ -984,7 +984,7 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
     }
 }
 
-#define test_metric_snapshot_with_single_value(                                                    \
+#define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(                                                    \
     metric_prototype, updater, value_type, is_integral, value_map_comparator)                      \
     do {                                                                                           \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
@@ -1008,7 +1008,7 @@ TEST(metrics_test, take_snapshot_gauge_int64)
     } tests[]{{"server_60", 5}};
 
     for (const auto &test : tests) {
-        test_metric_snapshot_with_single_value(
+        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(
             METRIC_test_gauge_int64, set, int64_t, true, compare_integral_metric_value_map);
     }
 }
@@ -1022,18 +1022,18 @@ TEST(metrics_test, take_snapshot_gauge_double)
     } tests[]{{"server_60", 6.789}};
 
     for (const auto &test : tests) {
-        test_metric_snapshot_with_single_value(
+        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(
             METRIC_test_gauge_double, set, double, false, compare_floating_metric_value_map);
     }
 }
 
-#define test_metric_snapshot_with_counter(metric_prototype)                                        \
+#define TEST_METRIC_SNAPSHOT_WITH_COUNTER(metric_prototype)                                        \
     do {                                                                                           \
-        test_metric_snapshot_with_single_value(                                                    \
+        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(                                                    \
             metric_prototype, increment_by, int64_t, true, compare_integral_metric_value_map);     \
     } while (0)
 
-#define run_cases_with_counter_snapshot(metric_prototype)                                          \
+#define RUN_CASES_WITH_COUNTER_SNAPSHOT(metric_prototype)                                          \
     do {                                                                                           \
         struct test_case                                                                           \
         {                                                                                          \
@@ -1042,25 +1042,25 @@ TEST(metrics_test, take_snapshot_gauge_double)
         } tests[]{{"server_60", 10}};                                                              \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
-            test_metric_snapshot_with_counter(metric_prototype);                                   \
+            TEST_METRIC_SNAPSHOT_WITH_COUNTER(metric_prototype);                                   \
         }                                                                                          \
     } while (0)
 
-TEST(metrics_test, take_snapshot_counter) { run_cases_with_counter_snapshot(METRIC_test_counter); }
+TEST(metrics_test, take_snapshot_counter) { RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_counter); }
 
 TEST(metrics_test, take_snapshot_concurrent_counter)
 {
-    run_cases_with_counter_snapshot(METRIC_test_concurrent_counter);
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_concurrent_counter);
 }
 
 TEST(metrics_test, take_snapshot_volatile_counter)
 {
-    run_cases_with_counter_snapshot(METRIC_test_volatile_counter);
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_volatile_counter);
 }
 
 TEST(metrics_test, take_snapshot_concurrent_volatile_counter)
 {
-    run_cases_with_counter_snapshot(METRIC_test_concurrent_volatile_counter);
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_concurrent_volatile_counter);
 }
 
 template <typename MetricType, typename CaseGenerator>
@@ -1093,7 +1093,7 @@ void generate_metric_value_map(MetricType *my_metric,
     }
 }
 
-#define test_metric_snapshot_with_percentile(                                                      \
+#define TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(                                                      \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
         using value_type = typename case_generator::value_type;                                    \
@@ -1121,7 +1121,7 @@ void generate_metric_value_map(MetricType *my_metric,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
-#define run_cases_with_percentile_snapshot(                                                        \
+#define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
         struct test_case                                                                           \
@@ -1135,14 +1135,14 @@ void generate_metric_value_map(MetricType *my_metric,
         } tests[]{{"server_60", 50, kAllKthPercentileTypes, 4096, 4096, 10}};                      \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
-            test_metric_snapshot_with_percentile(                                                  \
+            TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(                                                  \
                 metric_prototype, case_generator, is_integral, value_map_comparator);              \
         }                                                                                          \
     } while (0)
 
 TEST(metrics_test, take_snapshot_percentile_int64)
 {
-    run_cases_with_percentile_snapshot(METRIC_test_percentile_int64,
+    RUN_CASES_WITH_PERCENTILE_SNAPSHOT(METRIC_test_percentile_int64,
                                        integral_percentile_case_generator<int64_t>,
                                        true,
                                        compare_integral_metric_value_map);
@@ -1150,7 +1150,7 @@ TEST(metrics_test, take_snapshot_percentile_int64)
 
 TEST(metrics_test, take_snapshot_percentile_double)
 {
-    run_cases_with_percentile_snapshot(METRIC_test_percentile_double,
+    RUN_CASES_WITH_PERCENTILE_SNAPSHOT(METRIC_test_percentile_double,
                                        floating_percentile_case_generator<double>,
                                        false,
                                        compare_floating_metric_value_map);

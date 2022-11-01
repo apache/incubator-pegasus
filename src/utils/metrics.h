@@ -405,7 +405,7 @@ public:
     // where "name" is the name of the gauge in string type, and "value" is just current value
     // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
     // determined by `value_type`).
-    virtual void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer) override
     {
         writer.StartObject();
 
@@ -525,7 +525,7 @@ public:
     // }
     // where "name" is the name of the counter in string type, and "value" is just current value
     // of the counter fetched by `value()`, in integral type (namely int64_t).
-    virtual void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer) override
     {
         writer.StartObject();
 
@@ -603,12 +603,18 @@ ENUM_REG(kth_percentile_type::P99)
 ENUM_REG(kth_percentile_type::P999)
 ENUM_END(kth_percentile_type)
 
-const std::vector<double> kKthDecimals = {0.5, 0.9, 0.95, 0.99, 0.999};
-const std::vector<std::string> kKthNames = {"p50", "p90", "p95", "p99", "p999"};
+struct kth_percentile
+{
+    std::string name;
+    double decimal;
+};
+
+const std::vector<kth_percentile> kAllKthPercentiles = {
+    {"p50", 0.5}, {"p90", 0.9}, {"p95", 0.95}, {"p99", 0.99}, {"p999", 0.999}};
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
-    auto decimal = kKthDecimals[kth_index];
+    auto decimal = kAllKthPercentiles[kth_index].decimal;
     // Since the kth percentile is the value that is greater than k percent of the data values after
     // ranking them (https://people.richland.edu/james/ictcm/2001/descriptive/helpposition.html),
     // compute the nth index by size * decimal rather than size * decimal - 1.
@@ -626,8 +632,8 @@ const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percent
 inline std::string kth_percentile_to_name(const kth_percentile_type &type)
 {
     auto index = static_cast<size_t>(type);
-    CHECK_LT(index, kKthNames.size());
-    return kKthNames[index];
+    CHECK_LT(index, kAllKthPercentiles.size());
+    return kAllKthPercentiles[index].name;
 }
 
 // `percentile_timer` is a timer class that encapsulates the details how each percentile is
@@ -730,7 +736,7 @@ public:
     // where "name" is the name of the percentile in string type, with each configured kth
     // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
     // (i.e. integral or floating-point type, determined by `value_type`).
-    virtual void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer) override
     {
         writer.StartObject();
 
@@ -742,7 +748,7 @@ public:
                 continue;
             }
 
-            writer.Key(kKthNames[i].c_str());
+            writer.Key(kAllKthPercentiles[i].name.c_str());
             json::json_encode(writer, value(i));
         }
 
