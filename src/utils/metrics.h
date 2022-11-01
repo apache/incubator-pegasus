@@ -345,7 +345,7 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
-    // Take snapshot from the metric to json format.
+    // Take snapshot of each metric to collect current values as json format.
     virtual void take_snapshot(dsn::json::JsonWriter &writer) = 0;
 
 protected:
@@ -397,6 +397,14 @@ public:
 
     value_type value() const { return _value.load(std::memory_order_relaxed); }
 
+    // The snapshot collected has following json format:
+    // {
+    //     "name": "<metric_name>",
+    //     "value": ...
+    // }
+    // where "name" is the name of the gauge in string type, and "value" is just current value
+    // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
+    // determined by `value_type`).
     virtual void take_snapshot(json::JsonWriter &writer) override
     {
         writer.StartObject();
@@ -510,6 +518,13 @@ public:
         return _adder.fetch_and_reset();
     }
 
+    // The snapshot collected has following json format:
+    // {
+    //     "name": "<metric_name>",
+    //     "value": ...
+    // }
+    // where "name" is the name of the counter in string type, and "value" is just current value
+    // of the counter fetched by `value()`, in integral type (namely int64_t).
     virtual void take_snapshot(json::JsonWriter &writer) override
     {
         writer.StartObject();
@@ -704,6 +719,17 @@ public:
         return _kth_percentile_bitset.test(index);
     }
 
+    // The snapshot collected has following json format:
+    // {
+    //     "name": "<metric_name>",
+    //     "p50": ...,
+    //     "p90": ...,
+    //     "p95": ...,
+    //     ...
+    // }
+    // where "name" is the name of the percentile in string type, with each configured kth
+    // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
+    // (i.e. integral or floating-point type, determined by `value_type`).
     virtual void take_snapshot(json::JsonWriter &writer) override
     {
         writer.StartObject();
