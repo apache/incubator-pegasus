@@ -247,21 +247,6 @@ private:
     void do_update_app_info(const std::string &app_path,
                             const app_info &info,
                             const std::function<void(error_code)> &cb);
-    task_ptr update_partition_configuration_ballot_on_remote(
-        std::shared_ptr<app_state> &app,
-        const partition_configuration &new_partition_config,
-        partition_callback on_partition_updated);
-    void update_partition_configuration_ballot_on_remote_reply(
-        error_code ec,
-        std::shared_ptr<app_state> &app,
-        const partition_configuration &new_partition_config,
-        partition_callback on_partition_updated);
-    void update_partition_configuration_ballot(std::shared_ptr<app_state> &app,
-                                               int32_t partition_index,
-                                                partition_callback on_partition_updated);
-    void check_app_info_rename_finished_on_replica(int32_t app_id,
-                                                   int32_t partition_index,
-                                                   const std::string new_app_name);
 
     task_ptr
     update_configuration_on_remote(std::shared_ptr<configuration_update_request> &config_request);
@@ -352,6 +337,23 @@ private:
         std::shared_ptr<app_state> &app,
         const partition_configuration &new_partition_config,
         partition_callback on_partition_updated);
+
+    task_ptr update_partition_configuration_ballot_on_remote(
+        std::shared_ptr<app_state> &app,
+        const partition_configuration &new_partition_config,
+        partition_callback on_partition_updated);
+    void update_partition_configuration_ballot_on_remote_reply(
+        error_code ec,
+        std::shared_ptr<app_state> &app,
+        const partition_configuration &new_partition_config,
+        partition_callback on_partition_updated);
+
+    void update_partition_configuration_ballot(std::shared_ptr<app_state> &app,
+                                               int32_t partition_index,
+                                                partition_callback on_partition_updated);
+    void check_app_info_rename_finished_on_replica(int32_t app_id,
+                                                   int32_t partition_index,
+                                                   const std::string &new_app_name);
     void
     update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
                                                const partition_configuration &new_partition_config);

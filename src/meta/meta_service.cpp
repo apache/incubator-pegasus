@@ -409,7 +409,8 @@ void meta_service::register_rpc_handlers()
     register_rpc_handler(RPC_CM_CREATE_APP, "create_app", &meta_service::on_create_app);
     register_rpc_handler(RPC_CM_DROP_APP, "drop_app", &meta_service::on_drop_app);
     register_rpc_handler(RPC_CM_RECALL_APP, "recall_app", &meta_service::on_recall_app);
-    register_rpc_handler(RPC_CM_RENAME_APP, "rename_app", &meta_service::on_rename_app);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_RENAME_APP, "rename_app", &meta_service::on_rename_app);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_LIST_APPS, "list_apps", &meta_service::on_list_apps);
     register_rpc_handler_with_rpc_holder(

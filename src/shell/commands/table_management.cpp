@@ -734,7 +734,7 @@ bool rename_app(command_executor *e, shell_context *sc, arguments args)
     }
     std::string new_name = args.argv[2];
 
-    auto err_resp = sc->ddl_client->rename_app(app_id, new_name);
+    auto err_resp = sc->ddl_client->rename_app(id, new_name);
     auto err = err_resp.get_error();
     const auto &resp = err_resp.get_value();
 
@@ -743,7 +743,7 @@ bool rename_app(command_executor *e, shell_context *sc, arguments args)
     }
 
     if (err.is_ok()) {
-        fmt::print(stdout, "rename app ok, app_id({}), new_app_name({})\n", app_id, new_name);
+        fmt::print(stdout, "rename app ok, app_id({}), new_app_name({})\n", id, new_name);
     } else {
         std::string error_message(resp.err.to_string());
         if (!resp.hint_message.empty()) {
@@ -751,7 +751,7 @@ bool rename_app(command_executor *e, shell_context *sc, arguments args)
             error_message += resp.hint_message;
         }
 
-        fmt::print(stderr, "rename app ok, app_id({}), new_app_name({}), failed: {}\n", app_id, new_name, error_message);
+        fmt::print(stderr, "rename app ok, app_id({}), new_app_name({}), failed: {}\n", id, new_name, error_message);
     }
 
     return true;

@@ -45,7 +45,7 @@ struct query_replica_decree_response
 struct query_replica_app_mame_on_replica_request
 {
     1:dsn.rpc_address     node;
-    1:dsn.gpid pid;
+    2:dsn.gpid pid;
 }
 
 struct query_replica_app_mame_on_replica_reponse

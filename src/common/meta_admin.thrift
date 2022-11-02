@@ -210,7 +210,7 @@ struct query_app_info_response
 struct query_replica_app_mame_on_app_info_request
 {
     1:dsn.rpc_address     node;
-    1:dsn.gpid pid;
+    2:dsn.gpid pid;
 }
 
 struct query_replica_app_mame_on_app_info_reponse
