@@ -33,11 +33,12 @@
 #include <boost/asio/deadline_timer.hpp>
 
 #include "api_utilities.h"
-#include "fmt_logging.h"
 #include "alloc.h"
 #include "autoref_ptr.h"
 #include "casts.h"
+#include "common/json_helper.h"
 #include "enum_helper.h"
+#include "fmt_logging.h"
 #include "long_adder.h"
 #include "nth_element.h"
 #include "ports.h"
@@ -344,6 +345,9 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
+    // Take snapshot of each metric to collect current values as json format.
+    virtual void take_snapshot(dsn::json::JsonWriter &writer) = 0;
+
 protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
@@ -392,6 +396,27 @@ public:
     using value_type = T;
 
     value_type value() const { return _value.load(std::memory_order_relaxed); }
+
+    // The snapshot collected has following json format:
+    // {
+    //     "name": "<metric_name>",
+    //     "value": ...
+    // }
+    // where "name" is the name of the gauge in string type, and "value" is just current value
+    // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
+    // determined by `value_type`).
+    void take_snapshot(json::JsonWriter &writer) override
+    {
+        writer.StartObject();
+
+        writer.Key("name");
+        json::json_encode(writer, prototype()->name().data());
+
+        writer.Key("value");
+        json::json_encode(writer, value());
+
+        writer.EndObject();
+    }
 
     void set(const value_type &val) { _value.store(val, std::memory_order_relaxed); }
 
@@ -493,6 +518,26 @@ public:
         return _adder.fetch_and_reset();
     }
 
+    // The snapshot collected has following json format:
+    // {
+    //     "name": "<metric_name>",
+    //     "value": ...
+    // }
+    // where "name" is the name of the counter in string type, and "value" is just current value
+    // of the counter fetched by `value()`, in integral type (namely int64_t).
+    void take_snapshot(json::JsonWriter &writer) override
+    {
+        writer.StartObject();
+
+        writer.Key("name");
+        json::json_encode(writer, prototype()->name().data());
+
+        writer.Key("value");
+        json::json_encode(writer, value());
+
+        writer.EndObject();
+    }
+
     // NOTICE: x MUST be a non-negative integer.
     void increment_by(int64_t x)
     {
@@ -558,11 +603,18 @@ ENUM_REG(kth_percentile_type::P99)
 ENUM_REG(kth_percentile_type::P999)
 ENUM_END(kth_percentile_type)
 
-const std::vector<double> kKthDecimals = {0.5, 0.9, 0.95, 0.99, 0.999};
+struct kth_percentile
+{
+    std::string name;
+    double decimal;
+};
+
+const std::vector<kth_percentile> kAllKthPercentiles = {
+    {"p50", 0.5}, {"p90", 0.9}, {"p95", 0.95}, {"p99", 0.99}, {"p999", 0.999}};
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
-    auto decimal = kKthDecimals[kth_index];
+    auto decimal = kAllKthPercentiles[kth_index].decimal;
     // Since the kth percentile is the value that is greater than k percent of the data values after
     // ranking them (https://people.richland.edu/james/ictcm/2001/descriptive/helpposition.html),
     // compute the nth index by size * decimal rather than size * decimal - 1.
@@ -576,6 +628,13 @@ inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
 
 std::set<kth_percentile_type> get_all_kth_percentile_types();
 const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
+
+inline std::string kth_percentile_to_name(const kth_percentile_type &type)
+{
+    auto index = static_cast<size_t>(type);
+    CHECK_LT(index, kAllKthPercentiles.size());
+    return kAllKthPercentiles[index].name;
+}
 
 // `percentile_timer` is a timer class that encapsulates the details how each percentile is
 // computed periodically.
@@ -662,8 +721,38 @@ public:
         const auto index = static_cast<size_t>(type);
         CHECK_LT(index, static_cast<size_t>(kth_percentile_type::COUNT));
 
-        val = _full_nth_elements[index].load(std::memory_order_relaxed);
+        val = value(index);
         return _kth_percentile_bitset.test(index);
+    }
+
+    // The snapshot collected has following json format:
+    // {
+    //     "name": "<metric_name>",
+    //     "p50": ...,
+    //     "p90": ...,
+    //     "p95": ...,
+    //     ...
+    // }
+    // where "name" is the name of the percentile in string type, with each configured kth
+    // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
+    // (i.e. integral or floating-point type, determined by `value_type`).
+    void take_snapshot(json::JsonWriter &writer) override
+    {
+        writer.StartObject();
+
+        writer.Key("name");
+        json::json_encode(writer, prototype()->name().data());
+
+        for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
+            if (!_kth_percentile_bitset.test(i)) {
+                continue;
+            }
+
+            writer.Key(kAllKthPercentiles[i].name.c_str());
+            json::json_encode(writer, value(i));
+        }
+
+        writer.EndObject();
     }
 
     bool timer_enabled() const { return !!_timer; }
@@ -757,6 +846,11 @@ private:
         // This will be called back after timer is closed, which means the percentile is
         // no longer needed by timer and can be destructed safely.
         release_ref();
+    }
+
+    value_type value(size_t index) const
+    {
+        return _full_nth_elements[index].load(std::memory_order_relaxed);
     }
 
     void find_nth_elements()
