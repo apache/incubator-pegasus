@@ -59,33 +59,90 @@
 
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
-#define CHECK_NE(var1, var2) CHECK(var1 != var2, "{} vs {}", var1, var2)
-#define CHECK_EQ(var1, var2) CHECK(var1 == var2, "{} vs {}", var1, var2)
-#define CHECK_GE(var1, var2) CHECK(var1 >= var2, "{} vs {}", var1, var2)
-#define CHECK_LE(var1, var2) CHECK(var1 <= var2, "{} vs {}", var1, var2)
-#define CHECK_GT(var1, var2) CHECK(var1 > var2, "{} vs {}", var1, var2)
-#define CHECK_LT(var1, var2) CHECK(var1 < var2, "{} vs {}", var1, var2)
-
 #define CHECK_NE_MSG(var1, var2, ...)                                                              \
-    CHECK(var1 != var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK(_v1 != _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));                      \
+    } while (false)
+
 #define CHECK_EQ_MSG(var1, var2, ...)                                                              \
-    CHECK(var1 == var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK(_v1 == _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));                      \
+    } while (false)
+
 #define CHECK_GE_MSG(var1, var2, ...)                                                              \
-    CHECK(var1 >= var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK(_v1 >= _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));                      \
+    } while (false)
+
 #define CHECK_LE_MSG(var1, var2, ...)                                                              \
-    CHECK(var1 <= var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK(_v1 <= _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));                      \
+    } while (false)
+
 #define CHECK_GT_MSG(var1, var2, ...)                                                              \
-    CHECK(var1 > var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK(_v1 > _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));                       \
+    } while (false)
+
 #define CHECK_LT_MSG(var1, var2, ...)                                                              \
-    CHECK(var1 < var2, "{} vs {} {}", var1, var2, fmt::format(__VA_ARGS__))
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK(_v1 < _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));                       \
+    } while (false)
+
+#define CHECK_NE(var1, var2) CHECK_NE_MSG(var1, var2, "")
+#define CHECK_EQ(var1, var2) CHECK_EQ_MSG(var1, var2, "")
+#define CHECK_GE(var1, var2) CHECK_GE_MSG(var1, var2, "")
+#define CHECK_LE(var1, var2) CHECK_LE_MSG(var1, var2, "")
+#define CHECK_GT(var1, var2) CHECK_GT_MSG(var1, var2, "")
+#define CHECK_LT(var1, var2) CHECK_LT_MSG(var1, var2, "")
 
 // TODO(yingchun): add CHECK_NULL(ptr), CHECK_OK(err), CHECK(cond)
+#define CHECK_EQ_PREFIX(var1, var2)                                                                \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        dassert_replica(_v1 == _v2, "{} vs {}", _v1, _v2);                                         \
+    } while (false)
 
-#define CHECK_EQ_PREFIX(var1, var2) dassert_replica(var1 == var2, "{} vs {}", var1, var2)
-#define CHECK_GE_PREFIX(var1, var2) dassert_replica(var1 >= var2, "{} vs {}", var1, var2)
-#define CHECK_LE_PREFIX(var1, var2) dassert_replica(var1 <= var2, "{} vs {}", var1, var2)
-#define CHECK_GT_PREFIX(var1, var2) dassert_replica(var1 > var2, "{} vs {}", var1, var2)
-#define CHECK_LT_PREFIX(var1, var2) dassert_replica(var1 < var2, "{} vs {}", var1, var2)
+#define CHECK_GE_PREFIX(var1, var2)                                                                \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        dassert_replica(_v1 >= _v2, "{} vs {}", _v1, _v2);                                         \
+    } while (false)
+
+#define CHECK_LE_PREFIX(var1, var2)                                                                \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        dassert_replica(_v1 <= _v2, "{} vs {}", _v1, _v2);                                         \
+    } while (false)
+
+#define CHECK_GT_PREFIX(var1, var2)                                                                \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        dassert_replica(_v1 > _v2, "{} vs {}", _v1, _v2);                                          \
+    } while (false)
+
+#define CHECK_LT_PREFIX(var1, var2)                                                                \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        dassert_replica(_v1 < _v2, "{} vs {}", _v1, _v2);                                          \
+    } while (false)
 
 // Return the given status if condition is not true.
 #define ERR_LOG_AND_RETURN_NOT_TRUE(s, err, ...)                                                   \
