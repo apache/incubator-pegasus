@@ -223,7 +223,7 @@ void replica::on_group_check_reply(error_code err,
     }
 
     auto r = _primary_states.group_check_pending_replies.erase(req->node);
-    CHECK_EQ_MSG(r, 1, "invalid node address, address = {}", req->node.to_string());
+    CHECK_EQ_MSG(r, 1, "invalid node address, address = {}", req->node);
 
     if (err != ERR_OK || resp->err != ERR_OK) {
         if (ERR_OK == err) {

@@ -107,7 +107,7 @@ protected:
         s_vhandlers.resize(rpc_code + 1);
         CHECK(s_vhandlers[rpc_code] == nullptr,
               "handler {}({}) has already been registered",
-              rpc_code.to_string(),
+              rpc_code,
               rpc_code.code());
         s_vhandlers[rpc_code] = h;
         return true;

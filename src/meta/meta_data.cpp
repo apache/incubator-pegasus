@@ -118,9 +118,8 @@ void maintain_drops(std::vector<rpc_address> &drops, const rpc_address &node, co
                 drops.erase(it);
             }
         } else {
-            CHECK(it == drops.end(),
-                  "the node({}) cannot be in drops set before this update",
-                  node.to_string());
+            CHECK(
+                it == drops.end(), "the node({}) cannot be in drops set before this update", node);
             drops.push_back(node);
             if (drops.size() > 3) {
                 drops.erase(drops.begin());
@@ -135,7 +134,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     partition_configuration &pc = *get_config(*view.apps, pid);
     config_context &cc = *get_config_context(*view.apps, pid);
 
-    CHECK_EQ(replica_count(pc), 0);
+    CHECK_EQ_MSG(replica_count(pc), 0, "replica count of gpid({}) must be 0", pid);
     CHECK_GT(max_replica_count, 0);
 
     std::vector<dropped_replica> &drop_list = cc.dropped;

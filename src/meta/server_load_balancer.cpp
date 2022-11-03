@@ -115,7 +115,7 @@ void newly_partitions::newly_remove_partition(int32_t app_id)
 {
     auto iter = partitions.find(app_id);
     CHECK(iter != partitions.end(), "invalid app_id, app_id = {}", app_id);
-    CHECK_GT_MSG(iter->second, 0, "invalid partition coun");
+    CHECK_GT_MSG(iter->second, 0, "invalid partition count");
     if ((--iter->second) == 0) {
         partitions.erase(iter);
     }

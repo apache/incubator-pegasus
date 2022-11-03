@@ -282,8 +282,8 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
     CHECK_LE_MSG(plan_moving,
                  potential_moving_size,
                  "from({}) to({}) plan({}), can_move({})",
-                 from.to_string(),
-                 to.to_string(),
+                 from,
+                 to,
                  plan_moving,
                  potential_moving_size);
 

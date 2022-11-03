@@ -494,17 +494,17 @@ void policy_context::on_backup_reply(error_code err,
                      _policy.policy_name,
                      "policy names don't match, pid({}), replica_server({})",
                      pid,
-                     primary.to_string());
+                     primary);
         CHECK_EQ_MSG(response.pid,
                      pid,
                      "{}: backup pids don't match, replica_server({})",
                      _policy.policy_name,
-                     primary.to_string());
+                     primary);
         CHECK_LE_MSG(response.backup_id,
                      _cur_backup.backup_id,
                      "{}: replica server({}) has bigger backup_id({}), gpid({})",
                      _backup_sig,
-                     primary.to_string(),
+                     primary,
                      response.backup_id,
                      pid);
 

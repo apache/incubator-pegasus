@@ -99,7 +99,7 @@ private:
             CHECK(cluster_id < 128 && cluster_id > 0,
                   "cluster_id({}) for {} should be in [1, 127]",
                   cluster_id,
-                  cluster.data());
+                  cluster);
             _group.emplace(cluster, static_cast<uint8_t>(cluster_id));
         }
         CHECK_EQ_MSG(clusters.size(),
