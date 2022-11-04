@@ -3324,7 +3324,7 @@ void server_state::set_max_replica_count_env_updating(std::shared_ptr<app_state>
                          "An error that can't be handled occurs while updating remote env of "
                          "max_replica_count: error_code={}, app_name={}, app_id={}, "
                          "new_max_replica_count={}, {}={}",
-                         ec.to_string(),
+                         ec,
                          app->app_name,
                          app->app_id,
                          new_max_replica_count,
@@ -3451,7 +3451,7 @@ void server_state::update_app_max_replica_count(std::shared_ptr<app_state> &app,
                      "An error that can't be handled occurs while updating remote app-level "
                      "max_replica_count: error_code={}, app_name={}, app_id={}, "
                      "old_max_replica_count={}, new_max_replica_count={}, {}={}",
-                     ec.to_string(),
+                     ec,
                      app->app_name,
                      app->app_id,
                      old_max_replica_count,
@@ -3830,7 +3830,7 @@ void server_state::recover_all_partitions_max_replica_count(std::shared_ptr<app_
                              "partition-level max_replica_count: error_code={}, app_name={}, "
                              "app_id={}, partition_index={}, partition_count={}, "
                              "old_partition_config={}, new_partition_config={}",
-                             ec.to_string(),
+                             ec,
                              app->app_name,
                              app->app_id,
                              i,
@@ -3900,7 +3900,7 @@ void server_state::recover_app_max_replica_count(std::shared_ptr<app_state> &app
                          "An error that can't be handled occurs while recovering remote "
                          "app-level max_replica_count: error_code={}, app_name={}, app_id={}, "
                          "old_max_replica_count={}, new_max_replica_count={}",
-                         ec.to_string(),
+                         ec,
                          app->app_name,
                          app->app_id,
                          old_max_replica_count,
