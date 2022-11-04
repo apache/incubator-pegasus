@@ -970,9 +970,9 @@ error_code mutation_log::reset_from(const std::string &dir,
         } else {
             // Once rollback failed, dir should be recovered manually in case data is lost.
             dassert_f(utils::filesystem::rename_path(temp_dir, _dir),
-                  "rename temp dir {} back to current dir {} failed",
-                  temp_dir,
-                  _dir);
+                      "rename temp dir {} back to current dir {} failed",
+                      temp_dir,
+                      _dir);
         }
     });
 
@@ -986,9 +986,9 @@ error_code mutation_log::reset_from(const std::string &dir,
     auto dir_resolve = dsn::defer([this, dir, &err]() {
         if (err != ERR_OK) {
             dassert_f(utils::filesystem::rename_path(_dir, dir),
-                  "rename current dir {} back to source dir {} failed",
-                  _dir,
-                  dir);
+                      "rename current dir {} back to source dir {} failed",
+                      _dir,
+                      dir);
         }
     });
 
