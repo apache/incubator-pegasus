@@ -744,7 +744,7 @@ void server_state::initialize_node_state()
                 ns->put_partition(pc.pid, true);
             }
             for (auto &ep : pc.secondaries) {
-                CHECK(!ep.is_invalid(), "invalid secondary address, addr = {}", ep.to_string());
+                CHECK(!ep.is_invalid(), "invalid secondary address, addr = {}", ep);
                 node_state *ns = get_node_state(_nodes, ep, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -893,7 +893,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                               "gpid({}) on node({}) is not exist on meta server, administrator "
                               "should check consistency of meta data",
                               rep.pid,
-                              request.node.to_string());
+                              request.node);
                     }
                 } else if (app->status == app_status::AS_DROPPED) {
                     if (app->expire_second == 0) {
@@ -1050,7 +1050,7 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
         } else {
             CHECK(false,
                   "we can't handle this error in init app partition nodes err({}), gpid({}.{})",
-                  ec.to_string(),
+                  ec,
                   app->app_id,
                   pidx);
         }
@@ -1079,7 +1079,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
                              0,
                              std::chrono::seconds(1));
         } else {
-            CHECK(false, "we can't handle this right now, err({})", ec.to_string());
+            CHECK(false, "we can't handle this right now, err({})", ec);
         }
     };
 
@@ -1203,7 +1203,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
                              0,
                              std::chrono::seconds(1));
         } else {
-            CHECK(false, "we can't handle this, error({})", ec.to_string());
+            CHECK(false, "we can't handle this, error({})", ec);
         }
     };
 
@@ -1447,8 +1447,7 @@ void server_state::update_configuration_locally(
         node_state *ns = nullptr;
         if (config_request->type != config_type::CT_DROP_PARTITION) {
             ns = get_node_state(_nodes, config_request->node, false);
-            CHECK_NOTNULL(
-                ns, "invalid node address, address = {}", config_request->node.to_string());
+            CHECK_NOTNULL(ns, "invalid node address, address = {}", config_request->node);
         }
 #ifndef NDEBUG
         request_check(old_cfg, *config_request);
@@ -1517,9 +1516,7 @@ void server_state::update_configuration_locally(
         }
 
         auto it = _nodes.find(config_request->host_node);
-        CHECK(it != _nodes.end(),
-              "invalid node address, address = {}",
-              config_request->host_node.to_string());
+        CHECK(it != _nodes.end(), "invalid node address, address = {}", config_request->host_node);
         if (config_type::CT_REMOVE == config_request->type) {
             it->second.remove_partition(gpid, false);
         } else {
@@ -1651,7 +1648,7 @@ void server_state::on_update_configuration_on_remote_reply(
             }
         }
     } else {
-        CHECK(false, "we can't handle this right now, err = {}", ec.to_string());
+        CHECK(false, "we can't handle this right now, err = {}", ec);
     }
 }
 
@@ -1669,7 +1666,7 @@ void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
                              server_state::sStateHash,
                              std::chrono::seconds(1));
         } else {
-            CHECK(false, "unable to handle this({}) right now", error.to_string());
+            CHECK(false, "unable to handle this({}) right now", error);
         }
     };
 
@@ -1819,7 +1816,7 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
             break;
         }
     }
-    CHECK(!req->node.is_invalid(), "invalid node address, address = {}", req->node.to_string());
+    CHECK(!req->node.is_invalid(), "invalid node address, address = {}", req->node);
     // remove host_node & node from secondaries/last_drops, as it will be sync to remote storage
     for (++i; i < pc.secondaries.size(); ++i) {
         pc.secondaries[i - 1] = pc.secondaries[i];
@@ -1936,9 +1933,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
                     pc.pid.get_partition_index(),
                     address.to_string());
             } else {
-                CHECK(false,
-                      "no primary/secondary on this node, node address = {}",
-                      address.to_string());
+                CHECK(false, "no primary/secondary on this node, node address = {}", address);
             }
         }
     } else {
@@ -2027,7 +2022,7 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
                     // 2.1.x, 2.2.x and 2.3.x release
                     CHECK(app_info_compatible_equal(info, *old_info),
                           "conflict app info from ({}) for id({}): new_info({}), old_info({})",
-                          replica_nodes[i].to_string(),
+                          replica_nodes[i],
                           info.app_id,
                           boost::lexical_cast<std::string>(info),
                           boost::lexical_cast<std::string>(*old_info));
@@ -2585,31 +2580,29 @@ void server_state::check_consistency(const dsn::gpid &gpid)
     if (app.is_stateful) {
         if (config.primary.is_invalid() == false) {
             auto it = _nodes.find(config.primary);
-            CHECK(it != _nodes.end(),
-                  "invalid primary address, address = {}",
-                  config.primary.to_string());
+            CHECK(it != _nodes.end(), "invalid primary address, address = {}", config.primary);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_PRIMARY);
             CHECK(std::find(config.last_drops.begin(), config.last_drops.end(), config.primary) ==
                       config.last_drops.end(),
                   "primary shouldn't appear in last_drops, address = {}",
-                  config.primary.to_string());
+                  config.primary);
         }
 
         for (auto &ep : config.secondaries) {
             auto it = _nodes.find(ep);
-            CHECK(it != _nodes.end(), "invalid secondary address, address = {}", ep.to_string());
+            CHECK(it != _nodes.end(), "invalid secondary address, address = {}", ep);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
             CHECK(std::find(config.last_drops.begin(), config.last_drops.end(), ep) ==
                       config.last_drops.end(),
                   "secondary shouldn't appear in last_drops, address = {}",
-                  ep.to_string());
+                  ep);
         }
     } else {
         partition_configuration_stateless pcs(config);
         CHECK_EQ(pcs.hosts().size(), pcs.workers().size());
         for (auto &ep : pcs.hosts()) {
             auto it = _nodes.find(ep);
-            CHECK(it != _nodes.end(), "invalid host, address = {}", ep.to_string());
+            CHECK(it != _nodes.end(), "invalid host, address = {}", ep);
             CHECK_EQ(it->second.served_as(gpid), partition_status::PS_SECONDARY);
         }
     }
@@ -2649,7 +2642,7 @@ void server_state::do_update_app_info(const std::string &app_path,
                 0,
                 std::chrono::seconds(1));
         } else {
-            CHECK(false, "we can't handle this, error({})", ec.to_string());
+            CHECK(false, "we can't handle this, error({})", ec);
         }
     };
     // TODO(cailiuyang): callback scheduling order may be undefined if multiple requests are

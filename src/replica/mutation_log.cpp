@@ -781,8 +781,12 @@ error_code mutation_log::create_new_log_file()
                            },
                            0);
 
-    CHECK_EQ(_global_end_offset,
-             _current_log_file->start_offset() + sizeof(log_block_header) + header_len);
+    CHECK_EQ_MSG(_global_end_offset,
+                 _current_log_file->start_offset() + sizeof(log_block_header) + header_len,
+                 "current log file start offset: {}, log_block_header size: {}, header_len: {}",
+                 _current_log_file->start_offset(),
+                 sizeof(log_block_header),
+                 header_len);
     return ERR_OK;
 }
 

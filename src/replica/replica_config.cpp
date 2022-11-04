@@ -161,10 +161,10 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
     CHECK(proposal.config.secondaries == _primary_states.membership.secondaries, "");
     CHECK(!_primary_states.check_exist(proposal.node, partition_status::PS_PRIMARY),
           "node = {}",
-          proposal.node.to_string());
+          proposal.node);
     CHECK(!_primary_states.check_exist(proposal.node, partition_status::PS_SECONDARY),
           "node = {}",
-          proposal.node.to_string());
+          proposal.node);
 
     int potential_secondaries_count =
         _primary_states.membership.secondaries.size() + _primary_states.learners.size();
@@ -290,7 +290,7 @@ void replica::remove(configuration_update_request &proposal)
     case partition_status::PS_SECONDARY: {
         CHECK(replica_helper::remove_node(proposal.node, proposal.config.secondaries),
               "remove_node failed, node = {}",
-              proposal.node.to_string());
+              proposal.node);
     } break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         break;
