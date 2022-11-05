@@ -57,9 +57,9 @@ public:
     static error_code try_get(const char *name, error_code default_value);
     static error_code try_get(const std::string &name, error_code default_value);
 
-    friend std::ostream &operator<<(std::ostream &os, const error_code &ec)
+    std::ostream &operator<<(std::ostream &os, const error_code &ec)
     {
-        return os << std::string(ec.to_string());
+        return os << ec.to_string();
     }
 
 private:

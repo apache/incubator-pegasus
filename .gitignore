@@ -20,7 +20,6 @@ src/base/rrdb_types.cpp
 src/include/rrdb/rrdb_types.h
 src/common/serialization_helper/dsn.layer2_types.h
 src/runtime/dsn.layer2_types.cpp
-src/runtime
 src/*builder
 
 onebox/

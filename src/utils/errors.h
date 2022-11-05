@@ -127,7 +127,7 @@ public:
     }
 
 public:
-    friend std::ostream &operator<<(std::ostream &os, const error_s &s)
+    std::ostream &operator<<(std::ostream &os, const error_s &s)
     {
         return os << s.description();
     }

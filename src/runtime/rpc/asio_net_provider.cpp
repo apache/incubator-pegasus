@@ -98,7 +98,7 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
 
     CHECK(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
           "invalid given channel {}",
-          channel.to_string());
+          channel);
 
     _address.assign_ipv4(get_local_ipv4(), port);
 
