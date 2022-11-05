@@ -71,10 +71,7 @@ public:
 
     int thread_hash() const { return _value.u.app_id * 7919 + _value.u.partition_index; }
 
-    std::ostream &operator<<(std::ostream &os, const gpid &id)
-    {
-        return os << id.to_string();
-    }
+    std::ostream &operator<<(std::ostream &os, const gpid &id) { return os << id.to_string(); }
 
 private:
     union
