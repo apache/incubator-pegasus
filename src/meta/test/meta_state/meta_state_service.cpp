@@ -105,7 +105,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                            dsn::binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
-                           dassert(read_value == 0xdeadbeef, "get_value != create_value");
+                           CHECK_EQ(read_value, 0xdeadbeef);
                        })
             ->wait();
         writer = dsn::binary_writer();
@@ -122,7 +122,7 @@ void provider_basic_test(const service_creator_func &service_creator,
                            dsn::binary_reader reader(value);
                            int read_value = 0;
                            reader.read(read_value);
-                           dassert(read_value == 0xbeefdead, "get_value != create_value");
+                           CHECK_EQ(read_value, 0xbeefdead);
                        })
             ->wait();
     }

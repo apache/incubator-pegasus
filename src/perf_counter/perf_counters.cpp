@@ -131,11 +131,10 @@ perf_counter_ptr perf_counters::get_global_counter(const char *app,
             _counters.emplace(full_name, counter_object{counter, 1});
             return counter;
         } else {
-            dassert(it->second.counter->type() == flags,
-                    "counters with the same name %s with differnt types, (%d) vs (%d)",
-                    full_name.c_str(),
-                    it->second.counter->type(),
-                    flags);
+            CHECK_EQ_MSG(it->second.counter->type(),
+                         flags,
+                         "counters with the same name {} with differnt types",
+                         full_name);
             ++it->second.user_reference;
             return it->second.counter;
         }

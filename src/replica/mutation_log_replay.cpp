@@ -191,10 +191,7 @@ namespace replication {
 
     if (err == ERR_OK || err == ERR_HANDLE_EOF) {
         // the log may still be written when used for learning
-        dassert(g_end_offset <= end_offset,
-                "make sure the global end offset is correct: %" PRId64 " vs %" PRId64,
-                g_end_offset,
-                end_offset);
+        CHECK_LE(g_end_offset, end_offset);
         err = ERR_OK;
     } else if (err == ERR_INCOMPLETE_DATA) {
         // ignore the last incomplate block

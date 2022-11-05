@@ -109,7 +109,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     //        err = mutation_cache::put(mu);
     //        if (err == ERR_CAPACITY_EXCEEDED)
     //        {
-    //            dassert(mu->data.header.last_committed_decree >= min_decree(), "");
+    //            CHECK_GE(mu->data.header.last_committed_decree, min_decree());
     //            commit (min_decree(), true);
     //            pop_min();
     //        }

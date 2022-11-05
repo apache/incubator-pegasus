@@ -365,7 +365,7 @@ bool service_spec::init_app_specs()
 
                 // add app
                 app_specs.push_back(app);
-                dassert((int)app_specs.size() == app.id, "incorrect app id");
+                CHECK_EQ(app_specs.size(), app.id);
 
                 // for next instance
                 app.ports.clear();

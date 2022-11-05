@@ -49,7 +49,7 @@ sim_task_queue::sim_task_queue(task_worker_pool *pool, int index, task_queue *in
 
 void sim_task_queue::enqueue(task *t)
 {
-    dassert(0 == t->delay_milliseconds(), "delay time must be zero");
+    CHECK_EQ_MSG(0, t->delay_milliseconds(), "delay time must be zero");
     if (_tasks.size() > 0) {
         do {
             int random_pos = rand::next_u32(0, 1000000);
@@ -146,7 +146,7 @@ void sim_lock_provider::lock()
 
     _sema.wait(TIME_MS_MAX);
 
-    dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+    CHECK(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
     _current_holder = ctid;
     ++_lock_depth;
 }
@@ -165,7 +165,7 @@ bool sim_lock_provider::try_lock()
 
     bool r = _sema.wait(0);
     if (r) {
-        dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+        CHECK(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
         _current_holder = ctid;
         ++_lock_depth;
     }
@@ -178,8 +178,9 @@ void sim_lock_provider::unlock()
     if (scheduler::is_scheduling())
         return;
 
-    dassert(::dsn::utils::get_current_tid() == _current_holder,
-            "lock must be locked must current holder");
+    CHECK_EQ_MSG(::dsn::utils::get_current_tid(),
+                 _current_holder,
+                 "lock must be locked must current holder");
 
     if (0 == --_lock_depth) {
         _current_holder = -1;
@@ -208,7 +209,7 @@ void sim_lock_nr_provider::lock()
 
     _sema.wait(TIME_MS_MAX);
 
-    dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+    CHECK(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
     _current_holder = ctid;
     ++_lock_depth;
 }
@@ -224,7 +225,7 @@ bool sim_lock_nr_provider::try_lock()
 
     bool r = _sema.wait(0);
     if (r) {
-        dassert(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
+        CHECK(-1 == _current_holder && _lock_depth == 0, "must be unlocked state");
         _current_holder = ctid;
         ++_lock_depth;
     }
@@ -237,8 +238,9 @@ void sim_lock_nr_provider::unlock()
     if (scheduler::is_scheduling())
         return;
 
-    dassert(::dsn::utils::get_current_tid() == _current_holder,
-            "lock must be locked must current holder");
+    CHECK_EQ_MSG(::dsn::utils::get_current_tid(),
+                 _current_holder,
+                 "lock must be locked must current holder");
 
     if (0 == --_lock_depth) {
         _current_holder = -1;

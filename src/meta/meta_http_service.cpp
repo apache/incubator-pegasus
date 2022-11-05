@@ -292,14 +292,8 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             configuration_query_by_index_response response;
             request.app_name = info.app_name;
             _service->_state->query_configuration_by_index(request, response);
-            dassert(info.app_id == response.app_id,
-                    "invalid app_id, %d VS %d",
-                    info.app_id,
-                    response.app_id);
-            dassert(info.partition_count == response.partition_count,
-                    "invalid partition_count, %d VS %d",
-                    info.partition_count,
-                    response.partition_count);
+            CHECK_EQ(info.app_id, response.app_id);
+            CHECK_EQ(info.partition_count, response.partition_count);
             int fully_healthy = 0;
             int write_unhealthy = 0;
             int read_unhealthy = 0;
@@ -391,14 +385,8 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
             configuration_query_by_index_response response_app;
             request_app.app_name = app.app_name;
             _service->_state->query_configuration_by_index(request_app, response_app);
-            dassert(app.app_id == response_app.app_id,
-                    "invalid app_id, %d VS %d",
-                    app.app_id,
-                    response_app.app_id);
-            dassert(app.partition_count == response_app.partition_count,
-                    "invalid partition_count, %d VS %d",
-                    app.partition_count,
-                    response_app.partition_count);
+            CHECK_EQ(app.app_id, response_app.app_id);
+            CHECK_EQ(app.partition_count, response_app.partition_count);
 
             for (int i = 0; i < response_app.partitions.size(); i++) {
                 const dsn::partition_configuration &p = response_app.partitions[i];

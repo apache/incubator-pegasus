@@ -275,7 +275,7 @@ public:
     virtual int get_latest_samples(int required_sample_count,
                                    /*out*/ samples_t &samples) const override
     {
-        dassert(required_sample_count <= MAX_QUEUE_LENGTH, "");
+        CHECK_LE(required_sample_count, MAX_QUEUE_LENGTH);
 
         uint64_t count = _tail.load();
         int return_count = count >= (uint64_t)required_sample_count ? required_sample_count : count;

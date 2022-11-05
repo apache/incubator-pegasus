@@ -179,7 +179,7 @@ void log_file::close()
     _stream.reset(nullptr);
     if (_handle) {
         error_code err = file::close(_handle);
-        dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+        CHECK_EQ_MSG(err, ERR_OK, "file::close failed");
 
         _handle = nullptr;
     }
@@ -192,7 +192,7 @@ void log_file::flush() const
 
     if (_handle) {
         error_code err = file::flush(_handle);
-        dassert(err == ERR_OK, "file::flush failed, err = %s", err.to_string());
+        CHECK_EQ_MSG(err, ERR_OK, "file::flush failed");
     }
 }
 
@@ -278,7 +278,7 @@ aio_task_ptr log_file::commit_log_blocks(log_appender &pending,
         int64_t local_offset = block.start_offset() - start_offset();
         auto hdr = reinterpret_cast<log_block_header *>(const_cast<char *>(block.front().data()));
 
-        dassert(hdr->magic == 0xdeadbeef, "");
+        CHECK_EQ(hdr->magic, 0xdeadbeef);
         hdr->local_offset = local_offset;
         hdr->length = static_cast<int32_t>(block.size() - sizeof(log_block_header));
         hdr->body_crc = _crc32;

@@ -86,7 +86,7 @@ std::unique_ptr<value_field> value_schema_v0::extract_timestamp(dsn::string_view
 
 void value_schema_v0::update_expire_ts(std::string &value, std::unique_ptr<value_field> field)
 {
-    dassert_f(value.length() >= sizeof(uint32_t), "value must include 'expire_ts' header");
+    CHECK_GE_MSG(value.length(), sizeof(uint32_t), "value must include 'expire_ts' header");
     auto expire_field = static_cast<expire_timestamp_field *>(field.get());
 
     auto new_expire_ts = dsn::endian::hton(expire_field->expire_ts);

@@ -17,11 +17,13 @@
  * under the License.
  */
 
-#include <iomanip>
-#include "utils/api_utilities.h"
-#include "perf_counter/perf_counters.h"
-
 #include "brief_stat.h"
+
+#include <iomanip>
+
+#include "perf_counter/perf_counters.h"
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
 
 namespace pegasus {
 
@@ -73,7 +75,7 @@ std::string get_brief_stat()
     std::vector<bool> match_result;
     dsn::perf_counters::instance().query_snapshot(stat_counters, iter, &match_result);
 
-    dassert(stat_counters.size() == match_result.size(), "");
+    CHECK_EQ(stat_counters.size(), match_result.size());
     for (int i = 0; i < match_result.size(); ++i) {
         if (!match_result[i]) {
             if (!first_item)

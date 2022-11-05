@@ -498,9 +498,9 @@ public:
     void replace_callback(rpc_response_handler &&cb)
     {
         task_state cur_state = state();
-        dassert(cur_state == TASK_STATE_READY || cur_state == TASK_STATE_RUNNING,
-                "invalid task_state: %s",
-                enum_to_string(cur_state));
+        CHECK(cur_state == TASK_STATE_READY || cur_state == TASK_STATE_RUNNING,
+              "invalid task_state: {}",
+              enum_to_string(cur_state));
         _cb = std::move(cb);
     }
     void replace_callback(const rpc_response_handler &cb)

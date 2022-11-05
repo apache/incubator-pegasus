@@ -408,10 +408,7 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
         }
     }
 
-    dassert(request.last_committed_decree_in_app <= local_committed_decree,
-            "%" PRId64 " VS %" PRId64 "",
-            request.last_committed_decree_in_app,
-            local_committed_decree);
+    CHECK_LE(request.last_committed_decree_in_app, local_committed_decree);
 
     const decree learn_start_decree = get_learn_start_decree(request);
     response.state.__set_learn_start_decree(learn_start_decree);
@@ -558,13 +555,8 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 {
     _checker.only_one_thread_access();
 
-    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(),
-            "invalid partition status, status = %s",
-            enum_to_string(status()));
-    dassert(req.signature == (int64_t)_potential_secondary_states.learning_version,
-            "invalid learn signature, %" PRId64 " VS %" PRId64 "",
-            req.signature,
-            (int64_t)_potential_secondary_states.learning_version);
+    CHECK_EQ(partition_status::PS_POTENTIAL_SECONDARY, status());
+    CHECK_EQ(req.signature, _potential_secondary_states.learning_version);
 
     if (err != ERR_OK) {
         handle_learning_error(err, false);
@@ -697,8 +689,8 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         }
 
         if (err == ERR_OK) {
-            dassert(_app->last_committed_decree() == 0, "must be zero after app::open(true)");
-            dassert(_app->last_durable_decree() == 0, "must be zero after app::open(true)");
+            CHECK_EQ_MSG(_app->last_committed_decree(), 0, "must be zero after app::open(true)");
+            CHECK_EQ_MSG(_app->last_durable_decree(), 0, "must be zero after app::open(true)");
 
             // reset prepare list
             _prepare_list->reset(0);
@@ -761,14 +753,10 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     }
 
     if (resp.prepare_start_decree != invalid_decree) {
-        dassert(resp.type == learn_type::LT_CACHE,
-                "invalid learn_type, type = %s",
-                enum_to_string(resp.type));
-        dassert(resp.state.files.size() == 0, "");
-        dassert(_potential_secondary_states.learning_status ==
-                    learner_status::LearningWithoutPrepare,
-                "invalid learning_status, status = %s",
-                enum_to_string(_potential_secondary_states.learning_status));
+        CHECK_EQ(resp.type, learn_type::LT_CACHE);
+        CHECK(resp.state.files.empty(), "");
+        CHECK_EQ(_potential_secondary_states.learning_status,
+                 learner_status::LearningWithoutPrepare);
         _potential_secondary_states.learning_status = learner_status::LearningWithPrepareTransient;
 
         // reset log positions for later mutations
@@ -859,12 +847,8 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         // further states are synced using 2pc, and we must commit now as those later 2pc messages
         // thinks they should
         _prepare_list->commit(resp.prepare_start_decree - 1, COMMIT_TO_DECREE_HARD);
-        dassert(_prepare_list->last_committed_decree() == _app->last_committed_decree(),
-                "last_committed_decree of prepare_list and app isn't equal, %" PRId64 " VS %" PRId64
-                "",
-                _prepare_list->last_committed_decree(),
-                _app->last_committed_decree());
-        dassert(resp.state.files.size() == 0, "");
+        CHECK_EQ(_prepare_list->last_committed_decree(), _app->last_committed_decree());
+        CHECK(resp.state.files.empty(), "");
 
         // all state is complete
         dassert(_app->last_committed_decree() + 1 >=
@@ -1078,13 +1062,11 @@ void replica::on_copy_remote_state_completed(error_code err,
     if (err != ERR_OK) {
         // do nothing
     } else if (_potential_secondary_states.learning_status == learner_status::LearningWithPrepare) {
-        dassert(resp.type == learn_type::LT_CACHE,
-                "invalid learn_type, type = %s",
-                enum_to_string(resp.type));
+        CHECK_EQ(resp.type, learn_type::LT_CACHE);
     } else {
-        dassert(resp.type == learn_type::LT_APP || resp.type == learn_type::LT_LOG,
-                "invalid learn_type, type = %s",
-                enum_to_string(resp.type));
+        CHECK(resp.type == learn_type::LT_APP || resp.type == learn_type::LT_LOG,
+              "invalid learn_type, type = {}",
+              enum_to_string(resp.type));
 
         learn_state lstate;
         lstate.from_decree_excluded = resp.state.from_decree_excluded;
@@ -1105,17 +1087,11 @@ void replica::on_copy_remote_state_completed(error_code err,
             err = _app->apply_checkpoint(replication_app_base::chkpt_apply_mode::learn, lstate);
             if (err == ERR_OK) {
 
-                dassert(_app->last_committed_decree() >= _app->last_durable_decree(),
-                        "invalid app state, %" PRId64 " VS %" PRId64 "",
-                        _app->last_committed_decree(),
-                        _app->last_durable_decree());
+                CHECK_GE(_app->last_committed_decree(), _app->last_durable_decree());
                 // because if the original _app->last_committed_decree > resp.last_committed_decree,
                 // the learn_start_decree will be set to 0, which makes learner to learn from
                 // scratch
-                dassert(_app->last_committed_decree() <= resp.last_committed_decree,
-                        "invalid app state, %" PRId64 " VS %" PRId64 "",
-                        _app->last_committed_decree(),
-                        resp.last_committed_decree);
+                CHECK_LE(_app->last_committed_decree(), resp.last_committed_decree);
                 LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
                          "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
                          "checkpoint duration = %" PRIu64
@@ -1219,10 +1195,7 @@ void replica::on_copy_remote_state_completed(error_code err,
                  _app->last_durable_decree());
 
         if (err == ERR_OK) {
-            dassert(_app->last_committed_decree() == _app->last_durable_decree(),
-                    "%" PRId64 " VS %" PRId64 "",
-                    _app->last_committed_decree(),
-                    _app->last_durable_decree());
+            CHECK_EQ(_app->last_committed_decree(), _app->last_durable_decree());
         }
     }
 
@@ -1420,16 +1393,9 @@ void replica::on_learn_completion_notification_reply(error_code err,
 {
     _checker.only_one_thread_access();
 
-    dassert(partition_status::PS_POTENTIAL_SECONDARY == status(),
-            "invalid partition_status, status = %s",
-            enum_to_string(status()));
-    dassert(_potential_secondary_states.learning_status == learner_status::LearningSucceeded,
-            "invalid learner_status, status = %s",
-            enum_to_string(_potential_secondary_states.learning_status));
-    dassert(report.learner_signature == (int64_t)_potential_secondary_states.learning_version,
-            "%" PRId64 " VS %" PRId64 "",
-            report.learner_signature,
-            (int64_t)_potential_secondary_states.learning_version);
+    CHECK_EQ(partition_status::PS_POTENTIAL_SECONDARY, status());
+    CHECK_EQ(_potential_secondary_states.learning_status, learner_status::LearningSucceeded);
+    CHECK_EQ(report.learner_signature, _potential_secondary_states.learning_version);
 
     if (err != ERR_OK) {
         handle_learning_error(err, false);

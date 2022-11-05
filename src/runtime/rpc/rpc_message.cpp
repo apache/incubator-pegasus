@@ -264,9 +264,9 @@ message_ex *message_ex::copy_and_prepare_send(bool clone_content)
 
     if (_is_read) {
         // the message_header is hidden ahead of the buffer, expose it to buffer
-        dassert(buffers.size() == 1, "there must be only one buffer for read msg");
-        dassert((char *)header + sizeof(message_header) == (char *)buffers[0].data(),
-                "header and content must be contigous");
+        CHECK_EQ_MSG(buffers.size(), 1, "there must be only one buffer for read msg");
+        CHECK((char *)header + sizeof(message_header) == (char *)buffers[0].data(),
+              "header and content must be contigous");
 
         copy->buffers[0] = copy->buffers[0].range(-(int)sizeof(message_header));
 
@@ -406,8 +406,7 @@ void message_ex::write_next(void **ptr, size_t *size, size_t min_size)
     this->_rw_offset = 0;
     this->buffers.push_back(buffer);
 
-    dassert(this->_rw_index + 1 == (int)this->buffers.size(),
-            "message write buffer count is not right");
+    CHECK_EQ_MSG(_rw_index + 1, buffers.size(), "message write buffer count is not right");
 }
 
 void message_ex::write_commit(size_t size)

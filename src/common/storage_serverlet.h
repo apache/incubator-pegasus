@@ -105,10 +105,10 @@ protected:
         dassert(s_handlers.emplace(name, h).second, "handler %s has already been registered", name);
 
         s_vhandlers.resize(rpc_code + 1);
-        dassert(s_vhandlers[rpc_code] == nullptr,
-                "handler %s(%d) has already been registered",
-                rpc_code.to_string(),
-                rpc_code.code());
+        CHECK(s_vhandlers[rpc_code] == nullptr,
+              "handler {}({}) has already been registered",
+              rpc_code,
+              rpc_code.code());
         s_vhandlers[rpc_code] = h;
         return true;
     }

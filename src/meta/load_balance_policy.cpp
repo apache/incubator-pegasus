@@ -191,8 +191,9 @@ void load_balance_policy::init(const meta_view *global_view, migration_list *lis
 bool load_balance_policy::primary_balance(const std::shared_ptr<app_state> &app,
                                           bool only_move_primary)
 {
-    dassert(_alive_nodes >= FLAGS_min_live_node_count_for_unfreeze,
-            "too few alive nodes will lead to freeze");
+    CHECK_GE_MSG(_alive_nodes,
+                 FLAGS_min_live_node_count_for_unfreeze,
+                 "too few alive nodes will lead to freeze");
     LOG_INFO_F("primary balancer for app({}:{})", app->app_name, app->app_id);
 
     auto graph = ford_fulkerson::builder(app, *_global_view->nodes, address_id).build();
@@ -278,12 +279,13 @@ void load_balance_policy::start_moving_primary(const std::shared_ptr<app_state> 
 {
     std::list<dsn::gpid> potential_moving = calc_potential_moving(app, from, to);
     auto potential_moving_size = potential_moving.size();
-    dassert_f(plan_moving <= potential_moving_size,
-              "from({}) to({}) plan({}), can_move({})",
-              from.to_string(),
-              to.to_string(),
-              plan_moving,
-              potential_moving_size);
+    CHECK_LE_MSG(plan_moving,
+                 potential_moving_size,
+                 "from({}) to({}) plan({}), can_move({})",
+                 from,
+                 to,
+                 plan_moving,
+                 potential_moving_size);
 
     while (plan_moving-- > 0) {
         dsn::gpid selected = select_moving(potential_moving, prev_load, current_load, from, to);

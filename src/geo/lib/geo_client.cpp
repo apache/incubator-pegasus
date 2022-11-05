@@ -81,10 +81,7 @@ geo_client::geo_client(const char *config_file,
     _max_level = (int32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "max_level", 16, "max cell level for scan");
 
-    dassert_f(_min_level < _max_level,
-              "_min_level({}) must be less than _max_level({})",
-              _min_level,
-              _max_level);
+    CHECK_LT(_min_level, _max_level);
 
     uint32_t latitude_index = (uint32_t)dsn_config_get_value_uint64(
         "geo_client.lib", "latitude_index", 5, "latitude index in value");

@@ -15,10 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <numeric>
+#include "math.h"
+
 #include <algorithm>
-#include <math.h>
+#include <numeric>
+
 #include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
 #include "utils/math.h"
 
 namespace dsn {
@@ -26,7 +29,7 @@ namespace utils {
 
 double mean_stddev(const std::vector<uint32_t> &result_set, bool partial_sample)
 {
-    dassert(result_set.size() > 1, "invalid sample data input for stddev");
+    CHECK_GT_MSG(result_set.size(), 1, "invalid sample data input for stddev");
 
     double sum = std::accumulate(result_set.begin(), result_set.end(), 0.0);
     double mean = sum / result_set.size();

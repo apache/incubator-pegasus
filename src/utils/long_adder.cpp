@@ -73,7 +73,7 @@ cacheline_aligned_int64 *const kCellsLocked = reinterpret_cast<cacheline_aligned
     // [ENOMEM]
     //     There is insufficient memory available with the requested alignment.
     // Thus making an assertion here is enough.
-    dassert_f(err == 0, "error calling posix_memalign: {}", utils::safe_strerror(err).c_str());
+    CHECK_EQ_MSG(err, 0, "error calling posix_memalign: {}", utils::safe_strerror(err));
 
     cacheline_aligned_int64 *array = new (buffer) cacheline_aligned_int64[size];
     for (uint32_t i = 0; i < size; ++i) {

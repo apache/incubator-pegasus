@@ -249,7 +249,7 @@ int main(int argc, const char **argv)
     value_len =
         (int32_t)dsn_config_get_value_uint64("pressureclient", "value_len", 64, "value length");
 
-    dassert(qps > 0, "qps must GT 0, but qps(%d)", qps);
+    CHECK_GT(qps, 0);
     CHECK(!op_name.empty(), "must assign operation name");
 
     LOG_INFO("pressureclient %s qps = %d", op_name.c_str(), qps);

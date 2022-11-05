@@ -25,11 +25,12 @@
  */
 
 #include <iostream>
-#include <thread>
 #include <sstream>
+#include <thread>
 
-#include "utils/utils.h"
 #include "utils/command_manager.h"
+#include "utils/fmt_logging.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
@@ -45,7 +46,7 @@ dsn_handle_t command_manager::register_command(const std::vector<std::string> &c
         if (!cmd.empty()) {
             is_valid_cmd = true;
             auto it = _handlers.find(cmd);
-            dassert(it == _handlers.end(), "command '%s' already regisered", cmd.c_str());
+            CHECK(it == _handlers.end(), "command '{}' already regisered", cmd);
         }
     }
     dassert(is_valid_cmd, "should not register empty command");

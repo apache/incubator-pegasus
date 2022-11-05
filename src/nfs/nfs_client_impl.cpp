@@ -200,7 +200,8 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
             req_offset += req_size;
             size -= req_size;
             if (size <= 0) {
-                dassert(size == 0, "last request must read exactly the remaing size of the file");
+                CHECK_EQ_MSG(
+                    size, 0, "last request must read exactly the remaing size of the file");
                 break;
             }
 

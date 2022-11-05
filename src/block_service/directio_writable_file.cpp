@@ -63,7 +63,7 @@ direct_io_writable_file::~direct_io_writable_file()
         return;
     }
     // Here is an ensurance, users shuold call finalize manually
-    dassert(_offset == 0, "finalize() should be called before destructor");
+    CHECK_EQ_MSG(_offset, 0, "finalize() should be called before destructor");
 
     free(_buffer);
     close(_fd);
@@ -92,7 +92,7 @@ bool direct_io_writable_file::initialize()
 
 bool direct_io_writable_file::finalize()
 {
-    dassert(_buffer && _fd >= 0, "Initialize the instance first");
+    CHECK(_buffer && _fd >= 0, "Initialize the instance first");
 
     if (_offset > 0) {
         if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
@@ -108,7 +108,7 @@ bool direct_io_writable_file::finalize()
 
 bool direct_io_writable_file::write(const char *s, size_t n)
 {
-    dassert(_buffer && _fd >= 0, "Initialize the instance first");
+    CHECK(_buffer && _fd >= 0, "Initialize the instance first");
 
     uint32_t remaining = n;
     while (remaining > 0) {

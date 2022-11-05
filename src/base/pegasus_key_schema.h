@@ -40,7 +40,7 @@ namespace pegasus {
 template <typename T>
 void pegasus_generate_key(::dsn::blob &key, const T &hash_key, const T &sort_key)
 {
-    dassert(hash_key.length() < UINT16_MAX, "hash key length must be less than UINT16_MAX");
+    CHECK_LT(hash_key.length(), UINT16_MAX);
 
     int len = 2 + hash_key.length() + sort_key.length();
     std::shared_ptr<char> buf(::dsn::utils::make_shared_array<char>(len));
@@ -64,7 +64,7 @@ void pegasus_generate_key(::dsn::blob &key, const T &hash_key, const T &sort_key
 template <typename T>
 void pegasus_generate_next_blob(::dsn::blob &next, const T &hash_key)
 {
-    dassert(hash_key.length() < UINT16_MAX, "hash key length must be less than UINT16_MAX");
+    CHECK_LT(hash_key.length(), UINT16_MAX);
 
     int hash_key_len = hash_key.length();
     std::shared_ptr<char> buf(::dsn::utils::make_shared_array<char>(hash_key_len + 2));
@@ -102,14 +102,13 @@ void pegasus_generate_next_blob(::dsn::blob &next, const T &hash_key, const T &s
 inline void
 pegasus_restore_key(const ::dsn::blob &key, ::dsn::blob &hash_key, ::dsn::blob &sort_key)
 {
-    dassert(key.length() >= 2, "key length must be no less than 2");
+    CHECK_GE(key.length(), 2);
 
     // hash_key_len is in big endian
     uint16_t hash_key_len = ::dsn::endian::ntoh(*(uint16_t *)(key.data()));
 
     if (hash_key_len > 0) {
-        dassert(key.length() >= 2 + hash_key_len,
-                "key length must be no less than (2 + hash_key_len)");
+        CHECK_GE(key.length(), 2 + hash_key_len);
         hash_key = key.range(2, hash_key_len);
     } else {
         hash_key = ::dsn::blob();
@@ -127,14 +126,13 @@ pegasus_restore_key(const ::dsn::blob &key, ::dsn::blob &hash_key, ::dsn::blob &
 inline void
 pegasus_restore_key(const ::dsn::blob &key, std::string &hash_key, std::string &sort_key)
 {
-    dassert(key.length() >= 2, "key length must be no less than 2");
+    CHECK_GE(key.length(), 2);
 
     // hash_key_len is in big endian
     uint16_t hash_key_len = ::dsn::endian::ntoh(*(uint16_t *)(key.data()));
 
     if (hash_key_len > 0) {
-        dassert(key.length() >= 2 + hash_key_len,
-                "key length must be no less than (2 + hash_key_len)");
+        CHECK_GE(key.length(), 2 + hash_key_len);
         hash_key.assign(key.data() + 2, hash_key_len);
     } else {
         hash_key.clear();
@@ -151,15 +149,14 @@ pegasus_restore_key(const ::dsn::blob &key, std::string &hash_key, std::string &
 template <typename T>
 inline uint64_t pegasus_key_hash(const T &key)
 {
-    dassert(key.size() >= 2, "key length must be no less than 2");
+    CHECK_GE(key.size(), 2);
 
     // hash_key_len is in big endian
     uint16_t hash_key_len = ::dsn::endian::ntoh(*(uint16_t *)(key.data()));
 
     if (hash_key_len > 0) {
         // hash_key_len > 0, compute hash from hash_key
-        dassert(key.size() >= 2 + hash_key_len,
-                "key length must be no less than (2 + hash_key_len)");
+        CHECK_GE(key.size(), 2 + hash_key_len);
         return dsn::utils::crc64_calc(key.data() + 2, hash_key_len, 0);
     } else {
         // hash_key_len == 0, compute hash from sort_key

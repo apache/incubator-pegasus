@@ -97,13 +97,13 @@ void newly_partitions::newly_add_partition(int32_t app_id)
 void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
 {
     auto iter = primaries.find(app_id);
-    dassert(iter != primaries.end(), "invalid app_id, app_id = %d", app_id);
-    dassert(iter->second > 0, "invalid primary count, cnt = %d", iter->second);
+    CHECK(iter != primaries.end(), "invalid app_id, app_id = {}", app_id);
+    CHECK_GT_MSG(iter->second, 0, "invalid primary count");
     if (0 == (--iter->second)) {
         primaries.erase(iter);
     }
 
-    dassert(total_primaries > 0, "invalid total primaires = %d", total_primaries);
+    CHECK_GT_MSG(total_primaries, 0, "invalid total primaires");
     --total_primaries;
 
     if (!only_primary) {
@@ -114,13 +114,13 @@ void newly_partitions::newly_remove_primary(int32_t app_id, bool only_primary)
 void newly_partitions::newly_remove_partition(int32_t app_id)
 {
     auto iter = partitions.find(app_id);
-    dassert(iter != partitions.end(), "invalid app_id, app_id = %d", app_id);
-    dassert(iter->second > 0, "invalid partition count, cnt = %d", iter->second);
+    CHECK(iter != partitions.end(), "invalid app_id, app_id = {}", app_id);
+    CHECK_GT_MSG(iter->second, 0, "invalid partition count");
     if ((--iter->second) == 0) {
         partitions.erase(iter);
     }
 
-    dassert(total_partitions > 0, "invalid total partitions = ", total_partitions);
+    CHECK_GT(total_partitions, 0);
     --total_partitions;
 }
 

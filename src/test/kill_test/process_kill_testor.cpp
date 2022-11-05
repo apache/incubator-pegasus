@@ -51,7 +51,7 @@ process_kill_testor::process_kill_testor(const char *config_file) : kill_testor(
     // initialize killer_handler
     std::string killer_name =
         dsn_config_get_value_string(section, "killer_handler", "", "killer handler");
-    dassert(killer_name.size() > 0, "");
+    CHECK(!killer_name.empty(), "");
     _killer_handler.reset(killer_handler::new_handler(killer_name.c_str()));
     CHECK(_killer_handler, "invalid killer_name({})", killer_name);
 

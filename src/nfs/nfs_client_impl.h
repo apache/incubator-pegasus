@@ -93,7 +93,7 @@ public:
         {
             if (file_handle != nullptr) {
                 auto err = file::close(file_handle);
-                dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+                CHECK_EQ_MSG(err, ERR_OK, "file::close failed");
             }
         }
     };

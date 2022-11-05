@@ -176,10 +176,11 @@ void meta_split_service::register_child_on_meta(register_child_rpc rpc)
             app_name,
             child_gpid);
         const auto &child_config = app->partitions[child_gpid.get_partition_index()];
-        dassert_f(child_config.ballot > 0,
-                  "app({}) partition({}) should have been registered",
-                  app_name,
-                  child_gpid);
+        CHECK_GT_MSG(child_config.ballot,
+                     0,
+                     "app({}) partition({}) should have been registered",
+                     app_name,
+                     child_gpid);
         response.err = ERR_CHILD_REGISTERED;
         response.parent_config = parent_config;
         return;
@@ -267,7 +268,7 @@ void meta_split_service::on_add_child_on_remote_storage_reply(error_code ec,
                              std::chrono::seconds(delay));
         return;
     }
-    dassert_f(ec == ERR_OK, "we can't handle this right now, err = {}", ec);
+    CHECK_EQ_MSG(ec, ERR_OK, "we can't handle this right now");
 
     LOG_INFO_F("parent({}) resgiter child({}) on remote storage succeed", parent_gpid, child_gpid);
 
@@ -513,10 +514,7 @@ void meta_split_service::notify_stop_split(notify_stop_split_rpc rpc)
     }
 
     // canceling split
-    dassert_f(request.partition_count * 2 == app->partition_count,
-              "wrong partition_count, request({}) vs meta({})",
-              request.partition_count,
-              app->partition_count);
+    CHECK_EQ_MSG(request.partition_count * 2, app->partition_count, "wrong partition_count");
     app->helpers->split_states.status.erase(request.parent_gpid.get_partition_index());
     response.err = ERR_OK;
     // when all partitions finish, partition_count should be updated
@@ -563,9 +561,10 @@ void meta_split_service::query_child_state(query_child_state_rpc rpc)
         return;
     }
 
-    dassert_f(app->partition_count == request.partition_count * 2,
-              "app({}) has invalid partition_count",
-              app_name);
+    CHECK_EQ_MSG(app->partition_count,
+                 request.partition_count * 2,
+                 "app({}) has invalid partition_count",
+                 app_name);
 
     auto child_pidx = parent_pid.get_partition_index() + request.partition_count;
     if (app->partitions[child_pidx].ballot == invalid_ballot) {

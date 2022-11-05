@@ -57,7 +57,7 @@ static const char *states[] = {
 
 static inline const char *string_state(lock_state state)
 {
-    dassert(state < lock_state::state_count, "state = %d", (int)(state));
+    CHECK_LT(state, lock_state::state_count);
     return states[state];
 }
 
@@ -73,7 +73,7 @@ static bool is_zookeeper_timeout(int zookeeper_error)
             if (code == allow_list[i])                                                             \
                 break;                                                                             \
         }                                                                                          \
-        dassert(i < allow_list_size, "invalid code(%s)", code_str);                                \
+        CHECK_LT_MSG(i, allow_list_size, "invalid code({})", code_str);                            \
     } while (0)
 
 #define __execute(cb, _this) tasking::enqueue(TASK_CODE_DLOCK, nullptr, cb, _this->hash())
@@ -368,11 +368,12 @@ void lock_struct::after_self_check(lock_struct_ptr _this,
         _this->on_expire();
         return;
     }
-    dassert(*value == _this->_myself._node_value,
-            "lock(%s) get wrong value, local myself(%s), from zookeeper(%s)",
-            _this->_lock_id.c_str(),
-            _this->_myself._node_value.c_str(),
-            value->c_str());
+    CHECK_EQ_MSG(*value,
+                 _this->_myself._node_value,
+                 "lock({}) get wrong value, local myself({}), from zookeeper({})",
+                 _this->_lock_id,
+                 _this->_myself._node_value,
+                 *value);
 }
 
 void lock_struct::get_lock_owner(bool watch_myself)
@@ -486,10 +487,11 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
         bool watch_myself = false;
         if (min_seq == myself_seq) {
             // i am the smallest one, so i get the lock :-)
-            dassert(min_pos == my_pos,
-                    "same sequence node number on zookeeper, dir(%s), number(%d)",
-                    _this->_lock_dir.c_str(),
-                    myself_seq);
+            CHECK_EQ_MSG(min_pos,
+                         my_pos,
+                         "same sequence node number on zookeeper, dir({}), number({})",
+                         _this->_lock_dir,
+                         myself_seq);
             _this->_state = lock_state::locked;
             _this->_owner._node_value = _this->_myself._node_value;
             _this->_dist_lock_service->refresh_lock_cache(

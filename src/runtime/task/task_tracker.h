@@ -24,23 +24,15 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     tracker abstraction for tasks, to ensure the tasks are cancelled
- *     appropriately when the context is gone
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
+#include <atomic>
+
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/link.h"
 #include "utils/synchronize.h"
-#include "utils/error_code.h"
-#include "utils/api_utilities.h"
-#include <atomic>
 
 namespace dsn {
 //
@@ -184,7 +176,7 @@ private:
 // ------- inlined implementation ----------
 inline void trackable_task::set_tracker(task_tracker *owner, task *tsk)
 {
-    dassert(_owner == nullptr, "task tracker is already set");
+    CHECK(_owner == nullptr, "task tracker is already set");
     _owner = owner;
     _task = tsk;
     _deleting_owner.store(OWNER_DELETE_NOT_LOCKED, std::memory_order_release);

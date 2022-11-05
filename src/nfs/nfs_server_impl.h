@@ -113,7 +113,7 @@ private:
         ~file_handle_info_on_server()
         {
             error_code err = file::close(file_handle);
-            dassert(err == ERR_OK, "file::close failed, err = %s", err.to_string());
+            CHECK_EQ_MSG(err, ERR_OK, "file::close failed");
         }
     };
 

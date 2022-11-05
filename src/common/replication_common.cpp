@@ -414,10 +414,7 @@ void replication_options::initialize()
 
 void replication_options::sanity_check()
 {
-    dassert(max_mutation_count_in_prepare_list >= staleness_for_commit,
-            "%d VS %d",
-            max_mutation_count_in_prepare_list,
-            staleness_for_commit);
+    CHECK_GE(max_mutation_count_in_prepare_list, staleness_for_commit);
 }
 
 int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
@@ -478,11 +475,12 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
         std::vector<std::string> hostname_port;
         uint32_t ip = 0;
         utils::split_args(s.c_str(), hostname_port, ':');
-        dassert_f(2 == hostname_port.size(),
-                  "invalid address '{}' specified in config [{}].{}",
-                  s.c_str(),
-                  section,
-                  key);
+        CHECK_EQ_MSG(2,
+                     hostname_port.size(),
+                     "invalid address '{}' specified in config [{}].{}",
+                     s,
+                     section,
+                     key);
         uint32_t port_num = 0;
         CHECK(dsn::internal::buf2unsigned(hostname_port[1], port_num) && port_num < UINT16_MAX,
               "invalid address '{}' specified in config [{}].{}",

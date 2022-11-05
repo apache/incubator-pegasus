@@ -245,7 +245,7 @@ void service_engine::start_node(service_app_spec &app_spec)
 
         auto node = std::make_shared<service_node>(app_spec);
         error_code err = node->start();
-        dassert_f(err == ERR_OK, "service node start failed, err = {}", err.to_string());
+        CHECK_EQ_MSG(err, ERR_OK, "service node start failed");
 
         _nodes_by_app_id[node->id()] = node;
     }

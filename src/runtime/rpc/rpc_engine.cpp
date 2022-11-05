@@ -67,8 +67,8 @@ private:
 rpc_client_matcher::~rpc_client_matcher()
 {
     for (int i = 0; i < MATCHER_BUCKET_NR; i++) {
-        dassert(_requests[i].size() == 0,
-                "all rpc entries must be removed before the matcher ends");
+        CHECK_EQ_MSG(
+            _requests[i].size(), 0, "all rpc entries must be removed before the matcher ends");
     }
 }
 
@@ -87,8 +87,8 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
             _requests[bucket_index].erase(it);
         } else {
             if (reply) {
-                dassert(reply->get_count() == 0,
-                        "reply should not be referenced by anybody so far");
+                CHECK_EQ_MSG(
+                    reply->get_count(), 0, "reply should not be referenced by anybody so far");
                 delete reply;
             }
             return false;
@@ -154,7 +154,7 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
         // TODO(qinzuoyan): reset timeout to new value
         _engine->call_ip(addr, req, call, true);
 
-        dassert(reply->get_count() == 0, "reply should not be referenced by anybody so far");
+        CHECK_EQ_MSG(reply->get_count(), 0, "reply should not be referenced by anybody so far");
         delete reply;
     } else {
         // server address side effect
@@ -327,8 +327,8 @@ rpc_server_dispatcher::~rpc_server_dispatcher()
     }
     _vhandlers.clear();
     _handlers.clear();
-    dassert(_handlers.size() == 0,
-            "please make sure all rpc handlers are unregistered at this point");
+    CHECK_EQ_MSG(
+        _handlers.size(), 0, "please make sure all rpc handlers are unregistered at this point");
 }
 
 bool rpc_server_dispatcher::register_rpc_handler(dsn::task_code code,
@@ -543,7 +543,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
             msg->header->from_address.to_string(),
             msg->header->trace_id);
 
-        dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
+        CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
         delete msg;
         return;
     }
@@ -591,7 +591,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
                         msg->header->from_address.to_string(),
                         msg->header->trace_id);
 
-            dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
+            CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
             msg->add_ref();
             dsn_rpc_reply(msg->create_response(), ::dsn::ERR_HANDLER_NOT_FOUND);
             msg->release_ref();
@@ -602,7 +602,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
                     msg->header->from_address.to_string(),
                     msg->header->trace_id);
 
-        dassert(msg->get_count() == 0, "request should not be referenced by anybody so far");
+        CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
         msg->add_ref();
         dsn_rpc_reply(msg->create_response(), ::dsn::ERR_HANDLER_NOT_FOUND);
         msg->release_ref();

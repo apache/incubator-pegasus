@@ -85,10 +85,7 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
     if (!failure_detector::end_ping_internal(err, ack))
         return;
 
-    dassert(ack.this_node == _meta_servers.group_address()->leader(),
-            "ack.this_node[%s] vs meta_servers.leader[%s]",
-            ack.this_node.to_string(),
-            _meta_servers.group_address()->leader().to_string());
+    CHECK_EQ(ack.this_node, _meta_servers.group_address()->leader());
 
     if (ERR_OK != err) {
         rpc_address next = _meta_servers.group_address()->next(ack.this_node);

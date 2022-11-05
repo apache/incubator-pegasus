@@ -172,7 +172,7 @@ void mutation::add_client_request(task_code code, dsn::message_ex *request)
 
     client_requests.push_back(request);
 
-    dassert(client_requests.size() == data.updates.size(), "size must be equal");
+    CHECK_EQ(client_requests.size(), data.updates.size());
 }
 
 void mutation::write_to(const std::function<void(const blob &)> &inserter) const
