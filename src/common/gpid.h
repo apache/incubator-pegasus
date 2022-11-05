@@ -26,6 +26,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ostream>
 #include <thrift/protocol/TProtocol.h>
 
 namespace dsn {
