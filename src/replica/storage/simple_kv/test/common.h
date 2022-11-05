@@ -98,7 +98,7 @@ struct replica_id
     bool operator!=(const replica_id &o) const { return !(*this == o); }
     std::string to_string() const;
     bool from_string(const std::string &str);
-    std::ostream &operator<<(std::ostream &os, const replica_id &rid)
+    friend std::ostream &operator<<(std::ostream &os, const replica_id &rid)
     {
         return os << rid.to_string();
     }

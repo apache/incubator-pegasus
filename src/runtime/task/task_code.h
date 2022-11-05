@@ -121,7 +121,10 @@ public:
     static task_code try_get(const char *name, task_code default_value);
     static task_code try_get(const std::string &name, task_code default_value);
 
-    std::ostream &operator<<(std::ostream &os, const task_code &tc) { return os << tc.to_string(); }
+    friend std::ostream &operator<<(std::ostream &os, const task_code &tc)
+    {
+        return os << tc.to_string();
+    }
 
 private:
     task_code(const char *name);

@@ -81,7 +81,7 @@ struct customized_id
     static bool is_exist(const char *name);
     static customized_id from_string(const char *name, customized_id invalid_value);
 
-    std::ostream &operator<<(std::ostream &os, const customized_id &id)
+    friend std::ostream &operator<<(std::ostream &os, const customized_id &id)
     {
         return os << id.to_string();
     }

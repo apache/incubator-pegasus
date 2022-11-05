@@ -183,7 +183,7 @@ public:
         }
     }
 
-    std::ostream &operator<<(std::ostream &os, const rpc_address &addr)
+    friend std::ostream &operator<<(std::ostream &os, const rpc_address &addr)
     {
         return os << addr.to_string();
     }

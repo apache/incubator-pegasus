@@ -127,7 +127,10 @@ public:
     }
 
 public:
-    std::ostream &operator<<(std::ostream &os, const error_s &s) { return os << s.description(); }
+    friend std::ostream &operator<<(std::ostream &os, const error_s &s)
+    {
+        return os << s.description();
+    }
 
     friend bool operator==(const error_s lhs, const error_s &rhs)
     {
