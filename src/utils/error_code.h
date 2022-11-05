@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <ostream>
+
 #include "customizable_id.h"
 #include <thrift/protocol/TProtocol.h>
 
