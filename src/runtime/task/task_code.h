@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <ostream>
+
 #include "utils/ports.h"
 #include "utils/enum_helper.h"
 #include "utils/threadpool_code.h"
