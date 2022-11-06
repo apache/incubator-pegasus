@@ -25,29 +25,16 @@
  */
 
 #include <algorithm>
+
 #include <gtest/gtest.h>
 
+#include "meta/greedy_load_balancer.h"
 #include "meta/meta_data.h"
 #include "meta/server_load_balancer.h"
-#include "meta/greedy_load_balancer.h"
 #include "meta/test/misc/misc.h"
+#include "utils/fmt_logging.h"
 
 using namespace dsn::replication;
-
-#ifdef ASSERT_EQ
-#undef ASSERT_EQ
-#endif
-#define ASSERT_EQ(left, right) CHECK((left) == (right), "")
-
-#ifdef ASSERT_TRUE
-#undef ASSERT_TRUE
-#endif
-#define ASSERT_TRUE(exp) CHECK((exp), "")
-
-#ifdef ASSERT_FALSE
-#undef ASSERT_FALSE
-#endif
-#define ASSERT_FALSE(exp) CHECK(!(exp), "")
 
 class simple_priority_queue
 {
@@ -143,8 +130,8 @@ void generate_balanced_apps(/*out*/ app_mapper &apps,
 
     apps.emplace(the_app->app_id, the_app);
 
-    ASSERT_TRUE(pri_max - pri_min <= 1);
-    ASSERT_TRUE(part_max - part_min <= 1);
+    CHECK_LE(pri_max - pri_min, 1);
+    CHECK_LE(part_max - part_min, 1);
 }
 
 void random_move_primary(app_mapper &apps, node_mapper &nodes, int primary_move_ratio)
@@ -184,7 +171,7 @@ void greedy_balancer_perfect_move_primary()
         for (const auto &kv : ml) {
             const std::shared_ptr<configuration_balancer_request> &req = kv.second;
             for (const configuration_proposal_action &act : req->action_list) {
-                ASSERT_TRUE(act.type != config_type::CT_ADD_SECONDARY_FOR_LB);
+                CHECK_NE(act.type, config_type::CT_ADD_SECONDARY_FOR_LB);
             }
         }
         glb.check({&apps, &nodes}, ml);

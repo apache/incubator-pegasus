@@ -24,19 +24,18 @@
  * THE SOFTWARE.
  */
 
-#include <cstdlib>
-#include <iostream>
-#include <boost/lexical_cast.hpp>
-#include "utils/rand.h"
-
-#include "common/replication_common.h"
 #include "misc.h"
 
-using namespace dsn::replication;
+#include <cstdlib>
+#include <iostream>
 
-#define ASSERT_EQ(left, right) CHECK((left) == (right), "")
-#define ASSERT_TRUE(exp) CHECK((exp), "")
-#define ASSERT_FALSE(exp) CHECK(!(exp), "")
+#include <boost/lexical_cast.hpp>
+
+#include "common/replication_common.h"
+#include "utils/fmt_logging.h"
+#include "utils/rand.h"
+
+using namespace dsn::replication;
 
 uint32_t random32(uint32_t min, uint32_t max)
 {
@@ -88,7 +87,7 @@ void generate_node_mapper(
                 ns->put_partition(pc.pid, true);
             }
             for (const dsn::rpc_address &sec : pc.secondaries) {
-                ASSERT_FALSE(sec.is_invalid());
+                CHECK(!sec.is_invalid(), "");
                 ns = get_node_state(output_nodes, sec, true);
                 ns->put_partition(pc.pid, false);
             }
@@ -113,10 +112,10 @@ void generate_app(/*out*/ std::shared_ptr<app_state> &app,
             if (i != p)
                 pc.secondaries.push_back(node_list[indices[i]]);
 
-        ASSERT_FALSE(pc.primary.is_invalid());
-        ASSERT_FALSE(is_secondary(pc, pc.primary));
-        ASSERT_EQ(pc.secondaries.size(), 2);
-        ASSERT_TRUE(pc.secondaries[0] != pc.secondaries[1]);
+        CHECK(!pc.primary.is_invalid(), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
+        CHECK_EQ(pc.secondaries.size(), 2);
+        CHECK_NE(pc.secondaries[0], pc.secondaries[1]);
     }
 }
 
@@ -216,26 +215,26 @@ void track_disk_info_check_and_apply(const dsn::replication::configuration_propo
                                      /*in-out*/ nodes_fs_manager &manager)
 {
     config_context *cc = get_config_context(apps, pid);
-    ASSERT_TRUE(cc != nullptr);
+    CHECK_NOTNULL(cc, "");
 
     fs_manager *target_manager = get_fs_manager(manager, act.target);
-    ASSERT_TRUE(target_manager != nullptr);
+    CHECK_NOTNULL(target_manager, "");
     fs_manager *node_manager = get_fs_manager(manager, act.node);
-    ASSERT_TRUE(node_manager != nullptr);
+    CHECK_NOTNULL(node_manager, "");
 
     std::string dir;
     replica_info ri;
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY:
         target_manager->allocate_dir(pid, "test", dir);
-        ASSERT_EQ(dsn::ERR_OK, target_manager->get_disk_tag(dir, ri.disk_tag));
+        CHECK_EQ(dsn::ERR_OK, target_manager->get_disk_tag(dir, ri.disk_tag));
         cc->collect_serving_replica(act.target, ri);
         break;
 
     case config_type::CT_ADD_SECONDARY:
     case config_type::CT_ADD_SECONDARY_FOR_LB:
         node_manager->allocate_dir(pid, "test", dir);
-        ASSERT_EQ(dsn::ERR_OK, node_manager->get_disk_tag(dir, ri.disk_tag));
+        CHECK_EQ(dsn::ERR_OK, node_manager->get_disk_tag(dir, ri.disk_tag));
         cc->collect_serving_replica(act.node, ri);
         break;
 
@@ -250,7 +249,7 @@ void track_disk_info_check_and_apply(const dsn::replication::configuration_propo
         break;
 
     default:
-        ASSERT_TRUE(false);
+        CHECK(false, "");
         break;
     }
 }
@@ -265,9 +264,9 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
     node_state *ns;
 
     ++pc.ballot;
-    ASSERT_TRUE(act.type != config_type::CT_INVALID);
-    ASSERT_FALSE(act.target.is_invalid());
-    ASSERT_FALSE(act.node.is_invalid());
+    CHECK_NE(act.type, config_type::CT_INVALID);
+    CHECK(!act.target.is_invalid(), "");
+    CHECK(!act.node.is_invalid(), "");
 
     if (manager) {
         track_disk_info_check_and_apply(act, pid, apps, nodes, *manager);
@@ -275,76 +274,76 @@ void proposal_action_check_and_apply(const configuration_proposal_action &act,
 
     switch (act.type) {
     case config_type::CT_ASSIGN_PRIMARY:
-        ASSERT_EQ(act.node, act.target);
-        ASSERT_TRUE(pc.primary.is_invalid());
-        ASSERT_TRUE(pc.secondaries.empty());
+        CHECK_EQ(act.node, act.target);
+        CHECK(pc.primary.is_invalid(), "");
+        CHECK(pc.secondaries.empty(), "");
 
         pc.primary = act.node;
         ns = &nodes[act.node];
-        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
+        CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, true);
         break;
 
     case config_type::CT_ADD_SECONDARY:
-        ASSERT_EQ(act.target, pc.primary);
-        ASSERT_FALSE(is_member(pc, act.node));
+        CHECK_EQ(act.target, pc.primary);
+        CHECK(!is_member(pc, act.node), "");
 
         pc.secondaries.push_back(act.node);
         ns = &nodes[act.node];
-        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
+        CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
         ns->put_partition(pc.pid, false);
 
         break;
 
     case config_type::CT_DOWNGRADE_TO_SECONDARY:
-        ASSERT_EQ(act.node, act.target);
-        ASSERT_EQ(act.node, pc.primary);
-        ASSERT_TRUE(nodes.find(act.node) != nodes.end());
-        ASSERT_FALSE(is_secondary(pc, pc.primary));
+        CHECK_EQ(act.node, act.target);
+        CHECK_EQ(act.node, pc.primary);
+        CHECK(nodes.find(act.node) != nodes.end(), "");
+        CHECK(!is_secondary(pc, pc.primary), "");
         nodes[act.node].remove_partition(pc.pid, true);
         pc.secondaries.push_back(pc.primary);
         pc.primary.set_invalid();
         break;
 
     case config_type::CT_UPGRADE_TO_PRIMARY:
-        ASSERT_TRUE(pc.primary.is_invalid());
-        ASSERT_EQ(act.node, act.target);
-        ASSERT_TRUE(is_secondary(pc, act.node));
-        ASSERT_TRUE(nodes.find(act.node) != nodes.end());
+        CHECK(pc.primary.is_invalid(), "");
+        CHECK_EQ(act.node, act.target);
+        CHECK(is_secondary(pc, act.node), "");
+        CHECK(nodes.find(act.node) != nodes.end(), "");
 
         ns = &nodes[act.node];
         pc.primary = act.node;
-        ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
+        CHECK(replica_helper::remove_node(act.node, pc.secondaries), "");
         ns->put_partition(pc.pid, true);
         break;
 
     case config_type::CT_ADD_SECONDARY_FOR_LB:
-        ASSERT_EQ(act.target, pc.primary);
-        ASSERT_FALSE(is_member(pc, act.node));
-        ASSERT_FALSE(act.node.is_invalid());
+        CHECK_EQ(act.target, pc.primary);
+        CHECK(!is_member(pc, act.node), "");
+        CHECK(!act.node.is_invalid(), "");
         pc.secondaries.push_back(act.node);
 
         ns = &nodes[act.node];
         ns->put_partition(pc.pid, false);
-        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
+        CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
         break;
 
     // in balancer, remove primary is not allowed
     case config_type::CT_REMOVE:
     case config_type::CT_DOWNGRADE_TO_INACTIVE:
-        ASSERT_FALSE(pc.primary.is_invalid());
-        ASSERT_EQ(pc.primary, act.target);
-        ASSERT_TRUE(is_secondary(pc, act.node));
-        ASSERT_TRUE(nodes.find(act.node) != nodes.end());
-        ASSERT_TRUE(replica_helper::remove_node(act.node, pc.secondaries));
+        CHECK(!pc.primary.is_invalid(), "");
+        CHECK_EQ(pc.primary, act.target);
+        CHECK(is_secondary(pc, act.node), "");
+        CHECK(nodes.find(act.node) != nodes.end(), "");
+        CHECK(replica_helper::remove_node(act.node, pc.secondaries), "");
 
         ns = &nodes[act.node];
-        ASSERT_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
+        CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_SECONDARY);
         ns->remove_partition(pc.pid, false);
         break;
 
     default:
-        ASSERT_TRUE(false);
+        CHECK(false, "");
         break;
     }
 }
@@ -363,16 +362,17 @@ void migration_check_and_apply(app_mapper &apps,
                   proposal->gpid.get_partition_index());
         std::shared_ptr<app_state> &the_app = apps.find(proposal->gpid.get_app_id())->second;
 
-        ASSERT_EQ(proposal->gpid.get_app_id(), the_app->app_id);
-        ASSERT_TRUE(proposal->gpid.get_partition_index() < the_app->partition_count);
+        CHECK_EQ(proposal->gpid.get_app_id(), the_app->app_id);
+        CHECK_LT(proposal->gpid.get_partition_index(), the_app->partition_count);
         dsn::partition_configuration &pc =
             the_app->partitions[proposal->gpid.get_partition_index()];
 
-        ASSERT_FALSE(pc.primary.is_invalid());
-        ASSERT_EQ(pc.secondaries.size(), 2);
-        for (auto &addr : pc.secondaries)
-            ASSERT_FALSE(addr.is_invalid());
-        ASSERT_FALSE(is_secondary(pc, pc.primary));
+        CHECK(!pc.primary.is_invalid(), "");
+        CHECK_EQ(pc.secondaries.size(), 2);
+        for (auto &addr : pc.secondaries) {
+            CHECK(!addr.is_invalid(), "");
+        }
+        CHECK(!is_secondary(pc, pc.primary), "");
 
         for (unsigned int j = 0; j < proposal->action_list.size(); ++j) {
             configuration_proposal_action &act = proposal->action_list[j];
@@ -388,22 +388,23 @@ void migration_check_and_apply(app_mapper &apps,
 
 void app_mapper_compare(const app_mapper &mapper1, const app_mapper &mapper2)
 {
-    ASSERT_EQ(mapper1.size(), mapper2.size());
+    CHECK_EQ(mapper1.size(), mapper2.size());
     for (auto &kv : mapper1) {
         const std::shared_ptr<app_state> &app1 = kv.second;
-        ASSERT_TRUE(mapper2.find(app1->app_id) != mapper2.end());
+        CHECK(mapper2.find(app1->app_id) != mapper2.end(), "");
         const std::shared_ptr<app_state> app2 = mapper2.find(app1->app_id)->second;
 
-        ASSERT_EQ(app1->app_id, app2->app_id);
-        ASSERT_EQ(app1->app_name, app2->app_name);
-        ASSERT_EQ(app1->app_type, app2->app_type);
-        ASSERT_EQ(app1->status, app2->status);
-        ASSERT_TRUE(app1->status == dsn::app_status::AS_AVAILABLE ||
-                    app1->status == dsn::app_status::AS_DROPPED);
+        CHECK_EQ(app1->app_id, app2->app_id);
+        CHECK_EQ(app1->app_name, app2->app_name);
+        CHECK_EQ(app1->app_type, app2->app_type);
+        CHECK_EQ(app1->status, app2->status);
+        CHECK(app1->status == dsn::app_status::AS_AVAILABLE ||
+                  app1->status == dsn::app_status::AS_DROPPED,
+              "");
         if (app1->status == dsn::app_status::AS_AVAILABLE) {
-            ASSERT_EQ(app1->partition_count, app2->partition_count);
+            CHECK_EQ(app1->partition_count, app2->partition_count);
             for (unsigned int i = 0; i < app1->partition_count; ++i) {
-                ASSERT_TRUE(is_partition_config_equal(app1->partitions[i], app2->partitions[i]));
+                CHECK(is_partition_config_equal(app1->partitions[i], app2->partitions[i]), "");
             }
         }
     }

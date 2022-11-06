@@ -95,8 +95,8 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
         }
     }
 
-    dbg_dassert(call != nullptr, "rpc response task cannot be empty");
-    dbg_dassert(timeout_task != nullptr, "rpc timeout task cannot be empty");
+    DCHECK_NOTNULL(call, "rpc response task cannot be nullptr");
+    DCHECK_NOTNULL(timeout_task, "rpc timeout task cannot be nullptr");
 
     if (timeout_task != task::get_current_task()) {
         timeout_task->cancel(false); // no need to wait
@@ -127,10 +127,12 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
         ::dsn::unmarshall((dsn::message_ex *)reply, addr);
 
         // handle the case of forwarding to itself where addr == req->to_address.
-        dbg_dassert(addr != req->to_address,
-                    "impossible forwarding to myself as this only happens when i'm pure client so "
-                    "i don't get a named to_address %s",
-                    addr.to_string());
+        DCHECK_NE_MSG(
+            addr,
+            req->to_address,
+            "impossible forwarding to myself as this only happens when i'm pure client so "
+            "i don't get a named to_address {}",
+            addr);
 
         // server address side effect
         switch (req->server_address.type()) {
@@ -223,7 +225,7 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
         }
     }
 
-    dbg_dassert(call != nullptr, "rpc response task is missing for rpc request %" PRIu64, key);
+    DCHECK_NOTNULL(call, "rpc response task is missing for rpc request {}", key);
 
     // if timeout
     if (!resend) {
@@ -296,7 +298,7 @@ void rpc_client_matcher::on_call(message_ex *request, const rpc_response_task_pt
         timeout_ms = sp->rpc_request_resend_timeout_milliseconds;
     }
 
-    dbg_dassert(call != nullptr, "rpc response task cannot be empty");
+    DCHECK_NOTNULL(call, "rpc response task cannot be nullptr");
     task *timeout_task(new rpc_timeout_task(this, hdr.id, call->node()));
 
     {
@@ -619,7 +621,7 @@ void rpc_engine::call_group(rpc_address addr,
                             message_ex *request,
                             const rpc_response_task_ptr &call)
 {
-    dbg_dassert(addr.type() == HOST_TYPE_GROUP, "only group is now supported");
+    DCHECK_EQ_MSG(addr.type(), HOST_TYPE_GROUP, "only group is now supported");
 
     auto sp = task_spec::get(request->local_rpc_code);
     switch (sp->grpc_mode) {
@@ -644,8 +646,8 @@ void rpc_engine::call_ip(rpc_address addr,
                          bool reset_request_id,
                          bool set_forwarded)
 {
-    dbg_dassert(addr.type() == HOST_TYPE_IPV4, "only IPV4 is now supported");
-    dbg_dassert(addr.port() > MAX_CLIENT_PORT, "only server address can be called");
+    DCHECK_EQ_MSG(addr.type(), HOST_TYPE_IPV4, "only IPV4 is now supported");
+    DCHECK_GT_MSG(addr.port(), MAX_CLIENT_PORT, "only server address can be called");
     CHECK(!request->header->from_address.is_invalid(),
           "from address must be set before call call_ip");
 
@@ -766,8 +768,9 @@ void rpc_engine::reply(message_ex *response, error_code err)
         // request is forwarded, we cannot use the original rpc session,
         // so use client session to send response.
         else {
-            dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
-                        "target address must have named port in this case");
+            DCHECK_GT_MSG(response->to_address.port(),
+                          MAX_CLIENT_PORT,
+                          "target address must have named port in this case");
 
             // use the header format recorded in the message
             auto rpc_channel = sp ? sp->rpc_call_channel : RPC_CHANNEL_TCP;
@@ -789,8 +792,9 @@ void rpc_engine::reply(message_ex *response, error_code err)
 
     // not connection oriented network, we always use the named network to send msgs
     else {
-        dbg_dassert(response->to_address.port() > MAX_CLIENT_PORT,
-                    "target address must have named port in this case");
+        DCHECK_GT_MSG(response->to_address.port(),
+                      MAX_CLIENT_PORT,
+                      "target address must have named port in this case");
 
         auto rpc_channel = sp ? sp->rpc_call_channel : RPC_CHANNEL_TCP;
         network *net = _server_nets[response->header->from_address.port()][rpc_channel].get();
