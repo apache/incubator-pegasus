@@ -57,7 +57,7 @@ enum class split_args_state : int
 {
     kSplitBeginning,
     kSplitLeadingSpaces,
-    kToken,
+    kSplitToken,
 };
 
 const std::string kLeadingSpaces = " \t";
@@ -91,19 +91,23 @@ void split_args(const char *input,
                 char separator,
                 bool keep_place_holder)
 {
+    CHECK_NOTNULL(input, "");
+
     const char *token_start = nullptr;
-    auto p = input;
     auto state = split_args_state::kSplitBeginning;
-    while () {
+    for (auto p = input; ; ++p) {
         if (*p == separator || *p == '\0') {
-            switch (keep_place_holder) {
+            switch (state) {
                 case split_args_state::kSplitBeginning:
                 case split_args_state::kSplitLeadingSpaces:
-                    output.emplace_back();
+                    if (keep_place_holder) {
+                        output.emplace_back();
+                    }
                     break;
-                case split_args_state::kToken:
+                case split_args_state::kSplitToken:
                     auto token_end = find_first_trailing_space(token_start, p);
                     output.emplace_back(token_start, token_end);
+                    state = split_args_state::kSplitBeginning;
                     break;
                 default:
                     break;
@@ -121,13 +125,13 @@ void split_args(const char *input,
                 if (is_leading_space(*p)) {
                     state = split_args_state::kSplitLeadingSpaces;
                 } else {
-                    state = split_args_state::kToken;
+                    state = split_args_state::kSplitToken;
                     token_start = p;
                 }
                 break;
             case split_args_state::kSplitLeadingSpaces:
                 if (!is_leading_space(*p)) {
-                    state = split_args_state::kToken;
+                    state = split_args_state::kSplitToken;
                     token_start = p;
                 }
                 break;
