@@ -28,10 +28,10 @@
 
 #include "message_parser_manager.h"
 #include "runtime/rpc/rpc_engine.h"
-
 #include "utils/factory_store.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
+#include "utils/safe_strerror_posix.h"
 
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>
@@ -261,7 +261,7 @@ void rpc_session::send_message(message_ex *msg)
         return;
     }
 
-    CHECK(_parser, "parser should not be null when send");
+    CHECK_NOTNULL(_parser, "parser should not be null when send");
     _parser->prepare_on_send(msg);
 
     uint64_t sig;
@@ -548,7 +548,7 @@ void network::on_recv_reply(uint64_t id, message_ex *msg, int delay_ms)
 message_parser *network::new_message_parser(network_header_format hdr_format)
 {
     message_parser *parser = message_parser_manager::instance().create_parser(hdr_format);
-    CHECK(parser, "message parser '{}' not registerd or invalid!", hdr_format);
+    CHECK_NOTNULL(parser, "message parser '{}' not registerd or invalid!", hdr_format);
     return parser;
 }
 
@@ -580,8 +580,10 @@ uint32_t network::get_local_ipv4()
 
     if (0 == ip) {
         char name[128];
-        CHECK_EQ_MSG(
-            gethostname(name, sizeof(name)), 0, "gethostname failed, err = {}", strerror(errno));
+        CHECK_EQ_MSG(gethostname(name, sizeof(name)),
+                     0,
+                     "gethostname failed, err = {}",
+                     utils::safe_strerror(errno));
         ip = rpc_address::ipv4_from_host(name);
     }
 

@@ -634,7 +634,7 @@ void rpc_engine::call_group(rpc_address addr,
         CHECK(false, "to be implemented");
         break;
     default:
-        CHECK(false, "invalid group rpc mode {}", (int)(sp->grpc_mode));
+        CHECK(false, "invalid group rpc mode {}", sp->grpc_mode);
     }
 }
 

@@ -257,13 +257,13 @@ public:
 
     static mail_box_t &mail_box()
     {
-        CHECK_NOTNULL(_mail_box, "call this function only when you are in mock mode");
+        CHECK(_mail_box, "call this function only when you are in mock mode");
         return *_mail_box.get();
     }
 
     static mail_box_t &forward_mail_box()
     {
-        CHECK_NOTNULL(_forward_mail_box, "call this function only when you are in mock mode");
+        CHECK(_forward_mail_box, "call this function only when you are in mock mode");
         return *_forward_mail_box.get();
     }
 
@@ -290,7 +290,7 @@ private:
                  int thread_hash)
             : thrift_request(std::move(req)), auto_reply(false)
         {
-            CHECK_NOTNULL(thrift_request, "req should not be null");
+            CHECK(thrift_request, "req should not be null");
 
             dsn_request = message_ex::create_request(
                 code, static_cast<int>(timeout.count()), thread_hash, partition_hash);

@@ -482,8 +482,11 @@ void replica::on_prepare(dsn::message_ex *request)
 
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
         partition_status::PS_SECONDARY == status()) {
-        CHECK_LE(mu->data.header.decree,
-                 last_committed_decree() + _options->max_mutation_count_in_prepare_list);
+        CHECK_LE_MSG(mu->data.header.decree,
+                     last_committed_decree() + _options->max_mutation_count_in_prepare_list,
+                     "last_committed_decree: {}, _options->max_mutation_count_in_prepare_list: {}",
+                     last_committed_decree(),
+                     _options->max_mutation_count_in_prepare_list);
     } else {
         LOG_ERROR("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
                   name(),

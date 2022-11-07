@@ -52,7 +52,7 @@ void simple_timer_service::start()
         boost::asio::io_service::work work(_ios);
         boost::system::error_code ec;
         _ios.run(ec);
-        CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message().data());
+        CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message());
     });
     _is_running = true;
 }

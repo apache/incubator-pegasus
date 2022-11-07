@@ -195,13 +195,13 @@ public:
 
     const T &get_value() const
     {
-        CHECK(_err.is_ok(), get_error().description().data());
+        CHECK(_err.is_ok(), get_error().description());
         return *_value;
     }
 
     T &get_value()
     {
-        CHECK(_err.is_ok(), get_error().description().data());
+        CHECK(_err.is_ok(), get_error().description());
         return *_value;
     }
 

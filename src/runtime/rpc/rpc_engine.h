@@ -206,7 +206,7 @@ rpc_engine::call_address(rpc_address addr, message_ex *request, const rpc_respon
         call_group(addr, request, call);
         break;
     default:
-        CHECK(false, "invalid target address type {}", (int)request->server_address.type());
+        CHECK(false, "invalid target address type {}", request->server_address.type());
         break;
     }
 }

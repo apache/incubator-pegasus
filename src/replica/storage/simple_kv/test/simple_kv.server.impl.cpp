@@ -115,7 +115,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 
     dsn::zauto_lock l(_lock);
     if (clear_state) {
-        CHECK(dsn::utils::filesystem::remove_path(data_dir().c_str()),
+        CHECK(dsn::utils::filesystem::remove_path(data_dir()),
               "Fail to delete directory {}",
               data_dir());
         _store.clear();

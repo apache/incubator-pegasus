@@ -196,7 +196,7 @@ void prepare_list::commit(decree d, commit_type ct)
         return;
     }
     default:
-        CHECK(false, "invalid commit type {}", (int)ct);
+        CHECK(false, "invalid commit type {}", ct);
     }
 
     return;
