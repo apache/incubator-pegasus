@@ -395,18 +395,14 @@ bool run(const char *config_file,
 
     // setup data dir
     auto &data_dir = spec.data_dir;
-    dassert(!dsn::utils::filesystem::file_exists(data_dir),
-            "%s should not be a file.",
-            data_dir.c_str());
-    if (!dsn::utils::filesystem::directory_exists(data_dir.c_str())) {
-        if (!dsn::utils::filesystem::create_directory(data_dir)) {
-            dassert(false, "Fail to create %s.", data_dir.c_str());
-        }
+    CHECK(!dsn::utils::filesystem::file_exists(data_dir), "{} should not be a file.", data_dir);
+    if (!dsn::utils::filesystem::directory_exists(data_dir)) {
+        CHECK(dsn::utils::filesystem::create_directory(data_dir), "Fail to create {}", data_dir);
     }
     std::string cdir;
-    if (!dsn::utils::filesystem::get_absolute_path(data_dir.c_str(), cdir)) {
-        dassert(false, "Fail to get absolute path from %s.", data_dir.c_str());
-    }
+    CHECK(dsn::utils::filesystem::get_absolute_path(data_dir, cdir),
+          "Fail to get absolute path from {}",
+          data_dir);
     spec.data_dir = cdir;
 
     ::dsn::utils::coredump::init();
@@ -451,7 +447,7 @@ bool run(const char *config_file,
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {
         auto tlet =
             dsn::tools::internal_use_only::get_toollet(it->c_str(), ::dsn::PROVIDER_TYPE_MAIN);
-        dassert(tlet, "toolet not found");
+        CHECK_NOTNULL(tlet, "toolet not found");
         tlet->install(spec);
     }
 

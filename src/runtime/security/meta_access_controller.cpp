@@ -59,9 +59,10 @@ bool meta_access_controller::allowed(message_ex *msg)
 void meta_access_controller::register_allowed_list(const std::string &rpc_code)
 {
     auto code = task_code::try_get(rpc_code, TASK_CODE_INVALID);
-    dassert_f(code != TASK_CODE_INVALID,
-              "invalid task code({}) in rpc_code_white_list of security section",
-              rpc_code);
+    CHECK_NE_MSG(code,
+                 TASK_CODE_INVALID,
+                 "invalid task code({}) in rpc_code_white_list of security section",
+                 rpc_code);
 
     _allowed_rpc_code_list.insert(code);
 }

@@ -109,11 +109,7 @@ const std::string &get_disk_tag(const app_mapper &apps, const rpc_address &node,
 {
     const config_context &cc = *get_config_context(apps, pid);
     auto iter = cc.find_from_serving(node);
-    dassert(iter != cc.serving.end(),
-            "can't find disk tag of gpid(%d.%d) for %s",
-            pid.get_app_id(),
-            pid.get_partition_index(),
-            node.to_string());
+    CHECK(iter != cc.serving.end(), "can't find disk tag of gpid({}) for {}", pid, node);
     return iter->disk_tag;
 }
 
@@ -335,10 +331,7 @@ dsn::gpid load_balance_policy::select_moving(std::list<dsn::gpid> &potential_mov
         }
     }
 
-    dassert_f(selected != potential_moving.end(),
-              "can't find gpid to move from({}) to({})",
-              from.to_string(),
-              to.to_string());
+    CHECK(selected != potential_moving.end(), "can't find gpid to move from({}) to({})", from, to);
     auto res = *selected;
     potential_moving.erase(selected);
     return res;
@@ -556,9 +549,7 @@ void ford_fulkerson::update_decree(int node_id, const node_state &ns)
         const partition_configuration &pc = _app->partitions[pid.get_partition_index()];
         for (const auto &secondary : pc.secondaries) {
             auto i = _address_id.find(secondary);
-            dassert_f(i != _address_id.end(),
-                      "invalid secondary address, address = {}",
-                      secondary.to_string());
+            CHECK(i != _address_id.end(), "invalid secondary address, address = {}", secondary);
             _network[node_id][i->second]++;
         }
         return true;

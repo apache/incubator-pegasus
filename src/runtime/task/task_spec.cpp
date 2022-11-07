@@ -70,15 +70,13 @@ void task_spec::register_task_code(task_code code,
         }
     } else {
         auto spec = task_spec::get(code);
-        if (spec->type != type) {
-            dassert(
-                false,
-                "task code %s registerd for %s, which does not match with previously registered %s",
-                code.to_string(),
-                enum_to_string(type),
-                enum_to_string(spec->type));
-            return;
-        }
+        CHECK_EQ_MSG(
+            spec->type,
+            type,
+            "task code {} registerd for {}, which does not match with previously registered {}",
+            code,
+            enum_to_string(type),
+            enum_to_string(spec->type));
 
         if (spec->priority != pri) {
             LOG_WARNING("overwrite priority for task %s from %s to %s",
@@ -202,7 +200,7 @@ bool task_spec::init()
         std::string section_name =
             std::string("task.") + std::string(dsn::task_code(code).to_string());
         task_spec *spec = task_spec::get(code);
-        dassert(spec != nullptr, "task_spec cannot be null");
+        CHECK_NOTNULL(spec, "");
 
         if (!read_config(section_name.c_str(), *spec, &default_spec))
             return false;

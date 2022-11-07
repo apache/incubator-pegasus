@@ -49,7 +49,7 @@ void json_encode(Writer &writer, const table_printer &tp)
             dsn::json::json_encode(writer, tp._matrix_data[row][1]); // row data
         }
     } else {
-        dassert(false, "Unknown mode");
+        CHECK(false, "Unknown mode");
     }
     if (!tp._name.empty()) {
         writer.EndObject();
@@ -59,7 +59,7 @@ void json_encode(Writer &writer, const table_printer &tp)
 void table_printer::add_title(const std::string &title, alignment align)
 {
     check_mode(data_mode::kMultiColumns);
-    dassert(_matrix_data.empty() && _max_col_width.empty(), "`add_title` must be called only once");
+    CHECK(_matrix_data.empty() && _max_col_width.empty(), "'add_title' must be called only once");
     _max_col_width.push_back(title.length());
     _align_left.push_back(align == alignment::kLeft);
     add_row(title);
@@ -103,7 +103,7 @@ void table_printer::output(std::ostream &out, output_format format) const
         output_in_json<dsn::json::PrettyJsonWriter>(out);
         break;
     default:
-        dassert(false, "Unknown format");
+        CHECK(false, "Unknown format");
     }
 }
 
@@ -172,7 +172,7 @@ void multi_table_printer::output(std::ostream &out,
         output_in_json<dsn::json::PrettyJsonWriter>(out);
         break;
     default:
-        dassert(false, "Unknown format");
+        CHECK(false, "Unknown format");
     }
 }
 

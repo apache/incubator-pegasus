@@ -1508,7 +1508,7 @@ replication_ddl_client::set_app_envs(const std::string &app_name,
     if (clear_all) {
         req->__set_clear_prefix("");
     } else {
-        dassert(!prefix.empty(), "prefix can not be empty");
+        CHECK(!prefix.empty(), "prefix can not be empty");
         req->__set_clear_prefix(prefix);
     }
 

@@ -299,7 +299,7 @@ void tracer::install(service_spec &spec)
         std::string section_name =
             std::string("task.") + std::string(dsn::task_code(i).to_string());
         task_spec *spec = task_spec::get(i);
-        dassert(spec != nullptr, "task_spec cannot be null");
+        CHECK_NOTNULL(spec, "");
 
         if (!dsn_config_get_value_bool(
                 section_name.c_str(), "is_trace", trace, "whether to trace this kind of task"))

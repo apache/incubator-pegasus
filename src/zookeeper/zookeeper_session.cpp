@@ -174,7 +174,7 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
                                      this,
                                      0);
         }
-        dassert(_handle != nullptr, "zookeeper session init failed");
+        CHECK_NOTNULL(_handle, "zookeeper session init failed");
     }
 
     _watchers.push_back(watcher_object());

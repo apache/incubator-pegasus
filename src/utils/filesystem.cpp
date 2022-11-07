@@ -121,7 +121,7 @@ int get_normalized_path(const std::string &path, std::string &npath)
         tls_path_buffer[pos - 1] = _FS_NULL;
     }
 
-    dassert(tls_path_buffer[0] != _FS_NULL, "Normalized path cannot be empty!");
+    CHECK_NE_MSG(tls_path_buffer[0], _FS_NULL, "Normalized path cannot be empty!");
     npath = tls_path_buffer;
 
     return 0;

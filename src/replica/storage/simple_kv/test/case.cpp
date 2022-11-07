@@ -331,7 +331,7 @@ struct event_type_helper
     const char *get(event_type type)
     {
         auto it = type_to_name.find(type);
-        dassert(it != type_to_name.end(), "");
+        CHECK(it != type_to_name.end(), "");
         return it->second.c_str();
     }
     bool get(const std::string &name, event_type &type)
@@ -423,7 +423,7 @@ event *event::parse(int line_no, const std::string &params)
         e = new event_on_rpc_response_enqueue();
         break;
     default:
-        dassert(false, "");
+        CHECK(false, "");
     }
     if (!e->internal_parse(kv_map)) {
         std::cerr << "bad line: line_no=" << line_no
@@ -712,10 +712,9 @@ bool modify_case_line::parse(const std::string &params)
     if (!event_case_line::parse(params))
         return false;
     size_t pos = params.find(':');
-    dassert(pos != std::string::npos, "");
+    CHECK(pos != std::string::npos, "");
     std::map<std::string, std::string> kv_map;
-    bool parse_ret = parse_kv_map(line_no(), params.substr(pos + 1), kv_map);
-    dassert(parse_ret, "");
+    CHECK(parse_kv_map(line_no(), params.substr(pos + 1), kv_map), "");
     std::map<std::string, std::string>::const_iterator it;
     if ((it = kv_map.find("modify_delay")) != kv_map.end())
         _modify_delay = it->second;
@@ -726,8 +725,8 @@ void modify_case_line::modify(const event *ev)
 {
     if (!_modify_delay.empty()) {
         const event_on_task *e = dynamic_cast<const event_on_task *>(ev);
-        dassert(e != nullptr, "");
-        dassert(e->_task != nullptr, "");
+        CHECK_NOTNULL(e, "");
+        CHECK_NOTNULL(e->_task, "");
         e->_task->set_delay(boost::lexical_cast<int>(_modify_delay));
     }
 }
@@ -760,7 +759,7 @@ std::string client_case_line::to_string() const
         break;
     }
     default:
-        dassert(false, "");
+        CHECK(false, "");
     }
     return oss.str();
 }
@@ -825,7 +824,7 @@ bool client_case_line::parse(const std::string &params)
         break;
     }
     default:
-        dassert(false, "");
+        CHECK(false, "");
     }
     if (!parse_ok) {
         std::cerr << "bad line: line_no=" << line_no() << ": unknown error: " << kv_map["err"]
@@ -849,7 +848,7 @@ std::string client_case_line::type_name() const
     case replica_config:
         return "replica_config";
     default:
-        dassert(false, "");
+        CHECK(false, "");
     }
     return "";
 }
@@ -1104,7 +1103,7 @@ void test_case::print(case_line *cl, const std::string &other, bool is_skip)
     }
 
     if (cl == nullptr) {
-        dassert(!other.empty(), "");
+        CHECK(!other.empty(), "");
         std::cout << "    +  " << other << std::endl;
     } else // cl != nullptr
     {

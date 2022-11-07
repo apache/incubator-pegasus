@@ -94,7 +94,7 @@ public:
     virtual error_code stop(bool cleanup = false) { return ERR_OK; }
     virtual void on_intercepted_request(gpid pid, bool is_write, dsn::message_ex *msg)
     {
-        dassert(false, "not supported");
+        CHECK(false, "not supported");
     }
 
     bool is_started() const { return _started; }

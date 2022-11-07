@@ -52,10 +52,7 @@ void simple_timer_service::start()
         boost::asio::io_service::work work(_ios);
         boost::system::error_code ec;
         _ios.run(ec);
-        if (ec) {
-            dassert(
-                false, "io_service in simple_timer_service run failed: %s", ec.message().data());
-        }
+        CHECK(!ec, "io_service in simple_timer_service run failed: {}", ec.message());
     });
     _is_running = true;
 }
@@ -101,7 +98,7 @@ task *simple_task_queue::dequeue(/*inout*/ int &batch_size)
 {
     long c = 0;
     auto t = _samples.dequeue(c);
-    dassert(t != nullptr, "dequeue does not return empty tasks");
+    CHECK_NOTNULL(t, "dequeue does not return empty tasks");
     batch_size = 1;
     return t;
 }

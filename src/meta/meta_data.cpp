@@ -147,9 +147,10 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
 
     // treat last server in drop_list as the primary
     const dropped_replica &server = drop_list.back();
-    dassert(server.ballot != invalid_ballot,
-            "the ballot of server must not be invalid_ballot, node = %s",
-            server.node.to_string());
+    CHECK_NE_MSG(server.ballot,
+                 invalid_ballot,
+                 "the ballot of server must not be invalid_ballot, node = {}",
+                 server.node);
     pc.primary = server.node;
     pc.ballot = server.ballot;
     pc.partition_flags = 0;

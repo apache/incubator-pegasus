@@ -72,7 +72,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 return;
             }
             auto r = _cold_backup_contexts.insert(std::make_pair(policy_name, new_context));
-            dassert(r.second, "");
+            CHECK(r.second, "");
             backup_context = r.first->second;
             backup_context->block_service = block_service;
             backup_context->backup_root = request.__isset.backup_path
@@ -325,11 +325,11 @@ static bool filter_checkpoint(const std::string &dir,
         if (ret == 1) {
             related_chkpt_dirs.emplace_back(std::move(dirname));
         } else if (ret == 2) {
-            dassert(valid_chkpt_dir.empty(),
-                    "%s: there are two valid backup checkpoint dir, %s VS %s",
-                    backup_context->name,
-                    valid_chkpt_dir.c_str(),
-                    dirname.c_str());
+            CHECK(valid_chkpt_dir.empty(),
+                  "{}: there are two valid backup checkpoint dir, {} VS {}",
+                  backup_context->name,
+                  valid_chkpt_dir,
+                  dirname);
             valid_chkpt_dir = dirname;
         }
     }
@@ -427,11 +427,11 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
         // parse checkpoint dirname
         std::string policy_name;
         int64_t backup_id = 0, decree = 0, timestamp = 0;
-        dassert(backup_parse_dir_name(
-                    valid_backup_chkpt_dirname.c_str(), policy_name, backup_id, decree, timestamp),
-                "%s: valid chekpoint dirname %s",
-                backup_context->name,
-                valid_backup_chkpt_dirname.c_str());
+        CHECK(backup_parse_dir_name(
+                  valid_backup_chkpt_dirname.c_str(), policy_name, backup_id, decree, timestamp),
+              "{}: valid chekpoint dirname {}",
+              backup_context->name,
+              valid_backup_chkpt_dirname);
 
         if (statistic_file_infos_under_dir(valid_chkpt_full_path, file_infos, total_size)) {
             backup_context->checkpoint_decree = decree;

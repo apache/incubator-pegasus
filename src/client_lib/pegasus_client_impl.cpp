@@ -1274,8 +1274,7 @@ void pegasus_client_impl::async_duplicate(dsn::apps::duplicate_rpc rpc,
 const char *pegasus_client_impl::get_error_string(int error_code) const
 {
     auto it = _client_error_to_string.find(error_code);
-    dassert(
-        it != _client_error_to_string.end(), "client error %d have no error string", error_code);
+    CHECK(it != _client_error_to_string.end(), "client error {} have no error string", error_code);
     return it->second.c_str();
 }
 

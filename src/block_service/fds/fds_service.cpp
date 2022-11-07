@@ -407,19 +407,19 @@ error_code fds_file_object::get_file_meta()
 
         // get file length
         auto iter = meta.find(fds_service::FILE_LENGTH_CUSTOM_KEY);
-        dassert_f(iter != meta.end(),
-                  "can't find {} in object({})'s metadata",
-                  fds_service::FILE_LENGTH_CUSTOM_KEY.c_str(),
-                  _fds_path.c_str());
+        CHECK(iter != meta.end(),
+              "can't find {} in object({})'s metadata",
+              fds_service::FILE_LENGTH_CUSTOM_KEY,
+              _fds_path);
         bool valid = dsn::buf2uint64(iter->second, _size);
         CHECK(valid, "error to get file size");
 
         // get md5 key
         iter = meta.find(fds_service::FILE_MD5_KEY);
-        dassert_f(iter != meta.end(),
-                  "can't find {} in object({})'s metadata",
-                  fds_service::FILE_MD5_KEY,
-                  _fds_path);
+        CHECK(iter != meta.end(),
+              "can't find {} in object({})'s metadata",
+              fds_service::FILE_MD5_KEY,
+              _fds_path);
         _md5sum = iter->second;
 
         _has_meta_synced = true;

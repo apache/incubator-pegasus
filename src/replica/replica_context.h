@@ -68,8 +68,8 @@ typedef std::unordered_map<::dsn::rpc_address, remote_learner_state> learner_map
         if (t != nullptr) {                                                                        \
             bool finished;                                                                         \
             t->cancel(false, &finished);                                                           \
-            dassert(finished || dsn_task_is_running_inside(task_.get()),                           \
-                    "task must be finished at this point");                                        \
+            CHECK(finished || dsn_task_is_running_inside(task_.get()),                             \
+                  "task must be finished at this point");                                          \
             task_ = nullptr;                                                                       \
         }                                                                                          \
     }

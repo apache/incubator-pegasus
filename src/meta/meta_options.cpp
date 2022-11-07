@@ -84,9 +84,10 @@ void meta_options::initialize()
             break;
         }
     }
-    dassert(meta_function_level_on_start != meta_function_level::fl_invalid,
-            "invalid function level: %s",
-            level_str);
+    CHECK_NE_MSG(meta_function_level_on_start,
+                 meta_function_level::fl_invalid,
+                 "invalid function level: {}",
+                 level_str);
 
     recover_from_replica_server = dsn_config_get_value_bool(
         "meta_server",

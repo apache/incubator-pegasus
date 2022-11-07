@@ -308,7 +308,7 @@ error_code replication_app_base::open()
 
     std::unique_ptr<char *[]> argvs = make_unique<char *[]>(argc);
     char **argv = argvs.get();
-    dassert(argv != nullptr, "");
+    CHECK_NOTNULL(argv, "");
     int idx = 0;
     argv[idx++] = (char *)(info->app_name.c_str());
     if (argc > 1) {

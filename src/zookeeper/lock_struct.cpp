@@ -211,7 +211,7 @@ void lock_struct::owner_change(lock_struct_ptr _this, int zoo_event)
     } else if (ZOO_NOTWATCHING_EVENT == zoo_event)
         _this->get_lock_owner(false);
     else
-        dassert(false, "unexpected event");
+        CHECK(false, "unexpected event");
 }
 /*static*/
 void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this,
@@ -575,7 +575,7 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
     char splitter[] = {'/', 0};
     _this->_myself._node_seq_name = utils::get_last_component(*path, splitter);
     _this->_myself._sequence_id = parse_seq_path(_this->_myself._node_seq_name);
-    dassert(_this->_myself._sequence_id != -1, "invalid seq path created");
+    CHECK_NE_MSG(_this->_myself._sequence_id, -1, "invalid seq path created");
     LOG_INFO("create seq/ephe node in dir(%s) ok, my_sequence_id(%d)",
              _this->_lock_dir.c_str(),
              _this->_myself._sequence_id);

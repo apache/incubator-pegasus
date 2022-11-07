@@ -205,7 +205,7 @@ void sim_lock_nr_provider::lock()
         return;
 
     int ctid = ::dsn::utils::get_current_tid();
-    dassert(ctid != _current_holder, "non-recursive lock, error or use recursive locks instead");
+    CHECK_NE_MSG(ctid, _current_holder, "non-recursive lock, error or use recursive locks instead");
 
     _sema.wait(TIME_MS_MAX);
 
@@ -221,7 +221,7 @@ bool sim_lock_nr_provider::try_lock()
         return true;
 
     int ctid = ::dsn::utils::get_current_tid();
-    dassert(ctid != _current_holder, "non-recursive lock, error or use recursive locks instead");
+    CHECK_NE_MSG(ctid, _current_holder, "non-recursive lock, error or use recursive locks instead");
 
     bool r = _sema.wait(0);
     if (r) {
@@ -242,12 +242,9 @@ void sim_lock_nr_provider::unlock()
                  _current_holder,
                  "lock must be locked must current holder");
 
-    if (0 == --_lock_depth) {
-        _current_holder = -1;
-        _sema.signal(1);
-    } else {
-        dassert(false, "non-recursive lock, error or use recursive locks instead");
-    }
+    CHECK_EQ_MSG(0, --_lock_depth, "non-recursive lock, error or use recursive locks instead");
+    _current_holder = -1;
+    _sema.signal(1);
 }
 }
 } // end namespace

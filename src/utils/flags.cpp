@@ -265,7 +265,7 @@ public:
     void add_validator(const char *name, validator_fn &validator)
     {
         auto it = _flags.find(name);
-        dassert(it != _flags.end(), "flag \"%s\" does not exist", name);
+        CHECK(it != _flags.end(), "flag '{}' does not exist", name);
         flag_data &flag = it->second;
         if (!flag.validator()) {
             flag.set_validator(validator);
@@ -274,9 +274,9 @@ public:
 
     void add_group_validator(const char *name, group_validator_fn &validator)
     {
-        auto it = _group_flag_validators.find(name);
-        dassert_f(
-            it == _group_flag_validators.end(), "duplicate group flag validator \"{}\"", name);
+        CHECK(_group_flag_validators.find(name) == _group_flag_validators.end(),
+              "duplicate group flag validator '{}'",
+              name);
         _group_flag_validators[name] = validator;
     }
 
@@ -296,7 +296,7 @@ public:
     void add_tag(const char *name, const flag_tag &tag)
     {
         auto it = _flags.find(name);
-        dassert(it != _flags.end(), "flag \"%s\" does not exist", name);
+        CHECK(it != _flags.end(), "flag '{}' does not exist", name);
         it->second.add_tag(tag);
     }
 

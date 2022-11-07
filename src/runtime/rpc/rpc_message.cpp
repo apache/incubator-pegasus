@@ -74,7 +74,7 @@ message_ex::~message_ex()
 
     // release_header_buffer();
     if (!_is_read) {
-        dassert(_rw_committed, "message write is not committed");
+        CHECK(_rw_committed, "message write is not committed");
     }
 }
 
@@ -190,7 +190,7 @@ message_ex *message_ex::copy_message_no_reply(const message_ex &old_msg)
 
 message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
 {
-    dassert(this->_rw_committed, "should not copy the message when read/write is not committed");
+    CHECK(this->_rw_committed, "should not copy the message when read/write is not committed");
 
     // ATTENTION:
     // - if this message is a written message, set copied message's write pointer to the end,
@@ -244,8 +244,7 @@ message_ex *message_ex::copy(bool clone_content, bool copy_for_receive)
             i += bb.length();
             ptr += bb.length();
         }
-        dassert(
-            i == total_length, "%d VS %d, rpc_name = %s", i, total_length, msg->header->rpc_name);
+        CHECK_EQ_MSG(i, total_length, "rpc_name = {}", msg->header->rpc_name);
 
         auto data = dsn::blob(recv_buffer, total_length);
 
@@ -393,9 +392,9 @@ void message_ex::release_buffer_header()
 void message_ex::write_next(void **ptr, size_t *size, size_t min_size)
 {
     // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_is_read && this->_rw_committed,
-            "there are pending msg write not committed"
-            ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
+    CHECK(!this->_is_read && this->_rw_committed,
+          "there are pending msg write not committed"
+          ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
     auto ptr_data(utils::make_shared_array<char>(min_size));
     *size = min_size;
     *ptr = ptr_data.get();
@@ -412,9 +411,9 @@ void message_ex::write_next(void **ptr, size_t *size, size_t min_size)
 void message_ex::write_commit(size_t size)
 {
     // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_rw_committed,
-            "there are no pending msg write to be committed"
-            ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
+    CHECK(!this->_rw_committed,
+          "there are no pending msg write to be committed"
+          ", please invoke dsn_msg_write_next and dsn_msg_write_commit in pairs");
 
     this->_rw_offset += (int)size;
     *this->buffers.rbegin() = this->buffers.rbegin()->range(0, (int)this->_rw_offset);
@@ -425,9 +424,9 @@ void message_ex::write_commit(size_t size)
 bool message_ex::read_next(void **ptr, size_t *size)
 {
     // printf("%p %s %d\n", this, __FUNCTION__, utils::get_current_tid());
-    dassert(this->_is_read && this->_rw_committed,
-            "there are pending msg read not committed"
-            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+    CHECK(this->_is_read && this->_rw_committed,
+          "there are pending msg read not committed"
+          ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
 
     int idx = this->_rw_index;
     if (-1 == idx || this->_rw_offset == static_cast<int>(this->buffers[idx].length())) {
@@ -450,9 +449,9 @@ bool message_ex::read_next(void **ptr, size_t *size)
 bool message_ex::read_next(blob &data)
 {
     // printf("%p %s %d\n", this, __FUNCTION__, utils::get_current_tid());
-    dassert(this->_is_read && this->_rw_committed,
-            "there are pending msg read not committed"
-            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+    CHECK(this->_is_read && this->_rw_committed,
+          "there are pending msg read not committed"
+          ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
 
     int idx = this->_rw_index;
     if (-1 == idx || this->_rw_offset == static_cast<int>(this->buffers[idx].length())) {
@@ -473,11 +472,11 @@ bool message_ex::read_next(blob &data)
 void message_ex::read_commit(size_t size)
 {
     // printf("%p %s\n", this, __FUNCTION__);
-    dassert(!this->_rw_committed,
-            "there are no pending msg read to be committed"
-            ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
+    CHECK(!this->_rw_committed,
+          "there are no pending msg read to be committed"
+          ", please invoke dsn_msg_read_next and dsn_msg_read_commit in pairs");
 
-    dassert(-1 != this->_rw_index, "no buffer in curent msg is under read");
+    CHECK_NE_MSG(-1, this->_rw_index, "no buffer in curent msg is under read");
     this->_rw_offset += (int)size;
     this->_rw_committed = true;
 }

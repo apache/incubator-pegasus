@@ -63,7 +63,7 @@ bool data_operations(command_executor *e, shell_context *sc, arguments args)
     }
 
     auto iter = data_operations_map.find(args.argv[0]);
-    dassert(iter != data_operations_map.end(), "filter should done earlier");
+    CHECK(iter != data_operations_map.end(), "filter should done earlier");
     executor func = iter->second;
 
     if (sc->current_app_name.empty()) {

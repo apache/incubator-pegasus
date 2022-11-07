@@ -1731,8 +1731,7 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
     static std::once_flag flag;
     std::call_once(flag, [&]() {
         // The timer task will always running even though there is no replicas
-        dassert_f(kServerStatUpdateTimeSec.count() != 0,
-                  "kServerStatUpdateTimeSec shouldn't be zero");
+        CHECK_NE(kServerStatUpdateTimeSec.count(), 0);
         _update_server_rdb_stat = dsn::tasking::enqueue_timer(
             LPC_REPLICATION_LONG_COMMON,
             nullptr, // TODO: the tracker is nullptr, we will fix it later

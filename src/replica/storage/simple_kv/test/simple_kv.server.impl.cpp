@@ -115,9 +115,9 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
 
     dsn::zauto_lock l(_lock);
     if (clear_state) {
-        if (!dsn::utils::filesystem::remove_path(data_dir().c_str())) {
-            dassert(false, "Fail to delete directory %s.", data_dir().c_str());
-        }
+        CHECK(dsn::utils::filesystem::remove_path(data_dir()),
+              "Fail to delete directory {}",
+              data_dir());
         _store.clear();
         reset_state();
     }
@@ -137,9 +137,9 @@ void simple_kv_service_impl::recover()
 
     std::vector<std::string> sub_list;
     std::string path = data_dir();
-    if (!dsn::utils::filesystem::get_subfiles(path, sub_list, false)) {
-        dassert(false, "Fail to get subfiles in %s.", path.c_str());
-    }
+    CHECK(dsn::utils::filesystem::get_subfiles(path, sub_list, false),
+          "Fail to get subfiles in {}",
+          path);
     for (auto &fpath : sub_list) {
         auto &&s = dsn::utils::filesystem::get_file_name(fpath);
         if (s.substr(0, strlen("checkpoint.")) != std::string("checkpoint."))

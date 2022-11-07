@@ -116,7 +116,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     //        else
     //            break;
     //    }
-    //    dassert (err == ERR_OK, "");
+    //    CHECK_EQ(err, ERR_OK);
     //    return err;
 
     case partition_status::PS_INACTIVE: // only possible during init
@@ -135,7 +135,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
         return err;
 
     default:
-        dassert(false, "invalid partition_status, status = %s", enum_to_string(status));
+        CHECK(false, "invalid partition_status, status = {}", enum_to_string(status));
         return dsn::ERR_OK;
     }
 }
@@ -196,7 +196,7 @@ void prepare_list::commit(decree d, commit_type ct)
         return;
     }
     default:
-        dassert(false, "invalid commit type %d", (int)ct);
+        CHECK(false, "invalid commit type {}", ct);
     }
 
     return;

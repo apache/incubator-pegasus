@@ -78,8 +78,8 @@ replica::replica(replica_stub *stub,
       _is_duplication_follower(is_duplication_follower),
       _backup_mgr(new replica_backup_manager(this))
 {
-    dassert(_app_info.app_type != "", "");
-    dassert(stub != nullptr, "");
+    CHECK(!_app_info.app_type.empty(), "");
+    CHECK_NOTNULL(stub, "");
     _stub = stub;
     _dir = dir;
     _options = &stub->options();
@@ -256,7 +256,7 @@ void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
     }
 
     uint64_t start_time_ns = dsn_now_ns();
-    dassert(_app != nullptr, "");
+    CHECK(_app, "");
     _app->on_request(request);
 
     // If the corresponding perf counter exist, count the duration of this operation.
@@ -326,7 +326,7 @@ void replica::execute_mutation(mutation_ptr &mu)
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
-            dassert(_private_log != nullptr, "");
+            CHECK_NOTNULL(_private_log, "");
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
@@ -345,7 +345,7 @@ void replica::execute_mutation(mutation_ptr &mu)
             // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,
             // catch-up will be done later after the checkpoint task is finished
-            dassert(_private_log != nullptr, "");
+            CHECK_NOTNULL(_private_log, "");
         }
         break;
     case partition_status::PS_PARTITION_SPLIT:
@@ -357,7 +357,7 @@ void replica::execute_mutation(mutation_ptr &mu)
     case partition_status::PS_ERROR:
         break;
     default:
-        dassert(false, "invalid partition_status, status = %s", enum_to_string(status()));
+        CHECK(false, "invalid partition_status, status = {}", enum_to_string(status()));
     }
 
     LOG_DEBUG(
@@ -442,25 +442,21 @@ void replica::close()
     _tracker.cancel_outstanding_tasks();
 
     cleanup_preparing_mutations(true);
-    dassert(_primary_states.is_cleaned(), "primary context is not cleared");
+    CHECK(_primary_states.is_cleaned(), "primary context is not cleared");
 
     if (partition_status::PS_INACTIVE == status()) {
-        dassert(_secondary_states.is_cleaned(), "secondary context is not cleared");
-        dassert(_potential_secondary_states.is_cleaned(),
-                "potential secondary context is not cleared");
-        dassert(_split_states.is_cleaned(), "partition split context is not cleared");
+        CHECK(_secondary_states.is_cleaned(), "secondary context is not cleared");
+        CHECK(_potential_secondary_states.is_cleaned(),
+              "potential secondary context is not cleared");
+        CHECK(_split_states.is_cleaned(), "partition split context is not cleared");
     }
 
     // for partition_status::PS_ERROR, context cleanup is done here as they may block
     else {
-        bool r = _secondary_states.cleanup(true);
-        dassert(r, "secondary context is not cleared");
-
-        r = _potential_secondary_states.cleanup(true);
-        dassert(r, "potential secondary context is not cleared");
-
-        r = _split_states.cleanup(true);
-        dassert_replica(r, "partition split context is not cleared");
+        dassert_replica(_secondary_states.cleanup(true), "secondary context is not cleared");
+        dassert_replica(_potential_secondary_states.cleanup(true),
+                        "potential secondary context is not cleared");
+        dassert_replica(_split_states.cleanup(true), "partition split context is not cleared");
     }
 
     if (_private_log != nullptr) {

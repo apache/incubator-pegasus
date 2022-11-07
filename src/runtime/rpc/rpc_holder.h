@@ -111,31 +111,31 @@ public:
 
     const TRequest &request() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return *(_i->thrift_request);
     }
 
     TRequest *mutable_request() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->thrift_request.get();
     }
 
     TResponse &response() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->thrift_response;
     }
 
     dsn::error_code &error() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->rpc_error;
     }
 
     message_ex *dsn_request() const
     {
-        dassert(_i, "rpc_holder is uninitialized");
+        CHECK(_i, "rpc_holder is uninitialized");
         return _i->dsn_request;
     }
 
@@ -257,13 +257,13 @@ public:
 
     static mail_box_t &mail_box()
     {
-        dassert(_mail_box != nullptr, "call this function only when you are in mock mode");
+        CHECK(_mail_box, "call this function only when you are in mock mode");
         return *_mail_box.get();
     }
 
     static mail_box_t &forward_mail_box()
     {
-        dassert(_forward_mail_box != nullptr, "call this function only when you are in mock mode");
+        CHECK(_forward_mail_box, "call this function only when you are in mock mode");
         return *_forward_mail_box.get();
     }
 
@@ -290,7 +290,7 @@ private:
                  int thread_hash)
             : thrift_request(std::move(req)), auto_reply(false)
         {
-            dassert(thrift_request != nullptr, "req should not be null");
+            CHECK(thrift_request, "req should not be null");
 
             dsn_request = message_ex::create_request(
                 code, static_cast<int>(timeout.count()), thread_hash, partition_hash);
