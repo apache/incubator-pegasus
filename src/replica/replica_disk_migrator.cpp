@@ -171,11 +171,12 @@ bool replica_disk_migrator::check_migration_args(replica_disk_migrate_rpc rpc)
 // THREAD_POOL_REPLICATION_LONG
 void replica_disk_migrator::migrate_replica(const replica_disk_migrate_request &req)
 {
-    dassert_replica(status() == disk_migration_status::MOVING,
-                    "disk migration(origin={}, target={}), err = Invalid migration status({})",
-                    req.origin_disk,
-                    req.target_disk,
-                    enum_to_string(status()));
+    CHECK_EQ_MSG(status(),
+                 disk_migration_status::MOVING,
+                 "disk migration(origin={}, target={}), err = Invalid migration status({})",
+                 req.origin_disk,
+                 req.target_disk,
+                 enum_to_string(status()));
 
     if (init_target_dir(req) && migrate_replica_checkpoint(req) && migrate_replica_app_info(req)) {
         _status = disk_migration_status::MOVED;

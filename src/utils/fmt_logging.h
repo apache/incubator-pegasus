@@ -55,7 +55,6 @@
 #define LOG_WARNING_PREFIX(...) LOG_WARNING_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 #define LOG_ERROR_PREFIX(...) LOG_ERROR_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 #define LOG_FATAL_PREFIX(...) LOG_FATAL_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
-#define dassert_replica(x, ...) CHECK(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
@@ -109,47 +108,59 @@
 #define CHECK_LT(var1, var2) CHECK_LT_MSG(var1, var2, "")
 
 // TODO(yingchun): add CHECK_NULL(ptr), CHECK_OK(err), CHECK(cond)
-#define CHECK_NE_PREFIX(var1, var2)                                                                \
+
+#define CHECK_PREFIX_MSG(x, ...) CHECK(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define CHECK_NOTNULL_PREFIX_MSG(p, ...) CHECK_PREFIX_MSG(p != nullptr, fmt::format(__VA_ARGS__))
+
+#define CHECK_NE_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        dassert_replica(_v1 != _v2, "{} vs {}", _v1, _v2);                                         \
+        CHECK_PREFIX_MSG(_v1 != _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));           \
     } while (false)
 
-#define CHECK_EQ_PREFIX(var1, var2)                                                                \
+#define CHECK_EQ_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        dassert_replica(_v1 == _v2, "{} vs {}", _v1, _v2);                                         \
+        CHECK_PREFIX_MSG(_v1 == _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));           \
     } while (false)
 
-#define CHECK_GE_PREFIX(var1, var2)                                                                \
+#define CHECK_GE_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        dassert_replica(_v1 >= _v2, "{} vs {}", _v1, _v2);                                         \
+        CHECK_PREFIX_MSG(_v1 >= _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));           \
     } while (false)
 
-#define CHECK_LE_PREFIX(var1, var2)                                                                \
+#define CHECK_LE_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        dassert_replica(_v1 <= _v2, "{} vs {}", _v1, _v2);                                         \
+        CHECK_PREFIX_MSG(_v1 <= _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));           \
     } while (false)
 
-#define CHECK_GT_PREFIX(var1, var2)                                                                \
+#define CHECK_GT_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        dassert_replica(_v1 > _v2, "{} vs {}", _v1, _v2);                                          \
+        CHECK_PREFIX_MSG(_v1 > _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));            \
     } while (false)
 
-#define CHECK_LT_PREFIX(var1, var2)                                                                \
+#define CHECK_LT_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        dassert_replica(_v1 < _v2, "{} vs {}", _v1, _v2);                                          \
+        CHECK_PREFIX_MSG(_v1 < _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));            \
     } while (false)
+
+#define CHECK_PREFIX(x) CHECK_PREFIX_MSG(x, "")
+#define CHECK_NE_PREFIX(var1, var2) CHECK_NE_PREFIX_MSG(var1, var2, "")
+#define CHECK_EQ_PREFIX(var1, var2) CHECK_EQ_PREFIX_MSG(var1, var2, "")
+#define CHECK_GE_PREFIX(var1, var2) CHECK_GE_PREFIX_MSG(var1, var2, "")
+#define CHECK_LE_PREFIX(var1, var2) CHECK_LE_PREFIX_MSG(var1, var2, "")
+#define CHECK_GT_PREFIX(var1, var2) CHECK_GT_PREFIX_MSG(var1, var2, "")
+#define CHECK_LT_PREFIX(var1, var2) CHECK_LT_PREFIX_MSG(var1, var2, "")
 
 // Return the given status if condition is not true.
 #define ERR_LOG_AND_RETURN_NOT_TRUE(s, err, ...)                                                   \

@@ -336,9 +336,7 @@ void replica::update_configuration_on_meta_server(config_type::type type,
     // type should never be `CT_REGISTER_CHILD`
     // if this happens, it means serious mistake happened during partition split
     // assert here to stop split and avoid splitting wrong
-    if (type == config_type::CT_REGISTER_CHILD) {
-        dassert_replica(false, "invalid config_type, type = {}", enum_to_string(type));
-    }
+    CHECK_NE_PREFIX(type, config_type::CT_REGISTER_CHILD);
 
     newConfig.last_committed_decree = last_committed_decree();
 
@@ -1081,15 +1079,14 @@ void replica::update_app_max_replica_count(int32_t max_replica_count)
     auto old_max_replica_count = _app_info.max_replica_count;
     _app_info.max_replica_count = max_replica_count;
 
-    auto ec = store_app_info(_app_info);
-    dassert_replica(ec == ERR_OK,
-                    "store_app_info for max_replica_count failed: error_code={}, app_name={}, "
-                    "app_id={}, old_max_replica_count={}, new_max_replica_count={}",
-                    ec.to_string(),
-                    _app_info.app_name,
-                    _app_info.app_id,
-                    old_max_replica_count,
-                    _app_info.max_replica_count);
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+                        ERR_OK,
+                        "store_app_info for max_replica_count failed: app_name={}, "
+                        "app_id={}, old_max_replica_count={}, new_max_replica_count={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_max_replica_count,
+                        _app_info.max_replica_count);
 }
 
 void replica::replay_prepare_list()
