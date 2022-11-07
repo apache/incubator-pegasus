@@ -65,12 +65,14 @@ const std::string kTrailingSpaces = " \t\r\n";
 
 bool is_leading_space(char ch)
 {
-    return std::any_of(kLeadingSpaces.begin(), kLeadingSpaces.end(), [ch](char space){ return ch == space});
+    return std::any_of(
+        kLeadingSpaces.begin(), kLeadingSpaces.end(), [ch](char space) { return ch == space });
 }
 
 bool is_trailing_space(char ch)
 {
-    return std::any_of(kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space){ return ch == space});
+    return std::any_of(
+        kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space });
 }
 
 const char *find_first_trailing_space(const char *token_start, const char *token_end)
@@ -78,7 +80,7 @@ const char *find_first_trailing_space(const char *token_start, const char *token
     CHECK_LT(token_start, token_end);
 
     const char *p = token_end - 1;
-    for (; p >= token_start && is_trailing_space(*p) ; --p) {
+    for (; p >= token_start && is_trailing_space(*p); --p) {
     }
     return p;
 }
@@ -95,22 +97,22 @@ void split_args(const char *input,
 
     const char *token_start = nullptr;
     auto state = split_args_state::kSplitBeginning;
-    for (auto p = input; ; ++p) {
+    for (auto p = input;; ++p) {
         if (*p == separator || *p == '\0') {
             switch (state) {
-                case split_args_state::kSplitBeginning:
-                case split_args_state::kSplitLeadingSpaces:
-                    if (keep_place_holder) {
-                        output.emplace_back();
-                    }
-                    break;
-                case split_args_state::kSplitToken:
-                    auto token_end = find_first_trailing_space(token_start, p);
-                    output.emplace_back(token_start, token_end);
-                    state = split_args_state::kSplitBeginning;
-                    break;
-                default:
-                    break;
+            case split_args_state::kSplitBeginning:
+            case split_args_state::kSplitLeadingSpaces:
+                if (keep_place_holder) {
+                    output.emplace_back();
+                }
+                break;
+            case split_args_state::kSplitToken:
+                auto token_end = find_first_trailing_space(token_start, p);
+                output.emplace_back(token_start, token_end);
+                state = split_args_state::kSplitBeginning;
+                break;
+            default:
+                break;
             }
 
             if (*p == '\0') {
@@ -120,23 +122,23 @@ void split_args(const char *input,
             continue;
         }
 
-        switch(state) {
-            case split_args_state::kSplitBeginning:
-                if (is_leading_space(*p)) {
-                    state = split_args_state::kSplitLeadingSpaces;
-                } else {
-                    state = split_args_state::kSplitToken;
-                    token_start = p;
-                }
-                break;
-            case split_args_state::kSplitLeadingSpaces:
-                if (!is_leading_space(*p)) {
-                    state = split_args_state::kSplitToken;
-                    token_start = p;
-                }
-                break;
-            default:
-                break;
+        switch (state) {
+        case split_args_state::kSplitBeginning:
+            if (is_leading_space(*p)) {
+                state = split_args_state::kSplitLeadingSpaces;
+            } else {
+                state = split_args_state::kSplitToken;
+                token_start = p;
+            }
+            break;
+        case split_args_state::kSplitLeadingSpaces:
+            if (!is_leading_space(*p)) {
+                state = split_args_state::kSplitToken;
+                token_start = p;
+            }
+            break;
+        default:
+            break;
         }
     }
 }
