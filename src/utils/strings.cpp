@@ -109,7 +109,6 @@ void split_args(const char *input,
             case split_args_state::kSplitToken:
                 auto token_end = find_first_trailing_space(token_start, p);
                 output.emplace_back(token_start, token_end);
-                state = split_args_state::kSplitBeginning;
                 break;
             default:
                 break;
@@ -119,6 +118,7 @@ void split_args(const char *input,
                 break;
             }
 
+            state = split_args_state::kSplitBeginning;
             continue;
         }
 
