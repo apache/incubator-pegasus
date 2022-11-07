@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <ostream>
+
 #include "utils/ports.h"
 #include "utils/enum_helper.h"
 #include "utils/threadpool_code.h"
@@ -123,7 +125,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, const task_code &tc)
     {
-        return os << std::string(tc.to_string());
+        return os << tc.to_string();
     }
 
 private:

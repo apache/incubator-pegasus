@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <ostream>
+
 #include "customizable_id.h"
 #include <thrift/protocol/TProtocol.h>
 
@@ -59,7 +61,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, const error_code &ec)
     {
-        return os << std::string(ec.to_string());
+        return os << ec.to_string();
     }
 
 private:

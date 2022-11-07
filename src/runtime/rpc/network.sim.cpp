@@ -174,7 +174,7 @@ error_code sim_network_provider::start(rpc_channel channel, int port, bool clien
 {
     CHECK(channel == RPC_CHANNEL_TCP || channel == RPC_CHANNEL_UDP,
           "invalid given channel {}",
-          channel.to_string());
+          channel);
 
     _address = ::dsn::rpc_address("localhost", port);
     auto hostname = boost::asio::ip::host_name();

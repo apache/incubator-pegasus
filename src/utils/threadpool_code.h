@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <ostream>
+
 #include "ports.h"
 
 namespace dsn {
@@ -48,6 +50,11 @@ public:
 
     static int max();
     static bool is_exist(const char *name);
+
+    friend std::ostream &operator<<(std::ostream &os, const threadpool_code &pool_code)
+    {
+        return os << pool_code.to_string();
+    }
 
 private:
     int _internal_code;
