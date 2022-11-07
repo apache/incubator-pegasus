@@ -88,7 +88,7 @@ void task_queue::enqueue_internal(task *task)
                 }
             }
         } else {
-            dbg_dassert(TM_REJECT == throttle_mode, "unknow mode %d", (int)throttle_mode);
+            DCHECK_EQ_MSG(TM_REJECT, throttle_mode, "unknow mode {}", throttle_mode);
 
             if (ac_value > _spec->queue_length_throttling_threshold) {
                 auto rtask = static_cast<rpc_request_task *>(task);

@@ -119,7 +119,6 @@ message_ex *message_ex::create_receive_message(const blob &data)
     auto data2 = data.range((int)sizeof(message_header));
     msg->buffers.push_back(data2);
 
-    // dbg_dassert(msg->header->body_length > 0, "message %s is empty!", msg->header->rpc_name);
     return msg;
 }
 

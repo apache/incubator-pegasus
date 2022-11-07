@@ -47,13 +47,6 @@
         }                                                                                          \
     } while (false)
 
-// TODO(yingchun): use DCHECK instead of dbg_dassert
-#ifndef NDEBUG
-#define dbg_dassert CHECK
-#else
-#define dbg_dassert(x, ...)
-#endif
-
 #define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().
@@ -116,6 +109,13 @@
 #define CHECK_LT(var1, var2) CHECK_LT_MSG(var1, var2, "")
 
 // TODO(yingchun): add CHECK_NULL(ptr), CHECK_OK(err), CHECK(cond)
+#define CHECK_NE_PREFIX(var1, var2)                                                                \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        dassert_replica(_v1 != _v2, "{} vs {}", _v1, _v2);                                         \
+    } while (false)
+
 #define CHECK_EQ_PREFIX(var1, var2)                                                                \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
@@ -166,3 +166,53 @@
         error_code _err = (s);                                                                     \
         ERR_LOG_AND_RETURN_NOT_TRUE(_err == ERR_OK, _err, __VA_ARGS__);                            \
     } while (0)
+
+#ifndef NDEBUG
+#define DCHECK CHECK
+#define DCHECK_NOTNULL CHECK_NOTNULL
+
+#define DCHECK_NE_MSG CHECK_NE_MSG
+#define DCHECK_EQ_MSG CHECK_EQ_MSG
+#define DCHECK_GE_MSG CHECK_GE_MSG
+#define DCHECK_LE_MSG CHECK_LE_MSG
+#define DCHECK_GT_MSG CHECK_GT_MSG
+#define DCHECK_LT_MSG CHECK_LT_MSG
+
+#define DCHECK_NE CHECK_NE
+#define DCHECK_EQ CHECK_EQ
+#define DCHECK_GE CHECK_GE
+#define DCHECK_LE CHECK_LE
+#define DCHECK_GT CHECK_GT
+#define DCHECK_LT CHECK_LT
+
+#define DCHECK_NE_PREFIX CHECK_NE_PREFIX
+#define DCHECK_EQ_PREFIX CHECK_EQ_PREFIX
+#define DCHECK_GE_PREFIX CHECK_GE_PREFIX
+#define DCHECK_LE_PREFIX CHECK_LE_PREFIX
+#define DCHECK_GT_PREFIX CHECK_GT_PREFIX
+#define DCHECK_LT_PREFIX CHECK_LT_PREFIX
+#else
+#define DCHECK(x, ...)
+#define DCHECK_NOTNULL(p, ...)
+
+#define DCHECK_NE_MSG(var1, var2, ...)
+#define DCHECK_EQ_MSG(var1, var2, ...)
+#define DCHECK_GE_MSG(var1, var2, ...)
+#define DCHECK_LE_MSG(var1, var2, ...)
+#define DCHECK_GT_MSG(var1, var2, ...)
+#define DCHECK_LT_MSG(var1, var2, ...)
+
+#define DCHECK_NE(var1, var2)
+#define DCHECK_EQ(var1, var2)
+#define DCHECK_GE(var1, var2)
+#define DCHECK_LE(var1, var2)
+#define DCHECK_GT(var1, var2)
+#define DCHECK_LT(var1, var2)
+
+#define DCHECK_NE_PREFIX(var1, var2)
+#define DCHECK_EQ_PREFIX(var1, var2)
+#define DCHECK_GE_PREFIX(var1, var2)
+#define DCHECK_LE_PREFIX(var1, var2)
+#define DCHECK_GT_PREFIX(var1, var2)
+#define DCHECK_LT_PREFIX(var1, var2)
+#endif

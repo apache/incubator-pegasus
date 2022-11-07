@@ -26,19 +26,20 @@
 
 #pragma once
 
-#include "utils/utils.h"
+#include "common/api_common.h"
+#include "common/gpid.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
+#include "runtime/rpc/rpc_message.h"
+#include "runtime/task/task_code.h"
+#include "utils/api_utilities.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
-#include "runtime/rpc/rpc_message.h"
 #include "utils/error_code.h"
+#include "utils/fmt_logging.h"
 #include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "common/api_common.h"
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
+#include "utils/utils.h"
 
 namespace dsn {
 
@@ -120,7 +121,7 @@ private:
         void *ptr;
         size_t sz;
         _msg->write_next(&ptr, &sz, size);
-        dbg_dassert(sz >= size, "allocated buffer size must be not less than the required size");
+        DCHECK_GE_MSG(sz, size, "allocated buffer size must be not less than the required size");
         bb.assign((const char *)ptr, 0, (int)sz);
 
         _last_write_next_total_size = total_size();

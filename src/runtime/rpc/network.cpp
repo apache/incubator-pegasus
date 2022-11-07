@@ -171,12 +171,8 @@ inline bool rpc_session::unlink_message_for_send()
     auto n = _messages.next();
     int bcount = 0;
 
-    dbg_dassert(0 == _sending_buffers.size(),
-                "sending_buffers should be empty, but size = %d",
-                (int)_sending_buffers.size());
-    dbg_dassert(0 == _sending_msgs.size(),
-                "sending_msgs should be empty, but size = %d",
-                (int)_sending_msgs.size());
+    DCHECK_EQ(0, _sending_buffers.size());
+    DCHECK_EQ(0, _sending_msgs.size());
 
     while (n != &_messages) {
         auto lmsg = CONTAINING_RECORD(n, message_ex, dl);
@@ -429,7 +425,7 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
             return false;
         }
 
-        dbg_dassert(!is_client(), "only rpc server session can recv rpc requests");
+        DCHECK(!is_client(), "only rpc server session can recv rpc requests");
         _net.on_recv_request(msg, delay_ms);
     }
 
