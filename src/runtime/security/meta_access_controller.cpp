@@ -17,10 +17,11 @@
 
 #include "meta_access_controller.h"
 
+#include "runtime/rpc/network.h"
 #include "runtime/rpc/rpc_message.h"
 #include "utils/flags.h"
-#include "runtime/rpc/network.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace security {
@@ -33,7 +34,7 @@ meta_access_controller::meta_access_controller()
 {
     // MetaServer serves the allow-list RPC from all users. RPCs unincluded are accessible to only
     // superusers.
-    if (strlen(FLAGS_meta_acl_rpc_allow_list) == 0) {
+    if (utils::is_empty(FLAGS_meta_acl_rpc_allow_list)) {
         register_allowed_list("RPC_CM_LIST_APPS");
         register_allowed_list("RPC_CM_LIST_NODES");
         register_allowed_list("RPC_CM_CLUSTER_INFO");
