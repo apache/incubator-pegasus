@@ -168,18 +168,18 @@ void split(const char *input,
 
 template <typename Container>
 inline void split_to_sequence_container(const char *input,
-           char separator,
-           bool keep_place_holder,
-           Container &output)
+                                        char separator,
+                                        bool keep_place_holder,
+                                        Container &output)
 {
     split(input, separator, keep_place_holder, SequenceInserter(), output);
 }
 
 template <typename Container>
 inline void split_to_associative_container(const char *input,
-           char separator,
-           bool keep_place_holder,
-           Container &output)
+                                           char separator,
+                                           bool keep_place_holder,
+                                           Container &output)
 {
     split(input, separator, keep_place_holder, AssociativeInserter(), output);
 }
@@ -194,7 +194,10 @@ void split_args(const char *args,
     split_to_sequence_container(args, splitter, keep_place_holder, sargs);
 }
 
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter, bool keep_place_holder)
+void split_args(const char *args,
+                /*out*/ std::list<std::string> &sargs,
+                char splitter,
+                bool keep_place_holder)
 {
     split_to_sequence_container(args, splitter, keep_place_holder, sargs);
 }

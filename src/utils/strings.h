@@ -41,7 +41,10 @@ void split_args(const char *args,
                 char splitter = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ', bool keep_place_holder = false);
+void split_args(const char *args,
+                /*out*/ std::list<std::string> &sargs,
+                char splitter = ' ',
+                bool keep_place_holder = false);
 
 void split_args(const char *args,
                 /*out*/ std::unordered_set<std::string> &sargs,
