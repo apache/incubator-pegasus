@@ -1460,9 +1460,7 @@ void replica::on_add_learner(const group_check_request &request)
         if (!update_local_configuration(request.config, true))
             return;
 
-        dassert_replica(partition_status::PS_POTENTIAL_SECONDARY == status(),
-                        "invalid partition_status, status = {}",
-                        enum_to_string(status()));
+        CHECK_EQ_PREFIX(partition_status::PS_POTENTIAL_SECONDARY, status());
 
         _is_duplication_master = request.app.duplicating;
         init_learn(request.config.learner_signature);

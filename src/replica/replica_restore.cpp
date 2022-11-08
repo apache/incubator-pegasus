@@ -308,35 +308,35 @@ dsn::error_code replica::restore_checkpoint()
     // first check the parameter
     configuration_restore_request restore_req;
     auto iter = _app_info.envs.find(backup_restore_constant::BLOCK_SERVICE_PROVIDER);
-    dassert_replica(iter != _app_info.envs.end(),
-                    "can't find {} in app_info.envs",
-                    backup_restore_constant::BLOCK_SERVICE_PROVIDER);
+    CHECK_PREFIX_MSG(iter != _app_info.envs.end(),
+                     "can't find {} in app_info.envs",
+                     backup_restore_constant::BLOCK_SERVICE_PROVIDER);
     restore_req.backup_provider_name = iter->second;
     iter = _app_info.envs.find(backup_restore_constant::CLUSTER_NAME);
-    dassert_replica(iter != _app_info.envs.end(),
-                    "can't find {} in app_info.envs",
-                    backup_restore_constant::CLUSTER_NAME);
+    CHECK_PREFIX_MSG(iter != _app_info.envs.end(),
+                     "can't find {} in app_info.envs",
+                     backup_restore_constant::CLUSTER_NAME);
     restore_req.cluster_name = iter->second;
     iter = _app_info.envs.find(backup_restore_constant::POLICY_NAME);
-    dassert_replica(iter != _app_info.envs.end(),
-                    "can't find {} in app_info.envs",
-                    backup_restore_constant::POLICY_NAME);
+    CHECK_PREFIX_MSG(iter != _app_info.envs.end(),
+                     "can't find {} in app_info.envs",
+                     backup_restore_constant::POLICY_NAME);
     restore_req.policy_name = iter->second;
     iter = _app_info.envs.find(backup_restore_constant::APP_NAME);
-    dassert_replica(iter != _app_info.envs.end(),
-                    "can't find {} in app_info.envs",
-                    backup_restore_constant::APP_NAME);
+    CHECK_PREFIX_MSG(iter != _app_info.envs.end(),
+                     "can't find {} in app_info.envs",
+                     backup_restore_constant::APP_NAME);
     restore_req.app_name = iter->second;
     iter = _app_info.envs.find(backup_restore_constant::APP_ID);
-    dassert_replica(iter != _app_info.envs.end(),
-                    "can't find {} in app_info.envs",
-                    backup_restore_constant::APP_ID);
+    CHECK_PREFIX_MSG(iter != _app_info.envs.end(),
+                     "can't find {} in app_info.envs",
+                     backup_restore_constant::APP_ID);
     restore_req.app_id = boost::lexical_cast<int32_t>(iter->second);
 
     iter = _app_info.envs.find(backup_restore_constant::BACKUP_ID);
-    dassert_replica(iter != _app_info.envs.end(),
-                    "can't find {} in app_info.envs",
-                    backup_restore_constant::BACKUP_ID);
+    CHECK_PREFIX_MSG(iter != _app_info.envs.end(),
+                     "can't find {} in app_info.envs",
+                     backup_restore_constant::BACKUP_ID);
     restore_req.time_stamp = boost::lexical_cast<int64_t>(iter->second);
 
     bool skip_bad_partition = false;

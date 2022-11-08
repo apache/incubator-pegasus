@@ -81,10 +81,10 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
     _client = static_cast<client::pegasus_client_impl *>(client);
 
     auto ret = dsn::replication::get_duplication_cluster_id(remote_cluster.data());
-    dassert_replica(ret.is_ok(), // never possible, meta server disallows such remote_cluster.
-                    "invalid remote cluster: {}, err_ret: {}",
-                    remote_cluster,
-                    ret.get_error());
+    CHECK_PREFIX_MSG(ret.is_ok(), // never possible, meta server disallows such remote_cluster.
+                     "invalid remote cluster: {}, err_ret: {}",
+                     remote_cluster,
+                     ret.get_error());
     _remote_cluster_id = static_cast<uint8_t>(ret.get_value());
 
     LOG_INFO_PREFIX("initialize mutation duplicator for local cluster [id:{}], "
@@ -94,10 +94,8 @@ pegasus_mutation_duplicator::pegasus_mutation_duplicator(dsn::replication::repli
                     remote_cluster);
 
     // never possible to duplicate data to itself
-    dassert_replica(get_current_cluster_id() != _remote_cluster_id,
-                    "invalid remote cluster: {} {}",
-                    remote_cluster,
-                    _remote_cluster_id);
+    CHECK_NE_PREFIX_MSG(
+        get_current_cluster_id(), _remote_cluster_id, "invalid remote cluster: {}", remote_cluster);
 
     std::string str_gpid = fmt::format("{}", get_gpid());
     _shipped_ops.init_app_counter("app.pegasus",
@@ -150,7 +148,7 @@ void pegasus_mutation_duplicator::on_duplicate_reply(uint64_t hash,
                              rpc.request().entries.size());
         }
         // duplicating an illegal write to server is unacceptable, fail fast.
-        dassert_replica(perr != PERR_INVALID_ARGUMENT, rpc.response().error_hint);
+        CHECK_NE_PREFIX_MSG(perr, PERR_INVALID_ARGUMENT, rpc.response().error_hint);
     } else {
         _shipped_ops->increment();
         _total_shipped_size +=

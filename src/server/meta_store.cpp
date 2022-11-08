@@ -78,11 +78,11 @@ std::string meta_store::get_usage_scenario() const
     // If couldn't find rocksdb usage scenario in meta column family, return normal in default.
     std::string usage_scenario = ROCKSDB_ENV_USAGE_SCENARIO_NORMAL;
     auto ec = get_string_value_from_meta_cf(false, ROCKSDB_ENV_USAGE_SCENARIO_KEY, &usage_scenario);
-    dassert_replica(ec == ::dsn::ERR_OK || ec == ::dsn::ERR_OBJECT_NOT_FOUND,
-                    "rocksdb {} get {} from meta column family failed: {}",
-                    _db->GetName(),
-                    ROCKSDB_ENV_USAGE_SCENARIO_KEY,
-                    ec.to_string());
+    CHECK_PREFIX_MSG(ec == ::dsn::ERR_OK || ec == ::dsn::ERR_OBJECT_NOT_FOUND,
+                     "rocksdb {} get {} from meta column family failed: {}",
+                     _db->GetName(),
+                     ROCKSDB_ENV_USAGE_SCENARIO_KEY,
+                     ec);
     return usage_scenario;
 }
 

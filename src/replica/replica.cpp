@@ -423,14 +423,14 @@ bool replica::verbose_commit_log() const { return _stub->_verbose_commit_log; }
 
 void replica::close()
 {
-    dassert_replica(status() == partition_status::PS_ERROR ||
-                        status() == partition_status::PS_INACTIVE ||
-                        _disk_migrator->status() == disk_migration_status::IDLE ||
-                        _disk_migrator->status() >= disk_migration_status::MOVED,
-                    "invalid state(partition_status={}, migration_status={}) when calling "
-                    "replica close",
-                    enum_to_string(status()),
-                    enum_to_string(_disk_migrator->status()));
+    CHECK_PREFIX_MSG(status() == partition_status::PS_ERROR ||
+                         status() == partition_status::PS_INACTIVE ||
+                         _disk_migrator->status() == disk_migration_status::IDLE ||
+                         _disk_migrator->status() >= disk_migration_status::MOVED,
+                     "invalid state(partition_status={}, migration_status={}) when calling "
+                     "replica close",
+                     enum_to_string(status()),
+                     enum_to_string(_disk_migrator->status()));
 
     uint64_t start_time = dsn_now_ms();
 
@@ -453,10 +453,10 @@ void replica::close()
 
     // for partition_status::PS_ERROR, context cleanup is done here as they may block
     else {
-        dassert_replica(_secondary_states.cleanup(true), "secondary context is not cleared");
-        dassert_replica(_potential_secondary_states.cleanup(true),
-                        "potential secondary context is not cleared");
-        dassert_replica(_split_states.cleanup(true), "partition split context is not cleared");
+        CHECK_PREFIX_MSG(_secondary_states.cleanup(true), "secondary context is not cleared");
+        CHECK_PREFIX_MSG(_potential_secondary_states.cleanup(true),
+                         "potential secondary context is not cleared");
+        CHECK_PREFIX_MSG(_split_states.cleanup(true), "partition split context is not cleared");
     }
 
     if (_private_log != nullptr) {
@@ -496,13 +496,13 @@ void replica::close()
 
 std::string replica::query_manual_compact_state() const
 {
-    dassert_replica(_app != nullptr, "");
+    CHECK_PREFIX(_app);
     return _app->query_compact_state();
 }
 
 manual_compaction_status::type replica::get_manual_compact_status() const
 {
-    dassert_replica(_app != nullptr, "");
+    CHECK_PREFIX(_app);
     return _app->query_compact_status();
 }
 
@@ -539,7 +539,7 @@ void replica::on_detect_hotkey(const detect_hotkey_request &req, detect_hotkey_r
 
 uint32_t replica::query_data_version() const
 {
-    dassert_replica(_app != nullptr, "");
+    CHECK_PREFIX(_app);
     return _app->query_data_version();
 }
 

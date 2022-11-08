@@ -42,9 +42,7 @@ void mutation_buffer::commit(decree d, commit_type ct)
     if (d <= last_committed_decree())
         return;
 
-    if (ct != COMMIT_TO_DECREE_HARD) {
-        dassert_replica(false, "invalid commit type {}", (int)ct);
-    }
+    CHECK_EQ_PREFIX(ct, COMMIT_TO_DECREE_HARD);
 
     ballot last_bt = 0;
     for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {

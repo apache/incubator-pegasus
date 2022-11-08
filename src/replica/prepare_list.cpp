@@ -77,7 +77,6 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     CHECK_GT_PREFIX(d, last_committed_decree());
 
     ADD_POINT(mu->_tracer);
-    error_code err;
     switch (status) {
     case partition_status::PS_PRIMARY:
         // pop committed mutations if buffer is full or pop_all_committed_mutations = true
@@ -98,15 +97,14 @@ error_code prepare_list::prepare(mutation_ptr &mu,
                last_committed_decree() > min_decree()) {
             pop_min();
         }
-        err = mutation_cache::put(mu);
-        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
-        return err;
+        CHECK_EQ_PREFIX_MSG(mutation_cache::put(mu), ERR_OK, "mutation_cache::put failed");
+        return ERR_OK;
 
     //// delayed commit - only when capacity is an issue
     // case partition_status::PS_POTENTIAL_SECONDARY:
     //    while (true)
     //    {
-    //        err = mutation_cache::put(mu);
+    //        error_code err = mutation_cache::put(mu);
     //        if (err == ERR_CAPACITY_EXCEEDED)
     //        {
     //            CHECK_GE(mu->data.header.last_committed_decree, min_decree());
@@ -117,7 +115,7 @@ error_code prepare_list::prepare(mutation_ptr &mu,
     //            break;
     //    }
     //    CHECK_EQ(err, ERR_OK);
-    //    return err;
+    //    return ERR_OK;
 
     case partition_status::PS_INACTIVE: // only possible during init
         if (mu->data.header.last_committed_decree > max_decree()) {
@@ -130,13 +128,12 @@ error_code prepare_list::prepare(mutation_ptr &mu,
         while (d - min_decree() >= capacity() && last_committed_decree() > min_decree()) {
             pop_min();
         }
-        err = mutation_cache::put(mu);
-        dassert_replica(err == ERR_OK, "mutation_cache::put failed, err = {}", err);
-        return err;
+        CHECK_EQ_PREFIX_MSG(mutation_cache::put(mu), ERR_OK, "mutation_cache::put failed");
+        return ERR_OK;
 
     default:
         CHECK(false, "invalid partition_status, status = {}", enum_to_string(status));
-        return dsn::ERR_OK;
+        return ERR_OK;
     }
 }
 
@@ -154,7 +151,7 @@ void prepare_list::commit(decree d, commit_type ct)
         for (decree d0 = last_committed_decree() + 1; d0 <= d; d0++) {
             mutation_ptr mu = get_mutation_by_decree(d0);
 
-            dassert_replica(
+            CHECK_PREFIX_MSG(
                 mu != nullptr && mu->is_logged(), "mutation {} is missing in prepare list", d0);
             CHECK_GE_PREFIX(mu->data.header.ballot, last_bt);
 
