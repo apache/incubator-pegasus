@@ -131,6 +131,10 @@ void split(const char *input,
                 break;
             case split_args_state::kSplitToken: {
                 auto token_end = find_token_end(token_begin, p);
+                CHECK_LE(token_begin, token_end);
+                if (token_begin == token_end && !keep_place_holder) {
+                    break;
+                }
                 inserter.emplace(output, token_begin, token_end);
             } break;
             default:
