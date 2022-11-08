@@ -33,16 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/utils.h"
-#include "utils/strings.h"
+#include <gtest/gtest.h>
+
+#include "runtime/api_layer1.h"
+#include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
-#include "utils/link.h"
 #include "utils/crc.h"
-#include "utils/autoref_ptr.h"
-#include "runtime/api_layer1.h"
-#include <gtest/gtest.h>
+#include "utils/link.h"
 #include "utils/rand.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::utils;
@@ -82,6 +83,36 @@ TEST(core, binary_io)
     reader.read(value3);
 
     EXPECT_TRUE(value3 == value);
+}
+
+TEST(core, check_c_string_empty)
+{
+    const char *null_string = nullptr;
+    EXPECT_TRUE(dsn::utils::is_empty(null_string));
+
+    const char *empty_string_1 = "";
+    EXPECT_TRUE(dsn::utils::is_empty(empty_string_1));
+
+    const char *empty_string_2 = "\0";
+    EXPECT_TRUE(dsn::utils::is_empty(empty_string_2));
+
+    const char *empty_string_3 = "\0a";
+    EXPECT_TRUE(dsn::utils::is_empty(empty_string_3));
+
+    const char *empty_string_4 = "\0abc";
+    EXPECT_TRUE(dsn::utils::is_empty(empty_string_4));
+
+    const char *non_empty_string_1 = "a";
+    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_1));
+
+    const char *non_empty_string_2 = "a\0";
+    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_2));
+
+    const char *non_empty_string_3 = "ab\0c";
+    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_3));
+
+    const char *non_empty_string_4 = "abc";
+    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_4));
 }
 
 TEST(core, split_args)
