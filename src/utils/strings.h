@@ -26,29 +26,29 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include <iostream>
 #include <list>
 #include <map>
+#include <string>
 #include <unordered_set>
-#include <iostream>
+#include <vector>
 
 namespace dsn {
 namespace utils {
 
-void split_args(const char *args,
-                /*out*/ std::vector<std::string> &sargs,
-                char splitter = ' ',
+void split_args(const char *input,
+                std::vector<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args,
-                /*out*/ std::list<std::string> &sargs,
-                char splitter = ' ',
+void split_args(const char *input,
+                std::list<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args,
-                /*out*/ std::unordered_set<std::string> &sargs,
-                char splitter = ' ',
+void split_args(const char *input,
+                std::unordered_set<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
 // kv_map sample (when item_splitter = ',' and kv_splitter = ':'):

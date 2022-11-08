@@ -186,28 +186,28 @@ inline void split_to_associative_container(const char *input,
 
 } // anonymous namespace
 
-void split_args(const char *args,
-                /*out*/ std::vector<std::string> &sargs,
-                char splitter,
+void split_args(const char *input,
+                /*out*/ std::vector<std::string> &output,
+                char separator,
                 bool keep_place_holder)
 {
-    split_to_sequence_container(args, splitter, keep_place_holder, sargs);
+    split_to_sequence_container(input, separator, keep_place_holder, output);
 }
 
-void split_args(const char *args,
-                /*out*/ std::list<std::string> &sargs,
-                char splitter,
+void split_args(const char *input,
+                /*out*/ std::list<std::string> &output,
+                char separator,
                 bool keep_place_holder)
 {
-    split_to_sequence_container(args, splitter, keep_place_holder, sargs);
+    split_to_sequence_container(input, separator, keep_place_holder, output);
 }
 
-void split_args(const char *args,
-                /*out*/ std::unordered_set<std::string> &sargs,
-                char splitter,
+void split_args(const char *input,
+                /*out*/ std::unordered_set<std::string> &output,
+                char separator,
                 bool keep_place_holder)
 {
-    split_to_associative_container(args, splitter, keep_place_holder, sargs);
+    split_to_associative_container(input, separator, keep_place_holder, output);
 }
 
 bool parse_kv_map(const char *args,

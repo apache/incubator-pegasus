@@ -84,8 +84,32 @@ TEST(core, binary_io)
     EXPECT_TRUE(value3 == value);
 }
 
+template <typename Container>
+void test_split_args()
+{
+    struct test_case
+    {
+        const char *input;
+        char separator;
+        bool keep_place_holder;
+        Container expected_output;
+    } tests[] = {{"", ' ', false, {}},
+                 {"", ' ', true, {""}},
+                 {"", ',', false, {}}};
+
+    for (const auto &test : tests) {
+        Container actual_output;
+        split_args(test.input, actual_output, test.separator, test.keep_place_holder);
+        EXPECT_EQ(actual_output, test.expected_output);
+    }
+}
+
 TEST(core, split_args)
 {
+    test_split_args<std::vector<std::string>>();
+    test_split_args<std::list<std::string>>();
+    test_split_args<std::unordered_set<std::string>>();
+
     std::string value = "a ,b, c ";
     std::vector<std::string> sargs;
     std::list<std::string> sargs2;
