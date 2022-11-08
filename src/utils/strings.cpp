@@ -68,13 +68,13 @@ enum class split_args_state : int
 const std::string kLeadingSpaces = " \t";
 const std::string kTrailingSpaces = " \t\r\n";
 
-bool is_leading_space(char ch)
+inline bool is_leading_space(char ch)
 {
     return std::any_of(
         kLeadingSpaces.begin(), kLeadingSpaces.end(), [ch](char space) { return ch == space; });
 }
 
-bool is_trailing_space(char ch)
+inline bool is_trailing_space(char ch)
 {
     return std::any_of(
         kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space; });
@@ -115,6 +115,8 @@ void split(const char *input,
            Container &output)
 {
     CHECK_NOTNULL(input, "");
+
+    output.clear();
 
     auto state = split_args_state::kSplitBeginning;
     const char *token_begin = nullptr;
@@ -164,6 +166,24 @@ void split(const char *input,
     }
 }
 
+template <typename Container>
+inline void split_to_sequence_container(const char *input,
+           char separator,
+           bool keep_place_holder,
+           Container &output)
+{
+    split(input, separator, keep_place_holder, SequenceInserter(), output);
+}
+
+template <typename Container>
+inline void split_to_associative_container(const char *input,
+           char separator,
+           bool keep_place_holder,
+           Container &output)
+{
+    split(input, separator, keep_place_holder, AssociativeInserter(), output);
+}
+
 } // anonymous namespace
 
 void split_args(const char *args,
@@ -171,8 +191,12 @@ void split_args(const char *args,
                 char splitter,
                 bool keep_place_holder)
 {
-    sargs.clear();
-    split(args, splitter, keep_place_holder, SequenceInserter(), sargs);
+    split_to_sequence_container(args, splitter, keep_place_holder, sargs);
+}
+
+void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter, bool keep_place_holder)
+{
+    split_to_sequence_container(args, splitter, keep_place_holder, sargs);
 }
 
 void split_args(const char *args,
@@ -180,13 +204,7 @@ void split_args(const char *args,
                 char splitter,
                 bool keep_place_holder)
 {
-    split(args, splitter, keep_place_holder, AssociativeInserter(), sargs);
-}
-
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter)
-{
-    sargs.clear();
-    split(args, splitter, false, SequenceInserter(), sargs);
+    split_to_associative_container(args, splitter, keep_place_holder, sargs);
 }
 
 bool parse_kv_map(const char *args,

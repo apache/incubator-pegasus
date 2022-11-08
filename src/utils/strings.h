@@ -41,12 +41,12 @@ void split_args(const char *args,
                 char splitter = ' ',
                 bool keep_place_holder = false);
 
+void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ', bool keep_place_holder = false);
+
 void split_args(const char *args,
                 /*out*/ std::unordered_set<std::string> &sargs,
                 char splitter = ' ',
                 bool keep_place_holder = false);
-
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ');
 
 // kv_map sample (when item_splitter = ',' and kv_splitter = ':'):
 //   k1:v1,k2:v2,k3:v3
