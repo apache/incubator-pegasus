@@ -91,29 +91,28 @@ void check_nonempty(const char *str) { EXPECT_FALSE(dsn::utils::is_empty(str)); 
 
 TEST(core, check_c_string_empty)
 {
-    check_empty(nullptr);
-    check_empty("");
-    check_empty("\0");
-    check_empty("\0\0");
-    check_empty("\0\0\0");
-    check_empty("\0a");
-    check_empty("\0ab");
-    check_empty("\0abc");
+    const char *empty_strings[] = {nullptr, "", "\0", "\0\0", "\0\0\0", "\0a", "\0ab", "\0abc"};
+    for (const auto &p : empty_strings) {
+        check_empty(p);
+    }
 
-    check_nonempty("\\");
-    check_nonempty("\\\\");
-    check_nonempty("0");
-    check_nonempty("00");
-    check_nonempty("\\0");
-    check_nonempty("\\0a");
-    check_nonempty("\\\\00");
-    check_nonempty("a");
-    check_nonempty("a\0");
-    check_nonempty("a\\0");
-    check_nonempty("a\0b");
-    check_nonempty("ab\0c");
-    check_nonempty("abc\0");
-    check_nonempty("abc");
+    const char *nonempty_strings[] = {"\\",
+                                      "\\\\",
+                                      "0",
+                                      "00",
+                                      "\\0",
+                                      "\\0a",
+                                      "\\\\00",
+                                      "a",
+                                      "a\0",
+                                      "a\\0",
+                                      "a\0b",
+                                      "ab\0c",
+                                      "abc\0",
+                                      "abc"};
+    for (const auto &p : nonempty_strings) {
+        check_nonempty(p);
+    }
 }
 
 TEST(core, split_args)
