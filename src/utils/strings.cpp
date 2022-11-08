@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <cstring>
 #include <sstream>
+#include <utility>
+
 #include <openssl/md5.h>
 #include "utils/strings.h"
 
@@ -75,40 +77,55 @@ bool is_trailing_space(char ch)
         kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space });
 }
 
-const char *find_first_trailing_space(const char *token_start, const char *token_end)
+const char *find_token_end(const char *token_begin, const char *end)
 {
-    CHECK_LT(token_start, token_end);
+    CHECK_LT(token_begin, end);
 
-    const char *p = token_end - 1;
-    for (; p >= token_start && is_trailing_space(*p); --p) {
-    }
-    return p;
+    for (; end > token_begin && is_trailing_space(*(end - 1)); --end) {}
+    return end;
 }
 
-} // anonymous namespace
+struct SequenceInserter
+{
+    template <typename SequenceContainer, typename... Args>
+    void emplace(SequenceContainer &container, Args &&... args) const
+    {
+        container.emplace_back(std::forward<Args>(args)...);
+    }
+};
 
-template <typename Container>
-void split_args(const char *input,
-                Container<std::string> &output,
+struct AssociativeInserter
+{
+    template <typename AssociativeContainer, typename... Args>
+    void emplace(AssociativeContainer &container, Args &&... args) const
+    {
+        container.emplace(std::forward<Args>(args)...);
+    }
+};
+
+template <typename Inserter, typename Container>
+void split(const char *input,
                 char separator,
-                bool keep_place_holder)
+                bool keep_place_holder,
+                const Inserter &inserter,
+                Container &output)
 {
     CHECK_NOTNULL(input, "");
 
-    const char *token_start = nullptr;
     auto state = split_args_state::kSplitBeginning;
+    const char *token_begin = nullptr;
     for (auto p = input;; ++p) {
         if (*p == separator || *p == '\0') {
             switch (state) {
             case split_args_state::kSplitBeginning:
             case split_args_state::kSplitLeadingSpaces:
                 if (keep_place_holder) {
-                    output.emplace_back();
+                    inserter.emplace(output);
                 }
                 break;
             case split_args_state::kSplitToken:
-                auto token_end = find_first_trailing_space(token_start, p);
-                output.emplace_back(token_start, token_end);
+                auto token_end = find_token_end(token_begin, p);
+                inserter.emplace(output, token_begin, token_end);
                 break;
             default:
                 break;
@@ -128,13 +145,13 @@ void split_args(const char *input,
                 state = split_args_state::kSplitLeadingSpaces;
             } else {
                 state = split_args_state::kSplitToken;
-                token_start = p;
+                token_begin = p;
             }
             break;
         case split_args_state::kSplitLeadingSpaces:
             if (!is_leading_space(*p)) {
                 state = split_args_state::kSplitToken;
-                token_start = p;
+                token_begin = p;
             }
             break;
         default:
@@ -143,34 +160,15 @@ void split_args(const char *input,
     }
 }
 
+} // anonymous namespace
+
 void split_args(const char *args,
                 /*out*/ std::vector<std::string> &sargs,
                 char splitter,
                 bool keep_place_holder)
 {
     sargs.clear();
-    std::string v(args);
-    uint64_t last_pos = 0;
-    while (true) {
-        auto pos = v.find(splitter, last_pos);
-        if (pos != std::string::npos) {
-            std::string s = trim_string((char *)v.substr(last_pos, pos - last_pos).c_str());
-            if (!s.empty()) {
-                sargs.push_back(s);
-            } else if (keep_place_holder) {
-                sargs.emplace_back("");
-            }
-            last_pos = pos + 1;
-        } else {
-            std::string s = trim_string((char *)v.substr(last_pos).c_str());
-            if (!s.empty()) {
-                sargs.push_back(s);
-            } else if (keep_place_holder) {
-                sargs.emplace_back("");
-            }
-            break;
-        }
-    }
+    split(args, splitter, keep_place_holder, SequenceInserter(), sargs)
 }
 
 void split_args(const char *args,
@@ -178,38 +176,13 @@ void split_args(const char *args,
                 char splitter,
                 bool keep_place_holder)
 {
-    std::vector<std::string> sargs_vec;
-    split_args(args, sargs_vec, splitter, keep_place_holder);
-    sargs.insert(sargs_vec.begin(), sargs_vec.end());
+    split(args, splitter, keep_place_holder, AssociativeInserter(), sargs)
 }
 
 void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter)
 {
     sargs.clear();
-
-    std::string v(args);
-
-    int lastPos = 0;
-    while (true) {
-        auto pos = v.find(splitter, lastPos);
-        if (pos != std::string::npos) {
-            std::string s = v.substr(lastPos, pos - lastPos);
-            if (s.length() > 0) {
-                std::string s2 = trim_string((char *)s.c_str());
-                if (s2.length() > 0)
-                    sargs.push_back(s2);
-            }
-            lastPos = static_cast<int>(pos + 1);
-        } else {
-            std::string s = v.substr(lastPos);
-            if (s.length() > 0) {
-                std::string s2 = trim_string((char *)s.c_str());
-                if (s2.length() > 0)
-                    sargs.push_back(s2);
-            }
-            break;
-        }
-    }
+    split(args, splitter, false, SequenceInserter(), sargs)
 }
 
 bool parse_kv_map(const char *args,
