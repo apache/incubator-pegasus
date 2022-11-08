@@ -111,6 +111,7 @@
 
 #define CHECK_PREFIX_MSG(x, ...) CHECK(x, "[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 #define CHECK_NOTNULL_PREFIX_MSG(p, ...) CHECK_PREFIX_MSG(p != nullptr, fmt::format(__VA_ARGS__))
+#define CHECK_NOTNULL_PREFIX(p) CHECK_NOTNULL_PREFIX_MSG(p, "")
 
 #define CHECK_NE_PREFIX_MSG(var1, var2, ...)                                                       \
     do {                                                                                           \

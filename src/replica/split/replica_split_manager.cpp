@@ -638,7 +638,7 @@ void replica_split_manager::parent_handle_child_catch_up(
         mutation_ptr mu = _replica->new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
         _replica->init_prepare(mu, false);
-        CHECK_EQ_MSG(
+        CHECK_EQ_PREFIX_MSG(
             sync_point, mu->data.header.decree, "sync_point should be equal to mutation's decree");
     };
 

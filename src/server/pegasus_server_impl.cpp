@@ -3284,8 +3284,8 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
 void pegasus_server_impl::release_db()
 {
     if (_db) {
-        CHECK_NOTNULL_PREFIX_MSG(_data_cf, "");
-        CHECK_NOTNULL_PREFIX_MSG(_meta_cf, "");
+        CHECK_NOTNULL_PREFIX(_data_cf);
+        CHECK_NOTNULL_PREFIX(_meta_cf);
         _db->DestroyColumnFamilyHandle(_data_cf);
         _data_cf = nullptr;
         _db->DestroyColumnFamilyHandle(_meta_cf);
