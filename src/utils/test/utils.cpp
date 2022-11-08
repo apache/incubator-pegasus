@@ -85,34 +85,35 @@ TEST(core, binary_io)
     EXPECT_TRUE(value3 == value);
 }
 
+void check_empty(const char *str) { EXPECT_TRUE(dsn::utils::is_empty(str)); }
+
+void check_nonempty(const char *str) { EXPECT_FALSE(dsn::utils::is_empty(str)); }
+
 TEST(core, check_c_string_empty)
 {
-    const char *null_string = nullptr;
-    EXPECT_TRUE(dsn::utils::is_empty(null_string));
+    check_empty(nullptr);
+    check_empty("");
+    check_empty("\0");
+    check_empty("\0\0");
+    check_empty("\0\0\0");
+    check_empty("\0a");
+    check_empty("\0ab");
+    check_empty("\0abc");
 
-    const char *empty_string_1 = "";
-    EXPECT_TRUE(dsn::utils::is_empty(empty_string_1));
-
-    const char *empty_string_2 = "\0";
-    EXPECT_TRUE(dsn::utils::is_empty(empty_string_2));
-
-    const char *empty_string_3 = "\0a";
-    EXPECT_TRUE(dsn::utils::is_empty(empty_string_3));
-
-    const char *empty_string_4 = "\0abc";
-    EXPECT_TRUE(dsn::utils::is_empty(empty_string_4));
-
-    const char *non_empty_string_1 = "a";
-    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_1));
-
-    const char *non_empty_string_2 = "a\0";
-    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_2));
-
-    const char *non_empty_string_3 = "ab\0c";
-    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_3));
-
-    const char *non_empty_string_4 = "abc";
-    EXPECT_FALSE(dsn::utils::is_empty(non_empty_string_4));
+    check_nonempty("\\");
+    check_nonempty("\\\\");
+    check_nonempty("0");
+    check_nonempty("00");
+    check_nonempty("\\0");
+    check_nonempty("\\0a");
+    check_nonempty("\\\\00");
+    check_nonempty("a");
+    check_nonempty("a\0");
+    check_nonempty("a\\0");
+    check_nonempty("a\0b");
+    check_nonempty("ab\0c");
+    check_nonempty("abc\0");
+    check_nonempty("abc");
 }
 
 TEST(core, split_args)
