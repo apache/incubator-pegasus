@@ -36,6 +36,8 @@
 namespace dsn {
 namespace utils {
 
+inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
+
 void split_args(const char *args,
                 /*out*/ std::vector<std::string> &sargs,
                 char splitter = ' ',

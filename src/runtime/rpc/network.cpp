@@ -32,6 +32,7 @@
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/strings.h"
 
 namespace dsn {
 /*static*/ join_point<void, rpc_session *>
@@ -566,7 +567,7 @@ uint32_t network::get_local_ipv4()
 
     uint32_t ip = 0;
 
-    if (strlen(explicit_host) > 0) {
+    if (!utils::is_empty(explicit_host)) {
         ip = rpc_address::ipv4_from_host(explicit_host);
     }
 
