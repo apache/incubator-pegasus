@@ -33,16 +33,17 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
-#include "utils/utils.h"
-#include "utils/strings.h"
+#include <gtest/gtest.h>
+
+#include "runtime/api_layer1.h"
+#include "utils/autoref_ptr.h"
 #include "utils/binary_reader.h"
 #include "utils/binary_writer.h"
-#include "utils/link.h"
 #include "utils/crc.h"
-#include "utils/autoref_ptr.h"
-#include "runtime/api_layer1.h"
-#include <gtest/gtest.h>
+#include "utils/link.h"
 #include "utils/rand.h"
+#include "utils/strings.h"
+#include "utils/utils.h"
 
 using namespace ::dsn;
 using namespace ::dsn::utils;
@@ -82,6 +83,36 @@ TEST(core, binary_io)
     reader.read(value3);
 
     EXPECT_TRUE(value3 == value);
+}
+
+void check_empty(const char *str) { EXPECT_TRUE(dsn::utils::is_empty(str)); }
+
+void check_nonempty(const char *str) { EXPECT_FALSE(dsn::utils::is_empty(str)); }
+
+TEST(core, check_c_string_empty)
+{
+    const char *empty_strings[] = {nullptr, "", "\0", "\0\0", "\0\0\0", "\0a", "\0ab", "\0abc"};
+    for (const auto &p : empty_strings) {
+        check_empty(p);
+    }
+
+    const char *nonempty_strings[] = {"\\",
+                                      "\\\\",
+                                      "0",
+                                      "00",
+                                      "\\0",
+                                      "\\0a",
+                                      "\\\\00",
+                                      "a",
+                                      "a\0",
+                                      "a\\0",
+                                      "a\0b",
+                                      "ab\0c",
+                                      "abc\0",
+                                      "abc"};
+    for (const auto &p : nonempty_strings) {
+        check_nonempty(p);
+    }
 }
 
 template <typename Container>

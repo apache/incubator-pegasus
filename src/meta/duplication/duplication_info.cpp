@@ -152,7 +152,7 @@ void duplication_info::persist_progress(int partition_index)
     zauto_write_lock l(_lock);
 
     auto &p = _progress[partition_index];
-    dassert_dup(p.is_altering, this, "partition_index: {}", partition_index);
+    CHECK_PREFIX_MSG(p.is_altering, "partition_index: {}", partition_index);
     p.is_altering = false;
     p.stored_decree = p.volatile_decree;
 }

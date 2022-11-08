@@ -1471,7 +1471,7 @@ void pegasus_server_impl::on_clear_scanner(const int64_t &args) { _context_cache
 
 dsn::error_code pegasus_server_impl::start(int argc, char **argv)
 {
-    dassert_replica(!_is_open, "replica is already opened.");
+    CHECK_PREFIX_MSG(!_is_open, "replica is already opened");
     LOG_INFO_PREFIX("start to open app {}", data_dir());
 
     // parse envs for parameters
@@ -1587,8 +1587,8 @@ dsn::error_code pegasus_server_impl::start(int argc, char **argv)
             LOG_ERROR_PREFIX("check column families failed");
             return dsn::ERR_LOCAL_APP_FAILURE;
         }
-        dassert_replica(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
-        dassert_replica(!missing_data_cf, "Missing data column family");
+        CHECK_PREFIX_MSG(!missing_meta_cf, "You must upgrade Pegasus server from 2.0");
+        CHECK_PREFIX_MSG(!missing_data_cf, "Missing data column family");
 
         // Load latest options from option file stored in the db directory.
         rocksdb::DBOptions loaded_db_opt;
@@ -3284,7 +3284,8 @@ void pegasus_server_impl::set_partition_version(int32_t partition_version)
 void pegasus_server_impl::release_db()
 {
     if (_db) {
-        dassert_replica(_data_cf != nullptr && _meta_cf != nullptr, "");
+        CHECK_NOTNULL_PREFIX(_data_cf);
+        CHECK_NOTNULL_PREFIX(_meta_cf);
         _db->DestroyColumnFamilyHandle(_data_cf);
         _data_cf = nullptr;
         _db->DestroyColumnFamilyHandle(_meta_cf);

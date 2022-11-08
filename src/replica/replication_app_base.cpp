@@ -447,7 +447,7 @@ error_code replication_app_base::apply_mutation(const mutation *mu)
             str = "PS";
             break;
         default:
-            dassert_replica(false, "status = {}", enum_to_string(status));
+            CHECK_PREFIX_MSG(false, "status = {}", enum_to_string(status));
             __builtin_unreachable();
         }
         LOG_INFO_PREFIX(
