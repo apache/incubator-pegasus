@@ -118,6 +118,35 @@ TEST(core, check_c_string_empty)
 template <typename Container>
 void test_split_args()
 {
+    // Test cases:
+    // - split empty string by ' ' without place holder
+    // - split empty string by ' ' with place holder
+    // - split empty string by ',' without place holder
+    // - split empty string by ',' with place holder
+    // - split one space (' ') by ' ' without place holder
+    // - split one space (' ') by ' ' with place holder
+    // - split one space (' ') by ',' without place holder
+    // - split one space (' ') by ',' with place holder
+    // - split ' \t' by ' ' without place holder
+    // - split ' \t' by ' ' with place holder
+    // - split ' \t' by ',' without place holder
+    // - split ' \t' by ',' with place holder
+    // - split '\t ' by ' ' without place holder
+    // - split '\t ' by ' ' with place holder
+    // - split '\t ' by ',' without place holder
+    // - split '\t ' by ',' with place holder
+    // - split '\t \n' by ' ' without place holder
+    // - split '\t \n' by ' ' with place holder
+    // - split '\t \n' by ',' without place holder
+    // - split '\t \n' by ',' with place holder
+    // - split 'a' by ' ' without place holder
+    // - split 'a' by ' ' with place holder
+    // - split 'a' by ',' without place holder
+    // - split 'a' by ',' with place holder
+    // - split 'a ' by ' ' without place holder
+    // - split 'a ' by ' ' with place holder
+    // - split 'a ' by ',' without place holder
+    // - split 'a ' by ',' with place holder
     struct test_case
     {
         const char *input;
@@ -126,12 +155,59 @@ void test_split_args()
         Container expected_output;
     } tests[] = {{"", ' ', false, {}},
                  {"", ' ', true, {""}},
-                 {"", ',', false, {}}};
+                 {"", ',', false, {}},
+                 {"", ',', true, {""}},
+                 {" ", ' ', false, {}},
+                 {" ", ' ', true, {"", ""}},
+                 {" ", ',', false, {}},
+                 {" ", ',', true, {""}},
+                 {"  ", ' ', false, {}},
+                 {"  ", ' ', true, {"", "", ""}},
+                 {"  ", ',', false, {}},
+                 {"  ", ',', true, {""}},
+                 {" \t", ' ', false, {}},
+                 {" \t", ' ', true, {"", ""}},
+                 {" \t", ',', false, {}},
+                 {" \t", ',', true, {""}},
+                 {"\t ", ' ', false, {}},
+                 {"\t ", ' ', true, {"", ""}},
+                 {"\t ", ',', false, {}},
+                 {"\t ", ',', true, {""}},
+                 {"\t \n", ' ', false, {}},
+                 {"\t \n", ' ', true, {"", ""}},
+                 {"\t \n", ',', false, {}},
+                 {"\t \n", ',', true, {""}},
+                 {"\r \t", ' ', false, {}},
+                 {"\r \t", ' ', true, {"", ""}},
+                 {"\r \t", ',', false, {}},
+                 {"\r \t", ',', true, {""}},
+                 {"a", ' ', false, {"a"}},
+                 {"a", ' ', true, {"a"}},
+                 {"a", ',', false, {"a"}},
+                 {"a", ',', true, {"a"}},
+                 {"a ", ' ', false, {"a"}},
+                 {"a ", ' ', true, {"a", ""}},
+                 {"a ", ',', false, {"a"}},
+                 {"a ", ',', true, {"a"}},
+                 {"", ',', false, {}},
+    };
 
     for (const auto &test : tests) {
         Container actual_output;
         split_args(test.input, actual_output, test.separator, test.keep_place_holder);
         EXPECT_EQ(actual_output, test.expected_output);
+
+        // Test default value (i.e. false) for keep_place_holder.
+        if (!test.keep_place_holder) {
+            split_args(test.input, actual_output, test.separator);
+            EXPECT_EQ(actual_output, test.expected_output);
+
+            // Test default value (i.e. ' ') for separator.
+            if (test.separator == ' ') {
+                split_args(test.input, actual_output);
+                EXPECT_EQ(actual_output, test.expected_output);
+            }
+        }
     }
 }
 
