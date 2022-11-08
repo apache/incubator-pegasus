@@ -30,6 +30,9 @@
 #include <utility>
 
 #include <openssl/md5.h>
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
 #include "utils/strings.h"
 
 namespace dsn {
@@ -68,20 +71,21 @@ const std::string kTrailingSpaces = " \t\r\n";
 bool is_leading_space(char ch)
 {
     return std::any_of(
-        kLeadingSpaces.begin(), kLeadingSpaces.end(), [ch](char space) { return ch == space });
+        kLeadingSpaces.begin(), kLeadingSpaces.end(), [ch](char space) { return ch == space; });
 }
 
 bool is_trailing_space(char ch)
 {
     return std::any_of(
-        kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space });
+        kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space; });
 }
 
 const char *find_token_end(const char *token_begin, const char *end)
 {
     CHECK_LT(token_begin, end);
 
-    for (; end > token_begin && is_trailing_space(*(end - 1)); --end) {}
+    for (; end > token_begin && is_trailing_space(*(end - 1)); --end) {
+    }
     return end;
 }
 
@@ -105,10 +109,10 @@ struct AssociativeInserter
 
 template <typename Inserter, typename Container>
 void split(const char *input,
-                char separator,
-                bool keep_place_holder,
-                const Inserter &inserter,
-                Container &output)
+           char separator,
+           bool keep_place_holder,
+           const Inserter &inserter,
+           Container &output)
 {
     CHECK_NOTNULL(input, "");
 
@@ -123,10 +127,10 @@ void split(const char *input,
                     inserter.emplace(output);
                 }
                 break;
-            case split_args_state::kSplitToken:
+            case split_args_state::kSplitToken: {
                 auto token_end = find_token_end(token_begin, p);
                 inserter.emplace(output, token_begin, token_end);
-                break;
+            } break;
             default:
                 break;
             }
@@ -168,7 +172,7 @@ void split_args(const char *args,
                 bool keep_place_holder)
 {
     sargs.clear();
-    split(args, splitter, keep_place_holder, SequenceInserter(), sargs)
+    split(args, splitter, keep_place_holder, SequenceInserter(), sargs);
 }
 
 void split_args(const char *args,
@@ -176,13 +180,13 @@ void split_args(const char *args,
                 char splitter,
                 bool keep_place_holder)
 {
-    split(args, splitter, keep_place_holder, AssociativeInserter(), sargs)
+    split(args, splitter, keep_place_holder, AssociativeInserter(), sargs);
 }
 
 void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter)
 {
     sargs.clear();
-    split(args, splitter, false, SequenceInserter(), sargs)
+    split(args, splitter, false, SequenceInserter(), sargs);
 }
 
 bool parse_kv_map(const char *args,
