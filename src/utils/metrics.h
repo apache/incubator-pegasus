@@ -140,15 +140,19 @@ struct metric_filters
     bool generate_metric_fields_filter(const fields_type &with_metric_fields,
                                        const fields_type &without_metric_fields)
     {
+        // Either with_metric_fields or without_metric_fields is allowed to be nonempty.
+        // Once both are nonempty, it will be considered as wrong request and return false.
         if (!(with_metric_fields.empty() || without_metric_fields.empty())) {
             return false;
         }
 
         if (with_metric_fields.empty()) {
+            // Notice that any field is required once both with_metric_fields and
+            // without_metric_fields are empty. 
             metric_fields_filter = [without_metric_fields](const std::string &field) -> bool {
-                return without_metric_fields.find(field) != without_metric_fields.end();
+                return without_metric_fields.find(field) == without_metric_fields.end();
             }
-        } else { // without_metric_fields must be empty
+        } else { // without_metric_fields must be empty.
             metric_fields_filter = [with_metric_fields](const std::string &field) -> bool {
                 return with_metric_fields.find(field) != with_metric_fields.end();
             }
@@ -376,6 +380,9 @@ public:
     // Take snapshot of each metric to collect current values as json format.
     virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
 
+    static const std::string kMetricNameField;
+    static const std::string kMetricSingleValueField;
+
 protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
@@ -384,7 +391,7 @@ protected:
     inline void encode(dsn::json::JsonWriter &writer,
                        const std::string &field_name,
                        const T &value,
-                       const metric_filters &filters)
+                       const metric_filters &filters) const
     {
         if (!filters.metric_fields_filter(field_name)) {
             return;
@@ -394,14 +401,14 @@ protected:
         json::json_encode(writer, value);
     }
 
-    inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters)
+    inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
     }
 
     inline void encode_single_value(dsn::json::JsonWriter &writer,
                                     const T &value,
-                                    const metric_filters &filters)
+                                    const metric_filters &filters) const
     {
         encode(writer, kMetricSingleValueField, value, filters);
     }
@@ -409,9 +416,6 @@ protected:
     const metric_prototype *const _prototype;
 
 private:
-    static const std::string kMetricNameField;
-    static const std::string kMetricSingleValueField;
-
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 

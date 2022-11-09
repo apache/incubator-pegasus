@@ -34,7 +34,7 @@ class my_gauge : public metric
 public:
     int64_t value() { return _value; }
 
-    virtual void take_snapshot(json::JsonWriter &) override {}
+    void take_snapshot(json::JsonWriter &, const metric_filters &) override {}
 
 protected:
     explicit my_gauge(const metric_prototype *prototype) : metric(prototype), _value(0) {}
@@ -906,13 +906,13 @@ TEST(metrics_test, percentile_double)
                          floating_checker<value_type>>(METRIC_test_percentile_double);
 }
 
-std::string take_snapshot_and_get_json_string(metric *m)
+std::string take_snapshot_and_get_json_string(metric *m, const metric_filters &filters)
 {
     std::stringstream out;
     rapidjson::OStreamWrapper wrapper(out);
     json::JsonWriter writer(wrapper);
 
-    m->take_snapshot(writer);
+    m->take_snapshot(writer, filters);
 
     return out.str();
 }
@@ -924,20 +924,22 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 void check_and_extract_metric_value_map_from_json_string(const std::string &json_string,
                                                          const std::string &metric_name,
                                                          const bool is_integral,
+                               const metric_filters &filters,
                                                          metric_value_map<T> &value_map)
 {
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
+    auto has_metric_name = false;
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
-            ASSERT_STREQ(elem.name.GetString(), "name");
-
+            ASSERT_STREQ(elem.name.GetString(), metric::kMetricNameField.c_str());
             ASSERT_STREQ(elem.value.GetString(), metric_name.c_str());
+            has_metric_name = true;
         } else {
             T value;
             if (is_integral) {
@@ -950,16 +952,23 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
             value_map[elem.name.GetString()] = value;
         }
     }
+
+    if (filters.metric_fields_filter(metric::kMetricSingleValueField)) {
+        ASSERT_TRUE(has_metric_name);
+    } else {
+        ASSERT_FALSE(has_metric_name);
+    }
 }
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
+                               const metric_filters &filters,
                                metric_value_map<T> &value_map)
 {
-    auto json_string = take_snapshot_and_get_json_string(my_metric);
+    auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
     check_and_extract_metric_value_map_from_json_string(
-        json_string, my_metric->prototype()->name().data(), is_integral, value_map);
+        json_string, my_metric->prototype()->name().data(), is_integral, filters, value_map);
 }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
@@ -985,66 +994,68 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
 }
 
 #define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(                                                    \
-    metric_prototype, updater, value_type, is_integral, value_map_comparator)                      \
+    metric_prototype, updater, value_type, is_integral, with_metric_fields, without_metric_fields, value_map_comparator)                      \
     do {                                                                                           \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(my_server_entity);                           \
         my_metric->updater(test.expected_value);                                                   \
                                                                                                    \
-        const metric_value_map<value_type> expected_value_map = {{"value", test.expected_value}};  \
+        metric_value_map<value_type> expected_value_map;  \
+        metric_filters filters; \
+        if (filters.generate_metric_fields_filter(with_metric_fields, without_metric_fields)) {\
+            if (filters.metric_fields_filter(metric::kMetricSingleValueField)) {\
+                expected_value_map[metric::kMetricSingleValueField] = test.expected_value;  \
+            } \
+        } else { \
+            expected_value_map[metric::kMetricSingleValueField] = test.expected_value;  \
+        } \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
-        generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
+        generate_metric_value_map(my_metric.get(), is_integral, filters, actual_value_map);                 \
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+#define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(metric_prototype, updater, value_type, is_integral, value, value_map_comparator)  \
+    do { \
+    struct test_case \
+    { \
+        std::string entity_id; \
+        value_type expected_value; \
+        metric_filters::fields_type with_metric_fields; \
+        metric_filters::fields_type without_metric_fields; \
+    } tests[]{{"server_60", unique_expected_value, {}, {}}, \
+        {"server_61", value, {metric::kMetricNameField}, {}}, \
+        {"server_62", value, {}, {metric::kMetricSingleValueField}}, \
+        {"server_63", value, {metric::kMetricNameField}, {metric::kMetricSingleValueField}}, \
+        {"server_64", value, {"field_not_existed"}, {}}, \
+        {"server_65", value, {}, {"field_not_existed"}}, \
+        {"server_66", value, {"field_not_existed", metric::kMetricSingleValueField}, {}}, \
+        {"server_67", value, {}, {"field_not_existed", metric::kMetricSingleValueField}}, \
+    }; \
+ \
+    for (const auto &test : tests) { \
+        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE( \
+            metric_prototype, updater, value_type, is_integral, test.with_metric_fields, test.without_metric_fields, value_map_comparator); \
+    } \
+    } while (0);
+
+#define RUN_CASES_WITH_GAUGE_SNAPSHOT(metric_prototype, value_type, is_integral, value, value_map_comparator)  \
+    RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(metric_prototype, set, value_type, is_integral, value, value_map_comparator)
+
 TEST(metrics_test, take_snapshot_gauge_int64)
 {
-    struct test_case
-    {
-        std::string entity_id;
-        int64_t expected_value;
-    } tests[]{{"server_60", 5}};
-
-    for (const auto &test : tests) {
-        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(
-            METRIC_test_gauge_int64, set, int64_t, true, compare_integral_metric_value_map);
-    }
+    RUN_CASES_WITH_GAUGE_SNAPSHOT(METRIC_test_gauge_int64, int64_t, true, 5, compare_integral_metric_value_map);
 }
 
 TEST(metrics_test, take_snapshot_gauge_double)
 {
-    struct test_case
-    {
-        std::string entity_id;
-        double expected_value;
-    } tests[]{{"server_60", 6.789}};
-
-    for (const auto &test : tests) {
-        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(
-            METRIC_test_gauge_double, set, double, false, compare_floating_metric_value_map);
-    }
+    RUN_CASES_WITH_GAUGE_SNAPSHOT(METRIC_test_gauge_double, double, false, 6.789, compare_floating_metric_value_map);
 }
 
-#define TEST_METRIC_SNAPSHOT_WITH_COUNTER(metric_prototype)                                        \
-    do {                                                                                           \
-        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(                                                    \
-            metric_prototype, increment_by, int64_t, true, compare_integral_metric_value_map);     \
-    } while (0)
-
 #define RUN_CASES_WITH_COUNTER_SNAPSHOT(metric_prototype)                                          \
-    do {                                                                                           \
-        struct test_case                                                                           \
-        {                                                                                          \
-            std::string entity_id;                                                                 \
-            int64_t expected_value;                                                                \
-        } tests[]{{"server_60", 10}};                                                              \
-                                                                                                   \
-        for (const auto &test : tests) {                                                           \
-            TEST_METRIC_SNAPSHOT_WITH_COUNTER(metric_prototype);                                   \
-        }                                                                                          \
-    } while (0)
+        RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                    \
+            metric_prototype, increment_by, int64_t, true, 10, compare_integral_metric_value_map)
 
 TEST(metrics_test, take_snapshot_counter) { RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_counter); }
 
@@ -1116,7 +1127,7 @@ void generate_metric_value_map(MetricType *my_metric,
                                   expected_value_map);                                             \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
-        generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
+        generate_metric_value_map(my_metric.get(), is_integral, metric_filters(), actual_value_map);                 \
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
