@@ -82,7 +82,7 @@ inline bool is_trailing_space(char ch)
 
 const char *find_token_end(const char *token_begin, const char *end)
 {
-    CHECK_LT(token_begin, end);
+    CHECK(token_begin < end, "");
 
     for (; end > token_begin && is_trailing_space(*(end - 1)); --end) {
     }
@@ -131,7 +131,7 @@ void split(const char *input,
                 break;
             case split_args_state::kSplitToken: {
                 auto token_end = find_token_end(token_begin, p);
-                CHECK_LE(token_begin, token_end);
+                CHECK(token_begin <= token_end, "");
                 if (token_begin == token_end && !keep_place_holder) {
                     break;
                 }

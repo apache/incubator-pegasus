@@ -115,6 +115,8 @@ TEST(core, check_c_string_empty)
     }
 }
 
+// For containers such as std::unordered_set, the expected result will be deduplicated
+// at initialization. Therefore, it can be used to compare with actual result safely.
 template <typename Container>
 void test_split_args()
 {
@@ -127,6 +129,10 @@ void test_split_args()
     // - split one space (' ') by ' ' with place holder
     // - split one space (' ') by ',' without place holder
     // - split one space (' ') by ',' with place holder
+    // - split 2 spaces ('  ') by ' ' without place holder
+    // - split 2 spaces ('  ') by ' ' with place holder
+    // - split 2 spaces ('  ') by ',' without place holder
+    // - split 2 spaces ('  ') by ',' with place holder
     // - split ' \t' by ' ' without place holder
     // - split ' \t' by ' ' with place holder
     // - split ' \t' by ',' without place holder
@@ -139,6 +145,10 @@ void test_split_args()
     // - split '\t \n' by ' ' with place holder
     // - split '\t \n' by ',' without place holder
     // - split '\t \n' by ',' with place holder
+    // - split '\r \t' by ' ' without place holder
+    // - split '\r \t' by ' ' with place holder
+    // - split '\r \t' by ',' without place holder
+    // - split '\r \t' by ',' with place holder
     // - split 'a' by ' ' without place holder
     // - split 'a' by ' ' with place holder
     // - split 'a' by ',' without place holder
@@ -147,33 +157,67 @@ void test_split_args()
     // - split 'a ' by ' ' with place holder
     // - split 'a ' by ',' without place holder
     // - split 'a ' by ',' with place holder
+    // - split a string that includes multiple letters by ' ' without place holder
+    // - split a string that includes multiple letters by ' ' with place holder
+    // - split a string that includes multiple letters by ',' without place holder
+    // - split a string that includes multiple letters by ',' with place holder
+    // - split a string that includes multiple words by ' ' without place holder
+    // - split a string that includes multiple words by ' ' with place holder
+    // - split a string that includes multiple words by ',' without place holder
+    // - split a string that includes multiple words by ',' with place holder
     struct test_case
     {
         const char *input;
         char separator;
         bool keep_place_holder;
         Container expected_output;
-    } tests[] = {
-        {"", ' ', false, {}},      {"", ' ', true, {""}},
-        {"", ',', false, {}},      {"", ',', true, {""}},
-        {" ", ' ', false, {}},     {" ", ' ', true, {"", ""}},
-        {" ", ',', false, {}},     {" ", ',', true, {""}},
-        {"  ", ' ', false, {}},    {"  ", ' ', true, {"", "", ""}},
-        {"  ", ',', false, {}},    {"  ", ',', true, {""}},
-        {" \t", ' ', false, {}},   {" \t", ' ', true, {"", ""}},
-        {" \t", ',', false, {}},   {" \t", ',', true, {""}},
-        {"\t ", ' ', false, {}},   {"\t ", ' ', true, {"", ""}},
-        {"\t ", ',', false, {}},   {"\t ", ',', true, {""}},
-        {"\t \n", ' ', false, {}}, {"\t \n", ' ', true, {"", ""}},
-        {"\t \n", ',', false, {}}, {"\t \n", ',', true, {""}},
-        {"\r \t", ' ', false, {}}, {"\r \t", ' ', true, {"", ""}},
-        {"\r \t", ',', false, {}}, {"\r \t", ',', true, {""}},
-        {"a", ' ', false, {"a"}},  {"a", ' ', true, {"a"}},
-        {"a", ',', false, {"a"}},  {"a", ',', true, {"a"}},
-        {"a ", ' ', false, {"a"}}, {"a ", ' ', true, {"a", ""}},
-        {"a ", ',', false, {"a"}}, {"a ", ',', true, {"a"}},
-        {"", ',', false, {}},
-    };
+    } tests[] = {{"", ' ', false, {}},
+                 {"", ' ', true, {""}},
+                 {"", ',', false, {}},
+                 {"", ',', true, {""}},
+                 {" ", ' ', false, {}},
+                 {" ", ' ', true, {"", ""}},
+                 {" ", ',', false, {}},
+                 {" ", ',', true, {""}},
+                 {"  ", ' ', false, {}},
+                 {"  ", ' ', true, {"", "", ""}},
+                 {"  ", ',', false, {}},
+                 {"  ", ',', true, {""}},
+                 {" \t", ' ', false, {}},
+                 {" \t", ' ', true, {"", ""}},
+                 {" \t", ',', false, {}},
+                 {" \t", ',', true, {""}},
+                 {"\t ", ' ', false, {}},
+                 {"\t ", ' ', true, {"", ""}},
+                 {"\t ", ',', false, {}},
+                 {"\t ", ',', true, {""}},
+                 {"\t \n", ' ', false, {}},
+                 {"\t \n", ' ', true, {"", ""}},
+                 {"\t \n", ',', false, {}},
+                 {"\t \n", ',', true, {""}},
+                 {"\r \t", ' ', false, {}},
+                 {"\r \t", ' ', true, {"", ""}},
+                 {"\r \t", ',', false, {}},
+                 {"\r \t", ',', true, {""}},
+                 {"a", ' ', false, {"a"}},
+                 {"a", ' ', true, {"a"}},
+                 {"a", ',', false, {"a"}},
+                 {"a", ',', true, {"a"}},
+                 {"a ", ' ', false, {"a"}},
+                 {"a ", ' ', true, {"a", ""}},
+                 {"a ", ',', false, {"a"}},
+                 {"a ", ',', true, {"a"}},
+                 {"a ,b, c ", ' ', false, {"a", ",b,", "c"}},
+                 {"a ,b, c ", ' ', true, {"a", ",b,", "c", ""}},
+                 {"a ,b, c ", ',', false, {"a", "b", "c"}},
+                 {"a ,b, c ", ',', true, {"a", "b", "c"}},
+                 {" in  early 2000s ,  too, ", ' ', false, {"in", "early", "2000s", ",", "too,"}},
+                 {" in  early 2000s ,  too, ",
+                  ' ',
+                  true,
+                  {"", "in", "", "early", "2000s", ",", "", "too,", ""}},
+                 {" in  early 2000s ,  too, ", ',', false, {"in  early 2000s", "too"}},
+                 {" in  early 2000s ,  too, ", ',', true, {"in  early 2000s", "too", ""}}};
 
     for (const auto &test : tests) {
         Container actual_output;
