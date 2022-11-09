@@ -148,19 +148,19 @@ struct metric_filters
 
         if (with_metric_fields.empty()) {
             // Notice that any field is required once both with_metric_fields and
-            // without_metric_fields are empty. 
+            // without_metric_fields are empty.
             metric_fields_filter = [without_metric_fields](const std::string &field) -> bool {
                 return without_metric_fields.find(field) == without_metric_fields.end();
-            }
+            };
         } else { // without_metric_fields must be empty.
             metric_fields_filter = [with_metric_fields](const std::string &field) -> bool {
                 return with_metric_fields.find(field) != with_metric_fields.end();
-            }
+            };
         }
         return true;
     }
 
-    fields_filter_fn metric_fields_filter = [](const std::string &) -> bool { return true };
+    fields_filter_fn metric_fields_filter = [](const std::string &) -> bool { return true; };
 };
 
 class metric_prototype;
@@ -406,6 +406,7 @@ protected:
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
     }
 
+    template <typename T>
     inline void encode_single_value(dsn::json::JsonWriter &writer,
                                     const T &value,
                                     const metric_filters &filters) const
