@@ -953,7 +953,7 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
         }
     }
 
-    if (filters.metric_fields_filter(metric::kMetricSingleValueField)) {
+    if (filters.metric_fields_filter(metric::kMetricNameField)) {
         ASSERT_TRUE(has_metric_name);
     } else {
         ASSERT_FALSE(has_metric_name);
