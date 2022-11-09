@@ -3160,6 +3160,11 @@ bool pegasus_server_impl::set_options(
     auto s = rocksdb::DB::ListColumnFamilies(rocksdb::DBOptions(), path, &column_families);
     if (!s.ok()) {
         LOG_ERROR_PREFIX("rocksdb::DB::ListColumnFamilies failed, error = {}", s.ToString());
+        if (s.IsCorruption() &&
+            s.ToString().find("VersionEdit: unknown tag") != std::string::npos) {
+            LOG_ERROR_PREFIX("there are some unknown tags in MANIFEST, make sure you are upgrade "
+                             "from Pegasus 2.1 or higher version");
+        }
         return ::dsn::ERR_LOCAL_APP_FAILURE;
     }
 

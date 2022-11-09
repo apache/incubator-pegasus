@@ -390,10 +390,12 @@ ExternalProject_Add(jemalloc
 
 option(ROCKSDB_PORTABLE "build a portable binary" OFF)
 
+# The patch name '0879c240' means the patch of rocksdb:
+# https://github.com/facebook/rocksdb/commit/0879c240404b00142ba4718f36cd3f2bd537192d
 ExternalProject_Add(rocksdb
-        URL ${OSS_URL_PREFIX}/pegasus-rocksdb-ef29819c7a1ea9334ae170f506b653757f517a52.zip
-        https://github.com/XiaoMi/pegasus-rocksdb/archive/ef29819c7a1ea9334ae170f506b653757f517a52.zip
-        URL_MD5 2a6488cd87c37e0c2e42a5ca74bebc87
+        URL https://github.com/facebook/rocksdb/archive/refs/tags/v6.6.4.tar.gz
+        URL_MD5 7f7fcca3e96b7d83ef332804c90070c8
+        PATCH_COMMAND patch -p1 < ${TP_DIR}/rocksdb_fix_atomic_flush_0879c240.patch
         DEPENDS jemalloc
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${TP_OUTPUT}
         -DFAIL_ON_WARNINGS=OFF
