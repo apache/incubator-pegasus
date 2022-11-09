@@ -175,6 +175,9 @@ metric_prototype::~metric_prototype() {}
 
 metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
+const std::string metric::kMetricNameField = "name";
+const std::string metric::kMetricSingleValueField = "value";
+
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 
 uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)

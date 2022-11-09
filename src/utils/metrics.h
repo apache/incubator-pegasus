@@ -27,6 +27,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -130,6 +131,32 @@
     extern dsn::floating_percentile_prototype<double> METRIC_##name
 
 namespace dsn {
+
+struct metric_filters
+{
+    using fields_filter_fn = std::function<bool(const std::string &)>;
+    using fields_type = std::unordered_set<std::string>;
+
+    bool generate_metric_fields_filter(const fields_type &with_metric_fields, const fields_type &without_metric_fields)
+    {
+        if (!(with_metric_fields.empty() || without_metric_fields.empty())) {
+            return false;
+        }
+
+        if (with_metric_fields.empty()) {
+            metric_fields_filter = [without_metric_fields](const std::string &field) -> bool {
+                return without_metric_fields.find(field) != without_metric_fields.end();
+            }
+        } else { // without_metric_fields must be empty
+            metric_fields_filter = [with_metric_fields](const std::string &field) -> bool {
+                return with_metric_fields.find(field) != with_metric_fields.end();
+            }
+        }
+        return true;
+    }
+
+    fields_filter_fn metric_fields_filter = [] (const std::string &) -> bool { return true };
+};
 
 class metric_prototype;
 class metric;
@@ -346,15 +373,39 @@ public:
     const metric_prototype *prototype() const { return _prototype; }
 
     // Take snapshot of each metric to collect current values as json format.
-    virtual void take_snapshot(dsn::json::JsonWriter &writer) = 0;
+    virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
 
 protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
+    template <typename T>
+    inline void encode(dsn::json::JsonWriter &writer, const std::string &field_name, const T &value, const metric_filters &filters)
+    {
+        if (!filters.metric_fields_filter(field_name)) {
+            return;
+        }
+
+        writer.Key(field_name.c_str());
+        json::json_encode(writer, value);
+    }
+
+    inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters)
+    {
+        encode(writer, kMetricNameField, prototype()->name().data(), filters);
+    }
+
+    inline void encode_single_value(dsn::json::JsonWriter &writer, const T &value, const metric_filters &filters)
+    {
+        encode(writer, kMetricSingleValueField, value, filters);
+    }
+
     const metric_prototype *const _prototype;
 
 private:
+    static const std::string kMetricNameField;
+    static const std::string kMetricSingleValueField;
+
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
@@ -405,15 +456,12 @@ public:
     // where "name" is the name of the gauge in string type, and "value" is just current value
     // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
     // determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
-        writer.Key("name");
-        json::json_encode(writer, prototype()->name().data());
-
-        writer.Key("value");
-        json::json_encode(writer, value());
+        encode_name(writer, filters);
+        encode_single_value(writer, value(), filters);
 
         writer.EndObject();
     }
@@ -525,15 +573,12 @@ public:
     // }
     // where "name" is the name of the counter in string type, and "value" is just current value
     // of the counter fetched by `value()`, in integral type (namely int64_t).
-    void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
-        writer.Key("name");
-        json::json_encode(writer, prototype()->name().data());
-
-        writer.Key("value");
-        json::json_encode(writer, value());
+        encode_name(writer, filters);
+        encode_single_value(writer, value(), filters);
 
         writer.EndObject();
     }
@@ -736,20 +781,18 @@ public:
     // where "name" is the name of the percentile in string type, with each configured kth
     // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
     // (i.e. integral or floating-point type, determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
-        writer.Key("name");
-        json::json_encode(writer, prototype()->name().data());
+        encode_name(writer, filters);
 
         for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
             if (!_kth_percentile_bitset.test(i)) {
                 continue;
             }
 
-            writer.Key(kAllKthPercentiles[i].name.c_str());
-            json::json_encode(writer, value(i));
+            encode(writer, kAllKthPercentiles[i].name, value(i), filters);
         }
 
         writer.EndObject();
