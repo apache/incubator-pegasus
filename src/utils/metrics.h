@@ -137,7 +137,8 @@ struct metric_filters
     using fields_filter_fn = std::function<bool(const std::string &)>;
     using fields_type = std::unordered_set<std::string>;
 
-    bool generate_metric_fields_filter(const fields_type &with_metric_fields, const fields_type &without_metric_fields)
+    bool generate_metric_fields_filter(const fields_type &with_metric_fields,
+                                       const fields_type &without_metric_fields)
     {
         if (!(with_metric_fields.empty() || without_metric_fields.empty())) {
             return false;
@@ -155,7 +156,7 @@ struct metric_filters
         return true;
     }
 
-    fields_filter_fn metric_fields_filter = [] (const std::string &) -> bool { return true };
+    fields_filter_fn metric_fields_filter = [](const std::string &) -> bool { return true };
 };
 
 class metric_prototype;
@@ -380,7 +381,10 @@ protected:
     virtual ~metric() = default;
 
     template <typename T>
-    inline void encode(dsn::json::JsonWriter &writer, const std::string &field_name, const T &value, const metric_filters &filters)
+    inline void encode(dsn::json::JsonWriter &writer,
+                       const std::string &field_name,
+                       const T &value,
+                       const metric_filters &filters)
     {
         if (!filters.metric_fields_filter(field_name)) {
             return;
@@ -395,7 +399,9 @@ protected:
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
     }
 
-    inline void encode_single_value(dsn::json::JsonWriter &writer, const T &value, const metric_filters &filters)
+    inline void encode_single_value(dsn::json::JsonWriter &writer,
+                                    const T &value,
+                                    const metric_filters &filters)
     {
         encode(writer, kMetricSingleValueField, value, filters);
     }
