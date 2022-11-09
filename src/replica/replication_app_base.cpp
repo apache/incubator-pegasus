@@ -35,7 +35,6 @@
 #include "utils/factory_store.h"
 #include "utils/filesystem.h"
 #include "utils/crc.h"
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"

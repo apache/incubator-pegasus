@@ -27,7 +27,6 @@
 #pragma once
 
 #include "aio/aio_task.h"
-#include "utils/dlib.h"
 #include "utils/factory_store.h"
 
 namespace dsn {
@@ -82,8 +81,9 @@ private:
 
 namespace tools {
 namespace internal_use_only {
-DSN_API bool
-register_component_provider(const char *name, aio_provider::factory f, dsn::provider_type type);
+bool register_component_provider(const char *name,
+                                 aio_provider::factory f,
+                                 dsn::provider_type type);
 } // namespace internal_use_only
 } // namespace tools
 

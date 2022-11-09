@@ -20,7 +20,6 @@
 #include "common//duplication_common.h"
 #include "runtime/pipeline.h"
 #include "replica/replica_base.h"
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"

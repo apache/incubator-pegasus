@@ -37,7 +37,7 @@ ENUM_REG(SYS_EXIT_EXCEPTION)
 ENUM_END(sys_exit_type)
 
 namespace tools {
-DSN_API extern join_point<void, sys_exit_type> sys_exit;
+extern join_point<void, sys_exit_type> sys_exit;
 }
 
 } // namespace dsn

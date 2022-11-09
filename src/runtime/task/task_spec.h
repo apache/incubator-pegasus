@@ -42,7 +42,6 @@
 #include "utils/join_point.h"
 #include "utils/extensible_object.h"
 #include "utils/exp_delay.h"
-#include "utils/dlib.h"
 #include "perf_counter/perf_counter.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
@@ -145,19 +144,19 @@ std::set<dsn::task_code> &get_storage_rpc_req_codes();
 class task_spec : public extensible_object<task_spec, 4>
 {
 public:
-    DSN_API static task_spec *get(int ec);
-    DSN_API static void register_task_code(dsn::task_code code,
+    static task_spec *get(int ec);
+    static void register_task_code(dsn::task_code code,
+                                   dsn_task_type_t type,
+                                   dsn_task_priority_t pri,
+                                   dsn::threadpool_code pool);
+
+    static void register_storage_task_code(dsn::task_code code,
                                            dsn_task_type_t type,
                                            dsn_task_priority_t pri,
-                                           dsn::threadpool_code pool);
-
-    DSN_API static void register_storage_task_code(dsn::task_code code,
-                                                   dsn_task_type_t type,
-                                                   dsn_task_priority_t pri,
-                                                   dsn::threadpool_code pool,
-                                                   bool is_write_operation,
-                                                   bool allow_batch,
-                                                   bool is_idempotent);
+                                           dsn::threadpool_code pool,
+                                           bool is_write_operation,
+                                           bool allow_batch,
+                                           bool is_idempotent);
 
 public:
     // not configurable [
@@ -231,15 +230,15 @@ public:
     /*@}*/
 
 public:
-    DSN_API task_spec(int code,
-                      const char *name,
-                      dsn_task_type_t type,
-                      dsn_task_priority_t pri,
-                      dsn::threadpool_code pool);
+    task_spec(int code,
+              const char *name,
+              dsn_task_type_t type,
+              dsn_task_priority_t pri,
+              dsn::threadpool_code pool);
 
 public:
-    DSN_API static bool init();
-    DSN_API void init_profiling(bool profile);
+    static bool init();
+    void init_profiling(bool profile);
 };
 
 CONFIG_BEGIN(task_spec)

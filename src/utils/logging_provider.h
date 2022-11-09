@@ -91,9 +91,9 @@ extern std::function<std::string()> log_prefixed_message_func;
 
 namespace tools {
 namespace internal_use_only {
-DSN_API bool register_component_provider(const char *name,
-                                         logging_provider::factory f,
-                                         ::dsn::provider_type type);
+bool register_component_provider(const char *name,
+                                 logging_provider::factory f,
+                                 ::dsn::provider_type type);
 } // namespace internal_use_only
 } // namespace tools
 } // namespace dsn

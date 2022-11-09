@@ -31,7 +31,8 @@
 
 #pragma once
 
-#include "common/api_common.h"
+#include <stdarg.h>
+
 #include "ports.h"
 
 /*!
@@ -57,27 +58,27 @@ typedef enum dsn_log_level_t {
 } dsn_log_level_t;
 
 // logs with level smaller than this start_level will not be logged
-extern DSN_API dsn_log_level_t dsn_log_start_level;
-extern DSN_API dsn_log_level_t dsn_log_get_start_level();
-extern DSN_API void dsn_log_set_start_level(dsn_log_level_t level);
-extern DSN_API void dsn_logv(const char *file,
-                             const char *function,
-                             const int line,
-                             dsn_log_level_t log_level,
-                             const char *fmt,
-                             va_list args);
-extern DSN_API void dsn_logf(const char *file,
-                             const char *function,
-                             const int line,
-                             dsn_log_level_t log_level,
-                             const char *fmt,
-                             ...);
-extern DSN_API void dsn_log(const char *file,
-                            const char *function,
-                            const int line,
-                            dsn_log_level_t log_level,
-                            const char *str);
-extern DSN_API void dsn_coredump();
+extern dsn_log_level_t dsn_log_start_level;
+extern dsn_log_level_t dsn_log_get_start_level();
+extern void dsn_log_set_start_level(dsn_log_level_t level);
+extern void dsn_logv(const char *file,
+                     const char *function,
+                     const int line,
+                     dsn_log_level_t log_level,
+                     const char *fmt,
+                     va_list args);
+extern void dsn_logf(const char *file,
+                     const char *function,
+                     const int line,
+                     dsn_log_level_t log_level,
+                     const char *fmt,
+                     ...);
+extern void dsn_log(const char *file,
+                    const char *function,
+                    const int line,
+                    dsn_log_level_t log_level,
+                    const char *str);
+extern void dsn_coredump();
 
 // __FILENAME__ macro comes from the cmake, in which we calculate a filename without path.
 #define dlog(level, ...)                                                                           \

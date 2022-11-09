@@ -29,7 +29,6 @@
 
 #pragma once
 
-#include "common/api_common.h"
 #include "utils/error_code.h"
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
@@ -75,7 +74,6 @@ apps updates the value at dsn_task_queue_virtual_length_ptr(..) to control
 the length of a vitual queue (bound to current code + hash) to
 enable customized throttling, see spec of thread pool for more information
 */
-extern DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code,
-                                                               int hash DEFAULT(0));
+extern volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash = 0);
 
 /*@}*/

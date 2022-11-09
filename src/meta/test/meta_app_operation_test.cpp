@@ -18,7 +18,6 @@
 #include <gtest/gtest.h>
 #include "utils/fmt_logging.h"
 #include "common/replica_envs.h"
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"

@@ -30,7 +30,6 @@
 
 #pragma once
 
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "common/gpid.h"
 #include "utils/rpc_address.h"
@@ -179,7 +178,7 @@ dsn_threadpool_code_register.
  @{
  */
 /*! cancel the later execution of the timer task inside the timer */
-extern DSN_API void dsn_task_cancel_current_timer();
+extern void dsn_task_cancel_current_timer();
 
 /*!
  check whether the task is currently running inside the given task
@@ -188,7 +187,7 @@ extern DSN_API void dsn_task_cancel_current_timer();
 
  \return true if it is.
  */
-extern DSN_API bool dsn_task_is_running_inside(dsn::task *t);
+extern bool dsn_task_is_running_inside(dsn::task *t);
 
 /*@}*/
 
@@ -214,7 +213,7 @@ replace the underneath implementation of the network (e.g., RDMA, simulated netw
 @{
 */
 
-extern DSN_API dsn::rpc_address dsn_primary_address();
+extern dsn::rpc_address dsn_primary_address();
 
 /*!
 @defgroup rpc-server Server-Side RPC Primitives
@@ -224,20 +223,19 @@ Server-Side RPC Primitives
  */
 
 /*! register callback to handle RPC request */
-extern DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
-                                             const char *extra_name,
-                                             const dsn::rpc_request_handler &cb);
+extern bool dsn_rpc_register_handler(dsn::task_code code,
+                                     const char *extra_name,
+                                     const dsn::rpc_request_handler &cb);
 
 /*! unregister callback to handle RPC request, returns true if unregister ok, false if no handler
     was registered */
-extern DSN_API bool dsn_rpc_unregiser_handler(dsn::task_code code);
+extern bool dsn_rpc_unregiser_handler(dsn::task_code code);
 
 /*! reply with a response which is created using dsn::message_ex::create_response */
-extern DSN_API void dsn_rpc_reply(dsn::message_ex *response,
-                                  dsn::error_code err DEFAULT(dsn::ERR_OK));
+extern void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err = dsn::ERR_OK);
 
 /*! forward the request to another server instead */
-extern DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr);
+extern void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr);
 
 /*@}*/
 
@@ -249,23 +247,22 @@ Client-Side RPC Primitives
 */
 
 /*! client invokes the RPC call */
-extern DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call);
+extern void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call);
 
 /*!
    client invokes the RPC call and waits for its response, note
    returned msg must be explicitly released using \ref dsn::message_ex::release_ref
  */
-extern DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server,
-                                                  dsn::message_ex *request);
+extern dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request);
 
 /*! one-way RPC from client, no rpc response is expected */
-extern DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request);
+extern void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request);
 
 /*@}*/
 
 /*@}*/
 
-extern DSN_API uint64_t dsn_now_ns();
+extern uint64_t dsn_now_ns();
 
 __inline uint64_t dsn_now_us() { return dsn_now_ns() / 1000; }
 __inline uint64_t dsn_now_ms() { return dsn_now_ns() / 1000000; }

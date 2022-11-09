@@ -28,6 +28,7 @@
 
 #include <array>
 
+#include "runtime/rpc/rpc_message.h"
 #include "utils/fmt_logging.h"
 #include "utils/command_manager.h"
 #include "utils/threadpool_spec.h"

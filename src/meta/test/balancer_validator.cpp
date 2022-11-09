@@ -28,7 +28,6 @@
 
 #include <gtest/gtest.h>
 
-#include "common/api_common.h"
 #include "common/gpid.h"
 #include "backup_types.h"
 #include "bulk_load_types.h"
