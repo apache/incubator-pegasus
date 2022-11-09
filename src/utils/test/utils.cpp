@@ -141,18 +141,18 @@ void test_split_args()
     // - split '\t ' by ' ' with place holder
     // - split '\t ' by ',' without place holder
     // - split '\t ' by ',' with place holder
-    // - split '\t \n' by ' ' without place holder
-    // - split '\t \n' by ' ' with place holder
-    // - split '\t \n' by ',' without place holder
-    // - split '\t \n' by ',' with place holder
+    // - split ' \t \n' by ' ' without place holder
+    // - split ' \t \n' by ' ' with place holder
+    // - split ' \t \n' by ',' without place holder
+    // - split ' \t \n' by ',' with place holder
     // - split '\r \t' by ' ' without place holder
     // - split '\r \t' by ' ' with place holder
     // - split '\r \t' by ',' without place holder
     // - split '\r \t' by ',' with place holder
-    // - split 'a' by ' ' without place holder
-    // - split 'a' by ' ' with place holder
-    // - split 'a' by ',' without place holder
-    // - split 'a' by ',' with place holder
+    // - split a single letter 'a' by ' ' without place holder
+    // - split a single letter 'a' by ' ' with place holder
+    // - split a single letter 'a' by ',' without place holder
+    // - split a single letter 'a' by ',' with place holder
     // - split 'a ' by ' ' without place holder
     // - split 'a ' by ' ' with place holder
     // - split 'a ' by ',' without place holder
@@ -191,10 +191,10 @@ void test_split_args()
                  {"\t ", ' ', true, {"", ""}},
                  {"\t ", ',', false, {}},
                  {"\t ", ',', true, {""}},
-                 {"\t \n", ' ', false, {}},
-                 {"\t \n", ' ', true, {"", ""}},
-                 {"\t \n", ',', false, {}},
-                 {"\t \n", ',', true, {""}},
+                 {" \t \n", ' ', false, {}},
+                 {" \t \n", ' ', true, {"", "", ""}},
+                 {" \t \n", ',', false, {}},
+                 {" \t \n", ',', true, {""}},
                  {"\r \t", ' ', false, {}},
                  {"\r \t", ' ', true, {"", ""}},
                  {"\r \t", ',', false, {}},
@@ -203,7 +203,7 @@ void test_split_args()
                  {"a", ' ', true, {"a"}},
                  {"a", ',', false, {"a"}},
                  {"a", ',', true, {"a"}},
-                 {"a ", ' ', false, {"a"}},
+                 {" have a dinner \r\n", ' ', false, {"a"}},
                  {"a ", ' ', true, {"a", ""}},
                  {"a ", ',', false, {"a"}},
                  {"a ", ',', true, {"a"}},
