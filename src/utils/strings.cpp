@@ -107,6 +107,9 @@ struct AssociativeInserter
     }
 };
 
+// Split the `input` string by `separator` into partitions. Leading and trailing spaces of
+// each partition will be stripped. Once the partition is empty, or become empty after
+// stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.
 template <typename Inserter, typename Container>
 void split(const char *input,
            char separator,
@@ -126,6 +129,8 @@ void split(const char *input,
             case split_args_state::kSplitBeginning:
             case split_args_state::kSplitLeadingSpaces:
                 if (keep_place_holder) {
+                    // Will add an empty string as output, since all characters
+                    // in this split are spaces.
                     inserter.emplace(output);
                 }
                 break;
