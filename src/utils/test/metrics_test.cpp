@@ -1003,8 +1003,7 @@ void generate_and_check_metric_fields_filter(metric_filters &filters,
                                              const metric_fields_type &without_metric_fields)
 {
     bool ok = filters.generate_metric_fields_filter(with_metric_fields, without_metric_fields);
-    bool valid = with_metric_fields.empty() || without_metric_fields.empty();
-    if (valid) {
+    if (with_metric_fields.empty() || without_metric_fields.empty()) {
         ASSERT_TRUE(ok);
     } else {
         ASSERT_FALSE(ok);
@@ -1267,16 +1266,37 @@ void generate_metric_value_map(MetricType *my_metric,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+inline metric_fields_type drop_from_all_kth_percentile_fields(const metric_fields_type &dropped)
+{
+    return drop_from_metric_fields(kAllKthPercentileFields, dropped);
+}
+
 // Test cases:
 // - both with_metric_fields and without_metric_fields are empty
-// - with_metric_fields has a field that does not exist while without_metric_fields is empty
-// - with_metric_fields has 2 fields that exist while without_metric_fields is empty
+// - with_metric_fields has a field that exists while without_metric_fields is empty
+// - with_metric_fields has 3 fields that exist while without_metric_fields is empty
 // - with_metric_fields has all fields that exist while without_metric_fields is empty
 // - with_metric_fields has a field that does not exist while without_metric_fields is empty
 // - with_metric_fields has a field that does not exist and another 2 fields that exist while
 // without_metric_fields is empty
 // - with_metric_fields has 2 fields both of which does not exist while without_metric_fields
 // is empty
+// - without_metric_fields has a field that exists while with_metric_fields is empty
+// - without_metric_fields has 3 fields that exist while with_metric_fields is empty
+// - without_metric_fields has all fields that exist while with_metric_fields is empty
+// - without_metric_fields has a field that does not exist while with_metric_fields is empty
+// - without_metric_fields has a field that does not exist and another 2 fields that exist while
+// with_metric_fields is empty
+// - without_metric_fields has 2 fields both of which does not exist while with_metric_fields
+// is empty
+// - with_metric_fields has a field that exists while without_metric_fields has a field that
+// exists (invalid input)
+// - with_metric_fields has a field that exists while without_metric_fields has a field that does
+// not exist (invalid input)
+// - with_metric_fields has a field that does not exist while without_metric_fields has a field
+// that exists (invalid input)
+// - with_metric_fields has a field that does not exist while without_metric_fields has a field
+// that does not exist (invalid input)
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
@@ -1286,13 +1306,39 @@ void generate_metric_value_map(MetricType *my_metric,
             metric_fields_type with_metric_fields;                                                 \
             metric_fields_type without_metric_fields;                                              \
             metric_fields_type expected_metric_fields;                                             \
-        } tests[] = {{"server_60", {}, {}, kAllKthPercentileFields},                               \
-                     {"server_61", {kMetricNameField}, {}, {kMetricNameField}},                    \
-                     {"server_62", {kMetricNameField, "p95"}, {}, {kMetricNameField, "p95"}},      \
-                     {"server_63", kAllKthPercentileFields, {}, kAllKthPercentileFields},          \
-                     {"server_64", {"field_not_exist"}, {}, {}},                                   \
-                     {"server_65", {"file_not_exist", "p90", "p99"}, {}, {"p90", "p99"}},          \
-                     {"server_66", {"field_not_exist", "another_field_not_exist"}, {}, {}}};       \
+        } tests[] = {                                                                              \
+            {"server_60", {}, {}, kAllKthPercentileFields},                                        \
+            {"server_61", {kMetricNameField}, {}, {kMetricNameField}},                             \
+            {"server_62",                                                                          \
+             {kMetricNameField, "p95", "p999"},                                                    \
+             {},                                                                                   \
+             {kMetricNameField, "p95", "p999"}},                                                   \
+            {"server_63", kAllKthPercentileFields, {}, kAllKthPercentileFields},                   \
+            {"server_64", {"field_not_exist"}, {}, {}},                                            \
+            {"server_65", {"file_not_exist", "p90", "p99"}, {}, {"p90", "p99"}},                   \
+            {"server_66", {"field_not_exist", "another_field_not_exist"}, {}, {}},                 \
+            {"server_67", {}, {"p99"}, drop_from_all_kth_percentile_fields({"p99"})},              \
+            {"server_68",                                                                          \
+             {},                                                                                   \
+             {kMetricNameField, "p90", "p999"},                                                    \
+             drop_from_all_kth_percentile_fields({kMetricNameField, "p90", "p999"})},              \
+            {"server_69", {}, kAllKthPercentileFields, {}},                                        \
+            {"server_70", {}, {"field_not_exist"}, kAllKthPercentileFields},                       \
+            {"server_71",                                                                          \
+             {},                                                                                   \
+             {"field_not_exist", "p50", "p99"},                                                    \
+             drop_from_all_kth_percentile_fields({"p50", "p99"})},                                 \
+            {"server_72",                                                                          \
+             {},                                                                                   \
+             {"field_not_exist", "another_field_not_exist"},                                       \
+             kAllKthPercentileFields},                                                             \
+            {"server_73", {kMetricNameField}, {"p99"}, kAllKthPercentileFields},                   \
+            {"server_74", {"p99"}, {"field_not_exist"}, kAllKthPercentileFields},                  \
+            {"server_75", {"field_not_exist"}, {kMetricNameField}, kAllKthPercentileFields},       \
+            {"server_76",                                                                          \
+             {"field_not_exist"},                                                                  \
+             {"another_field_not_exist"},                                                          \
+             kAllKthPercentileFields}};                                                            \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                 \
