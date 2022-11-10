@@ -132,13 +132,14 @@
 
 namespace dsn {
 
+using metric_fields_type = std::unordered_set<std::string>;
+
 struct metric_filters
 {
     using fields_filter_fn = std::function<bool(const std::string &)>;
-    using fields_type = std::unordered_set<std::string>;
 
-    bool generate_metric_fields_filter(const fields_type &with_metric_fields,
-                                       const fields_type &without_metric_fields)
+    bool generate_metric_fields_filter(const metric_fields_type &with_metric_fields,
+                                       const metric_fields_type &without_metric_fields)
     {
         // Either with_metric_fields or without_metric_fields is allowed to be nonempty.
         // Once both are nonempty, it will be considered as wrong request and return false.
@@ -363,6 +364,10 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
 
+const std::string kMetricNameField = "name";
+const std::string kMetricSingleValueField = "value";
+const metric_fields_type kAllSingleValueMetricFields = {kMetricNameField, kMetricSingleValueField};
+
 // Base class for each type of metric.
 // Every metric class should inherit from this class.
 //
@@ -379,9 +384,6 @@ public:
 
     // Take snapshot of each metric to collect current values as json format.
     virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
-
-    static const std::string kMetricNameField;
-    static const std::string kMetricSingleValueField;
 
 protected:
     explicit metric(const metric_prototype *prototype);
@@ -659,6 +661,9 @@ ENUM_REG(kth_percentile_type::P99)
 ENUM_REG(kth_percentile_type::P999)
 ENUM_END(kth_percentile_type)
 
+std::set<kth_percentile_type> get_all_kth_percentile_types();
+const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
+
 struct kth_percentile
 {
     std::string name;
@@ -667,6 +672,16 @@ struct kth_percentile
 
 const std::vector<kth_percentile> kAllKthPercentiles = {
     {"p50", 0.5}, {"p90", 0.9}, {"p95", 0.95}, {"p99", 0.99}, {"p999", 0.999}};
+
+metric_fields_type get_all_kth_percentile_fields();
+const metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields();
+
+inline std::string kth_percentile_to_name(const kth_percentile_type &type)
+{
+    auto index = static_cast<size_t>(type);
+    CHECK_LT(index, kAllKthPercentiles.size());
+    return kAllKthPercentiles[index].name;
+}
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
@@ -680,16 +695,6 @@ inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
 {
     return kth_percentile_to_nth_index(size, static_cast<size_t>(type));
-}
-
-std::set<kth_percentile_type> get_all_kth_percentile_types();
-const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
-
-inline std::string kth_percentile_to_name(const kth_percentile_type &type)
-{
-    auto index = static_cast<size_t>(type);
-    CHECK_LT(index, kAllKthPercentiles.size());
-    return kAllKthPercentiles[index].name;
 }
 
 // `percentile_timer` is a timer class that encapsulates the details how each percentile is

@@ -921,11 +921,12 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 using metric_value_map = std::map<std::string, T>;
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-void check_and_extract_metric_value_map_from_json_string(const std::string &json_string,
-                                                         const std::string &metric_name,
-                                                         const bool is_integral,
-                                                         const metric_filters &filters,
-                                                         metric_value_map<T> &value_map)
+void check_and_extract_metric_value_map_from_json_string(
+    const std::string &json_string,
+    const std::string &metric_name,
+    const bool is_integral,
+    const metric_fields_type &expected_metric_fields,
+    metric_value_map<T> &value_map)
 {
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
@@ -937,7 +938,7 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
-            ASSERT_STREQ(elem.name.GetString(), metric::kMetricNameField.c_str());
+            ASSERT_STREQ(elem.name.GetString(), kMetricNameField.c_str());
             ASSERT_STREQ(elem.value.GetString(), metric_name.c_str());
             has_metric_name = true;
         } else {
@@ -953,7 +954,7 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
         }
     }
 
-    if (filters.metric_fields_filter(metric::kMetricNameField)) {
+    if (expected_metric_fields.find(kMetricNameField) != expected_metric_fields.end()) {
         ASSERT_TRUE(has_metric_name);
     } else {
         ASSERT_FALSE(has_metric_name);
@@ -964,11 +965,15 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
                                const metric_filters &filters,
+                               const metric_fields_type &expected_metric_fields,
                                metric_value_map<T> &value_map)
 {
     auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
-    check_and_extract_metric_value_map_from_json_string(
-        json_string, my_metric->prototype()->name().data(), is_integral, filters, value_map);
+    check_and_extract_metric_value_map_from_json_string(json_string,
+                                                        my_metric->prototype()->name().data(),
+                                                        is_integral,
+                                                        expected_metric_fields,
+                                                        value_map);
 }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
@@ -993,34 +998,73 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
     }
 }
 
+void generate_and_check_metric_fields_filter(metric_filters &filters,
+                                             const metric_fields_type &with_metric_fields,
+                                             const metric_fields_type &without_metric_fields)
+{
+    bool ok = filters.generate_metric_fields_filter(with_metric_fields, without_metric_fields);
+    bool valid = with_metric_fields.empty() || without_metric_fields.empty();
+    if (valid) {
+        ASSERT_TRUE(ok);
+    } else {
+        ASSERT_FALSE(ok);
+    }
+}
+
 #define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                                   \
                                                updater,                                            \
                                                value_type,                                         \
                                                is_integral,                                        \
                                                with_metric_fields,                                 \
                                                without_metric_fields,                              \
+                                               expected_metric_fields,                             \
                                                value_map_comparator)                               \
     do {                                                                                           \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(my_server_entity);                           \
         my_metric->updater(test.expected_value);                                                   \
                                                                                                    \
-        metric_value_map<value_type> expected_value_map;                                           \
         metric_filters filters;                                                                    \
-        if (filters.generate_metric_fields_filter(with_metric_fields, without_metric_fields)) {    \
-            if (filters.metric_fields_filter(metric::kMetricSingleValueField)) {                   \
-                expected_value_map[metric::kMetricSingleValueField] = test.expected_value;         \
-            }                                                                                      \
-        } else {                                                                                   \
-            expected_value_map[metric::kMetricSingleValueField] = test.expected_value;             \
+        generate_and_check_metric_fields_filter(                                                   \
+            filters, with_metric_fields, without_metric_fields);                                   \
+                                                                                                   \
+        metric_value_map<value_type> expected_value_map;                                           \
+        if (expected_metric_fields.find(kMetricSingleValueField) !=                                \
+            expected_metric_fields.end()) {                                                        \
+            expected_value_map[kMetricSingleValueField] = test.expected_value;                     \
         }                                                                                          \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
-        generate_metric_value_map(my_metric.get(), is_integral, filters, actual_value_map);        \
+        generate_metric_value_map(                                                                 \
+            my_metric.get(), is_integral, filters, expected_metric_fields, actual_value_map);      \
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+// Test cases:
+// - both with_metric_fields and without_metric_fields are empty
+// - with_metric_fields has a field that exists while without_metric_fields is empty
+// - with_metric_fields has a field that does not exist while without_metric_fields is empty
+// - with_metric_fields has a field that does not exist and another field that exists while
+// without_metric_fields is empty
+// - with_metric_fields has 2 fields both of which exist while without_metric_fields is empty
+// - with_metric_fields has 2 fields both of which does not exist while without_metric_fields
+// is empty
+// - without_metric_fields has a field that exists while with_metric_fields is empty
+// - without_metric_fields has a field that does not exist while with_metric_fields is empty
+// - without_metric_fields has a field that does not exist and another field that exists while
+// with_metric_fields is empty
+// - without_metric_fields has 2 fields both of which exist while with_metric_fields is empty
+// - without_metric_fields has 2 fields both of which does not exist while with_metric_fields
+// is empty
+// - with_metric_fields has a field that exists while without_metric_fields has a field that
+// exists (invalid input)
+// - with_metric_fields has a field that exists while without_metric_fields has a field that does
+// not exist (invalid input)
+// - with_metric_fields has a field that does not exist while without_metric_fields has a field
+// that exists (invalid input)
+// - with_metric_fields has a field that does not exist while without_metric_fields has a field
+// that does not exist (invalid input)
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
@@ -1028,18 +1072,56 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         {                                                                                          \
             std::string entity_id;                                                                 \
             value_type expected_value;                                                             \
-            metric_filters::fields_type with_metric_fields;                                        \
-            metric_filters::fields_type without_metric_fields;                                     \
-        } tests[]{                                                                                 \
-            {"server_60", value, {}, {}},                                                          \
-            {"server_61", value, {metric::kMetricNameField}, {}},                                  \
-            {"server_62", value, {}, {metric::kMetricSingleValueField}},                           \
-            {"server_63", value, {metric::kMetricNameField}, {metric::kMetricSingleValueField}},   \
-            {"server_64", value, {"field_not_existed"}, {}},                                       \
-            {"server_65", value, {}, {"field_not_existed"}},                                       \
-            {"server_66", value, {"field_not_existed", metric::kMetricSingleValueField}, {}},      \
-            {"server_67", value, {}, {"field_not_existed", metric::kMetricSingleValueField}},      \
-        };                                                                                         \
+            metric_fields_type with_metric_fields;                                                 \
+            metric_fields_type without_metric_fields;                                              \
+            metric_fields_type expected_metric_fields;                                             \
+        } tests[]{{"server_60", value, {}, {}, kAllSingleValueMetricFields},                       \
+                  {"server_61", value, {kMetricNameField}, {}, {kMetricNameField}},                \
+                  {"server_62", value, {"field_not_exist"}, {}, {}},                               \
+                  {"server_63",                                                                    \
+                   value,                                                                          \
+                   {"field_not_exist", kMetricSingleValueField},                                   \
+                   {},                                                                             \
+                   {kMetricSingleValueField}},                                                     \
+                  {"server_64",                                                                    \
+                   value,                                                                          \
+                   {kMetricNameField, kMetricSingleValueField},                                    \
+                   {},                                                                             \
+                   {kMetricNameField, kMetricSingleValueField}},                                   \
+                  {"server_65", value, {"field_not_exist", "another_field_not_exist"}, {}, {}},    \
+                  {"server_66", value, {}, {kMetricSingleValueField}, {kMetricNameField}},         \
+                  {"server_67", value, {}, {"field_not_exist"}, kAllSingleValueMetricFields},      \
+                  {"server_68",                                                                    \
+                   value,                                                                          \
+                   {},                                                                             \
+                   {"field_not_exist", kMetricNameField},                                          \
+                   {kMetricSingleValueField}},                                                     \
+                  {"server_69", value, {}, {kMetricNameField, kMetricSingleValueField}, {}},       \
+                  {"server_70",                                                                    \
+                   value,                                                                          \
+                   {},                                                                             \
+                   {"field_not_exist", "another_field_not_exist"},                                 \
+                   kAllSingleValueMetricFields},                                                   \
+                  {"server_71",                                                                    \
+                   value,                                                                          \
+                   {kMetricNameField},                                                             \
+                   {kMetricSingleValueField},                                                      \
+                   kAllSingleValueMetricFields},                                                   \
+                  {"server_72",                                                                    \
+                   value,                                                                          \
+                   {kMetricSingleValueField},                                                      \
+                   {"field_not_exist"},                                                            \
+                   kAllSingleValueMetricFields},                                                   \
+                  {"server_73",                                                                    \
+                   value,                                                                          \
+                   {"field_not_exist"},                                                            \
+                   {kMetricNameField},                                                             \
+                   kAllSingleValueMetricFields},                                                   \
+                  {"server_74",                                                                    \
+                   value,                                                                          \
+                   {"field_not_exist"},                                                            \
+                   {"another_field_not_exist"},                                                    \
+                   kAllSingleValueMetricFields}};                                                  \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                               \
@@ -1048,6 +1130,7 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
                                                    is_integral,                                    \
                                                    test.with_metric_fields,                        \
                                                    test.without_metric_fields,                     \
+                                                   test.expected_metric_fields,                    \
                                                    value_map_comparator);                          \
         }                                                                                          \
     } while (0);
@@ -1096,6 +1179,7 @@ void generate_metric_value_map(MetricType *my_metric,
                                const uint64_t interval_ms,
                                const uint64_t exec_ms,
                                const std::set<kth_percentile_type> &kth_percentiles,
+                               const metric_fields_type &expected_metric_fields,
                                metric_value_map<typename MetricType::value_type> &value_map)
 {
     using value_type = typename MetricType::value_type;
@@ -1116,18 +1200,30 @@ void generate_metric_value_map(MetricType *my_metric,
     auto value = values.begin();
     for (const auto &type : kth_percentiles) {
         auto name = kth_percentile_to_name(type);
+        if (expected_metric_fields.find(name) == expected_metric_fields.end()) {
+            continue;
+        }
         value_map[name] = *value++;
     }
 }
 
-#define TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(                                                      \
-    metric_prototype, case_generator, is_integral, value_map_comparator)                           \
+#define TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                     \
+                                             case_generator,                                       \
+                                             is_integral,                                          \
+                                             with_metric_fields,                                   \
+                                             without_metric_fields,                                \
+                                             expected_metric_fields,                               \
+                                             value_map_comparator)                                 \
     do {                                                                                           \
         using value_type = typename case_generator::value_type;                                    \
                                                                                                    \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(                                             \
             my_server_entity, test.interval_ms, test.kth_percentiles, test.sample_size);           \
+                                                                                                   \
+        metric_filters filters;                                                                    \
+        generate_and_check_metric_fields_filter(                                                   \
+            filters, with_metric_fields, without_metric_fields);                                   \
                                                                                                    \
         case_generator generator(test.data_size,                                                   \
                                  value_type() /* initial_value */,                                 \
@@ -1140,11 +1236,12 @@ void generate_metric_value_map(MetricType *my_metric,
                                   test.interval_ms,                                                \
                                   test.exec_ms,                                                    \
                                   test.kth_percentiles,                                            \
+                                  expected_metric_fields,                                          \
                                   expected_value_map);                                             \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
         generate_metric_value_map(                                                                 \
-            my_metric.get(), is_integral, metric_filters(), actual_value_map);                     \
+            my_metric.get(), is_integral, filters, expected_metric_fields, actual_value_map);      \
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
@@ -1160,11 +1257,27 @@ void generate_metric_value_map(MetricType *my_metric,
             size_t sample_size;                                                                    \
             size_t data_size;                                                                      \
             uint64_t exec_ms;                                                                      \
-        } tests[]{{"server_60", 50, kAllKthPercentileTypes, 4096, 4096, 10}};                      \
+            metric_fields_type with_metric_fields;                                                 \
+            metric_fields_type without_metric_fields;                                              \
+            metric_fields_type expected_metric_fields;                                             \
+        } tests[]{{"server_60",                                                                    \
+                   50,                                                                             \
+                   kAllKthPercentileTypes,                                                         \
+                   4096,                                                                           \
+                   4096,                                                                           \
+                   10,                                                                             \
+                   {},                                                                             \
+                   {},                                                                             \
+                   kAllKthPercentileFields}};                                                      \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
-            TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(                                                  \
-                metric_prototype, case_generator, is_integral, value_map_comparator);              \
+            TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                 \
+                                                 case_generator,                                   \
+                                                 is_integral,                                      \
+                                                 test.with_metric_fields,                          \
+                                                 test.without_metric_fields,                       \
+                                                 test.expected_metric_fields,                      \
+                                                 value_map_comparator);                            \
         }                                                                                          \
     } while (0)
 

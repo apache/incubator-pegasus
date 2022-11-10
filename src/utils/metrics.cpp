@@ -24,15 +24,6 @@
 
 namespace dsn {
 
-std::set<kth_percentile_type> get_all_kth_percentile_types()
-{
-    std::set<kth_percentile_type> all_types;
-    for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
-        all_types.insert(static_cast<kth_percentile_type>(i));
-    }
-    return all_types;
-}
-
 metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
     : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
 {
@@ -175,9 +166,6 @@ metric_prototype::~metric_prototype() {}
 
 metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
-const std::string metric::kMetricNameField = "name";
-const std::string metric::kMetricSingleValueField = "value";
-
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 
 uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
@@ -268,6 +256,24 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
     _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
 #undef TRY_PROCESS_TIMER_CLOSING
+}
+
+std::set<kth_percentile_type> get_all_kth_percentile_types()
+{
+    std::set<kth_percentile_type> all_types;
+    for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
+        all_types.insert(static_cast<kth_percentile_type>(i));
+    }
+    return all_types;
+}
+
+metric_fields_type get_all_kth_percentile_fields()
+{
+    metric_fields_type fields = {kMetricNameField};
+    for (const auto &kth : kAllKthPercentiles) {
+        fields.insert(kth.name);
+    }
+    return fields;
 }
 
 } // namespace dsn
