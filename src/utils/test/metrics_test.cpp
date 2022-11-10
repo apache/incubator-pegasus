@@ -1011,6 +1011,16 @@ void generate_and_check_metric_fields_filter(metric_filters &filters,
     }
 }
 
+metric_fields_type drop_from_metric_fields(const metric_fields_type &all,
+                                           const metric_fields_type &dropped)
+{
+    metric_fields_type target(all);
+    for (const auto &e : dropped) {
+        target.erase(e);
+    }
+    return target;
+}
+
 #define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                                   \
                                                updater,                                            \
                                                value_type,                                         \
@@ -1041,20 +1051,26 @@ void generate_and_check_metric_fields_filter(metric_filters &filters,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+inline metric_fields_type
+drop_from_all_single_value_metric_fields(const metric_fields_type &dropped)
+{
+    return drop_from_metric_fields(kAllSingleValueMetricFields, dropped);
+}
+
 // Test cases:
 // - both with_metric_fields and without_metric_fields are empty
 // - with_metric_fields has a field that exists while without_metric_fields is empty
+// - with_metric_fields has all fields which exist while without_metric_fields is empty
 // - with_metric_fields has a field that does not exist while without_metric_fields is empty
 // - with_metric_fields has a field that does not exist and another field that exists while
 // without_metric_fields is empty
-// - with_metric_fields has 2 fields both of which exist while without_metric_fields is empty
 // - with_metric_fields has 2 fields both of which does not exist while without_metric_fields
 // is empty
 // - without_metric_fields has a field that exists while with_metric_fields is empty
+// - without_metric_fields has all fields which exist while with_metric_fields is empty
 // - without_metric_fields has a field that does not exist while with_metric_fields is empty
 // - without_metric_fields has a field that does not exist and another field that exists while
 // with_metric_fields is empty
-// - without_metric_fields has 2 fields both of which exist while with_metric_fields is empty
 // - without_metric_fields has 2 fields both of which does not exist while with_metric_fields
 // is empty
 // - with_metric_fields has a field that exists while without_metric_fields has a field that
@@ -1075,53 +1091,54 @@ void generate_and_check_metric_fields_filter(metric_filters &filters,
             metric_fields_type with_metric_fields;                                                 \
             metric_fields_type without_metric_fields;                                              \
             metric_fields_type expected_metric_fields;                                             \
-        } tests[]{{"server_60", value, {}, {}, kAllSingleValueMetricFields},                       \
-                  {"server_61", value, {kMetricNameField}, {}, {kMetricNameField}},                \
-                  {"server_62", value, {"field_not_exist"}, {}, {}},                               \
-                  {"server_63",                                                                    \
-                   value,                                                                          \
-                   {"field_not_exist", kMetricSingleValueField},                                   \
-                   {},                                                                             \
-                   {kMetricSingleValueField}},                                                     \
-                  {"server_64",                                                                    \
-                   value,                                                                          \
-                   {kMetricNameField, kMetricSingleValueField},                                    \
-                   {},                                                                             \
-                   {kMetricNameField, kMetricSingleValueField}},                                   \
-                  {"server_65", value, {"field_not_exist", "another_field_not_exist"}, {}, {}},    \
-                  {"server_66", value, {}, {kMetricSingleValueField}, {kMetricNameField}},         \
-                  {"server_67", value, {}, {"field_not_exist"}, kAllSingleValueMetricFields},      \
-                  {"server_68",                                                                    \
-                   value,                                                                          \
-                   {},                                                                             \
-                   {"field_not_exist", kMetricNameField},                                          \
-                   {kMetricSingleValueField}},                                                     \
-                  {"server_69", value, {}, {kMetricNameField, kMetricSingleValueField}, {}},       \
-                  {"server_70",                                                                    \
-                   value,                                                                          \
-                   {},                                                                             \
-                   {"field_not_exist", "another_field_not_exist"},                                 \
-                   kAllSingleValueMetricFields},                                                   \
-                  {"server_71",                                                                    \
-                   value,                                                                          \
-                   {kMetricNameField},                                                             \
-                   {kMetricSingleValueField},                                                      \
-                   kAllSingleValueMetricFields},                                                   \
-                  {"server_72",                                                                    \
-                   value,                                                                          \
-                   {kMetricSingleValueField},                                                      \
-                   {"field_not_exist"},                                                            \
-                   kAllSingleValueMetricFields},                                                   \
-                  {"server_73",                                                                    \
-                   value,                                                                          \
-                   {"field_not_exist"},                                                            \
-                   {kMetricNameField},                                                             \
-                   kAllSingleValueMetricFields},                                                   \
-                  {"server_74",                                                                    \
-                   value,                                                                          \
-                   {"field_not_exist"},                                                            \
-                   {"another_field_not_exist"},                                                    \
-                   kAllSingleValueMetricFields}};                                                  \
+        } tests[] = {                                                                              \
+            {"server_60", value, {}, {}, kAllSingleValueMetricFields},                             \
+            {"server_61", value, {kMetricNameField}, {}, {kMetricNameField}},                      \
+            {"server_62", value, kAllSingleValueMetricFields, {}, kAllSingleValueMetricFields},    \
+            {"server_63", value, {"field_not_exist"}, {}, {}},                                     \
+            {"server_64",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricSingleValueField},                                         \
+             {},                                                                                   \
+             {kMetricSingleValueField}},                                                           \
+            {"server_65", value, {"field_not_exist", "another_field_not_exist"}, {}, {}},          \
+            {"server_66",                                                                          \
+             value,                                                                                \
+             {},                                                                                   \
+             {kMetricSingleValueField},                                                            \
+             drop_from_all_single_value_metric_fields({kMetricSingleValueField})},                 \
+            {"server_67", value, {}, kAllSingleValueMetricFields, {}},                             \
+            {"server_68", value, {}, {"field_not_exist"}, kAllSingleValueMetricFields},            \
+            {"server_69",                                                                          \
+             value,                                                                                \
+             {},                                                                                   \
+             {"field_not_exist", kMetricNameField},                                                \
+             drop_from_all_single_value_metric_fields({kMetricNameField})},                        \
+            {"server_70",                                                                          \
+             value,                                                                                \
+             {},                                                                                   \
+             {"field_not_exist", "another_field_not_exist"},                                       \
+             kAllSingleValueMetricFields},                                                         \
+            {"server_71",                                                                          \
+             value,                                                                                \
+             {kMetricNameField},                                                                   \
+             {kMetricSingleValueField},                                                            \
+             kAllSingleValueMetricFields},                                                         \
+            {"server_72",                                                                          \
+             value,                                                                                \
+             {kMetricSingleValueField},                                                            \
+             {"field_not_exist"},                                                                  \
+             kAllSingleValueMetricFields},                                                         \
+            {"server_73",                                                                          \
+             value,                                                                                \
+             {"field_not_exist"},                                                                  \
+             {kMetricNameField},                                                                   \
+             kAllSingleValueMetricFields},                                                         \
+            {"server_74",                                                                          \
+             value,                                                                                \
+             {"field_not_exist"},                                                                  \
+             {"another_field_not_exist"},                                                          \
+             kAllSingleValueMetricFields}};                                                        \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                               \
@@ -1200,10 +1217,10 @@ void generate_metric_value_map(MetricType *my_metric,
     auto value = values.begin();
     for (const auto &type : kth_percentiles) {
         auto name = kth_percentile_to_name(type);
-        if (expected_metric_fields.find(name) == expected_metric_fields.end()) {
-            continue;
+        if (expected_metric_fields.find(name) != expected_metric_fields.end()) {
+            value_map[name] = *value;
         }
-        value_map[name] = *value++;
+        ++value;
     }
 }
 
@@ -1217,25 +1234,29 @@ void generate_metric_value_map(MetricType *my_metric,
     do {                                                                                           \
         using value_type = typename case_generator::value_type;                                    \
                                                                                                    \
+        const uint64_t interval_ms = 50;                                                           \
+        const auto kth_percentiles = kAllKthPercentileTypes;                                       \
+        const size_t sample_size = 4096;                                                           \
+        const size_t data_size = 4096;                                                             \
+        const uint64_t exec_ms = 10;                                                               \
+                                                                                                   \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(                                             \
-            my_server_entity, test.interval_ms, test.kth_percentiles, test.sample_size);           \
+            my_server_entity, interval_ms, kth_percentiles, sample_size);                          \
                                                                                                    \
         metric_filters filters;                                                                    \
         generate_and_check_metric_fields_filter(                                                   \
             filters, with_metric_fields, without_metric_fields);                                   \
                                                                                                    \
-        case_generator generator(test.data_size,                                                   \
-                                 value_type() /* initial_value */,                                 \
-                                 5 /* range_size */,                                               \
-                                 test.kth_percentiles);                                            \
+        case_generator generator(                                                                  \
+            data_size, value_type() /* initial_value */, 5 /* range_size */, kth_percentiles);     \
                                                                                                    \
         metric_value_map<value_type> expected_value_map;                                           \
         generate_metric_value_map(my_metric.get(),                                                 \
                                   generator,                                                       \
-                                  test.interval_ms,                                                \
-                                  test.exec_ms,                                                    \
-                                  test.kth_percentiles,                                            \
+                                  interval_ms,                                                     \
+                                  exec_ms,                                                         \
+                                  kth_percentiles,                                                 \
                                   expected_metric_fields,                                          \
                                   expected_value_map);                                             \
                                                                                                    \
@@ -1246,29 +1267,32 @@ void generate_metric_value_map(MetricType *my_metric,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+// Test cases:
+// - both with_metric_fields and without_metric_fields are empty
+// - with_metric_fields has a field that does not exist while without_metric_fields is empty
+// - with_metric_fields has 2 fields that exist while without_metric_fields is empty
+// - with_metric_fields has all fields that exist while without_metric_fields is empty
+// - with_metric_fields has a field that does not exist while without_metric_fields is empty
+// - with_metric_fields has a field that does not exist and another 2 fields that exist while
+// without_metric_fields is empty
+// - with_metric_fields has 2 fields both of which does not exist while without_metric_fields
+// is empty
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
-            uint64_t interval_ms;                                                                  \
-            std::set<kth_percentile_type> kth_percentiles;                                         \
-            size_t sample_size;                                                                    \
-            size_t data_size;                                                                      \
-            uint64_t exec_ms;                                                                      \
             metric_fields_type with_metric_fields;                                                 \
             metric_fields_type without_metric_fields;                                              \
             metric_fields_type expected_metric_fields;                                             \
-        } tests[]{{"server_60",                                                                    \
-                   50,                                                                             \
-                   kAllKthPercentileTypes,                                                         \
-                   4096,                                                                           \
-                   4096,                                                                           \
-                   10,                                                                             \
-                   {},                                                                             \
-                   {},                                                                             \
-                   kAllKthPercentileFields}};                                                      \
+        } tests[] = {{"server_60", {}, {}, kAllKthPercentileFields},                               \
+                     {"server_61", {kMetricNameField}, {}, {kMetricNameField}},                    \
+                     {"server_62", {kMetricNameField, "p95"}, {}, {kMetricNameField, "p95"}},      \
+                     {"server_63", kAllKthPercentileFields, {}, kAllKthPercentileFields},          \
+                     {"server_64", {"field_not_exist"}, {}, {}},                                   \
+                     {"server_65", {"file_not_exist", "p90", "p99"}, {}, {"p90", "p99"}},          \
+                     {"server_66", {"field_not_exist", "another_field_not_exist"}, {}, {}}};       \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                 \
