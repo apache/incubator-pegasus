@@ -182,9 +182,10 @@ void disk_engine::write(aio_task *aio)
     }
 
     auto dio = aio->get_aio_context();
+    CHECK_NE(dio->fd, DSN_INVALID_FILE_HANDLE);
     auto dfile = (disk_file *)(void *)(uintptr_t)(dio->fd);
-    dio->fd = dfile->native_handle();
-    dio->dfile = dfile;
+    CHECK_EQ(dio->fd, dfile->native_handle());
+    dio->dfile = dfile; // dio->dfile is initialized here
     dio->engine = this;
     dio->type = AIO_Write;
 
