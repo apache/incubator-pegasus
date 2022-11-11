@@ -68,7 +68,7 @@ void failure_detector::register_ctrl_commands()
     });
 }
 
-void failure_detector::unregister_ctrl_commands() { UNREGISTER_VALID_HANDLER(_get_allow_list); }
+void failure_detector::unregister_ctrl_commands() { _get_allow_list.reset(); }
 
 error_code failure_detector::start(uint32_t check_interval_seconds,
                                    uint32_t beacon_interval_seconds,

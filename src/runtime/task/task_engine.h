@@ -99,11 +99,7 @@ class task_engine
 {
 public:
     task_engine(service_node *node);
-    ~task_engine()
-    {
-        stop();
-        UNREGISTER_VALID_HANDLER(_task_queue_max_length_cmd);
-    }
+    ~task_engine() { stop(); }
 
     //
     // service management routines
@@ -134,7 +130,7 @@ private:
     std::vector<task_worker_pool *> _pools;
     volatile bool _is_running;
     service_node *_node;
-    dsn_handle_t _task_queue_max_length_cmd;
+    std::unique_ptr<command_deregister> _task_queue_max_length_cmd;
 };
 
 // -------------------- inline implementation ----------------------------

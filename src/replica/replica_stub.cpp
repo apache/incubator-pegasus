@@ -2609,40 +2609,6 @@ void replica_stub::close()
         return;
     }
 
-    UNREGISTER_VALID_HANDLER(_kill_partition_command);
-    UNREGISTER_VALID_HANDLER(_deny_client_command);
-    UNREGISTER_VALID_HANDLER(_verbose_client_log_command);
-    UNREGISTER_VALID_HANDLER(_verbose_commit_log_command);
-    UNREGISTER_VALID_HANDLER(_trigger_chkpt_command);
-    UNREGISTER_VALID_HANDLER(_query_compact_command);
-    UNREGISTER_VALID_HANDLER(_query_app_envs_command);
-#ifdef DSN_ENABLE_GPERF
-    UNREGISTER_VALID_HANDLER(_release_tcmalloc_memory_command);
-    UNREGISTER_VALID_HANDLER(_get_tcmalloc_status_command);
-    UNREGISTER_VALID_HANDLER(_max_reserved_memory_percentage_command);
-    UNREGISTER_VALID_HANDLER(_release_all_reserved_memory_command);
-#elif defined(DSN_USE_JEMALLOC)
-    UNREGISTER_VALID_HANDLER(_dump_jemalloc_stats_command);
-#endif
-    UNREGISTER_VALID_HANDLER(_max_concurrent_bulk_load_downloading_count_command);
-
-    _kill_partition_command = nullptr;
-    _deny_client_command = nullptr;
-    _verbose_client_log_command = nullptr;
-    _verbose_commit_log_command = nullptr;
-    _trigger_chkpt_command = nullptr;
-    _query_compact_command = nullptr;
-    _query_app_envs_command = nullptr;
-#ifdef DSN_ENABLE_GPERF
-    _release_tcmalloc_memory_command = nullptr;
-    _get_tcmalloc_status_command = nullptr;
-    _max_reserved_memory_percentage_command = nullptr;
-    _release_all_reserved_memory_command = nullptr;
-#elif defined(DSN_USE_JEMALLOC)
-    _dump_jemalloc_stats_command = nullptr;
-#endif
-    _max_concurrent_bulk_load_downloading_count_command = nullptr;
-
     if (_config_sync_timer_task != nullptr) {
         _config_sync_timer_task->cancel(true);
         _config_sync_timer_task = nullptr;

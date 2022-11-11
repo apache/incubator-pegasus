@@ -74,7 +74,7 @@ private:
     std::unique_ptr<load_balance_policy> _app_balance_policy;
     std::unique_ptr<load_balance_policy> _cluster_balance_policy;
 
-    dsn_handle_t _get_balance_operation_count;
+    std::unique_ptr<command_deregister> _get_balance_operation_count;
 
     // perf counters
     perf_counter_wrapper _balance_operation_count;

@@ -44,8 +44,7 @@ DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);
 
-greedy_load_balancer::greedy_load_balancer(meta_service *_svc)
-    : server_load_balancer(_svc), _get_balance_operation_count(nullptr)
+greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_balancer(_svc)
 {
     _app_balance_policy = dsn::make_unique<app_balance_policy>(_svc);
     _cluster_balance_policy = dsn::make_unique<cluster_balance_policy>(_svc);
@@ -85,10 +84,7 @@ void greedy_load_balancer::register_ctrl_commands()
         [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
 }
 
-void greedy_load_balancer::unregister_ctrl_commands()
-{
-    UNREGISTER_VALID_HANDLER(_get_balance_operation_count);
-}
+void greedy_load_balancer::unregister_ctrl_commands() { _get_balance_operation_count.reset(); }
 
 std::string greedy_load_balancer::get_balance_operation_count(const std::vector<std::string> &args)
 {

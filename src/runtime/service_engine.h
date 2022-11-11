@@ -107,6 +107,7 @@ private:
     error_code init_rpc_engine();
 };
 
+class command_deregister;
 typedef std::map<int, std::shared_ptr<service_node>> service_nodes_by_app_id;
 class service_engine : public utils::singleton<service_engine>
 {
@@ -132,8 +133,8 @@ private:
     service_spec _spec;
     env_provider *_env;
 
-    dsn_handle_t _get_runtime_info_cmd;
-    dsn_handle_t _get_queue_info_cmd;
+    std::unique_ptr<command_deregister> _get_runtime_info_cmd;
+    std::unique_ptr<command_deregister> _get_queue_info_cmd;
 
     bool _simulator;
 

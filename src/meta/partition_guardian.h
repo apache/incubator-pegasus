@@ -89,9 +89,9 @@ private:
     dsn::zrwlock_nr _black_list_lock; // [
     std::set<dsn::rpc_address> _assign_secondary_black_list;
     // ]
-    dsn_handle_t _ctrl_assign_secondary_black_list = nullptr;
 
-    dsn_handle_t _ctrl_assign_delay_ms = nullptr;
+    std::unique_ptr<command_deregister> _ctrl_assign_secondary_black_list;
+    std::unique_ptr<command_deregister> _ctrl_assign_delay_ms;
     uint64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;

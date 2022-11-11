@@ -293,7 +293,7 @@ private:
     replication_options _opts;
     meta_options _meta_opts;
     uint64_t _node_live_percentage_threshold_for_update;
-    dsn_handle_t _ctrl_node_live_percentage_threshold_for_update = nullptr;
+    std::unique_ptr<command_deregister> _ctrl_node_live_percentage_threshold_for_update;
 
     std::shared_ptr<server_state> _state;
     std::shared_ptr<meta_server_failure_detector> _failure_detector;
@@ -303,7 +303,7 @@ private:
 
     std::shared_ptr<server_load_balancer> _balancer;
     std::shared_ptr<backup_service> _backup_handler;
-    std::shared_ptr<partition_guardian> _partition_guardian = nullptr;
+    std::shared_ptr<partition_guardian> _partition_guardian;
 
     std::unique_ptr<meta_duplication_service> _dup_svc;
 

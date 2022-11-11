@@ -192,13 +192,7 @@ service_engine::service_engine()
         &service_engine::get_queue_info);
 }
 
-service_engine::~service_engine()
-{
-    _nodes_by_app_id.clear();
-
-    UNREGISTER_VALID_HANDLER(_get_runtime_info_cmd);
-    UNREGISTER_VALID_HANDLER(_get_queue_info_cmd);
-}
+service_engine::~service_engine() { _nodes_by_app_id.clear(); }
 
 void service_engine::init_before_toollets(const service_spec &spec)
 {

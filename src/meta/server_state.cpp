@@ -93,20 +93,11 @@ static const char *unlock_state = "unlock";
 server_state::server_state()
     : _meta_svc(nullptr),
       _add_secondary_enable_flow_control(false),
-      _add_secondary_max_count_for_one_node(0),
-      _cli_dump_handle(nullptr),
-      _ctrl_add_secondary_enable_flow_control(nullptr),
-      _ctrl_add_secondary_max_count_for_one_node(nullptr)
+      _add_secondary_max_count_for_one_node(0)
 {
 }
 
-server_state::~server_state()
-{
-    _tracker.cancel_outstanding_tasks();
-    UNREGISTER_VALID_HANDLER(_cli_dump_handle);
-    UNREGISTER_VALID_HANDLER(_ctrl_add_secondary_enable_flow_control);
-    UNREGISTER_VALID_HANDLER(_ctrl_add_secondary_max_count_for_one_node);
-}
+server_state::~server_state() { _tracker.cancel_outstanding_tasks(); }
 
 void server_state::register_cli_commands()
 {
@@ -133,7 +124,7 @@ void server_state::register_cli_commands()
             }
             return std::string(err.to_string());
         });
-    CHECK_NOTNULL(_cli_dump_handle, "register cli handler failed");
+    CHECK(_cli_dump_handle, "register cli handler failed");
 
     _ctrl_add_secondary_enable_flow_control = dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_enable_flow_control"},

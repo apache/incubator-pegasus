@@ -684,8 +684,8 @@ void partition_guardian::register_ctrl_commands()
 
 void partition_guardian::unregister_ctrl_commands()
 {
-    UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms);
-    UNREGISTER_VALID_HANDLER(_ctrl_assign_secondary_black_list);
+    _ctrl_assign_delay_ms.reset();
+    _ctrl_assign_secondary_black_list.reset();
 }
 
 std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::string> &args)

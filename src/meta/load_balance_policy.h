@@ -57,7 +57,7 @@ class load_balance_policy
 {
 public:
     load_balance_policy(meta_service *svc);
-    virtual ~load_balance_policy() = 0;
+    virtual ~load_balance_policy();
 
     virtual void balance(bool checker, const meta_view *global_view, migration_list *list) = 0;
 
@@ -88,7 +88,7 @@ protected:
     dsn::zrwlock_nr _balancer_ignored_apps_lock; // {
     std::set<app_id> _balancer_ignored_apps;
     // }
-    dsn_handle_t _ctrl_balancer_ignored_apps;
+    std::unique_ptr<command_deregister> _ctrl_balancer_ignored_apps;
 
 private:
     void start_moving_primary(const std::shared_ptr<app_state> &app,
@@ -111,9 +111,6 @@ private:
     std::string set_balancer_ignored_app_ids(const std::vector<std::string> &args);
     std::string get_balancer_ignored_app_ids();
     std::string clear_balancer_ignored_app_ids();
-
-    void register_ctrl_commands();
-    void unregister_ctrl_commands();
 
     FRIEND_TEST(cluster_balance_policy, calc_potential_moving);
 };

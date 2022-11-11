@@ -221,7 +221,7 @@ private:
 
     perf_counter_wrapper _recent_beacon_fail_count;
 
-    dsn_handle_t _get_allow_list = nullptr;
+    std::unique_ptr<command_deregister> _get_allow_list;
 
 protected:
     mutable zlock _lock;
