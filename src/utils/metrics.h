@@ -134,10 +134,32 @@ namespace dsn {
 
 using metric_fields_type = std::unordered_set<std::string>;
 
+// This struct includes a set of filters for both entities and metrics requested by client.
 struct metric_filters
 {
     using fields_filter_fn = std::function<bool(const std::string &)>;
 
+    // According to the parameters requested by client, this function will filter metric
+    // fields that will be put in the response. `with_metric_fields` includes all the metric
+    // fields that are wanted by client; on the contrary, once client wants all except some
+    // metric fields, it could specify them in `without_metric_fields`.
+    //
+    // However, once both `with_metric_fields` and `without_metric_fields` are specified, it
+    // will be considered invalid. The reason can be explained in 2 conditions. Suppose both
+    // `with_metric_fields` and `without_metric_fields` are provided, then:
+    //
+    // * Firstly, if both include the same fields, each will conflict with another. For example,
+    // suppose "with_metric_fields=a,b" and "without_metric_fields=b,c", this will lead to
+    // contradiction: we cannot decide if b should be put in the response to client.
+    //
+    // * Otherwise, if both do not include any same field, actually they can just be simplified
+    // as a unique `with_metric_fields`. For example, suppose "with_metric_fields=a,b" and
+    // "without_metric_fields=c,d", this can be simplified as "with_metric_fields=a,b":
+    // "without_metric_fields=c,d" is useless here since we have declared that only a and b are
+    // needed according to "with_metric_fields=a,b".
+    //
+    // To sum up, we can just require that `with_metric_fields` and `without_metric_fields` can
+    // not be provided at the same time.
     bool generate_metric_fields_filter(const metric_fields_type &with_metric_fields,
                                        const metric_fields_type &without_metric_fields)
     {
@@ -161,6 +183,7 @@ struct metric_filters
         return true;
     }
 
+    // Default filter will not exclude any metric field.
     fields_filter_fn metric_fields_filter = [](const std::string &) -> bool { return true; };
 };
 
@@ -382,13 +405,16 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
-    // Take snapshot of each metric to collect current values as json format.
+    // Take snapshot of each metric to collect current values as json format with fields chosen
+    // by `filters`.
     virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
 
 protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
 
+    // Encode a metric field specified by `field_name` as json format. However, once the field
+    // are not chosen by `filters`, this function will do nothing.
     template <typename T>
     inline void encode(dsn::json::JsonWriter &writer,
                        const std::string &field_name,
@@ -403,11 +429,14 @@ protected:
         json::json_encode(writer, value);
     }
 
+    // Encode the metric name as json format, if it is chosen by `filters`.
     inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
     }
 
+    // Encode the unique value of a metric as json format, if it is chosen by `filters`. Notice
+    // that the metric should have only one value. like gauge and counter.
     template <typename T>
     inline void encode_single_value(dsn::json::JsonWriter &writer,
                                     const T &value,

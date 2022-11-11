@@ -954,6 +954,7 @@ void check_and_extract_metric_value_map_from_json_string(
         }
     }
 
+    // Check if the field of metric name is included as expected.
     if (expected_metric_fields.find(kMetricNameField) != expected_metric_fields.end()) {
         ASSERT_TRUE(has_metric_name);
     } else {
@@ -961,6 +962,7 @@ void check_and_extract_metric_value_map_from_json_string(
     }
 }
 
+// Take snapshot as json format, then decode to a value map.
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
@@ -1189,6 +1191,8 @@ TEST(metrics_test, take_snapshot_concurrent_volatile_counter)
     RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_concurrent_volatile_counter);
 }
 
+// Set to percentile metric with values output by case generator, and generate the expected
+// value map.
 template <typename MetricType, typename CaseGenerator>
 void generate_metric_value_map(MetricType *my_metric,
                                CaseGenerator &generator,
@@ -1216,6 +1220,7 @@ void generate_metric_value_map(MetricType *my_metric,
     auto value = values.begin();
     for (const auto &type : kth_percentiles) {
         auto name = kth_percentile_to_name(type);
+        // Only add the chosen fields to the expected value map.
         if (expected_metric_fields.find(name) != expected_metric_fields.end()) {
             value_map[name] = *value;
         }
