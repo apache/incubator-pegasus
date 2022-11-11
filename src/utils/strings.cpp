@@ -58,11 +58,12 @@ std::string get_last_component(const std::string &input, const char splitters[])
 
 namespace {
 
+// The states while scan each split.
 enum class split_args_state : int
 {
-    kSplitBeginning,
-    kSplitLeadingSpaces,
-    kSplitToken,
+    kSplitBeginning,     // The initial state while starting to scan a split
+    kSplitLeadingSpaces, // While meeting leading spaces, if any
+    kSplitToken,         // While running into token (after leading spaces)
 };
 
 const std::string kLeadingSpaces = " \t";
@@ -80,6 +81,7 @@ inline bool is_trailing_space(char ch)
         kTrailingSpaces.begin(), kTrailingSpaces.end(), [ch](char space) { return ch == space; });
 }
 
+// Skip trailing spaces and find the end of token.
 const char *find_token_end(const char *token_begin, const char *end)
 {
     CHECK(token_begin < end, "");
@@ -89,8 +91,11 @@ const char *find_token_end(const char *token_begin, const char *end)
     return end;
 }
 
+// Append new element to sequence containers, such as std::vector and std::list.
 struct SequenceInserter
 {
+    // The new element is constructed through variadic template and appended at the end
+    // of the sequence container.
     template <typename SequenceContainer, typename... Args>
     void emplace(SequenceContainer &container, Args &&... args) const
     {
@@ -98,8 +103,11 @@ struct SequenceInserter
     }
 };
 
+// Insert new element to associative containers, such as std::unordered_set and std::set.
 struct AssociativeInserter
 {
+    // The new element is constructed through variadic template and inserted into the associative
+    // container.
     template <typename AssociativeContainer, typename... Args>
     void emplace(AssociativeContainer &container, Args &&... args) const
     {
@@ -107,9 +115,14 @@ struct AssociativeInserter
     }
 };
 
-// Split the `input` string by `separator` into partitions. Leading and trailing spaces of
-// each partition will be stripped. Once the partition is empty, or become empty after
+// Split the `input` string by the only character `separator` into tokens. Leading and trailing
+// spaces of each token will be stripped. Once the token is empty, or become empty after
 // stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.
+//
+// `inserter` provides the only interface for all types of containers. By `inserter`, all tokens
+// will be collected to each type of container: for sequence containers, such as std::vector and
+// std::list, tokens will be "appended"; for associative containers, such as std::unordered_set
+// and std::set, tokens will be "inserted".
 template <typename Inserter, typename Container>
 void split(const char *input,
            char separator,
@@ -138,6 +151,7 @@ void split(const char *input,
                 auto token_end = find_token_end(token_begin, p);
                 CHECK(token_begin <= token_end, "");
                 if (token_begin == token_end && !keep_place_holder) {
+                    // Current token is empty, and place holder is not needed.
                     break;
                 }
                 inserter.emplace(output, token_begin, token_end);
@@ -147,13 +161,16 @@ void split(const char *input,
             }
 
             if (*p == '\0') {
+                // The whole string has been scanned, just break from the loop.
                 break;
             }
 
+            // Current token has been scanned, continue next split.
             state = split_args_state::kSplitBeginning;
             continue;
         }
 
+        // Current scanned character is not `separator`.
         switch (state) {
         case split_args_state::kSplitBeginning:
             if (is_leading_space(*p)) {
@@ -165,6 +182,10 @@ void split(const char *input,
             break;
         case split_args_state::kSplitLeadingSpaces:
             if (!is_leading_space(*p)) {
+                // Any character that is not leading space will be considered as
+                // the beginning of a token. Whether all of the scanned characters
+                // belong to the token will be decided while the `separator` is
+                // found.
                 state = split_args_state::kSplitToken;
                 token_begin = p;
             }
@@ -196,7 +217,7 @@ inline void split_to_associative_container(const char *input,
 } // anonymous namespace
 
 void split_args(const char *input,
-                /*out*/ std::vector<std::string> &output,
+                std::vector<std::string> &output,
                 char separator,
                 bool keep_place_holder)
 {
@@ -204,7 +225,7 @@ void split_args(const char *input,
 }
 
 void split_args(const char *input,
-                /*out*/ std::list<std::string> &output,
+                std::list<std::string> &output,
                 char separator,
                 bool keep_place_holder)
 {
@@ -212,7 +233,7 @@ void split_args(const char *input,
 }
 
 void split_args(const char *input,
-                /*out*/ std::unordered_set<std::string> &output,
+                std::unordered_set<std::string> &output,
                 char separator,
                 bool keep_place_holder)
 {

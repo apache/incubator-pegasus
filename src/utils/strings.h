@@ -38,6 +38,12 @@ namespace utils {
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
+// Split the `input` string by the only character `separator` into tokens. Leading and trailing
+// spaces of each token will be stripped. Once the token is empty, or become empty after
+// stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.
+//
+// There are several overloaded `split_args` functions in the following all of which are the
+// same except that the split tokens are collected to the different containers.
 void split_args(const char *input,
                 std::vector<std::string> &output,
                 char separator = ' ',
