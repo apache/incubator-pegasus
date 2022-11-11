@@ -24,19 +24,11 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #include "runtime/tracer.h"
+
+#include "aio/aio_task.h"
 #include "utils/filesystem.h"
 #include "utils/command_manager.h"
-#include "aio/aio_task.h"
 
 namespace dsn {
 namespace tools {
@@ -396,14 +388,18 @@ void tracer::install(service_spec &spec)
             spec->on_rpc_create_response.put_back(tracer_on_rpc_create_response, "tracer");
     }
 
-    command_manager::instance().register_command(
-        {"tracer.find"},
-        "tracer.find - find related logs",
-        "tracer.find forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., "
-        "a023003920302390) log_file_name(log.xx.txt)",
-        tracer_log_flow);
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _tracer_find_cmd = command_manager::instance().register_command(
+            {"tracer.find"},
+            "tracer.find - find related logs",
+            "tracer.find forward|f|backward|b rpc|r|task|t trace_id|task_id(e.g., "
+            "a023003920302390) log_file_name(log.xx.txt)",
+            tracer_log_flow);
+    });
 }
 
 tracer::tracer(const char *name) : toollet(name) {}
-}
-}
+
+} // namespace tools
+} // namespace dsn

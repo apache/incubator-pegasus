@@ -24,16 +24,6 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     the tracer toollets traces all the asynchonous execution flow
- *     in the system through the join-point mechanism
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include "runtime/tool_api.h"
@@ -101,13 +91,20 @@ is_trace = false
 </PRE>
 */
 namespace dsn {
+
+class command_deregister;
+
 namespace tools {
 
 class tracer : public toollet
 {
 public:
     tracer(const char *name);
-    virtual void install(service_spec &spec);
+    void install(service_spec &spec) override;
+
+private:
+    std::unique_ptr<command_deregister> _tracer_find_cmd;
 };
-}
-}
+
+} // namespace tools
+} // namespace dsn

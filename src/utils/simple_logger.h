@@ -26,9 +26,10 @@
 
 #pragma once
 
-#include "runtime/tool_api.h"
-#include <thread>
 #include <cstdio>
+#include <thread>
+
+#include "runtime/tool_api.h"
 
 namespace dsn {
 namespace tools {
@@ -71,22 +72,22 @@ class simple_logger : public logging_provider
 {
 public:
     simple_logger(const char *log_dir);
-    virtual ~simple_logger(void);
+    ~simple_logger(void);
 
-    virtual void dsn_logv(const char *file,
-                          const char *function,
-                          const int line,
-                          dsn_log_level_t log_level,
-                          const char *fmt,
-                          va_list args);
+    void dsn_logv(const char *file,
+                  const char *function,
+                  const int line,
+                  dsn_log_level_t log_level,
+                  const char *fmt,
+                  va_list args) override;
 
-    virtual void dsn_log(const char *file,
-                         const char *function,
-                         const int line,
-                         dsn_log_level_t log_level,
-                         const char *str);
+    void dsn_log(const char *file,
+                 const char *function,
+                 const int line,
+                 dsn_log_level_t log_level,
+                 const char *str) override;
 
-    virtual void flush();
+    void flush() override;
 
 private:
     void create_log_file();
@@ -101,5 +102,5 @@ private:
     int _lines;
     dsn_log_level_t _stderr_start_level;
 };
-}
-}
+} // namespace tools
+} // namespace dsn

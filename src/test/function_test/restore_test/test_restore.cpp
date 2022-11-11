@@ -241,7 +241,7 @@ public:
     int64_t get_first_backup_timestamp()
     {
         std::string pegasus_root_dir = global_env::instance()._pegasus_root;
-        chdir(pegasus_root_dir.c_str());
+        CHECK_EQ(0, ::chdir(pegasus_root_dir.c_str()));
         std::string cmd = "cd " + backup_dir + "; "
                                                "ls -c > restore_app_from_backup_test_tmp; "
                                                "tail -n 1 restore_app_from_backup_test_tmp; "

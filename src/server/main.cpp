@@ -20,7 +20,6 @@
 #include "pegasus_server_impl.h"
 #include "pegasus_service_app.h"
 #include "info_collector_app.h"
-#include "brief_stat.h"
 #include "compaction_operation.h"
 
 #include <pegasus/version.h>
@@ -70,24 +69,6 @@ void dsn_app_registration_pegasus()
     service_app::register_factory<pegasus::server::pegasus_replication_service_app>("replica");
     service_app::register_factory<pegasus::server::info_collector_app>("collector");
     pegasus::server::pegasus_server_impl::register_service();
-
-    dsn::command_manager::instance().register_command(
-        {"server-info"},
-        "server-info - query server information",
-        "server-info",
-        [](const std::vector<std::string> &args) {
-            char str[100];
-            ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
-            std::ostringstream oss;
-            oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
-                << PEGASUS_BUILD_TYPE << ", Started at " << str;
-            return oss.str();
-        });
-    dsn::command_manager::instance().register_command(
-        {"server-stat"},
-        "server-stat - query selected perf counters",
-        "server-stat",
-        [](const std::vector<std::string> &args) { return pegasus::get_brief_stat(); });
     pegasus::server::register_compaction_operations();
 }
 
@@ -106,6 +87,21 @@ int main(int argc, char **argv)
     LOG_INFO(
         "pegasus server starting, pid(%d), version(%s)", (int)getpid(), pegasus_server_rcsid());
     dsn_app_registration_pegasus();
+
+    std::unique_ptr<command_deregister> server_info_cmd =
+        dsn::command_manager::instance().register_command(
+            {"server-info"},
+            "server-info - query server information",
+            "server-info",
+            [](const std::vector<std::string> &args) {
+                char str[100];
+                ::dsn::utils::time_ms_to_date_time(dsn::utils::process_start_millis(), str, 100);
+                std::ostringstream oss;
+                oss << "Pegasus Server " << PEGASUS_VERSION << " (" << PEGASUS_GIT_COMMIT << ") "
+                    << PEGASUS_BUILD_TYPE << ", Started at " << str;
+                return oss.str();
+            });
+
     dsn_run(argc, argv, true);
 
     return 0;

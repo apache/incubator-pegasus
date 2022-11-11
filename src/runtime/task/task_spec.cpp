@@ -226,31 +226,6 @@ bool task_spec::init()
         }
     }
 
-    ::dsn::command_manager::instance().register_command(
-        {"task-code"},
-        "task-code - query task code containing any given keywords",
-        "task-code keyword1 keyword2 ...",
-        [](const std::vector<std::string> &args) {
-            std::stringstream ss;
-
-            for (int code = 0; code <= dsn::task_code::max(); code++) {
-                if (code == TASK_CODE_INVALID)
-                    continue;
-
-                std::string codes = dsn::task_code(code).to_string();
-                if (args.size() == 0) {
-                    ss << "    " << codes << std::endl;
-                } else {
-                    for (auto &arg : args) {
-                        if (codes.find(arg.c_str()) != std::string::npos) {
-                            ss << "    " << codes << std::endl;
-                        }
-                    }
-                }
-            }
-            return ss.str();
-        });
-
     return true;
 }
 

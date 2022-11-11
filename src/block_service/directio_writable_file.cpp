@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "block_service/directio_writable_file.h"
+
 #include <algorithm>
 #include <cstring>
 #include <fcntl.h>
@@ -24,10 +26,9 @@
 #include <sys/types.h>
 #include <unistd.h> // getpagesize
 
-#include "utils/fmt_logging.h"
 #include "utils/flags.h"
-
-#include "block_service/directio_writable_file.h"
+#include "utils/fmt_logging.h"
+#include "utils/safe_strerror_posix.h"
 
 namespace dsn {
 namespace dist {
@@ -65,14 +66,15 @@ direct_io_writable_file::~direct_io_writable_file()
     // Here is an ensurance, users shuold call finalize manually
     CHECK_EQ_MSG(_offset, 0, "finalize() should be called before destructor");
 
-    free(_buffer);
-    close(_fd);
+    ::free(_buffer);
+    CHECK_EQ_MSG(
+        0, ::close(_fd), "Failed to close {}, err = {}", _file_path, utils::safe_strerror(errno));
 }
 
 bool direct_io_writable_file::initialize()
 {
     if (posix_memalign(&_buffer, g_page_size, _buffer_size) != 0) {
-        LOG_ERROR_F("Allocate memaligned buffer failed, errno = {}", errno);
+        LOG_ERROR_F("Allocate memaligned buffer failed, err = {}", utils::safe_strerror(errno));
         return false;
     }
 
@@ -80,10 +82,15 @@ bool direct_io_writable_file::initialize()
 #if !defined(__APPLE__)
     flag |= O_DIRECT;
 #endif
-    _fd = open(_file_path.c_str(), flag, S_IRUSR | S_IWUSR | S_IRGRP);
+    // TODO(yingchun): there maybe serious error of the disk driver when these system call failed,
+    // maybe just terminate the process or mark the disk as failed would be better
+    _fd = ::open(_file_path.c_str(), flag, S_IRUSR | S_IWUSR | S_IRGRP);
     if (_fd < 0) {
-        LOG_ERROR_F("Failed to open {} with flag {}, errno = {}", _file_path, flag, errno);
-        free(_buffer);
+        LOG_ERROR_F("Failed to open {} with flag {}, err = {}",
+                    _file_path,
+                    flag,
+                    utils::safe_strerror(errno));
+        ::free(_buffer);
         _buffer = nullptr;
         return false;
     }
@@ -96,12 +103,16 @@ bool direct_io_writable_file::finalize()
 
     if (_offset > 0) {
         if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
-            LOG_ERROR_F(
-                "Failed to write last chunk, filie_path = {}, errno = {}", _file_path, errno);
+            LOG_ERROR_F("Failed to write last chunk, file_path = {}, err = {}",
+                        _file_path,
+                        utils::safe_strerror(errno));
             return false;
         }
         _offset = 0;
-        ftruncate(_fd, _file_size);
+        if (::ftruncate(_fd, _file_size) < 0) {
+            LOG_ERROR_F("Failed to truncate {}, err = {}", _file_path, utils::safe_strerror(errno));
+            return false;
+        }
     }
     return true;
 }
@@ -120,7 +131,9 @@ bool direct_io_writable_file::write(const char *s, size_t n)
         // buffer is full, flush to file
         if (_offset == _buffer_size) {
             if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
-                LOG_ERROR_F("Failed to write to direct_io_writable_file, errno = {}", errno);
+                LOG_ERROR_F("Failed to write to direct_io_writable_file {}, err = {}",
+                            _file_path,
+                            utils::safe_strerror(errno));
                 return false;
             }
             // reset offset
