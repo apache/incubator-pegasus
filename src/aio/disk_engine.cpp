@@ -91,7 +91,7 @@ aio_task *disk_write_queue::unlink_next_workload(void *plength)
     return first;
 }
 
-disk_file::disk_file(dsn_handle_t handle) : _handle(handle) {}
+disk_file::disk_file(int fd) : _fd(fd) {}
 
 aio_task *disk_file::read(aio_task *tsk)
 {
@@ -162,10 +162,9 @@ public:
 
     virtual void exec() override
     {
-        auto df = (disk_file *)_tasks->get_aio_context()->file_object;
+        auto dfile = _tasks->get_aio_context()->dfile;
         uint64_t sz;
-
-        auto wk = df->on_write_completed(_tasks, (void *)&sz, error(), get_transferred_size());
+        auto wk = dfile->on_write_completed(_tasks, (void *)&sz, error(), get_transferred_size());
         if (wk) {
             wk->get_aio_context()->engine->process_write(wk, sz);
         }
@@ -183,14 +182,14 @@ void disk_engine::write(aio_task *aio)
     }
 
     auto dio = aio->get_aio_context();
-    auto df = (disk_file *)dio->file;
-    dio->file = df->native_handle();
-    dio->file_object = df;
+    auto dfile = (disk_file *)(void *)(uintptr_t)(dio->fd);
+    dio->fd = dfile->native_handle();
+    dio->dfile = dfile;
     dio->engine = this;
     dio->type = AIO_Write;
 
     uint64_t sz;
-    auto wk = df->write(aio, &sz);
+    auto wk = dfile->write(aio, &sz);
     if (wk) {
         process_write(wk, sz);
     }
@@ -213,8 +212,8 @@ void disk_engine::process_write(aio_task *aio, uint64_t sz)
         auto new_dio = new_task->get_aio_context();
         new_dio->buffer_size = sz;
         new_dio->file_offset = dio->file_offset;
-        new_dio->file = dio->file;
-        new_dio->file_object = dio->file_object;
+        new_dio->fd = dio->fd;
+        new_dio->dfile = dio->dfile;
         new_dio->engine = dio->engine;
         new_dio->type = AIO_Write;
 
@@ -256,9 +255,9 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
 
     // no batching
     else {
-        auto df = (disk_file *)(aio->get_aio_context()->file_object);
+        auto dfile = aio->get_aio_context()->dfile;
         if (aio->get_aio_context()->type == AIO_Read) {
-            auto wk = df->on_read_completed(aio, err, (size_t)bytes);
+            auto wk = dfile->on_read_completed(aio, err, (size_t)bytes);
             if (wk) {
                 _provider->submit_aio_task(wk);
             }
@@ -267,7 +266,7 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
         // write
         else {
             uint64_t sz;
-            auto wk = df->on_write_completed(aio, (void *)&sz, err, (size_t)bytes);
+            auto wk = dfile->on_write_completed(aio, (void *)&sz, err, (size_t)bytes);
             if (wk) {
                 process_write(wk, sz);
             }

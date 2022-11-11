@@ -71,7 +71,7 @@ protected:
 private:
     struct callback_para
     {
-        dsn_handle_t hfile;
+        int fd;
         std::string source_disk_tag;
         std::string file_path;
         std::string dst_dir;
@@ -81,11 +81,11 @@ private:
         rpc_replier<copy_response> replier;
 
         callback_para(rpc_replier<copy_response> &&r)
-            : hfile(nullptr), offset(0), size(0), replier(std::move(r))
+            : fd(DSN_INVALID_FILE_HANDLE), offset(0), size(0), replier(std::move(r))
         {
         }
         callback_para(callback_para &&r)
-            : hfile(r.hfile),
+            : fd(r.fd),
               file_path(std::move(r.file_path)),
               dst_dir(std::move(r.dst_dir)),
               bb(std::move(r.bb)),
@@ -93,7 +93,7 @@ private:
               size(r.size),
               replier(std::move(r.replier))
         {
-            r.hfile = nullptr;
+            r.fd = DSN_INVALID_FILE_HANDLE;
             r.offset = 0;
             r.size = 0;
         }

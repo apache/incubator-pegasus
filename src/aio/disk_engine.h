@@ -52,18 +52,17 @@ private:
 class disk_file
 {
 public:
-    disk_file(dsn_handle_t handle);
+    disk_file(int fd);
     aio_task *read(aio_task *tsk);
     aio_task *write(aio_task *tsk, void *ctx);
 
     aio_task *on_read_completed(aio_task *wk, error_code err, size_t size);
     aio_task *on_write_completed(aio_task *wk, void *ctx, error_code err, size_t size);
 
-    // TODO(wutao1): make it uint64_t
-    dsn_handle_t native_handle() const { return _handle; }
+    int native_handle() const { return _fd; }
 
 private:
-    dsn_handle_t _handle;
+    int _fd;
     disk_write_queue _write_queue;
     work_queue<aio_task> _read_queue;
 };

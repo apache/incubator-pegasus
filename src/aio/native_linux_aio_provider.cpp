@@ -42,18 +42,18 @@ native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk) : aio_pr
 
 native_linux_aio_provider::~native_linux_aio_provider() {}
 
-dsn_handle_t native_linux_aio_provider::open(const char *file_name, int flag, int pmode)
+int native_linux_aio_provider::open(const char *file_name, int flag, int pmode)
 {
-    dsn_handle_t fh = (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
-    if (fh == DSN_INVALID_FILE_HANDLE) {
+    int fd = ::open(file_name, flag, pmode);
+    if (fd == DSN_INVALID_FILE_HANDLE) {
         LOG_ERROR("create file failed, err = %s", strerror(errno));
     }
-    return fh;
+    return fd;
 }
 
-error_code native_linux_aio_provider::close(dsn_handle_t fh)
+error_code native_linux_aio_provider::close(int fd)
 {
-    if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0) {
+    if (fd == DSN_INVALID_FILE_HANDLE || ::close(fd) == 0) {
         return ERR_OK;
     } else {
         LOG_ERROR("close file failed, err = %s", strerror(errno));
@@ -61,9 +61,9 @@ error_code native_linux_aio_provider::close(dsn_handle_t fh)
     }
 }
 
-error_code native_linux_aio_provider::flush(dsn_handle_t fh)
+error_code native_linux_aio_provider::flush(int fd)
 {
-    if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0) {
+    if (fd == DSN_INVALID_FILE_HANDLE || ::fsync(fd) == 0) {
         return ERR_OK;
     } else {
         LOG_ERROR("flush file failed, err = %s", strerror(errno));
@@ -78,7 +78,7 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
     uint64_t buffer_offset = 0;
     do {
         // ret is the written data size
-        auto ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
+        auto ret = pwrite(aio_ctx.fd,
                           (char *)aio_ctx.buffer + buffer_offset,
                           aio_ctx.buffer_size - buffer_offset,
                           aio_ctx.file_offset + buffer_offset);
@@ -117,10 +117,7 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
 error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
                                            /*out*/ uint64_t *processed_bytes)
 {
-    ssize_t ret = pread(static_cast<int>((ssize_t)aio_ctx.file),
-                        aio_ctx.buffer,
-                        aio_ctx.buffer_size,
-                        aio_ctx.file_offset);
+    ssize_t ret = pread(aio_ctx.fd, aio_ctx.buffer, aio_ctx.buffer_size, aio_ctx.file_offset);
     if (ret < 0) {
         return ERR_FILE_OPERATION_FAILED;
     }
