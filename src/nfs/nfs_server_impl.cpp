@@ -117,7 +117,6 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
     cp->dst_dir = request.dst_dir;
     cp->source_disk_tag = request.source_disk_tag;
     cp->file_path = std::move(file_path);
-    cp->fd = dfile->native_handle();
     cp->offset = request.offset;
     cp->size = request.size;
 
