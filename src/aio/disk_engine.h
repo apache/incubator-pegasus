@@ -52,7 +52,7 @@ private:
 class disk_file
 {
 public:
-    disk_file(int fd);
+    explicit disk_file(int fd);
     aio_task *read(aio_task *tsk);
     aio_task *write(aio_task *tsk, void *ctx);
 

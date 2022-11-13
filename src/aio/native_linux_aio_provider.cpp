@@ -28,12 +28,12 @@
 
 #include <fcntl.h>
 
+#include "aio/disk_engine.h"
 #include "runtime/service_engine.h"
-
 #include "runtime/task/async_calls.h"
 #include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
 
 namespace dsn {
@@ -78,7 +78,7 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
     uint64_t buffer_offset = 0;
     do {
         // ret is the written data size
-        auto ret = pwrite(aio_ctx.fd,
+        auto ret = pwrite(aio_ctx.dfile->native_handle(),
                           (char *)aio_ctx.buffer + buffer_offset,
                           aio_ctx.buffer_size - buffer_offset,
                           aio_ctx.file_offset + buffer_offset);
@@ -117,7 +117,8 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
 error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
                                            /*out*/ uint64_t *processed_bytes)
 {
-    ssize_t ret = pread(aio_ctx.fd, aio_ctx.buffer, aio_ctx.buffer_size, aio_ctx.file_offset);
+    ssize_t ret = pread(
+        aio_ctx.dfile->native_handle(), aio_ctx.buffer, aio_ctx.buffer_size, aio_ctx.file_offset);
     if (ret < 0) {
         return ERR_FILE_OPERATION_FAILED;
     }

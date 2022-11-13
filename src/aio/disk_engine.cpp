@@ -182,15 +182,10 @@ void disk_engine::write(aio_task *aio)
     }
 
     auto dio = aio->get_aio_context();
-    CHECK_NE(dio->fd, DSN_INVALID_FILE_HANDLE);
-    auto dfile = (disk_file *)(void *)(uintptr_t)(dio->fd);
-    CHECK_EQ(dio->fd, dfile->native_handle());
-    dio->dfile = dfile; // dio->dfile is initialized here
     dio->engine = this;
-    dio->type = AIO_Write;
 
     uint64_t sz;
-    auto wk = dfile->write(aio, &sz);
+    auto wk = dio->dfile->write(aio, &sz);
     if (wk) {
         process_write(wk, sz);
     }
@@ -213,7 +208,6 @@ void disk_engine::process_write(aio_task *aio, uint64_t sz)
         auto new_dio = new_task->get_aio_context();
         new_dio->buffer_size = sz;
         new_dio->file_offset = dio->file_offset;
-        new_dio->fd = dio->fd;
         new_dio->dfile = dio->dfile;
         new_dio->engine = dio->engine;
         new_dio->type = AIO_Write;
