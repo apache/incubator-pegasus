@@ -253,7 +253,7 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
         auto dfile = aio->get_aio_context()->dfile;
         if (aio->get_aio_context()->type == AIO_Read) {
             auto wk = dfile->on_read_completed(aio, err, (size_t)bytes);
-            if (wk != nullptr) {
+            if (wk) {
                 _provider->submit_aio_task(wk);
             }
         }
@@ -262,7 +262,7 @@ void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
         else {
             uint64_t sz;
             auto wk = dfile->on_write_completed(aio, (void *)&sz, err, (size_t)bytes);
-            if (wk != nullptr) {
+            if (wk) {
                 process_write(wk, sz);
             }
         }
