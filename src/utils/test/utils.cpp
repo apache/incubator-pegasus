@@ -125,38 +125,46 @@ void test_split_args()
     // - split empty string by ' ' with place holder
     // - split empty string by ',' without place holder
     // - split empty string by ',' with place holder
-    // - split one space (' ') by ' ' without place holder
-    // - split one space (' ') by ' ' with place holder
-    // - split one space (' ') by ',' without place holder
-    // - split one space (' ') by ',' with place holder
-    // - split 2 spaces ('  ') by ' ' without place holder
-    // - split 2 spaces ('  ') by ' ' with place holder
-    // - split 2 spaces ('  ') by ',' without place holder
-    // - split 2 spaces ('  ') by ',' with place holder
-    // - split ' \t' by ' ' without place holder
-    // - split ' \t' by ' ' with place holder
-    // - split ' \t' by ',' without place holder
-    // - split ' \t' by ',' with place holder
-    // - split '\t ' by ' ' without place holder
-    // - split '\t ' by ' ' with place holder
-    // - split '\t ' by ',' without place holder
-    // - split '\t ' by ',' with place holder
-    // - split ' \t \n' by ' ' without place holder
-    // - split ' \t \n' by ' ' with place holder
-    // - split ' \t \n' by ',' without place holder
-    // - split ' \t \n' by ',' with place holder
-    // - split '\r \t' by ' ' without place holder
-    // - split '\r \t' by ' ' with place holder
-    // - split '\r \t' by ',' without place holder
-    // - split '\r \t' by ',' with place holder
-    // - split a single letter 'a' by ' ' without place holder
-    // - split a single letter 'a' by ' ' with place holder
-    // - split a single letter 'a' by ',' without place holder
-    // - split a single letter 'a' by ',' with place holder
-    // - split 'a ' by ' ' without place holder
-    // - split 'a ' by ' ' with place holder
-    // - split 'a ' by ',' without place holder
-    // - split 'a ' by ',' with place holder
+    // - split a space (' ') by ' ' without place holder
+    // - split a space (' ') by ' ' with place holder
+    // - split a space (' ') by ',' without place holder
+    // - split a space (' ') by ',' with place holder
+    // - split a comma (',') by ' ' without place holder
+    // - split a comma (',') by ' ' with place holder
+    // - split a comma (',') by ',' without place holder
+    // - split a comma (',') by ',' with place holder
+    // - split 2 leading spaces by ' ' without place holder
+    // - split 2 leading spaces by ' ' with place holder
+    // - split 2 leading spaces by ',' without place holder
+    // - split 2 leading spaces by ',' with place holder
+    // - split 3 leading spaces by ' ' without place holder
+    // - split 3 leading spaces by ' ' with place holder
+    // - split 3 leading spaces by ',' without place holder
+    // - split 3 leading spaces by ',' with place holder
+    // - split 2 trailing spaces by ' ' without place holder
+    // - split 2 trailing spaces by ' ' with place holder
+    // - split 2 trailing spaces by ',' without place holder
+    // - split 2 trailing spaces by ',' with place holder
+    // - split 3 trailing spaces by ' ' without place holder
+    // - split 3 trailing spaces by ' ' with place holder
+    // - split 3 trailing spaces by ',' without place holder
+    // - split 3 trailing spaces by ',' with place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ' ' without place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ' ' with place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ',' without place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ',' with place holder
+    // - split a single letter by ' ' without place holder
+    // - split a single letter by ' ' with place holder
+    // - split a single letter by ',' without place holder
+    // - split a single letter by ',' with place holder
+    // - split a single word by ' ' without place holder
+    // - split a single word by ' ' with place holder
+    // - split a single word by ',' without place holder
+    // - split a single word by ',' with place holder
+    // - split a string including letters and words by ' ' without place holder
+    // - split a string including letters and words by ' ' with place holder
+    // - split a string including letters and words by ',' without place holder
+    // - split a string including letters and words by ',' with place holder
     // - split a string that includes multiple letters by ' ' without place holder
     // - split a string that includes multiple letters by ' ' with place holder
     // - split a string that includes multiple letters by ',' without place holder
@@ -179,34 +187,58 @@ void test_split_args()
                  {" ", ' ', true, {"", ""}},
                  {" ", ',', false, {}},
                  {" ", ',', true, {""}},
-                 {" \t", ' ', false, {}},
-                 {" \t", ' ', true, {"", ""}},
-                 {" \t", ',', false, {}},
-                 {" \t", ',', true, {""}},
-                 {"\t ", ' ', false, {}},
+                 {",", ' ', false, {","}},
+                 {",", ' ', true, {","}},
+                 {",", ',', false, {}},
+                 {",", ',', true, {"", ""}},
+                 {"  ", ' ', false, {}},
                  {"\t ", ' ', true, {"", ""}},
-                 {"\t ", ',', false, {}},
-                 {"\t ", ',', true, {""}},
-                 {" \t \n", ' ', false, {}},
-                 {" \t \n", ' ', true, {"", "", ""}},
-                 {" \t \n", ',', false, {}},
-                 {" \t \n", ',', true, {""}},
-                 {"\r \t", ' ', false, {}},
-                 {"\r \t", ' ', true, {"", ""}},
-                 {"\r \t", ',', false, {}},
-                 {"\r \t", ',', true, {""}},
+                 {" \t", ',', false, {}},
+                 {"\t\t", ',', true, {""}},
+                 {" \t ", ' ', false, {}},
+                 {"\t  ", ' ', true, {"", "", ""}},
+                 {"\t\t ", ',', false, {}},
+                 {"  \t", ',', true, {""}},
+                 {"\r ", ' ', false, {}},
+                 {"\t\n", ' ', true, {""}},
+                 {"\r\t", ',', false, {}},
+                 {" \n", ',', true, {""}},
+                 {"\n\t\r", ' ', false, {}},
+                 {" \r ", ' ', true, {"", "", ""}},
+                 {"\r \n", ',', false, {}},
+                 {"\t\n\r", ',', true, {""}},
+                 {" \\n,,\\t \\r ", ' ', false, {"\\n,,\\t", "\\r"}},
+                 {" \\n,,\\t \\r ", ' ', true, {"", "\\n,,\\t", "\\r", ""}},
+                 {" \\n,,\\t \\r ", ',', false, {"\\n", "\\t \\r"}},
+                 {" \\n,,\\t \\r ", ',', true, {"\\n", "", "\\t \\r"}},
                  {"a", ' ', false, {"a"}},
                  {"a", ' ', true, {"a"}},
                  {"a", ',', false, {"a"}},
                  {"a", ',', true, {"a"}},
-                 {" \r\n have \t a \t dinner \r\n ", ' ', false, {"a"}},
-                 {"a ", ' ', true, {"a", ""}},
-                 {"a ", ',', false, {"a"}},
-                 {"a ", ',', true, {"a"}},
-                 {"a ,b, c ", ' ', false, {"a", ",b,", "c"}},
-                 {"a ,b, c ", ' ', true, {"a", ",b,", "c", ""}},
-                 {"a ,b, c ", ',', false, {"a", "b", "c"}},
-                 {"a ,b, c ", ',', true, {"a", "b", "c"}},
+                 {"dinner", ' ', false, {"dinner"}},
+                 {"dinner", ' ', true, {"dinner"}},
+                 {"dinner", ',', false, {"dinner"}},
+                 {"dinner", ',', true, {"dinner"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ' ',
+                  false,
+                  {"\r\na\t\tdog,", "\r\nand", "a\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ' ',
+                  true,
+                  {"\r\na\t\tdog,", "", "\r\nand", "a\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ',',
+                  false,
+                  {"\r\na\t\tdog", "\r\n  \t\r\nand\t\r\n \t\ta\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ',',
+                  true,
+                  {"\r\na\t\tdog", "\r\n  \t\r\nand\t\r\n \t\ta\t\tcat"}},
+                 {"a ,b, ,c ", ' ', false, {"a", ",b,", ",c"}},
+                 {"a ,b, ,c ", ' ', true, {"a", ",b,", ",c", ""}},
+                 {"a ,b, ,c ", ',', false, {"a", "b", "c"}},
+                 {"a ,b, ,c ", ',', true, {"a", "b", "", "c"}},
                  {" in  early 2000s ,  too, ", ' ', false, {"in", "early", "2000s", ",", "too,"}},
                  {" in  early 2000s ,  too, ",
                   ' ',
