@@ -91,7 +91,7 @@ aio_task *disk_write_queue::unlink_next_workload(void *plength)
     return first;
 }
 
-disk_file::disk_file(linux_fd_t fd) : _fd(fd.fd) {}
+disk_file::disk_file(linux_fd_t fd) : _fd(fd) {}
 
 aio_task *disk_file::read(aio_task *tsk)
 {
