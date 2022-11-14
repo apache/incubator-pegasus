@@ -60,7 +60,6 @@ public:
     explicit aio_provider(disk_engine *disk);
     virtual ~aio_provider() = default;
 
-    // return DSN_INVALID_FILE_HANDLE if failed
     virtual linux_fd_t open(const char *file_name, int flag, int pmode) = 0;
 
     virtual error_code close(linux_fd_t fd) = 0;

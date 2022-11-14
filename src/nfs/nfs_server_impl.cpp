@@ -85,7 +85,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
         if (it == _handles_map.end()) {
             dfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
-            if (dfile) {
+            if (dfile != nullptr) {
                 auto fh = std::make_shared<file_handle_info_on_server>();
                 fh->file_handle = dfile;
                 fh->file_access_count = 1;

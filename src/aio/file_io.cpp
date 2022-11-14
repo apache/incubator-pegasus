@@ -32,7 +32,7 @@ namespace file {
 
 /*extern*/ disk_file *open(const char *file_name, int flag, int pmode)
 {
-    linux_fd_t fd = disk_engine::provider().open(file_name, flag, pmode);
+    auto fd = disk_engine::provider().open(file_name, flag, pmode);
     if (fd.is_invalid()) {
         return nullptr;
     }
