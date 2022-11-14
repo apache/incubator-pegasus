@@ -36,9 +36,9 @@ public:
     explicit native_linux_aio_provider(disk_engine *disk);
     ~native_linux_aio_provider() override;
 
-    int open(const char *file_name, int flag, int pmode) override;
-    error_code close(int fd) override;
-    error_code flush(int fd) override;
+    linux_fd_t open(const char *file_name, int flag, int pmode) override;
+    error_code close(linux_fd_t fd) override;
+    error_code flush(linux_fd_t fd) override;
     error_code write(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) override;
     error_code read(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) override;
 

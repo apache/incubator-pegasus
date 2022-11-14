@@ -32,8 +32,6 @@
 
 namespace dsn {
 
-#define DSN_INVALID_FILE_HANDLE -1
-
 namespace utils {
 class latency_tracer;
 }

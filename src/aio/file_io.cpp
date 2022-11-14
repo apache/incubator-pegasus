@@ -32,12 +32,12 @@ namespace file {
 
 /*extern*/ disk_file *open(const char *file_name, int flag, int pmode)
 {
-    int fd = disk_engine::provider().open(file_name, flag, pmode);
-    if (fd != DSN_INVALID_FILE_HANDLE) {
-        return new disk_file(fd);
-    } else {
+    linux_fd_t fd = disk_engine::provider().open(file_name, flag, pmode);
+    if (fd.is_invalid()) {
         return nullptr;
     }
+
+    return new disk_file(fd);
 }
 
 /*extern*/ error_code close(disk_file *file)

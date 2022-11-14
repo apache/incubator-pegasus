@@ -52,17 +52,17 @@ private:
 class disk_file
 {
 public:
-    explicit disk_file(int fd);
+    explicit disk_file(linux_fd_t fd);
     aio_task *read(aio_task *tsk);
     aio_task *write(aio_task *tsk, void *ctx);
 
     aio_task *on_read_completed(aio_task *wk, error_code err, size_t size);
     aio_task *on_write_completed(aio_task *wk, void *ctx, error_code err, size_t size);
 
-    int native_handle() const { return _fd; }
+    linux_fd_t native_handle() const { return _fd; }
 
 private:
-    int _fd;
+    linux_fd_t _fd;
     disk_write_queue _write_queue;
     work_queue<aio_task> _read_queue;
 };

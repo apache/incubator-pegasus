@@ -37,6 +37,15 @@ class service_node;
 class task_worker_pool;
 class task_queue;
 
+#define DSN_INVALID_FILE_HANDLE -1
+struct linux_fd_t
+{
+    int fd;
+
+    explicit linux_fd_t(int f) : fd(f) {}
+    inline bool is_invalid() const { return fd == DSN_INVALID_FILE_HANDLE; }
+};
+
 class aio_provider
 {
 public:
@@ -52,10 +61,10 @@ public:
     virtual ~aio_provider() = default;
 
     // return DSN_INVALID_FILE_HANDLE if failed
-    virtual int open(const char *file_name, int flag, int pmode) = 0;
+    virtual linux_fd_t open(const char *file_name, int flag, int pmode) = 0;
 
-    virtual error_code close(int fd) = 0;
-    virtual error_code flush(int fd) = 0;
+    virtual error_code close(linux_fd_t fd) = 0;
+    virtual error_code flush(linux_fd_t fd) = 0;
     virtual error_code write(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) = 0;
     virtual error_code read(const aio_context &aio_ctx, /*out*/ uint64_t *processed_bytes) = 0;
 
