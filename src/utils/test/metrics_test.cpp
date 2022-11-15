@@ -922,8 +922,8 @@ using metric_value_map = std::map<std::string, T>;
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 void check_and_extract_metric_value_map_from_json_string(
+    metric *my_metric,
     const std::string &json_string,
-    const std::string &metric_name,
     const bool is_integral,
     const metric_fields_type &expected_metric_fields,
     metric_value_map<T> &value_map)
@@ -938,9 +938,20 @@ void check_and_extract_metric_value_map_from_json_string(
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
-            ASSERT_STREQ(elem.name.GetString(), kMetricNameField.c_str());
-            ASSERT_STREQ(elem.value.GetString(), metric_name.c_str());
-            has_metric_name = true;
+            if (std::strcmp(elem.name.GetString(), kMetricTypeField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(),
+                             enum_to_string(my_metric->prototype()->type()));
+            } else if (std::strcmp(elem.name.GetString(), kMetricNameField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->name().data());
+                has_metric_name = true;
+            } else if (std::strcmp(elem.name.GetString(), kMetricUnitField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(),
+                             enum_to_string(my_metric->prototype()->unit()));
+            } else if (std::strcmp(elem.name.GetString(), kMetricDescField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->description().data());
+            } else {
+                ASSERT_TRUE(false);
+            }
         } else {
             T value;
             if (is_integral) {
@@ -971,11 +982,8 @@ void generate_metric_value_map(metric *my_metric,
                                metric_value_map<T> &value_map)
 {
     auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
-    check_and_extract_metric_value_map_from_json_string(json_string,
-                                                        my_metric->prototype()->name().data(),
-                                                        is_integral,
-                                                        expected_metric_fields,
-                                                        value_map);
+    check_and_extract_metric_value_map_from_json_string(
+        my_metric, json_string, is_integral, expected_metric_fields, value_map);
 }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
@@ -998,16 +1006,6 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         ASSERT_EQ(actual_iter->first, expected_iter->first);
         ASSERT_DOUBLE_EQ(actual_iter->second, expected_iter->second);
     }
-}
-
-metric_fields_type drop_from_metric_fields(const metric_fields_type &all,
-                                           const metric_fields_type &dropped)
-{
-    metric_fields_type target(all);
-    for (const auto &e : dropped) {
-        target.erase(e);
-    }
-    return target;
 }
 
 #define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                                   \
@@ -1191,11 +1189,6 @@ void generate_metric_value_map(MetricType *my_metric,
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
-
-inline metric_fields_type drop_from_all_kth_percentile_fields(const metric_fields_type &dropped)
-{
-    return drop_from_metric_fields(kAllKthPercentileFields, dropped);
-}
 
 // Test cases:
 // - with_metric_fields is empty

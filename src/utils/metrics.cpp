@@ -164,6 +164,13 @@ metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}
 
 metric_prototype::~metric_prototype() {}
 
+metric_fields_type get_all_single_value_metric_fields()
+{
+    metric_fields_type fields = kMetricPrototypeFields;
+    fields.insert(kMetricSingleValueField);
+    return fields;
+}
+
 metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}

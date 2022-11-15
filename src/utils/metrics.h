@@ -277,10 +277,10 @@ enum class metric_type
 };
 
 ENUM_BEGIN(metric_type, metric_type::kInvalidUnit)
-ENUM_REG(metric_type::kGauge)
-ENUM_REG(metric_type::kCounter)
-ENUM_REG(metric_type::kVolatileCounter)
-ENUM_REG(metric_type::kPercentile)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kGauge, gauge)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kCounter, counter)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kVolatileCounter, volatile_counter)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kPercentile, percentile)
 ENUM_END(metric_type)
 
 enum class metric_unit
@@ -294,10 +294,11 @@ enum class metric_unit
 };
 
 ENUM_BEGIN(metric_unit, metric_unit::kInvalidUnit)
-ENUM_REG(metric_unit::kNanoSeconds)
-ENUM_REG(metric_unit::kMicroSeconds)
-ENUM_REG(metric_unit::kMilliSeconds)
-ENUM_REG(metric_unit::kSeconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kNanoSeconds, nanoseconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kMicroSeconds, microseconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kMilliSeconds, milliseconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kSeconds, seconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kRequests, requests)
 ENUM_END(metric_unit)
 
 class metric_prototype
@@ -352,9 +353,16 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
 
+const std::string kMetricTypeField = "type";
 const std::string kMetricNameField = "name";
+const std::string kMetricUnitField = "unit";
+const std::string kMetricDescField = "desc";
+const metric_fields_type kMetricPrototypeFields = {
+    kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
+
 const std::string kMetricSingleValueField = "value";
-const metric_fields_type kAllSingleValueMetricFields = {kMetricNameField, kMetricSingleValueField};
+metric_fields_type get_all_single_value_metric_fields();
+const metric_fields_type kAllSingleValueMetricFields = get_all_single_value_metric_fields();
 
 // Base class for each type of metric.
 // Every metric class should inherit from this class.
@@ -394,10 +402,37 @@ protected:
         json::json_encode(writer, value);
     }
 
+    // Encode the metric type as json format, if it is chosen by `filters`.
+    inline void encode_type(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricTypeField, enum_to_string(prototype()->type()), filters);
+    }
+
     // Encode the metric name as json format, if it is chosen by `filters`.
     inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
+    }
+
+    // Encode the metric unit as json format, if it is chosen by `filters`.
+    inline void encode_unit(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricUnitField, enum_to_string(prototype()->unit()), filters);
+    }
+
+    // Encode the metric description as json format, if it is chosen by `filters`.
+    inline void encode_desc(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricDescField, prototype()->description().data(), filters);
+    }
+
+    // Encode the metric prototype as json format, if some attributes in it are chosen by `filters`.
+    inline void encode_prototype(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode_type(writer, filters);
+        encode_name(writer, filters);
+        encode_unit(writer, filters);
+        encode_desc(writer, filters);
     }
 
     // Encode the unique value of a metric as json format, if it is chosen by `filters`. Notice
@@ -467,7 +502,7 @@ public:
     {
         writer.StartObject();
 
-        encode_name(writer, filters);
+        encode_prototype(writer, filters);
         encode_single_value(writer, value(), filters);
 
         writer.EndObject();
@@ -584,7 +619,7 @@ public:
     {
         writer.StartObject();
 
-        encode_name(writer, filters);
+        encode_prototype(writer, filters);
         encode_single_value(writer, value(), filters);
 
         writer.EndObject();
@@ -795,7 +830,7 @@ public:
     {
         writer.StartObject();
 
-        encode_name(writer, filters);
+        encode_prototype(writer, filters);
 
         for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
             if (!_kth_percentile_bitset.test(i)) {
