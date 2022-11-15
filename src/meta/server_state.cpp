@@ -1475,6 +1475,8 @@ void server_state::check_app_info_rename_finished_on_replica(int32_t app_id,
         id = partition_config.pid;
     }
 
+    LOG_DEBUG_F("send rpc query gpid({}.{}) app_name on .app_info to {}.", app_id, partition_index, node.to_string());
+
     auto req = std::make_unique<query_replica_app_mame_on_replica_request>();
     req->pid = id;
     query_app_name_on_replica_rpc rpc(std::move(req), RPC_QUERY_APP_NAME_ON_REPLICA);
