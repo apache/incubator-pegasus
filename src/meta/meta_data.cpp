@@ -151,6 +151,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
                  invalid_ballot,
                  "the ballot of server must not be invalid_ballot, node = {}",
                  server.node);
+    // TODO(yingchun): ip to host
     pc.primary = server.node;
     pc.ballot = server.ballot;
     pc.partition_flags = 0;

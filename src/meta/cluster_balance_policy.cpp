@@ -532,6 +532,7 @@ bool cluster_balance_policy::apply_move(const move_info &move,
     // add into migration list and selected_pid
     partition_configuration pc;
     pc.pid = move.pid;
+    // TODO(yingchun): ip to host
     pc.primary = primary_addr;
     list[move.pid] = generate_balancer_request(*_global_view->apps, pc, move.type, source, target);
     _migration_result->emplace(

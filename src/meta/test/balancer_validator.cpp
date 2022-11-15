@@ -88,6 +88,7 @@ static void check_cure(app_mapper &apps, node_mapper &nodes, ::dsn::partition_co
             CHECK(!is_member(pc, act.node), "");
             CHECK_EQ(pc.primary, act.target);
             CHECK(nodes.find(act.node) != nodes.end(), "");
+            // TODO(yingchun): ip to host
             pc.secondaries.push_back(act.node);
             ns = &nodes[act.node];
             CHECK_EQ(ns->served_as(pc.pid), partition_status::PS_INACTIVE);
@@ -322,6 +323,7 @@ static void load_apps_and_nodes(const char *file, app_mapper &apps, node_mapper 
             app->partitions[j].primary = get_rpc_address(ip_port);
             for (int k = 1; k < n; ++k) {
                 infile >> ip_port;
+                // TODO(yingchun): ip to host
                 app->partitions[j].secondaries.push_back(get_rpc_address(ip_port));
             }
         }

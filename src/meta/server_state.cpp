@@ -741,10 +741,12 @@ void server_state::initialize_node_state()
         app_state &app = *(app_pair.second);
         for (partition_configuration &pc : app.partitions) {
             if (!pc.primary.is_invalid()) {
+                // TODO(yingchun): ip to host
                 node_state *ns = get_node_state(_nodes, pc.primary, true);
                 ns->put_partition(pc.pid, true);
             }
             for (auto &ep : pc.secondaries) {
+                // TODO(yingchun): ip to host
                 CHECK(!ep.is_invalid(), "invalid secondary address, addr = {}", ep);
                 node_state *ns = get_node_state(_nodes, ep, true);
                 ns->put_partition(pc.pid, false);
