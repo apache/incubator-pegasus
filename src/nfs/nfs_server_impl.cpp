@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-#include "nfs_server_impl.h"
+#include "nfs/nfs_server_impl.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -32,8 +32,9 @@
 #include <cstdlib>
 
 #include "aio/disk_engine.h"
-#include "utils/filesystem.h"
 #include "runtime/task/async_calls.h"
+#include "utils/filesystem.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace service {

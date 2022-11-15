@@ -24,25 +24,18 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     What is this file about?
- *
- * Revision history:
- *     xxxx-xx-xx, author, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include "utils/factory_store.h"
-#include "utils/fail_point.h"
-#include "utils/fmt_logging.h"
-#include "meta_server_failure_detector.h"
-#include "server_state.h"
-#include "meta_service.h"
-#include "meta_options.h"
+#include "meta/meta_server_failure_detector.h"
 
 #include <chrono>
 #include <thread>
+
+#include "meta/meta_service.h"
+#include "meta/meta_options.h"
+#include "meta/server_state.h"
+#include "utils/factory_store.h"
+#include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {

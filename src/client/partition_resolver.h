@@ -29,7 +29,7 @@
 #include "utils/autoref_ptr.h"
 #include "utils/error_code.h"
 #include "common/gpid.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 

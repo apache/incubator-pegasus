@@ -27,7 +27,7 @@
 #pragma once
 
 #include "utils/utils.h"
-#include "utils/rpc_address.h"
+#include "rpc_address.h"
 #include "runtime/rpc/rpc_stream.h"
 #include "common/serialization_helper/thrift_helper.h"
 

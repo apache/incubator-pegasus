@@ -28,8 +28,10 @@
 
 #include <functional>
 #include <memory>
+#include <map>
+#include <set>
 
-#include "rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "string_view.h"
 
 #define TIME_MS_MAX 0xffffffff

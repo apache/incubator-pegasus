@@ -44,7 +44,7 @@
 #include "utils/threadpool_code.h"
 #include "runtime/task/task_code.h"
 #include "common/gpid.h"
-#include "utils/rpc_address.h"
+#include "rpc_address.h"
 #include "runtime/global_config.h"
 
 #define DSN_MAX_TASK_CODE_NAME_LENGTH 48

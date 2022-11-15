@@ -23,14 +23,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
 #pragma once
 
+#include <sstream>
 #include <string>
 
-#include <arpa/inet.h>
-#include <thrift/protocol/TProtocol.h>
-
-#include "string_conv.h"
+namespace apache {
+namespace thrift {
+namespace protocol {
+class TProtocol;
+} // namespace protocol
+} // namespace thrift
+} // namespace apache
 
 typedef enum dsn_host_type_t {
     HOST_TYPE_INVALID = 0,
@@ -64,7 +69,7 @@ public:
         assign_ipv4(ip, port);
         static_assert(sizeof(rpc_address) == sizeof(uint64_t),
                       "make sure rpc_address does not "
-                      "add new payload to dsn::rpc_address "
+                      "add new payload to rpc_address "
                       "to keep it sizeof(uint64_t)");
     }
 
@@ -106,29 +111,7 @@ public:
     // This function is used for validating the format of ipv4 like "192.168.0.1:12345"
     // Due to historical legacy, we also consider "localhost:8080" is in a valid format
     // IP address without port like "127.0.0.1" is invalid here
-    bool from_string_ipv4(const char *s)
-    {
-        set_invalid();
-        std::string ip_port = std::string(s);
-        auto pos = ip_port.find_last_of(':');
-        if (pos == std::string::npos) {
-            return false;
-        }
-        std::string ip = ip_port.substr(0, pos);
-        std::string port = ip_port.substr(pos + 1);
-        // check port
-        unsigned int port_num;
-        if (!dsn::internal::buf2unsigned(port, port_num) || port_num > UINT16_MAX) {
-            return false;
-        }
-        // check localhost & IP
-        uint32_t ip_addr;
-        if (ip == "localhost" || inet_pton(AF_INET, ip.c_str(), &ip_addr)) {
-            assign_ipv4(ip.c_str(), (uint16_t)port_num);
-            return true;
-        }
-        return false;
-    }
+    bool from_string_ipv4(const char *s);
 
     uint64_t &value() { return _addr.value; }
 
@@ -151,10 +134,15 @@ public:
     // and you MUST ensure that _addr is INITIALIZED before you call this function
     void set_invalid();
 
-    bool operator==(::dsn::rpc_address r) const
+    bool operator==(rpc_address r) const
     {
-        if (type() != r.type())
+        if (this == &r) {
+            return true;
+        }
+
+        if (type() != r.type()) {
             return false;
+        }
 
         switch (type()) {
         case HOST_TYPE_IPV4:
@@ -166,9 +154,9 @@ public:
         }
     }
 
-    bool operator!=(::dsn::rpc_address r) const { return !(*this == r); }
+    bool operator!=(rpc_address r) const { return !(*this == r); }
 
-    bool operator<(::dsn::rpc_address r) const
+    bool operator<(rpc_address r) const
     {
         if (type() != r.type())
             return type() < r.type();

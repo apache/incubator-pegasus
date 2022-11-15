@@ -30,7 +30,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "replica/replication_service_app.h"
 #include "server/compaction_operation.h"
 #include "server/pegasus_server_impl.h"

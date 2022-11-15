@@ -24,7 +24,7 @@
 #include "base/pegasus_const.h"
 #include "client/replication_ddl_client.h"
 #include "common/replication_other_types.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "include/pegasus/client.h"
 #include "test/function_test/utils/global_env.h"
 #include "test/function_test/utils/utils.h"

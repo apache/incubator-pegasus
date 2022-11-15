@@ -30,7 +30,7 @@
 
 #include "utils/fmt_logging.h"
 #include "utils/utils.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/api_layer1.h"
 #include "test/function_test/utils/utils.h"
 

@@ -53,7 +53,7 @@
 #include "utils/api_utilities.h"
 #include "utils/error_code.h"
 #include "utils/fmt_logging.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/threadpool_code.h"
 
 namespace dsn {

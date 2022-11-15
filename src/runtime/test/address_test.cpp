@@ -24,20 +24,12 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     Unit-test for rpc_address.
- *
- * Revision history:
- *     Nov., 2015, @qinzuoyan (Zuoyan Qin), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
-#include "utils/rpc_address.h"
-#include "runtime/rpc/group_address.h"
 #include <gtest/gtest.h>
 
-using namespace ::dsn;
+#include "runtime/rpc/group_address.h"
+#include "runtime/rpc/rpc_address.h"
+
+namespace dsn {
 
 static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8_t sec4)
 {
@@ -49,7 +41,7 @@ static inline uint32_t host_ipv4(uint8_t sec1, uint8_t sec2, uint8_t sec3, uint8
     return ip;
 }
 
-TEST(core, rpc_address_ipv4_from_host)
+TEST(rpc_address_test, rpc_address_ipv4_from_host)
 {
     // localhost --> 127.0.0.1
     // on some systems "localhost" could be "127.0.1.1" (debian)
@@ -60,14 +52,14 @@ TEST(core, rpc_address_ipv4_from_host)
     ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_host("127.0.0.1"));
 }
 
-TEST(core, rpc_address_ipv4_from_network_interface)
+TEST(rpc_address_test, rpc_address_ipv4_from_network_interface)
 {
     ASSERT_EQ(host_ipv4(127, 0, 0, 1), rpc_address::ipv4_from_network_interface("lo"));
     ASSERT_EQ(host_ipv4(0, 0, 0, 0),
               rpc_address::ipv4_from_network_interface("not_exist_interface"));
 }
 
-TEST(core, is_site_local_address)
+TEST(rpc_address_test, is_site_local_address)
 {
     ASSERT_FALSE(rpc_address::is_site_local_address(htonl(host_ipv4(1, 2, 3, 4))));
     ASSERT_TRUE(rpc_address::is_site_local_address(htonl(host_ipv4(10, 235, 111, 111))));
@@ -79,7 +71,7 @@ TEST(core, is_site_local_address)
     ASSERT_FALSE(rpc_address::is_site_local_address(htonl(host_ipv4(201, 201, 201, 201))));
 }
 
-TEST(core, is_docker_netcard)
+TEST(rpc_address_test, is_docker_netcard)
 {
     ASSERT_TRUE(rpc_address::is_docker_netcard("docker0", htonl(host_ipv4(1, 2, 3, 4))));
     ASSERT_TRUE(rpc_address::is_docker_netcard("10docker5", htonl(host_ipv4(4, 5, 6, 8))));
@@ -87,45 +79,45 @@ TEST(core, is_docker_netcard)
     ASSERT_TRUE(rpc_address::is_docker_netcard("eth0", htonl(host_ipv4(172, 17, 42, 1))));
 }
 
-TEST(core, rpc_address_to_string)
+TEST(rpc_address_test, rpc_address_to_string)
 {
     {
-        dsn::rpc_address addr;
+        rpc_address addr;
         addr.assign_ipv4(host_ipv4(127, 0, 0, 1), 8080);
         ASSERT_EQ(std::string("127.0.0.1:8080"), addr.to_std_string());
     }
 
     {
         const char *name = "test_group";
-        dsn::rpc_address addr;
+        rpc_address addr;
         addr.assign_group(name);
         ASSERT_EQ(std::string(name), addr.to_std_string());
     }
 
     {
-        dsn::rpc_address addr;
+        rpc_address addr;
         ASSERT_EQ(std::string("invalid address"), addr.to_std_string());
     }
 }
 
-TEST(core, dsn_address_build)
+TEST(rpc_address_test, dsn_address_build)
 {
     {
-        dsn::rpc_address addr;
+        rpc_address addr;
         addr.assign_ipv4(host_ipv4(127, 0, 0, 1), 8080);
         ASSERT_EQ(HOST_TYPE_IPV4, addr.type());
         ASSERT_EQ(host_ipv4(127, 0, 0, 1), addr.ip());
         ASSERT_EQ(8080, addr.port());
 
-        ASSERT_TRUE(dsn::rpc_address("127.0.0.1", 8080) == dsn::rpc_address("localhost", 8080) ||
-                    dsn::rpc_address("127.0.1.1", 8080) == dsn::rpc_address("localhost", 8080));
-        ASSERT_EQ(addr, dsn::rpc_address("127.0.0.1", 8080));
-        ASSERT_EQ(addr, dsn::rpc_address(host_ipv4(127, 0, 0, 1), 8080));
+        ASSERT_TRUE(rpc_address("127.0.0.1", 8080) == rpc_address("localhost", 8080) ||
+                    rpc_address("127.0.1.1", 8080) == rpc_address("localhost", 8080));
+        ASSERT_EQ(addr, rpc_address("127.0.0.1", 8080));
+        ASSERT_EQ(addr, rpc_address(host_ipv4(127, 0, 0, 1), 8080));
     }
 
     {
         const char *name = "test_group";
-        dsn::rpc_address addr;
+        rpc_address addr;
         addr.assign_group(name);
 
         ASSERT_EQ(HOST_TYPE_GROUP, addr.type());
@@ -134,7 +126,36 @@ TEST(core, dsn_address_build)
     }
 }
 
-TEST(core, rpc_group_address)
+TEST(rpc_address_test, operators)
+{
+    rpc_address addr(1234, 123);
+    ASSERT_EQ(addr, addr);
+
+    {
+        rpc_address new_addr(addr);
+        ASSERT_EQ(addr, new_addr);
+    }
+
+    {
+        rpc_address new_addr(1234, 321);
+        ASSERT_NE(addr, new_addr);
+    }
+
+    rpc_address addr_grp;
+    ASSERT_EQ(addr_grp, addr_grp);
+    ASSERT_NE(addr, addr_grp);
+
+    addr_grp.assign_group("test_group");
+    addr_grp.group_address()->add(addr);
+    ASSERT_NE(addr, addr_grp);
+
+    {
+        rpc_address new_addr_grp(addr_grp);
+        ASSERT_EQ(addr_grp, new_addr_grp);
+    }
+}
+
+TEST(rpc_address_test, rpc_group_address)
 {
     rpc_address addr("127.0.0.1", 8080);
     rpc_address invalid_addr;
@@ -221,3 +242,5 @@ TEST(core, rpc_group_address)
     ASSERT_EQ(0u, g->members().size());
     ASSERT_EQ(invalid_addr, g->leader());
 }
+
+} // namespace dsn

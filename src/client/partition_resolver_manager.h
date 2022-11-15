@@ -30,7 +30,7 @@
 #include <map>
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "client/partition_resolver.h"
 
 namespace dsn {

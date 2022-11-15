@@ -58,8 +58,10 @@ using tp_output_format = ::dsn::utils::table_printer::output_format;
 replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers)
 {
     _meta_server.assign_group("meta-servers");
-    for (auto &m : meta_servers) {
-        _meta_server.group_address()->add(m);
+    for (const auto &m : meta_servers) {
+        if (!_meta_server.group_address()->add(m)) {
+            LOG_WARNING_F("duplicate adress {}", m);
+        }
     }
 }
 

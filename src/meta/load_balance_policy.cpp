@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "load_balance_policy.h"
-#include "greedy_load_balancer.h"
+#include "meta/load_balance_policy.h"
 
+#include "meta/greedy_load_balancer.h"
 #include "utils/command_manager.h"
-#include "utils/fmt_logging.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {
