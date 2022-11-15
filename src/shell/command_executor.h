@@ -32,6 +32,7 @@ struct shell_context
 {
     std::string current_cluster_name;
     std::string current_app_name;
+    // TODO(yingchun): ip
     std::vector<dsn::rpc_address> meta_list;
     std::unique_ptr<dsn::replication::replication_ddl_client> ddl_client;
     pegasus::pegasus_client *pg_client;

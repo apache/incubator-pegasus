@@ -57,6 +57,7 @@ proxy_stub::proxy_stub(const proxy_session::factory &f,
 
 void proxy_stub::on_rpc_request(dsn::message_ex *request)
 {
+    // TODO(yingchun): ip
     ::dsn::rpc_address source = request->header->from_address;
     std::shared_ptr<proxy_session> session;
     {
@@ -82,12 +83,14 @@ void proxy_stub::on_rpc_request(dsn::message_ex *request)
 
 void proxy_stub::on_recv_remove_session_request(dsn::message_ex *request)
 {
+    // TODO(yingchun): ip
     ::dsn::rpc_address source = request->header->from_address;
     remove_session(source);
 }
 
 void proxy_stub::remove_session(dsn::rpc_address remote_address)
 {
+    // TODO(yingchun): ip
     std::shared_ptr<proxy_session> session;
     {
         ::dsn::zauto_write_lock l(_lock);

@@ -47,6 +47,7 @@ DEFINE_TASK_CODE(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
 
 info_collector::info_collector()
 {
+    // TODO(yingchun): ip
     std::vector<::dsn::rpc_address> meta_servers;
     replica_helper::load_meta_servers(meta_servers);
 

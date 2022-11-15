@@ -603,6 +603,7 @@ inline void scan_data_next(scan_data_context *context)
 struct node_desc
 {
     std::string desc;
+    // TODO(yingchun): ip
     dsn::rpc_address address;
     node_desc(const std::string &s, const dsn::rpc_address &n) : desc(s), address(n) {}
 };
@@ -616,6 +617,7 @@ inline bool fill_nodes(shell_context *sc, const std::string &type, std::vector<n
     }
 
     if (type == "all" || type == "replica-server") {
+        // TODO(yingchun): ip
         std::map<dsn::rpc_address, dsn::replication::node_status::type> rs_nodes;
         ::dsn::error_code err =
             sc->ddl_client->list_nodes(dsn::replication::node_status::NS_ALIVE, rs_nodes);

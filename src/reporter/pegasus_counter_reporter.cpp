@@ -129,6 +129,7 @@ void pegasus_counter_reporter::start()
     if (_report_timer != nullptr)
         return;
 
+    // TODO(yingchun): ip
     rpc_address addr(dsn_primary_address());
     char buf[1000];
     pegasus::utils::addr2host(addr, buf, 1000);

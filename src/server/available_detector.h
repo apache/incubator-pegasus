@@ -60,6 +60,7 @@ private:
     // client to access server.
     pegasus_client *_client;
     std::shared_ptr<replication_ddl_client> _ddl_client;
+    // TODO(yingchun): ip
     std::vector<dsn::rpc_address> _meta_list;
     uint32_t _detect_interval_seconds;
     int32_t _alert_fail_count;

@@ -29,6 +29,7 @@ bool validate_ip(shell_context *sc,
         return false;
     }
 
+    // TODO(yingchun): ip
     std::map<dsn::rpc_address, dsn::replication::node_status::type> nodes;
     auto error = sc->ddl_client->list_nodes(dsn::replication::node_status::NS_INVALID, nodes);
     if (error != dsn::ERR_OK) {

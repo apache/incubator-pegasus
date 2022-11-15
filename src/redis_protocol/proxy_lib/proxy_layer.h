@@ -79,6 +79,7 @@ protected:
     // we need to backup one request to create a response struct.
     dsn::message_ex *_backup_one_request;
     // the client address for which this session served
+    // TODO(yingchun): ip
     dsn::rpc_address _remote_address;
 };
 
@@ -112,8 +113,10 @@ private:
     void on_recv_remove_session_request(dsn::message_ex *);
 
     ::dsn::zrwlock_nr _lock;
+    // TODO(yingchun): ip
     std::unordered_map<::dsn::rpc_address, std::shared_ptr<proxy_session>> _sessions;
     proxy_session::factory _factory;
+    // TODO(yingchun): ip
     ::dsn::rpc_address _uri_address;
     std::string _cluster;
     std::string _app;
