@@ -185,6 +185,7 @@ public:
     // partition split
     //
 
+    // TODO(yingchun): ip
     // called by parent partition, executed by child partition
     void create_child_replica(dsn::rpc_address primary_address,
                               app_info app,
@@ -349,6 +350,7 @@ private:
     closed_replicas _closed_replicas;
 
     mutation_log_ptr _log;
+    // TODO(yingchun): ip
     ::dsn::rpc_address _primary_address;
     char _primary_address_str[64];
 

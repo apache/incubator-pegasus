@@ -87,6 +87,7 @@ private:
     // but when adding secondary, the black list is accessed in THREADPOOL_META_STATE
     // so we need a lock to protect it
     dsn::zrwlock_nr _black_list_lock; // [
+    // TODO(yingchun): ip
     std::set<dsn::rpc_address> _assign_secondary_black_list;
     // ]
     dsn_handle_t _ctrl_assign_secondary_black_list = nullptr;

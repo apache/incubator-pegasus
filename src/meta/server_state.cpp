@@ -597,6 +597,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         zauto_write_lock l(_lock);
                         app->partitions[partition_id] = pc;
                         for (const dsn::rpc_address &addr : pc.last_drops) {
+                            // TODO(yingchun): ip
                             app->helpers->contexts[partition_id].record_drop_history(addr);
                         }
 
@@ -1476,6 +1477,7 @@ void server_state::update_configuration_locally(
 
         case config_type::CT_DROP_PARTITION:
             for (const rpc_address &node : new_cfg.last_drops) {
+                // TODO(yingchun): ip
                 ns = get_node_state(_nodes, node, false);
                 if (ns != nullptr)
                     ns->remove_partition(gpid, false);

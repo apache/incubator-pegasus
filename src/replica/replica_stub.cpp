@@ -1372,6 +1372,7 @@ void replica_stub::query_configuration_by_node()
     LOG_INFO("send query node partitions request to meta server, stored_replicas_count = %d",
              (int)req.stored_replicas.size());
 
+    // TODO(yingchun): ip
     rpc_address target(_failure_detector->get_servers());
     _config_query_task =
         rpc::call(target,
@@ -1576,6 +1577,7 @@ void replica_stub::remove_replica_on_meta_server(const app_info &info,
 
     ::dsn::marshall(msg, *request);
 
+    // TODO(yingchun): ip
     rpc_address target(_failure_detector->get_servers());
     rpc::call(_failure_detector->get_servers(),
               msg,

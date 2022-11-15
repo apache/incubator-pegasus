@@ -22,7 +22,9 @@
 namespace dsn {
 namespace replication {
 uint32_t get_partition_count(const node_state &ns, balance_type type, int32_t app_id);
+// TODO(yingchun): ip
 uint32_t get_skew(const std::map<rpc_address, uint32_t> &count_map);
+// TODO(yingchun): ip
 void get_min_max_set(const std::map<rpc_address, uint32_t> &node_count_map,
                      /*out*/ std::set<rpc_address> &min_set,
                      /*out*/ std::set<rpc_address> &max_set);
@@ -60,18 +62,22 @@ private:
     bool get_next_move(const cluster_migration_info &cluster_info,
                        const partition_set &selected_pid,
                        /*out*/ move_info &next_move);
+    // TODO(yingchun): ip
     bool pick_up_move(const cluster_migration_info &cluster_info,
                       const std::set<rpc_address> &max_nodes,
                       const std::set<rpc_address> &min_nodes,
                       const int32_t app_id,
                       const partition_set &selected_pid,
                       /*out*/ move_info &move_info);
+    // TODO(yingchun): ip
     void get_max_load_disk_set(const cluster_migration_info &cluster_info,
                                const std::set<rpc_address> &max_nodes,
                                const int32_t app_id,
                                /*out*/ std::set<app_disk_info> &max_load_disk_set);
+    // TODO(yingchun): ip
     std::map<std::string, partition_set> get_disk_partitions_map(
         const cluster_migration_info &cluster_info, const rpc_address &addr, const int32_t app_id);
+    // TODO(yingchun): ip
     bool pick_up_partition(const cluster_migration_info &cluster_info,
                            const rpc_address &min_node_addr,
                            const partition_set &max_load_partitions,

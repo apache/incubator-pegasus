@@ -162,6 +162,7 @@ public:
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
     error_code restore_from_local_storage(const char *local_path);
 
+    // TODO(yingchun): ip
     void on_change_node_state(rpc_address node, bool is_alive);
     void on_propose_balancer(const configuration_balancer_request &request,
                              configuration_balancer_response &response);
@@ -211,6 +212,7 @@ private:
     // else indicate error that remote storage responses
     error_code sync_apps_to_remote_storage();
 
+    // TODO(yingchun): ip
     error_code sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &node_list,
                                             bool skip_bad_nodes,
                                             bool skip_lost_partitions,
@@ -226,9 +228,11 @@ private:
 
     void check_consistency(const dsn::gpid &gpid);
 
+    // TODO(yingchun): ip
     error_code construct_apps(const std::vector<query_app_info_response> &query_app_responses,
                               const std::vector<dsn::rpc_address> &replica_nodes,
                               std::string &hint_message);
+    // TODO(yingchun): ip
     error_code construct_partitions(
         const std::vector<query_replica_info_response> &query_replica_info_responses,
         const std::vector<dsn::rpc_address> &replica_nodes,
@@ -258,16 +262,20 @@ private:
     void recall_partition(std::shared_ptr<app_state> &app, int pidx);
     void drop_partition(std::shared_ptr<app_state> &app, int pidx);
     void downgrade_primary_to_inactive(std::shared_ptr<app_state> &app, int pidx);
+    // TODO(yingchun): ip
     void downgrade_secondary_to_inactive(std::shared_ptr<app_state> &app,
                                          int pidx,
                                          const rpc_address &node);
+    // TODO(yingchun): ip
     void downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
                                    int pidx,
                                    const rpc_address &address);
 
+    // TODO(yingchun): ip
     void on_partition_node_dead(std::shared_ptr<app_state> &app,
                                 int pidx,
                                 const dsn::rpc_address &address);
+    // TODO(yingchun): ip
     void send_proposal(rpc_address target, const configuration_update_request &proposal);
     void send_proposal(const configuration_proposal_action &action,
                        const partition_configuration &pc,

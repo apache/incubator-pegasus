@@ -47,6 +47,7 @@ namespace service {
 
 using TokenBucket = folly::BasicTokenBucket<std::chrono::steady_clock>;
 
+// TODO(yingchun): ip
 template <typename TCallback>
 task_ptr async_nfs_get_file_size(const get_file_size_request &request,
                                  TCallback &&callback,
@@ -61,6 +62,7 @@ task_ptr async_nfs_get_file_size(const get_file_size_request &request,
                      timeout);
 }
 
+// TODO(yingchun): ip
 template <typename TCallback>
 task_ptr async_nfs_copy(const copy_request &request,
                         TCallback &&callback,

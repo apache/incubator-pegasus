@@ -37,13 +37,16 @@ ENUM_REG(balance_type::COPY_SECONDARY)
 ENUM_REG(balance_type::MOVE_PRIMARY)
 ENUM_END(balance_type)
 
+// TODO(yingchun): ip
 bool calc_disk_load(node_mapper &nodes,
                     const app_mapper &apps,
                     app_id id,
                     const rpc_address &node,
                     bool only_primary,
                     /*out*/ disk_load &load);
+// TODO(yingchun): ip
 const std::string &get_disk_tag(const app_mapper &apps, const rpc_address &node, const gpid &pid);
+// TODO(yingchun): ip
 std::shared_ptr<configuration_balancer_request>
 generate_balancer_request(const app_mapper &apps,
                           const partition_configuration &pc,
@@ -81,7 +84,9 @@ protected:
     int _alive_nodes;
     // this is used to assign an integer id for every node
     // and these are generated from the above data, which are tempory too
+    // TODO(yingchun): ip
     std::unordered_map<dsn::rpc_address, int> address_id;
+    // TODO(yingchun): ip
     std::vector<dsn::rpc_address> address_vec;
 
     // the app set which won't be re-balanced
@@ -91,15 +96,18 @@ protected:
     dsn_handle_t _ctrl_balancer_ignored_apps;
 
 private:
+    // TODO(yingchun): ip
     void start_moving_primary(const std::shared_ptr<app_state> &app,
                               const rpc_address &from,
                               const rpc_address &to,
                               int plan_moving,
                               disk_load *prev_load,
                               disk_load *current_load);
+    // TODO(yingchun): ip
     std::list<dsn::gpid> calc_potential_moving(const std::shared_ptr<app_state> &app,
                                                const rpc_address &from,
                                                const rpc_address &to);
+    // TODO(yingchun): ip
     dsn::gpid select_moving(std::list<dsn::gpid> &potential_moving,
                             disk_load *prev_load,
                             disk_load *current_load,
