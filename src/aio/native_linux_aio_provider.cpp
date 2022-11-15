@@ -28,13 +28,14 @@
 
 #include <fcntl.h>
 
+#include "aio/disk_engine.h"
 #include "runtime/service_engine.h"
-
 #include "runtime/task/async_calls.h"
 #include "utils/api_utilities.h"
-#include "utils/fmt_logging.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
 #include "utils/latency_tracer.h"
+#include "utils/safe_strerror_posix.h"
 
 namespace dsn {
 
@@ -42,33 +43,33 @@ native_linux_aio_provider::native_linux_aio_provider(disk_engine *disk) : aio_pr
 
 native_linux_aio_provider::~native_linux_aio_provider() {}
 
-dsn_handle_t native_linux_aio_provider::open(const char *file_name, int flag, int pmode)
+linux_fd_t native_linux_aio_provider::open(const char *file_name, int flag, int pmode)
 {
-    dsn_handle_t fh = (dsn_handle_t)(uintptr_t)::open(file_name, flag, pmode);
-    if (fh == DSN_INVALID_FILE_HANDLE) {
-        LOG_ERROR("create file failed, err = %s", strerror(errno));
+    auto fd = ::open(file_name, flag, pmode);
+    if (fd == DSN_INVALID_FILE_HANDLE) {
+        LOG_ERROR_F("create file failed, err = {}", utils::safe_strerror(errno));
     }
-    return fh;
+    return linux_fd_t(fd);
 }
 
-error_code native_linux_aio_provider::close(dsn_handle_t fh)
+error_code native_linux_aio_provider::close(linux_fd_t fd)
 {
-    if (fh == DSN_INVALID_FILE_HANDLE || ::close((int)(uintptr_t)(fh)) == 0) {
+    if (fd.is_invalid() || ::close(fd.fd) == 0) {
         return ERR_OK;
-    } else {
-        LOG_ERROR("close file failed, err = %s", strerror(errno));
-        return ERR_FILE_OPERATION_FAILED;
     }
+
+    LOG_ERROR_F("close file failed, err = {}", utils::safe_strerror(errno));
+    return ERR_FILE_OPERATION_FAILED;
 }
 
-error_code native_linux_aio_provider::flush(dsn_handle_t fh)
+error_code native_linux_aio_provider::flush(linux_fd_t fd)
 {
-    if (fh == DSN_INVALID_FILE_HANDLE || ::fsync((int)(uintptr_t)(fh)) == 0) {
+    if (fd.is_invalid() || ::fsync(fd.fd) == 0) {
         return ERR_OK;
-    } else {
-        LOG_ERROR("flush file failed, err = %s", strerror(errno));
-        return ERR_FILE_OPERATION_FAILED;
     }
+
+    LOG_ERROR_F("flush file failed, err = {}", utils::safe_strerror(errno));
+    return ERR_FILE_OPERATION_FAILED;
 }
 
 error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
@@ -78,17 +79,19 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
     uint64_t buffer_offset = 0;
     do {
         // ret is the written data size
-        auto ret = pwrite(static_cast<int>((ssize_t)aio_ctx.file),
-                          (char *)aio_ctx.buffer + buffer_offset,
-                          aio_ctx.buffer_size - buffer_offset,
-                          aio_ctx.file_offset + buffer_offset);
+        auto ret = ::pwrite(aio_ctx.dfile->native_handle().fd,
+                            (char *)aio_ctx.buffer + buffer_offset,
+                            aio_ctx.buffer_size - buffer_offset,
+                            aio_ctx.file_offset + buffer_offset);
         if (dsn_unlikely(ret < 0)) {
             if (errno == EINTR) {
-                LOG_WARNING_F("write failed with errno={} and will retry it.", strerror(errno));
+                LOG_WARNING_F("write failed with errno={} and will retry it.",
+                              utils::safe_strerror(errno));
                 continue;
             }
             resp = ERR_FILE_OPERATION_FAILED;
-            LOG_ERROR_F("write failed with errno={}, return {}.", strerror(errno), resp);
+            LOG_ERROR_F(
+                "write failed with errno={}, return {}.", utils::safe_strerror(errno), resp);
             return resp;
         }
 
@@ -117,11 +120,12 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
 error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
                                            /*out*/ uint64_t *processed_bytes)
 {
-    ssize_t ret = pread(static_cast<int>((ssize_t)aio_ctx.file),
-                        aio_ctx.buffer,
-                        aio_ctx.buffer_size,
-                        aio_ctx.file_offset);
-    if (ret < 0) {
+    auto ret = ::pread(aio_ctx.dfile->native_handle().fd,
+                       aio_ctx.buffer,
+                       aio_ctx.buffer_size,
+                       aio_ctx.file_offset);
+    if (dsn_unlikely(ret < 0)) {
+        LOG_WARNING_F("write failed with errno={} and will retry it.", utils::safe_strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
     if (ret == 0) {

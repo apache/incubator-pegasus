@@ -26,11 +26,12 @@
 
 #include "nfs_server_impl.h"
 
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include <cstdlib>
 
+#include "aio/disk_engine.h"
 #include "utils/filesystem.h"
 #include "runtime/task/async_calls.h"
 
@@ -76,26 +77,23 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
 
     std::string file_path =
         dsn::utils::filesystem::path_combine(request.source_dir, request.file_name);
-    disk_file *hfile;
+    disk_file *dfile = nullptr;
 
     {
         zauto_lock l(_handles_map_lock);
         auto it = _handles_map.find(file_path); // find file handle cache first
 
-        if (it == _handles_map.end()) // not found
-        {
-            hfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
-            if (hfile) {
-
+        if (it == _handles_map.end()) {
+            dfile = file::open(file_path.c_str(), O_RDONLY | O_BINARY, 0);
+            if (dfile != nullptr) {
                 auto fh = std::make_shared<file_handle_info_on_server>();
-                fh->file_handle = hfile;
+                fh->file_handle = dfile;
                 fh->file_access_count = 1;
                 fh->last_access_time = dsn_now_ms();
                 _handles_map.insert(std::make_pair(file_path, std::move(fh)));
             }
-        } else // found
-        {
-            hfile = it->second->file_handle;
+        } else {
+            dfile = it->second->file_handle;
             it->second->file_access_count++;
             it->second->last_access_time = dsn_now_ms();
         }
@@ -106,7 +104,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
               request.offset,
               request.offset + request.size);
 
-    if (hfile == 0) {
+    if (dfile == nullptr) {
         LOG_ERROR("{nfs_service} open file %s failed", file_path.c_str());
         ::dsn::service::copy_response resp;
         resp.error = ERR_OBJECT_NOT_FOUND;
@@ -119,14 +117,13 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
     cp->dst_dir = request.dst_dir;
     cp->source_disk_tag = request.source_disk_tag;
     cp->file_path = std::move(file_path);
-    cp->hfile = hfile;
     cp->offset = request.offset;
     cp->size = request.size;
 
     auto buffer_save = cp->bb.buffer().get();
 
     file::read(
-        hfile,
+        dfile,
         buffer_save,
         request.size,
         request.offset,

@@ -32,12 +32,12 @@ namespace file {
 
 /*extern*/ disk_file *open(const char *file_name, int flag, int pmode)
 {
-    dsn_handle_t nh = disk_engine::provider().open(file_name, flag, pmode);
-    if (nh != DSN_INVALID_FILE_HANDLE) {
-        return new disk_file(nh);
-    } else {
+    auto fd = disk_engine::provider().open(file_name, flag, pmode);
+    if (fd.is_invalid()) {
         return nullptr;
     }
+
+    return new disk_file(fd);
 }
 
 /*extern*/ error_code close(disk_file *file)
@@ -72,11 +72,10 @@ namespace file {
     auto cb = create_aio_task(callback_code, tracker, std::move(callback), hash);
     cb->get_aio_context()->buffer = buffer;
     cb->get_aio_context()->buffer_size = count;
-    cb->get_aio_context()->file_object = file;
-    cb->get_aio_context()->file = file->native_handle();
     cb->get_aio_context()->file_offset = offset;
     cb->get_aio_context()->type = AIO_Read;
     cb->get_aio_context()->engine = &disk_engine::instance();
+    cb->get_aio_context()->dfile = file;
 
     if (!cb->spec().on_aio_call.execute(task::get_current_task(), cb, true)) {
         cb->enqueue(ERR_FILE_OPERATION_FAILED, 0);
@@ -101,9 +100,9 @@ namespace file {
     auto cb = create_aio_task(callback_code, tracker, std::move(callback), hash);
     cb->get_aio_context()->buffer = (char *)buffer;
     cb->get_aio_context()->buffer_size = count;
-    cb->get_aio_context()->file = file;
     cb->get_aio_context()->file_offset = offset;
     cb->get_aio_context()->type = AIO_Write;
+    cb->get_aio_context()->dfile = file;
 
     disk_engine::instance().write(cb);
     return cb;
@@ -119,9 +118,9 @@ namespace file {
                                      int hash /*= 0*/)
 {
     auto cb = create_aio_task(callback_code, tracker, std::move(callback), hash);
-    cb->get_aio_context()->file = file;
     cb->get_aio_context()->file_offset = offset;
     cb->get_aio_context()->type = AIO_Write;
+    cb->get_aio_context()->dfile = file;
     for (int i = 0; i < buffer_count; i++) {
         if (buffers[i].size > 0) {
             cb->_unmerged_write_buffers.push_back(buffers[i]);
