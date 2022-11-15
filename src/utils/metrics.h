@@ -137,54 +137,19 @@ using metric_fields_type = std::unordered_set<std::string>;
 // This struct includes a set of filters for both entities and metrics requested by client.
 struct metric_filters
 {
-    using fields_filter_fn = std::function<bool(const std::string &)>;
-
     // According to the parameters requested by client, this function will filter metric
     // fields that will be put in the response. `with_metric_fields` includes all the metric
-    // fields that are wanted by client; on the contrary, once client wants all except some
-    // metric fields, it could specify them in `without_metric_fields`.
-    //
-    // However, once both `with_metric_fields` and `without_metric_fields` are specified, it
-    // will be considered invalid. The reason can be explained in 2 conditions. Suppose both
-    // `with_metric_fields` and `without_metric_fields` are provided, then:
-    //
-    // * Firstly, if both include the same fields, each will conflict with another. For example,
-    // suppose "with_metric_fields=a,b" and "without_metric_fields=b,c", this will lead to
-    // contradiction: we cannot decide if b should be put in the response to client.
-    //
-    // * Otherwise, if both do not include any same field, actually they can just be simplified
-    // as a unique `with_metric_fields`. For example, suppose "with_metric_fields=a,b" and
-    // "without_metric_fields=c,d", this can be simplified as "with_metric_fields=a,b":
-    // "without_metric_fields=c,d" is useless here since we have declared that only a and b are
-    // needed according to "with_metric_fields=a,b".
-    //
-    // To sum up, we can just require that `with_metric_fields` and `without_metric_fields` can
-    // not be provided at the same time.
-    bool generate_metric_fields_filter(const metric_fields_type &with_metric_fields,
-                                       const metric_fields_type &without_metric_fields)
+    // fields that are wanted by client.
+    bool has_metric_field(const std::string &field_name) const
     {
-        // Either with_metric_fields or without_metric_fields is allowed to be nonempty.
-        // Once both are nonempty, it will be considered as wrong request and return false.
-        if (!(with_metric_fields.empty() || without_metric_fields.empty())) {
-            return false;
-        }
-
         if (with_metric_fields.empty()) {
-            // Notice that any field is required once both with_metric_fields and
-            // without_metric_fields are empty.
-            metric_fields_filter = [without_metric_fields](const std::string &field) -> bool {
-                return without_metric_fields.find(field) == without_metric_fields.end();
-            };
-        } else { // without_metric_fields must be empty.
-            metric_fields_filter = [with_metric_fields](const std::string &field) -> bool {
-                return with_metric_fields.find(field) != with_metric_fields.end();
-            };
+            // Any metric field is needed.
+            return true;
         }
-        return true;
+        return with_metric_fields.find(field_name) != with_metric_fields.end();
     }
 
-    // Default filter will not exclude any metric field.
-    fields_filter_fn metric_fields_filter = [](const std::string &) -> bool { return true; };
+    metric_fields_type with_metric_fields;
 };
 
 class metric_prototype;
@@ -421,7 +386,7 @@ protected:
                        const T &value,
                        const metric_filters &filters) const
     {
-        if (!filters.metric_fields_filter(field_name)) {
+        if (!filters.has_metric_field(field_name)) {
             return;
         }
 
