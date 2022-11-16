@@ -406,9 +406,7 @@ private:
 
     bool _add_secondary_enable_flow_control;
     int32_t _add_secondary_max_count_for_one_node;
-    std::unique_ptr<command_deregister> _cli_dump_handle;
-    std::unique_ptr<command_deregister> _ctrl_add_secondary_enable_flow_control;
-    std::unique_ptr<command_deregister> _ctrl_add_secondary_max_count_for_one_node;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 
     perf_counter_wrapper _dead_partition_count;
     perf_counter_wrapper _unreadable_partition_count;

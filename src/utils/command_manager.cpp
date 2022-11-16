@@ -100,34 +100,34 @@ bool command_manager::run_command(const std::string &cmd,
 
 command_manager::command_manager()
 {
-    _help_cmd = register_command({"help", "h", "H", "Help"},
-                                 "help|Help|h|H [command] - display help information",
-                                 "",
-                                 [this](const std::vector<std::string> &args) {
-                                     std::stringstream ss;
+    _cmds.emplace_back(register_command({"help", "h", "H", "Help"},
+                                        "help|Help|h|H [command] - display help information",
+                                        "",
+                                        [this](const std::vector<std::string> &args) {
+                                            std::stringstream ss;
 
-                                     if (args.size() == 0) {
-                                         utils::auto_read_lock l(_lock);
-                                         for (const auto &c : this->_handlers) {
-                                             ss << c.second->help_short << std::endl;
-                                         }
-                                     } else {
-                                         utils::auto_read_lock l(_lock);
-                                         auto it = _handlers.find(args[0]);
-                                         if (it == _handlers.end())
-                                             ss << "cannot find command '" << args[0] << "'";
-                                         else {
-                                             ss.width(6);
-                                             ss << std::left << it->first << ": "
-                                                << it->second->help_short << std::endl
-                                                << it->second->help_long << std::endl;
-                                         }
-                                     }
+                                            if (args.size() == 0) {
+                                                utils::auto_read_lock l(_lock);
+                                                for (const auto &c : this->_handlers) {
+                                                    ss << c.second->help_short << std::endl;
+                                                }
+                                            } else {
+                                                utils::auto_read_lock l(_lock);
+                                                auto it = _handlers.find(args[0]);
+                                                if (it == _handlers.end())
+                                                    ss << "cannot find command '" << args[0] << "'";
+                                                else {
+                                                    ss.width(6);
+                                                    ss << std::left << it->first << ": "
+                                                       << it->second->help_short << std::endl
+                                                       << it->second->help_long << std::endl;
+                                                }
+                                            }
 
-                                     return ss.str();
-                                 });
+                                            return ss.str();
+                                        }));
 
-    _repeat_cmd = register_command(
+    _cmds.emplace_back(register_command(
         {"repeat", "r", "R", "Repeat"},
         "repeat|Repeat|r|R interval_seconds max_count command - execute command periodically",
         "repeat|Repeat|r|R interval_seconds max_count command - execute command every interval "
@@ -171,14 +171,15 @@ command_manager::command_manager()
             }
 
             return "repeat command completed";
-        });
+        }));
 }
 
 command_manager::~command_manager()
 {
-    _help_cmd.reset();
-    _repeat_cmd.reset();
-    CHECK(_handlers.empty(), _handlers.begin()->first);
+    _cmds.clear();
+    // TODO(yingchun): enable this check when all commands deregister correctly.
+    // CHECK(_handlers.empty(), "All commands must be deregistered before command_manager been
+    // destroyed", _handlers.begin()->first);
 }
 
 } // namespace dsn

@@ -34,35 +34,30 @@ app_balance_policy::app_balance_policy(meta_service *svc) : load_balance_policy(
         _only_primary_balancer = false;
         _only_move_primary = false;
     }
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+        {"meta.lb.balancer_in_turn"},
+        "meta.lb.balancer_in_turn <true|false>",
+        "control whether do app balancer in turn",
+        [this](const std::vector<std::string> &args) {
+            return remote_command_set_bool_flag(_balancer_in_turn, "lb.balancer_in_turn", args);
+        }));
 
-    static std::once_flag flag;
-    std::call_once(flag, [&]() {
-        _ctrl_balancer_in_turn = dsn::command_manager::instance().register_command(
-            {"meta.lb.balancer_in_turn"},
-            "meta.lb.balancer_in_turn <true|false>",
-            "control whether do app balancer in turn",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(_balancer_in_turn, "lb.balancer_in_turn", args);
-            });
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+        {"meta.lb.only_primary_balancer"},
+        "meta.lb.only_primary_balancer <true|false>",
+        "control whether do only primary balancer",
+        [this](const std::vector<std::string> &args) {
+            return remote_command_set_bool_flag(
+                _only_primary_balancer, "lb.only_primary_balancer", args);
+        }));
 
-        _ctrl_only_primary_balancer = dsn::command_manager::instance().register_command(
-            {"meta.lb.only_primary_balancer"},
-            "meta.lb.only_primary_balancer <true|false>",
-            "control whether do only primary balancer",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _only_primary_balancer, "lb.only_primary_balancer", args);
-            });
-
-        _ctrl_only_move_primary = dsn::command_manager::instance().register_command(
-            {"meta.lb.only_move_primary"},
-            "meta.lb.only_move_primary <true|false>",
-            "control whether only move primary in balancer",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_set_bool_flag(
-                    _only_move_primary, "lb.only_move_primary", args);
-            });
-    });
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
+        {"meta.lb.only_move_primary"},
+        "meta.lb.only_move_primary <true|false>",
+        "control whether only move primary in balancer",
+        [this](const std::vector<std::string> &args) {
+            return remote_command_set_bool_flag(_only_move_primary, "lb.only_move_primary", args);
+        }));
 }
 
 void app_balance_policy::balance(bool checker, const meta_view *global_view, migration_list *list)

@@ -82,14 +82,6 @@ bool replica_stub::s_not_exit_on_log_failure = false;
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
                            bool is_long_subscriber /* = true*/)
     : serverlet("replica_stub"),
-      _kill_partition_command(nullptr),
-      _deny_client_command(nullptr),
-      _verbose_client_log_command(nullptr),
-      _verbose_commit_log_command(nullptr),
-      _trigger_chkpt_command(nullptr),
-      _query_compact_command(nullptr),
-      _query_app_envs_command(nullptr),
-      _max_concurrent_bulk_load_downloading_count_command(nullptr),
       _deny_client(false),
       _verbose_client_log(false),
       _verbose_commit_log(false),
@@ -104,12 +96,6 @@ replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
 {
 #ifdef DSN_ENABLE_GPERF
     _is_releasing_memory = false;
-    _release_tcmalloc_memory_command = nullptr;
-    _get_tcmalloc_status_command = nullptr;
-    _max_reserved_memory_percentage_command = nullptr;
-    _release_all_reserved_memory_command = nullptr;
-#elif defined(DSN_USE_JEMALLOC)
-    _dump_jemalloc_stats_command = nullptr;
 #endif
     _replica_state_subscriber = subscriber;
     _is_long_subscriber = is_long_subscriber;
@@ -2275,7 +2261,7 @@ void replica_stub::open_service()
 #if !defined(DSN_ENABLE_GPERF) && defined(DSN_USE_JEMALLOC)
 void replica_stub::register_jemalloc_ctrl_command()
 {
-    _dump_jemalloc_stats_command = ::dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
         {"replica.dump-jemalloc-stats"},
         fmt::format("replica.dump-jemalloc-stats <{}> [buffer size]", kAllJeStatsTypesStr),
         "dump stats of jemalloc",
@@ -2303,7 +2289,7 @@ void replica_stub::register_jemalloc_ctrl_command()
 
             dsn::je_dump_stats(type, static_cast<size_t>(buf_sz), stats);
             return stats;
-        });
+        }));
 }
 #endif
 
@@ -2316,7 +2302,7 @@ void replica_stub::register_ctrl_command()
     /// failure_detector::register_ctrl_commands and nfs_client_impl::register_cli_commands
     static std::once_flag flag;
     std::call_once(flag, [&]() {
-        _kill_partition_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.kill_partition"},
             "replica.kill_partition [app_id [partition_index]]",
             "replica.kill_partition: kill partitions by (all, one app, one partition)",
@@ -2336,17 +2322,17 @@ void replica_stub::register_ctrl_command()
                 }
                 dsn::error_code e = this->on_kill_replica(pid);
                 return std::string(e.to_string());
-            });
+            }));
 
-        _deny_client_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.deny-client"},
             "replica.deny-client <true|false>",
             "replica.deny-client - control if deny client read & write request",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(_deny_client, "deny-client", args);
-            });
+            }));
 
-        _verbose_client_log_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.verbose-client-log"},
             "replica.verbose-client-log <true|false>",
             "replica.verbose-client-log - control if print verbose error log when reply read & "
@@ -2354,18 +2340,18 @@ void replica_stub::register_ctrl_command()
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(
                     _verbose_client_log, "verbose-client-log", args);
-            });
+            }));
 
-        _verbose_commit_log_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.verbose-commit-log"},
             "replica.verbose-commit-log <true|false>",
             "replica.verbose-commit-log - control if print verbose log when commit mutation",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(
                     _verbose_commit_log, "verbose-commit-log", args);
-            });
+            }));
 
-        _trigger_chkpt_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.trigger-checkpoint"},
             "replica.trigger-checkpoint [id1,id2,...] (where id is 'app_id' or "
             "'app_id.partition_id')",
@@ -2378,9 +2364,9 @@ void replica_stub::register_ctrl_command()
                                      rep->get_gpid().thread_hash());
                     return std::string("triggered");
                 });
-            });
+            }));
 
-        _query_compact_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.query-compact"},
             "replica.query-compact [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
             "replica.query-compact - query full compact status on the underlying storage engine",
@@ -2388,9 +2374,9 @@ void replica_stub::register_ctrl_command()
                 return exec_command_on_replica(args, true, [](const replica_ptr &rep) {
                     return rep->query_manual_compact_state();
                 });
-            });
+            }));
 
-        _query_app_envs_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.query-app-envs"},
             "replica.query-app-envs [id1,id2,...] (where id is 'app_id' or 'app_id.partition_id')",
             "replica.query-app-envs - query app envs on the underlying storage engine",
@@ -2400,19 +2386,19 @@ void replica_stub::register_ctrl_command()
                     rep->query_app_envs(kv_map);
                     return dsn::utils::kv_map_to_string(kv_map, ',', '=');
                 });
-            });
+            }));
 
 #ifdef DSN_ENABLE_GPERF
-        _release_tcmalloc_memory_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.release-tcmalloc-memory"},
             "replica.release-tcmalloc-memory <true|false>",
             "replica.release-tcmalloc-memory - control if try to release tcmalloc memory",
             [this](const std::vector<std::string> &args) {
                 return remote_command_set_bool_flag(
                     _release_tcmalloc_memory, "release-tcmalloc-memory", args);
-            });
+            }));
 
-        _get_tcmalloc_status_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.get-tcmalloc-status"},
             "replica.get-tcmalloc-status - get status of tcmalloc",
             "get status of tcmalloc",
@@ -2420,9 +2406,9 @@ void replica_stub::register_ctrl_command()
                 char buf[4096];
                 MallocExtension::instance()->GetStats(buf, 4096);
                 return std::string(buf);
-            });
+            }));
 
-        _max_reserved_memory_percentage_command = dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.mem-release-max-reserved-percentage"},
             "replica.mem-release-max-reserved-percentage [num | DEFAULT]",
             "control tcmalloc max reserved but not-used memory percentage",
@@ -2447,46 +2433,45 @@ void replica_stub::register_ctrl_command()
                     _mem_release_max_reserved_mem_percentage = percentage;
                 }
                 return result;
-            });
+            }));
 
-        _release_all_reserved_memory_command = ::dsn::command_manager::instance().register_command(
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.release-all-reserved-memory"},
             "replica.release-all-reserved-memory - release tcmalloc all reserved-not-used memory",
             "release tcmalloc all reserverd not-used memory back to operating system",
             [this](const std::vector<std::string> &args) {
                 auto release_bytes = gc_tcmalloc_memory(true);
                 return "OK, release_bytes=" + std::to_string(release_bytes);
-            });
+            }));
 #elif defined(DSN_USE_JEMALLOC)
         register_jemalloc_ctrl_command();
 #endif
-        _max_concurrent_bulk_load_downloading_count_command =
-            dsn::command_manager::instance().register_command(
-                {"replica.max-concurrent-bulk-load-downloading-count"},
-                "replica.max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
-                "control stub max_concurrent_bulk_load_downloading_count",
-                [this](const std::vector<std::string> &args) {
-                    std::string result("OK");
-                    if (args.empty()) {
-                        result = "max_concurrent_bulk_load_downloading_count=" +
-                                 std::to_string(_max_concurrent_bulk_load_downloading_count);
-                        return result;
-                    }
-
-                    if (args[0] == "DEFAULT") {
-                        _max_concurrent_bulk_load_downloading_count =
-                            _options.max_concurrent_bulk_load_downloading_count;
-                        return result;
-                    }
-
-                    int32_t count = 0;
-                    if (!dsn::buf2int32(args[0], count) || count <= 0) {
-                        result = std::string("ERR: invalid arguments");
-                    } else {
-                        _max_concurrent_bulk_load_downloading_count = count;
-                    }
+        _cmds.emplace_back(::dsn::command_manager::instance().register_command(
+            {"replica.max-concurrent-bulk-load-downloading-count"},
+            "replica.max-concurrent-bulk-load-downloading-count [num | DEFAULT]",
+            "control stub max_concurrent_bulk_load_downloading_count",
+            [this](const std::vector<std::string> &args) {
+                std::string result("OK");
+                if (args.empty()) {
+                    result = "max_concurrent_bulk_load_downloading_count=" +
+                             std::to_string(_max_concurrent_bulk_load_downloading_count);
                     return result;
-                });
+                }
+
+                if (args[0] == "DEFAULT") {
+                    _max_concurrent_bulk_load_downloading_count =
+                        _options.max_concurrent_bulk_load_downloading_count;
+                    return result;
+                }
+
+                int32_t count = 0;
+                if (!dsn::buf2int32(args[0], count) || count <= 0) {
+                    result = std::string("ERR: invalid arguments");
+                } else {
+                    _max_concurrent_bulk_load_downloading_count = count;
+                }
+                return result;
+            }));
     });
 }
 
@@ -2605,9 +2590,10 @@ void replica_stub::close()
     // this replica may not be opened
     // or is already closed by calling tool_app::stop_all_apps()
     // in this case, just return
-    if (_kill_partition_command == nullptr) {
+    if (_cmds.empty()) {
         return;
     }
+    _cmds.clear();
 
     if (_config_sync_timer_task != nullptr) {
         _config_sync_timer_task->cancel(true);

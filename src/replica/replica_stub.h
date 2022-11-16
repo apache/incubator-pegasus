@@ -372,22 +372,7 @@ private:
     std::unique_ptr<replica_backup_server> _backup_server;
 
     // command_handlers
-    std::unique_ptr<command_deregister> _kill_partition_command;
-    std::unique_ptr<command_deregister> _deny_client_command;
-    std::unique_ptr<command_deregister> _verbose_client_log_command;
-    std::unique_ptr<command_deregister> _verbose_commit_log_command;
-    std::unique_ptr<command_deregister> _trigger_chkpt_command;
-    std::unique_ptr<command_deregister> _query_compact_command;
-    std::unique_ptr<command_deregister> _query_app_envs_command;
-#ifdef DSN_ENABLE_GPERF
-    std::unique_ptr<command_deregister> _release_tcmalloc_memory_command;
-    std::unique_ptr<command_deregister> _get_tcmalloc_status_command;
-    std::unique_ptr<command_deregister> _max_reserved_memory_percentage_command;
-    std::unique_ptr<command_deregister> _release_all_reserved_memory_command;
-#elif defined(DSN_USE_JEMALLOC)
-    std::unique_ptr<command_deregister> _dump_jemalloc_stats_command;
-#endif
-    std::unique_ptr<command_deregister> _max_concurrent_bulk_load_downloading_count_command;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 
     bool _deny_client;
     bool _verbose_client_log;

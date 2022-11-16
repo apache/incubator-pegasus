@@ -43,11 +43,11 @@ class command_manager : public ::dsn::utils::singleton<command_manager>
 public:
     typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
 
-    std::unique_ptr<command_deregister>
-    register_command(const std::vector<std::string> &commands,
-                     const std::string &help_one_line,
-                     const std::string &help_long,
-                     command_handler handler) WARN_UNUSED_RESULT;
+    // TODO(yingchun): add __attribute__((warn_unused_result)) in future refactor
+    std::unique_ptr<command_deregister> register_command(const std::vector<std::string> &commands,
+                                                         const std::string &help_one_line,
+                                                         const std::string &help_long,
+                                                         command_handler handler);
 
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
@@ -74,8 +74,7 @@ private:
     utils::rw_lock_nr _lock;
     std::map<std::string, command_instance_ptr> _handlers;
 
-    std::unique_ptr<command_deregister> _help_cmd;
-    std::unique_ptr<command_deregister> _repeat_cmd;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 };
 
 class command_deregister

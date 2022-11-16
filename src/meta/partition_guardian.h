@@ -90,8 +90,7 @@ private:
     std::set<dsn::rpc_address> _assign_secondary_black_list;
     // ]
 
-    std::unique_ptr<command_deregister> _ctrl_assign_secondary_black_list;
-    std::unique_ptr<command_deregister> _ctrl_assign_delay_ms;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
     uint64_t _replica_assign_delay_ms_for_dropouts;
 
     friend class meta_partition_guardian_test;

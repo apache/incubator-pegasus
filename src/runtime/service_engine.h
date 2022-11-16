@@ -133,8 +133,7 @@ private:
     service_spec _spec;
     env_provider *_env;
 
-    std::unique_ptr<command_deregister> _get_runtime_info_cmd;
-    std::unique_ptr<command_deregister> _get_queue_info_cmd;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 
     bool _simulator;
 

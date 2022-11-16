@@ -33,9 +33,7 @@ private:
     bool need_balance_secondaries(bool balance_checker);
     bool copy_secondary(const std::shared_ptr<app_state> &app, bool place_holder);
 
-    std::unique_ptr<command_deregister> _ctrl_balancer_in_turn;
-    std::unique_ptr<command_deregister> _ctrl_only_primary_balancer;
-    std::unique_ptr<command_deregister> _ctrl_only_move_primary;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 
     // options
     bool _balancer_in_turn;
