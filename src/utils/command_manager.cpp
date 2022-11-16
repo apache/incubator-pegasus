@@ -177,6 +177,7 @@ command_manager::command_manager()
 command_manager::~command_manager()
 {
     _cmds.clear();
+    _handlers.clear();
     // TODO(yingchun): enable this check when all commands deregister correctly.
     // CHECK(_handlers.empty(), "All commands must be deregistered before command_manager been
     // destroyed", _handlers.begin()->first);

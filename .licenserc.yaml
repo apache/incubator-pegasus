@@ -610,7 +610,6 @@ header:
     - 'src/utils/test/CMakeLists.txt'
     - 'src/utils/test/address.cpp'
     - 'src/utils/test/clear.sh'
-    - 'src/utils/test/command_manager.cpp'
     - 'src/utils/test/config-bad-section.ini'
     - 'src/utils/test/config-dup-key.ini'
     - 'src/utils/test/config-dup-section.ini'
