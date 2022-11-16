@@ -921,7 +921,7 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 using metric_value_map = std::map<std::string, T>;
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-void check_and_extract_metric_value_map_from_json_string(
+void check_prototype_and_extract_value_map_from_json_string(
     metric *my_metric,
     const std::string &json_string,
     const bool is_integral,
@@ -932,18 +932,21 @@ void check_and_extract_metric_value_map_from_json_string(
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
-    auto has_metric_name = false;
+    metric_fields_type actual_metric_fields;
+
+    // The json format for each metric should be an object.
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
+        // Each metric name must be a string.
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
+            // Must be a field of metric prototype.
             if (std::strcmp(elem.name.GetString(), kMetricTypeField.c_str()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(),
                              enum_to_string(my_metric->prototype()->type()));
             } else if (std::strcmp(elem.name.GetString(), kMetricNameField.c_str()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->name().data());
-                has_metric_name = true;
             } else if (std::strcmp(elem.name.GetString(), kMetricUnitField.c_str()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(),
                              enum_to_string(my_metric->prototype()->unit()));
@@ -953,6 +956,7 @@ void check_and_extract_metric_value_map_from_json_string(
                 ASSERT_TRUE(false);
             }
         } else {
+            // Must be a field of metric value.
             T value;
             if (is_integral) {
                 ASSERT_TRUE(elem.value.IsInt64());
@@ -963,14 +967,12 @@ void check_and_extract_metric_value_map_from_json_string(
             }
             value_map[elem.name.GetString()] = value;
         }
+
+        actual_metric_fields.emplace(elem.name.GetString());
     }
 
-    // Check if the field of metric name is included as expected.
-    if (expected_metric_fields.find(kMetricNameField) != expected_metric_fields.end()) {
-        ASSERT_TRUE(has_metric_name);
-    } else {
-        ASSERT_FALSE(has_metric_name);
-    }
+    // Check if the fields of metric prototype have been provided to the client as expected.
+    ASSERT_EQ(actual_metric_fields, expected_metric_fields);
 }
 
 // Take snapshot as json format, then decode to a value map.
@@ -982,7 +984,7 @@ void generate_metric_value_map(metric *my_metric,
                                metric_value_map<T> &value_map)
 {
     auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
-    check_and_extract_metric_value_map_from_json_string(
+    check_prototype_and_extract_value_map_from_json_string(
         my_metric, json_string, is_integral, expected_metric_fields, value_map);
 }
 
@@ -1036,26 +1038,39 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+const metric_fields_type kAllPrototypeMetricFields = {
+    kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
+
 metric_fields_type get_all_single_value_metric_fields()
 {
-    metric_fields_type fields = {
-        kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
+    auto fields = kAllPrototypeMetricFields;
     fields.insert(kMetricSingleValueField);
     return fields;
 }
 
 // Test cases:
 // - with_metric_fields is empty
-// - with_metric_fields has a field that exists
-// - with_metric_fields has 2 field that exist
-// - with_metric_fields has 3 field that exist
+// - with_metric_fields has a field of prototype that exists
+// - with_metric_fields has a field of value that exists
+// - with_metric_fields has 2 fields of prototype that exist
+// - with_metric_fields has 2 fields that exist where there is a field of prototype and a field
+// of value
+// - with_metric_fields has 3 fields that exist where there is 2 fields of prototype and a field
+// of value
 // - with_metric_fields has all fields which exist
 // - with_metric_fields has a field that does not exist
 // - with_metric_fields has 2 fields both of which does not exist
-// - with_metric_fields has a field that does not exist and another field that exists
-// - with_metric_fields has a field that does not exist and another 2 fields that exist
-// - with_metric_fields has a field that does not exist and another 3 fields that exist
-// - with_metric_fields has 2 fields that does not exist and another 3 fields that exist
+// - with_metric_fields has a field that does not exist and another field of prototype that
+// exists
+// - with_metric_fields has a field that does not exist and another field of value that exists
+// - with_metric_fields has a field that does not exist and another 2 fields of prototype that
+// exists
+// - with_metric_fields has a field that does not exist and another 2 fields that exist where
+// there is a field of prototype and a field of value
+// - with_metric_fields has a field that does not exist and another 3 fields that exist where
+// there is 2 fields of prototype and a field of value
+// - with_metric_fields has 2 fields that does not exist and another 3 fields that exist where
+// there is 2 fields of prototype and a field of value
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
@@ -1070,37 +1085,47 @@ metric_fields_type get_all_single_value_metric_fields()
         } tests[] = {                                                                              \
             {"server_60", value, {}, kAllSingleValueMetricFields},                                 \
             {"server_61", value, {kMetricNameField}, {kMetricNameField}},                          \
-            {"server_62",                                                                          \
+            {"server_62", value, {kMetricSingleValueField}, {kMetricSingleValueField}},            \
+            {"server_63",                                                                          \
+             value,                                                                                \
+             {kMetricNameField, kMetricDescField},                                                 \
+             {kMetricNameField, kMetricDescField}},                                                \
+            {"server_64",                                                                          \
              value,                                                                                \
              {kMetricNameField, kMetricSingleValueField},                                          \
              {kMetricNameField, kMetricSingleValueField}},                                         \
-            {"server_63",                                                                          \
+            {"server_65",                                                                          \
              value,                                                                                \
              {kMetricTypeField, kMetricNameField, kMetricSingleValueField},                        \
              {kMetricTypeField, kMetricNameField, kMetricSingleValueField}},                       \
-            {"server_64", value, kAllSingleValueMetricFields, kAllSingleValueMetricFields},        \
-            {"server_65", value, {"field_not_exist"}, {}},                                         \
-            {"server_66", value, {"field_not_exist", "another_field_not_exist"}, {}},              \
-            {"server_67",                                                                          \
+            {"server_66", value, kAllSingleValueMetricFields, kAllSingleValueMetricFields},        \
+            {"server_67", value, {"field_not_exist"}, {}},                                         \
+            {"server_68", value, {"field_not_exist", "another_field_not_exist"}, {}},              \
+            {"server_69", value, {"field_not_exist", kMetricNameField}, {kMetricNameField}},       \
+            {"server_70",                                                                          \
              value,                                                                                \
              {"field_not_exist", kMetricSingleValueField},                                         \
              {kMetricSingleValueField}},                                                           \
-            {"server_68",                                                                          \
+            {"server_71",                                                                          \
              value,                                                                                \
-             {"field_not_exist", kMetricSingleValueField, kMetricDescField},                       \
-             {kMetricSingleValueField, kMetricDescField}},                                         \
-            {"server_69",                                                                          \
+             {"field_not_exist", kMetricTypeField, kMetricUnitField},                              \
+             {kMetricTypeField, kMetricUnitField}},                                                \
+            {"server_72",                                                                          \
              value,                                                                                \
-             {"field_not_exist", kMetricSingleValueField, kMetricUnitField, kMetricDescField},     \
-             {kMetricSingleValueField, kMetricUnitField, kMetricDescField}},                       \
-            {"server_70",                                                                          \
+             {"field_not_exist", kMetricDescField, kMetricSingleValueField},                       \
+             {kMetricDescField, kMetricSingleValueField}},                                         \
+            {"server_73",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricTypeField, kMetricNameField, kMetricSingleValueField},     \
+             {kMetricTypeField, kMetricNameField, kMetricSingleValueField}},                       \
+            {"server_74",                                                                          \
              value,                                                                                \
              {"field_not_exist",                                                                   \
               "another_field_not_exist",                                                           \
-              kMetricSingleValueField,                                                             \
               kMetricUnitField,                                                                    \
-              kMetricDescField},                                                                   \
-             {kMetricSingleValueField, kMetricUnitField, kMetricDescField}}};                      \
+              kMetricDescField,                                                                    \
+              kMetricSingleValueField},                                                            \
+             {kMetricUnitField, kMetricDescField, kMetricSingleValueField}}};                      \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                               \
@@ -1231,7 +1256,7 @@ void generate_metric_value_map(MetricType *my_metric,
 
 metric_fields_type get_all_kth_percentile_fields()
 {
-    metric_fields_type fields = {kMetricNameField};
+    auto fields = kAllPrototypeMetricFields;
     for (const auto &kth : kAllKthPercentiles) {
         fields.insert(kth.name);
     }
@@ -1240,15 +1265,39 @@ metric_fields_type get_all_kth_percentile_fields()
 
 // Test cases:
 // - with_metric_fields is empty
-// - with_metric_fields has a field that exists
-// - with_metric_fields has 2 fields that exist
-// - with_metric_fields has 3 fields that exist
+// - with_metric_fields has a field of prototype that exists
+// - with_metric_fields has a field of value that exists
+// - with_metric_fields has 2 fields of prototype that exist
+// - with_metric_fields has 2 fields of value that exist
+// - with_metric_fields has 2 fields that exist where there is a field of prototype and a field
+// of value
+// - with_metric_fields has 3 fields that exist where there is 2 fields of prototype and a field
+// of value
+// - with_metric_fields has 3 fields that exist where there is a field of prototype and 2 fields
+// of value
+// - with_metric_fields has 4 fields that exist where there is 2 fields of prototype and 2 fields
+// of value
 // - with_metric_fields has all fields that exist
 // - with_metric_fields has a field that does not exist
 // - with_metric_fields has 2 fields both of which does not exist
-// - with_metric_fields has a field that does not exist and another field that exists
-// - with_metric_fields has a field that does not exist and another 2 fields that exist
-// - with_metric_fields has 2 fields that does not exist and another 2 fields that exist
+// - with_metric_fields has a field that does not exist and another field of prototype that
+// exists
+// - with_metric_fields has a field that does not exist and another field of value that
+// exists
+// - with_metric_fields has a field that does not exist and another 2 fields of prototype that
+// exist
+// - with_metric_fields has a field that does not exist and another 2 fields of value that
+// exist
+// - with_metric_fields has a field that does not exist and another 2 fields that exist where
+// there is a field of prototype and a field of value
+// - with_metric_fields has a field that does not exist and another 3 fields that exist where
+// there is 2 fields of prototype and a field of value
+// - with_metric_fields has a field that does not exist and another 3 fields that exist where
+// there is a field of prototype and 2 fields of value
+// - with_metric_fields has a field that does not exist and another 4 fields that exist where
+// there is 2 fields of prototype and 2 fields of value
+// - with_metric_fields has 2 fields that does not exist and another 4 fields that exist where
+// there is 2 fields of prototype and 2 fields of value
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
@@ -1262,16 +1311,48 @@ metric_fields_type get_all_kth_percentile_fields()
         } tests[] = {                                                                              \
             {"server_60", {}, kAllKthPercentileFields},                                            \
             {"server_61", {kMetricNameField}, {kMetricNameField}},                                 \
-            {"server_62", {kMetricNameField, "p99"}, {kMetricNameField, "p99"}},                   \
-            {"server_63", {kMetricNameField, "p95", "p999"}, {kMetricNameField, "p95", "p999"}},   \
-            {"server_64", kAllKthPercentileFields, kAllKthPercentileFields},                       \
-            {"server_65", {"field_not_exist"}, {}},                                                \
-            {"server_66", {"field_not_exist", "another_field_not_exist"}, {}},                     \
-            {"server_67", {"file_not_exist", "p999"}, {"p999"}},                                   \
-            {"server_68", {"file_not_exist", "p50", "p99"}, {"p50", "p99"}},                       \
-            {"server_69",                                                                          \
-             {"field_not_exist", "another_field_not_exist", kMetricNameField, "p99"},              \
-             {kMetricNameField, "p99"}}};                                                          \
+            {"server_62", {"p999"}, {"p999"}},                                                     \
+            {"server_63",                                                                          \
+             {kMetricTypeField, kMetricDescField},                                                 \
+             {kMetricTypeField, kMetricDescField}},                                                \
+            {"server_64", {"p50", "p999"}, {"p50", "p999"}},                                       \
+            {"server_65", {kMetricUnitField, "p99"}, {kMetricUnitField, "p99"}},                   \
+            {"server_66",                                                                          \
+             {kMetricNameField, kMetricUnitField, "p99"},                                          \
+             {kMetricNameField, kMetricUnitField, "p99"}},                                         \
+            {"server_67", {kMetricDescField, "p95", "p999"}, {kMetricDescField, "p95", "p999"}},   \
+            {"server_68",                                                                          \
+             {kMetricTypeField, kMetricNameField, "p90", "p99"},                                   \
+             {kMetricTypeField, kMetricNameField, "p90", "p99"}},                                  \
+            {"server_69", kAllKthPercentileFields, kAllKthPercentileFields},                       \
+            {"server_70", {"field_not_exist"}, {}},                                                \
+            {"server_71", {"field_not_exist", "another_field_not_exist"}, {}},                     \
+            {"server_72", {"file_not_exist", kMetricTypeField}, {kMetricTypeField}},               \
+            {"server_73", {"file_not_exist", "p99"}, {"p99"}},                                     \
+            {"server_74",                                                                          \
+             {"field_not_exist", kMetricUnitField, kMetricDescField},                              \
+             {kMetricUnitField, kMetricDescField}},                                                \
+            {"server_75", {"file_not_exist", "p50", "p99"}, {"p50", "p99"}},                       \
+            {"server_76",                                                                          \
+             {"field_not_exist", kMetricNameField, "p999"},                                        \
+             {kMetricNameField, "p999"}},                                                          \
+            {"server_77",                                                                          \
+             {"field_not_exist", kMetricTypeField, kMetricUnitField, "p99"},                       \
+             {kMetricTypeField, kMetricUnitField, "p99"}},                                         \
+            {"server_78",                                                                          \
+             {"field_not_exist", kMetricDescField, "p90", "p999"},                                 \
+             {kMetricDescField, "p90", "p999"}},                                                   \
+            {"server_79",                                                                          \
+             {"field_not_exist", kMetricNameField, kMetricUnitField, "p95", "p99"},                \
+             {kMetricNameField, kMetricUnitField, "p95", "p99"}},                                  \
+            {"server_80",                                                                          \
+             {"field_not_exist",                                                                   \
+              "another_field_not_exist",                                                           \
+              kMetricTypeField,                                                                    \
+              kMetricDescField,                                                                    \
+              "p50",                                                                               \
+              "p999"},                                                                             \
+             {kMetricTypeField, kMetricDescField, "p50", "p999"}}};                                \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                 \

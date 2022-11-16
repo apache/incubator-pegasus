@@ -138,17 +138,20 @@ using metric_fields_type = std::unordered_set<std::string>;
 struct metric_filters
 {
     // According to the parameters requested by client, this function will filter metric
-    // fields that will be put in the response. `with_metric_fields` includes all the metric
-    // fields that are wanted by client.
-    bool has_metric_field(const std::string &field_name) const
+    // fields that will be put in the response.
+    bool include_metric_field(const std::string &field_name) const
     {
+        // NOTICE: empty `with_metric_fields` means every field is required by client.
         if (with_metric_fields.empty()) {
-            // Any metric field is needed.
             return true;
         }
+
         return with_metric_fields.find(field_name) != with_metric_fields.end();
     }
 
+    // `with_metric_fields` includes all the metric fields that are wanted by client. If it
+    // is empty, there will be no restriction: in other words, all fields owned by the metric
+    // will be put in the response.
     metric_fields_type with_metric_fields;
 };
 
@@ -389,7 +392,7 @@ protected:
                        const T &value,
                        const metric_filters &filters) const
     {
-        if (!filters.has_metric_field(field_name)) {
+        if (!filters.include_metric_field(field_name)) {
             return;
         }
 
