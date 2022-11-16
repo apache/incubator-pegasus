@@ -1036,16 +1036,31 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+metric_fields_type get_all_single_value_metric_fields()
+{
+    metric_fields_type fields = {
+        kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
+    fields.insert(kMetricSingleValueField);
+    return fields;
+}
+
 // Test cases:
 // - with_metric_fields is empty
 // - with_metric_fields has a field that exists
+// - with_metric_fields has 2 field that exist
+// - with_metric_fields has 3 field that exist
 // - with_metric_fields has all fields which exist
 // - with_metric_fields has a field that does not exist
-// - with_metric_fields has a field that does not exist and another field that exists
 // - with_metric_fields has 2 fields both of which does not exist
+// - with_metric_fields has a field that does not exist and another field that exists
+// - with_metric_fields has a field that does not exist and another 2 fields that exist
+// - with_metric_fields has a field that does not exist and another 3 fields that exist
+// - with_metric_fields has 2 fields that does not exist and another 3 fields that exist
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
+        static const metric_fields_type kAllSingleValueMetricFields =                              \
+            get_all_single_value_metric_fields();                                                  \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
@@ -1055,13 +1070,37 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         } tests[] = {                                                                              \
             {"server_60", value, {}, kAllSingleValueMetricFields},                                 \
             {"server_61", value, {kMetricNameField}, {kMetricNameField}},                          \
-            {"server_62", value, kAllSingleValueMetricFields, kAllSingleValueMetricFields},        \
-            {"server_63", value, {"field_not_exist"}, {}},                                         \
-            {"server_64",                                                                          \
+            {"server_62",                                                                          \
+             value,                                                                                \
+             {kMetricNameField, kMetricSingleValueField},                                          \
+             {kMetricNameField, kMetricSingleValueField}},                                         \
+            {"server_63",                                                                          \
+             value,                                                                                \
+             {kMetricTypeField, kMetricNameField, kMetricSingleValueField},                        \
+             {kMetricTypeField, kMetricNameField, kMetricSingleValueField}},                       \
+            {"server_64", value, kAllSingleValueMetricFields, kAllSingleValueMetricFields},        \
+            {"server_65", value, {"field_not_exist"}, {}},                                         \
+            {"server_66", value, {"field_not_exist", "another_field_not_exist"}, {}},              \
+            {"server_67",                                                                          \
              value,                                                                                \
              {"field_not_exist", kMetricSingleValueField},                                         \
              {kMetricSingleValueField}},                                                           \
-            {"server_65", value, {"field_not_exist", "another_field_not_exist"}, {}}};             \
+            {"server_68",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricSingleValueField, kMetricDescField},                       \
+             {kMetricSingleValueField, kMetricDescField}},                                         \
+            {"server_69",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricSingleValueField, kMetricUnitField, kMetricDescField},     \
+             {kMetricSingleValueField, kMetricUnitField, kMetricDescField}},                       \
+            {"server_70",                                                                          \
+             value,                                                                                \
+             {"field_not_exist",                                                                   \
+              "another_field_not_exist",                                                           \
+              kMetricSingleValueField,                                                             \
+              kMetricUnitField,                                                                    \
+              kMetricDescField},                                                                   \
+             {kMetricSingleValueField, kMetricUnitField, kMetricDescField}}};                      \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
             TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                               \
@@ -1190,6 +1229,15 @@ void generate_metric_value_map(MetricType *my_metric,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+metric_fields_type get_all_kth_percentile_fields()
+{
+    metric_fields_type fields = {kMetricNameField};
+    for (const auto &kth : kAllKthPercentiles) {
+        fields.insert(kth.name);
+    }
+    return fields;
+}
+
 // Test cases:
 // - with_metric_fields is empty
 // - with_metric_fields has a field that exists
@@ -1204,6 +1252,8 @@ void generate_metric_value_map(MetricType *my_metric,
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
+        static const metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields(); \
+                                                                                                   \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \

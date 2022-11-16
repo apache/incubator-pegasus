@@ -164,13 +164,6 @@ metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}
 
 metric_prototype::~metric_prototype() {}
 
-metric_fields_type get_all_single_value_metric_fields()
-{
-    metric_fields_type fields = kMetricPrototypeFields;
-    fields.insert(kMetricSingleValueField);
-    return fields;
-}
-
 metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
@@ -272,15 +265,6 @@ std::set<kth_percentile_type> get_all_kth_percentile_types()
         all_types.insert(static_cast<kth_percentile_type>(i));
     }
     return all_types;
-}
-
-metric_fields_type get_all_kth_percentile_fields()
-{
-    metric_fields_type fields = {kMetricNameField};
-    for (const auto &kth : kAllKthPercentiles) {
-        fields.insert(kth.name);
-    }
-    return fields;
 }
 
 } // namespace dsn

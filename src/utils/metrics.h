@@ -357,12 +357,7 @@ const std::string kMetricTypeField = "type";
 const std::string kMetricNameField = "name";
 const std::string kMetricUnitField = "unit";
 const std::string kMetricDescField = "desc";
-const metric_fields_type kMetricPrototypeFields = {
-    kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
-
 const std::string kMetricSingleValueField = "value";
-metric_fields_type get_all_single_value_metric_fields();
-const metric_fields_type kAllSingleValueMetricFields = get_all_single_value_metric_fields();
 
 // Base class for each type of metric.
 // Every metric class should inherit from this class.
@@ -701,9 +696,6 @@ struct kth_percentile
 
 const std::vector<kth_percentile> kAllKthPercentiles = {
     {"p50", 0.5}, {"p90", 0.9}, {"p95", 0.95}, {"p99", 0.99}, {"p999", 0.999}};
-
-metric_fields_type get_all_kth_percentile_fields();
-const metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields();
 
 inline std::string kth_percentile_to_name(const kth_percentile_type &type)
 {
