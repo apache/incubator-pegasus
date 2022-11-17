@@ -56,7 +56,7 @@ DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
 
 static void print_header(FILE *fp, dsn_log_level_t log_level)
 {
-    static char s_level_char[] = "IDWEF";
+    static char s_level_char[] = "DIWEF";
 
     uint64_t ts = dsn_now_ns();
     std::string time_str;
