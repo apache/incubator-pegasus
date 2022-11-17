@@ -119,11 +119,7 @@ nfs_client_impl::nfs_client_impl()
     register_cli_commands();
 }
 
-nfs_client_impl::~nfs_client_impl()
-{
-    _tracker.cancel_outstanding_tasks();
-    UNREGISTER_VALID_HANDLER(_nfs_max_copy_rate_megabytes_cmd);
-}
+nfs_client_impl::~nfs_client_impl() { _tracker.cancel_outstanding_tasks(); }
 
 void nfs_client_impl::begin_remote_copy(std::shared_ptr<remote_copy_request> &rci,
                                         aio_task *nfs_task)

@@ -93,24 +93,15 @@ static const char *unlock_state = "unlock";
 server_state::server_state()
     : _meta_svc(nullptr),
       _add_secondary_enable_flow_control(false),
-      _add_secondary_max_count_for_one_node(0),
-      _cli_dump_handle(nullptr),
-      _ctrl_add_secondary_enable_flow_control(nullptr),
-      _ctrl_add_secondary_max_count_for_one_node(nullptr)
+      _add_secondary_max_count_for_one_node(0)
 {
 }
 
-server_state::~server_state()
-{
-    _tracker.cancel_outstanding_tasks();
-    UNREGISTER_VALID_HANDLER(_cli_dump_handle);
-    UNREGISTER_VALID_HANDLER(_ctrl_add_secondary_enable_flow_control);
-    UNREGISTER_VALID_HANDLER(_ctrl_add_secondary_max_count_for_one_node);
-}
+server_state::~server_state() { _tracker.cancel_outstanding_tasks(); }
 
 void server_state::register_cli_commands()
 {
-    _cli_dump_handle = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.dump"},
         "meta.dump - dump app_states of meta server to local file",
         "meta.dump -t|--target target_file",
@@ -132,20 +123,18 @@ void server_state::register_cli_commands()
                 }
             }
             return std::string(err.to_string());
-        });
-    CHECK_NOTNULL(_cli_dump_handle, "register cli handler failed");
+        }));
 
-    _ctrl_add_secondary_enable_flow_control = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_enable_flow_control"},
         "meta.lb.add_secondary_enable_flow_control <true|false>",
         "control whether enable add secondary flow control",
         [this](const std::vector<std::string> &args) {
             return remote_command_set_bool_flag(
                 _add_secondary_enable_flow_control, "lb.add_secondary_enable_flow_control", args);
-        });
-    CHECK(_ctrl_add_secondary_enable_flow_control, "register cli handler failed");
+        }));
 
-    _ctrl_add_secondary_max_count_for_one_node = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.lb.add_secondary_max_count_for_one_node"},
         "meta.lb.add_secondary_max_count_for_one_node [num | DEFAULT]",
         "control the max count to add secondary for one node",
@@ -167,8 +156,7 @@ void server_state::register_cli_commands()
                 }
             }
             return result;
-        });
-    CHECK(_ctrl_add_secondary_max_count_for_one_node, "register cli handler failed");
+        }));
 }
 
 void server_state::initialize(meta_service *meta_svc, const std::string &apps_root)

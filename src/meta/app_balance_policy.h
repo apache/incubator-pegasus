@@ -25,20 +25,15 @@ class app_balance_policy : public load_balance_policy
 {
 public:
     app_balance_policy(meta_service *svc);
-    ~app_balance_policy();
+    ~app_balance_policy() = default;
 
-    void balance(bool checker, const meta_view *global_view, migration_list *list);
+    void balance(bool checker, const meta_view *global_view, migration_list *list) override;
 
 private:
     bool need_balance_secondaries(bool balance_checker);
     bool copy_secondary(const std::shared_ptr<app_state> &app, bool place_holder);
 
-    void register_ctrl_commands();
-    void unregister_ctrl_commands();
-
-    dsn_handle_t _ctrl_balancer_in_turn;
-    dsn_handle_t _ctrl_only_primary_balancer;
-    dsn_handle_t _ctrl_only_move_primary;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 
     // options
     bool _balancer_in_turn;

@@ -39,6 +39,8 @@
 
 namespace dsn {
 
+class command_deregister;
+
 /// Registry of all perf counters, users can get/create a specific perf counter
 /// via `get_app_counter` and `get_global_counter`.
 /// To push metrics to some monitoring systems (e.g Prometheus), users can
@@ -134,6 +136,8 @@ public:
         std::function<bool(const std::string &arg, const counter_snapshot &cs)> filter) const;
 
 private:
+    friend class utils::singleton<perf_counters>;
+
     perf_counters();
     ~perf_counters();
 
@@ -165,12 +169,7 @@ private:
     // timestamp in seconds when take snapshot of current counters
     int64_t _timestamp;
 
-    dsn_handle_t _perf_counters_cmd;
-    dsn_handle_t _perf_counters_by_substr_cmd;
-    dsn_handle_t _perf_counters_by_prefix_cmd;
-    dsn_handle_t _perf_counters_by_postfix_cmd;
-
-    friend class utils::singleton<perf_counters>;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 };
 
 } // namespace dsn

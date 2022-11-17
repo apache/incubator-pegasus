@@ -88,5 +88,3 @@
 #define DSN_MAX_CALLBAC_COUNT 32
 #define DSN_MAX_APP_COUNT_IN_SAME_PROCESS 256
 #define DSN_MAX_PATH 1024
-
-typedef void *dsn_handle_t;

@@ -170,10 +170,19 @@ generate_balancer_request(const app_mapper &apps,
 load_balance_policy::load_balance_policy(meta_service *svc)
     : _svc(svc), _ctrl_balancer_ignored_apps(nullptr)
 {
-    register_ctrl_commands();
+    static std::once_flag flag;
+    std::call_once(flag, [&]() {
+        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
+            {"meta.lb.ignored_app_list"},
+            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
+            "get, set and clear balancer ignored_app_list",
+            [this](const std::vector<std::string> &args) {
+                return remote_command_balancer_ignored_app_ids(args);
+            });
+    });
 }
 
-load_balance_policy::~load_balance_policy() { unregister_ctrl_commands(); }
+load_balance_policy::~load_balance_policy() {}
 
 void load_balance_policy::init(const meta_view *global_view, migration_list *list)
 {
@@ -371,25 +380,6 @@ bool load_balance_policy::execute_balance(
         }
     }
     return true;
-}
-
-void load_balance_policy::register_ctrl_commands()
-{
-    static std::once_flag flag;
-    std::call_once(flag, [&]() {
-        _ctrl_balancer_ignored_apps = dsn::command_manager::instance().register_command(
-            {"meta.lb.ignored_app_list"},
-            "meta.lb.ignored_app_list <get|set|clear> [app_id1,app_id2..]",
-            "get, set and clear balancer ignored_app_list",
-            [this](const std::vector<std::string> &args) {
-                return remote_command_balancer_ignored_app_ids(args);
-            });
-    });
-}
-
-void load_balance_policy::unregister_ctrl_commands()
-{
-    UNREGISTER_VALID_HANDLER(_ctrl_balancer_ignored_apps);
 }
 
 std::string

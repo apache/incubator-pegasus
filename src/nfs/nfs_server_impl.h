@@ -54,11 +54,12 @@ public:
 
     void register_cli_commands();
 
+    // TODO(yingchun): seems nobody call it, can be removed?
     void close_service()
     {
         unregister_rpc_handler(RPC_NFS_COPY);
         unregister_rpc_handler(RPC_NFS_GET_FILE_SIZE);
-        UNREGISTER_VALID_HANDLER(_nfs_max_send_rate_megabytes_cmd);
+        _nfs_max_send_rate_megabytes_cmd.reset();
     }
 
 protected:
@@ -128,7 +129,7 @@ private:
     perf_counter_wrapper _recent_copy_data_size;
     perf_counter_wrapper _recent_copy_fail_count;
 
-    dsn_handle_t _nfs_max_send_rate_megabytes_cmd;
+    std::unique_ptr<command_deregister> _nfs_max_send_rate_megabytes_cmd;
 
     dsn::task_tracker _tracker;
 };

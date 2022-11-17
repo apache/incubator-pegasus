@@ -30,32 +30,36 @@
 
 #include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
+#include "utils/ports.h"
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
 
 namespace dsn {
+
+class command_deregister;
 
 class command_manager : public ::dsn::utils::singleton<command_manager>
 {
 public:
     typedef std::function<std::string(const std::vector<std::string> &)> command_handler;
 
-    command_manager();
-
-    ~command_manager();
-
-    dsn_handle_t register_command(const std::vector<std::string> &commands,
-                                  const std::string &help_one_line,
-                                  const std::string &help_long,
-                                  command_handler handler);
-
-    void deregister_command(dsn_handle_t handle);
+    // TODO(yingchun): add __attribute__((warn_unused_result)) in future refactor
+    std::unique_ptr<command_deregister> register_command(const std::vector<std::string> &commands,
+                                                         const std::string &help_one_line,
+                                                         const std::string &help_long,
+                                                         command_handler handler);
 
     bool run_command(const std::string &cmd,
                      const std::vector<std::string> &args,
                      /*out*/ std::string &output);
 
 private:
+    friend class command_deregister;
+    friend class utils::singleton<command_manager>;
+
+    command_manager();
+    ~command_manager();
+
     struct command_instance : public ref_counter
     {
         std::vector<std::string> commands;
@@ -64,20 +68,32 @@ private:
         command_handler handler;
     };
 
+    void deregister_command(uintptr_t handle);
+
     typedef ref_ptr<command_instance> command_instance_ptr;
     utils::rw_lock_nr _lock;
     std::map<std::string, command_instance_ptr> _handlers;
+
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
+};
+
+class command_deregister
+{
+public:
+    command_deregister(uintptr_t id) : cmd_id_(id) {}
+    ~command_deregister()
+    {
+        if (cmd_id_ != 0) {
+            dsn::command_manager::instance().deregister_command(cmd_id_);
+            cmd_id_ = 0;
+        }
+    }
+
+private:
+    uintptr_t cmd_id_ = 0;
 };
 
 } // namespace dsn
-
-#define UNREGISTER_VALID_HANDLER(ptr)                                                              \
-    do {                                                                                           \
-        if (ptr != nullptr) {                                                                      \
-            dsn::command_manager::instance().deregister_command(ptr);                              \
-            ptr = nullptr;                                                                         \
-        }                                                                                          \
-    } while (0)
 
 // if args are empty, then return the old flag;
 // otherwise set the proper "flag" according to args

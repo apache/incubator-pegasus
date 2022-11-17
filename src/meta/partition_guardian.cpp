@@ -667,26 +667,22 @@ void partition_guardian::finish_cure_proposal(meta_view &view,
 
 void partition_guardian::register_ctrl_commands()
 {
-    _ctrl_assign_delay_ms = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.lb.assign_delay_ms"},
         "lb.assign_delay_ms [num | DEFAULT]",
         "control the replica_assign_delay_ms_for_dropouts config",
-        [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); });
+        [this](const std::vector<std::string> &args) { return ctrl_assign_delay_ms(args); }));
 
-    _ctrl_assign_secondary_black_list = dsn::command_manager::instance().register_command(
+    _cmds.emplace_back(dsn::command_manager::instance().register_command(
         {"meta.lb.assign_secondary_black_list"},
         "lb.assign_secondary_black_list [<ip:port,ip:port,ip:port>|clear]",
         "control the assign secondary black list",
         [this](const std::vector<std::string> &args) {
             return ctrl_assign_secondary_black_list(args);
-        });
+        }));
 }
 
-void partition_guardian::unregister_ctrl_commands()
-{
-    UNREGISTER_VALID_HANDLER(_ctrl_assign_delay_ms);
-    UNREGISTER_VALID_HANDLER(_ctrl_assign_secondary_black_list);
-}
+void partition_guardian::unregister_ctrl_commands() { _cmds.clear(); }
 
 std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::string> &args)
 {

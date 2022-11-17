@@ -33,7 +33,7 @@ public:
     cluster_balance_policy(meta_service *svc);
     ~cluster_balance_policy() = default;
 
-    void balance(bool checker, const meta_view *global_view, migration_list *list);
+    void balance(bool checker, const meta_view *global_view, migration_list *list) override;
 
 private:
     struct cluster_migration_info;
