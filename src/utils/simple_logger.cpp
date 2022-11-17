@@ -56,6 +56,12 @@ DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
 
 static void print_header(FILE *fp, dsn_log_level_t log_level)
 {
+    // The leading character of each log lines, corresponding to the log level
+    // D: Debug
+    // I: Info
+    // W: Warning
+    // E: Error
+    // F: Fatal
     static char s_level_char[] = "DIWEF";
 
     uint64_t ts = dsn_now_ns();
