@@ -665,40 +665,63 @@ using concurrent_volatile_counter_ptr = counter_ptr<concurrent_long_adder, true>
 template <typename Adder = striped_long_adder>
 using volatile_counter_prototype = metric_prototype_with<counter<Adder, true>>;
 
-// All supported kinds of kth percentiles. User can configure required kth percentiles for
-// each percentile. Only configured kth percentiles will be computed. This can reduce CPU
-// consumption.
-enum class kth_percentile_type : size_t
-{
-    P50,
-    P90,
-    P95,
-    P99,
-    P999,
-    COUNT,
-    INVALID
-};
+#define KTH_PERCENTILE(prefix, kth) prefix##kth
+#define KTH_PERCENTILE_TYPE(kth) KTH_PERCENTILE(P, kth)
+#define ENUM_KTH_PERCENTILE_TYPE(qualifier, kth) qualifier KTH_PERCENTILE_TYPE(kth)
+#define KTH_PERCENTILE_NAME(kth) KTH_PERCENTILE(p, kth)
 
-// Support to load from configuration files for percentiles.
-ENUM_BEGIN(kth_percentile_type, kth_percentile_type::INVALID)
-ENUM_REG(kth_percentile_type::P50)
-ENUM_REG(kth_percentile_type::P90)
-ENUM_REG(kth_percentile_type::P95)
-ENUM_REG(kth_percentile_type::P99)
-ENUM_REG(kth_percentile_type::P999)
-ENUM_END(kth_percentile_type)
+#define ENUM_REG_WITH_KTH_PERCENTILE_TYPE(kth)                                                     \
+    ENUM_REG_WITH_CUSTOM_NAME(ENUM_KTH_PERCENTILE_TYPE(kth_percentile_type::, kth),                \
+                              KTH_PERCENTILE_NAME(kth))
 
-std::set<kth_percentile_type> get_all_kth_percentile_types();
-const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
-
-struct kth_percentile
+struct kth_percentile_property
 {
     std::string name;
     double decimal;
 };
 
-const std::vector<kth_percentile> kAllKthPercentiles = {
-    {"p50", 0.5}, {"p90", 0.9}, {"p95", 0.95}, {"p99", 0.99}, {"p999", 0.999}};
+#define STRINGIFY_HELPER(x) #x
+#define STRINGIFY(x) STRINGIFY_HELPER(x)
+#define STRINGIFY_KTH_PERCENTILE_NAME(kth) STRINGIFY(KTH_PERCENTILE_NAME(kth))
+#define KTH_TO_DECIMAL(kth) 0.##kth
+#define KTH_PERCENTILE_PROPERTY_LIST(kth)                                                          \
+    {                                                                                              \
+        STRINGIFY_KTH_PERCENTILE_NAME(kth), KTH_TO_DECIMAL(kth)                                    \
+    }
+
+// All supported kinds of kth percentiles. User can configure required kth percentiles for
+// each percentile. Only configured kth percentiles will be computed. This can reduce CPU
+// consumption.
+#define ALL_KTH_PERCENTILE_TYPES(qualifier)                                                        \
+    ENUM_KTH_PERCENTILE_TYPE(qualifier, 50)                                                        \
+    , ENUM_KTH_PERCENTILE_TYPE(qualifier, 90), ENUM_KTH_PERCENTILE_TYPE(qualifier, 95),            \
+        ENUM_KTH_PERCENTILE_TYPE(qualifier, 99), ENUM_KTH_PERCENTILE_TYPE(qualifier, 999)
+
+enum class kth_percentile_type : size_t
+{
+    ALL_KTH_PERCENTILE_TYPES(),
+    COUNT,
+    INVALID,
+};
+
+// Support to load from configuration files for percentiles.
+ENUM_BEGIN(kth_percentile_type, kth_percentile_type::INVALID)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(50)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(90)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(95)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(99)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(999)
+ENUM_END(kth_percentile_type)
+
+// Generate decimals from kth percentiles.
+const std::vector<kth_percentile_property> kAllKthPercentiles = {KTH_PERCENTILE_PROPERTY_LIST(50),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(90),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(95),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(99),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(999)};
+
+const std::set<kth_percentile_type> kAllKthPercentileTypes = {
+    ALL_KTH_PERCENTILE_TYPES(kth_percentile_type::)};
 
 inline std::string kth_percentile_to_name(const kth_percentile_type &type)
 {
@@ -709,6 +732,7 @@ inline std::string kth_percentile_to_name(const kth_percentile_type &type)
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
+    CHECK_LT(kth_index, kAllKthPercentiles.size());
     auto decimal = kAllKthPercentiles[kth_index].decimal;
     // Since the kth percentile is the value that is greater than k percent of the data values after
     // ranking them (https://people.richland.edu/james/ictcm/2001/descriptive/helpposition.html),
