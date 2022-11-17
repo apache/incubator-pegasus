@@ -26,7 +26,6 @@
 
 #include <rocksdb/slice.h>
 
-#include "common/api_common.h"
 #include "utils/api_utilities.h"
 #include "utils/blob.h"
 #include "utils/endians.h"

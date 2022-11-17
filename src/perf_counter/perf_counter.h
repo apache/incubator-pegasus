@@ -32,7 +32,6 @@
 
 #include "utils/enum_helper.h"
 #include "utils/autoref_ptr.h"
-#include "utils/dlib.h"
 
 typedef enum dsn_perf_counter_type_t {
     COUNTER_TYPE_NUMBER,

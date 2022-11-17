@@ -18,10 +18,9 @@
 #include "clock.h"
 
 #include "time_utils.h"
-#include "dlib.h"
 #include "smart_pointers.h"
 
-DSN_API uint64_t dsn_now_ns() { return dsn::utils::clock::instance()->now_ns(); }
+uint64_t dsn_now_ns() { return dsn::utils::clock::instance()->now_ns(); }
 
 namespace dsn {
 namespace utils {

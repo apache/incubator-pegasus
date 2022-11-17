@@ -32,7 +32,6 @@
 #include "runtime/rpc/message_parser.h"
 #include "utils/rpc_address.h"
 #include "utils/exp_delay.h"
-#include "utils/dlib.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include <atomic>
 
@@ -73,7 +72,7 @@ public:
     // tracing)
     //                  all downcalls should be redirected to the inner provider in the end
     //
-    DSN_API network(rpc_engine *srv, network *inner_provider);
+    network(rpc_engine *srv, network *inner_provider);
     virtual ~network() {}
 
     //
@@ -104,25 +103,25 @@ public:
     //
     // utilities
     //
-    DSN_API service_node *node() const;
+    service_node *node() const;
 
     //
     // called when network received a complete request message
     //
-    DSN_API void on_recv_request(message_ex *msg, int delay_ms);
+    void on_recv_request(message_ex *msg, int delay_ms);
 
     //
     // called when network received a complete reply message or network failed,
     // if network failed, the 'msg' will be nullptr
     //
-    DSN_API void on_recv_reply(uint64_t id, message_ex *msg, int delay_ms);
+    void on_recv_reply(uint64_t id, message_ex *msg, int delay_ms);
 
     //
     // create a message parser for
     //  (1) extracing blob from a RPC request message for low layer'
     //  (2) parsing a incoming blob message to get the rpc_message
     //
-    DSN_API message_parser *new_message_parser(network_header_format hdr_format);
+    message_parser *new_message_parser(network_header_format hdr_format);
 
     rpc_engine *engine() const { return _engine; }
     int max_buffer_block_count_per_send() const { return _max_buffer_block_count_per_send; }
@@ -130,7 +129,7 @@ public:
     network_header_format unknown_msg_hdr_format() const { return _unknown_msg_header_format; }
     int message_buffer_block_size() const { return _message_buffer_block_size; }
 
-    DSN_API static uint32_t get_local_ipv4();
+    static uint32_t get_local_ipv4();
 
 protected:
     rpc_engine *_engine;
@@ -142,8 +141,7 @@ protected:
 
 private:
     friend class rpc_engine;
-    DSN_API void reset_parser_attr(network_header_format client_hdr_format,
-                                   int message_buffer_block_size);
+    void reset_parser_attr(network_header_format client_hdr_format, int message_buffer_block_size);
 };
 
 /*!
@@ -152,27 +150,27 @@ private:
 class connection_oriented_network : public network
 {
 public:
-    DSN_API connection_oriented_network(rpc_engine *srv, network *inner_provider);
+    connection_oriented_network(rpc_engine *srv, network *inner_provider);
     virtual ~connection_oriented_network() {}
 
     // server session management
-    DSN_API rpc_session_ptr get_server_session(::dsn::rpc_address ep);
-    DSN_API void on_server_session_accepted(rpc_session_ptr &s);
-    DSN_API void on_server_session_disconnected(rpc_session_ptr &s);
+    rpc_session_ptr get_server_session(::dsn::rpc_address ep);
+    void on_server_session_accepted(rpc_session_ptr &s);
+    void on_server_session_disconnected(rpc_session_ptr &s);
 
     // Checks if IP of the incoming session has too much connections.
     // Related config: [network] conn_threshold_per_ip. No limit if the value is 0.
-    DSN_API bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
+    bool check_if_conn_threshold_exceeded(::dsn::rpc_address ep);
 
     // client session management
-    DSN_API void on_client_session_connected(rpc_session_ptr &s);
-    DSN_API void on_client_session_disconnected(rpc_session_ptr &s);
+    void on_client_session_connected(rpc_session_ptr &s);
+    void on_client_session_disconnected(rpc_session_ptr &s);
 
     // called upon RPC call, rpc client session is created on demand
-    DSN_API virtual void send_message(message_ex *request) override;
+    virtual void send_message(message_ex *request) override;
 
     // called by rpc engine
-    DSN_API virtual void inject_drop_message(message_ex *msg, bool is_send) override;
+    virtual void inject_drop_message(message_ex *msg, bool is_send) override;
 
     // to be defined
     virtual rpc_session_ptr create_client_session(::dsn::rpc_address server_addr) = 0;

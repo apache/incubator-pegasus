@@ -29,7 +29,6 @@
 #include "task.h"
 
 #include "perf_counter/perf_counter_wrapper.h"
-#include "utils/dlib.h"
 
 namespace dsn {
 
@@ -55,8 +54,8 @@ public:
     typedef task_queue *(*factory)(task_worker_pool *, int, task_queue *);
 
 public:
-    DSN_API task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
-    DSN_API virtual ~task_queue();
+    task_queue(task_worker_pool *pool, int index, task_queue *inner_provider);
+    virtual ~task_queue();
 
     virtual void enqueue(task *task) = 0;
     // dequeue may return more than 1 tasks, but there is a configured

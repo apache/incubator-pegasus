@@ -32,7 +32,6 @@
 
 #include <fstream>
 
-#include "common/api_common.h"
 #include "runtime/api_task.h"
 #include "runtime/api_layer1.h"
 #include "runtime/app_model.h"
@@ -81,18 +80,15 @@ static struct _all_info_
 
 } dsn_all;
 
-DSN_API volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
+volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
     return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code,
                                                                                            hash);
 }
 
-DSN_API bool dsn_task_is_running_inside(dsn::task *t)
-{
-    return ::dsn::task::get_current_task() == t;
-}
+bool dsn_task_is_running_inside(dsn::task *t) { return ::dsn::task::get_current_task() == t; }
 
-DSN_API void dsn_coredump()
+void dsn_coredump()
 {
     ::dsn::utils::coredump::write();
     ::abort();
@@ -105,24 +101,21 @@ DSN_API void dsn_coredump()
 //------------------------------------------------------------------------------
 
 // rpc calls
-DSN_API dsn::rpc_address dsn_primary_address()
-{
-    return ::dsn::task::get_current_rpc()->primary_address();
-}
+dsn::rpc_address dsn_primary_address() { return ::dsn::task::get_current_rpc()->primary_address(); }
 
-DSN_API bool dsn_rpc_register_handler(dsn::task_code code,
-                                      const char *extra_name,
-                                      const dsn::rpc_request_handler &cb)
+bool dsn_rpc_register_handler(dsn::task_code code,
+                              const char *extra_name,
+                              const dsn::rpc_request_handler &cb)
 {
     return ::dsn::task::get_current_node()->rpc_register_handler(code, extra_name, cb);
 }
 
-DSN_API bool dsn_rpc_unregiser_handler(dsn::task_code code)
+bool dsn_rpc_unregiser_handler(dsn::task_code code)
 {
     return ::dsn::task::get_current_node()->rpc_unregister_handler(code);
 }
 
-DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
+void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_call)
 {
     CHECK_EQ_MSG(rpc_call->spec().type, TASK_TYPE_RPC_RESPONSE, "invalid task_type");
 
@@ -131,7 +124,7 @@ DSN_API void dsn_rpc_call(dsn::rpc_address server, dsn::rpc_response_task *rpc_c
     ::dsn::task::get_current_rpc()->call(msg, dsn::rpc_response_task_ptr(rpc_call));
 }
 
-DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request)
+dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
@@ -151,7 +144,7 @@ DSN_API dsn::message_ex *dsn_rpc_call_wait(dsn::rpc_address server, dsn::message
     }
 }
 
-DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
+void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *request)
 {
     auto msg = ((::dsn::message_ex *)request);
     msg->server_address = server;
@@ -159,13 +152,13 @@ DSN_API void dsn_rpc_call_one_way(dsn::rpc_address server, dsn::message_ex *requ
     ::dsn::task::get_current_rpc()->call(msg, nullptr);
 }
 
-DSN_API void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err)
+void dsn_rpc_reply(dsn::message_ex *response, dsn::error_code err)
 {
     auto msg = ((::dsn::message_ex *)response);
     ::dsn::task::get_current_rpc()->reply(msg, err);
 }
 
-DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
+void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
 {
     ::dsn::task::get_current_rpc()->forward((::dsn::message_ex *)(request),
                                             ::dsn::rpc_address(addr));
@@ -180,13 +173,13 @@ DSN_API void dsn_rpc_forward(dsn::message_ex *request, dsn::rpc_address addr)
 static bool
 run(const char *config_file, const char *config_arguments, bool is_server, std::string &app_list);
 
-DSN_API bool dsn_run_config(const char *config, bool is_server)
+bool dsn_run_config(const char *config, bool is_server)
 {
     std::string name;
     return run(config, nullptr, is_server, name);
 }
 
-NORETURN DSN_API void dsn_exit(int code)
+[[noreturn]] void dsn_exit(int code)
 {
     printf("dsn exit with code %d\n", code);
     fflush(stdout);
@@ -195,7 +188,7 @@ NORETURN DSN_API void dsn_exit(int code)
     _exit(code);
 }
 
-DSN_API bool dsn_mimic_app(const char *app_role, int index)
+bool dsn_mimic_app(const char *app_role, int index)
 {
     auto worker = ::dsn::task::get_current_worker2();
     CHECK(worker == nullptr, "cannot call dsn_mimic_app in rDSN threads");
@@ -234,7 +227,7 @@ DSN_API bool dsn_mimic_app(const char *app_role, int index)
 //       port variable specified in config.ini
 //       config.ini to start ALL apps as a new process
 //
-DSN_API void dsn_run(int argc, char **argv, bool is_server)
+void dsn_run(int argc, char **argv, bool is_server)
 {
     if (argc < 2) {
         printf(

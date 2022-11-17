@@ -34,7 +34,7 @@
 #include "utils/smart_pointers.h"
 #include "simple_logger.h"
 
-DSN_API dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_DEBUG;
+dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_DEBUG;
 DSN_DEFINE_string("core",
                   logging_start_level,
                   "LOG_LEVEL_DEBUG",
@@ -118,27 +118,27 @@ void dsn_log_init(const std::string &logging_factory_name,
     }
 }
 
-DSN_API dsn_log_level_t dsn_log_get_start_level() { return dsn_log_start_level; }
+dsn_log_level_t dsn_log_get_start_level() { return dsn_log_start_level; }
 
-DSN_API void dsn_log_set_start_level(dsn_log_level_t level) { dsn_log_start_level = level; }
+void dsn_log_set_start_level(dsn_log_level_t level) { dsn_log_start_level = level; }
 
-DSN_API void dsn_logv(const char *file,
-                      const char *function,
-                      const int line,
-                      dsn_log_level_t log_level,
-                      const char *fmt,
-                      va_list args)
+void dsn_logv(const char *file,
+              const char *function,
+              const int line,
+              dsn_log_level_t log_level,
+              const char *fmt,
+              va_list args)
 {
     dsn::logging_provider *logger = dsn::logging_provider::instance();
     logger->dsn_logv(file, function, line, log_level, fmt, args);
 }
 
-DSN_API void dsn_logf(const char *file,
-                      const char *function,
-                      const int line,
-                      dsn_log_level_t log_level,
-                      const char *fmt,
-                      ...)
+void dsn_logf(const char *file,
+              const char *function,
+              const int line,
+              dsn_log_level_t log_level,
+              const char *fmt,
+              ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -146,11 +146,11 @@ DSN_API void dsn_logf(const char *file,
     va_end(ap);
 }
 
-DSN_API void dsn_log(const char *file,
-                     const char *function,
-                     const int line,
-                     dsn_log_level_t log_level,
-                     const char *str)
+void dsn_log(const char *file,
+             const char *function,
+             const int line,
+             dsn_log_level_t log_level,
+             const char *str)
 {
     dsn::logging_provider *logger = dsn::logging_provider::instance();
     logger->dsn_log(file, function, line, log_level, str);

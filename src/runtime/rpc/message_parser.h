@@ -33,7 +33,6 @@
 #include "utils/autoref_ptr.h"
 #include "utils/utils.h"
 #include "utils/blob.h"
-#include "utils/dlib.h"
 #include <vector>
 
 namespace dsn {
@@ -49,7 +48,7 @@ public:
     }
 
     // called before read to extend read buffer
-    DSN_API char *read_buffer_ptr(unsigned int read_next);
+    char *read_buffer_ptr(unsigned int read_next);
 
     // get remaining buffer capacity
     unsigned int read_buffer_capacity() const { return _buffer.length() - _buffer_occupied; }
@@ -128,9 +127,9 @@ public:
     virtual int get_buffers_on_send(message_ex *msg, /*out*/ send_buf *buffers) = 0;
 
 public:
-    DSN_API static network_header_format
+    static network_header_format
     get_header_type(const char *bytes); // buffer size >= sizeof(uint32_t)
-    DSN_API static std::string get_debug_string(const char *bytes);
+    static std::string get_debug_string(const char *bytes);
 };
 
 } // namespace dsn

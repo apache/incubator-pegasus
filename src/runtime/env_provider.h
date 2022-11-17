@@ -28,7 +28,6 @@
 
 #include "utils/ports.h"
 #include "utils/utils.h"
-#include "utils/dlib.h"
 #include <random>
 
 namespace dsn {

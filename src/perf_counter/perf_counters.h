@@ -32,7 +32,6 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "common/api_common.h"
 #include "perf_counter.h"
 #include "utils/singleton.h"
 #include "utils/synchronize.h"
