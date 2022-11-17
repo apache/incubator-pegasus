@@ -115,96 +115,162 @@ TEST(core, check_c_string_empty)
     }
 }
 
-TEST(core, split_args)
+// For containers such as std::unordered_set, the expected result will be deduplicated
+// at initialization. Therefore, it can be used to compare with actual result safely.
+template <typename Container>
+void test_split_args()
 {
-    std::string value = "a ,b, c ";
-    std::vector<std::string> sargs;
-    std::list<std::string> sargs2;
-    ::dsn::utils::split_args(value.c_str(), sargs, ',');
-    ::dsn::utils::split_args(value.c_str(), sargs2, ',');
+    // Test cases:
+    // - split empty string by ' ' without place holder
+    // - split empty string by ' ' with place holder
+    // - split empty string by ',' without place holder
+    // - split empty string by ',' with place holder
+    // - split a space (' ') by ' ' without place holder
+    // - split a space (' ') by ' ' with place holder
+    // - split a space (' ') by ',' without place holder
+    // - split a space (' ') by ',' with place holder
+    // - split a comma (',') by ' ' without place holder
+    // - split a comma (',') by ' ' with place holder
+    // - split a comma (',') by ',' without place holder
+    // - split a comma (',') by ',' with place holder
+    // - split 2 leading spaces by ' ' without place holder
+    // - split 2 leading spaces by ' ' with place holder
+    // - split 2 leading spaces by ',' without place holder
+    // - split 2 leading spaces by ',' with place holder
+    // - split 3 leading spaces by ' ' without place holder
+    // - split 3 leading spaces by ' ' with place holder
+    // - split 3 leading spaces by ',' without place holder
+    // - split 3 leading spaces by ',' with place holder
+    // - split 2 trailing spaces by ' ' without place holder
+    // - split 2 trailing spaces by ' ' with place holder
+    // - split 2 trailing spaces by ',' without place holder
+    // - split 2 trailing spaces by ',' with place holder
+    // - split 3 trailing spaces by ' ' without place holder
+    // - split 3 trailing spaces by ' ' with place holder
+    // - split 3 trailing spaces by ',' without place holder
+    // - split 3 trailing spaces by ',' with place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ' ' without place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ' ' with place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ',' without place holder
+    // - split a string including "\\t", "\\r" and "\\n" by ',' with place holder
+    // - split a single letter by ' ' without place holder
+    // - split a single letter by ' ' with place holder
+    // - split a single letter by ',' without place holder
+    // - split a single letter by ',' with place holder
+    // - split a single word by ' ' without place holder
+    // - split a single word by ' ' with place holder
+    // - split a single word by ',' without place holder
+    // - split a single word by ',' with place holder
+    // - split a string including letters and words by ' ' without place holder
+    // - split a string including letters and words by ' ' with place holder
+    // - split a string including letters and words by ',' without place holder
+    // - split a string including letters and words by ',' with place holder
+    // - split a string that includes multiple letters by ' ' without place holder
+    // - split a string that includes multiple letters by ' ' with place holder
+    // - split a string that includes multiple letters by ',' without place holder
+    // - split a string that includes multiple letters by ',' with place holder
+    // - split a string that includes multiple words by ' ' without place holder
+    // - split a string that includes multiple words by ' ' with place holder
+    // - split a string that includes multiple words by ',' without place holder
+    // - split a string that includes multiple words by ',' with place holder
+    struct test_case
+    {
+        const char *input;
+        char separator;
+        bool keep_place_holder;
+        Container expected_output;
+    } tests[] = {{"", ' ', false, {}},
+                 {"", ' ', true, {""}},
+                 {"", ',', false, {}},
+                 {"", ',', true, {""}},
+                 {" ", ' ', false, {}},
+                 {" ", ' ', true, {"", ""}},
+                 {" ", ',', false, {}},
+                 {" ", ',', true, {""}},
+                 {",", ' ', false, {","}},
+                 {",", ' ', true, {","}},
+                 {",", ',', false, {}},
+                 {",", ',', true, {"", ""}},
+                 {"  ", ' ', false, {}},
+                 {"\t ", ' ', true, {"", ""}},
+                 {" \t", ',', false, {}},
+                 {"\t\t", ',', true, {""}},
+                 {" \t ", ' ', false, {}},
+                 {"\t  ", ' ', true, {"", "", ""}},
+                 {"\t\t ", ',', false, {}},
+                 {"  \t", ',', true, {""}},
+                 {"\r ", ' ', false, {}},
+                 {"\t\n", ' ', true, {""}},
+                 {"\r\t", ',', false, {}},
+                 {" \n", ',', true, {""}},
+                 {"\n\t\r", ' ', false, {}},
+                 {" \r ", ' ', true, {"", "", ""}},
+                 {"\r \n", ',', false, {}},
+                 {"\t\n\r", ',', true, {""}},
+                 {" \\n,,\\t \\r ", ' ', false, {"\\n,,\\t", "\\r"}},
+                 {" \\n,,\\t \\r ", ' ', true, {"", "\\n,,\\t", "\\r", ""}},
+                 {" \\n,,\\t \\r ", ',', false, {"\\n", "\\t \\r"}},
+                 {" \\n,,\\t \\r ", ',', true, {"\\n", "", "\\t \\r"}},
+                 {"a", ' ', false, {"a"}},
+                 {"a", ' ', true, {"a"}},
+                 {"a", ',', false, {"a"}},
+                 {"a", ',', true, {"a"}},
+                 {"dinner", ' ', false, {"dinner"}},
+                 {"dinner", ' ', true, {"dinner"}},
+                 {"dinner", ',', false, {"dinner"}},
+                 {"dinner", ',', true, {"dinner"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ' ',
+                  false,
+                  {"\r\na\t\tdog,", "\r\nand", "a\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ' ',
+                  true,
+                  {"\r\na\t\tdog,", "", "\r\nand", "a\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ',',
+                  false,
+                  {"\r\na\t\tdog", "\r\n  \t\r\nand\t\r\n \t\ta\t\tcat"}},
+                 {"\t\r\na\t\tdog,\t\r\n  \t\r\nand\t\r\n \t\ta\t\tcat",
+                  ',',
+                  true,
+                  {"\r\na\t\tdog", "\r\n  \t\r\nand\t\r\n \t\ta\t\tcat"}},
+                 {"a ,b, ,c ", ' ', false, {"a", ",b,", ",c"}},
+                 {"a ,b, ,c ", ' ', true, {"a", ",b,", ",c", ""}},
+                 {"a ,b, ,c ", ',', false, {"a", "b", "c"}},
+                 {"a ,b, ,c ", ',', true, {"a", "b", "", "c"}},
+                 {" in  early 2000s ,  too, ", ' ', false, {"in", "early", "2000s", ",", "too,"}},
+                 {" in  early 2000s ,  too, ",
+                  ' ',
+                  true,
+                  {"", "in", "", "early", "2000s", ",", "", "too,", ""}},
+                 {" in  early 2000s ,  too, ", ',', false, {"in  early 2000s", "too"}},
+                 {" in  early 2000s ,  too, ", ',', true, {"in  early 2000s", "too", ""}}};
 
-    EXPECT_EQ(sargs.size(), 3);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "c");
+    for (const auto &test : tests) {
+        Container actual_output;
+        split_args(test.input, actual_output, test.separator, test.keep_place_holder);
+        EXPECT_EQ(actual_output, test.expected_output);
 
-    EXPECT_EQ(sargs2.size(), 3);
-    auto it = sargs2.begin();
-    EXPECT_EQ(*it++, "a");
-    EXPECT_EQ(*it++, "b");
-    EXPECT_EQ(*it++, "c");
+        // Test default value (i.e. false) for keep_place_holder.
+        if (!test.keep_place_holder) {
+            split_args(test.input, actual_output, test.separator);
+            EXPECT_EQ(actual_output, test.expected_output);
 
-    std::unordered_set<std::string> sargs_set;
-    dsn::utils::split_args(value.c_str(), sargs_set, ',');
-    EXPECT_EQ(sargs_set.size(), 3);
-
-    // test value = ""
-    value = "";
-    sargs.clear();
-    dsn::utils::split_args(value.c_str(), sargs, ',');
-    EXPECT_EQ(sargs.size(), 0);
-
-    sargs2.clear();
-    dsn::utils::split_args(value.c_str(), sargs2, ',');
-    EXPECT_EQ(sargs2.size(), 0);
-
-    sargs_set.clear();
-    dsn::utils::split_args(value.c_str(), sargs_set, ',');
-    EXPECT_EQ(sargs_set.size(), 0);
+            // Test default value (i.e. ' ') for separator.
+            if (test.separator == ' ') {
+                split_args(test.input, actual_output);
+                EXPECT_EQ(actual_output, test.expected_output);
+            }
+        }
+    }
 }
 
-TEST(core, split_args_keep_place_holder)
+TEST(core, split_args)
 {
-    std::string value = "a ,b, c ";
-    std::vector<std::string> sargs;
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
-
-    EXPECT_EQ(sargs.size(), 3);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "c");
-
-    value = " ,  a ,b, c ";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
-
-    EXPECT_EQ(sargs.size(), 4);
-    EXPECT_EQ(sargs[0], "");
-    EXPECT_EQ(sargs[1], "a");
-    EXPECT_EQ(sargs[2], "b");
-    EXPECT_EQ(sargs[3], "c");
-
-    value = "a ,b, , c";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
-
-    EXPECT_EQ(sargs.size(), 4);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "");
-    EXPECT_EQ(sargs[3], "c");
-
-    value = "a ,b, c , ";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
-
-    EXPECT_EQ(sargs.size(), 4);
-    EXPECT_EQ(sargs[0], "a");
-    EXPECT_EQ(sargs[1], "b");
-    EXPECT_EQ(sargs[2], "c");
-    EXPECT_EQ(sargs[3], "");
-
-    value = ", a ,b, ,c , ";
-    sargs.clear();
-    ::dsn::utils::split_args(value.c_str(), sargs, ',', true);
-
-    EXPECT_EQ(sargs.size(), 6);
-    EXPECT_EQ(sargs[0], "");
-    EXPECT_EQ(sargs[1], "a");
-    EXPECT_EQ(sargs[2], "b");
-    EXPECT_EQ(sargs[3], "");
-    EXPECT_EQ(sargs[4], "c");
-    EXPECT_EQ(sargs[5], "");
+    test_split_args<std::vector<std::string>>();
+    test_split_args<std::list<std::string>>();
+    test_split_args<std::unordered_set<std::string>>();
 }
 
 TEST(core, trim_string)

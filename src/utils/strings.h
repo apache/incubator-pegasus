@@ -26,29 +26,38 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include <iostream>
 #include <list>
 #include <map>
+#include <string>
 #include <unordered_set>
-#include <iostream>
+#include <vector>
 
 namespace dsn {
 namespace utils {
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
-void split_args(const char *args,
-                /*out*/ std::vector<std::string> &sargs,
-                char splitter = ' ',
+// Split the `input` string by the only character `separator` into tokens. Leading and trailing
+// spaces of each token will be stripped. Once the token is empty, or become empty after
+// stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.
+//
+// There are several overloaded `split_args` functions in the following all of which are the
+// same except that the split tokens are collected to the different containers.
+void split_args(const char *input,
+                std::vector<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args,
-                /*out*/ std::unordered_set<std::string> &sargs,
-                char splitter = ' ',
+void split_args(const char *input,
+                std::list<std::string> &output,
+                char separator = ' ',
                 bool keep_place_holder = false);
 
-void split_args(const char *args, /*out*/ std::list<std::string> &sargs, char splitter = ' ');
+void split_args(const char *input,
+                std::unordered_set<std::string> &output,
+                char separator = ' ',
+                bool keep_place_holder = false);
 
 // kv_map sample (when item_splitter = ',' and kv_splitter = ':'):
 //   k1:v1,k2:v2,k3:v3
