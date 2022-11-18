@@ -81,6 +81,11 @@ metric_entity::metric_map metric_entity::metrics() const
     return _metrics;
 }
 
+void metric_entity::take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+{
+
+}
+
 void metric_entity::set_attributes(attr_map &&attrs)
 {
     utils::auto_write_lock l(_lock);

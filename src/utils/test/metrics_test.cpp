@@ -925,14 +925,14 @@ void check_prototype_and_extract_value_map_from_json_string(
     metric *my_metric,
     const std::string &json_string,
     const bool is_integral,
-    const metric_fields_type &expected_metric_fields,
+    const metric_filters::metric_fields_type &expected_metric_fields,
     metric_value_map<T> &value_map)
 {
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
-    metric_fields_type actual_metric_fields;
+    metric_filters::metric_fields_type actual_metric_fields;
 
     // The json format for each metric should be an object.
     ASSERT_TRUE(doc.IsObject());
@@ -980,7 +980,7 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
                                const metric_filters &filters,
-                               const metric_fields_type &expected_metric_fields,
+                               const metric_filters::metric_fields_type &expected_metric_fields,
                                metric_value_map<T> &value_map)
 {
     auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
@@ -1038,10 +1038,10 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
-const metric_fields_type kAllPrototypeMetricFields = {
+const metric_filters::metric_fields_type kAllPrototypeMetricFields = {
     kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
 
-metric_fields_type get_all_single_value_metric_fields()
+metric_filters::metric_fields_type get_all_single_value_metric_fields()
 {
     auto fields = kAllPrototypeMetricFields;
     fields.insert(kMetricSingleValueField);
@@ -1074,14 +1074,14 @@ metric_fields_type get_all_single_value_metric_fields()
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
-        static const metric_fields_type kAllSingleValueMetricFields =                              \
+        static const metric_filters::metric_fields_type kAllSingleValueMetricFields =                              \
             get_all_single_value_metric_fields();                                                  \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
             value_type expected_value;                                                             \
-            metric_fields_type with_metric_fields;                                                 \
-            metric_fields_type expected_metric_fields;                                             \
+            metric_filters::metric_fields_type with_metric_fields;                                                 \
+            metric_filters::metric_fields_type expected_metric_fields;                                             \
         } tests[] = {                                                                              \
             {"server_60", value, {}, kAllSingleValueMetricFields},                                 \
             {"server_61", value, {kMetricNameField}, {kMetricNameField}},                          \
@@ -1184,7 +1184,7 @@ void generate_metric_value_map(MetricType *my_metric,
                                const uint64_t interval_ms,
                                const uint64_t exec_ms,
                                const std::set<kth_percentile_type> &kth_percentiles,
-                               const metric_fields_type &expected_metric_fields,
+                               const metric_filters::metric_fields_type &expected_metric_fields,
                                metric_value_map<typename MetricType::value_type> &value_map)
 {
     using value_type = typename MetricType::value_type;
@@ -1254,7 +1254,7 @@ void generate_metric_value_map(MetricType *my_metric,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
-metric_fields_type get_all_kth_percentile_fields()
+metric_filters::metric_fields_type get_all_kth_percentile_fields()
 {
     auto fields = kAllPrototypeMetricFields;
     for (const auto &kth : kAllKthPercentiles) {
@@ -1301,13 +1301,13 @@ metric_fields_type get_all_kth_percentile_fields()
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
-        static const metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields(); \
+        static const metric_filters::metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields(); \
                                                                                                    \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
-            metric_fields_type with_metric_fields;                                                 \
-            metric_fields_type expected_metric_fields;                                             \
+            metric_filters::metric_fields_type with_metric_fields;                                                 \
+            metric_filters::metric_fields_type expected_metric_fields;                                             \
         } tests[] = {                                                                              \
             {"server_60", {}, kAllKthPercentileFields},                                            \
             {"server_61", {kMetricNameField}, {kMetricNameField}},                                 \

@@ -132,32 +132,10 @@
 
 namespace dsn {
 
-using metric_fields_type = std::unordered_set<std::string>;
-
-// This struct includes a set of filters for both entities and metrics requested by client.
-struct metric_filters
-{
-    // According to the parameters requested by client, this function will filter metric
-    // fields that will be put in the response.
-    bool include_metric_field(const std::string &field_name) const
-    {
-        // NOTICE: empty `with_metric_fields` means every field is required by client.
-        if (with_metric_fields.empty()) {
-            return true;
-        }
-
-        return with_metric_fields.find(field_name) != with_metric_fields.end();
-    }
-
-    // `with_metric_fields` includes all the metric fields that are wanted by client. If it
-    // is empty, there will be no restriction: in other words, all fields owned by the metric
-    // will be put in the response.
-    metric_fields_type with_metric_fields;
-};
-
 class metric_prototype;
 class metric;
 using metric_ptr = ref_ptr<metric>;
+class metric_filters;
 
 class metric_entity : public ref_counter
 {
@@ -187,6 +165,8 @@ public:
         _metrics[prototype] = ptr;
         return ptr;
     }
+
+    void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) const;
 
 private:
     friend class metric_registry;
@@ -221,6 +201,99 @@ private:
 };
 
 using metric_entity_ptr = ref_ptr<metric_entity>;
+
+// This struct includes a set of filters for both entities and metrics requested by client.
+struct metric_filters
+{
+    using metric_fields_type = std::unordered_set<std::string>;
+    using entity_types_type = std::unordered_set<std::string>;
+    using entity_ids_type = std::unordered_set<std::string>;
+    using entity_attrs_type = std::vector<std::string>;
+    using entity_metrics_type = std::unordered_set<std::string>;
+
+// NOTICE: empty `white_list` means every field is required by client.
+#define RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list) \
+    do {\
+        if (white_list.empty()) { \
+            return true; \
+        } \
+    } while(0)
+
+#define DEFINE_SIMPLE_MATCHER(name) \
+    inline bool match_##name(const std::string &candidate) const \
+    { \
+        return match(candidate, name##s); \
+    }
+
+    static inline bool match(const std::string &candidate, const std::vector<std::string> &white_list)
+    { 
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
+        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
+    }
+
+    static inline bool match(const std::string &candidate, const std::unordered_set<std::string> &white_list)
+    { 
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
+        return white_list.find(candidate) != white_list.end();
+    }
+
+    // According to the parameters requested by client, this function will filter metric
+    // fields that will be put in the response.
+    DEFINE_SIMPLE_MATCHER(with_metric_field)
+
+    DEFINE_SIMPLE_MATCHER(entity_type)
+
+    DEFINE_SIMPLE_MATCHER(entity_id)
+
+    bool match_entity_attrs(const metric_entity::attr_map &candidates) const
+    {
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(attrs);
+
+        CHECK_EQ(entity_attrs.size() & 1, 0);
+
+        for (entity_types::size_type i = 0; i < entity_attrs.size(); i += 2) {
+            metric_entity::const_iterator iter = candidates.find(entity_attrs[i]);
+            if (iter == candidates.end()) {
+                continue;
+            }
+            if (iter->second == entity_attrs[i+1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void extract_entity_metrics(const metric_entity::metric_map &candidates, metric_entity::metric_map &metrics) const
+    {
+        if (entity_metrics.empty()) {
+            metrics = candidates;
+            return;
+        }
+
+        metrics.clear();
+        for (const auto &candidate : candidates) {
+            if (entity_metrics.find(candidate.first->))
+            metrics.emplace(candidate.first, candidate.second);
+
+        }
+    }
+
+#undef DEFINE_SIMPLE_MATCHER
+#undef RETURN_MATCHED_WITH_EMPTY_WHITE_LIST
+
+    // `with_metric_fields` includes all the metric fields that are wanted by client. If it
+    // is empty, there will be no restriction: in other words, all fields owned by the metric
+    // will be put in the response.
+    metric_fields_type with_metric_fields;
+
+    entity_types_type entity_types;
+
+    entity_ids_type entity_ids;
+
+    entity_attrs_type entity_attrs;
+
+    entity_metrics_type entity_metrics;
+};
 
 class metric_entity_prototype
 {
@@ -392,7 +465,7 @@ protected:
                        const T &value,
                        const metric_filters &filters) const
     {
-        if (!filters.include_metric_field(field_name)) {
+        if (!filters.match_with_metric_field(field_name)) {
             return;
         }
 
