@@ -27,6 +27,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -130,6 +131,29 @@
     extern dsn::floating_percentile_prototype<double> METRIC_##name
 
 namespace dsn {
+
+using metric_fields_type = std::unordered_set<std::string>;
+
+// This struct includes a set of filters for both entities and metrics requested by client.
+struct metric_filters
+{
+    // According to the parameters requested by client, this function will filter metric
+    // fields that will be put in the response.
+    bool include_metric_field(const std::string &field_name) const
+    {
+        // NOTICE: empty `with_metric_fields` means every field is required by client.
+        if (with_metric_fields.empty()) {
+            return true;
+        }
+
+        return with_metric_fields.find(field_name) != with_metric_fields.end();
+    }
+
+    // `with_metric_fields` includes all the metric fields that are wanted by client. If it
+    // is empty, there will be no restriction: in other words, all fields owned by the metric
+    // will be put in the response.
+    metric_fields_type with_metric_fields;
+};
 
 class metric_prototype;
 class metric;
@@ -256,10 +280,10 @@ enum class metric_type
 };
 
 ENUM_BEGIN(metric_type, metric_type::kInvalidUnit)
-ENUM_REG(metric_type::kGauge)
-ENUM_REG(metric_type::kCounter)
-ENUM_REG(metric_type::kVolatileCounter)
-ENUM_REG(metric_type::kPercentile)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kGauge, gauge)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kCounter, counter)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kVolatileCounter, volatile_counter)
+ENUM_REG_WITH_CUSTOM_NAME(metric_type::kPercentile, percentile)
 ENUM_END(metric_type)
 
 enum class metric_unit
@@ -273,10 +297,11 @@ enum class metric_unit
 };
 
 ENUM_BEGIN(metric_unit, metric_unit::kInvalidUnit)
-ENUM_REG(metric_unit::kNanoSeconds)
-ENUM_REG(metric_unit::kMicroSeconds)
-ENUM_REG(metric_unit::kMilliSeconds)
-ENUM_REG(metric_unit::kSeconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kNanoSeconds, nanoseconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kMicroSeconds, microseconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kMilliSeconds, milliseconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kSeconds, seconds)
+ENUM_REG_WITH_CUSTOM_NAME(metric_unit::kRequests, requests)
 ENUM_END(metric_unit)
 
 class metric_prototype
@@ -331,6 +356,12 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
 
+const std::string kMetricTypeField = "type";
+const std::string kMetricNameField = "name";
+const std::string kMetricUnitField = "unit";
+const std::string kMetricDescField = "desc";
+const std::string kMetricSingleValueField = "value";
+
 // Base class for each type of metric.
 // Every metric class should inherit from this class.
 //
@@ -345,12 +376,72 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
-    // Take snapshot of each metric to collect current values as json format.
-    virtual void take_snapshot(dsn::json::JsonWriter &writer) = 0;
+    // Take snapshot of each metric to collect current values as json format with fields chosen
+    // by `filters`.
+    virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
 
 protected:
     explicit metric(const metric_prototype *prototype);
     virtual ~metric() = default;
+
+    // Encode a metric field specified by `field_name` as json format. However, once the field
+    // are not chosen by `filters`, this function will do nothing.
+    template <typename T>
+    inline void encode(dsn::json::JsonWriter &writer,
+                       const std::string &field_name,
+                       const T &value,
+                       const metric_filters &filters) const
+    {
+        if (!filters.include_metric_field(field_name)) {
+            return;
+        }
+
+        writer.Key(field_name.c_str());
+        json::json_encode(writer, value);
+    }
+
+    // Encode the metric type as json format, if it is chosen by `filters`.
+    inline void encode_type(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricTypeField, enum_to_string(prototype()->type()), filters);
+    }
+
+    // Encode the metric name as json format, if it is chosen by `filters`.
+    inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricNameField, prototype()->name().data(), filters);
+    }
+
+    // Encode the metric unit as json format, if it is chosen by `filters`.
+    inline void encode_unit(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricUnitField, enum_to_string(prototype()->unit()), filters);
+    }
+
+    // Encode the metric description as json format, if it is chosen by `filters`.
+    inline void encode_desc(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode(writer, kMetricDescField, prototype()->description().data(), filters);
+    }
+
+    // Encode the metric prototype as json format, if some attributes in it are chosen by `filters`.
+    inline void encode_prototype(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    {
+        encode_type(writer, filters);
+        encode_name(writer, filters);
+        encode_unit(writer, filters);
+        encode_desc(writer, filters);
+    }
+
+    // Encode the unique value of a metric as json format, if it is chosen by `filters`. Notice
+    // that the metric should have only one value. like gauge and counter.
+    template <typename T>
+    inline void encode_single_value(dsn::json::JsonWriter &writer,
+                                    const T &value,
+                                    const metric_filters &filters) const
+    {
+        encode(writer, kMetricSingleValueField, value, filters);
+    }
 
     const metric_prototype *const _prototype;
 
@@ -405,15 +496,12 @@ public:
     // where "name" is the name of the gauge in string type, and "value" is just current value
     // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
     // determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
-        writer.Key("name");
-        json::json_encode(writer, prototype()->name().data());
-
-        writer.Key("value");
-        json::json_encode(writer, value());
+        encode_prototype(writer, filters);
+        encode_single_value(writer, value(), filters);
 
         writer.EndObject();
     }
@@ -525,15 +613,12 @@ public:
     // }
     // where "name" is the name of the counter in string type, and "value" is just current value
     // of the counter fetched by `value()`, in integral type (namely int64_t).
-    void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
-        writer.Key("name");
-        json::json_encode(writer, prototype()->name().data());
-
-        writer.Key("value");
-        json::json_encode(writer, value());
+        encode_prototype(writer, filters);
+        encode_single_value(writer, value(), filters);
 
         writer.EndObject();
     }
@@ -580,40 +665,74 @@ using concurrent_volatile_counter_ptr = counter_ptr<concurrent_long_adder, true>
 template <typename Adder = striped_long_adder>
 using volatile_counter_prototype = metric_prototype_with<counter<Adder, true>>;
 
-// All supported kinds of kth percentiles. User can configure required kth percentiles for
-// each percentile. Only configured kth percentiles will be computed. This can reduce CPU
-// consumption.
-enum class kth_percentile_type : size_t
-{
-    P50,
-    P90,
-    P95,
-    P99,
-    P999,
-    COUNT,
-    INVALID
-};
+#define KTH_PERCENTILE(prefix, kth) prefix##kth
+#define KTH_PERCENTILE_TYPE(kth) KTH_PERCENTILE(P, kth)
+#define ENUM_KTH_PERCENTILE_TYPE(qualifier, kth) qualifier KTH_PERCENTILE_TYPE(kth)
+#define KTH_PERCENTILE_NAME(kth) KTH_PERCENTILE(p, kth)
 
-// Support to load from configuration files for percentiles.
-ENUM_BEGIN(kth_percentile_type, kth_percentile_type::INVALID)
-ENUM_REG(kth_percentile_type::P50)
-ENUM_REG(kth_percentile_type::P90)
-ENUM_REG(kth_percentile_type::P95)
-ENUM_REG(kth_percentile_type::P99)
-ENUM_REG(kth_percentile_type::P999)
-ENUM_END(kth_percentile_type)
+#define ENUM_REG_WITH_KTH_PERCENTILE_TYPE(kth)                                                     \
+    ENUM_REG_WITH_CUSTOM_NAME(ENUM_KTH_PERCENTILE_TYPE(kth_percentile_type::, kth),                \
+                              KTH_PERCENTILE_NAME(kth))
 
-struct kth_percentile
+struct kth_percentile_property
 {
     std::string name;
     double decimal;
 };
 
-const std::vector<kth_percentile> kAllKthPercentiles = {
-    {"p50", 0.5}, {"p90", 0.9}, {"p95", 0.95}, {"p99", 0.99}, {"p999", 0.999}};
+#define STRINGIFY_HELPER(x) #x
+#define STRINGIFY(x) STRINGIFY_HELPER(x)
+#define STRINGIFY_KTH_PERCENTILE_NAME(kth) STRINGIFY(KTH_PERCENTILE_NAME(kth))
+#define KTH_TO_DECIMAL(kth) 0.##kth
+#define KTH_PERCENTILE_PROPERTY_LIST(kth)                                                          \
+    {                                                                                              \
+        STRINGIFY_KTH_PERCENTILE_NAME(kth), KTH_TO_DECIMAL(kth)                                    \
+    }
+
+// All supported kinds of kth percentiles. User can configure required kth percentiles for
+// each percentile. Only configured kth percentiles will be computed. This can reduce CPU
+// consumption.
+#define ALL_KTH_PERCENTILE_TYPES(qualifier)                                                        \
+    ENUM_KTH_PERCENTILE_TYPE(qualifier, 50)                                                        \
+    , ENUM_KTH_PERCENTILE_TYPE(qualifier, 90), ENUM_KTH_PERCENTILE_TYPE(qualifier, 95),            \
+        ENUM_KTH_PERCENTILE_TYPE(qualifier, 99), ENUM_KTH_PERCENTILE_TYPE(qualifier, 999)
+
+enum class kth_percentile_type : size_t
+{
+    ALL_KTH_PERCENTILE_TYPES(),
+    COUNT,
+    INVALID,
+};
+
+// Support to load from configuration files for percentiles.
+ENUM_BEGIN(kth_percentile_type, kth_percentile_type::INVALID)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(50)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(90)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(95)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(99)
+ENUM_REG_WITH_KTH_PERCENTILE_TYPE(999)
+ENUM_END(kth_percentile_type)
+
+// Generate decimals from kth percentiles.
+const std::vector<kth_percentile_property> kAllKthPercentiles = {KTH_PERCENTILE_PROPERTY_LIST(50),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(90),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(95),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(99),
+                                                                 KTH_PERCENTILE_PROPERTY_LIST(999)};
+
+const std::set<kth_percentile_type> kAllKthPercentileTypes = {
+    ALL_KTH_PERCENTILE_TYPES(kth_percentile_type::)};
+
+inline std::string kth_percentile_to_name(const kth_percentile_type &type)
+{
+    auto index = static_cast<size_t>(type);
+    CHECK_LT(index, kAllKthPercentiles.size());
+    return kAllKthPercentiles[index].name;
+}
 
 inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 {
+    CHECK_LT(kth_index, kAllKthPercentiles.size());
     auto decimal = kAllKthPercentiles[kth_index].decimal;
     // Since the kth percentile is the value that is greater than k percent of the data values after
     // ranking them (https://people.richland.edu/james/ictcm/2001/descriptive/helpposition.html),
@@ -624,16 +743,6 @@ inline size_t kth_percentile_to_nth_index(size_t size, size_t kth_index)
 inline size_t kth_percentile_to_nth_index(size_t size, kth_percentile_type type)
 {
     return kth_percentile_to_nth_index(size, static_cast<size_t>(type));
-}
-
-std::set<kth_percentile_type> get_all_kth_percentile_types();
-const std::set<kth_percentile_type> kAllKthPercentileTypes = get_all_kth_percentile_types();
-
-inline std::string kth_percentile_to_name(const kth_percentile_type &type)
-{
-    auto index = static_cast<size_t>(type);
-    CHECK_LT(index, kAllKthPercentiles.size());
-    return kAllKthPercentiles[index].name;
 }
 
 // `percentile_timer` is a timer class that encapsulates the details how each percentile is
@@ -736,20 +845,18 @@ public:
     // where "name" is the name of the percentile in string type, with each configured kth
     // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
     // (i.e. integral or floating-point type, determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer) override
+    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
-        writer.Key("name");
-        json::json_encode(writer, prototype()->name().data());
+        encode_prototype(writer, filters);
 
         for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
             if (!_kth_percentile_bitset.test(i)) {
                 continue;
             }
 
-            writer.Key(kAllKthPercentiles[i].name.c_str());
-            json::json_encode(writer, value(i));
+            encode(writer, kAllKthPercentiles[i].name, value(i), filters);
         }
 
         writer.EndObject();

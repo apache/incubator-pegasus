@@ -24,15 +24,6 @@
 
 namespace dsn {
 
-std::set<kth_percentile_type> get_all_kth_percentile_types()
-{
-    std::set<kth_percentile_type> all_types;
-    for (size_t i = 0; i < static_cast<size_t>(kth_percentile_type::COUNT); ++i) {
-        all_types.insert(static_cast<kth_percentile_type>(i));
-    }
-    return all_types;
-}
-
 metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
     : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
 {

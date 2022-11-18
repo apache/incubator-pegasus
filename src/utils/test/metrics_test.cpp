@@ -34,7 +34,7 @@ class my_gauge : public metric
 public:
     int64_t value() { return _value; }
 
-    virtual void take_snapshot(json::JsonWriter &) override {}
+    void take_snapshot(json::JsonWriter &, const metric_filters &) override {}
 
 protected:
     explicit my_gauge(const metric_prototype *prototype) : metric(prototype), _value(0) {}
@@ -906,13 +906,13 @@ TEST(metrics_test, percentile_double)
                          floating_checker<value_type>>(METRIC_test_percentile_double);
 }
 
-std::string take_snapshot_and_get_json_string(metric *m)
+std::string take_snapshot_and_get_json_string(metric *m, const metric_filters &filters)
 {
     std::stringstream out;
     rapidjson::OStreamWrapper wrapper(out);
     json::JsonWriter writer(wrapper);
 
-    m->take_snapshot(writer);
+    m->take_snapshot(writer, filters);
 
     return out.str();
 }
@@ -921,24 +921,42 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 using metric_value_map = std::map<std::string, T>;
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
-void check_and_extract_metric_value_map_from_json_string(const std::string &json_string,
-                                                         const std::string &metric_name,
-                                                         const bool is_integral,
-                                                         metric_value_map<T> &value_map)
+void check_prototype_and_extract_value_map_from_json_string(
+    metric *my_metric,
+    const std::string &json_string,
+    const bool is_integral,
+    const metric_fields_type &expected_metric_fields,
+    metric_value_map<T> &value_map)
 {
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
+    metric_fields_type actual_metric_fields;
+
+    // The json format for each metric should be an object.
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
+        // Each metric name must be a string.
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
-            ASSERT_STREQ(elem.name.GetString(), "name");
-
-            ASSERT_STREQ(elem.value.GetString(), metric_name.c_str());
+            // Must be a field of metric prototype.
+            if (std::strcmp(elem.name.GetString(), kMetricTypeField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(),
+                             enum_to_string(my_metric->prototype()->type()));
+            } else if (std::strcmp(elem.name.GetString(), kMetricNameField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->name().data());
+            } else if (std::strcmp(elem.name.GetString(), kMetricUnitField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(),
+                             enum_to_string(my_metric->prototype()->unit()));
+            } else if (std::strcmp(elem.name.GetString(), kMetricDescField.c_str()) == 0) {
+                ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->description().data());
+            } else {
+                ASSERT_TRUE(false);
+            }
         } else {
+            // Must be a field of metric value.
             T value;
             if (is_integral) {
                 ASSERT_TRUE(elem.value.IsInt64());
@@ -949,17 +967,25 @@ void check_and_extract_metric_value_map_from_json_string(const std::string &json
             }
             value_map[elem.name.GetString()] = value;
         }
+
+        actual_metric_fields.emplace(elem.name.GetString());
     }
+
+    // Check if the fields of metric prototype have been provided to the client as expected.
+    ASSERT_EQ(actual_metric_fields, expected_metric_fields);
 }
 
+// Take snapshot as json format, then decode to a value map.
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
+                               const metric_filters &filters,
+                               const metric_fields_type &expected_metric_fields,
                                metric_value_map<T> &value_map)
 {
-    auto json_string = take_snapshot_and_get_json_string(my_metric);
-    check_and_extract_metric_value_map_from_json_string(
-        json_string, my_metric->prototype()->name().data(), is_integral, value_map);
+    auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
+    check_prototype_and_extract_value_map_from_json_string(
+        my_metric, json_string, is_integral, expected_metric_fields, value_map);
 }
 
 template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type>
@@ -984,67 +1010,154 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
     }
 }
 
-#define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(                                                    \
-    metric_prototype, updater, value_type, is_integral, value_map_comparator)                      \
+#define TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                                   \
+                                               updater,                                            \
+                                               value_type,                                         \
+                                               is_integral,                                        \
+                                               metric_fields,                                      \
+                                               expected_metric_fields,                             \
+                                               value_map_comparator)                               \
     do {                                                                                           \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(my_server_entity);                           \
         my_metric->updater(test.expected_value);                                                   \
                                                                                                    \
-        const metric_value_map<value_type> expected_value_map = {{"value", test.expected_value}};  \
+        metric_filters filters;                                                                    \
+        filters.with_metric_fields = metric_fields;                                                \
+                                                                                                   \
+        metric_value_map<value_type> expected_value_map;                                           \
+        if (expected_metric_fields.find(kMetricSingleValueField) !=                                \
+            expected_metric_fields.end()) {                                                        \
+            expected_value_map[kMetricSingleValueField] = test.expected_value;                     \
+        }                                                                                          \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
-        generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
+        generate_metric_value_map(                                                                 \
+            my_metric.get(), is_integral, filters, expected_metric_fields, actual_value_map);      \
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+const metric_fields_type kAllPrototypeMetricFields = {
+    kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
+
+metric_fields_type get_all_single_value_metric_fields()
+{
+    auto fields = kAllPrototypeMetricFields;
+    fields.insert(kMetricSingleValueField);
+    return fields;
+}
+
+// Test cases:
+// - with_metric_fields is empty
+// - with_metric_fields has a field of prototype that exists
+// - with_metric_fields has a field of value that exists
+// - with_metric_fields has 2 fields of prototype that exist
+// - with_metric_fields has 2 fields that exist where there is a field of prototype and a field
+// of value
+// - with_metric_fields has 3 fields that exist where there is 2 fields of prototype and a field
+// of value
+// - with_metric_fields has all fields which exist
+// - with_metric_fields has a field that does not exist
+// - with_metric_fields has 2 fields both of which does not exist
+// - with_metric_fields has a field that does not exist and another field of prototype that
+// exists
+// - with_metric_fields has a field that does not exist and another field of value that exists
+// - with_metric_fields has a field that does not exist and another 2 fields of prototype that
+// exists
+// - with_metric_fields has a field that does not exist and another 2 fields that exist where
+// there is a field of prototype and a field of value
+// - with_metric_fields has a field that does not exist and another 3 fields that exist where
+// there is 2 fields of prototype and a field of value
+// - with_metric_fields has 2 fields that does not exist and another 3 fields that exist where
+// there is 2 fields of prototype and a field of value
+#define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
+    metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
+    do {                                                                                           \
+        static const metric_fields_type kAllSingleValueMetricFields =                              \
+            get_all_single_value_metric_fields();                                                  \
+        struct test_case                                                                           \
+        {                                                                                          \
+            std::string entity_id;                                                                 \
+            value_type expected_value;                                                             \
+            metric_fields_type with_metric_fields;                                                 \
+            metric_fields_type expected_metric_fields;                                             \
+        } tests[] = {                                                                              \
+            {"server_60", value, {}, kAllSingleValueMetricFields},                                 \
+            {"server_61", value, {kMetricNameField}, {kMetricNameField}},                          \
+            {"server_62", value, {kMetricSingleValueField}, {kMetricSingleValueField}},            \
+            {"server_63",                                                                          \
+             value,                                                                                \
+             {kMetricNameField, kMetricDescField},                                                 \
+             {kMetricNameField, kMetricDescField}},                                                \
+            {"server_64",                                                                          \
+             value,                                                                                \
+             {kMetricNameField, kMetricSingleValueField},                                          \
+             {kMetricNameField, kMetricSingleValueField}},                                         \
+            {"server_65",                                                                          \
+             value,                                                                                \
+             {kMetricTypeField, kMetricNameField, kMetricSingleValueField},                        \
+             {kMetricTypeField, kMetricNameField, kMetricSingleValueField}},                       \
+            {"server_66", value, kAllSingleValueMetricFields, kAllSingleValueMetricFields},        \
+            {"server_67", value, {"field_not_exist"}, {}},                                         \
+            {"server_68", value, {"field_not_exist", "another_field_not_exist"}, {}},              \
+            {"server_69", value, {"field_not_exist", kMetricNameField}, {kMetricNameField}},       \
+            {"server_70",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricSingleValueField},                                         \
+             {kMetricSingleValueField}},                                                           \
+            {"server_71",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricTypeField, kMetricUnitField},                              \
+             {kMetricTypeField, kMetricUnitField}},                                                \
+            {"server_72",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricDescField, kMetricSingleValueField},                       \
+             {kMetricDescField, kMetricSingleValueField}},                                         \
+            {"server_73",                                                                          \
+             value,                                                                                \
+             {"field_not_exist", kMetricTypeField, kMetricNameField, kMetricSingleValueField},     \
+             {kMetricTypeField, kMetricNameField, kMetricSingleValueField}},                       \
+            {"server_74",                                                                          \
+             value,                                                                                \
+             {"field_not_exist",                                                                   \
+              "another_field_not_exist",                                                           \
+              kMetricUnitField,                                                                    \
+              kMetricDescField,                                                                    \
+              kMetricSingleValueField},                                                            \
+             {kMetricUnitField, kMetricDescField, kMetricSingleValueField}}};                      \
+                                                                                                   \
+        for (const auto &test : tests) {                                                           \
+            TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(metric_prototype,                               \
+                                                   updater,                                        \
+                                                   value_type,                                     \
+                                                   is_integral,                                    \
+                                                   test.with_metric_fields,                        \
+                                                   test.expected_metric_fields,                    \
+                                                   value_map_comparator);                          \
+        }                                                                                          \
+    } while (0);
+
+#define RUN_CASES_WITH_GAUGE_SNAPSHOT(                                                             \
+    metric_prototype, value_type, is_integral, value, value_map_comparator)                        \
+    RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                          \
+        metric_prototype, set, value_type, is_integral, value, value_map_comparator)
+
 TEST(metrics_test, take_snapshot_gauge_int64)
 {
-    struct test_case
-    {
-        std::string entity_id;
-        int64_t expected_value;
-    } tests[]{{"server_60", 5}};
-
-    for (const auto &test : tests) {
-        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(
-            METRIC_test_gauge_int64, set, int64_t, true, compare_integral_metric_value_map);
-    }
+    RUN_CASES_WITH_GAUGE_SNAPSHOT(
+        METRIC_test_gauge_int64, int64_t, true, 5, compare_integral_metric_value_map);
 }
 
 TEST(metrics_test, take_snapshot_gauge_double)
 {
-    struct test_case
-    {
-        std::string entity_id;
-        double expected_value;
-    } tests[]{{"server_60", 6.789}};
-
-    for (const auto &test : tests) {
-        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(
-            METRIC_test_gauge_double, set, double, false, compare_floating_metric_value_map);
-    }
+    RUN_CASES_WITH_GAUGE_SNAPSHOT(
+        METRIC_test_gauge_double, double, false, 6.789, compare_floating_metric_value_map);
 }
 
-#define TEST_METRIC_SNAPSHOT_WITH_COUNTER(metric_prototype)                                        \
-    do {                                                                                           \
-        TEST_METRIC_SNAPSHOT_WITH_SINGLE_VALUE(                                                    \
-            metric_prototype, increment_by, int64_t, true, compare_integral_metric_value_map);     \
-    } while (0)
-
 #define RUN_CASES_WITH_COUNTER_SNAPSHOT(metric_prototype)                                          \
-    do {                                                                                           \
-        struct test_case                                                                           \
-        {                                                                                          \
-            std::string entity_id;                                                                 \
-            int64_t expected_value;                                                                \
-        } tests[]{{"server_60", 10}};                                                              \
-                                                                                                   \
-        for (const auto &test : tests) {                                                           \
-            TEST_METRIC_SNAPSHOT_WITH_COUNTER(metric_prototype);                                   \
-        }                                                                                          \
-    } while (0)
+    RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                          \
+        metric_prototype, increment_by, int64_t, true, 10, compare_integral_metric_value_map)
 
 TEST(metrics_test, take_snapshot_counter) { RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_counter); }
 
@@ -1063,12 +1176,15 @@ TEST(metrics_test, take_snapshot_concurrent_volatile_counter)
     RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_concurrent_volatile_counter);
 }
 
+// Set to percentile metric with values output by case generator, and generate the expected
+// value map.
 template <typename MetricType, typename CaseGenerator>
 void generate_metric_value_map(MetricType *my_metric,
                                CaseGenerator &generator,
                                const uint64_t interval_ms,
                                const uint64_t exec_ms,
                                const std::set<kth_percentile_type> &kth_percentiles,
+                               const metric_fields_type &expected_metric_fields,
                                metric_value_map<typename MetricType::value_type> &value_map)
 {
     using value_type = typename MetricType::value_type;
@@ -1089,54 +1205,162 @@ void generate_metric_value_map(MetricType *my_metric,
     auto value = values.begin();
     for (const auto &type : kth_percentiles) {
         auto name = kth_percentile_to_name(type);
-        value_map[name] = *value++;
+        // Only add the chosen fields to the expected value map.
+        if (expected_metric_fields.find(name) != expected_metric_fields.end()) {
+            value_map[name] = *value;
+        }
+        ++value;
     }
 }
 
-#define TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(                                                      \
-    metric_prototype, case_generator, is_integral, value_map_comparator)                           \
+#define TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                     \
+                                             case_generator,                                       \
+                                             is_integral,                                          \
+                                             metric_fields,                                        \
+                                             expected_metric_fields,                               \
+                                             value_map_comparator)                                 \
     do {                                                                                           \
         using value_type = typename case_generator::value_type;                                    \
                                                                                                    \
+        const uint64_t interval_ms = 50;                                                           \
+        const auto kth_percentiles = kAllKthPercentileTypes;                                       \
+        const size_t sample_size = 4096;                                                           \
+        const size_t data_size = 4096;                                                             \
+        const uint64_t exec_ms = 10;                                                               \
+                                                                                                   \
         auto my_server_entity = METRIC_ENTITY_my_server.instantiate(test.entity_id);               \
         auto my_metric = metric_prototype.instantiate(                                             \
-            my_server_entity, test.interval_ms, test.kth_percentiles, test.sample_size);           \
+            my_server_entity, interval_ms, kth_percentiles, sample_size);                          \
                                                                                                    \
-        case_generator generator(test.data_size,                                                   \
-                                 value_type() /* initial_value */,                                 \
-                                 5 /* range_size */,                                               \
-                                 test.kth_percentiles);                                            \
+        metric_filters filters;                                                                    \
+        filters.with_metric_fields = metric_fields;                                                \
+                                                                                                   \
+        case_generator generator(                                                                  \
+            data_size, value_type() /* initial_value */, 5 /* range_size */, kth_percentiles);     \
                                                                                                    \
         metric_value_map<value_type> expected_value_map;                                           \
         generate_metric_value_map(my_metric.get(),                                                 \
                                   generator,                                                       \
-                                  test.interval_ms,                                                \
-                                  test.exec_ms,                                                    \
-                                  test.kth_percentiles,                                            \
+                                  interval_ms,                                                     \
+                                  exec_ms,                                                         \
+                                  kth_percentiles,                                                 \
+                                  expected_metric_fields,                                          \
                                   expected_value_map);                                             \
                                                                                                    \
         metric_value_map<value_type> actual_value_map;                                             \
-        generate_metric_value_map(my_metric.get(), is_integral, actual_value_map);                 \
+        generate_metric_value_map(                                                                 \
+            my_metric.get(), is_integral, filters, expected_metric_fields, actual_value_map);      \
                                                                                                    \
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
+metric_fields_type get_all_kth_percentile_fields()
+{
+    auto fields = kAllPrototypeMetricFields;
+    for (const auto &kth : kAllKthPercentiles) {
+        fields.insert(kth.name);
+    }
+    return fields;
+}
+
+// Test cases:
+// - with_metric_fields is empty
+// - with_metric_fields has a field of prototype that exists
+// - with_metric_fields has a field of value that exists
+// - with_metric_fields has 2 fields of prototype that exist
+// - with_metric_fields has 2 fields of value that exist
+// - with_metric_fields has 2 fields that exist where there is a field of prototype and a field
+// of value
+// - with_metric_fields has 3 fields that exist where there is 2 fields of prototype and a field
+// of value
+// - with_metric_fields has 3 fields that exist where there is a field of prototype and 2 fields
+// of value
+// - with_metric_fields has 4 fields that exist where there is 2 fields of prototype and 2 fields
+// of value
+// - with_metric_fields has all fields that exist
+// - with_metric_fields has a field that does not exist
+// - with_metric_fields has 2 fields both of which does not exist
+// - with_metric_fields has a field that does not exist and another field of prototype that
+// exists
+// - with_metric_fields has a field that does not exist and another field of value that
+// exists
+// - with_metric_fields has a field that does not exist and another 2 fields of prototype that
+// exist
+// - with_metric_fields has a field that does not exist and another 2 fields of value that
+// exist
+// - with_metric_fields has a field that does not exist and another 2 fields that exist where
+// there is a field of prototype and a field of value
+// - with_metric_fields has a field that does not exist and another 3 fields that exist where
+// there is 2 fields of prototype and a field of value
+// - with_metric_fields has a field that does not exist and another 3 fields that exist where
+// there is a field of prototype and 2 fields of value
+// - with_metric_fields has a field that does not exist and another 4 fields that exist where
+// there is 2 fields of prototype and 2 fields of value
+// - with_metric_fields has 2 fields that does not exist and another 4 fields that exist where
+// there is 2 fields of prototype and 2 fields of value
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
+        static const metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields(); \
+                                                                                                   \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
-            uint64_t interval_ms;                                                                  \
-            std::set<kth_percentile_type> kth_percentiles;                                         \
-            size_t sample_size;                                                                    \
-            size_t data_size;                                                                      \
-            uint64_t exec_ms;                                                                      \
-        } tests[]{{"server_60", 50, kAllKthPercentileTypes, 4096, 4096, 10}};                      \
+            metric_fields_type with_metric_fields;                                                 \
+            metric_fields_type expected_metric_fields;                                             \
+        } tests[] = {                                                                              \
+            {"server_60", {}, kAllKthPercentileFields},                                            \
+            {"server_61", {kMetricNameField}, {kMetricNameField}},                                 \
+            {"server_62", {"p999"}, {"p999"}},                                                     \
+            {"server_63",                                                                          \
+             {kMetricTypeField, kMetricDescField},                                                 \
+             {kMetricTypeField, kMetricDescField}},                                                \
+            {"server_64", {"p50", "p999"}, {"p50", "p999"}},                                       \
+            {"server_65", {kMetricUnitField, "p99"}, {kMetricUnitField, "p99"}},                   \
+            {"server_66",                                                                          \
+             {kMetricNameField, kMetricUnitField, "p99"},                                          \
+             {kMetricNameField, kMetricUnitField, "p99"}},                                         \
+            {"server_67", {kMetricDescField, "p95", "p999"}, {kMetricDescField, "p95", "p999"}},   \
+            {"server_68",                                                                          \
+             {kMetricTypeField, kMetricNameField, "p90", "p99"},                                   \
+             {kMetricTypeField, kMetricNameField, "p90", "p99"}},                                  \
+            {"server_69", kAllKthPercentileFields, kAllKthPercentileFields},                       \
+            {"server_70", {"field_not_exist"}, {}},                                                \
+            {"server_71", {"field_not_exist", "another_field_not_exist"}, {}},                     \
+            {"server_72", {"file_not_exist", kMetricTypeField}, {kMetricTypeField}},               \
+            {"server_73", {"file_not_exist", "p99"}, {"p99"}},                                     \
+            {"server_74",                                                                          \
+             {"field_not_exist", kMetricUnitField, kMetricDescField},                              \
+             {kMetricUnitField, kMetricDescField}},                                                \
+            {"server_75", {"file_not_exist", "p50", "p99"}, {"p50", "p99"}},                       \
+            {"server_76",                                                                          \
+             {"field_not_exist", kMetricNameField, "p999"},                                        \
+             {kMetricNameField, "p999"}},                                                          \
+            {"server_77",                                                                          \
+             {"field_not_exist", kMetricTypeField, kMetricUnitField, "p99"},                       \
+             {kMetricTypeField, kMetricUnitField, "p99"}},                                         \
+            {"server_78",                                                                          \
+             {"field_not_exist", kMetricDescField, "p90", "p999"},                                 \
+             {kMetricDescField, "p90", "p999"}},                                                   \
+            {"server_79",                                                                          \
+             {"field_not_exist", kMetricNameField, kMetricUnitField, "p95", "p99"},                \
+             {kMetricNameField, kMetricUnitField, "p95", "p99"}},                                  \
+            {"server_80",                                                                          \
+             {"field_not_exist",                                                                   \
+              "another_field_not_exist",                                                           \
+              kMetricTypeField,                                                                    \
+              kMetricDescField,                                                                    \
+              "p50",                                                                               \
+              "p999"},                                                                             \
+             {kMetricTypeField, kMetricDescField, "p50", "p999"}}};                                \
                                                                                                    \
         for (const auto &test : tests) {                                                           \
-            TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(                                                  \
-                metric_prototype, case_generator, is_integral, value_map_comparator);              \
+            TEST_METRIC_SNAPSHOT_WITH_PERCENTILE(metric_prototype,                                 \
+                                                 case_generator,                                   \
+                                                 is_integral,                                      \
+                                                 test.with_metric_fields,                          \
+                                                 test.expected_metric_fields,                      \
+                                                 value_map_comparator);                            \
         }                                                                                          \
     } while (0)
 
