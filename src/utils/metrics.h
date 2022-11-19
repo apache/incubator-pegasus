@@ -212,27 +212,29 @@ struct metric_filters
     using entity_metrics_type = std::unordered_set<std::string>;
 
 // NOTICE: empty `white_list` means every field is required by client.
-#define RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list) \
-    do {\
-        if (white_list.empty()) { \
-            return true; \
-        } \
-    } while(0)
+#define RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list)                                           \
+    do {                                                                                           \
+        if (white_list.empty()) {                                                                  \
+            return true;                                                                           \
+        }                                                                                          \
+    } while (0)
 
-#define DEFINE_SIMPLE_MATCHER(name) \
-    inline bool match_##name(const std::string &candidate) const \
-    { \
-        return match(candidate, name##s); \
+#define DEFINE_SIMPLE_MATCHER(name)                                                                \
+    inline bool match_##name(const std::string &candidate) const                                   \
+    {                                                                                              \
+        return match(candidate, name##s);                                                          \
     }
 
-    static inline bool match(const std::string &candidate, const std::vector<std::string> &white_list)
-    { 
+    static inline bool match(const std::string &candidate,
+                             const std::vector<std::string> &white_list)
+    {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
         return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
     }
 
-    static inline bool match(const std::string &candidate, const std::unordered_set<std::string> &white_list)
-    { 
+    static inline bool match(const std::string &candidate,
+                             const std::unordered_set<std::string> &white_list)
+    {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
         return white_list.find(candidate) != white_list.end();
     }
@@ -256,14 +258,15 @@ struct metric_filters
             if (iter == candidates.end()) {
                 continue;
             }
-            if (iter->second == entity_attrs[i+1]) {
+            if (iter->second == entity_attrs[i + 1]) {
                 return true;
             }
         }
         return false;
     }
 
-    void extract_entity_metrics(const metric_entity::metric_map &candidates, metric_entity::metric_map &metrics) const
+    void extract_entity_metrics(const metric_entity::metric_map &candidates,
+                                metric_entity::metric_map &metrics) const
     {
         if (entity_metrics.empty()) {
             metrics = candidates;
@@ -273,8 +276,7 @@ struct metric_filters
         metrics.clear();
         for (const auto &candidate : candidates) {
             if (entity_metrics.find(candidate.first->))
-            metrics.emplace(candidate.first, candidate.second);
-
+                metrics.emplace(candidate.first, candidate.second);
         }
     }
 

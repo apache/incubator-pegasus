@@ -1074,14 +1074,14 @@ metric_filters::metric_fields_type get_all_single_value_metric_fields()
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
-        static const metric_filters::metric_fields_type kAllSingleValueMetricFields =                              \
+        static const metric_filters::metric_fields_type kAllSingleValueMetricFields =              \
             get_all_single_value_metric_fields();                                                  \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
             value_type expected_value;                                                             \
-            metric_filters::metric_fields_type with_metric_fields;                                                 \
-            metric_filters::metric_fields_type expected_metric_fields;                                             \
+            metric_filters::metric_fields_type with_metric_fields;                                 \
+            metric_filters::metric_fields_type expected_metric_fields;                             \
         } tests[] = {                                                                              \
             {"server_60", value, {}, kAllSingleValueMetricFields},                                 \
             {"server_61", value, {kMetricNameField}, {kMetricNameField}},                          \
@@ -1301,13 +1301,14 @@ metric_filters::metric_fields_type get_all_kth_percentile_fields()
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
-        static const metric_filters::metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields(); \
+        static const metric_filters::metric_fields_type kAllKthPercentileFields =                  \
+            get_all_kth_percentile_fields();                                                       \
                                                                                                    \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
-            metric_filters::metric_fields_type with_metric_fields;                                                 \
-            metric_filters::metric_fields_type expected_metric_fields;                                             \
+            metric_filters::metric_fields_type with_metric_fields;                                 \
+            metric_filters::metric_fields_type expected_metric_fields;                             \
         } tests[] = {                                                                              \
             {"server_60", {}, kAllKthPercentileFields},                                            \
             {"server_61", {kMetricNameField}, {kMetricNameField}},                                 \
