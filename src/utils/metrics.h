@@ -136,6 +136,7 @@ class metric_prototype;
 class metric;
 using metric_ptr = ref_ptr<metric>;
 class metric_filters;
+class metric_entity_prototype;
 
 class metric_entity : public ref_counter
 {
@@ -172,7 +173,9 @@ private:
     friend class metric_registry;
     friend class ref_ptr<metric_entity>;
 
-    metric_entity(const std::string &id, attr_map &&attrs);
+    metric_entity(const metric_entity_prototype *prototype,
+                  const std::string &id,
+                  const attr_map &attrs);
 
     ~metric_entity();
 
@@ -189,7 +192,9 @@ private:
     };
     void close(close_option option);
 
-    void set_attributes(attr_map &&attrs);
+    void set_attributes(const attr_map &attrs);
+
+    const metric_entity_prototype *const _prototype;
 
     const std::string _id;
 
@@ -206,10 +211,10 @@ using metric_entity_ptr = ref_ptr<metric_entity>;
 struct metric_filters
 {
     using metric_fields_type = std::unordered_set<std::string>;
-    using entity_types_type = std::unordered_set<std::string>;
+    using entity_types_type = std::vector<std::string>;
     using entity_ids_type = std::unordered_set<std::string>;
     using entity_attrs_type = std::vector<std::string>;
-    using entity_metrics_type = std::unordered_set<std::string>;
+    using entity_metrics_type = std::vector<std::string>;
 
 // NOTICE: empty `white_list` means every field is required by client.
 #define RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list)                                           \
@@ -220,16 +225,19 @@ struct metric_filters
     } while (0)
 
 #define DEFINE_SIMPLE_MATCHER(name)                                                                \
-    inline bool match_##name(const std::string &candidate) const                                   \
+    template <typename T>                                                                          \
+    inline bool match_##name(const T &candidate) const                                             \
     {                                                                                              \
         return match(candidate, name##s);                                                          \
     }
 
-    static inline bool match(const std::string &candidate,
-                             const std::vector<std::string> &white_list)
+    static inline bool match(const char *candidate, const std::vector<std::string> &white_list)
     {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
-        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
+        return std::find_if(
+                   white_list.begin(), white_list.end(), [candidate](const std::string &e) {
+                       return e.compare(candidate) == 0;
+                   }) != white_list.end();
     }
 
     static inline bool match(const std::string &candidate,
@@ -249,12 +257,12 @@ struct metric_filters
 
     bool match_entity_attrs(const metric_entity::attr_map &candidates) const
     {
-        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(attrs);
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(entity_attrs);
 
         CHECK_EQ(entity_attrs.size() & 1, 0);
 
-        for (entity_types::size_type i = 0; i < entity_attrs.size(); i += 2) {
-            metric_entity::const_iterator iter = candidates.find(entity_attrs[i]);
+        for (entity_attrs_type::size_type i = 0; i < entity_attrs.size(); i += 2) {
+            metric_entity::attr_map::const_iterator iter = candidates.find(entity_attrs[i]);
             if (iter == candidates.end()) {
                 continue;
             }
@@ -265,23 +273,11 @@ struct metric_filters
         return false;
     }
 
-    void extract_entity_metrics(const metric_entity::metric_map &candidates,
-                                metric_entity::metric_map &metrics) const
-    {
-        if (entity_metrics.empty()) {
-            metrics = candidates;
-            return;
-        }
-
-        metrics.clear();
-        for (const auto &candidate : candidates) {
-            if (entity_metrics.find(candidate.first->))
-                metrics.emplace(candidate.first, candidate.second);
-        }
-    }
-
 #undef DEFINE_SIMPLE_MATCHER
 #undef RETURN_MATCHED_WITH_EMPTY_WHITE_LIST
+
+    void extract_entity_metrics(const metric_entity::metric_map &candidates,
+                                metric_entity::metric_map &target_metrics) const;
 
     // `with_metric_fields` includes all the metric fields that are wanted by client. If it
     // is empty, there will be no restriction: in other words, all fields owned by the metric
@@ -306,7 +302,8 @@ public:
     const char *name() const { return _name; }
 
     // Create an entity with the given ID and attributes, if any.
-    metric_entity_ptr instantiate(const std::string &id, metric_entity::attr_map attrs) const;
+    metric_entity_ptr instantiate(const std::string &id,
+                                  const metric_entity::attr_map &attrs) const;
     metric_entity_ptr instantiate(const std::string &id) const;
 
 private:
@@ -329,7 +326,9 @@ private:
     metric_registry();
     ~metric_registry();
 
-    metric_entity_ptr find_or_create_entity(const std::string &id, metric_entity::attr_map &&attrs);
+    metric_entity_ptr find_or_create_entity(const metric_entity_prototype *prototype,
+                                            const std::string &id,
+                                            const metric_entity::attr_map &attrs);
 
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;

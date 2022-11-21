@@ -158,7 +158,7 @@ TEST(metrics_test, create_entity)
 
     metric_registry::entity_map entities;
     for (const auto &test : tests) {
-        ASSERT_EQ(test.prototype->name(), test.type_name);
+        ASSERT_STREQ(test.prototype->name(), test.type_name.c_str());
 
         metric_entity_ptr entity;
         if (test.entity_attrs.empty() && !test.use_attrs_arg_if_empty) {
@@ -171,10 +171,6 @@ TEST(metrics_test, create_entity)
         ASSERT_EQ(id, test.entity_id);
 
         auto attrs = entity->attributes();
-        ASSERT_NE(attrs.find("entity"), attrs.end());
-        ASSERT_EQ(attrs["entity"], test.type_name);
-        ASSERT_EQ(attrs.size(), test.entity_attrs.size() + 1);
-        ASSERT_EQ(attrs.erase("entity"), 1);
         ASSERT_EQ(attrs, test.entity_attrs);
 
         ASSERT_EQ(entities.find(test.entity_id), entities.end());
@@ -207,7 +203,6 @@ TEST(metrics_test, recreate_entity)
 
         // the attributes will be updated
         auto attrs = entity->attributes();
-        ASSERT_EQ(attrs.erase("entity"), 1);
         ASSERT_EQ(attrs, test.entity_attrs);
     }
 }

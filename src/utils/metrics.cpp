@@ -24,8 +24,10 @@
 
 namespace dsn {
 
-metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
-    : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
+metric_entity::metric_entity(const metric_entity_prototype *prototype,
+                             const std::string &id,
+                             const attr_map &attrs)
+    : _prototype(prototype), _id(id), _lock(), _attrs(attrs), _metrics()
 {
 }
 
@@ -84,21 +86,52 @@ metric_entity::metric_map metric_entity::metrics() const
 void metric_entity::take_snapshot(dsn::json::JsonWriter &writer,
                                   const metric_filters &filters) const
 {
+    if (!filters.match_entity_type(_prototype->name())) {
+        return;
+    }
+
+    if (!filters.match_entity_id(_id)) {
+        return;
+    }
+
+    utils::auto_read_lock l(_lock);
+    if (!filters.match_entity_attrs(_attrs)) {
+        return;
+    }
+
+    metric_map target_metrics;
+    filters.extract_entity_metrics(_metrics, target_metrics);
+    for (const auto &m : target_metrics) {
+        m.second->take_snapshot(writer, filters);
+    }
 }
 
-void metric_entity::set_attributes(attr_map &&attrs)
+void metric_entity::set_attributes(const attr_map &attrs)
 {
     utils::auto_write_lock l(_lock);
-    _attrs = std::move(attrs);
+    _attrs = attrs;
+}
+
+void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
+                                            metric_entity::metric_map &target_metrics) const
+{
+    if (entity_metrics.empty()) {
+        target_metrics = candidates;
+        return;
+    }
+
+    target_metrics.clear();
+    for (const auto &candidate : candidates) {
+        if (match(candidate.first->name().data(), entity_metrics)) {
+            target_metrics.emplace(candidate.first, candidate.second);
+        }
+    }
 }
 
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id,
-                                                       metric_entity::attr_map attrs) const
+                                                       const metric_entity::attr_map &attrs) const
 {
-    CHECK(attrs.find("entity") == attrs.end(), "{}'s attribute \"entity\" is reserved", id);
-
-    attrs["entity"] = _name;
-    return metric_registry::instance().find_or_create_entity(id, std::move(attrs));
+    return metric_registry::instance().find_or_create_entity(this, id, attrs);
 }
 
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id) const
@@ -146,8 +179,9 @@ metric_registry::entity_map metric_registry::entities() const
     return _entities;
 }
 
-metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
-                                                         metric_entity::attr_map &&attrs)
+metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_prototype *prototype,
+                                                         const std::string &id,
+                                                         const metric_entity::attr_map &attrs)
 {
     utils::auto_write_lock l(_lock);
 
@@ -155,10 +189,10 @@ metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
 
     metric_entity_ptr entity;
     if (iter == _entities.end()) {
-        entity = new metric_entity(id, std::move(attrs));
+        entity = new metric_entity(prototype, id, attrs);
         _entities[id] = entity;
     } else {
-        iter->second->set_attributes(std::move(attrs));
+        iter->second->set_attributes(attrs);
         entity = iter->second;
     }
 
