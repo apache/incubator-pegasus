@@ -138,6 +138,11 @@ using metric_ptr = ref_ptr<metric>;
 class metric_filters;
 class metric_entity_prototype;
 
+const std::string kMetricEntityTypeField = "type";
+const std::string kMetricEntityIdField = "id";
+const std::string kMetricEntityAttrsField = "attributes";
+const std::string kMetricEntityMetricsField = "attributes";
+
 class metric_entity : public ref_counter
 {
 public:
@@ -193,6 +198,16 @@ private:
     void close(close_option option);
 
     void set_attributes(const attr_map &attrs);
+
+    void encode_type(dsn::json::JsonWriter &writer) const;
+
+    void encode_id(dsn::json::JsonWriter &writer) const;
+
+    static void encode_attrs(dsn::json::JsonWriter &writer, const attr_map &attrs);
+
+    static void encode_metrics(dsn::json::JsonWriter &writer,
+                               const metric_map &metrics,
+                               const metric_filters &filters);
 
     const metric_entity_prototype *const _prototype;
 
@@ -461,10 +476,10 @@ protected:
     // Encode a metric field specified by `field_name` as json format. However, once the field
     // are not chosen by `filters`, this function will do nothing.
     template <typename T>
-    inline void encode(dsn::json::JsonWriter &writer,
-                       const std::string &field_name,
-                       const T &value,
-                       const metric_filters &filters) const
+    static inline void encode(dsn::json::JsonWriter &writer,
+                              const std::string &field_name,
+                              const T &value,
+                              const metric_filters &filters)
     {
         if (!filters.match_with_metric_field(field_name)) {
             return;
@@ -510,9 +525,9 @@ protected:
     // Encode the unique value of a metric as json format, if it is chosen by `filters`. Notice
     // that the metric should have only one value. like gauge and counter.
     template <typename T>
-    inline void encode_single_value(dsn::json::JsonWriter &writer,
-                                    const T &value,
-                                    const metric_filters &filters) const
+    static inline void encode_single_value(dsn::json::JsonWriter &writer,
+                                           const T &value,
+                                           const metric_filters &filters)
     {
         encode(writer, kMetricSingleValueField, value, filters);
     }

@@ -83,6 +83,53 @@ metric_entity::metric_map metric_entity::metrics() const
     return _metrics;
 }
 
+void metric_entity::set_attributes(const attr_map &attrs)
+{
+    utils::auto_write_lock l(_lock);
+    _attrs = attrs;
+}
+
+void metric_entity::encode_type(dsn::json::JsonWriter &writer) const
+{
+    writer.Key(kMetricEntityTypeField.c_str());
+    json::json_encode(writer, _prototype->name());
+}
+
+void metric_entity::encode_id(dsn::json::JsonWriter &writer) const
+{
+    writer.Key(kMetricEntityIdField.c_str());
+    json::json_encode(writer, _id);
+}
+
+/*static*/ void metric_entity::encode_attrs(dsn::json::JsonWriter &writer, const attr_map &attrs)
+{
+    // Empty attributes will just be encoded as {}.
+
+    writer.Key(kMetricEntityAttrsField.c_str());
+
+    writer.StartObject();
+    for (const auto &attr : attrs) {
+        writer.Key(attr.first.c_str());
+        json::json_encode(writer, attr.second);
+    }
+    writer.EndObject();
+}
+
+/*static*/ void metric_entity::encode_metrics(dsn::json::JsonWriter &writer,
+                                              const metric_map &metrics,
+                                              const metric_filters &filters)
+{
+    CHECK(!metrics.empty(), "");
+
+    writer.Key(kMetricEntityMetricsField.c_str());
+
+    writer.StartArray();
+    for (const auto &m : metrics) {
+        m.second->take_snapshot(writer, filters);
+    }
+    writer.EndArray();
+}
+
 void metric_entity::take_snapshot(dsn::json::JsonWriter &writer,
                                   const metric_filters &filters) const
 {
@@ -94,22 +141,30 @@ void metric_entity::take_snapshot(dsn::json::JsonWriter &writer,
         return;
     }
 
-    utils::auto_read_lock l(_lock);
-    if (!filters.match_entity_attrs(_attrs)) {
-        return;
-    }
-
+    attr_map my_attrs;
     metric_map target_metrics;
-    filters.extract_entity_metrics(_metrics, target_metrics);
-    for (const auto &m : target_metrics) {
-        m.second->take_snapshot(writer, filters);
-    }
-}
 
-void metric_entity::set_attributes(const attr_map &attrs)
-{
-    utils::auto_write_lock l(_lock);
-    _attrs = attrs;
+    {
+        utils::auto_read_lock l(_lock);
+
+        if (!filters.match_entity_attrs(_attrs)) {
+            return;
+        }
+
+        filters.extract_entity_metrics(_metrics, target_metrics);
+        if (target_metrics.empty()) {
+            return;
+        }
+
+        my_attrs = _attrs;
+    }
+
+    writer.StartObject();
+    encode_type(writer);
+    encode_id(writer);
+    encode_attrs(writer, my_attrs);
+    encode_metrics(writer, target_metrics, filters);
+    writer.EndObject();
 }
 
 void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
