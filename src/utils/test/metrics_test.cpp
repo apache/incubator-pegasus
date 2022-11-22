@@ -901,7 +901,8 @@ TEST(metrics_test, percentile_double)
                          floating_checker<value_type>>(METRIC_test_percentile_double);
 }
 
-std::string take_snapshot_and_get_json_string(metric *m, const metric_filters &filters)
+template <typename T>
+std::string take_snapshot_and_get_json_string(T *m, const metric_filters &filters)
 {
     std::stringstream out;
     rapidjson::OStreamWrapper wrapper(out);
@@ -909,6 +910,9 @@ std::string take_snapshot_and_get_json_string(metric *m, const metric_filters &f
 
     m->take_snapshot(writer, filters);
 
+    std::cout << "json string:" << std::endl;
+    std::cout << out.str();
+    std::cout << std::endl;
     return out.str();
 }
 
@@ -932,23 +936,23 @@ void check_prototype_and_extract_value_map_from_json_string(
     // The json format for each metric should be an object.
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
-        // Each metric name must be a string.
+        // Each name must be a string.
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
             // Must be a field of metric prototype.
-            if (std::strcmp(elem.name.GetString(), kMetricTypeField.c_str()) == 0) {
+            if (kMetricTypeField.compare(elem.name.GetString()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(),
                              enum_to_string(my_metric->prototype()->type()));
-            } else if (std::strcmp(elem.name.GetString(), kMetricNameField.c_str()) == 0) {
+            } else if (kMetricNameField.compare(elem.name.GetString()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->name().data());
-            } else if (std::strcmp(elem.name.GetString(), kMetricUnitField.c_str()) == 0) {
+            } else if (kMetricUnitField.compare(elem.name.GetString()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(),
                              enum_to_string(my_metric->prototype()->unit()));
-            } else if (std::strcmp(elem.name.GetString(), kMetricDescField.c_str()) == 0) {
+            } else if (kMetricDescField.compare(elem.name.GetString()) == 0) {
                 ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->description().data());
             } else {
-                ASSERT_TRUE(false);
+                ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
             }
         } else {
             // Must be a field of metric value.
@@ -1374,6 +1378,71 @@ TEST(metrics_test, take_snapshot_percentile_double)
                                        floating_percentile_case_generator<double>,
                                        false,
                                        compare_floating_metric_value_map);
+}
+
+void check_entity_from_json_string(metric_entity *my_entity,
+                                   const std::string &json_string,
+                                   const std::string &expected_entity_type,
+                                   const std::string &expected_entity_id,
+                                   const metric_entity::attr_map &expected_entity_attrs,
+                                   const std::unordered_set<std::string> &expected_entity_metrics)
+{
+    rapidjson::Document doc;
+    rapidjson::ParseResult result = doc.Parse(json_string.c_str());
+    ASSERT_FALSE(result.IsError());
+
+    // The json format for each entity should be an object.
+    ASSERT_TRUE(doc.IsObject());
+    for (const auto &elem : doc.GetObject()) {
+        // Each name must be a string.
+        ASSERT_TRUE(elem.name.IsString());
+
+        if (kMetricEntityTypeField.compare(elem.name.GetString()) == 0) {
+            ASSERT_STREQ(elem.value.GetString(), expected_entity_type.c_str());
+            ASSERT_STREQ(elem.value.GetString(), my_entity->prototype()->name());
+        } else if (kMetricEntityIdField.compare(elem.name.GetString()) == 0) {
+            ASSERT_STREQ(elem.value.GetString(), expected_entity_id.c_str());
+            ASSERT_STREQ(elem.value.GetString(), my_entity->id().c_str());
+        } else if (kMetricEntityAttrsField.compare(elem.name.GetString()) == 0) {
+            ASSERT_TRUE(elem.value.IsObject());
+
+            metric_entity::attr_map actual_entity_attrs;
+            for (const auto &attr : elem.value.GetObject()) {
+                // Each name must be a string.
+                ASSERT_TRUE(attr.name.IsString());
+                ASSERT_TRUE(attr.value.IsString());
+                actual_entity_attrs.emplace(attr.name.GetString(), attr.value.GetString());
+            }
+            ASSERT_EQ(actual_entity_attrs, expected_entity_attrs);
+            ASSERT_EQ(actual_entity_attrs, my_entity->attributes());
+        } else if (kMetricEntityMetricsField.compare(elem.name.GetString()) == 0) {
+            ASSERT_TRUE(elem.value.IsArray());
+
+            std::unordered_set<std::string> actual_entity_metrics;
+            for (const auto &m : elem.value.GetArray()) {
+                ASSERT_TRUE(m.IsObject());
+
+                for (const auto &field : m.GetObject()) {
+                    // Each name must be a string.
+                    ASSERT_TRUE(field.name.IsString());
+                    ASSERT_TRUE(field.value.IsString());
+                    if (kMetricNameField.compare(field.name.GetString()) == 0) {
+                        actual_entity_metrics.emplace(field.value.GetString());
+                    }
+                }
+            }
+
+            std::unordered_set<std::string> my_entity_metrics;
+            for (const auto &m : my_entity->metrics()) {
+                my_entity_metrics.emplace(m.second->prototype()->name().data());
+            }
+
+            ASSERT_EQ(actual_entity_metrics, expected_entity_metrics);
+            ASSERT_EQ(actual_entity_metrics, my_entity_metrics);
+        } else {
+            ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
+        }
+    }
 }
 
 } // namespace dsn

@@ -151,6 +151,8 @@ public:
     using attr_map = std::unordered_map<std::string, std::string>;
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
 
+    const metric_entity_prototype *prototype() const { return _prototype; }
+
     const std::string &id() const { return _id; }
 
     attr_map attributes() const;
@@ -212,7 +214,6 @@ private:
                                const metric_filters &filters);
 
     const metric_entity_prototype *const _prototype;
-
     const std::string _id;
 
     mutable utils::rw_lock_nr _lock;
