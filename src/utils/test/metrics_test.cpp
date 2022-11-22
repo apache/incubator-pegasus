@@ -34,7 +34,7 @@ class my_gauge : public metric
 public:
     int64_t value() { return _value; }
 
-    void take_snapshot(json::JsonWriter &, const metric_filters &) override {}
+    void take_snapshot(metric_json_writer &, const metric_filters &) override {}
 
 protected:
     explicit my_gauge(const metric_prototype *prototype) : metric(prototype), _value(0) {}
@@ -905,7 +905,7 @@ std::string take_snapshot_and_get_json_string(metric *m, const metric_filters &f
 {
     std::stringstream out;
     rapidjson::OStreamWrapper wrapper(out);
-    json::JsonWriter writer(wrapper);
+    metric_json_writer writer(wrapper);
 
     m->take_snapshot(writer, filters);
 

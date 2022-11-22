@@ -89,19 +89,19 @@ void metric_entity::set_attributes(const attr_map &attrs)
     _attrs = attrs;
 }
 
-void metric_entity::encode_type(dsn::json::JsonWriter &writer) const
+void metric_entity::encode_type(metric_json_writer &writer) const
 {
     writer.Key(kMetricEntityTypeField.c_str());
     json::json_encode(writer, _prototype->name());
 }
 
-void metric_entity::encode_id(dsn::json::JsonWriter &writer) const
+void metric_entity::encode_id(metric_json_writer &writer) const
 {
     writer.Key(kMetricEntityIdField.c_str());
     json::json_encode(writer, _id);
 }
 
-/*static*/ void metric_entity::encode_attrs(dsn::json::JsonWriter &writer, const attr_map &attrs)
+/*static*/ void metric_entity::encode_attrs(metric_json_writer &writer, const attr_map &attrs)
 {
     // Empty attributes will just be encoded as {}.
 
@@ -115,7 +115,7 @@ void metric_entity::encode_id(dsn::json::JsonWriter &writer) const
     writer.EndObject();
 }
 
-/*static*/ void metric_entity::encode_metrics(dsn::json::JsonWriter &writer,
+/*static*/ void metric_entity::encode_metrics(metric_json_writer &writer,
                                               const metric_map &metrics,
                                               const metric_filters &filters)
 {
@@ -130,8 +130,7 @@ void metric_entity::encode_id(dsn::json::JsonWriter &writer) const
     writer.EndArray();
 }
 
-void metric_entity::take_snapshot(dsn::json::JsonWriter &writer,
-                                  const metric_filters &filters) const
+void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filters &filters) const
 {
     if (!filters.match_entity_type(_prototype->name())) {
         return;

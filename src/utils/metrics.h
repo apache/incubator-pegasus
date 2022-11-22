@@ -138,6 +138,8 @@ using metric_ptr = ref_ptr<metric>;
 class metric_filters;
 class metric_entity_prototype;
 
+using metric_json_writer = dsn::json::PrettyJsonWriter;
+
 const std::string kMetricEntityTypeField = "type";
 const std::string kMetricEntityIdField = "id";
 const std::string kMetricEntityAttrsField = "attributes";
@@ -172,7 +174,7 @@ public:
         return ptr;
     }
 
-    void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) const;
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
 
 private:
     friend class metric_registry;
@@ -199,13 +201,13 @@ private:
 
     void set_attributes(const attr_map &attrs);
 
-    void encode_type(dsn::json::JsonWriter &writer) const;
+    void encode_type(metric_json_writer &writer) const;
 
-    void encode_id(dsn::json::JsonWriter &writer) const;
+    void encode_id(metric_json_writer &writer) const;
 
-    static void encode_attrs(dsn::json::JsonWriter &writer, const attr_map &attrs);
+    static void encode_attrs(metric_json_writer &writer, const attr_map &attrs);
 
-    static void encode_metrics(dsn::json::JsonWriter &writer,
+    static void encode_metrics(metric_json_writer &writer,
                                const metric_map &metrics,
                                const metric_filters &filters);
 
@@ -467,7 +469,7 @@ public:
 
     // Take snapshot of each metric to collect current values as json format with fields chosen
     // by `filters`.
-    virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
+    virtual void take_snapshot(metric_json_writer &writer, const metric_filters &filters) = 0;
 
 protected:
     explicit metric(const metric_prototype *prototype);
@@ -476,7 +478,7 @@ protected:
     // Encode a metric field specified by `field_name` as json format. However, once the field
     // are not chosen by `filters`, this function will do nothing.
     template <typename T>
-    static inline void encode(dsn::json::JsonWriter &writer,
+    static inline void encode(metric_json_writer &writer,
                               const std::string &field_name,
                               const T &value,
                               const metric_filters &filters)
@@ -490,31 +492,31 @@ protected:
     }
 
     // Encode the metric type as json format, if it is chosen by `filters`.
-    inline void encode_type(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_type(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricTypeField, enum_to_string(prototype()->type()), filters);
     }
 
     // Encode the metric name as json format, if it is chosen by `filters`.
-    inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_name(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
     }
 
     // Encode the metric unit as json format, if it is chosen by `filters`.
-    inline void encode_unit(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_unit(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricUnitField, enum_to_string(prototype()->unit()), filters);
     }
 
     // Encode the metric description as json format, if it is chosen by `filters`.
-    inline void encode_desc(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_desc(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricDescField, prototype()->description().data(), filters);
     }
 
     // Encode the metric prototype as json format, if some attributes in it are chosen by `filters`.
-    inline void encode_prototype(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_prototype(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode_type(writer, filters);
         encode_name(writer, filters);
@@ -525,9 +527,8 @@ protected:
     // Encode the unique value of a metric as json format, if it is chosen by `filters`. Notice
     // that the metric should have only one value. like gauge and counter.
     template <typename T>
-    static inline void encode_single_value(dsn::json::JsonWriter &writer,
-                                           const T &value,
-                                           const metric_filters &filters)
+    static inline void
+    encode_single_value(metric_json_writer &writer, const T &value, const metric_filters &filters)
     {
         encode(writer, kMetricSingleValueField, value, filters);
     }
@@ -585,7 +586,7 @@ public:
     // where "name" is the name of the gauge in string type, and "value" is just current value
     // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
     // determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
@@ -702,7 +703,7 @@ public:
     // }
     // where "name" is the name of the counter in string type, and "value" is just current value
     // of the counter fetched by `value()`, in integral type (namely int64_t).
-    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
@@ -934,7 +935,7 @@ public:
     // where "name" is the name of the percentile in string type, with each configured kth
     // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
     // (i.e. integral or floating-point type, determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
