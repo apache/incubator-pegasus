@@ -1425,8 +1425,8 @@ void check_entity_from_json_string(metric_entity *my_entity,
                 for (const auto &field : m.GetObject()) {
                     // Each name must be a string.
                     ASSERT_TRUE(field.name.IsString());
-                    ASSERT_TRUE(field.value.IsString());
                     if (kMetricNameField.compare(field.name.GetString()) == 0) {
+                        ASSERT_TRUE(field.value.IsString());
                         actual_entity_metrics.emplace(field.value.GetString());
                     }
                 }
@@ -1442,6 +1442,52 @@ void check_entity_from_json_string(metric_entity *my_entity,
         } else {
             ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
         }
+    }
+}
+
+TEST(metrics_test, take_snapshot_entity)
+{
+    struct test_case
+    {
+        metric_entity_prototype *entity_prototype;
+        std::string expected_entity_type;
+        std::string expected_entity_id;
+        metric_entity::attr_map expected_entity_attrs;
+        std::unordered_set<std::string> expected_entity_metrics;
+        metric_filters::entity_types_type entity_types;
+        metric_filters::entity_ids_type entity_ids;
+        metric_filters::entity_attrs_type entity_attrs;
+        metric_filters::entity_metrics_type entity_metrics;
+    } tests[] = {{&METRIC_ENTITY_my_server,
+                  "my_server",
+                  "server_81",
+                  {},
+                  {"test_gauge_int64", "test_counter"},
+                  {},
+                  {},
+                  {},
+                  {}}};
+
+    for (const auto &test : tests) {
+        auto my_entity =
+            test.entity_prototype->instantiate(test.expected_entity_id, test.expected_entity_attrs);
+
+        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+        my_gauge_int64->set(5);
+
+        auto my_counter = METRIC_test_counter.instantiate(my_entity);
+        my_counter->increment();
+
+        metric_filters filters = {
+            {}, test.entity_types, test.entity_ids, test.entity_attrs, test.entity_metrics};
+
+        auto json_string = take_snapshot_and_get_json_string(my_entity.get(), filters);
+        check_entity_from_json_string(my_entity,
+                                      json_string,
+                                      test.expected_entity_type,
+                                      test.expected_entity_id,
+                                      test.expected_entity_attrs,
+                                      test.expected_entity_metrics);
     }
 }
 

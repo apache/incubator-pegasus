@@ -143,7 +143,7 @@ using metric_json_writer = dsn::json::PrettyJsonWriter;
 const std::string kMetricEntityTypeField = "type";
 const std::string kMetricEntityIdField = "id";
 const std::string kMetricEntityAttrsField = "attributes";
-const std::string kMetricEntityMetricsField = "attributes";
+const std::string kMetricEntityMetricsField = "metrics";
 
 class metric_entity : public ref_counter
 {
