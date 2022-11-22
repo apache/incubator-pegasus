@@ -82,12 +82,9 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
                log_prefixed_message_func().c_str());
 }
 
-screen_logger::screen_logger(bool short_header) : logging_provider("./")
-{
-    _short_header = short_header;
-}
+screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
 
-screen_logger::screen_logger(const char *log_dir) : logging_provider(log_dir)
+screen_logger::screen_logger(const char *log_dir)
 {
     _short_header =
         dsn_config_get_value_bool("tools.screen_logger",
@@ -117,7 +114,7 @@ void screen_logger::dsn_logv(const char *file,
 
 void screen_logger::flush() { ::fflush(stdout); }
 
-simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
+simple_logger::simple_logger(const char *log_dir)
 {
     _log_dir = std::string(log_dir);
     // we assume all valid entries are positive

@@ -636,7 +636,7 @@ static void
 generate_file(const char *filename, unsigned long long file_size, char *block, unsigned block_size)
 {
     int fd = ::open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-    ASSERT_TRUE(fd > 0) << utils::safe_strerror(errno);
+    ASSERT_GT(fd, 0) << utils::safe_strerror(errno);
     for (unsigned long long i = 0; i < file_size;) {
         int batch_size = (file_size - i);
         if (batch_size > block_size)
@@ -647,10 +647,10 @@ generate_file(const char *filename, unsigned long long file_size, char *block, u
             block[j] = (char)rand::next_u32(0, 255);
         }
         ASSERT_EQ(batch_size, ::write(fd, block, batch_size))
-            << "write file " << filename << " failed, err = {}" << utils::safe_strerror(errno);
+            << "write file " << filename << " failed, err = " << utils::safe_strerror(errno);
     }
-    ASSERT_EQ(0, ::close(fd)) << "close file " << filename << " failed, err = {}"
-                              << utils::safe_strerror(errno);
+    ASSERT_EQ(0, ::close(fd)) << "close file " << filename
+                              << " failed, err = " << utils::safe_strerror(errno);
 }
 
 TEST_F(FDSClientTest, test_concurrent_upload_download)

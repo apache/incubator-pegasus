@@ -51,7 +51,7 @@ public:
     typedef logging_provider *(*factory)(const char *);
 
 public:
-    virtual ~logging_provider() {}
+    virtual ~logging_provider() = default;
 
     // singleton
     static logging_provider *instance();
@@ -77,8 +77,6 @@ public:
     void deregister_commands() { _cmds.clear(); }
 
 protected:
-    logging_provider(const char *) {}
-
     static std::unique_ptr<logging_provider> _logger;
 
     static logging_provider *create_default_instance();

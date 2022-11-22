@@ -128,7 +128,7 @@ void dsn_log(const char *file,
 
 namespace dsn {
 
-std::unique_ptr<logging_provider> logging_provider::_logger = nullptr;
+std::unique_ptr<logging_provider> logging_provider::_logger;
 
 logging_provider *logging_provider::instance()
 {

@@ -179,7 +179,8 @@ command_manager::~command_manager()
 {
     _cmds.clear();
     CHECK(_handlers.empty(),
-          "All commands must be deregistered before command_manager been destroyed",
+          "All commands must be deregistered before command_manager is destroyed, however {} is "
+          "still registered",
           _handlers.begin()->first);
 }
 

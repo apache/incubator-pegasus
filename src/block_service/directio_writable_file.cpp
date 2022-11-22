@@ -102,10 +102,20 @@ bool direct_io_writable_file::finalize()
     CHECK(_buffer && _fd >= 0, "Initialize the instance first");
 
     if (_offset > 0) {
-        if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
-            LOG_ERROR_F("Failed to write last chunk, file_path = {}, err = {}",
+        ssize_t written_bytes = ::write(_fd, _buffer, _buffer_size);
+        if (dsn_unlikely(written_bytes < 0)) {
+            LOG_ERROR_F("Failed to write the last chunk, file_path = {}, err = {}",
                         _file_path,
                         utils::safe_strerror(errno));
+            return false;
+        }
+        // TODO(yingchun): would better to retry
+        if (dsn_unlikely(written_bytes != _buffer_size)) {
+            LOG_ERROR_F("Failed to write the last chunk, file_path = {}, data bytes = {}, written "
+                        "bytes = {}",
+                        _file_path,
+                        _buffer_size,
+                        written_bytes);
             return false;
         }
         _offset = 0;
@@ -130,10 +140,20 @@ bool direct_io_writable_file::write(const char *s, size_t n)
         s += bytes;
         // buffer is full, flush to file
         if (_offset == _buffer_size) {
-            if (::write(_fd, _buffer, _buffer_size) != _buffer_size) {
-                LOG_ERROR_F("Failed to write to direct_io_writable_file {}, err = {}",
+            ssize_t written_bytes = ::write(_fd, _buffer, _buffer_size);
+            if (dsn_unlikely(written_bytes < 0)) {
+                LOG_ERROR_F("Failed to write chunk, file_path = {}, err = {}",
                             _file_path,
                             utils::safe_strerror(errno));
+                return false;
+            }
+            // TODO(yingchun): would better to retry
+            if (dsn_unlikely(written_bytes != _buffer_size)) {
+                LOG_ERROR_F(
+                    "Failed to write chunk, file_path = {}, data bytes = {}, written bytes = {}",
+                    _file_path,
+                    _buffer_size,
+                    written_bytes);
                 return false;
             }
             // reset offset
