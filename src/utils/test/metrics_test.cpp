@@ -1447,6 +1447,13 @@ void check_entity_from_json_string(metric_entity *my_entity,
 
 TEST(metrics_test, take_snapshot_entity)
 {
+    static const std::unordered_set<std::string> kAllEntityMetrics = {"test_gauge_int64",
+                                                                      "test_counter"};
+
+    // Test cases:
+    // - both attributes and filters are empty
+    // - entity has an attribute while filters are empty
+    // - entity has 2 attributes while filters are empty
     struct test_case
     {
         metric_entity_prototype *entity_prototype;
@@ -1458,15 +1465,26 @@ TEST(metrics_test, take_snapshot_entity)
         metric_filters::entity_ids_type entity_ids;
         metric_filters::entity_attrs_type entity_attrs;
         metric_filters::entity_metrics_type entity_metrics;
-    } tests[] = {{&METRIC_ENTITY_my_server,
-                  "my_server",
-                  "server_81",
-                  {},
-                  {"test_gauge_int64", "test_counter"},
-                  {},
-                  {},
-                  {},
-                  {}}};
+    } tests[] = {
+        {&METRIC_ENTITY_my_server, "my_server", "server_81", {}, kAllEntityMetrics, {}, {}, {}, {}},
+        {&METRIC_ENTITY_my_table,
+         "my_table",
+         "table_1",
+         {{"table", "test_table_1"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.2",
+         {{"table", "test_table_1"}, {"partition", "2"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {},
+         {}}};
 
     for (const auto &test : tests) {
         auto my_entity =
