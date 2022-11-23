@@ -103,7 +103,7 @@ void metric_entity::encode_id(metric_json_writer &writer) const
 
 /*static*/ void metric_entity::encode_attrs(metric_json_writer &writer, const attr_map &attrs)
 {
-    // Empty attributes will just be encoded as {}.
+    // Empty attributes are allowed and will just be encoded as {}.
 
     writer.Key(kMetricEntityAttrsField.c_str());
 
@@ -119,6 +119,7 @@ void metric_entity::encode_id(metric_json_writer &writer) const
                                               const metric_map &metrics,
                                               const metric_filters &filters)
 {
+    // Taking snapshot from empty metrics is meaningless.
     CHECK(!metrics.empty(), "");
 
     writer.Key(kMetricEntityMetricsField.c_str());

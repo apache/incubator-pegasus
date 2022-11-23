@@ -1387,6 +1387,13 @@ void check_entity_from_json_string(metric_entity *my_entity,
                                    const metric_entity::attr_map &expected_entity_attrs,
                                    const std::unordered_set<std::string> &expected_entity_metrics)
 {
+    // `json_string` and `expected_entity_metrics` should be empty or non-empty simultaneously
+    ASSERT_EQ(json_string.empty(), expected_entity_metrics.empty());
+    if (json_string.empty()) {
+        std::cout << "json string is empty" << std::endl;
+        return;
+    }
+
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
@@ -1454,6 +1461,7 @@ TEST(metrics_test, take_snapshot_entity)
     // - both attributes and filters are empty
     // - entity has an attribute while filters are empty
     // - entity has 2 attributes while filters are empty
+    // - entity has 2 attributes while filters are empty and metrics are empty
     struct test_case
     {
         metric_entity_prototype *entity_prototype;
@@ -1484,17 +1492,33 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {}}};
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_2.2",
+         {{"table", "test_table_2"}, {"partition", "2"}},
+         {},
+         {},
+         {},
+         {},
+         {}},
+    };
 
     for (const auto &test : tests) {
         auto my_entity =
             test.entity_prototype->instantiate(test.expected_entity_id, test.expected_entity_attrs);
 
-        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
-        my_gauge_int64->set(5);
+        if (test.expected_entity_metrics.find("test_gauge_int64") !=
+            test.expected_entity_metrics.end()) {
+            auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+            my_gauge_int64->set(5);
+        }
 
-        auto my_counter = METRIC_test_counter.instantiate(my_entity);
-        my_counter->increment();
+        if (test.expected_entity_metrics.find("test_counter") !=
+            test.expected_entity_metrics.end()) {
+            auto my_counter = METRIC_test_counter.instantiate(my_entity);
+            my_counter->increment();
+        }
 
         metric_filters filters = {
             {}, test.entity_types, test.entity_ids, test.entity_attrs, test.entity_metrics};
