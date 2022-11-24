@@ -1486,6 +1486,14 @@ TEST(metrics_test, take_snapshot_entity)
     // both mismatched
     // - entity has an attribute while filter has 2 entity attributes one of which is matched
     // - entity has an attribute while filter has 2 mismatched entity attributes
+    // - entity has 2 attributes while filter has one matched entity attribute
+    // - entity has 2 attributes while filter has one entity attribute whose key is mismatched
+    // - entity has 2 attributes while filter has one entity attribute whose value is mismatched
+    // - entity has 2 attributes while filter has one entity attribute whose key and value are
+    // both mismatched
+    // - entity has 2 attributes while filter has 2 matched entity attributes
+    // - entity has 2 attributes while filter has 2 entity attributes one of which is matched
+    // - entity has 2 attributes while filter has 2 mismatched entity attributes
     struct test_case
     {
         metric_entity_prototype *entity_prototype;
@@ -1669,6 +1677,69 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {"another_table", "test_table_7", "table", "another_test_table_7"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.2",
+         {{"table", "test_table_1"}, {"partition", "2"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"table", "test_table_1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.3",
+         {{"table", "test_table_1"}, {"partition", "3"}},
+         {},
+         {},
+         {},
+         {"another_partition", "3"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.4",
+         {{"table", "test_table_1"}, {"partition", "4"}},
+         {},
+         {},
+         {},
+         {"table", "another_test_table_1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.5",
+         {{"table", "test_table_1"}, {"partition", "5"}},
+         {},
+         {},
+         {},
+         {"another_table", "another_test_table_1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.6",
+         {{"table", "test_table_1"}, {"partition", "6"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"table", "test_table_1", "partition", "6"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_1.7",
+         {{"table", "test_table_1"}, {"partition", "7"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"another_table", "another_test_table_1", "partition", "7"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         "my_replica",
+         "replica_2.0",
+         {{"table", "test_table_2"}, {"partition", "0"}},
+         {},
+         {},
+         {},
+         {"table", "another_test_table_2", "partition", "1"},
          {}},
     };
 
