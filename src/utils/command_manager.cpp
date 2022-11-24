@@ -31,6 +31,7 @@
 #include <thread>
 
 #include "utils/fmt_logging.h"
+#include "utils/logging_provider.h"
 #include "utils/smart_pointers.h"
 #include "utils/utils.h"
 
@@ -177,10 +178,10 @@ command_manager::command_manager()
 command_manager::~command_manager()
 {
     _cmds.clear();
-    _handlers.clear();
-    // TODO(yingchun): enable this check when all commands deregister correctly.
-    // CHECK(_handlers.empty(), "All commands must be deregistered before command_manager been
-    // destroyed", _handlers.begin()->first);
+    CHECK(_handlers.empty(),
+          "All commands must be deregistered before command_manager is destroyed, however {} is "
+          "still registered",
+          _handlers.begin()->first);
 }
 
 } // namespace dsn

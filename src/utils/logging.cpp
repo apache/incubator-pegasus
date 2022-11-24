@@ -24,14 +24,15 @@
  * THE SOFTWARE.
  */
 
-#include "utils/command_manager.h"
 #include "utils/logging_provider.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
+
 #include "common/gpid.h"
+#include "runtime/task/task_code.h"
+#include "utils/command_manager.h"
+#include "utils/error_code.h"
 #include "utils/flags.h"
 #include "utils/smart_pointers.h"
+#include "utils/threadpool_code.h"
 #include "simple_logger.h"
 
 dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFO;
@@ -82,37 +83,6 @@ void dsn_log_init(const std::string &logging_factory_name,
         logging_factory_name.c_str(), dsn::PROVIDER_TYPE_MAIN, dir_log.c_str());
     dsn::logging_provider::set_logger(logger);
 
-    // register command for logging
-    ::dsn::command_manager::instance().register_command(
-        {"flush-log"},
-        "flush-log - flush log to stderr or log file",
-        "flush-log",
-        [](const std::vector<std::string> &args) {
-            dsn::logging_provider *logger = dsn::logging_provider::instance();
-            logger->flush();
-            return "Flush done.";
-        });
-    ::dsn::command_manager::instance().register_command(
-        {"reset-log-start-level"},
-        "reset-log-start-level - reset the log start level",
-        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
-        [](const std::vector<std::string> &args) {
-            dsn_log_level_t start_level;
-            if (args.size() == 0) {
-                start_level =
-                    enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
-            } else {
-                std::string level_str = "LOG_LEVEL_" + args[0];
-                start_level =
-                    enum_from_string(level_str.c_str(), dsn_log_level_t::LOG_LEVEL_INVALID);
-                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID) {
-                    return "ERROR: invalid level '" + args[0] + "'";
-                }
-            }
-            dsn_log_set_start_level(start_level);
-            return std::string("OK, current level is ") + enum_to_string(start_level);
-        });
-
     if (dsn_log_prefixed_message_func != nullptr) {
         dsn::set_log_prefixed_message_func(dsn_log_prefixed_message_func);
     }
@@ -158,13 +128,11 @@ void dsn_log(const char *file,
 
 namespace dsn {
 
-std::unique_ptr<logging_provider> logging_provider::_logger =
-    std::unique_ptr<logging_provider>(nullptr);
+std::unique_ptr<logging_provider> logging_provider::_logger;
 
 logging_provider *logging_provider::instance()
 {
-    static std::unique_ptr<logging_provider> default_logger =
-        std::unique_ptr<logging_provider>(create_default_instance());
+    static std::unique_ptr<logging_provider> default_logger(create_default_instance());
     return _logger ? _logger.get() : default_logger.get();
 }
 

@@ -24,19 +24,15 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     dynamic and seperated string to/from integer id mapping
- *     in constrast to defining all enums in a single file
- */
-
 #pragma once
 
-#include "singleton.h"
-#include "ports.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "utils/ports.h"
+#include "utils/singleton.h"
+#include "utils/command_manager.h"
 
 namespace dsn {
 namespace utils {
@@ -54,16 +50,18 @@ template <typename T>
 class customized_id_mgr : public dsn::utils::singleton<customized_id_mgr<T>>
 {
 public:
-    customized_id_mgr() : _names(199) {}
+    customized_id_mgr() : _names(199) { register_commands(); }
     int get_id(const char *name) const;
     int get_id(const std::string &name) const;
     const char *get_name(int id) const;
     int register_id(const char *name);
     int max_value() const { return static_cast<int>(_names2.size()) - 1; }
+    void register_commands() {}
 
 private:
     std::unordered_map<std::string, int> _names;
     std::vector<std::string> _names2;
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 };
 
 template <typename T>

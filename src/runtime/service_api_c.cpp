@@ -80,6 +80,8 @@ static struct _all_info_
 
 } dsn_all;
 
+std::unique_ptr<dsn::command_deregister> dump_log_cmd;
+
 volatile int *dsn_task_queue_virtual_length_ptr(dsn::task_code code, int hash)
 {
     return dsn::task::get_current_node()->computation()->get_task_queue_virtual_length_ptr(code,
@@ -181,6 +183,8 @@ bool dsn_run_config(const char *config, bool is_server)
 
 [[noreturn]] void dsn_exit(int code)
 {
+    dump_log_cmd.reset();
+
     printf("dsn exit with code %d\n", code);
     fflush(stdout);
     ::dsn::tools::sys_exit.execute(::dsn::SYS_EXIT_NORMAL);
@@ -510,24 +514,25 @@ bool run(const char *config_file,
         exit(1);
     }
 
-    dsn::command_manager::instance().register_command({"config-dump"},
-                                                      "config-dump - dump configuration",
-                                                      "config-dump [to-this-config-file]",
-                                                      [](const std::vector<std::string> &args) {
-                                                          std::ostringstream oss;
-                                                          std::ofstream off;
-                                                          std::ostream *os = &oss;
-                                                          if (args.size() > 0) {
-                                                              off.open(args[0]);
-                                                              os = &off;
+    dump_log_cmd =
+        dsn::command_manager::instance().register_command({"config-dump"},
+                                                          "config-dump - dump configuration",
+                                                          "config-dump [to-this-config-file]",
+                                                          [](const std::vector<std::string> &args) {
+                                                              std::ostringstream oss;
+                                                              std::ofstream off;
+                                                              std::ostream *os = &oss;
+                                                              if (args.size() > 0) {
+                                                                  off.open(args[0]);
+                                                                  os = &off;
 
-                                                              oss << "config dump to file "
-                                                                  << args[0] << std::endl;
-                                                          }
+                                                                  oss << "config dump to file "
+                                                                      << args[0] << std::endl;
+                                                              }
 
-                                                          dsn_config_dump(*os);
-                                                          return oss.str();
-                                                      });
+                                                              dsn_config_dump(*os);
+                                                              return oss.str();
+                                                          });
 
     // invoke customized init after apps are created
     dsn::tools::sys_init_after_app_created.execute();

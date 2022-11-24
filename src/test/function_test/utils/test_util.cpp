@@ -77,7 +77,7 @@ void test_util::SetUp()
 
 void test_util::run_cmd_from_project_root(const std::string &cmd)
 {
-    ASSERT_EQ(0, chdir(global_env::instance()._pegasus_root.c_str()));
+    ASSERT_EQ(0, ::chdir(global_env::instance()._pegasus_root.c_str()));
     ASSERT_NO_FATAL_FAILURE(run_cmd(cmd));
 }
 

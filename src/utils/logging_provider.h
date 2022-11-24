@@ -24,21 +24,17 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     base prototype for logging
- *
- * Revision history:
- *     Mar., 2015, @imzhenyu (Zhenyu Guo), first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <stdarg.h>
+
+#include "utils/api_utilities.h"
 #include "utils/factory_store.h"
 
 namespace dsn {
+
+class command_deregister;
+
 /*!
 @addtogroup tool-api-providers
 @{
@@ -55,9 +51,7 @@ public:
     typedef logging_provider *(*factory)(const char *);
 
 public:
-    logging_provider(const char *) {}
-
-    virtual ~logging_provider(void) {}
+    virtual ~logging_provider() = default;
 
     // singleton
     static logging_provider *instance();
@@ -80,10 +74,14 @@ public:
 
     virtual void flush() = 0;
 
-private:
+    void deregister_commands() { _cmds.clear(); }
+
+protected:
     static std::unique_ptr<logging_provider> _logger;
 
     static logging_provider *create_default_instance();
+
+    std::vector<std::unique_ptr<command_deregister>> _cmds;
 };
 
 void set_log_prefixed_message_func(std::function<std::string()> func);

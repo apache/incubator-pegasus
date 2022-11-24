@@ -218,8 +218,11 @@ bool process_kill_testor::start_job_by_index(job_type type, int index)
 
 void process_kill_testor::stop_verifier_and_exit(const char *msg)
 {
-    system("ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9");
-    CHECK(false, "{}", msg);
+    std::stringstream ss;
+    int ret = dsn::utils::pipe_execute(
+        "ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9", ss);
+    CHECK(ret == 0 || ret == 256, "");
+    LOG_FATAL(msg);
 }
 
 bool process_kill_testor::check_coredump()

@@ -24,12 +24,16 @@
  * THE SOFTWARE.
  */
 
-#include "simple_logger.h"
+#include "utils/simple_logger.h"
+
+#include <fmt/format.h>
 #include <sstream>
+
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/time_utils.h"
-#include <fmt/format.h>
+
+DSN_DECLARE_string(logging_start_level);
 
 namespace dsn {
 namespace tools {
@@ -78,12 +82,9 @@ static void print_header(FILE *fp, dsn_log_level_t log_level)
                log_prefixed_message_func().c_str());
 }
 
-screen_logger::screen_logger(bool short_header) : logging_provider("./")
-{
-    _short_header = short_header;
-}
+screen_logger::screen_logger(bool short_header) { _short_header = short_header; }
 
-screen_logger::screen_logger(const char *log_dir) : logging_provider(log_dir)
+screen_logger::screen_logger(const char *log_dir)
 {
     _short_header =
         dsn_config_get_value_bool("tools.screen_logger",
@@ -113,7 +114,7 @@ void screen_logger::dsn_logv(const char *file,
 
 void screen_logger::flush() { ::fflush(stdout); }
 
-simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
+simple_logger::simple_logger(const char *log_dir)
 {
     _log_dir = std::string(log_dir);
     // we assume all valid entries are positive
@@ -151,6 +152,36 @@ simple_logger::simple_logger(const char *log_dir) : logging_provider(log_dir)
         ++_index;
 
     create_log_file();
+
+    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
+        {"flush-log"},
+        "flush-log - flush log to stderr or log file",
+        "flush-log",
+        [this](const std::vector<std::string> &args) {
+            this->flush();
+            return "Flush done.";
+        }));
+
+    _cmds.emplace_back(::dsn::command_manager::instance().register_command(
+        {"reset-log-start-level"},
+        "reset-log-start-level - reset the log start level",
+        "reset-log-start-level [DEBUG | INFO | WARNING | ERROR | FATAL]",
+        [](const std::vector<std::string> &args) {
+            dsn_log_level_t start_level;
+            if (args.size() == 0) {
+                start_level =
+                    enum_from_string(FLAGS_logging_start_level, dsn_log_level_t::LOG_LEVEL_INVALID);
+            } else {
+                std::string level_str = "LOG_LEVEL_" + args[0];
+                start_level =
+                    enum_from_string(level_str.c_str(), dsn_log_level_t::LOG_LEVEL_INVALID);
+                if (start_level == dsn_log_level_t::LOG_LEVEL_INVALID) {
+                    return "ERROR: invalid level '" + args[0] + "'";
+                }
+            }
+            dsn_log_set_start_level(start_level);
+            return std::string("OK, current level is ") + enum_to_string(start_level);
+        }));
 }
 
 void simple_logger::create_log_file()

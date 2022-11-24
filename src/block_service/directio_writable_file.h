@@ -19,6 +19,8 @@
 
 #include <string>
 
+#include "utils/ports.h"
+
 namespace dsn {
 namespace dist {
 namespace block_service {
