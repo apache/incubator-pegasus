@@ -910,10 +910,15 @@ std::string take_snapshot_and_get_json_string(T *m, const metric_filters &filter
 
     m->take_snapshot(writer, filters);
 
-    std::cout << "json string:" << std::endl;
-    std::cout << out.str();
-    std::cout << std::endl;
-    return out.str();
+    auto out_str = out.str();
+    if (out_str.empty()) {
+        std::cout << "The json string is empty." << std::endl;
+    } else {
+        std::cout << "The json string is: " << std::endl;
+        std::cout << out_str << std::endl;
+    }
+
+    return out_str;
 }
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
