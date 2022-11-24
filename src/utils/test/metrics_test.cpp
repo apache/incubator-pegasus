@@ -1392,10 +1392,12 @@ void check_entity_from_json_string(metric_entity *my_entity,
                                    const metric_entity::attr_map &expected_entity_attrs,
                                    const std::unordered_set<std::string> &expected_entity_metrics)
 {
-    // `json_string` and `expected_entity_metrics` should be empty or non-empty simultaneously
+    // `json_string` and `expected_entity_metrics` should be empty or non-empty simultaneously;
+    // empty `json_string` means this entity is not selected by the filters.
     ASSERT_EQ(json_string.empty(), expected_entity_metrics.empty());
     if (json_string.empty()) {
-        std::cout << "json string is empty" << std::endl;
+        std::cout << "Empty json string means this entity is not selected by the filters."
+                  << std::endl;
         return;
     }
 
@@ -1467,6 +1469,23 @@ TEST(metrics_test, take_snapshot_entity)
     // - entity has an attribute while filters are empty
     // - entity has 2 attributes while filters are empty
     // - entity has 2 attributes while filters are empty and metrics are empty
+    // - filter has one matched entity type
+    // - filter has one mismatched entity type
+    // - filter has 2 entity types one of which is matched
+    // - filter has 2 mismatched entity types
+    // - filter has one matched entity id
+    // - filter has one mismatched entity id
+    // - filter has 2 entity ids one of which is matched
+    // - filter has 2 mismatched entity ids
+    // - entity has no attribute while filter has one mismatched entity attribute
+    // - entity has no attribute while filter has 2 mismatched entity attributes
+    // - entity has an attribute while filter has one matched entity attribute
+    // - entity has an attribute while filter has one entity attribute whose key is mismatched
+    // - entity has an attribute while filter has one entity attribute whose value is mismatched
+    // - entity has an attribute while filter has one entity attribute whose key and value are
+    // both mismatched
+    // - entity has an attribute while filter has 2 entity attributes one of which is matched
+    // - entity has an attribute while filter has 2 mismatched entity attributes
     struct test_case
     {
         metric_entity_prototype *entity_prototype;
@@ -1491,8 +1510,8 @@ TEST(metrics_test, take_snapshot_entity)
          {}},
         {&METRIC_ENTITY_my_replica,
          "my_replica",
-         "replica_1.2",
-         {{"table", "test_table_1"}, {"partition", "2"}},
+         "replica_1.0",
+         {{"table", "test_table_1"}, {"partition", "0"}},
          kAllEntityMetrics,
          {},
          {},
@@ -1500,8 +1519,8 @@ TEST(metrics_test, take_snapshot_entity)
          {}},
         {&METRIC_ENTITY_my_replica,
          "my_replica",
-         "replica_2.2",
-         {{"table", "test_table_2"}, {"partition", "2"}},
+         "replica_1.1",
+         {{"table", "test_table_1"}, {"partition", "1"}},
          {},
          {},
          {},
