@@ -1448,13 +1448,7 @@ void check_entity_from_json_string(metric_entity *my_entity,
                 }
             }
 
-            std::unordered_set<std::string> my_entity_metrics;
-            for (const auto &m : my_entity->metrics()) {
-                my_entity_metrics.emplace(m.second->prototype()->name().data());
-            }
-
             ASSERT_EQ(actual_entity_metrics, expected_entity_metrics);
-            ASSERT_EQ(actual_entity_metrics, my_entity_metrics);
         } else {
             ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
         }
