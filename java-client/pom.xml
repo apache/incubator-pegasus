@@ -186,7 +186,7 @@
       </activation>
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
-        <argLine>@{argLine} -Dio.netty.tryReflectionSetAccessible=true
+        <argLine>-Dio.netty.tryReflectionSetAccessible=true
           --add-modules jdk.unsupported
           --add-opens java.base/java.nio=ALL-UNNAMED
           --add-opens java.base/sun.nio.ch=ALL-UNNAMED
@@ -256,9 +256,8 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.19.1</version>
+        <version>3.0.0-M7</version>
         <configuration>
-          <skipTests>${skipTests}</skipTests>
           <additionalClasspathElements>
             <additionalClasspathElement>${project.basedir}/configuration</additionalClasspathElement>
           </additionalClasspathElements>
