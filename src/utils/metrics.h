@@ -285,6 +285,8 @@ struct metric_filters
                 continue;
             }
             if (iter->second == entity_attrs[i + 1]) {
+                // It will be considered as matched once any attribute is matched
+                // for both name and value.
                 return true;
             }
         }

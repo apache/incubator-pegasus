@@ -153,12 +153,16 @@ void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filte
 
         filters.extract_entity_metrics(_metrics, target_metrics);
         if (target_metrics.empty()) {
+            // None of metrics is chosen, there is no need to take snapshot for
+            // this entity.
             return;
         }
 
         my_attrs = _attrs;
     }
 
+    // At least one metric of this entity is chosen, thus take snapshot and encode
+    // this entity as json format.
     writer.StartObject();
     encode_type(writer);
     encode_id(writer);

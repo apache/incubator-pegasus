@@ -1405,6 +1405,8 @@ void check_entity_from_json_string(metric_entity *my_entity,
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
+    std::unordered_set<std::string> actual_fields;
+
     // The json format for each entity should be an object.
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
@@ -1456,7 +1458,16 @@ void check_entity_from_json_string(metric_entity *my_entity,
         } else {
             ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
         }
+
+        actual_fields.emplace(elem.name.GetString());
     }
+
+    static const std::unordered_set<std::string> kAllMetricEntityFields = {
+        kMetricEntityTypeField,
+        kMetricEntityIdField,
+        kMetricEntityAttrsField,
+        kMetricEntityMetricsField};
+    ASSERT_EQ(actual_fields, kAllMetricEntityFields);
 }
 
 TEST(metrics_test, take_snapshot_entity)
@@ -1497,17 +1508,28 @@ TEST(metrics_test, take_snapshot_entity)
     struct test_case
     {
         metric_entity_prototype *entity_prototype;
+        std::unordered_set<std::string> entity_metrics;
         std::string expected_entity_type;
         std::string expected_entity_id;
         metric_entity::attr_map expected_entity_attrs;
         std::unordered_set<std::string> expected_entity_metrics;
-        metric_filters::entity_types_type entity_types;
-        metric_filters::entity_ids_type entity_ids;
-        metric_filters::entity_attrs_type entity_attrs;
-        metric_filters::entity_metrics_type entity_metrics;
+        metric_filters::entity_types_type filter_entity_types;
+        metric_filters::entity_ids_type filter_entity_ids;
+        metric_filters::entity_attrs_type filter_entity_attrs;
+        metric_filters::entity_metrics_type filter_entity_metrics;
     } tests[] = {
-        {&METRIC_ENTITY_my_server, "my_server", "server_81", {}, kAllEntityMetrics, {}, {}, {}, {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_81",
+         {},
+         kAllEntityMetrics,
+         {},
+         {},
+         {},
+         {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_1",
          {{"table", "test_table_1"}},
@@ -1517,6 +1539,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.0",
          {{"table", "test_table_1"}, {"partition", "0"}},
@@ -1526,6 +1549,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_replica,
+         {},
          "my_replica",
          "replica_1.1",
          {{"table", "test_table_1"}, {"partition", "1"}},
@@ -1535,6 +1559,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_82",
          {},
@@ -1544,6 +1569,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_83",
          {},
@@ -1553,6 +1579,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_84",
          {},
@@ -1562,6 +1589,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_85",
          {},
@@ -1571,6 +1599,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_86",
          {},
@@ -1580,6 +1609,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_87",
          {},
@@ -1589,6 +1619,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_88",
          {},
@@ -1598,6 +1629,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_89",
          {},
@@ -1607,6 +1639,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_90",
          {},
@@ -1616,6 +1649,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"attr_name_1", "attr_value_1"},
          {}},
         {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
          "my_server",
          "server_91",
          {},
@@ -1625,6 +1659,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"attr_name_1", "attr_value_1", "attr_name_2", "attr_value_2"},
          {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_2",
          {{"table", "test_table_2"}},
@@ -1634,6 +1669,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_2"},
          {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_3",
          {{"table", "test_table_3"}},
@@ -1643,6 +1679,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "test_table_3"},
          {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_4",
          {{"table", "test_table_4"}},
@@ -1652,6 +1689,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_4"},
          {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_5",
          {{"table", "test_table_5"}},
@@ -1661,6 +1699,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_5"},
          {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_6",
          {{"table", "test_table_6"}},
@@ -1670,6 +1709,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_6", "table", "test_table_6"},
          {}},
         {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
          "my_table",
          "table_7",
          {{"table", "test_table_7"}},
@@ -1679,6 +1719,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "test_table_7", "table", "another_test_table_7"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.2",
          {{"table", "test_table_1"}, {"partition", "2"}},
@@ -1688,6 +1729,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.3",
          {{"table", "test_table_1"}, {"partition", "3"}},
@@ -1697,6 +1739,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_partition", "3"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.4",
          {{"table", "test_table_1"}, {"partition", "4"}},
@@ -1706,6 +1749,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.5",
          {{"table", "test_table_1"}, {"partition", "5"}},
@@ -1715,6 +1759,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.6",
          {{"table", "test_table_1"}, {"partition", "6"}},
@@ -1724,6 +1769,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_1", "partition", "6"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_1.7",
          {{"table", "test_table_1"}, {"partition", "7"}},
@@ -1733,6 +1779,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_1", "partition", "7"},
          {}},
         {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
          "my_replica",
          "replica_2.0",
          {{"table", "test_table_2"}, {"partition", "0"}},
@@ -1747,20 +1794,21 @@ TEST(metrics_test, take_snapshot_entity)
         auto my_entity =
             test.entity_prototype->instantiate(test.expected_entity_id, test.expected_entity_attrs);
 
-        if (test.expected_entity_metrics.find("test_gauge_int64") !=
-            test.expected_entity_metrics.end()) {
+        if (test.entity_metrics.find("test_gauge_int64") != test.entity_metrics.end()) {
             auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
             my_gauge_int64->set(5);
         }
 
-        if (test.expected_entity_metrics.find("test_counter") !=
-            test.expected_entity_metrics.end()) {
+        if (test.entity_metrics.find("test_counter") != test.entity_metrics.end()) {
             auto my_counter = METRIC_test_counter.instantiate(my_entity);
             my_counter->increment();
         }
 
-        metric_filters filters = {
-            {}, test.entity_types, test.entity_ids, test.entity_attrs, test.entity_metrics};
+        metric_filters filters;
+        filters.entity_types = test.filter_entity_types;
+        filters.entity_ids = test.filter_entity_ids;
+        filters.entity_attrs = test.filter_entity_attrs;
+        filters.entity_metrics = test.filter_entity_metrics;
 
         auto json_string = take_snapshot_and_get_json_string(my_entity.get(), filters);
         check_entity_from_json_string(my_entity,
