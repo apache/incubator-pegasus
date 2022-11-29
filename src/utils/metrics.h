@@ -277,6 +277,8 @@ struct metric_filters
     {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(entity_attrs);
 
+        // The size of container must be divisible by 2, since attribute name always pairs
+        // with value in it.
         CHECK_EQ(entity_attrs.size() & 1, 0);
 
         for (entity_attrs_type::size_type i = 0; i < entity_attrs.size(); i += 2) {

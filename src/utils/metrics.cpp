@@ -119,8 +119,10 @@ void metric_entity::encode_id(metric_json_writer &writer) const
                                               const metric_map &metrics,
                                               const metric_filters &filters)
 {
-    // Taking snapshot from empty metrics is meaningless.
-    CHECK(!metrics.empty(), "");
+    // We shouldn't reach here if no metric is chosen, thus just mark an assertion.
+    CHECK(!metrics.empty(),
+          "the entity '{}' should not be encoded into the response since no metric is chosen",
+          _id);
 
     writer.Key(kMetricEntityMetricsField.c_str());
 
@@ -161,7 +163,7 @@ void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filte
         my_attrs = _attrs;
     }
 
-    // At least one metric of this entity is chosen, thus take snapshot and encode
+    // At least one metric of this entity has been chosen, thus take snapshot and encode
     // this entity as json format.
     writer.StartObject();
     encode_type(writer);
