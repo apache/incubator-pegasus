@@ -121,8 +121,7 @@ void metric_entity::encode_id(metric_json_writer &writer) const
 {
     // We shouldn't reach here if no metric is chosen, thus just mark an assertion.
     CHECK(!metrics.empty(),
-          "the entity '{}' should not be encoded into the response since no metric is chosen",
-          _id);
+          "this entity should not be encoded into the response since no metric is chosen");
 
     writer.Key(kMetricEntityMetricsField.c_str());
 
