@@ -252,10 +252,9 @@ struct metric_filters
     static inline bool match(const char *candidate, const std::vector<std::string> &white_list)
     {
         RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
-        return std::find_if(
-                   white_list.begin(), white_list.end(), [candidate](const std::string &e) {
-                       return e.compare(candidate) == 0;
-                   }) != white_list.end();
+        // Will use `bool operator==(const string &lhs, const char *rhs);` to compare each element
+        // in `white_list` with `candidate`.
+        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
     }
 
     static inline bool match(const std::string &candidate,
