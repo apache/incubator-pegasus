@@ -135,7 +135,7 @@ namespace dsn {
 class metric_prototype;
 class metric;
 using metric_ptr = ref_ptr<metric>;
-class metric_filters;
+struct metric_filters;
 class metric_entity_prototype;
 
 using metric_json_writer = dsn::json::PrettyJsonWriter;
