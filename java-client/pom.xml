@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 
     Licensed to the Apache Software Foundation (ASF) under one
@@ -18,8 +19,7 @@
     under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache</groupId>
@@ -29,8 +29,8 @@
   </parent>
   <groupId>org.apache.pegasus</groupId>
   <artifactId>pegasus-client</artifactId>
-  <packaging>jar</packaging>
   <version>2.4-SNAPSHOT</version>
+  <packaging>jar</packaging>
   <name>Pegasus Java Client</name>
 
   <licenses>
@@ -129,31 +129,31 @@
       <artifactId>zookeeper</artifactId>
       <version>${zookeeper.version}</version>
       <exclusions>
-          <exclusion>
-            <groupId>javax.jms</groupId>
-            <artifactId>jms</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jdmk</groupId>
-            <artifactId>jmxtools</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jmx</groupId>
-            <artifactId>jmxri</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>jline</groupId>
-            <artifactId>jline</artifactId>
-          </exclusion>
-        </exclusions>
+        <exclusion>
+          <groupId>javax.jms</groupId>
+          <artifactId>jms</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jdmk</groupId>
+          <artifactId>jmxtools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.sun.jmx</groupId>
+          <artifactId>jmxri</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jline</groupId>
+          <artifactId>jline</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -196,53 +196,8 @@
       <version>${javax.annotation-api.version}</version>
     </dependency>
   </dependencies>
-
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>cobertura-maven-plugin</artifactId>
-        <version>2.7</version>
-      </plugin>
-    </plugins>
-  </reporting>
-  <profiles>
-    <profile>
-      <id>build-with-jdk8</id>
-      <activation>
-        <jdk>1.8</jdk>
-      </activation>
-      <properties>
-        <maven.compiler.source>${compileSource}</maven.compiler.source>
-        <maven.compiler.target>${compileSource}</maven.compiler.target>
-      </properties>
-    </profile>
-    <profile>
-      <id>build-with-jdk11</id>
-      <activation>
-        <jdk>[11,)</jdk>
-      </activation>
-      <properties>
-        <maven.compiler.release>${releaseTarget}</maven.compiler.release>
-        <argLine>-Dio.netty.tryReflectionSetAccessible=true
-          --add-modules jdk.unsupported
-          --add-opens java.base/java.nio=ALL-UNNAMED
-          --add-opens java.base/sun.nio.ch=ALL-UNNAMED
-          --add-opens java.base/java.lang=ALL-UNNAMED
-          --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
-          --add-opens java.base/java.lang.reflect=ALL-UNNAMED
-          --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
-          --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED
-          </argLine>
-      </properties>
-    </profile>
-  </profiles>
   <build>
-    <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-    <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
     <directory>${project.basedir}/target</directory>
-    <outputDirectory>${project.basedir}/target/classes</outputDirectory>
-    <testOutputDirectory>${project.basedir}/target/test-classes</testOutputDirectory>
     <plugins>
 
       <!--maven-shade-plugin-->
@@ -252,10 +207,10 @@
         <version>3.4.1</version>
         <executions>
           <execution>
-            <phase>package</phase>
             <goals>
               <goal>shade</goal>
             </goals>
+            <phase>package</phase>
             <configuration>
               <artifactSet>
                 <includes>
@@ -331,6 +286,9 @@
         <executions>
           <execution>
             <id>checkstyle</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
             <phase>validate</phase>
             <configuration>
               <configLocation>dev-support/google-checks.xml</configLocation>
@@ -340,15 +298,10 @@
               <failOnViolation>true</failOnViolation>
               <violationSeverity>warning</violationSeverity>
               <failsOnError>true</failsOnError>
-              <excludes>
-                org/apache/pegasus/apps/*,
+              <excludes>org/apache/pegasus/apps/*,
                 org/apache/pegasus/base/*,
-                org/apache/pegasus/replication/*,
-              </excludes>
+                org/apache/pegasus/replication/*,</excludes>
             </configuration>
-            <goals>
-              <goal>check</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
@@ -451,6 +404,11 @@
               <style>GOOGLE</style>
             </googleJavaFormat>
           </java>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+            </sortPom>
+          </pom>
         </configuration>
         <executions>
           <execution>
@@ -462,5 +420,49 @@
         </executions>
       </plugin>
     </plugins>
+    <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+    <testSourceDirectory>${project.basedir}/src/test/java</testSourceDirectory>
+    <outputDirectory>${project.basedir}/target/classes</outputDirectory>
+    <testOutputDirectory>${project.basedir}/target/test-classes</testOutputDirectory>
   </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>cobertura-maven-plugin</artifactId>
+        <version>2.7</version>
+      </plugin>
+    </plugins>
+  </reporting>
+  <profiles>
+    <profile>
+      <id>build-with-jdk8</id>
+      <activation>
+        <jdk>1.8</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.source>${compileSource}</maven.compiler.source>
+        <maven.compiler.target>${compileSource}</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>build-with-jdk11</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <properties>
+        <maven.compiler.release>${releaseTarget}</maven.compiler.release>
+        <argLine>-Dio.netty.tryReflectionSetAccessible=true
+          --add-modules jdk.unsupported
+          --add-opens java.base/java.nio=ALL-UNNAMED
+          --add-opens java.base/sun.nio.ch=ALL-UNNAMED
+          --add-opens java.base/java.lang=ALL-UNNAMED
+          --add-opens java.base/jdk.internal.ref=ALL-UNNAMED
+          --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+          --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
+          --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED</argLine>
+      </properties>
+    </profile>
+  </profiles>
 </project>
