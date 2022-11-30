@@ -336,7 +336,6 @@ private:
         std::shared_ptr<app_state> &app,
         const partition_configuration &new_partition_config,
         partition_callback on_partition_updated);
-
     void
     update_partition_max_replica_count_locally(std::shared_ptr<app_state> &app,
                                                const partition_configuration &new_partition_config);

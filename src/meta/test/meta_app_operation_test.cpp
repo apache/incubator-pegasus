@@ -171,6 +171,19 @@ public:
         return rpc.response();
     }
 
+    configuration_rename_app_response rename_app(int32_t app_id, const std::string &new_app_name)
+    {
+        auto req = dsn::make_unique<configuration_rename_app_request>();
+        req->__set_app_id(app_id);
+        req->__set_new_app_name(new_app_name);
+
+        configuration_rename_app_rpc rpc(std::move(req), RPC_CM_RENAME_APP);
+        _ss->rename_app(rpc);
+        _ss->wait_all_task();
+
+        return rpc.response();
+    }
+
     void set_app_and_all_partitions_max_replica_count(const std::string &app_name,
                                                       int32_t max_replica_count)
     {
@@ -793,6 +806,29 @@ TEST_F(meta_app_operation_test, recover_from_max_replica_count_env)
 
     verify_all_partitions_max_replica_count(APP_NAME, new_max_replica_count);
     verify_app_max_replica_count(APP_NAME, new_max_replica_count);
+}
+
+TEST_F(meta_app_operation_test, rename_app)
+{
+    const std::string app_name_1 = APP_NAME + "_rename_1";
+    create_app(app_name_1);
+    auto app = find_app(app_name_1);
+    auto app_id_1 = app->app_id;
+
+    const std::string app_name_2 = APP_NAME + "_rename_2";
+    create_app(app_name_2);
+    app = find_app(app_name_2);
+    auto app_id_2 = app->app_id;
+
+    const std::string app_name_3 = APP_NAME + "_rename_3";
+
+    auto resp = rename_app(app_id_1, app_name_2);
+    ASSERT_EQ(resp.err, ERR_INVALID_PARAMETERS);
+
+    resp = rename_app(app_id_1, app_name_3);
+    ASSERT_EQ(resp.err, ERR_OK);
+    app = find_app(app_name_3);
+    ASSERT_EQ(app->app_id, app_id_1);
 }
 
 } // namespace replication
