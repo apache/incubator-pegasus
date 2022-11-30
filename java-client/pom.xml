@@ -66,13 +66,24 @@
     <slf4j.version>1.7.36</slf4j.version>
     <apache.commons.lang3.version>3.12.0</apache.commons.lang3.version>
     <json.version>20160810</json.version>
-    <netty.version>4.1.42.Final</netty.version>
+    <netty.version>4.1.85.Final</netty.version>
     <zstd-jni.version>1.3.7-1</zstd-jni.version>
     <libthrift.version>0.11.0</libthrift.version>
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
     <zookeeper.version>3.4.14</zookeeper.version>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -152,22 +163,18 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-buffer</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
-      <version>${netty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.json</groupId>
@@ -183,6 +190,16 @@
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
       <version>${libthrift.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpcore</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.httpcomponents</groupId>
+          <artifactId>httpclient</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>javax.annotation</groupId>
@@ -210,6 +227,7 @@
                 <includes>
                   <include>com.google.guava</include>
                   <include>org.apache.thrift</include>
+                  <include>io.netty</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -221,7 +239,12 @@
                   <pattern>org.apache.thrift</pattern>
                   <shadedPattern>${pegasus.shade.name}.org.apache.thrift</shadedPattern>
                 </relocation>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>${pegasus.shade.name}.io.netty</shadedPattern>
+                </relocation>
               </relocations>
+              <createSourcesJar>true</createSourcesJar>
             </configuration>
           </execution>
         </executions>
@@ -447,7 +470,7 @@
       </activation>
       <properties>
         <maven.compiler.release>${releaseTarget}</maven.compiler.release>
-        <argLine>-Dio.netty.tryReflectionSetAccessible=true
+        <argLine>-D${pegasus.shade.name}.io.netty.tryReflectionSetAccessible=true
           --add-modules jdk.unsupported
           --add-opens java.base/java.nio=ALL-UNNAMED
           --add-opens java.base/sun.nio.ch=ALL-UNNAMED
