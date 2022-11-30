@@ -18,11 +18,13 @@
  */
 package org.apache.pegasus.client;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Properties;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.serialize.BytesPushThroughSerializer;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,15 +115,20 @@ public class PConfigUtil {
     String server = zkServerAndPath.getKey();
     String path = zkServerAndPath.getValue();
     LOGGER.info("Pegasus load client information from zkServer=" + server + ", zkPath=" + path);
-    ZkClient client =
-        new ZkClient(
-            server, ZK_SESSION_TIMEOUT, ZK_CONNECTION_TIMEOUT, new BytesPushThroughSerializer());
+    ZooKeeper zk = null;
     try {
-      return client.readData(path);
+      zk = new ZooKeeper(server, ZK_SESSION_TIMEOUT, null);
+      return zk.getData(path, false, null);
     } catch (Exception e) {
       throw new PException(e);
     } finally {
-      client.close();
+      if (zk != null) {
+        try {
+          zk.close();
+        } catch (InterruptedException e) {
+          LOGGER.warn("failed to close zookeeper", e);
+        }
+      }
     }
   }
 
