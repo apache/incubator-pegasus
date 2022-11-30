@@ -18,10 +18,9 @@
  */
 package org.apache.pegasus.client;
 
+import com.google.common.io.ByteStreams;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Scanner;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
@@ -51,13 +50,12 @@ public class TestPingZK {
           zk.create(curPath, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
       }
-      InputStream is = PegasusClient.class.getResourceAsStream("/pegasus.properties");
-      String configData;
-      try (Scanner s = new java.util.Scanner(is).useDelimiter("\\A")) {
-        configData = s.hasNext() ? s.next() : "";
+      byte[] configData;
+      try (InputStream is = PegasusClient.class.getResourceAsStream("/pegasus.properties")) {
+        configData = ByteStreams.toByteArray(is);
       }
       System.out.println("write config to " + configPath);
-      zk.setData(zkPath, configData.getBytes(StandardCharsets.UTF_8), -1);
+      zk.setData(zkPath, configData, -1);
     } finally {
       zk.close();
     }

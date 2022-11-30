@@ -117,7 +117,7 @@ public class PConfigUtil {
     LOGGER.info("Pegasus load client information from zkServer=" + server + ", zkPath=" + path);
     ZooKeeper zk = null;
     try {
-      zk = new ZooKeeper(path, ZK_SESSION_TIMEOUT, null);
+      zk = new ZooKeeper(server, ZK_SESSION_TIMEOUT, null);
       return zk.getData(path, false, null);
     } catch (Exception e) {
       throw new PException(e);
