@@ -59,6 +59,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           titleFormat: '%title%'
           quiet: true
+          bodyRegex: '#(\d+)'
           bodyURLRegex: 'http(s?):\/\/(github.com)(\/apache)(\/incubator-pegasus)(\/issues)\/\d+'
 
   dockerfile_linter:
