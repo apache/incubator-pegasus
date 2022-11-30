@@ -1,20 +1,16 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.pegasus.client;
 
@@ -23,10 +19,9 @@ import static org.apache.pegasus.client.PConfigUtil.loadConfiguration;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Properties;
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.configuration2.ConfigurationConverter;
 import org.apache.pegasus.security.Credential;
 import org.apache.pegasus.tools.WriteLimiter;
+import org.apache.pegasus.util.PropertyUtils;
 
 /**
  * Client Options to control the behavior of {@link PegasusClientInterface}.
@@ -41,16 +36,10 @@ import org.apache.pegasus.tools.WriteLimiter;
  *
  * <pre>{@code
  * ClientOptions opts =
- *      ClientOptions.builder()
- *          .metaServers("127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603")
- *          .operationTimeout(Duration.ofMillis(1000))
- *          .asyncWorkers(4)
- *          .enablePerfCounter(false)
- *          .falconPerfCounterTags("")
- *          .falconPushInterval(Duration.ofSeconds(10))
- *          .metaQueryTimeout(Duration.ofMillis(5000))
- *          .credential(null)
- *          .build();
+ *     ClientOptions.builder().metaServers("127.0.0.1:34601,127.0.0.1:34602,127.0.0.1:34603")
+ *         .operationTimeout(Duration.ofMillis(1000)).asyncWorkers(4).enablePerfCounter(false)
+ *         .falconPerfCounterTags("").falconPushInterval(Duration.ofSeconds(10))
+ *         .metaQueryTimeout(Duration.ofMillis(5000)).credential(null).build();
  * }</pre>
  */
 public class ClientOptions {
@@ -145,18 +134,12 @@ public class ClientOptions {
     return builder().build();
   }
 
-  public static ClientOptions create(Properties properties) throws PException {
-    Configuration config = ConfigurationConverter.getConfiguration(properties);
-    return create(config);
-  }
-
   public static ClientOptions create(String configPath) throws PException {
-    Configuration config = ConfigurationConverter.getConfiguration(loadConfiguration(configPath));
-    return create(config);
+    return create(loadConfiguration(configPath));
   }
 
-  private static ClientOptions create(Configuration config) throws PException {
-    String metaList = config.getString(PEGASUS_META_SERVERS_KEY);
+  public static ClientOptions create(Properties config) throws PException {
+    String metaList = config.getProperty(PEGASUS_META_SERVERS_KEY);
     if (metaList == null) {
       throw new IllegalArgumentException("no property set: " + PEGASUS_META_SERVERS_KEY);
     }
@@ -165,28 +148,34 @@ public class ClientOptions {
       throw new IllegalArgumentException("invalid property: " + PEGASUS_META_SERVERS_KEY);
     }
 
-    int asyncWorkers = config.getInt(PEGASUS_ASYNC_WORKERS_KEY, DEFAULT_ASYNC_WORKERS);
+    int asyncWorkers =
+        PropertyUtils.getInt(config, PEGASUS_ASYNC_WORKERS_KEY, DEFAULT_ASYNC_WORKERS);
     boolean enablePerfCounter =
-        config.getBoolean(PEGASUS_ENABLE_PERF_COUNTER_KEY, DEFAULT_ENABLE_PERF_COUNTER);
+        PropertyUtils.getBoolean(
+            config, PEGASUS_ENABLE_PERF_COUNTER_KEY, DEFAULT_ENABLE_PERF_COUNTER);
     String perfCounterTags =
         enablePerfCounter
-            ? config.getString(PEGASUS_PERF_COUNTER_TAGS_KEY, DEFAULT_FALCON_PERF_COUNTER_TAGS)
+            ? config.getProperty(PEGASUS_PERF_COUNTER_TAGS_KEY, DEFAULT_FALCON_PERF_COUNTER_TAGS)
             : null;
     Duration pushIntervalSecs =
         Duration.ofSeconds(
-            config.getLong(
-                PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY, DEFAULT_FALCON_PUSH_INTERVAL.getSeconds()));
+            PropertyUtils.getLong(
+                config,
+                PEGASUS_PUSH_COUNTER_INTERVAL_SECS_KEY,
+                DEFAULT_FALCON_PUSH_INTERVAL.getSeconds()));
     Duration operationTimeOut =
         Duration.ofMillis(
-            config.getLong(PEGASUS_OPERATION_TIMEOUT_KEY, DEFAULT_OPERATION_TIMEOUT.toMillis()));
+            PropertyUtils.getLong(
+                config, PEGASUS_OPERATION_TIMEOUT_KEY, DEFAULT_OPERATION_TIMEOUT.toMillis()));
     Duration metaQueryTimeout =
         Duration.ofMillis(
-            config.getLong(PEGASUS_META_QUERY_TIMEOUT_KEY, DEFAULT_META_QUERY_TIMEOUT.toMillis()));
-    String authProtocol = config.getString(PEGASUS_AUTH_PROTOCOL_KEY, DEFAULT_AUTH_PROTOCOL);
+            PropertyUtils.getLong(
+                config, PEGASUS_META_QUERY_TIMEOUT_KEY, DEFAULT_META_QUERY_TIMEOUT.toMillis()));
+    String authProtocol = config.getProperty(PEGASUS_AUTH_PROTOCOL_KEY, DEFAULT_AUTH_PROTOCOL);
     Credential credential = Credential.create(authProtocol, config);
     long sessionResetTimeWindowSecs =
-        config.getLong(
-            PEGASUS_SESSION_RESET_TIME_WINDOW_SECS_KEY, DEFAULT_SESSION_RESET_SECS_WINDOW);
+        PropertyUtils.getLong(
+            config, PEGASUS_SESSION_RESET_TIME_WINDOW_SECS_KEY, DEFAULT_SESSION_RESET_SECS_WINDOW);
 
     return ClientOptions.builder()
         .metaServers(metaList)
