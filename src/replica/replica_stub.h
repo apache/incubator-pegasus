@@ -230,7 +230,7 @@ public:
     // query last checkpoint info for follower in duplication process
     void on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc);
 
-    virtual void update_config(const std::string &name);
+    void update_config(const std::string &name);
 
 private:
     enum replica_node_state

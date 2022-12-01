@@ -88,11 +88,11 @@ void http_service::register_handler(std::string sub_path, http_callback cb, std:
         return;
     }
     auto call = make_unique<http_call>();
-    if (this->path().empty()) {
-        call->path = std::move(sub_path);
-    } else {
-        call->path = this->path() + "/" + std::move(sub_path);
+    call->path = this->path();
+    if (!call->path.empty()) {
+        call->path += '/';
     }
+    call->path += sub_path;
     call->callback = std::move(cb);
     call->help = std::move(help);
     http_call_registry::instance().add(std::move(call));
