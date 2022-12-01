@@ -17,8 +17,7 @@
 
 #include "block_service/fds/fds_service.h"
 
-#include <string.h>
-
+#include <cstring>
 #include <fstream>
 #include <memory>
 
@@ -28,14 +27,14 @@
 #include <galaxy_fds_client.h>
 #include <galaxy_fds_client_exception.h>
 #include <model/delete_multi_objects_result.h>
-#include <model/fds_object_metadata.h>
 #include <model/fds_object.h>
+#include <model/fds_object_metadata.h>
 #include <model/fds_object_listing.h>
 #include <model/fds_object_summary.h>
 #include <Poco/Net/HTTPResponse.h>
 
-#include "utils/error_code.h"
 #include "utils/defer.h"
+#include "utils/error_code.h"
 #include "utils/filesystem.h"
 #include "utils/flags.h"
 #include "utils/fmt_logging.h"

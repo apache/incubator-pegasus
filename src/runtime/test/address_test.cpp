@@ -146,7 +146,7 @@ TEST(rpc_address_test, operators)
     ASSERT_NE(addr, addr_grp);
 
     addr_grp.assign_group("test_group");
-    addr_grp.group_address()->add(addr);
+    ASSERT_TRUE(addr_grp.group_address()->add(addr));
     ASSERT_NE(addr, addr_grp);
 
     {

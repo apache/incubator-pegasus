@@ -59,7 +59,7 @@ static dsn::rpc_address build_group()
     server_group.assign_group("server_group.test");
     dsn::rpc_group_address *g = server_group.group_address();
     for (uint16_t p = TEST_PORT_BEGIN; p <= TEST_PORT_END; ++p) {
-        g->add(dsn::rpc_address("localhost", p));
+        CHECK(g->add(dsn::rpc_address("localhost", p)), "");
     }
 
     g->set_leader(dsn::rpc_address("localhost", TEST_PORT_BEGIN));

@@ -134,7 +134,7 @@ public:
     // and you MUST ensure that _addr is INITIALIZED before you call this function
     void set_invalid();
 
-    bool operator==(rpc_address r) const
+    bool operator==(const rpc_address &r) const
     {
         if (this == &r) {
             return true;
@@ -154,9 +154,9 @@ public:
         }
     }
 
-    bool operator!=(rpc_address r) const { return !(*this == r); }
+    bool operator!=(const rpc_address &r) const { return !(*this == r); }
 
-    bool operator<(rpc_address r) const
+    bool operator<(const rpc_address &r) const
     {
         if (type() != r.type())
             return type() < r.type();

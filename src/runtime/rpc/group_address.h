@@ -42,10 +42,10 @@ public:
     rpc_group_address(const char *name);
     rpc_group_address(const rpc_group_address &other);
     rpc_group_address &operator=(const rpc_group_address &other);
-    bool add(rpc_address addr); // TODO(yingchun): WARN_UNUSED_RESULT
+    bool add(rpc_address addr) WARN_UNUSED_RESULT;
     void add_list(const std::vector<rpc_address> &addrs)
     {
-        for (const rpc_address &addr : addrs) {
+        for (const auto &addr : addrs) {
             // TODO(yingchun): add LOG_WARNING_IF/LOG_ERROR_IF
             if (!add(addr)) {
                 LOG_WARNING_F("duplicate adress {}", addr);
@@ -53,8 +53,8 @@ public:
         }
     }
     void set_leader(rpc_address addr);
-    bool remove(rpc_address addr);   // TODO(yingchun): WARN_UNUSED_RESULT
-    bool contains(rpc_address addr); // TODO(yingchun): WARN_UNUSED_RESULT
+    bool remove(rpc_address addr) WARN_UNUSED_RESULT;
+    bool contains(rpc_address addr) const WARN_UNUSED_RESULT;
     int count();
 
     const std::vector<rpc_address> &members() const { return _members; }
@@ -175,18 +175,20 @@ inline bool rpc_group_address::remove(rpc_address addr)
 {
     alw_t l(_lock);
     auto it = std::find(_members.begin(), _members.end(), addr);
-    bool r = (it != _members.end());
-    if (r) {
-        if (-1 != _leader_index && addr == _members[_leader_index]) {
-            _leader_index = -1;
-        }
-
-        _members.erase(it);
+    if (it == _members.end()) {
+        return false;
     }
-    return r;
+
+    if (-1 != _leader_index && addr == _members[_leader_index]) {
+        _leader_index = -1;
+    }
+
+    _members.erase(it);
+
+    return true;
 }
 
-inline bool rpc_group_address::contains(rpc_address addr)
+inline bool rpc_group_address::contains(rpc_address addr) const
 {
     alr_t l(_lock);
     return _members.end() != std::find(_members.begin(), _members.end(), addr);

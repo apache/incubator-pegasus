@@ -57,8 +57,7 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
         // TODO(yingchun): use getaddrinfo instead
         hostent *hp = ::gethostbyname(name);
         if (dsn_unlikely(hp == nullptr)) {
-            LOG_ERROR_F(
-                "gethostbyname failed, name = {}, err = {}", name, utils::safe_strerror(h_errno));
+            LOG_ERROR_F("gethostbyname failed, name = {}, err = {}", name, hstrerror(h_errno));
             return 0;
         }
 

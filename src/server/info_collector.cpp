@@ -52,7 +52,7 @@ info_collector::info_collector()
 
     _meta_servers.assign_group("meta-servers");
     for (auto &ms : meta_servers) {
-        _meta_servers.group_address()->add(ms);
+        CHECK(_meta_servers.group_address()->add(ms), "");
     }
 
     _cluster_name = dsn::get_current_cluster_name();
