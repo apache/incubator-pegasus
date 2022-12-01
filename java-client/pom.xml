@@ -71,6 +71,7 @@
     <libthrift.version>0.11.0</libthrift.version>
     <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
     <zookeeper.version>3.4.14</zookeeper.version>
+    <doclint>none</doclint>
   </properties>
 
   <dependencyManagement>
@@ -503,6 +504,23 @@
           --add-exports java.base/jdk.internal.misc=ALL-UNNAMED
           --add-exports java.security.jgss/sun.security.krb5=ALL-UNNAMED</argLine>
       </properties>
+    </profile>
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.13</version>
+            <extensions>true</extensions>
+            <configuration>
+              <nexusUrl>https://repository.apache.org/</nexusUrl>
+              <serverId>apache.releases.https</serverId>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 </project>
