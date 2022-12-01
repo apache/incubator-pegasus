@@ -24,20 +24,23 @@
  * THE SOFTWARE.
  */
 
-#include <sys/socket.h>
-#include <netdb.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
+#include "runtime/rpc/rpc_address.h"
+
 #include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
-#include "utils/ports.h"
-#include "utils/string_view.h"
-#include "utils/fixed_size_buffer_pool.h"
+#include <thrift/protocol/TProtocol.h>
 
-#include "utils/api_utilities.h"
-
-#include "utils/rpc_address.h"
 #include "runtime/rpc/group_address.h"
+#include "utils/api_utilities.h"
+#include "utils/fixed_size_buffer_pool.h"
+#include "utils/ports.h"
+#include "utils/safe_strerror_posix.h"
+#include "utils/string_conv.h"
+#include "utils/string_view.h"
 
 namespace dsn {
 
@@ -51,15 +54,14 @@ uint32_t rpc_address::ipv4_from_host(const char *name)
 
     addr.sin_family = AF_INET;
     if ((addr.sin_addr.s_addr = inet_addr(name)) == (unsigned int)(-1)) {
+        // TODO(yingchun): use getaddrinfo instead
         hostent *hp = ::gethostbyname(name);
-        int err = h_errno;
-
-        if (hp == nullptr) {
-            LOG_ERROR("gethostbyname failed, name = %s, err = %d.", name, err);
+        if (dsn_unlikely(hp == nullptr)) {
+            LOG_ERROR_F("gethostbyname failed, name = {}, err = {}", name, hstrerror(h_errno));
             return 0;
-        } else {
-            memcpy((void *)&(addr.sin_addr.s_addr), (const void *)hp->h_addr, (size_t)hp->h_length);
         }
+
+        memcpy((void *)&(addr.sin_addr.s_addr), (const void *)hp->h_addr, (size_t)hp->h_length);
     }
 
     // converts from network byte order to host byte order
@@ -79,8 +81,9 @@ bool rpc_address::is_site_local_address(uint32_t ip_net)
 /*static*/
 bool rpc_address::is_docker_netcard(const char *netcard_interface, uint32_t ip_net)
 {
-    if (dsn::string_view(netcard_interface).find("docker") != dsn::string_view::npos)
+    if (string_view(netcard_interface).find("docker") != string_view::npos) {
         return true;
+    }
     uint32_t iphost = ntohl(ip_net);
     return iphost == 0xAC112A01; // 172.17.42.1
 }
@@ -102,23 +105,22 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
                      is_site_local_address(ip_val))) {
                     ret = (uint32_t)ntohl(ip_val);
                     break;
-                } else {
-                    LOG_DEBUG("skip interface(%s), address(%s)",
-                              i->ifa_name,
-                              rpc_address(ip_val, 0).ipv4_str());
                 }
+                LOG_DEBUG_F("skip interface({}), address({})",
+                            i->ifa_name,
+                            rpc_address(ip_val, 0).ipv4_str());
             }
             i = i->ifa_next;
         }
 
         if (i == nullptr) {
-            LOG_ERROR("get local ip from network interfaces failed, network_interface = %s",
-                      network_interface);
+            LOG_ERROR_F("get local ip from network interfaces failed, network_interface = {}",
+                        network_interface);
         } else {
-            LOG_INFO("get ip address from network interface(%s), addr(%s), input interface(\"%s\")",
-                     i->ifa_name,
-                     rpc_address(ret, 0).ipv4_str(),
-                     network_interface);
+            LOG_INFO_F("get ip address from network interface({}), addr({}), input interface({})",
+                       i->ifa_name,
+                       rpc_address(ret, 0).ipv4_str(),
+                       network_interface);
         }
 
         if (ifa != nullptr) {
@@ -156,7 +158,7 @@ void rpc_address::assign_group(const char *name)
 {
     set_invalid();
     _addr.group.type = HOST_TYPE_GROUP;
-    dsn::rpc_group_address *addr = new dsn::rpc_group_address(name);
+    rpc_group_address *addr = new rpc_group_address(name);
     // take the lifetime of rpc_uri_address, release_ref when change value or call destructor
     addr->add_ref();
     _addr.group.group = (uint64_t)addr;
@@ -189,6 +191,30 @@ const char *rpc_address::ipv4_str() const
         p = (char *)"invalid_ipv4";
     }
     return p;
+}
+
+bool rpc_address::from_string_ipv4(const char *s)
+{
+    set_invalid();
+    std::string ip_port(s);
+    auto pos = ip_port.find_last_of(':');
+    if (pos == std::string::npos) {
+        return false;
+    }
+    std::string ip = ip_port.substr(0, pos);
+    std::string port = ip_port.substr(pos + 1);
+    // check port
+    unsigned int port_num;
+    if (!internal::buf2unsigned(port, port_num) || port_num > UINT16_MAX) {
+        return false;
+    }
+    // check localhost & IP
+    uint32_t ip_addr;
+    if (ip == "localhost" || inet_pton(AF_INET, ip.c_str(), &ip_addr)) {
+        assign_ipv4(ip.c_str(), (uint16_t)port_num);
+        return true;
+    }
+    return false;
 }
 
 const char *rpc_address::to_string() const

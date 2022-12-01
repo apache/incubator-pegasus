@@ -33,6 +33,7 @@
 #include "utils/command_manager.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace service {

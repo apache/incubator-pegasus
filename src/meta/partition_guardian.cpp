@@ -15,8 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "partition_guardian.h"
-#include "server_load_balancer.h"
+#include "meta/partition_guardian.h"
+
+#include "meta/server_load_balancer.h"
+#include "utils/string_conv.h"
 #include "utils/time_utils.h"
 
 namespace dsn {

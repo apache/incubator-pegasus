@@ -29,7 +29,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "rpc_address.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/task/async_calls.h"
 #include "runtime/task/task_tracker.h"

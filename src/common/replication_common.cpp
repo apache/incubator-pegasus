@@ -24,14 +24,15 @@
  * THE SOFTWARE.
  */
 
+#include "common/replication_common.h"
+
 #include <fstream>
 
-#include "utils/fmt_logging.h"
 #include "common/replica_envs.h"
-#include "utils/flags.h"
 #include "utils/filesystem.h"
-
-#include "replication_common.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {
@@ -493,6 +494,7 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
             LOG_ERROR_F("invalid address '{}' specified in config [{}].{}", s, section, key);
             return false;
         }
+        // TODO(yingchun): check there is no duplicates
         servers.push_back(addr);
     }
     if (servers.empty()) {

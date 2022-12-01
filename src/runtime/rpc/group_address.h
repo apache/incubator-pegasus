@@ -24,42 +24,37 @@
  * THE SOFTWARE.
  */
 
-/*
- * Description:
- *     group_address is a collection of rpc_addresses, usually used for replication
- *
- * Revision history:
- *     Sep., 2015, @imzhenyu, first version
- *     xxxx-xx-xx, author, fix bug about xxx
- */
-
 #pragma once
 
 #include <algorithm>
-#include "utils/api_utilities.h"
+
 #include "runtime/api_layer1.h"
-#include "utils/synchronize.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/api_utilities.h"
 #include "utils/autoref_ptr.h"
 #include "utils/rand.h"
-#include "utils/rpc_address.h"
+#include "utils/synchronize.h"
 
 namespace dsn {
-class rpc_group_address : public dsn::ref_counter
+class rpc_group_address : public ref_counter
 {
 public:
     rpc_group_address(const char *name);
     rpc_group_address(const rpc_group_address &other);
     rpc_group_address &operator=(const rpc_group_address &other);
-    bool add(rpc_address addr);
-    void add_list(const std::vector<rpc_address> &list)
+    bool add(rpc_address addr) WARN_UNUSED_RESULT;
+    void add_list(const std::vector<rpc_address> &addrs)
     {
-        for (const rpc_address &r : list) {
-            add(r);
+        for (const auto &addr : addrs) {
+            // TODO(yingchun): add LOG_WARNING_IF/LOG_ERROR_IF
+            if (!add(addr)) {
+                LOG_WARNING_F("duplicate adress {}", addr);
+            }
         }
     }
     void set_leader(rpc_address addr);
-    bool remove(rpc_address addr);
-    bool contains(rpc_address addr);
+    bool remove(rpc_address addr) WARN_UNUSED_RESULT;
+    bool contains(rpc_address addr) const WARN_UNUSED_RESULT;
     int count();
 
     const std::vector<rpc_address> &members() const { return _members; }
@@ -83,10 +78,10 @@ public:
 
 private:
     typedef std::vector<rpc_address> members_t;
-    typedef ::dsn::utils::auto_read_lock alr_t;
-    typedef ::dsn::utils::auto_write_lock alw_t;
+    typedef utils::auto_read_lock alr_t;
+    typedef utils::auto_write_lock alw_t;
 
-    mutable ::dsn::utils::rw_lock_nr _lock;
+    mutable utils::rw_lock_nr _lock;
     members_t _members;
     int _leader_index;
     bool _update_leader_automatically;
@@ -112,6 +107,9 @@ inline rpc_group_address::rpc_group_address(const rpc_group_address &other)
 
 inline rpc_group_address &rpc_group_address::operator=(const rpc_group_address &other)
 {
+    if (this == &other) {
+        return *this;
+    }
     _name = other._name;
     _leader_index = other._leader_index;
     _update_leader_automatically = other._update_leader_automatically;
@@ -135,8 +133,9 @@ inline bool rpc_group_address::add(rpc_address addr)
 inline void rpc_group_address::leader_forward()
 {
     alw_t l(_lock);
-    if (_members.empty())
+    if (_members.empty()) {
         return;
+    }
     _leader_index = (_leader_index + 1) % _members.size();
 }
 
@@ -145,27 +144,30 @@ inline void rpc_group_address::set_leader(rpc_address addr)
     alw_t l(_lock);
     if (addr.is_invalid()) {
         _leader_index = -1;
-    } else {
-        CHECK_EQ_MSG(addr.type(), HOST_TYPE_IPV4, "rpc group address member must be ipv4");
-        for (int i = 0; i < (int)_members.size(); i++) {
-            if (_members[i] == addr) {
-                _leader_index = i;
-                return;
-            }
-        }
-
-        _members.push_back(addr);
-        _leader_index = (int)(_members.size() - 1);
+        return;
     }
+
+    CHECK_EQ_MSG(addr.type(), HOST_TYPE_IPV4, "rpc group address member must be ipv4");
+    for (int i = 0; i < (int)_members.size(); i++) {
+        if (_members[i] == addr) {
+            _leader_index = i;
+            return;
+        }
+    }
+
+    _members.push_back(addr);
+    _leader_index = (int)(_members.size() - 1);
 }
 
 inline rpc_address rpc_group_address::possible_leader()
 {
-    alr_t l(_lock);
-    if (_members.empty())
+    alw_t l(_lock);
+    if (_members.empty()) {
         return rpc_address::s_invalid_address;
-    if (_leader_index == -1)
+    }
+    if (_leader_index == -1) {
         _leader_index = rand::next_u32(0, (uint32_t)_members.size() - 1);
+    }
     return _members[_leader_index];
 }
 
@@ -173,17 +175,20 @@ inline bool rpc_group_address::remove(rpc_address addr)
 {
     alw_t l(_lock);
     auto it = std::find(_members.begin(), _members.end(), addr);
-    bool r = (it != _members.end());
-    if (r) {
-        if (-1 != _leader_index && addr == _members[_leader_index])
-            _leader_index = -1;
-
-        _members.erase(it);
+    if (it == _members.end()) {
+        return false;
     }
-    return r;
+
+    if (-1 != _leader_index && addr == _members[_leader_index]) {
+        _leader_index = -1;
+    }
+
+    _members.erase(it);
+
+    return true;
 }
 
-inline bool rpc_group_address::contains(rpc_address addr)
+inline bool rpc_group_address::contains(rpc_address addr) const
 {
     alr_t l(_lock);
     return _members.end() != std::find(_members.begin(), _members.end(), addr);
@@ -198,18 +203,21 @@ inline int rpc_group_address::count()
 inline rpc_address rpc_group_address::next(rpc_address current) const
 {
     alr_t l(_lock);
-    if (_members.empty())
+    if (_members.empty()) {
         return rpc_address::s_invalid_address;
-    if (current.is_invalid())
-        return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
-    else {
-        auto it = std::find(_members.begin(), _members.end(), current);
-        if (it == _members.end())
-            return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
-        else {
-            it++;
-            return it == _members.end() ? _members[0] : *it;
-        }
     }
+
+    if (current.is_invalid()) {
+        return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
+    }
+
+    auto it = std::find(_members.begin(), _members.end(), current);
+    if (it == _members.end()) {
+        return _members[rand::next_u32(0, (uint32_t)_members.size() - 1)];
+    }
+
+    it++;
+    return it == _members.end() ? _members[0] : *it;
 }
+
 } // namespace dsn

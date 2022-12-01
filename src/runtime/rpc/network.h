@@ -30,7 +30,7 @@
 
 #include "utils/synchronize.h"
 #include "runtime/rpc/message_parser.h"
-#include "utils/rpc_address.h"
+#include "rpc_address.h"
 #include "utils/exp_delay.h"
 #include "perf_counter/perf_counter_wrapper.h"
 #include <atomic>

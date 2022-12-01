@@ -53,7 +53,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 
 int g_test_count = 0;
 int g_test_ret = 0;

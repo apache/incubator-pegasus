@@ -15,10 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "utils/utils.h"
-
-#include "utils/rpc_address.h"
+#include <arpa/inet.h>
 #include <gtest/gtest.h>
+
+#include "runtime/rpc/rpc_address.h"
+#include "utils/utils.h"
 
 namespace dsn {
 namespace replication {

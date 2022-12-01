@@ -21,6 +21,7 @@
 
 #include "utils/fmt_logging.h"
 #include "utils/flags.h"
+#include "utils/string_conv.h"
 
 namespace pegasus {
 namespace server {

@@ -55,7 +55,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/error_code.h"
 #include "runtime/task/future_types.h"
 #include <string>

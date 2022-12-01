@@ -15,10 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "meta_bulk_load_ingestion_context.h"
+#include "meta/meta_bulk_load_ingestion_context.h"
 
-#include "utils/fmt_logging.h"
 #include "utils/fail_point.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
 
 namespace dsn {
 namespace replication {

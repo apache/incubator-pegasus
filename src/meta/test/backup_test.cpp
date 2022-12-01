@@ -27,7 +27,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/fail_point.h"
 #include "utils/time_utils.h"
 #include <gtest/gtest.h>

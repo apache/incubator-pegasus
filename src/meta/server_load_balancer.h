@@ -48,7 +48,7 @@
 #include "runtime/rpc/rpc_stream.h"
 #include "runtime/serverlet.h"
 #include "runtime/service_app.h"
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "utils/zlocks.h"
 #include "utils/command_manager.h"
 #include "utils/error_code.h"

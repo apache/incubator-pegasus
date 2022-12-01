@@ -34,7 +34,7 @@
  */
 
 #include <cinttypes>
-#include "utils/rpc_address.h"
+#include "runtime/rpc/rpc_address.h"
 #include "runtime/rpc/group_address.h"
 #include "failure_detector/failure_detector_multimaster.h"
 #include "utils/rand.h"
@@ -48,8 +48,10 @@ slave_failure_detector_with_multimaster::slave_failure_detector_with_multimaster
     std::function<void()> &&master_connected_callback)
 {
     _meta_servers.assign_group("meta-servers");
-    for (auto &s : meta_servers) {
-        _meta_servers.group_address()->add(s);
+    for (const auto &s : meta_servers) {
+        if (!_meta_servers.group_address()->add(s)) {
+            LOG_WARNING_F("duplicate adress {}", s);
+        }
     }
 
     _meta_servers.group_address()->set_leader(
