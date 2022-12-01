@@ -77,6 +77,14 @@ DSN_DEFINE_uint32("replication",
                   "max concurrent manual emergency checkpoint running count");
 DSN_TAG_VARIABLE(max_concurrent_manual_emergency_checkpointing_count, FT_MUTABLE);
 
+DSN_DEFINE_uint32(
+    "replication",
+    config_sync_interval_ms,
+    30000,
+    "The interval milliseconds of replica server to syncs replica configuration with meta server");
+DSN_TAG_VARIABLE(config_sync_interval_ms, FT_MUTABLE);
+DSN_DEFINE_validator(config_sync_interval_ms, [](uint32_t value) -> bool { return value > 0; });
+
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
@@ -787,9 +795,9 @@ void replica_stub::initialize_start()
                                        zauto_lock l(_state_lock);
                                        this->query_configuration_by_node();
                                    },
-                                   std::chrono::milliseconds(_options.config_sync_interval_ms),
+                                   std::chrono::milliseconds(FLAGS_config_sync_interval_ms),
                                    0,
-                                   std::chrono::milliseconds(_options.config_sync_interval_ms));
+                                   std::chrono::milliseconds(FLAGS_config_sync_interval_ms));
     }
 
 #ifdef DSN_ENABLE_GPERF
@@ -811,7 +819,7 @@ void replica_stub::initialize_start()
 
     // init liveness monitor
     CHECK_EQ(NS_Disconnected, _state);
-    if (_options.fd_disabled == false) {
+    if (!_options.fd_disabled) {
         _failure_detector = std::make_shared<dsn::dist::slave_failure_detector_with_multimaster>(
             _options.meta_servers,
             [this]() { this->on_meta_server_disconnected(); },
@@ -3000,6 +3008,13 @@ void replica_stub::update_disks_status()
             }
         }
     }
+}
+
+void replica_stub::update_config(const std::string &name)
+{
+    // The new value has been validated and FLAGS_* has been updated, it's safety to use it
+    // directly.
+    UPDATE_CONFIG(_config_sync_timer_task->update_interval, config_sync_interval_ms, name);
 }
 
 } // namespace replication

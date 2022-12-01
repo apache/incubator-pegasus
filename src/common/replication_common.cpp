@@ -102,7 +102,6 @@ replication_options::replication_options()
     log_shared_pending_size_throttling_delay_ms = 0;
 
     config_sync_disabled = false;
-    config_sync_interval_ms = 30000;
 
     mem_release_enabled = true;
     mem_release_check_interval_ms = 3600000;
@@ -361,11 +360,6 @@ void replication_options::initialize()
         "config_sync_disabled",
         config_sync_disabled,
         "whether to disable replica configuration periodical sync with the meta server");
-    config_sync_interval_ms = (int)dsn_config_get_value_uint64(
-        "replication",
-        "config_sync_interval_ms",
-        config_sync_interval_ms,
-        "every this period(ms) the replica syncs replica configuration with the meta server");
 
     mem_release_enabled = dsn_config_get_value_bool("replication",
                                                     "mem_release_enabled",

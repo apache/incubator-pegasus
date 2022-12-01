@@ -21,6 +21,7 @@
 #include <nlohmann/json.hpp>
 
 #include "duplication/duplication_sync_timer.h"
+#include "http/http_server.h"
 #include "utils/output_utils.h"
 #include "utils/string_conv.h"
 
@@ -154,6 +155,8 @@ void replica_http_service::query_manual_compaction_handler(const http_request &r
     resp.status_code = http_status_code::ok;
     resp.body = json.dump();
 }
+
+void replica_http_service::update_config(const std::string &name) { _stub->update_config(name); }
 
 } // namespace replication
 } // namespace dsn

@@ -359,15 +359,18 @@ public:
     void exec() override;
     void enqueue() override;
 
+    void update_interval(int interval_ms);
+
 protected:
     void clear_non_trivial_on_task_end() override { _cb = nullptr; }
 
 private:
-    // ATTENTION: if _interval_milliseconds <= 0, then timer task will just be executed once;
-    // otherwise, timer task will be executed periodically(period = _interval_milliseconds)
-    int _interval_milliseconds;
+    // ATTENTION: if _interval_ms == 0, then timer task will just be executed once;
+    // otherwise, timer task will be executed periodically(period = _interval_ms)
+    int _interval_ms;
     task_handler _cb;
 };
+typedef dsn::ref_ptr<dsn::timer_task> timer_task_ptr;
 
 template <typename First, typename... Remaining>
 class future_task : public task

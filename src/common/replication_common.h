@@ -113,7 +113,6 @@ public:
     int32_t log_shared_pending_size_throttling_delay_ms;
 
     bool config_sync_disabled;
-    int32_t config_sync_interval_ms;
 
     bool mem_release_enabled;
     int32_t mem_release_check_interval_ms;
