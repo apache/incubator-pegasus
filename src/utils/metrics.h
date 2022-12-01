@@ -207,12 +207,6 @@ private:
 
     void encode_id(metric_json_writer &writer) const;
 
-    static void encode_attrs(metric_json_writer &writer, const attr_map &attrs);
-
-    static void encode_metrics(metric_json_writer &writer,
-                               const metric_map &metrics,
-                               const metric_filters &filters);
-
     const metric_entity_prototype *const _prototype;
     const std::string _id;
 
@@ -281,7 +275,7 @@ struct metric_filters
         CHECK_EQ(entity_attrs.size() & 1, 0);
 
         for (entity_attrs_type::size_type i = 0; i < entity_attrs.size(); i += 2) {
-            metric_entity::attr_map::const_iterator iter = candidates.find(entity_attrs[i]);
+            const auto &iter = candidates.find(entity_attrs[i]);
             if (iter == candidates.end()) {
                 continue;
             }

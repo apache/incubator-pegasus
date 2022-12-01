@@ -27,7 +27,7 @@ namespace dsn {
 metric_entity::metric_entity(const metric_entity_prototype *prototype,
                              const std::string &id,
                              const attr_map &attrs)
-    : _prototype(prototype), _id(id), _lock(), _attrs(attrs), _metrics()
+    : _prototype(prototype), _id(id), _attrs(attrs)
 {
 }
 
@@ -101,29 +101,31 @@ void metric_entity::encode_id(metric_json_writer &writer) const
     json::json_encode(writer, _id);
 }
 
-/*static*/ void metric_entity::encode_attrs(metric_json_writer &writer, const attr_map &attrs)
+namespace {
+
+void encode_attrs(dsn::metric_json_writer &writer, const dsn::metric_entity::attr_map &attrs)
 {
     // Empty attributes are allowed and will just be encoded as {}.
 
-    writer.Key(kMetricEntityAttrsField.c_str());
+    writer.Key(dsn::kMetricEntityAttrsField.c_str());
 
     writer.StartObject();
     for (const auto &attr : attrs) {
         writer.Key(attr.first.c_str());
-        json::json_encode(writer, attr.second);
+        dsn::json::json_encode(writer, attr.second);
     }
     writer.EndObject();
 }
 
-/*static*/ void metric_entity::encode_metrics(metric_json_writer &writer,
-                                              const metric_map &metrics,
-                                              const metric_filters &filters)
+void encode_metrics(dsn::metric_json_writer &writer,
+                    const dsn::metric_entity::metric_map &metrics,
+                    const dsn::metric_filters &filters)
 {
     // We shouldn't reach here if no metric is chosen, thus just mark an assertion.
     CHECK(!metrics.empty(),
           "this entity should not be encoded into the response since no metric is chosen");
 
-    writer.Key(kMetricEntityMetricsField.c_str());
+    writer.Key(dsn::kMetricEntityMetricsField.c_str());
 
     writer.StartArray();
     for (const auto &m : metrics) {
@@ -131,6 +133,8 @@ void metric_entity::encode_id(metric_json_writer &writer) const
     }
     writer.EndArray();
 }
+
+} // anonymous namespace
 
 void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filters &filters) const
 {
