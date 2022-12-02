@@ -34,6 +34,7 @@
 #include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
 #include "rrdb/rrdb_types.h"
+#include "duplication_internal_types.h"
 
 namespace pegasus {
 namespace server {

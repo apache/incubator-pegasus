@@ -16,6 +16,7 @@
 // under the License.
 
 namespace cpp dsn
+namespace go replication
 
 // Metadata field of the request in rDSN's thrift protocol (version 1).
 // TODO(wutao1): add design doc of the thrift protocol.

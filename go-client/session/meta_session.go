@@ -41,11 +41,11 @@ func (ms *metaSession) call(ctx context.Context, args RpcRequestArgs, rpcName st
 	return ms.CallWithGpid(ctx, &base.Gpid{Appid: 0, PartitionIndex: 0}, 0, args, rpcName)
 }
 
-func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {
+func (ms *metaSession) queryConfig(ctx context.Context, tableName string) (*replication.ConfigurationQueryByIndexResponse, error) {
 	ms.logger.Printf("querying configuration of table(%s) from %s", tableName, ms)
 
 	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
+	arg.Query = replication.NewConfigurationQueryByIndexRequest()
 	arg.Query.AppName = tableName
 	arg.Query.PartitionIndices = []int32{}
 
@@ -106,13 +106,13 @@ func (m *MetaManager) call(ctx context.Context, callFunc metaCallFunc) (metaResp
 // QueryConfig queries table configuration from the leader of meta servers. If the leader was changed,
 // it retries for other servers until it finds the true leader, unless no leader exists.
 // Thread-Safe
-func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*replication.QueryCfgResponse, error) {
+func (m *MetaManager) QueryConfig(ctx context.Context, tableName string) (*replication.ConfigurationQueryByIndexResponse, error) {
 	m.logger.Printf("querying configuration of table(%s) [metaList=%s]", tableName, m.metaIPAddrs)
 	resp, err := m.call(ctx, func(rpcCtx context.Context, ms *metaSession) (metaResponse, error) {
 		return ms.queryConfig(rpcCtx, tableName)
 	})
 	if err == nil {
-		queryCfgResp := resp.(*replication.QueryCfgResponse)
+		queryCfgResp := resp.(*replication.ConfigurationQueryByIndexResponse)
 		return queryCfgResp, nil
 	}
 	return nil, err

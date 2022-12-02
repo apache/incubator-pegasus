@@ -15,11 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "../../idl/dsn.thrift"
-include "../../idl/dsn.layer2.thrift"
+include "dsn.thrift"
+include "dsn.layer2.thrift"
 include "metadata.thrift"
 
 namespace cpp dsn.replication
+namespace go admin
 
 // client to meta server to start partition split
 struct start_partition_split_request

@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
+include "dsn.layer2.thrift"
 include "dsn.thrift"
 
 namespace cpp dsn.apps
+namespace go rrdb
 
 enum filter_type
 {
@@ -124,7 +126,10 @@ struct multi_put_request
 struct multi_remove_request
 {
     1:dsn.blob      hash_key;
-    2:list<dsn.blob> sort_keys; // should not be empty
+    // Should not be empty
+    // Except for go-client which empty means remove all sortkeys
+    // TODO(yingchun): check
+    2:list<dsn.blob> sort_keys;
     3:i64           max_count; // deprecated
 }
 
@@ -298,37 +303,6 @@ struct scan_response
     7:optional i32  kv_count;
 }
 
-struct duplicate_request
-{
-    1: list<duplicate_entry> entries
-}
-
-struct duplicate_entry
-{
-    // The timestamp of this write.
-    1: optional i64 timestamp
-
-    // The code to identify this write.
-    2: optional dsn.task_code task_code
-
-    // The binary form of the write.
-    3: optional dsn.blob raw_message
-
-    // ID of the cluster where this write comes from.
-    4: optional byte cluster_id
-
-    // Whether to compare the timetag of old value with the new write's.
-    5: optional bool verify_timetag
-}
-
-struct duplicate_response
-{
-    1: optional i32 error;
-
-    // hints on the reason why this duplicate failed.
-    2: optional string error_hint;
-}
-
 service rrdb
 {
     update_response put(1:update_request update);
@@ -347,5 +321,11 @@ service rrdb
     scan_response get_scanner(1:get_scanner_request request);
     scan_response scan(1:scan_request request);
     oneway void clear_scanner(1:i64 context_id);
+}
+
+// ONLY FOR GO
+service meta
+{
+    dsn.layer2.configuration_query_by_index_response query_cfg(1:dsn.layer2.configuration_query_by_index_request query);
 }
 

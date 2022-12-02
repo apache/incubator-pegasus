@@ -89,7 +89,7 @@ func (c *rpcBasedClient) waitTableReady(ctx context.Context, tableName string, p
 }
 
 func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int) error {
-	_, err := c.metaManager.CreateApp(ctx, &admin.CreateAppRequest{
+	_, err := c.metaManager.CreateApp(ctx, &admin.ConfigurationCreateAppRequest{
 		AppName: tableName,
 		Options: &admin.CreateAppOptions{
 			PartitionCount: int32(partitionCount),
@@ -119,7 +119,7 @@ func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error 
 }
 
 func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
-	resp, err := c.metaManager.ListApps(ctx, &admin.ListAppsRequest{
+	resp, err := c.metaManager.ListApps(ctx, &admin.ConfigurationListAppsRequest{
 		Status: admin.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {

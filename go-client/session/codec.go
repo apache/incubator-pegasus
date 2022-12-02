@@ -158,27 +158,27 @@ var nameToResultMapLock sync.Mutex
 var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK": func() RpcResponseResult {
 		return &rrdb.MetaQueryCfgResult{
-			Success: replication.NewQueryCfgResponse(),
+			Success: replication.NewConfigurationQueryByIndexResponse(),
 		}
 	},
 	"RPC_CM_CREATE_APP_ACK": func() RpcResponseResult {
 		return &admin.AdminClientCreateAppResult{
-			Success: admin.NewCreateAppResponse(),
+			Success: admin.NewConfigurationCreateAppResponse(),
 		}
 	},
 	"RPC_CM_DROP_APP_ACK": func() RpcResponseResult {
 		return &admin.AdminClientDropAppResult{
-			Success: admin.NewDropAppResponse(),
+			Success: admin.NewConfigurationDropAppResponse(),
 		}
 	},
 	"RPC_CM_RECALL_APP_ACK": func() RpcResponseResult {
 		return &admin.AdminClientRecallAppResult{
-			Success: admin.NewRecallAppResponse(),
+			Success: admin.NewConfigurationRecallAppResponse(),
 		}
 	},
 	"RPC_CM_LIST_APPS_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListAppsResult{
-			Success: admin.NewListAppsResponse(),
+			Success: admin.NewConfigurationListAppsResponse(),
 		}
 	},
 	"RPC_QUERY_APP_INFO_ACK": func() RpcResponseResult {
@@ -188,7 +188,7 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	},
 	"RPC_CM_UPDATE_APP_ENV_ACK": func() RpcResponseResult {
 		return &admin.AdminClientUpdateAppEnvResult{
-			Success: admin.NewUpdateAppEnvResponse(),
+			Success: admin.NewConfigurationUpdateAppEnvResponse(),
 		}
 	},
 	"RPC_CM_QUERY_DUPLICATION_ACK": func() RpcResponseResult {
@@ -208,27 +208,27 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	},
 	"RPC_CM_QUERY_BACKUP_POLICY_ACK": func() RpcResponseResult {
 		return &admin.AdminClientQueryBackupPolicyResult{
-			Success: admin.NewQueryBackupPolicyResponse(),
+			Success: admin.NewConfigurationQueryBackupPolicyResponse(),
 		}
 	},
 	"RPC_CM_CLUSTER_INFO_ACK": func() RpcResponseResult {
 		return &admin.AdminClientQueryClusterInfoResult{
-			Success: admin.NewClusterInfoResponse(),
+			Success: admin.NewConfigurationClusterInfoResponse(),
 		}
 	},
 	"RPC_CM_CONTROL_META_ACK": func() RpcResponseResult {
 		return &admin.AdminClientMetaControlResult{
-			Success: admin.NewMetaControlResponse(),
+			Success: admin.NewConfigurationMetaControlResponse(),
 		}
 	},
 	"RPC_CM_LIST_NODES_ACK": func() RpcResponseResult {
 		return &admin.AdminClientListNodesResult{
-			Success: admin.NewListNodesResponse(),
+			Success: admin.NewConfigurationListNodesResponse(),
 		}
 	},
 	"RPC_CM_PROPOSE_BALANCER_ACK": func() RpcResponseResult {
 		return &admin.AdminClientBalanceResult{
-			Success: admin.NewBalanceResponse(),
+			Success: admin.NewConfigurationBalancerResponse(),
 		}
 	},
 	"RPC_CM_START_BACKUP_APP_ACK": func() RpcResponseResult {
@@ -243,7 +243,7 @@ var nameToResultMap = map[string]func() RpcResponseResult{
 	},
 	"RPC_CM_START_RESTORE_ACK": func() RpcResponseResult {
 		return &admin.AdminClientRestoreAppResult{
-			Success: admin.NewCreateAppResponse(),
+			Success: admin.NewConfigurationCreateAppResponse(),
 		}
 	},
 	"RPC_QUERY_DISK_INFO_ACK": func() RpcResponseResult {

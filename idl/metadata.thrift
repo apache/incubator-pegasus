@@ -24,10 +24,11 @@
  * THE SOFTWARE.
  */
 
-include "../../idl/dsn.thrift"
-include "../../idl/dsn.layer2.thrift"
+include "dsn.thrift"
+include "dsn.layer2.thrift"
 
 namespace cpp dsn.replication
+namespace go admin
 
 enum partition_status
 {

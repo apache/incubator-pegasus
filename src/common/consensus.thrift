@@ -26,7 +26,7 @@
 
 include "../../idl/dsn.thrift"
 include "../../idl/dsn.layer2.thrift"
-include "metadata.thrift"
+include "../../idl/metadata.thrift"
 
 namespace cpp dsn.replication
 

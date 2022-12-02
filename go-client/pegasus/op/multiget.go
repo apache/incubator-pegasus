@@ -53,9 +53,9 @@ func (r *MultiGet) Validate() error {
 		if err := validateSortKeys(r.SortKeys); err != nil {
 			return err
 		}
-		r.Req.SorkKeys = make([]*base.Blob, len(r.SortKeys))
+		r.Req.SortKeys = make([]*base.Blob, len(r.SortKeys))
 		for i, sortKey := range r.SortKeys {
-			r.Req.SorkKeys[i] = &base.Blob{Data: sortKey}
+			r.Req.SortKeys[i] = &base.Blob{Data: sortKey}
 		}
 	}
 	r.Req.HashKey = &base.Blob{Data: r.HashKey}
