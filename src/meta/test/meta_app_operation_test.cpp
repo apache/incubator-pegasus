@@ -171,10 +171,11 @@ public:
         return rpc.response();
     }
 
-    configuration_rename_app_response rename_app(int32_t app_id, const std::string &new_app_name)
+    configuration_rename_app_response rename_app(const std::string &old_app_name,
+                                                 const std::string &new_app_name)
     {
         auto req = dsn::make_unique<configuration_rename_app_request>();
-        req->__set_app_id(app_id);
+        req->__set_old_app_name(old_app_name);
         req->__set_new_app_name(new_app_name);
 
         configuration_rename_app_rpc rpc(std::move(req), RPC_CM_RENAME_APP);
@@ -822,10 +823,10 @@ TEST_F(meta_app_operation_test, rename_app)
 
     const std::string app_name_3 = APP_NAME + "_rename_3";
 
-    auto resp = rename_app(app_id_1, app_name_2);
+    auto resp = rename_app(app_name_1, app_name_2);
     ASSERT_EQ(resp.err, ERR_INVALID_PARAMETERS);
 
-    resp = rename_app(app_id_1, app_name_3);
+    resp = rename_app(app_name_1, app_name_3);
     ASSERT_EQ(resp.err, ERR_OK);
     app = find_app(app_name_3);
     ASSERT_EQ(app->app_id, app_id_1);

@@ -727,14 +727,10 @@ bool rename_app(command_executor *e, shell_context *sc, arguments args)
         return false;
     }
 
-    int id;
-    if (!dsn::buf2int32(args.argv[1], id)) {
-        fprintf(stderr, "ERROR: parse %s as id failed\n", args.argv[1]);
-        return false;
-    }
-    std::string new_name = args.argv[2];
+    const std::string old_app_name = args.argv[1];
+    const std::string new_app_name = args.argv[2];
 
-    auto err_resp = sc->ddl_client->rename_app(id, new_name);
+    auto err_resp = sc->ddl_client->rename_app(old_app_name, new_app_name);
     auto err = err_resp.get_error();
     const auto &resp = err_resp.get_value();
 
@@ -743,15 +739,22 @@ bool rename_app(command_executor *e, shell_context *sc, arguments args)
     }
 
     if (err.is_ok()) {
-        fmt::print(stdout, "rename app ok, app_id({}), new_app_name({})\n", id, new_name);
+        fmt::print(stdout,
+                   "rename app ok, old_app_name({}), new_app_name({})\n",
+                   old_app_name,
+                   new_app_name);
     } else {
+        std::string error_message(resp.err.to_string());
+        if (!resp.hint_message.empty()) {
+            error_message += ", ";
+            error_message += resp.hint_message;
+        }
         fmt::print(stderr,
-                   "rename app failed, app_id({}), new_app_name({}), failed: {}\n",
-                   id,
-                   new_name,
-                   resp.err.to_string());
+                   "rename app failed, old_app_name({}), new_app_name({}), failed: {}\n",
+                   old_app_name,
+                   new_app_name,
+                   error_message);
     }
-
     return true;
 }
 

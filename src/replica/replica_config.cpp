@@ -1083,9 +1083,8 @@ void replica::update_app_name(const std::string app_name)
     auto ec = store_app_info(_app_info);
     CHECK_EQ_PREFIX_MSG(ec,
                         ERR_OK,
-                        "store_app_info for app_name failed: error_code={}, "
+                        "store_app_info for app_name failed: "
                         "app_name={}, app_id={}, old_app_name={}",
-                        ec.to_string(),
                         _app_info.app_name,
                         _app_info.app_id,
                         old_app_name);

@@ -1741,16 +1741,24 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
 }
 
 error_with<configuration_rename_app_response>
-replication_ddl_client::rename_app(int32_t app_id, const std::string &new_app_name)
+replication_ddl_client::rename_app(const std::string &old_app_name, const std::string &new_app_name)
 {
+    if (old_app_name.empty() ||
+        !std::all_of(old_app_name.cbegin(),
+                     old_app_name.cend(),
+                     (bool (*)(int))replication_ddl_client::valid_app_char))
+        return FMT_ERR(ERR_INVALID_PARAMETERS, "invalid old_app_name.");
     if (!std::all_of(new_app_name.cbegin(),
                      new_app_name.cend(),
                      (bool (*)(int))replication_ddl_client::valid_app_char)) {
-        return FMT_ERR(ERR_INVALID_PARAMETERS, "not support format for new_app_name");
+        return FMT_ERR(ERR_INVALID_PARAMETERS,
+                       "Not support format for new_app_name. You can use "
+                       "letters and numbers, and also char in ['.', ':', "
+                       "'_'].");
     }
 
     auto req = std::make_unique<configuration_rename_app_request>();
-    req->__set_app_id(app_id);
+    req->__set_old_app_name(old_app_name);
     req->__set_new_app_name(new_app_name);
     return call_rpc_sync(configuration_rename_app_rpc(std::move(req), RPC_CM_RENAME_APP));
 }
