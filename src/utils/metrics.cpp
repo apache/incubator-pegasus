@@ -24,8 +24,10 @@
 
 namespace dsn {
 
-metric_entity::metric_entity(const std::string &id, attr_map &&attrs)
-    : _id(id), _lock(), _attrs(std::move(attrs)), _metrics()
+metric_entity::metric_entity(const metric_entity_prototype *prototype,
+                             const std::string &id,
+                             const attr_map &attrs)
+    : _prototype(prototype), _id(id), _attrs(attrs)
 {
 }
 
@@ -81,19 +83,119 @@ metric_entity::metric_map metric_entity::metrics() const
     return _metrics;
 }
 
-void metric_entity::set_attributes(attr_map &&attrs)
+void metric_entity::set_attributes(const attr_map &attrs)
 {
     utils::auto_write_lock l(_lock);
-    _attrs = std::move(attrs);
+    _attrs = attrs;
+}
+
+void metric_entity::encode_type(metric_json_writer &writer) const
+{
+    writer.Key(kMetricEntityTypeField.c_str());
+    json::json_encode(writer, _prototype->name());
+}
+
+void metric_entity::encode_id(metric_json_writer &writer) const
+{
+    writer.Key(kMetricEntityIdField.c_str());
+    json::json_encode(writer, _id);
+}
+
+namespace {
+
+void encode_attrs(dsn::metric_json_writer &writer, const dsn::metric_entity::attr_map &attrs)
+{
+    // Empty attributes are allowed and will just be encoded as {}.
+
+    writer.Key(dsn::kMetricEntityAttrsField.c_str());
+
+    writer.StartObject();
+    for (const auto &attr : attrs) {
+        writer.Key(attr.first.c_str());
+        dsn::json::json_encode(writer, attr.second);
+    }
+    writer.EndObject();
+}
+
+void encode_metrics(dsn::metric_json_writer &writer,
+                    const dsn::metric_entity::metric_map &metrics,
+                    const dsn::metric_filters &filters)
+{
+    // We shouldn't reach here if no metric is chosen, thus just mark an assertion.
+    CHECK(!metrics.empty(),
+          "this entity should not be encoded into the response since no metric is chosen");
+
+    writer.Key(dsn::kMetricEntityMetricsField.c_str());
+
+    writer.StartArray();
+    for (const auto &m : metrics) {
+        m.second->take_snapshot(writer, filters);
+    }
+    writer.EndArray();
+}
+
+} // anonymous namespace
+
+void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filters &filters) const
+{
+    if (!filters.match_entity_type(_prototype->name())) {
+        return;
+    }
+
+    if (!filters.match_entity_id(_id)) {
+        return;
+    }
+
+    attr_map my_attrs;
+    metric_map target_metrics;
+
+    {
+        utils::auto_read_lock l(_lock);
+
+        if (!filters.match_entity_attrs(_attrs)) {
+            return;
+        }
+
+        filters.extract_entity_metrics(_metrics, target_metrics);
+        if (target_metrics.empty()) {
+            // None of metrics is chosen, there is no need to take snapshot for
+            // this entity.
+            return;
+        }
+
+        my_attrs = _attrs;
+    }
+
+    // At least one metric of this entity has been chosen, thus take snapshot and encode
+    // this entity as json format.
+    writer.StartObject();
+    encode_type(writer);
+    encode_id(writer);
+    encode_attrs(writer, my_attrs);
+    encode_metrics(writer, target_metrics, filters);
+    writer.EndObject();
+}
+
+void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
+                                            metric_entity::metric_map &target_metrics) const
+{
+    if (entity_metrics.empty()) {
+        target_metrics = candidates;
+        return;
+    }
+
+    target_metrics.clear();
+    for (const auto &candidate : candidates) {
+        if (match(candidate.first->name().data(), entity_metrics)) {
+            target_metrics.emplace(candidate.first, candidate.second);
+        }
+    }
 }
 
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id,
-                                                       metric_entity::attr_map attrs) const
+                                                       const metric_entity::attr_map &attrs) const
 {
-    CHECK(attrs.find("entity") == attrs.end(), "{}'s attribute \"entity\" is reserved", id);
-
-    attrs["entity"] = _name;
-    return metric_registry::instance().find_or_create_entity(id, std::move(attrs));
+    return metric_registry::instance().find_or_create_entity(this, id, attrs);
 }
 
 metric_entity_ptr metric_entity_prototype::instantiate(const std::string &id) const
@@ -141,8 +243,9 @@ metric_registry::entity_map metric_registry::entities() const
     return _entities;
 }
 
-metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
-                                                         metric_entity::attr_map &&attrs)
+metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_prototype *prototype,
+                                                         const std::string &id,
+                                                         const metric_entity::attr_map &attrs)
 {
     utils::auto_write_lock l(_lock);
 
@@ -150,10 +253,17 @@ metric_entity_ptr metric_registry::find_or_create_entity(const std::string &id,
 
     metric_entity_ptr entity;
     if (iter == _entities.end()) {
-        entity = new metric_entity(id, std::move(attrs));
+        entity = new metric_entity(prototype, id, attrs);
         _entities[id] = entity;
     } else {
-        iter->second->set_attributes(std::move(attrs));
+        CHECK_EQ_MSG(std::strcmp(prototype->name(), iter->second->prototype()->name()),
+                     0,
+                     "new prototype '{}' is inconsistent with old prototype '{}' for entity '{}'",
+                     prototype->name(),
+                     iter->second->prototype()->name(),
+                     id);
+
+        iter->second->set_attributes(attrs);
         entity = iter->second;
     }
 

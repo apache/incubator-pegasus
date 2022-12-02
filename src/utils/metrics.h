@@ -132,38 +132,26 @@
 
 namespace dsn {
 
-using metric_fields_type = std::unordered_set<std::string>;
-
-// This struct includes a set of filters for both entities and metrics requested by client.
-struct metric_filters
-{
-    // According to the parameters requested by client, this function will filter metric
-    // fields that will be put in the response.
-    bool include_metric_field(const std::string &field_name) const
-    {
-        // NOTICE: empty `with_metric_fields` means every field is required by client.
-        if (with_metric_fields.empty()) {
-            return true;
-        }
-
-        return with_metric_fields.find(field_name) != with_metric_fields.end();
-    }
-
-    // `with_metric_fields` includes all the metric fields that are wanted by client. If it
-    // is empty, there will be no restriction: in other words, all fields owned by the metric
-    // will be put in the response.
-    metric_fields_type with_metric_fields;
-};
-
 class metric_prototype;
 class metric;
 using metric_ptr = ref_ptr<metric>;
+struct metric_filters;
+class metric_entity_prototype;
+
+using metric_json_writer = dsn::json::PrettyJsonWriter;
+
+const std::string kMetricEntityTypeField = "type";
+const std::string kMetricEntityIdField = "id";
+const std::string kMetricEntityAttrsField = "attributes";
+const std::string kMetricEntityMetricsField = "metrics";
 
 class metric_entity : public ref_counter
 {
 public:
     using attr_map = std::unordered_map<std::string, std::string>;
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
+
+    const metric_entity_prototype *prototype() const { return _prototype; }
 
     const std::string &id() const { return _id; }
 
@@ -188,11 +176,15 @@ public:
         return ptr;
     }
 
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
+
 private:
     friend class metric_registry;
     friend class ref_ptr<metric_entity>;
 
-    metric_entity(const std::string &id, attr_map &&attrs);
+    metric_entity(const metric_entity_prototype *prototype,
+                  const std::string &id,
+                  const attr_map &attrs);
 
     ~metric_entity();
 
@@ -209,8 +201,13 @@ private:
     };
     void close(close_option option);
 
-    void set_attributes(attr_map &&attrs);
+    void set_attributes(const attr_map &attrs);
 
+    void encode_type(metric_json_writer &writer) const;
+
+    void encode_id(metric_json_writer &writer) const;
+
+    const metric_entity_prototype *const _prototype;
     const std::string _id;
 
     mutable utils::rw_lock_nr _lock;
@@ -222,6 +219,95 @@ private:
 
 using metric_entity_ptr = ref_ptr<metric_entity>;
 
+// This struct includes a set of filters for both entities and metrics requested by client.
+struct metric_filters
+{
+    using metric_fields_type = std::unordered_set<std::string>;
+    using entity_types_type = std::vector<std::string>;
+    using entity_ids_type = std::unordered_set<std::string>;
+    using entity_attrs_type = std::vector<std::string>;
+    using entity_metrics_type = std::vector<std::string>;
+
+// NOTICE: empty `white_list` means every field is required by client.
+#define RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list)                                           \
+    do {                                                                                           \
+        if (white_list.empty()) {                                                                  \
+            return true;                                                                           \
+        }                                                                                          \
+    } while (0)
+
+#define DEFINE_SIMPLE_MATCHER(name)                                                                \
+    template <typename T>                                                                          \
+    inline bool match_##name(const T &candidate) const                                             \
+    {                                                                                              \
+        return match(candidate, name##s);                                                          \
+    }
+
+    static inline bool match(const char *candidate, const std::vector<std::string> &white_list)
+    {
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
+        // Will use `bool operator==(const string &lhs, const char *rhs);` to compare each element
+        // in `white_list` with `candidate`.
+        return std::find(white_list.begin(), white_list.end(), candidate) != white_list.end();
+    }
+
+    static inline bool match(const std::string &candidate,
+                             const std::unordered_set<std::string> &white_list)
+    {
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(white_list);
+        return white_list.find(candidate) != white_list.end();
+    }
+
+    // According to the parameters requested by client, this function will filter metric
+    // fields that will be put in the response.
+    DEFINE_SIMPLE_MATCHER(with_metric_field)
+
+    DEFINE_SIMPLE_MATCHER(entity_type)
+
+    DEFINE_SIMPLE_MATCHER(entity_id)
+
+    bool match_entity_attrs(const metric_entity::attr_map &candidates) const
+    {
+        RETURN_MATCHED_WITH_EMPTY_WHITE_LIST(entity_attrs);
+
+        // The size of container must be divisible by 2, since attribute name always pairs
+        // with value in it.
+        CHECK_EQ(entity_attrs.size() & 1, 0);
+
+        for (entity_attrs_type::size_type i = 0; i < entity_attrs.size(); i += 2) {
+            const auto &iter = candidates.find(entity_attrs[i]);
+            if (iter == candidates.end()) {
+                continue;
+            }
+            if (iter->second == entity_attrs[i + 1]) {
+                // It will be considered as matched once any attribute is matched
+                // for both name and value.
+                return true;
+            }
+        }
+        return false;
+    }
+
+#undef DEFINE_SIMPLE_MATCHER
+#undef RETURN_MATCHED_WITH_EMPTY_WHITE_LIST
+
+    void extract_entity_metrics(const metric_entity::metric_map &candidates,
+                                metric_entity::metric_map &target_metrics) const;
+
+    // `with_metric_fields` includes all the metric fields that are wanted by client. If it
+    // is empty, there will be no restriction: in other words, all fields owned by the metric
+    // will be put in the response.
+    metric_fields_type with_metric_fields;
+
+    entity_types_type entity_types;
+
+    entity_ids_type entity_ids;
+
+    entity_attrs_type entity_attrs;
+
+    entity_metrics_type entity_metrics;
+};
+
 class metric_entity_prototype
 {
 public:
@@ -231,7 +317,8 @@ public:
     const char *name() const { return _name; }
 
     // Create an entity with the given ID and attributes, if any.
-    metric_entity_ptr instantiate(const std::string &id, metric_entity::attr_map attrs) const;
+    metric_entity_ptr instantiate(const std::string &id,
+                                  const metric_entity::attr_map &attrs) const;
     metric_entity_ptr instantiate(const std::string &id) const;
 
 private:
@@ -254,7 +341,9 @@ private:
     metric_registry();
     ~metric_registry();
 
-    metric_entity_ptr find_or_create_entity(const std::string &id, metric_entity::attr_map &&attrs);
+    metric_entity_ptr find_or_create_entity(const metric_entity_prototype *prototype,
+                                            const std::string &id,
+                                            const metric_entity::attr_map &attrs);
 
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;
@@ -378,7 +467,7 @@ public:
 
     // Take snapshot of each metric to collect current values as json format with fields chosen
     // by `filters`.
-    virtual void take_snapshot(dsn::json::JsonWriter &writer, const metric_filters &filters) = 0;
+    virtual void take_snapshot(metric_json_writer &writer, const metric_filters &filters) = 0;
 
 protected:
     explicit metric(const metric_prototype *prototype);
@@ -387,12 +476,12 @@ protected:
     // Encode a metric field specified by `field_name` as json format. However, once the field
     // are not chosen by `filters`, this function will do nothing.
     template <typename T>
-    inline void encode(dsn::json::JsonWriter &writer,
-                       const std::string &field_name,
-                       const T &value,
-                       const metric_filters &filters) const
+    static inline void encode(metric_json_writer &writer,
+                              const std::string &field_name,
+                              const T &value,
+                              const metric_filters &filters)
     {
-        if (!filters.include_metric_field(field_name)) {
+        if (!filters.match_with_metric_field(field_name)) {
             return;
         }
 
@@ -401,31 +490,31 @@ protected:
     }
 
     // Encode the metric type as json format, if it is chosen by `filters`.
-    inline void encode_type(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_type(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricTypeField, enum_to_string(prototype()->type()), filters);
     }
 
     // Encode the metric name as json format, if it is chosen by `filters`.
-    inline void encode_name(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_name(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricNameField, prototype()->name().data(), filters);
     }
 
     // Encode the metric unit as json format, if it is chosen by `filters`.
-    inline void encode_unit(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_unit(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricUnitField, enum_to_string(prototype()->unit()), filters);
     }
 
     // Encode the metric description as json format, if it is chosen by `filters`.
-    inline void encode_desc(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_desc(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode(writer, kMetricDescField, prototype()->description().data(), filters);
     }
 
     // Encode the metric prototype as json format, if some attributes in it are chosen by `filters`.
-    inline void encode_prototype(dsn::json::JsonWriter &writer, const metric_filters &filters) const
+    inline void encode_prototype(metric_json_writer &writer, const metric_filters &filters) const
     {
         encode_type(writer, filters);
         encode_name(writer, filters);
@@ -436,9 +525,8 @@ protected:
     // Encode the unique value of a metric as json format, if it is chosen by `filters`. Notice
     // that the metric should have only one value. like gauge and counter.
     template <typename T>
-    inline void encode_single_value(dsn::json::JsonWriter &writer,
-                                    const T &value,
-                                    const metric_filters &filters) const
+    static inline void
+    encode_single_value(metric_json_writer &writer, const T &value, const metric_filters &filters)
     {
         encode(writer, kMetricSingleValueField, value, filters);
     }
@@ -496,7 +584,7 @@ public:
     // where "name" is the name of the gauge in string type, and "value" is just current value
     // of the gauge fetched by `value()`, in numeric types (i.e. integral or floating-point type,
     // determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
@@ -613,7 +701,7 @@ public:
     // }
     // where "name" is the name of the counter in string type, and "value" is just current value
     // of the counter fetched by `value()`, in integral type (namely int64_t).
-    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 
@@ -845,7 +933,7 @@ public:
     // where "name" is the name of the percentile in string type, with each configured kth
     // percentile followed, such as "p50", "p90", "p95", etc. All of them are in numeric types
     // (i.e. integral or floating-point type, determined by `value_type`).
-    void take_snapshot(json::JsonWriter &writer, const metric_filters &filters) override
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) override
     {
         writer.StartObject();
 

@@ -252,7 +252,11 @@ void json_encode(Writer &out, const std::string &str)
 {
     out.String(str.c_str(), str.length(), true);
 }
-inline void json_encode(JsonWriter &out, const char *str) { out.String(str, strlen(str), true); }
+template <typename Writer>
+inline void json_encode(Writer &out, const char *str)
+{
+    out.String(str, std::strlen(str), true);
+}
 inline bool json_decode(const JsonObject &in, std::string &str)
 {
     dverify(in.IsString());
@@ -289,7 +293,11 @@ inline bool json_decode(const JsonObject &in, bool &t)
 }
 
 // json serialization for double types
-inline void json_encode(JsonWriter &out, double d) { out.Double(d); }
+template <typename Writer>
+inline void json_encode(Writer &out, double d)
+{
+    out.Double(d);
+}
 inline bool json_decode(const JsonObject &in, double &t)
 {
     if (in.IsDouble()) {
@@ -307,7 +315,11 @@ inline bool json_decode(const JsonObject &in, double &t)
 
 // json serialization for int types
 #define INT_TYPE_SERIALIZATION(TName)                                                              \
-    inline void json_encode(JsonWriter &out, TName t) { out.Int64((int64_t)t); }                   \
+    template <typename Writer>                                                                     \
+    inline void json_encode(Writer &out, TName t)                                                  \
+    {                                                                                              \
+        out.Int64(static_cast<int64_t>(t));                                                        \
+    }                                                                                              \
     inline bool json_decode(const JsonObject &in, TName &t)                                        \
     {                                                                                              \
         dverify(in.IsInt64());                                                                     \
@@ -325,7 +337,11 @@ INT_TYPE_SERIALIZATION(int64_t)
 
 // json serialization for uint types
 #define UINT_TYPE_SERIALIZATION(TName)                                                             \
-    inline void json_encode(JsonWriter &out, TName t) { out.Uint64((uint64_t)t); }                 \
+    template <typename Writer>                                                                     \
+    inline void json_encode(Writer &out, TName t)                                                  \
+    {                                                                                              \
+        out.Uint64(static_cast<uint64_t>(t));                                                      \
+    }                                                                                              \
     inline bool json_decode(const JsonObject &in, TName &t)                                        \
     {                                                                                              \
         dverify(in.IsUint64());                                                                    \

@@ -34,7 +34,7 @@ class my_gauge : public metric
 public:
     int64_t value() { return _value; }
 
-    void take_snapshot(json::JsonWriter &, const metric_filters &) override {}
+    void take_snapshot(metric_json_writer &, const metric_filters &) override {}
 
 protected:
     explicit my_gauge(const metric_prototype *prototype) : metric(prototype), _value(0) {}
@@ -158,7 +158,7 @@ TEST(metrics_test, create_entity)
 
     metric_registry::entity_map entities;
     for (const auto &test : tests) {
-        ASSERT_EQ(test.prototype->name(), test.type_name);
+        ASSERT_STREQ(test.prototype->name(), test.type_name.c_str());
 
         metric_entity_ptr entity;
         if (test.entity_attrs.empty() && !test.use_attrs_arg_if_empty) {
@@ -171,10 +171,6 @@ TEST(metrics_test, create_entity)
         ASSERT_EQ(id, test.entity_id);
 
         auto attrs = entity->attributes();
-        ASSERT_NE(attrs.find("entity"), attrs.end());
-        ASSERT_EQ(attrs["entity"], test.type_name);
-        ASSERT_EQ(attrs.size(), test.entity_attrs.size() + 1);
-        ASSERT_EQ(attrs.erase("entity"), 1);
         ASSERT_EQ(attrs, test.entity_attrs);
 
         ASSERT_EQ(entities.find(test.entity_id), entities.end());
@@ -207,7 +203,6 @@ TEST(metrics_test, recreate_entity)
 
         // the attributes will be updated
         auto attrs = entity->attributes();
-        ASSERT_EQ(attrs.erase("entity"), 1);
         ASSERT_EQ(attrs, test.entity_attrs);
     }
 }
@@ -906,15 +901,24 @@ TEST(metrics_test, percentile_double)
                          floating_checker<value_type>>(METRIC_test_percentile_double);
 }
 
-std::string take_snapshot_and_get_json_string(metric *m, const metric_filters &filters)
+template <typename T>
+std::string take_snapshot_and_get_json_string(T *m, const metric_filters &filters)
 {
     std::stringstream out;
     rapidjson::OStreamWrapper wrapper(out);
-    json::JsonWriter writer(wrapper);
+    metric_json_writer writer(wrapper);
 
     m->take_snapshot(writer, filters);
 
-    return out.str();
+    auto out_str = out.str();
+    if (out_str.empty()) {
+        std::cout << "The json string is empty." << std::endl;
+    } else {
+        std::cout << "The json string is: " << std::endl;
+        std::cout << out_str << std::endl;
+    }
+
+    return out_str;
 }
 
 template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
@@ -925,35 +929,35 @@ void check_prototype_and_extract_value_map_from_json_string(
     metric *my_metric,
     const std::string &json_string,
     const bool is_integral,
-    const metric_fields_type &expected_metric_fields,
+    const metric_filters::metric_fields_type &expected_metric_fields,
     metric_value_map<T> &value_map)
 {
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
-    metric_fields_type actual_metric_fields;
+    metric_filters::metric_fields_type actual_metric_fields;
 
     // The json format for each metric should be an object.
     ASSERT_TRUE(doc.IsObject());
     for (const auto &elem : doc.GetObject()) {
-        // Each metric name must be a string.
+        // Each name must be a string.
         ASSERT_TRUE(elem.name.IsString());
 
         if (elem.value.IsString()) {
             // Must be a field of metric prototype.
-            if (std::strcmp(elem.name.GetString(), kMetricTypeField.c_str()) == 0) {
+            if (kMetricTypeField == elem.name.GetString()) {
                 ASSERT_STREQ(elem.value.GetString(),
                              enum_to_string(my_metric->prototype()->type()));
-            } else if (std::strcmp(elem.name.GetString(), kMetricNameField.c_str()) == 0) {
+            } else if (kMetricNameField == elem.name.GetString()) {
                 ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->name().data());
-            } else if (std::strcmp(elem.name.GetString(), kMetricUnitField.c_str()) == 0) {
+            } else if (kMetricUnitField == elem.name.GetString()) {
                 ASSERT_STREQ(elem.value.GetString(),
                              enum_to_string(my_metric->prototype()->unit()));
-            } else if (std::strcmp(elem.name.GetString(), kMetricDescField.c_str()) == 0) {
+            } else if (kMetricDescField == elem.name.GetString()) {
                 ASSERT_STREQ(elem.value.GetString(), my_metric->prototype()->description().data());
             } else {
-                ASSERT_TRUE(false);
+                ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
             }
         } else {
             // Must be a field of metric value.
@@ -980,7 +984,7 @@ template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::
 void generate_metric_value_map(metric *my_metric,
                                const bool is_integral,
                                const metric_filters &filters,
-                               const metric_fields_type &expected_metric_fields,
+                               const metric_filters::metric_fields_type &expected_metric_fields,
                                metric_value_map<T> &value_map)
 {
     auto json_string = take_snapshot_and_get_json_string(my_metric, filters);
@@ -1038,10 +1042,10 @@ void compare_floating_metric_value_map(const metric_value_map<T> &actual_value_m
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
-const metric_fields_type kAllPrototypeMetricFields = {
+const metric_filters::metric_fields_type kAllPrototypeMetricFields = {
     kMetricTypeField, kMetricNameField, kMetricUnitField, kMetricDescField};
 
-metric_fields_type get_all_single_value_metric_fields()
+metric_filters::metric_fields_type get_all_single_value_metric_fields()
 {
     auto fields = kAllPrototypeMetricFields;
     fields.insert(kMetricSingleValueField);
@@ -1074,14 +1078,14 @@ metric_fields_type get_all_single_value_metric_fields()
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
-        static const metric_fields_type kAllSingleValueMetricFields =                              \
+        static const metric_filters::metric_fields_type kAllSingleValueMetricFields =              \
             get_all_single_value_metric_fields();                                                  \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
             value_type expected_value;                                                             \
-            metric_fields_type with_metric_fields;                                                 \
-            metric_fields_type expected_metric_fields;                                             \
+            metric_filters::metric_fields_type with_metric_fields;                                 \
+            metric_filters::metric_fields_type expected_metric_fields;                             \
         } tests[] = {                                                                              \
             {"server_60", value, {}, kAllSingleValueMetricFields},                                 \
             {"server_61", value, {kMetricNameField}, {kMetricNameField}},                          \
@@ -1184,7 +1188,7 @@ void generate_metric_value_map(MetricType *my_metric,
                                const uint64_t interval_ms,
                                const uint64_t exec_ms,
                                const std::set<kth_percentile_type> &kth_percentiles,
-                               const metric_fields_type &expected_metric_fields,
+                               const metric_filters::metric_fields_type &expected_metric_fields,
                                metric_value_map<typename MetricType::value_type> &value_map)
 {
     using value_type = typename MetricType::value_type;
@@ -1254,7 +1258,7 @@ void generate_metric_value_map(MetricType *my_metric,
         value_map_comparator(actual_value_map, expected_value_map);                                \
     } while (0)
 
-metric_fields_type get_all_kth_percentile_fields()
+metric_filters::metric_fields_type get_all_kth_percentile_fields()
 {
     auto fields = kAllPrototypeMetricFields;
     for (const auto &kth : kAllKthPercentiles) {
@@ -1301,13 +1305,14 @@ metric_fields_type get_all_kth_percentile_fields()
 #define RUN_CASES_WITH_PERCENTILE_SNAPSHOT(                                                        \
     metric_prototype, case_generator, is_integral, value_map_comparator)                           \
     do {                                                                                           \
-        static const metric_fields_type kAllKthPercentileFields = get_all_kth_percentile_fields(); \
+        static const metric_filters::metric_fields_type kAllKthPercentileFields =                  \
+            get_all_kth_percentile_fields();                                                       \
                                                                                                    \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
-            metric_fields_type with_metric_fields;                                                 \
-            metric_fields_type expected_metric_fields;                                             \
+            metric_filters::metric_fields_type with_metric_fields;                                 \
+            metric_filters::metric_fields_type expected_metric_fields;                             \
         } tests[] = {                                                                              \
             {"server_60", {}, kAllKthPercentileFields},                                            \
             {"server_61", {kMetricNameField}, {kMetricNameField}},                                 \
@@ -1378,6 +1383,799 @@ TEST(metrics_test, take_snapshot_percentile_double)
                                        floating_percentile_case_generator<double>,
                                        false,
                                        compare_floating_metric_value_map);
+}
+
+void check_entity_from_json_string(metric_entity *my_entity,
+                                   const std::string &json_string,
+                                   const std::string &expected_entity_type,
+                                   const std::string &expected_entity_id,
+                                   const metric_entity::attr_map &expected_entity_attrs,
+                                   const std::unordered_set<std::string> &expected_entity_metrics)
+{
+    // `json_string` and `expected_entity_metrics` should be empty or non-empty simultaneously;
+    // empty `json_string` means this entity is not selected by the filters.
+    ASSERT_EQ(json_string.empty(), expected_entity_metrics.empty());
+    if (json_string.empty()) {
+        std::cout << "Empty json string means this entity is not selected by the filters."
+                  << std::endl;
+        return;
+    }
+
+    rapidjson::Document doc;
+    rapidjson::ParseResult result = doc.Parse(json_string.c_str());
+    ASSERT_FALSE(result.IsError());
+
+    // Actual fields parsed from json string for each entity.
+    std::unordered_set<std::string> actual_fields;
+
+    // The json format for each entity should be an object.
+    ASSERT_TRUE(doc.IsObject());
+    for (const auto &elem : doc.GetObject()) {
+        // Each name must be a string.
+        ASSERT_TRUE(elem.name.IsString());
+
+        if (kMetricEntityTypeField == elem.name.GetString()) {
+            ASSERT_STREQ(elem.value.GetString(), expected_entity_type.c_str());
+            ASSERT_STREQ(elem.value.GetString(), my_entity->prototype()->name());
+        } else if (kMetricEntityIdField == elem.name.GetString()) {
+            ASSERT_STREQ(elem.value.GetString(), expected_entity_id.c_str());
+            ASSERT_STREQ(elem.value.GetString(), my_entity->id().c_str());
+        } else if (kMetricEntityAttrsField == elem.name.GetString()) {
+            ASSERT_TRUE(elem.value.IsObject());
+
+            metric_entity::attr_map actual_entity_attrs;
+            for (const auto &attr : elem.value.GetObject()) {
+                // Each name must be a string.
+                ASSERT_TRUE(attr.name.IsString());
+                ASSERT_TRUE(attr.value.IsString());
+                actual_entity_attrs.emplace(attr.name.GetString(), attr.value.GetString());
+            }
+            ASSERT_EQ(actual_entity_attrs, expected_entity_attrs);
+            ASSERT_EQ(actual_entity_attrs, my_entity->attributes());
+        } else if (kMetricEntityMetricsField == elem.name.GetString()) {
+            ASSERT_TRUE(elem.value.IsArray());
+
+            std::unordered_set<std::string> actual_entity_metrics;
+            for (const auto &m : elem.value.GetArray()) {
+                ASSERT_TRUE(m.IsObject());
+
+                for (const auto &field : m.GetObject()) {
+                    // Each name must be a string.
+                    ASSERT_TRUE(field.name.IsString());
+                    if (kMetricNameField == field.name.GetString()) {
+                        ASSERT_TRUE(field.value.IsString());
+                        actual_entity_metrics.emplace(field.value.GetString());
+                    }
+                }
+            }
+
+            ASSERT_EQ(actual_entity_metrics, expected_entity_metrics);
+        } else {
+            ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
+        }
+
+        actual_fields.emplace(elem.name.GetString());
+    }
+
+    static const std::unordered_set<std::string> kAllMetricEntityFields = {
+        kMetricEntityTypeField,
+        kMetricEntityIdField,
+        kMetricEntityAttrsField,
+        kMetricEntityMetricsField};
+    ASSERT_EQ(actual_fields, kAllMetricEntityFields);
+}
+
+TEST(metrics_test, take_snapshot_entity)
+{
+    static const std::unordered_set<std::string> kAllEntityMetrics = {"test_gauge_int64",
+                                                                      "test_counter"};
+
+    // Test cases:
+    // - both attributes and filters are empty
+    // - entity has an attribute while filters are empty
+    // - entity has 2 attributes while filters are empty
+    // - entity has 2 attributes while filters are empty and metrics are empty
+    // - filter has one matched entity type
+    // - filter has one mismatched entity type
+    // - filter has 2 entity types one of which is matched
+    // - filter has 2 mismatched entity types
+    // - filter has one matched entity id
+    // - filter has one mismatched entity id
+    // - filter has 2 entity ids one of which is matched
+    // - filter has 2 mismatched entity ids
+    // - entity has no attribute while filter has one mismatched entity attribute
+    // - entity has no attribute while filter has 2 mismatched entity attributes
+    // - entity has an attribute while filter has one matched entity attribute
+    // - entity has an attribute while filter has one entity attribute whose key is mismatched
+    // - entity has an attribute while filter has one entity attribute whose value is mismatched
+    // - entity has an attribute while filter has one entity attribute whose key and value are
+    // both mismatched
+    // - entity has an attribute while filter has 2 entity attributes one of which is matched
+    // - entity has an attribute while filter has 2 mismatched entity attributes
+    // - entity has 2 attributes while filter has one matched entity attribute
+    // - entity has 2 attributes while filter has one entity attribute whose key is mismatched
+    // - entity has 2 attributes while filter has one entity attribute whose value is mismatched
+    // - entity has 2 attributes while filter has one entity attribute whose key and value are
+    // both mismatched
+    // - entity has 2 attributes while filter has 2 matched entity attributes
+    // - entity has 2 attributes while filter has 2 entity attributes one of which is matched
+    // - entity has 2 attributes while filter has 2 mismatched entity attributes
+    // - entity has no metrics while filter has one mismatched entity metrics
+    // - entity has no metrics while filter has 2 mismatched entity metrics
+    // - entity has an metric while filter has one matched entity metric
+    // - entity has an metric while filter has one mismatched entity metric
+    // - entity has an metric while filter has 2 entity metrics one of which is matched
+    // - entity has an metric while filter has 2 mismatched entity metrics
+    // - entity has 2 metrics while filter has one matched entity metric
+    // - entity has 2 metrics while filter has one mismatched entity metric
+    // - entity has 2 metrics while filter has 2 matched entity metrics
+    // - entity has 2 metrics while filter has 2 entity metrics one of which is matched
+    // - entity has 2 metrics while filter has 2 mismatched entity metrics
+    // - matched for entity types and ids
+    // - mismatched for entity types and ids
+    // - matched for entity types and attributes
+    // - mismatched for entity types and attributes
+    // - matched for entity types and metrics
+    // - mismatched for entity types and metrics
+    // - matched for entity ids and attributes
+    // - mismatched for entity ids and attributes
+    // - matched for entity ids and metrics
+    // - mismatched for entity ids and metrics
+    // - matched for entity attributes and metrics
+    // - mismatched for entity attributes and metrics
+    // - matched for entity types, ids and attributes
+    // - mismatched for entity types, ids and attributes
+    // - matched for entity types, ids and metrics
+    // - mismatched for entity types, ids and metrics
+    // - matched for entity types, attributes and metrics
+    // - mismatched for entity types, attributes and metrics
+    // - matched for entity ids, attributes and metrics
+    // - mismatched for entity ids, attributes and metrics
+    // - matched for entity types, ids, attributes and metrics
+    // - mismatched for entity types, ids, attributes and metrics
+    struct test_case
+    {
+        metric_entity_prototype *entity_prototype;
+        std::unordered_set<std::string> entity_metrics;
+        std::string expected_entity_type;
+        std::string expected_entity_id;
+        metric_entity::attr_map expected_entity_attrs;
+        std::unordered_set<std::string> expected_entity_metrics;
+        metric_filters::entity_types_type filter_entity_types;
+        metric_filters::entity_ids_type filter_entity_ids;
+        metric_filters::entity_attrs_type filter_entity_attrs;
+        metric_filters::entity_metrics_type filter_entity_metrics;
+    } tests[] = {
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_81",
+         {},
+         kAllEntityMetrics,
+         {},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_1",
+         {{"table", "test_table_1"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.0",
+         {{"table", "test_table_1"}, {"partition", "0"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         {},
+         "my_replica",
+         "replica_1.1",
+         {{"table", "test_table_1"}, {"partition", "1"}},
+         {},
+         {},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_82",
+         {},
+         kAllEntityMetrics,
+         {"my_server"},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_83",
+         {},
+         {},
+         {"another_server"},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_84",
+         {},
+         kAllEntityMetrics,
+         {"another_server", "my_server"},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_85",
+         {},
+         {},
+         {"another_server", "another_another_server"},
+         {},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_86",
+         {},
+         kAllEntityMetrics,
+         {},
+         {"server_86"},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_87",
+         {},
+         {},
+         {},
+         {"another_server_87"},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_88",
+         {},
+         kAllEntityMetrics,
+         {},
+         {"another_server_88", "server_88"},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_89",
+         {},
+         {},
+         {},
+         {"another_server_89", "another_another_server_89"},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_90",
+         {},
+         {},
+         {},
+         {},
+         {"attr_name_1", "attr_value_1"},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_91",
+         {},
+         {},
+         {},
+         {},
+         {"attr_name_1", "attr_value_1", "attr_name_2", "attr_value_2"},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_2",
+         {{"table", "test_table_2"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"table", "test_table_2"},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_3",
+         {{"table", "test_table_3"}},
+         {},
+         {},
+         {},
+         {"another_table", "test_table_3"},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_4",
+         {{"table", "test_table_4"}},
+         {},
+         {},
+         {},
+         {"table", "another_test_table_4"},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_5",
+         {{"table", "test_table_5"}},
+         {},
+         {},
+         {},
+         {"another_table", "another_test_table_5"},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_6",
+         {{"table", "test_table_6"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"another_table", "another_test_table_6", "table", "test_table_6"},
+         {}},
+        {&METRIC_ENTITY_my_table,
+         kAllEntityMetrics,
+         "my_table",
+         "table_7",
+         {{"table", "test_table_7"}},
+         {},
+         {},
+         {},
+         {"another_table", "test_table_7", "table", "another_test_table_7"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.2",
+         {{"table", "test_table_1"}, {"partition", "2"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"table", "test_table_1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.3",
+         {{"table", "test_table_1"}, {"partition", "3"}},
+         {},
+         {},
+         {},
+         {"another_partition", "3"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.4",
+         {{"table", "test_table_1"}, {"partition", "4"}},
+         {},
+         {},
+         {},
+         {"table", "another_test_table_1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.5",
+         {{"table", "test_table_1"}, {"partition", "5"}},
+         {},
+         {},
+         {},
+         {"another_table", "another_test_table_1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.6",
+         {{"table", "test_table_1"}, {"partition", "6"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"table", "test_table_1", "partition", "6"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_1.7",
+         {{"table", "test_table_1"}, {"partition", "7"}},
+         kAllEntityMetrics,
+         {},
+         {},
+         {"another_table", "another_test_table_1", "partition", "7"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.0",
+         {{"table", "test_table_2"}, {"partition", "0"}},
+         {},
+         {},
+         {},
+         {"table", "another_test_table_2", "partition", "1"},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         {},
+         "my_server",
+         "server_92",
+         {},
+         {},
+         {},
+         {},
+         {},
+         {"test_gauge_int64"}},
+        {&METRIC_ENTITY_my_server,
+         {},
+         "my_server",
+         "server_93",
+         {},
+         {},
+         {},
+         {},
+         {},
+         {"test_gauge_int64", "test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64"},
+         "my_server",
+         "server_94",
+         {},
+         {"test_gauge_int64"},
+         {},
+         {},
+         {},
+         {"test_gauge_int64"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64"},
+         "my_server",
+         "server_95",
+         {},
+         {},
+         {},
+         {},
+         {},
+         {"test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64"},
+         "my_server",
+         "server_96",
+         {},
+         {"test_gauge_int64"},
+         {},
+         {},
+         {},
+         {"test_gauge_int64", "test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64"},
+         "my_server",
+         "server_97",
+         {},
+         {},
+         {},
+         {},
+         {},
+         {"test_gauge_double", "test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64", "test_counter"},
+         "my_server",
+         "server_98",
+         {},
+         {"test_counter"},
+         {},
+         {},
+         {},
+         {"test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64", "test_counter"},
+         "my_server",
+         "server_99",
+         {},
+         {},
+         {},
+         {},
+         {},
+         {"test_gauge_double"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64", "test_counter"},
+         "my_server",
+         "server_100",
+         {},
+         {"test_gauge_int64", "test_counter"},
+         {},
+         {},
+         {},
+         {"test_gauge_int64", "test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64", "test_counter"},
+         "my_server",
+         "server_101",
+         {},
+         {"test_gauge_int64"},
+         {},
+         {},
+         {},
+         {"test_gauge_int64", "test_gauge_double"}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64", "test_counter"},
+         "my_server",
+         "server_102",
+         {},
+         {},
+         {},
+         {},
+         {},
+         {"test_gauge_double", "test_concurrent_counter"}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_103",
+         {},
+         kAllEntityMetrics,
+         {"another_server", "my_server"},
+         {"another_server_103", "server_103"},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_104",
+         {},
+         {},
+         {"another_server", "my_server"},
+         {"another_server_104"},
+         {},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.1",
+         {{"table", "test_table_2"}, {"partition", "1"}},
+         kAllEntityMetrics,
+         {"another_replica", "my_replica"},
+         {},
+         {"table", "test_table_2", "partition", "1"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.2",
+         {{"table", "test_table_2"}, {"partition", "2"}},
+         {},
+         {"another_replica", "my_replica"},
+         {},
+         {"table", "another_test_table_2", "another_partition", "2"},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         {"test_gauge_int64", "test_counter"},
+         "my_server",
+         "server_105",
+         {},
+         {"test_gauge_int64", "test_counter"},
+         {"another_server", "my_server"},
+         {},
+         {},
+         {"test_gauge_int64", "test_counter"}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_106",
+         {},
+         {"test_counter"},
+         {"another_server", "my_server"},
+         {},
+         {},
+         {"test_gauge_double", "test_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.3",
+         {{"table", "test_table_2"}, {"partition", "3"}},
+         kAllEntityMetrics,
+         {},
+         {"another_replica_2.3", "replica_2.3"},
+         {"table", "another_test_table_2", "partition", "3"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.4",
+         {{"table", "test_table_2"}, {"partition", "4"}},
+         {},
+         {},
+         {"another_replica_2.4", "replica_2.4"},
+         {"table", "another_test_table_2", "another_partition", "4"},
+         {}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_107",
+         {},
+         {"test_gauge_int64"},
+         {},
+         {"another_server_107", "server_107"},
+         {},
+         {"test_gauge_int64", "test_gauge_double"}},
+        {&METRIC_ENTITY_my_server,
+         kAllEntityMetrics,
+         "my_server",
+         "server_108",
+         {},
+         {},
+         {},
+         {"another_server_108", "server_108"},
+         {},
+         {"test_gauge_double", "test_concurrent_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.5",
+         {{"table", "test_table_2"}, {"partition", "5"}},
+         {"test_gauge_int64"},
+         {},
+         {},
+         {"table", "another_test_table_2", "partition", "5"},
+         {"test_gauge_int64", "test_gauge_double"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.6",
+         {{"table", "test_table_2"}, {"partition", "6"}},
+         {},
+         {},
+         {},
+         {"table", "test_table_2", "partition", "6"},
+         {"test_gauge_double", "test_concurrent_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_2.7",
+         {{"table", "test_table_2"}, {"partition", "7"}},
+         kAllEntityMetrics,
+         {"another_replica", "my_replica"},
+         {"another_replica_2.7", "replica_2.7"},
+         {"table", "another_test_table_2", "partition", "7"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.0",
+         {{"table", "test_table_3"}, {"partition", "0"}},
+         {},
+         {"another_replica", "my_replica"},
+         {"another_replica_3.0", "replica_3.0"},
+         {"table", "another_test_table_3", "another_partition", "0"},
+         {}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.1",
+         {},
+         {"test_counter"},
+         {"another_replica", "my_replica"},
+         {"another_replica_3.1", "replica_3.1"},
+         {},
+         {"test_gauge_double", "test_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.2",
+         {},
+         {},
+         {"another_replica", "my_replica"},
+         {"another_replica_3.2", "replica_3.2"},
+         {},
+         {"test_gauge_double", "test_concurrent_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.3",
+         {{"table", "test_table_3"}, {"partition", "3"}},
+         {"test_gauge_int64"},
+         {"another_replica", "my_replica"},
+         {},
+         {"table", "test_table_3", "another_partition", "3"},
+         {"test_gauge_int64", "test_gauge_double"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.4",
+         {{"table", "test_table_3"}, {"partition", "4"}},
+         {},
+         {"another_replica", "my_replica"},
+         {},
+         {"table", "another_test_table_3", "partition", "4"},
+         {"test_gauge_double", "test_concurrent_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.5",
+         {{"table", "test_table_3"}, {"partition", "5"}},
+         {"test_counter"},
+         {},
+         {"another_replica_3.5", "replica_3.5"},
+         {"table", "test_table_3", "another_partition", "5"},
+         {"test_gauge_double", "test_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.6",
+         {{"table", "test_table_3"}, {"partition", "6"}},
+         {},
+         {},
+         {"another_replica_3.6", "replica_3.6"},
+         {"table", "another_test_table_3", "partition", "6"},
+         {"test_gauge_double", "test_concurrent_counter"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_3.7",
+         {{"table", "test_table_3"}, {"partition", "7"}},
+         {"test_gauge_int64"},
+         {"another_replica", "my_replica"},
+         {"another_replica_3.7", "replica_3.7"},
+         {"table", "test_table_3", "another_partition", "7"},
+         {"test_gauge_int64", "test_gauge_double"}},
+        {&METRIC_ENTITY_my_replica,
+         kAllEntityMetrics,
+         "my_replica",
+         "replica_4.0",
+         {{"table", "test_table_4"}, {"partition", "0"}},
+         {},
+         {"another_replica", "my_replica"},
+         {"another_replica_4.0", "replica_4.0"},
+         {"table", "another_test_table_4", "partition", "0"},
+         {"test_gauge_double", "test_concurrent_counter"}},
+    };
+
+    for (const auto &test : tests) {
+        auto my_entity =
+            test.entity_prototype->instantiate(test.expected_entity_id, test.expected_entity_attrs);
+
+        if (test.entity_metrics.find("test_gauge_int64") != test.entity_metrics.end()) {
+            auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+            my_gauge_int64->set(5);
+        }
+
+        if (test.entity_metrics.find("test_counter") != test.entity_metrics.end()) {
+            auto my_counter = METRIC_test_counter.instantiate(my_entity);
+            my_counter->increment();
+        }
+
+        metric_filters filters;
+        filters.entity_types = test.filter_entity_types;
+        filters.entity_ids = test.filter_entity_ids;
+        filters.entity_attrs = test.filter_entity_attrs;
+        filters.entity_metrics = test.filter_entity_metrics;
+
+        auto json_string = take_snapshot_and_get_json_string(my_entity.get(), filters);
+        check_entity_from_json_string(my_entity,
+                                      json_string,
+                                      test.expected_entity_type,
+                                      test.expected_entity_id,
+                                      test.expected_entity_attrs,
+                                      test.expected_entity_metrics);
+    }
 }
 
 } // namespace dsn
