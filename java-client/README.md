@@ -19,8 +19,6 @@ under the License.
 
 # Pegasus Java Client
 
-[![Test - java client](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml/badge.svg)](https://github.com/apache/incubator-pegasus/actions/workflows/test_java-client.yml)
-
 ## Build
 
 ```
