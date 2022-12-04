@@ -2181,7 +2181,7 @@ TEST(metrics_test, take_snapshot_entity)
 void check_entities_from_json_string(const std::string &json_string,
                                      const std::unordered_set<std::string> &expected_entity_ids)
 {
-    // Even if there is not any entity selected, `json_string` should be "{}"
+    // Even if there is not any entity selected, `json_string` should be "{}".
     ASSERT_FALSE(json_string.empty());
 
     rapidjson::Document doc;
@@ -2267,13 +2267,27 @@ void check_registry_json_string(const std::unordered_set<std::string> &entity_id
 
 TEST(metrics_test, take_snapshot_registry)
 {
+    // Test cases:
+    // - filter an entity that does not exist in registery
+    // - filter 2 entities both of which do not exist in registery
+    // - filter an entity that exists in registery
+    // - filter 2 entities one of which does not exist in registery
+    // - filter 2 entities both of which exist in registery
+    // - filter 3 entities one of which does not exist in registery
     struct test_case
     {
         std::unordered_set<std::string> entity_ids;
         metric_filters::entity_ids_type filter_entity_ids;
         std::unordered_set<std::string> expected_entity_ids;
     } tests[] = {
+        {{}, {"server_109"}, {}},
+        {{}, {"server_109", "server_110"}, {}},
         {{"server_109"}, {"server_109"}, {"server_109"}},
+        {{"server_110"}, {"server_110", "server_111"}, {"server_110"}},
+        {{"server_111", "server_112"}, {"server_111", "server_112"}, {"server_111", "server_112"}},
+        {{"server_113", "server_114"},
+         {"server_113", "server_114", "server_115"},
+         {"server_113", "server_114"}},
     };
     for (const auto &test : tests) {
         check_registry_json_string(
