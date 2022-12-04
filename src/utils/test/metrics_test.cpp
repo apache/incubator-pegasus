@@ -2178,9 +2178,8 @@ TEST(metrics_test, take_snapshot_entity)
     }
 }
 
-void check_entities_from_json_string(
-                                   const std::string &json_string,
-const  std::unordered_set<std::string> &expected_entity_ids)
+void check_entities_from_json_string(const std::string &json_string,
+                                     const std::unordered_set<std::string> &expected_entity_ids)
 {
     // Even if there is not any entity selected, `json_string` should be "{}"
     ASSERT_FALSE(json_string.empty());
@@ -2194,7 +2193,7 @@ const  std::unordered_set<std::string> &expected_entity_ids)
 
     // The json format for entities should be an array.
     ASSERT_TRUE(doc.IsArray());
-    for (const auto &entity: doc.GetArray()) {
+    for (const auto &entity : doc.GetArray()) {
         // The json format for each entity should be an object.
         ASSERT_TRUE(entity.IsObject());
 
@@ -2232,8 +2231,9 @@ const  std::unordered_set<std::string> &expected_entity_ids)
                     }
                 }
 
-                static const std::unordered_set<std::string> kExpectedEntityMetrics={"test_gauge_int64", "test_counter"};
-                ASSERT_EQ(actual_entity_metrics, expected_entity_metrics);
+                static const std::unordered_set<std::string> kExpectedEntityMetrics = {
+                    "test_gauge_int64", "test_counter"};
+                ASSERT_EQ(actual_entity_metrics, kExpectedEntityMetrics);
             } else {
                 ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
             }
@@ -2243,31 +2243,26 @@ const  std::unordered_set<std::string> &expected_entity_ids)
     ASSERT_EQ(actual_entity_ids, expected_entity_ids);
 }
 
-void check_registry_json_string(
-const   std::unordered_set<std::string> &entity_ids,
-const  metric_filters::entity_ids_type &filter_entity_ids,
-const  std::unordered_set<std::string> &expected_entity_ids
-)
+void check_registry_json_string(const std::unordered_set<std::string> &entity_ids,
+                                const metric_filters::entity_ids_type &filter_entity_ids,
+                                const std::unordered_set<std::string> &expected_entity_ids)
 {
-    for (const auto &id:entity_ids) {
-        auto my_entity =
-            METRIC_ENTITY_my_server.instantiate(id);
+    for (const auto &id : entity_ids) {
+        auto my_entity = METRIC_ENTITY_my_server.instantiate(id);
 
-            auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
-            my_gauge_int64->set(5);
+        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+        my_gauge_int64->set(5);
 
-            auto my_counter = METRIC_test_counter.instantiate(my_entity);
-            my_counter->increment();
+        auto my_counter = METRIC_test_counter.instantiate(my_entity);
+        my_counter->increment();
     }
 
-        metric_filters filters;
-        filters.entity_ids = filter_entity_ids;
+    metric_filters filters;
+    filters.entity_ids = filter_entity_ids;
 
-        auto &registery = metric_registry::instance();
-        auto json_string = take_snapshot_and_get_json_string(&registery, filters);
-        check_entities_from_json_string(
-                                      json_string,
-                                      expected_entity_ids);
+    auto &registery = metric_registry::instance();
+    auto json_string = take_snapshot_and_get_json_string(&registery, filters);
+    check_entities_from_json_string(json_string, expected_entity_ids);
 }
 
 TEST(metrics_test, take_snapshot_registry)
@@ -2278,10 +2273,11 @@ TEST(metrics_test, take_snapshot_registry)
         metric_filters::entity_ids_type filter_entity_ids;
         std::unordered_set<std::string> expected_entity_ids;
     } tests[] = {
-        {{"server_109"}, {}, {"server_109"}},
+        {{"server_109"}, {"server_109"}, {"server_109"}},
     };
     for (const auto &test : tests) {
-         check_registry_json_string(test.entity_ids, test.filter_entity_ids, test.expected_entity_ids);
+        check_registry_json_string(
+            test.entity_ids, test.filter_entity_ids, test.expected_entity_ids);
     }
 }
 
