@@ -1071,7 +1071,7 @@ void replica::on_config_sync(const app_info &info,
     }
 }
 
-void replica::update_app_name(const std::string app_name)
+void replica::update_app_name(const std::string &app_name)
 {
     if (app_name == _app_info.app_name) {
         return;
@@ -1080,8 +1080,7 @@ void replica::update_app_name(const std::string app_name)
     auto old_app_name = _app_info.app_name;
     _app_info.app_name = app_name;
 
-    auto ec = store_app_info(_app_info);
-    CHECK_EQ_PREFIX_MSG(ec,
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
                         ERR_OK,
                         "store_app_info for app_name failed: "
                         "app_name={}, app_id={}, old_app_name={}",
