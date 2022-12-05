@@ -41,6 +41,7 @@ header:
     - '**/*.json'
     - 'go-client/idl/base/dsn_err_string.go'
     - 'go-client/idl/base/rocskdb_err_string.go'
+    - 'go-client/idl/base/GoUnusedProtection__.go'
     - 'nodejs-client/src/dsn/*.js'
     - '**/.npmigonre'
     # Copyright (c) Facebook, Inc
