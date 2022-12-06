@@ -135,14 +135,12 @@ func (p *PegasusCodec) String() string {
 // RegisterRPCResultHandler registers an external RPC that's not including in
 // pegasus-go-client.
 //
-// The following example registers an response handler for Pegasus's remote-command RPC.
+// The following example registers a response handler for Pegasus's remote-command RPC.
 // Usage:
 //
-// ```go
-//   RegisterRpcResultHandler("RPC_CLI_CLI_CALL_ACK", func() RpcResponseResult {
-//     return &RemoteCmdServiceCallCommandResult{Success: new(string)}
-//   })
-// ```
+//	RegisterRpcResultHandler("RPC_CLI_CLI_CALL_ACK", func() RpcResponseResult {
+//		return &RemoteCmdServiceCallCommandResult{Success: new(string)}
+//	})
 func RegisterRPCResultHandler(responseAck string, handler func() RpcResponseResult) {
 	nameToResultMapLock.Lock()
 	defer nameToResultMapLock.Unlock()

@@ -22,11 +22,11 @@ package admin
 import (
 	"context"
 	"fmt"
-	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
