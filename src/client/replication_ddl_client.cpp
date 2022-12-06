@@ -54,11 +54,13 @@ namespace dsn {
 namespace replication {
 
 #define VALIDATE_TABLE_NAME(app_name)                                                              \
-    if (app_name.empty() ||                                                                        \
-        !std::all_of(app_name.cbegin(),                                                            \
-                     app_name.cend(),                                                              \
-                     (bool (*)(int))replication_ddl_client::valid_app_char))                       \
-        return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name. Only 0-9a-zA-Z.:_ are valid!");
+    do {                                                                                           \
+        if (app_name.empty() ||                                                                    \
+            !std::all_of(app_name.cbegin(),                                                        \
+                         app_name.cend(),                                                          \
+                         (bool (*)(int))replication_ddl_client::valid_app_char))                   \
+            return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name. Only 0-9a-zA-Z.:_ are valid!");  \
+    } while (false)
 
 using tp_output_format = ::dsn::utils::table_printer::output_format;
 

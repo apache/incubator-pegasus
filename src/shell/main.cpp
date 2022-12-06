@@ -92,7 +92,7 @@ static command_executor commands[] = {
         "recall", "recall an app", "<app_id> [new_app_name]", recall_app,
     },
     {
-        "rename", "rename an app", "<old_app_name> [new_app_name]", rename_app,
+        "rename", "rename an app", "<old_app_name> <new_app_name>", rename_app,
     },
     {
         "set_meta_level",

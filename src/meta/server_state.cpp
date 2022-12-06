@@ -1261,58 +1261,49 @@ void server_state::drop_app(dsn::message_ex *msg)
 
 void server_state::do_app_rename(configuration_rename_app_rpc rpc)
 {
+    zauto_write_lock l(_lock);
+
     const auto &old_app_name = rpc.request().old_app_name;
     const auto &new_app_name = rpc.request().new_app_name;
 
-    zauto_read_lock l;
     auto target_app = get_app(old_app_name);
-
-    if (target_app == nullptr) {
-        auto &response = rpc.response();
-        std::ostringstream oss;
-        response.err = ERR_APP_NOT_EXIST;
-        oss << "ERROR: app(" << old_app_name << ") not exist. check it!" << std::endl;
-        response.hint_message += oss.str();
-        return;
-    }
-
-    LOG_INFO_F("ready to update remote app_name: app_id={}, old_app_name={}, new_app_name={}.",
-               target_app->app_id,
-               old_app_name,
-               new_app_name);
+    auto app_id = target_app->app_id;
 
     auto ainfo = *(reinterpret_cast<app_info *>(target_app.get()));
     ainfo.app_name = new_app_name;
     auto app_path = get_app_path(*target_app);
 
-    do_update_app_info(app_path, ainfo, [this, target_app, rpc](error_code ec) mutable {
+    target_app->app_name = new_app_name;
+    _exist_apps.emplace(new_app_name, target_app);
+
+    do_update_app_info(app_path, ainfo, [this, app_id, rpc](error_code ec) mutable {
         const auto &new_app_name = rpc.request().new_app_name;
+        const auto &old_app_name = rpc.request().old_app_name;
         zauto_write_lock l(_lock);
 
-        CHECK_EQ(ec, ERR_OK);
+        if (ERR_OK != ec) {
+            _exist_apps.erase(new_app_name);
+            CHECK(false,
+                  "update remote app info failed: app_id={}, old_app_name={}, new_app_name={}",
+                  app_id,
+                  old_app_name,
+                  new_app_name);
+        }
 
-        const auto old_app_name = target_app->app_name;
-        target_app->app_name = new_app_name;
-
-        _exist_apps.emplace(new_app_name, target_app);
         _exist_apps.erase(old_app_name);
 
-        LOG_INFO_F("both remote and local env of app_name have been updated "
+        LOG_INFO_F("both remote and local app info of app_name have been updated "
                    "successfully: app_id={}, old_app_name={}, new_app_name={}",
-                   target_app->app_id,
+                   app_id,
                    old_app_name,
                    new_app_name);
-
-        auto &response = rpc.response();
-        response.err = ERR_OK;
-
     });
 }
 
 void server_state::rename_app(configuration_rename_app_rpc rpc)
 {
-    const std::string &old_app_name = rpc.request().old_app_name;
-    const std::string &new_app_name = rpc.request().new_app_name;
+    const auto &old_app_name = rpc.request().old_app_name;
+    const auto &new_app_name = rpc.request().new_app_name;
     auto &response = rpc.response();
 
     std::shared_ptr<app_state> target_app;
@@ -1320,45 +1311,48 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
     LOG_INFO_F(
         "rename app request, old_app_name({}), new_app_name({})", old_app_name, new_app_name);
 
-    zauto_read_lock l(_lock);
-    target_app = get_app(old_app_name);
+    {
+        zauto_read_lock l(_lock);
+        target_app = get_app(old_app_name);
 
-    std::ostringstream oss;
-    if (target_app == nullptr) {
-        response.err = ERR_APP_NOT_EXIST;
-        oss << "ERROR: app(" << old_app_name << ") not exist. check it!" << std::endl;
-        response.hint_message += oss.str();
-        return;
-    }
-
-    switch (target_app->status) {
-    case app_status::AS_AVAILABLE: {
-        if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
-            response.err = ERR_INVALID_PARAMETERS;
-            oss << "ERROR: app(" << new_app_name << ") already exist! check it!" << std::endl;
+        std::ostringstream oss;
+        if (target_app == nullptr) {
+            response.err = ERR_APP_NOT_EXIST;
+            oss << "ERROR: app(" << old_app_name << ") not exist. check it!" << std::endl;
             response.hint_message += oss.str();
             return;
         }
-        do_rename = true;
-    } break;
-    case app_status::AS_CREATING:
-    case app_status::AS_RECALLING: {
-        response.err = ERR_BUSY_CREATING;
-    } break;
-    case app_status::AS_DROPPING: {
-        response.err = ERR_BUSY_DROPPING;
-    } break;
-    case app_status::AS_DROPPED: {
-        response.err = ERR_APP_DROPPED;
-    } break;
-    default: {
-        response.err = ERR_INVALID_STATE;
-    } break;
+
+        switch (target_app->status) {
+        case app_status::AS_AVAILABLE: {
+            if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
+                response.err = ERR_INVALID_PARAMETERS;
+                oss << "ERROR: app(" << new_app_name << ") already exist! check it!" << std::endl;
+                response.hint_message += oss.str();
+                return;
+            }
+            do_rename = true;
+        } break;
+        case app_status::AS_CREATING:
+        case app_status::AS_RECALLING: {
+            response.err = ERR_BUSY_CREATING;
+        } break;
+        case app_status::AS_DROPPING: {
+            response.err = ERR_BUSY_DROPPING;
+        } break;
+        case app_status::AS_DROPPED: {
+            response.err = ERR_APP_DROPPED;
+        } break;
+        default: {
+            response.err = ERR_INVALID_STATE;
+        } break;
+        }
     }
 
     if (do_rename) {
         do_app_rename(rpc);
     } else {
+        std::ostringstream oss;
         oss << "ERROR: app(" << old_app_name << ") status can't execute rename!" << std::endl;
         response.hint_message += oss.str();
     }
