@@ -334,6 +334,8 @@ public:
 
     entity_map entities() const;
 
+    void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
+
 private:
     friend class metric_entity_prototype;
     friend class utils::singleton<metric_registry>;

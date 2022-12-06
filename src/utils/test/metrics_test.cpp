@@ -2178,4 +2178,114 @@ TEST(metrics_test, take_snapshot_entity)
     }
 }
 
+void check_entities_from_json_string(const std::string &json_string,
+                                     const std::unordered_set<std::string> &expected_entity_ids)
+{
+    // Even if there is not any entity selected, `json_string` should be "{}".
+    ASSERT_FALSE(json_string.empty());
+
+    rapidjson::Document doc;
+    rapidjson::ParseResult result = doc.Parse(json_string.c_str());
+    ASSERT_FALSE(result.IsError());
+
+    // Actual entity ids parsed from json string for entities.
+    std::unordered_set<std::string> actual_entity_ids;
+
+    // The json format for entities should be an array.
+    ASSERT_TRUE(doc.IsArray());
+    for (const auto &entity : doc.GetArray()) {
+        // The json format for each entity should be an object.
+        ASSERT_TRUE(entity.IsObject());
+
+        for (const auto &elem : entity.GetObject()) {
+            // Each name must be a string.
+            ASSERT_TRUE(elem.name.IsString());
+
+            if (kMetricEntityTypeField == elem.name.GetString()) {
+                ASSERT_STREQ("my_server", elem.value.GetString());
+            } else if (kMetricEntityIdField == elem.name.GetString()) {
+                actual_entity_ids.emplace(elem.value.GetString());
+            } else if (kMetricEntityAttrsField == elem.name.GetString()) {
+                ASSERT_TRUE(elem.value.ObjectEmpty());
+            } else if (kMetricEntityMetricsField == elem.name.GetString()) {
+                ASSERT_TRUE(elem.value.IsArray());
+
+                std::unordered_set<std::string> actual_entity_metrics;
+                for (const auto &m : elem.value.GetArray()) {
+                    ASSERT_TRUE(m.IsObject());
+
+                    for (const auto &field : m.GetObject()) {
+                        // Each name must be a string.
+                        ASSERT_TRUE(field.name.IsString());
+                        if (kMetricNameField == field.name.GetString()) {
+                            ASSERT_TRUE(field.value.IsString());
+                            actual_entity_metrics.emplace(field.value.GetString());
+                        }
+                    }
+                }
+
+                static const std::unordered_set<std::string> kExpectedEntityMetrics = {
+                    "test_gauge_int64", "test_counter"};
+                ASSERT_EQ(kExpectedEntityMetrics, actual_entity_metrics);
+            } else {
+                ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
+            }
+        }
+    }
+
+    ASSERT_EQ(expected_entity_ids, actual_entity_ids);
+}
+
+void check_registry_json_string(const std::unordered_set<std::string> &entity_ids,
+                                const metric_filters::entity_ids_type &filter_entity_ids,
+                                const std::unordered_set<std::string> &expected_entity_ids)
+{
+    for (const auto &id : entity_ids) {
+        auto my_entity = METRIC_ENTITY_my_server.instantiate(id);
+
+        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+        my_gauge_int64->set(5);
+
+        auto my_counter = METRIC_test_counter.instantiate(my_entity);
+        my_counter->increment();
+    }
+
+    metric_filters filters;
+    filters.entity_ids = filter_entity_ids;
+
+    auto &registery = metric_registry::instance();
+    auto json_string = take_snapshot_and_get_json_string(&registery, filters);
+    check_entities_from_json_string(json_string, expected_entity_ids);
+}
+
+TEST(metrics_test, take_snapshot_registry)
+{
+    // Test cases:
+    // - filter an entity that does not exist in registery
+    // - filter 2 entities both of which do not exist in registery
+    // - filter an entity that exists in registery
+    // - filter 2 entities one of which does not exist in registery
+    // - filter 2 entities both of which exist in registery
+    // - filter 3 entities one of which does not exist in registery
+    struct test_case
+    {
+        std::unordered_set<std::string> entity_ids;
+        metric_filters::entity_ids_type filter_entity_ids;
+        std::unordered_set<std::string> expected_entity_ids;
+    } tests[] = {
+        {{}, {"server_109"}, {}},
+        {{}, {"server_109", "server_110"}, {}},
+        {{"server_109"}, {"server_109"}, {"server_109"}},
+        {{"server_110"}, {"server_110", "server_111"}, {"server_110"}},
+        {{"server_111", "server_112"}, {"server_111", "server_112"}, {"server_111", "server_112"}},
+        {{"server_113", "server_114"},
+         {"server_113", "server_114", "server_115"},
+         {"server_113", "server_114"}},
+    };
+    for (const auto &test : tests) {
+        check_registry_json_string(
+            test.entity_ids, test.filter_entity_ids, test.expected_entity_ids);
+    }
+}
+
 } // namespace dsn

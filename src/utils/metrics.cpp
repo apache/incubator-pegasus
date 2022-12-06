@@ -243,6 +243,17 @@ metric_registry::entity_map metric_registry::entities() const
     return _entities;
 }
 
+void metric_registry::take_snapshot(metric_json_writer &writer, const metric_filters &filters) const
+{
+    utils::auto_read_lock l(_lock);
+
+    writer.StartArray();
+    for (const auto &entity : _entities) {
+        entity.second->take_snapshot(writer, filters);
+    }
+    writer.EndArray();
+}
+
 metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_prototype *prototype,
                                                          const std::string &id,
                                                          const metric_entity::attr_map &attrs)
