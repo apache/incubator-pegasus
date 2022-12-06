@@ -33,19 +33,20 @@
 
 #include <boost/asio/deadline_timer.hpp>
 
-#include "api_utilities.h"
-#include "alloc.h"
-#include "autoref_ptr.h"
-#include "casts.h"
 #include "common/json_helper.h"
-#include "enum_helper.h"
-#include "fmt_logging.h"
-#include "long_adder.h"
-#include "nth_element.h"
-#include "ports.h"
-#include "singleton.h"
-#include "string_view.h"
-#include "synchronize.h"
+#include "http/http_server.h"
+#include "utils/api_utilities.h"
+#include "utils/alloc.h"
+#include "utils/autoref_ptr.h"
+#include "utils/casts.h"
+#include "utils/enum_helper.h"
+#include "utils/fmt_logging.h"
+#include "utils/long_adder.h"
+#include "utils/nth_element.h"
+#include "utils/ports.h"
+#include "utils/singleton.h"
+#include "utils/string_view.h"
+#include "utils/synchronize.h"
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
@@ -327,6 +328,23 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_entity_prototype);
 };
 
+class metric_registry;
+class metrics_http_service : public http_server_base
+{
+public:
+    explicit metrics_http_service(metric_registry *registry);
+    ~metrics_http_service() = default;
+
+    std::string path() const override { return ""; }
+    
+    void get_metrics_handler(const http_request &req, http_response &resp);
+
+private:
+    metric_registry *_registry;
+
+    DISALLOW_COPY_AND_ASSIGN(metrics_http_service);
+};
+
 class metric_registry : public utils::singleton<metric_registry>
 {
 public:
@@ -349,6 +367,8 @@ private:
 
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;
+
+    metrics_http_service _http_service;
 
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
 };

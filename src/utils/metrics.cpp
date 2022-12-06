@@ -17,10 +17,12 @@
 
 #include "utils/metrics.h"
 
+#include <sstream>
+
 #include "utils/api_utilities.h"
 #include "utils/rand.h"
-
-#include "shared_io_service.h"
+#include "utils/shared_io_service.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -207,7 +209,60 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
-metric_registry::metric_registry() : _lock(), _entities()
+metrics_http_service::metrics_http_service(metric_registry *registry)
+    : _registry(registry) 
+{
+    register_handler("metrics",
+                     std::bind(&metrics_http_service::get_metrics_handler,
+                               this,
+                               std::placeholders::_1,
+                               std::placeholders::_2),
+                     "ip:port/metrics");
+}
+
+namespace {
+
+void parse_as_array(const std::string &field_value,
+                std::vector<std::string> &array)
+{
+    util::split_args(field_value.c_str(), array, ',');
+}
+
+} // anonymous namespace
+
+void metrics_http_service::get_metrics_handler(const http_request &req, http_response &resp)
+{
+    if (req.method != http_method::HTTP_METHOD_GET) {
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    metric_filters filters;
+    for (const auto &field : req.query_args) {
+        if (field.first == "types") {
+            parse_as_array(field.second, filters.entity_types);
+        } else if (field.first == "ids") {
+            parse_as_array(field.second, filters.entity_ids);
+        } else if (field.first == "attributes") {
+            parse_as_array(field.second, filters.entity_attrs);
+        } else if (field.first == "metrics") {
+            parse_as_array(field.second, filters.entity_metrics);
+        } else {
+            resp.status_code = http_status_code::bad_request;
+            return;
+        }
+    }
+
+    std::stringstream out;
+    rapidjson::OStreamWrapper wrapper(out);
+    metric_json_writer writer(wrapper);
+    registry->take_snapshot(writer, filters);
+    resp.body = out.str();
+
+    resp.status_code = http_status_code::ok;
+}
+
+metric_registry::metric_registry() : _http_service(this)
 {
     // We should ensure that metric_registry is destructed before shared_io_service is destructed.
     // Once shared_io_service is destructed before metric_registry is destructed,
