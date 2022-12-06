@@ -2202,18 +2202,11 @@ void check_entities_from_json_string(const std::string &json_string,
             ASSERT_TRUE(elem.name.IsString());
 
             if (kMetricEntityTypeField == elem.name.GetString()) {
-                ASSERT_STREQ(elem.value.GetString(), "my_server");
+                ASSERT_STREQ("my_server", elem.value.GetString());
             } else if (kMetricEntityIdField == elem.name.GetString()) {
                 actual_entity_ids.emplace(elem.value.GetString());
             } else if (kMetricEntityAttrsField == elem.name.GetString()) {
-                ASSERT_TRUE(elem.value.IsObject());
-
-                // The attributes for each entity should be empty.
-                metric_entity::attr_map actual_entity_attrs;
-                for (const auto &attr : elem.value.GetObject()) {
-                    actual_entity_attrs.emplace(attr.name.GetString(), attr.value.GetString());
-                }
-                ASSERT_TRUE(actual_entity_attrs.empty());
+                ASSERT_TRUE(elem.value.ObjectEmpty());
             } else if (kMetricEntityMetricsField == elem.name.GetString()) {
                 ASSERT_TRUE(elem.value.IsArray());
 
@@ -2233,14 +2226,14 @@ void check_entities_from_json_string(const std::string &json_string,
 
                 static const std::unordered_set<std::string> kExpectedEntityMetrics = {
                     "test_gauge_int64", "test_counter"};
-                ASSERT_EQ(actual_entity_metrics, kExpectedEntityMetrics);
+                ASSERT_EQ(kExpectedEntityMetrics, actual_entity_metrics);
             } else {
                 ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
             }
         }
     }
 
-    ASSERT_EQ(actual_entity_ids, expected_entity_ids);
+    ASSERT_EQ(expected_entity_ids, actual_entity_ids);
 }
 
 void check_registry_json_string(const std::unordered_set<std::string> &entity_ids,
