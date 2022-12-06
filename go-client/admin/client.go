@@ -22,6 +22,7 @@ package admin
 import (
 	"context"
 	"fmt"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"time"
 
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
@@ -107,7 +108,7 @@ func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, part
 }
 
 func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error {
-	req := admin.NewDropAppRequest()
+	req := admin.NewConfigurationDropAppRequest()
 	req.AppName = tableName
 	reserveSeconds := int64(1) // delete immediately. the caller is responsible for the soft deletion of table.
 	req.Options = &admin.DropAppOptions{
@@ -120,7 +121,7 @@ func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error 
 
 func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
 	resp, err := c.metaManager.ListApps(ctx, &admin.ConfigurationListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
+		Status: replication.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {
 		return nil, err

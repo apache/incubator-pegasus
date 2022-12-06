@@ -48,7 +48,7 @@ func TestCodec_Marshal(t *testing.T) {
 		0x00, 0x00,
 	}
 	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
+	arg.Query = replication.NewConfigurationQueryByIndexRequest()
 	arg.Query.AppName = "temp"
 	arg.Query.PartitionIndices = []int32{}
 
