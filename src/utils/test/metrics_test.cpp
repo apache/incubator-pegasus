@@ -18,7 +18,6 @@
 #include "utils/metrics.h"
 
 #include <chrono>
-#include <sstream>
 #include <thread>
 #include <vector>
 
@@ -904,13 +903,7 @@ TEST(metrics_test, percentile_double)
 template <typename T>
 std::string take_snapshot_and_get_json_string(T *m, const metric_filters &filters)
 {
-    std::stringstream out;
-    rapidjson::OStreamWrapper wrapper(out);
-    metric_json_writer writer(wrapper);
-
-    m->take_snapshot(writer, filters);
-
-    auto out_str = out.str();
+    auto out_str = take_snapshot_as_json(m, filters);
     if (out_str.empty()) {
         std::cout << "The json string is empty." << std::endl;
     } else {

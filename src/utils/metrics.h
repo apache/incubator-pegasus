@@ -24,6 +24,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -308,6 +309,23 @@ struct metric_filters
 
     entity_metrics_type entity_metrics;
 };
+
+inline std::string encode_as_json(std::function<void(metric_json_writer&)> encoder)
+{
+    std::ostringstream out;
+    rapidjson::OStreamWrapper wrapper(out);
+    metric_json_writer writer(wrapper);
+    encoder(writer);
+    return out.str();
+}
+
+template <typename T>
+inline std::string take_snapshot_as_json(T *m, const metric_filters &filters)
+{
+    return encode_as_json([m, &filters](metric_json_writer &writer){
+    m->take_snapshot(writer, filters);
+    });
+}
 
 class metric_entity_prototype
 {

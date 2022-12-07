@@ -17,8 +17,6 @@
 
 #include "utils/metrics.h"
 
-#include <sstream>
-
 #include "utils/api_utilities.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
@@ -222,10 +220,26 @@ metrics_http_service::metrics_http_service(metric_registry *registry)
 
 namespace {
 
-void parse_as_array(const std::string &field_value,
-                std::vector<std::string> &array)
+template<typename Container>
+void parse_as(const std::string &field_value,
+                Container &container)
 {
-    util::split_args(field_value.c_str(), array, ',');
+    util::split_args(field_value.c_str(), container, ',');
+}
+
+inline void encode_error(dsn::metric_json_writer &writer, const char *error_message)
+{
+    writer.StartObject();
+    writer.Key("error_message");
+    dsn::json::json_encode(writer, error_message);
+    writer.EndObject();
+}
+
+inline std::string encode_error_as_json(const char *error_message)
+{
+    return encode_as_json([error_message](metric_json_writer &writer){
+            encode_error(writer, error_message);
+            });
 }
 
 } // anonymous namespace
@@ -233,6 +247,7 @@ void parse_as_array(const std::string &field_value,
 void metrics_http_service::get_metrics_handler(const http_request &req, http_response &resp)
 {
     if (req.method != http_method::HTTP_METHOD_GET) {
+        resp.body = encode_error_as_json("please use 'GET' method while querying for metrics");
         resp.status_code = http_status_code::bad_request;
         return;
     }
@@ -240,25 +255,27 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
     metric_filters filters;
     for (const auto &field : req.query_args) {
         if (field.first == "types") {
-            parse_as_array(field.second, filters.entity_types);
+            parse_as(field.second, filters.entity_types);
         } else if (field.first == "ids") {
-            parse_as_array(field.second, filters.entity_ids);
+            parse_as(field.second, filters.entity_ids);
         } else if (field.first == "attributes") {
-            parse_as_array(field.second, filters.entity_attrs);
+            parse_as(field.second, filters.entity_attrs);
+            if ((entity_attrs.size() & 1) != 0) {
+                resp.body = encode_error_as_json("the number of arguments for attributes should be even, since each attribute name always pairs with a value");
+                resp.status_code = http_status_code::bad_request;
+                return;
+            }
         } else if (field.first == "metrics") {
-            parse_as_array(field.second, filters.entity_metrics);
+            parse_as(field.second, filters.entity_metrics);
         } else {
+            auto error_message = fmt::format("unknown field {}={}", field.first, field.second);
+            resp.body = encode_error_as_json(error_message.c_str());
             resp.status_code = http_status_code::bad_request;
             return;
         }
     }
 
-    std::stringstream out;
-    rapidjson::OStreamWrapper wrapper(out);
-    metric_json_writer writer(wrapper);
-    registry->take_snapshot(writer, filters);
-    resp.body = out.str();
-
+    resp.body = take_snapshot_as_json(_registry, filters);
     resp.status_code = http_status_code::ok;
 }
 
