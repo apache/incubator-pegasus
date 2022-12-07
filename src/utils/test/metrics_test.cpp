@@ -23,7 +23,10 @@
 
 #include <gtest/gtest.h>
 
+#include "http/http_message_parser.h"
 #include "percentile_utils.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/blob.h"
 #include "utils/rand.h"
 
 namespace dsn {
@@ -910,7 +913,6 @@ std::string take_snapshot_and_get_json_string(T *m, const metric_filters &filter
         std::cout << "The json string is: " << std::endl;
         std::cout << out_str << std::endl;
     }
-
     return out_str;
 }
 
@@ -2275,10 +2277,68 @@ TEST(metrics_test, take_snapshot_registry)
          {"server_113", "server_114", "server_115"},
          {"server_113", "server_114"}},
     };
+
     for (const auto &test : tests) {
         check_registry_json_string(
             test.entity_ids, test.filter_entity_ids, test.expected_entity_ids);
     }
 }
+
+void test_http_get_metrics(const char *method, const std::string &url, http_status_code expected_status_code)
+{
+    ref_ptr<message_ex> m(message_ex::create_receive_message_with_standalone_header(
+        blob::create_from_bytes(method)));
+    m->buffers.emplace_back(blob::create_from_bytes(std::string(url)));
+    m->buffers.resize(HTTP_MSG_BUFFERS_NUM);
+
+    const auto req_res = http_request::parse(m.get());
+    ASSERT_TRUE(req_res.is_ok());
+
+    http_response resp;
+    metric_registry::instance()._http_service.get_metrics_handler(req_res.get_value(), resp);
+    ASSERT_EQ(expected_status_code, resp.status_code);
+}
+
+#define URL(fields) "http://127.0.0.1:34601/metrics?" #fields
+
+TEST(metrics_test, http_get_metrics)
+{
+    struct loaded_test_entity;
+    {
+        metric_entity_prototype *prototype;
+        std::string type;
+        std::string id;
+        metric_entity::attr_map attrs;
+    } test_entities[] = {
+    };
+
+    for (const auto &entity: test_entities) {
+        auto my_entity = entity.prototype->instantiate(id, entity.attrs);
+
+        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+        my_gauge_int64->set(5);
+
+        auto my_counter = METRIC_test_counter.instantiate(my_entity);
+        my_counter->increment();
+    }
+
+    // Test cases:
+    // - filter an entity that does not exist in registery
+    struct test_case
+    {
+        std::unordered_set<std::string> expected_entity_ids;
+        std::unordered_set<std::string> expected_entity_metrics;
+        metric_filters::entity_types_type filter_entity_types;
+        metric_filters::entity_ids_type filter_entity_ids;
+        metric_filters::entity_attrs_type filter_entity_attrs;
+        metric_filters::entity_metrics_type filter_entity_metrics;
+    } tests[] = {
+    };
+
+    for (const auto &test : tests) {
+    }
+}
+
+#undef URL
 
 } // namespace dsn

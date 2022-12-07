@@ -353,11 +353,13 @@ public:
     explicit metrics_http_service(metric_registry *registry);
     ~metrics_http_service() = default;
 
+    // There is only one API now whose URI is "/metrics", thus just make 
+    // this URI as sub path while leaving the root path empty.
     std::string path() const override { return ""; }
     
+private:
     void get_metrics_handler(const http_request &req, http_response &resp);
 
-private:
     metric_registry *_registry;
 
     DISALLOW_COPY_AND_ASSIGN(metrics_http_service);
