@@ -86,42 +86,62 @@ METRIC_DEFINE_my_gauge(my_replica,
                        "a replica-level duration for test");
 
 METRIC_DEFINE_gauge_int64(my_server,
-                          test_gauge_int64,
+                          test_server_gauge_int64,
                           dsn::metric_unit::kMilliSeconds,
                           "a server-level gauge of int64 type for test");
 
+METRIC_DEFINE_gauge_int64(my_table,
+                          test_table_gauge_int64,
+                          dsn::metric_unit::kMilliSeconds,
+                          "a table-level gauge of int64 type for test");
+
+METRIC_DEFINE_gauge_int64(my_replica,
+                          test_replica_gauge_int64,
+                          dsn::metric_unit::kMilliSeconds,
+                          "a replica-level gauge of int64 type for test");
+
 METRIC_DEFINE_gauge_double(my_server,
-                           test_gauge_double,
+                           test_server_gauge_double,
                            dsn::metric_unit::kSeconds,
                            "a server-level gauge of double type for test");
 
 METRIC_DEFINE_counter(my_server,
-                      test_counter,
+                      test_server_counter,
                       dsn::metric_unit::kRequests,
                       "a server-level counter for test");
 
+METRIC_DEFINE_counter(my_table,
+                      test_table_counter,
+                      dsn::metric_unit::kRequests,
+                      "a table-level counter for test");
+
+METRIC_DEFINE_counter(my_replica,
+                      test_replica_counter,
+                      dsn::metric_unit::kRequests,
+                      "a replica-level counter for test");
+
 METRIC_DEFINE_concurrent_counter(my_server,
-                                 test_concurrent_counter,
+                                 test_server_concurrent_counter,
                                  dsn::metric_unit::kRequests,
                                  "a server-level concurrent_counter for test");
 
 METRIC_DEFINE_volatile_counter(my_server,
-                               test_volatile_counter,
+                               test_server_volatile_counter,
                                dsn::metric_unit::kRequests,
                                "a server-level volatile_counter for test");
 
 METRIC_DEFINE_concurrent_volatile_counter(my_server,
-                                          test_concurrent_volatile_counter,
+                                          test_server_concurrent_volatile_counter,
                                           dsn::metric_unit::kRequests,
                                           "a server-level concurrent_volatile_counter for test");
 
 METRIC_DEFINE_percentile_int64(my_server,
-                               test_percentile_int64,
+                               test_server_percentile_int64,
                                dsn::metric_unit::kNanoSeconds,
                                "a server-level percentile of int64 type for test");
 
 METRIC_DEFINE_percentile_double(my_server,
-                                test_percentile_double,
+                                test_server_percentile_double,
                                 dsn::metric_unit::kNanoSeconds,
                                 "a server-level percentile of double type for test");
 
@@ -297,9 +317,9 @@ TEST(metrics_test, gauge_int64)
 
         gauge_ptr<int64_t> my_metric;
         if (test.use_default_value) {
-            my_metric = METRIC_test_gauge_int64.instantiate(my_server_entity);
+            my_metric = METRIC_test_server_gauge_int64.instantiate(my_server_entity);
         } else {
-            my_metric = METRIC_test_gauge_int64.instantiate(my_server_entity, test.initial_value);
+            my_metric = METRIC_test_server_gauge_int64.instantiate(my_server_entity, test.initial_value);
         }
 
         ASSERT_EQ(my_metric->value(), test.initial_value);
@@ -308,10 +328,10 @@ TEST(metrics_test, gauge_int64)
         ASSERT_EQ(my_metric->value(), test.new_value);
 
         auto metrics = my_server_entity->metrics();
-        ASSERT_EQ(metrics[&METRIC_test_gauge_int64].get(), static_cast<metric *>(my_metric.get()));
+        ASSERT_EQ(metrics[&METRIC_test_server_gauge_int64].get(), static_cast<metric *>(my_metric.get()));
 
         ASSERT_EQ(my_metric->prototype(),
-                  static_cast<const metric_prototype *>(&METRIC_test_gauge_int64));
+                  static_cast<const metric_prototype *>(&METRIC_test_server_gauge_int64));
     }
 }
 
@@ -338,9 +358,9 @@ TEST(metrics_test, gauge_double)
 
         gauge_ptr<double> my_metric;
         if (test.use_default_value) {
-            my_metric = METRIC_test_gauge_double.instantiate(my_server_entity);
+            my_metric = METRIC_test_server_gauge_double.instantiate(my_server_entity);
         } else {
-            my_metric = METRIC_test_gauge_double.instantiate(my_server_entity, test.initial_value);
+            my_metric = METRIC_test_server_gauge_double.instantiate(my_server_entity, test.initial_value);
         }
 
         ASSERT_DOUBLE_EQ(my_metric->value(), test.initial_value);
@@ -349,10 +369,10 @@ TEST(metrics_test, gauge_double)
         ASSERT_DOUBLE_EQ(my_metric->value(), test.new_value);
 
         auto metrics = my_server_entity->metrics();
-        ASSERT_EQ(metrics[&METRIC_test_gauge_double].get(), static_cast<metric *>(my_metric.get()));
+        ASSERT_EQ(metrics[&METRIC_test_server_gauge_double].get(), static_cast<metric *>(my_metric.get()));
 
         ASSERT_EQ(my_metric->prototype(),
-                  static_cast<const metric_prototype *>(&METRIC_test_gauge_double));
+                  static_cast<const metric_prototype *>(&METRIC_test_server_gauge_double));
     }
 }
 
@@ -490,7 +510,7 @@ void run_gauge_increment_cases(dsn::gauge_prototype<int64_t> *prototype)
     run_gauge_increment_cases(prototype, 4);
 }
 
-TEST(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_gauge_int64); }
+TEST(metrics_test, gauge_increment) { run_gauge_increment_cases(&METRIC_test_server_gauge_int64); }
 
 template <typename Adder>
 void run_counter_cases(dsn::counter_prototype<Adder> *prototype, int64_t num_threads)
@@ -538,8 +558,8 @@ void run_counter_cases(dsn::counter_prototype<Adder> *prototype)
 TEST(metrics_test, counter)
 {
     // Test both kinds of counter
-    run_counter_cases<striped_long_adder>(&METRIC_test_counter);
-    run_counter_cases<concurrent_long_adder>(&METRIC_test_concurrent_counter);
+    run_counter_cases<striped_long_adder>(&METRIC_test_server_counter);
+    run_counter_cases<concurrent_long_adder>(&METRIC_test_server_concurrent_counter);
 }
 
 template <typename Adder>
@@ -656,8 +676,8 @@ void run_volatile_counter_cases(dsn::volatile_counter_prototype<Adder> *prototyp
 TEST(metrics_test, volatile_counter)
 {
     // Test both kinds of volatile counter
-    run_volatile_counter_cases<striped_long_adder>(&METRIC_test_volatile_counter);
-    run_volatile_counter_cases<concurrent_long_adder>(&METRIC_test_concurrent_volatile_counter);
+    run_volatile_counter_cases<striped_long_adder>(&METRIC_test_server_volatile_counter);
+    run_volatile_counter_cases<concurrent_long_adder>(&METRIC_test_server_concurrent_volatile_counter);
 }
 
 template <typename T, typename Prototype, typename Checker>
@@ -872,7 +892,7 @@ TEST(metrics_test, percentile_int64)
     run_percentile_cases<value_type,
                          percentile_prototype<value_type>,
                          integral_percentile_case_generator<value_type>,
-                         integral_checker<value_type>>(METRIC_test_percentile_int64);
+                         integral_checker<value_type>>(METRIC_test_server_percentile_int64);
 }
 
 template <typename T>
@@ -900,7 +920,7 @@ TEST(metrics_test, percentile_double)
     run_percentile_cases<value_type,
                          floating_percentile_prototype<value_type>,
                          floating_percentile_case_generator<value_type>,
-                         floating_checker<value_type>>(METRIC_test_percentile_double);
+                         floating_checker<value_type>>(METRIC_test_server_percentile_double);
 }
 
 template <typename T>
@@ -1145,34 +1165,34 @@ metric_filters::metric_fields_type get_all_single_value_metric_fields()
 TEST(metrics_test, take_snapshot_gauge_int64)
 {
     RUN_CASES_WITH_GAUGE_SNAPSHOT(
-        METRIC_test_gauge_int64, int64_t, true, 5, compare_integral_metric_value_map);
+        METRIC_test_server_gauge_int64, int64_t, true, 5, compare_integral_metric_value_map);
 }
 
 TEST(metrics_test, take_snapshot_gauge_double)
 {
     RUN_CASES_WITH_GAUGE_SNAPSHOT(
-        METRIC_test_gauge_double, double, false, 6.789, compare_floating_metric_value_map);
+        METRIC_test_server_gauge_double, double, false, 6.789, compare_floating_metric_value_map);
 }
 
 #define RUN_CASES_WITH_COUNTER_SNAPSHOT(metric_prototype)                                          \
     RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                          \
         metric_prototype, increment_by, int64_t, true, 10, compare_integral_metric_value_map)
 
-TEST(metrics_test, take_snapshot_counter) { RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_counter); }
+TEST(metrics_test, take_snapshot_counter) { RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_server_counter); }
 
 TEST(metrics_test, take_snapshot_concurrent_counter)
 {
-    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_concurrent_counter);
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_server_concurrent_counter);
 }
 
 TEST(metrics_test, take_snapshot_volatile_counter)
 {
-    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_volatile_counter);
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_server_volatile_counter);
 }
 
 TEST(metrics_test, take_snapshot_concurrent_volatile_counter)
 {
-    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_concurrent_volatile_counter);
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_server_concurrent_volatile_counter);
 }
 
 // Set to percentile metric with values output by case generator, and generate the expected
@@ -1366,7 +1386,7 @@ metric_filters::metric_fields_type get_all_kth_percentile_fields()
 
 TEST(metrics_test, take_snapshot_percentile_int64)
 {
-    RUN_CASES_WITH_PERCENTILE_SNAPSHOT(METRIC_test_percentile_int64,
+    RUN_CASES_WITH_PERCENTILE_SNAPSHOT(METRIC_test_server_percentile_int64,
                                        integral_percentile_case_generator<int64_t>,
                                        true,
                                        compare_integral_metric_value_map);
@@ -1374,7 +1394,7 @@ TEST(metrics_test, take_snapshot_percentile_int64)
 
 TEST(metrics_test, take_snapshot_percentile_double)
 {
-    RUN_CASES_WITH_PERCENTILE_SNAPSHOT(METRIC_test_percentile_double,
+    RUN_CASES_WITH_PERCENTILE_SNAPSHOT(METRIC_test_server_percentile_double,
                                        floating_percentile_case_generator<double>,
                                        false,
                                        compare_floating_metric_value_map);
@@ -1462,8 +1482,12 @@ void check_entity_from_json_string(metric_entity *my_entity,
 
 TEST(metrics_test, take_snapshot_entity)
 {
-    static const std::unordered_set<std::string> kAllEntityMetrics = {"test_gauge_int64",
-                                                                      "test_counter"};
+    static const std::unordered_set<std::string> kAllServerEntityMetrics = {"test_server_gauge_int64",
+                                                                      "test_server_counter"};
+    static const std::unordered_set<std::string> kAllTableEntityMetrics = {"test_table_gauge_int64",
+                                                                      "test_table_counter"};
+    static const std::unordered_set<std::string> kAllReplicaEntityMetrics = {"test_replica_gauge_int64",
+                                                                      "test_replica_counter"};
 
     // Test cases:
     // - both attributes and filters are empty
@@ -1542,31 +1566,31 @@ TEST(metrics_test, take_snapshot_entity)
         metric_filters::entity_metrics_type filter_entity_metrics;
     } tests[] = {
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_81",
          {},
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          {},
          {},
          {},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_1",
          {{"table", "test_table_1"}},
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          {},
          {},
          {},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.0",
          {{"table", "test_table_1"}, {"partition", "0"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {},
          {},
          {},
@@ -1582,17 +1606,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_82",
          {},
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          {"my_server"},
          {},
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_83",
          {},
@@ -1602,17 +1626,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_84",
          {},
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          {"another_server", "my_server"},
          {},
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_85",
          {},
@@ -1622,17 +1646,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_86",
          {},
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          {},
          {"server_86"},
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_87",
          {},
@@ -1642,17 +1666,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_88",
          {},
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          {},
          {"another_server_88", "server_88"},
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_89",
          {},
@@ -1662,7 +1686,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_90",
          {},
@@ -1672,7 +1696,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"attr_name_1", "attr_value_1"},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_91",
          {},
@@ -1682,17 +1706,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"attr_name_1", "attr_value_1", "attr_name_2", "attr_value_2"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_2",
          {{"table", "test_table_2"}},
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          {},
          {},
          {"table", "test_table_2"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_3",
          {{"table", "test_table_3"}},
@@ -1702,7 +1726,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "test_table_3"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_4",
          {{"table", "test_table_4"}},
@@ -1712,7 +1736,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_4"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_5",
          {{"table", "test_table_5"}},
@@ -1722,17 +1746,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_5"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_6",
          {{"table", "test_table_6"}},
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          {},
          {},
          {"another_table", "another_test_table_6", "table", "test_table_6"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllEntityMetrics,
+         kAllServerTableMetrics,
          "my_table",
          "table_7",
          {{"table", "test_table_7"}},
@@ -1742,17 +1766,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "test_table_7", "table", "another_test_table_7"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.2",
          {{"table", "test_table_1"}, {"partition", "2"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {},
          {},
          {"table", "test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.3",
          {{"table", "test_table_1"}, {"partition", "3"}},
@@ -1762,7 +1786,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_partition", "3"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.4",
          {{"table", "test_table_1"}, {"partition", "4"}},
@@ -1772,7 +1796,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.5",
          {{"table", "test_table_1"}, {"partition", "5"}},
@@ -1782,27 +1806,27 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.6",
          {{"table", "test_table_1"}, {"partition", "6"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {},
          {},
          {"table", "test_table_1", "partition", "6"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_1.7",
          {{"table", "test_table_1"}, {"partition", "7"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {},
          {},
          {"another_table", "another_test_table_1", "partition", "7"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.0",
          {{"table", "test_table_2"}, {"partition", "0"}},
@@ -1820,7 +1844,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {"test_gauge_int64"}},
+         {"test_server_gauge_int64"}},
         {&METRIC_ENTITY_my_server,
          {},
          "my_server",
@@ -1830,19 +1854,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {"test_gauge_int64", "test_counter"}},
+         {"test_server_gauge_int64", "test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          "my_server",
          "server_94",
          {},
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          {},
          {},
          {},
-         {"test_gauge_int64"}},
+         {"test_server_gauge_int64"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          "my_server",
          "server_95",
          {},
@@ -1850,19 +1874,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {"test_counter"}},
+         {"test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          "my_server",
          "server_96",
          {},
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          {},
          {},
          {},
-         {"test_gauge_int64", "test_counter"}},
+         {"test_server_gauge_int64", "test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          "my_server",
          "server_97",
          {},
@@ -1870,19 +1894,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {"test_gauge_double", "test_counter"}},
+         {"test_server_gauge_double", "test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          "my_server",
          "server_98",
          {},
-         {"test_counter"},
+         {"test_server_counter"},
          {},
          {},
          {},
-         {"test_counter"}},
+         {"test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          "my_server",
          "server_99",
          {},
@@ -1890,29 +1914,29 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {"test_gauge_double"}},
+         {"test_server_gauge_double"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          "my_server",
          "server_100",
          {},
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          {},
          {},
          {},
-         {"test_gauge_int64", "test_counter"}},
+         {"test_server_gauge_int64", "test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          "my_server",
          "server_101",
          {},
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          {},
          {},
          {},
-         {"test_gauge_int64", "test_gauge_double"}},
+         {"test_server_gauge_int64", "test_server_gauge_double"}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          "my_server",
          "server_102",
          {},
@@ -1920,19 +1944,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_server_gauge_double", "test_server_concurrent_counter"}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_103",
          {},
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          {"another_server", "my_server"},
          {"another_server_103", "server_103"},
          {},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_104",
          {},
@@ -1942,17 +1966,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.1",
          {{"table", "test_table_2"}, {"partition", "1"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {"another_replica", "my_replica"},
          {},
          {"table", "test_table_2", "partition", "1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.2",
          {{"table", "test_table_2"}, {"partition", "2"}},
@@ -1962,37 +1986,37 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_2", "another_partition", "2"},
          {}},
         {&METRIC_ENTITY_my_server,
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          "my_server",
          "server_105",
          {},
-         {"test_gauge_int64", "test_counter"},
+         {"test_server_gauge_int64", "test_server_counter"},
          {"another_server", "my_server"},
          {},
          {},
-         {"test_gauge_int64", "test_counter"}},
+         {"test_server_gauge_int64", "test_server_counter"}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_106",
          {},
-         {"test_counter"},
+         {"test_server_counter"},
          {"another_server", "my_server"},
          {},
          {},
-         {"test_gauge_double", "test_counter"}},
+         {"test_server_gauge_double", "test_server_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.3",
          {{"table", "test_table_2"}, {"partition", "3"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {},
          {"another_replica_2.3", "replica_2.3"},
          {"table", "another_test_table_2", "partition", "3"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.4",
          {{"table", "test_table_2"}, {"partition", "4"}},
@@ -2002,17 +2026,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_2", "another_partition", "4"},
          {}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_107",
          {},
-         {"test_gauge_int64"},
+         {"test_server_gauge_int64"},
          {},
          {"another_server_107", "server_107"},
          {},
-         {"test_gauge_int64", "test_gauge_double"}},
+         {"test_server_gauge_int64", "test_server_gauge_double"}},
         {&METRIC_ENTITY_my_server,
-         kAllEntityMetrics,
+         kAllServerEntityMetrics,
          "my_server",
          "server_108",
          {},
@@ -2020,19 +2044,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {"another_server_108", "server_108"},
          {},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_server_gauge_double", "test_server_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.5",
          {{"table", "test_table_2"}, {"partition", "5"}},
-         {"test_gauge_int64"},
+         {"test_replica_gauge_int64"},
          {},
          {},
          {"table", "another_test_table_2", "partition", "5"},
-         {"test_gauge_int64", "test_gauge_double"}},
+         {"test_replica_gauge_int64", "test_replica_gauge_double"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.6",
          {{"table", "test_table_2"}, {"partition", "6"}},
@@ -2040,19 +2064,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {},
          {"table", "test_table_2", "partition", "6"},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_2.7",
          {{"table", "test_table_2"}, {"partition", "7"}},
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          {"another_replica", "my_replica"},
          {"another_replica_2.7", "replica_2.7"},
          {"table", "another_test_table_2", "partition", "7"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.0",
          {{"table", "test_table_3"}, {"partition", "0"}},
@@ -2062,17 +2086,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_3", "another_partition", "0"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.1",
          {},
-         {"test_counter"},
+         {"test_replica_counter"},
          {"another_replica", "my_replica"},
          {"another_replica_3.1", "replica_3.1"},
          {},
-         {"test_gauge_double", "test_counter"}},
+         {"test_replica_gauge_double", "test_replica_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.2",
          {},
@@ -2080,19 +2104,19 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_replica", "my_replica"},
          {"another_replica_3.2", "replica_3.2"},
          {},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.3",
          {{"table", "test_table_3"}, {"partition", "3"}},
-         {"test_gauge_int64"},
+         {"test_replica_gauge_int64"},
          {"another_replica", "my_replica"},
          {},
          {"table", "test_table_3", "another_partition", "3"},
-         {"test_gauge_int64", "test_gauge_double"}},
+         {"test_replica_gauge_int64", "test_replica_gauge_double"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.4",
          {{"table", "test_table_3"}, {"partition", "4"}},
@@ -2100,19 +2124,19 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_replica", "my_replica"},
          {},
          {"table", "another_test_table_3", "partition", "4"},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.5",
          {{"table", "test_table_3"}, {"partition", "5"}},
-         {"test_counter"},
+         {"test_replica_counter"},
          {},
          {"another_replica_3.5", "replica_3.5"},
          {"table", "test_table_3", "another_partition", "5"},
-         {"test_gauge_double", "test_counter"}},
+         {"test_replica_gauge_double", "test_replica_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.6",
          {{"table", "test_table_3"}, {"partition", "6"}},
@@ -2120,19 +2144,19 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {"another_replica_3.6", "replica_3.6"},
          {"table", "another_test_table_3", "partition", "6"},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_3.7",
          {{"table", "test_table_3"}, {"partition", "7"}},
-         {"test_gauge_int64"},
+         {"test_replica_gauge_int64"},
          {"another_replica", "my_replica"},
          {"another_replica_3.7", "replica_3.7"},
          {"table", "test_table_3", "another_partition", "7"},
-         {"test_gauge_int64", "test_gauge_double"}},
+         {"test_replica_gauge_int64", "test_replica_gauge_double"}},
         {&METRIC_ENTITY_my_replica,
-         kAllEntityMetrics,
+         kAllReplicaTableMetrics,
          "my_replica",
          "replica_4.0",
          {{"table", "test_table_4"}, {"partition", "0"}},
@@ -2140,21 +2164,33 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_replica", "my_replica"},
          {"another_replica_4.0", "replica_4.0"},
          {"table", "another_test_table_4", "partition", "0"},
-         {"test_gauge_double", "test_concurrent_counter"}},
+         {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
     };
 
     for (const auto &test : tests) {
         auto my_entity =
             test.entity_prototype->instantiate(test.expected_entity_id, test.expected_entity_attrs);
 
-        if (test.entity_metrics.find("test_gauge_int64") != test.entity_metrics.end()) {
-            auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
-            my_gauge_int64->set(5);
-        }
-
-        if (test.entity_metrics.find("test_counter") != test.entity_metrics.end()) {
-            auto my_counter = METRIC_test_counter.instantiate(my_entity);
-            my_counter->increment();
+        for (const auto &entity_metric:test.entity_metrics) {
+            if (entity_metric == "test_server_gauge_int64") {
+                auto my_metric = METRIC_test_server_gauge_int64.instantiate(my_entity);
+                my_metric->set(5);
+            } else if (entity_metric == "test_table_gauge_int64") {
+                auto my_metric = METRIC_test_table_gauge_int64.instantiate(my_entity);
+                my_metric->set(5);
+            } else if (entity_metric == "test_replica_gauge_int64") {
+                auto my_metric = METRIC_test_replica_gauge_int64.instantiate(my_entity);
+                my_metric->set(5);
+            } else if (entity_metric == "test_server_counter") {
+                auto my_metric = METRIC_test_server_counter.instantiate(my_entity);
+                my_metric->increment();
+            } else if (entity_metric == "test_table_counter") {
+                auto my_metric = METRIC_test_table_counter.instantiate(my_entity);
+                my_metric->increment();
+            } else if (entity_metric == "test_replica_counter") {
+                auto my_metric = METRIC_test_replica_counter.instantiate(my_entity);
+                my_metric->increment();
+            }
         }
 
         metric_filters filters;
@@ -2220,7 +2256,7 @@ void check_entities_from_json_string(const std::string &json_string,
                 }
 
                 static const std::unordered_set<std::string> kExpectedEntityMetrics = {
-                    "test_gauge_int64", "test_counter"};
+                    "test_server_gauge_int64", "test_server_counter"};
                 ASSERT_EQ(kExpectedEntityMetrics, actual_entity_metrics);
             } else {
                 ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
@@ -2238,10 +2274,10 @@ void check_registry_json_string(const std::unordered_set<std::string> &entity_id
     for (const auto &id : entity_ids) {
         auto my_entity = METRIC_ENTITY_my_server.instantiate(id);
 
-        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+        auto my_gauge_int64 = METRIC_test_server_gauge_int64.instantiate(my_entity);
         my_gauge_int64->set(5);
 
-        auto my_counter = METRIC_test_counter.instantiate(my_entity);
+        auto my_counter = METRIC_test_server_counter.instantiate(my_entity);
         my_counter->increment();
     }
 
@@ -2315,10 +2351,10 @@ TEST(metrics_test, http_get_metrics)
     for (const auto &entity: test_entities) {
         auto my_entity = entity.prototype->instantiate(id, entity.attrs);
 
-        auto my_gauge_int64 = METRIC_test_gauge_int64.instantiate(my_entity);
+        auto my_gauge_int64 = METRIC_test_server_gauge_int64.instantiate(my_entity);
         my_gauge_int64->set(5);
 
-        auto my_counter = METRIC_test_counter.instantiate(my_entity);
+        auto my_counter = METRIC_test_server_counter.instantiate(my_entity);
         my_counter->increment();
     }
 

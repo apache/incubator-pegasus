@@ -165,6 +165,8 @@ public:
     template <typename MetricType, typename... Args>
     ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args)
     {
+        CHECK_EQ_MSG(std::strcmp(prototype->entity_type().data(), _prototype->name()), 0, "the entity type '{}' of the metric '{}' is inconsistent with the prototype '{}' of the attached entity '{}'", prototype->entity_type().data(), prototype->name().data(), _prototype->name(), _id);
+
         utils::auto_write_lock l(_lock);
 
         metric_map::const_iterator iter = _metrics.find(prototype);
