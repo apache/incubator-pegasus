@@ -67,6 +67,9 @@ METRIC_DEFINE_entity(my_server);
 METRIC_DEFINE_entity(my_table);
 METRIC_DEFINE_entity(my_replica);
 
+// Dedicated entity for getting metrics by http service.
+METRIC_DEFINE_entity(my_app);
+
 METRIC_DEFINE_my_gauge(my_server,
                        my_server_latency,
                        dsn::metric_unit::kMicroSeconds,
@@ -100,6 +103,11 @@ METRIC_DEFINE_gauge_int64(my_replica,
                           dsn::metric_unit::kMilliSeconds,
                           "a replica-level gauge of int64 type for test");
 
+METRIC_DEFINE_gauge_int64(my_app,
+                          test_app_gauge_int64,
+                          dsn::metric_unit::kMilliSeconds,
+                          "an app-level gauge of int64 type for test");
+
 METRIC_DEFINE_gauge_double(my_server,
                            test_server_gauge_double,
                            dsn::metric_unit::kSeconds,
@@ -119,6 +127,11 @@ METRIC_DEFINE_counter(my_replica,
                       test_replica_counter,
                       dsn::metric_unit::kRequests,
                       "a replica-level counter for test");
+
+METRIC_DEFINE_counter(my_app,
+                      test_app_counter,
+                      dsn::metric_unit::kRequests,
+                      "an app-level counter for test");
 
 METRIC_DEFINE_concurrent_counter(my_server,
                                  test_server_concurrent_counter,
@@ -1067,6 +1080,8 @@ metric_filters::metric_fields_type get_all_single_value_metric_fields()
     return fields;
 }
 
+        const metric_filters::metric_fields_type kAllSingleValueMetricFields =      get_all_single_value_metric_fields();                                                  
+
 // Test cases:
 // - with_metric_fields is empty
 // - with_metric_fields has a field of prototype that exists
@@ -1093,8 +1108,6 @@ metric_filters::metric_fields_type get_all_single_value_metric_fields()
 #define RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                      \
     metric_prototype, updater, value_type, is_integral, value, value_map_comparator)               \
     do {                                                                                           \
-        static const metric_filters::metric_fields_type kAllSingleValueMetricFields =              \
-            get_all_single_value_metric_fields();                                                  \
         struct test_case                                                                           \
         {                                                                                          \
             std::string entity_id;                                                                 \
@@ -1400,6 +1413,12 @@ TEST(metrics_test, take_snapshot_percentile_double)
                                        compare_floating_metric_value_map);
 }
 
+    const std::unordered_set<std::string> kAllMetricEntityFields = {
+        kMetricEntityTypeField,
+        kMetricEntityIdField,
+        kMetricEntityAttrsField,
+        kMetricEntityMetricsField};
+
 void check_entity_from_json_string(metric_entity *my_entity,
                                    const std::string &json_string,
                                    const std::string &expected_entity_type,
@@ -1472,11 +1491,6 @@ void check_entity_from_json_string(metric_entity *my_entity,
         actual_fields.emplace(elem.name.GetString());
     }
 
-    static const std::unordered_set<std::string> kAllMetricEntityFields = {
-        kMetricEntityTypeField,
-        kMetricEntityIdField,
-        kMetricEntityAttrsField,
-        kMetricEntityMetricsField};
     ASSERT_EQ(actual_fields, kAllMetricEntityFields);
 }
 
@@ -2209,17 +2223,17 @@ TEST(metrics_test, take_snapshot_entity)
     }
 }
 
-void check_entities_from_json_string(const std::string &json_string,
+void check_entity_ids_from_json_string(const std::string &json_string,
                                      const std::unordered_set<std::string> &expected_entity_ids)
 {
-    // Even if there is not any entity selected, `json_string` should be "{}".
+    // Even if there is not any entity selected, `json_string` should be "[]".
     ASSERT_FALSE(json_string.empty());
 
     rapidjson::Document doc;
     rapidjson::ParseResult result = doc.Parse(json_string.c_str());
     ASSERT_FALSE(result.IsError());
 
-    // Actual entity ids parsed from json string for entities.
+    // Actual entity ids parsed from json string.
     std::unordered_set<std::string> actual_entity_ids;
 
     // The json format for entities should be an array.
@@ -2286,7 +2300,7 @@ void check_registry_json_string(const std::unordered_set<std::string> &entity_id
 
     auto &registery = metric_registry::instance();
     auto json_string = take_snapshot_and_get_json_string(&registery, filters);
-    check_entities_from_json_string(json_string, expected_entity_ids);
+    check_entity_ids_from_json_string(json_string, expected_entity_ids);
 }
 
 TEST(metrics_test, take_snapshot_registry)
@@ -2320,11 +2334,128 @@ TEST(metrics_test, take_snapshot_registry)
     }
 }
 
-void test_http_get_metrics(const char *method, const std::string &url, http_status_code expected_status_code)
+struct entity_properties
+{
+    std::string type;
+    metric_entity::attr_map attrs;
+    std::unordered_set<std::string> metrics;
+};
+
+bool operator==(const entity_properties &lhs, const entity_properties &rhs) const
+{
+    if (lhs.type != rhs.type) {
+        return false;
+    }
+
+    if (lhs.attrs != rhs.attrs) {
+        return false;
+    }
+
+    return lhs.metrics == rhs.metrics;
+}
+
+using entity_container = std::unordered_map<std::string, entity_properties>;
+
+void check_entities_from_json_string(const std::string &json_string, const http_status_code expected_status_code,const entity_container &expected_entities,
+    const std::unordered_set<std::string> &expected_metric_fields
+        )
+{
+    // Should not be empty for both success and error response.
+    ASSERT_FALSE(json_string.empty());
+
+    rapidjson::Document doc;
+    rapidjson::ParseResult result = doc.Parse(json_string.c_str());
+    ASSERT_FALSE(result.IsError());
+
+    if (expected_status_code != http_status_code::ok) {
+        ASSERT_TRUE(doc.IsObject());
+        for (const auto &elem : doc.GetObject()) {
+            // Each name must be a string.
+            ASSERT_TRUE(elem.name.IsString());
+
+            // There is only one field for error response.
+            ASSERT_STREQ("error_message", elem.name.GetString());
+
+            ASSERT_TRUE(elem.value.IsString());
+        }
+        return;
+    }
+
+    // Actual entities parsed from json string.
+    entity_container actual_entities;
+
+    // The json format for entities should be an array.
+    ASSERT_TRUE(doc.IsArray());
+    for (const auto &entity : doc.GetArray()) {
+        // The json format for each entity should be an object.
+        ASSERT_TRUE(entity.IsObject());
+
+        // Actual properties parsed from json string for each entity.
+        std::string id;
+        entity_properties actual_entity;
+
+        // Actual fields parsed from json string for each entity.
+        std::unordered_set<std::string> actual_entity_fields;
+
+        for (const auto &elem : entity.GetObject()) {
+            // Each name must be a string.
+            ASSERT_TRUE(elem.name.IsString());
+
+            if (kMetricEntityTypeField == elem.name.GetString()) {
+                ASSERT_TRUE(elem.value.IsString());
+                actual_entity.type = elem.value.GetString();
+            } else if (kMetricEntityIdField == elem.name.GetString()) {
+                ASSERT_TRUE(elem.value.IsString());
+                id = elem.value.GetString();
+            } else if (kMetricEntityAttrsField == elem.name.GetString()) {
+                ASSERT_TRUE(elem.value.IsObject());
+
+                for (const auto &attr : elem.value.GetObject()) {
+                    // Each name must be a string.
+                    ASSERT_TRUE(attr.name.IsString());
+                    ASSERT_TRUE(attr.value.IsString());
+                    actual_entity.attrs.emplace(attr.name.GetString(), attr.value.GetString());
+                }
+            } else if (kMetricEntityMetricsField == elem.name.GetString()) {
+                ASSERT_TRUE(elem.value.IsArray());
+
+                std::unordered_set<std::string> actual_metric_fields;
+                for (const auto &m : elem.value.GetArray()) {
+                    ASSERT_TRUE(m.IsObject());
+
+                    for (const auto &field : m.GetObject()) {
+                        // Each name must be a string.
+                        ASSERT_TRUE(field.name.IsString());
+                        if (kMetricNameField == field.name.GetString()) {
+                            ASSERT_TRUE(field.value.IsString());
+                            actual_entity.metrics.emplace(field.value.GetString());
+                        }
+                        actual_metric_fields.emplace(field.name.GetString());
+                    }
+                }
+
+                ASSERT_EQ(expected_metric_fields, actual_metric_fields);
+            } else {
+                ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
+            }
+
+            actual_entity_fields.emplace(elem.name.GetString());
+        }
+
+        ASSERT_EQ(kAllMetricEntityFields, actual_entity_fields);
+        actual_entities.emplace(id, actual_entity);
+    }
+
+    ASSERT_EQ(expected_entities, actual_entities);
+}
+
+void test_http_get_metrics(const char *method, const char *url, const http_status_code expected_status_code, const entity_container &expected_entities,
+    const std::unordered_set<std::string> &expected_metric_fields
+        )
 {
     ref_ptr<message_ex> m(message_ex::create_receive_message_with_standalone_header(
         blob::create_from_bytes(method)));
-    m->buffers.emplace_back(blob::create_from_bytes(std::string(url)));
+    m->buffers.emplace_back(blob::create_from_bytes(url));
     m->buffers.resize(HTTP_MSG_BUFFERS_NUM);
 
     const auto req_res = http_request::parse(m.get());
@@ -2333,6 +2464,7 @@ void test_http_get_metrics(const char *method, const std::string &url, http_stat
     http_response resp;
     metric_registry::instance()._http_service.get_metrics_handler(req_res.get_value(), resp);
     ASSERT_EQ(expected_status_code, resp.status_code);
+    check_entities_from_json_string(resp.body, expected_status_code, expected_entities, expected_metric_fields);
 }
 
 #define URL(fields) "http://127.0.0.1:34601/metrics?" #fields
@@ -2342,36 +2474,60 @@ TEST(metrics_test, http_get_metrics)
     struct loaded_test_entity;
     {
         metric_entity_prototype *prototype;
-        std::string type;
         std::string id;
         metric_entity::attr_map attrs;
     } test_entities[] = {
+        {&METRIC_ENTITY_my_replica,  "replica_5.0", {{"table", "test_table_5"}, {"partition", "0"}}}, 
+        {&METRIC_ENTITY_my_replica,  "replica_5.1", {{"table", "test_table_5"}, {"partition", "1"}}},
+        {&METRIC_ENTITY_my_app,  "app_5", {{"table", "test_table_5"}}}, 
+        {&METRIC_ENTITY_my_app,  "app_6", {{"table", "test_table_6"}}},
     };
 
     for (const auto &entity: test_entities) {
-        auto my_entity = entity.prototype->instantiate(id, entity.attrs);
+        auto my_entity = entity.prototype->instantiate(entity.id, entity.attrs);
 
-        auto my_gauge_int64 = METRIC_test_server_gauge_int64.instantiate(my_entity);
-        my_gauge_int64->set(5);
+        if (std::strcmp(entity.prototype->name(), "my_replica") == 0) {
+            auto my_gauge_int64 = METRIC_test_replica_gauge_int64.instantiate(my_entity);
+            my_gauge_int64->set(5);
 
-        auto my_counter = METRIC_test_server_counter.instantiate(my_entity);
-        my_counter->increment();
+            auto my_counter = METRIC_test_replica_counter.instantiate(my_entity);
+            my_counter->increment();
+        } else if (std::strcmp(entity.prototype->name(), "my_app") == 0) {
+            auto my_gauge_int64 = METRIC_test_app_gauge_int64.instantiate(my_entity);
+            my_gauge_int64->set(5);
+
+            auto my_counter = METRIC_test_app_counter.instantiate(my_entity);
+            my_counter->increment();
+
+        } else {
+            ASSERT_TRUE(false);
+        }
     }
 
     // Test cases:
-    // - filter an entity that does not exist in registery
+    // - 
     struct test_case
     {
-        std::unordered_set<std::string> expected_entity_ids;
-        std::unordered_set<std::string> expected_entity_metrics;
-        metric_filters::entity_types_type filter_entity_types;
-        metric_filters::entity_ids_type filter_entity_ids;
-        metric_filters::entity_attrs_type filter_entity_attrs;
-        metric_filters::entity_metrics_type filter_entity_metrics;
+        const char *method;
+        const char *url;
+        http_status_code expected_status_code;
+        std::unordered_map<std::string, std::unordered_set<std::string>> expected_entity_metrics;
+    std::unordered_set<std::string> expected_metric_fields;
     } tests[] = {
+        {"GET", URL(types=my_app), http_status_code::ok, 
+            {{"app_5", {"test_app_gauge_int64", "test_app_counter"}}, {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+        kAllSingleValueMetricFields},
     };
 
+    const auto &entities = metric_registry::instance().entities();
     for (const auto &test : tests) {
+        entity_container expected_entities;
+        for (const auto &entity_pair: test.expected_entity_metrics) {
+            const auto &entity = entities[entity_pair.first];
+            expected_entities.emplac(entity->id(), {entity->prototype()->name(), entity->attributes(), entity_pair.second});
+        }
+
+        test_http_get_metrics(test.method, test.url, test.expected_status_code, expected_entities, expected_metric_fields);
     }
 }
 
