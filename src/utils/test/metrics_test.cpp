@@ -332,7 +332,8 @@ TEST(metrics_test, gauge_int64)
         if (test.use_default_value) {
             my_metric = METRIC_test_server_gauge_int64.instantiate(my_server_entity);
         } else {
-            my_metric = METRIC_test_server_gauge_int64.instantiate(my_server_entity, test.initial_value);
+            my_metric =
+                METRIC_test_server_gauge_int64.instantiate(my_server_entity, test.initial_value);
         }
 
         ASSERT_EQ(my_metric->value(), test.initial_value);
@@ -341,7 +342,8 @@ TEST(metrics_test, gauge_int64)
         ASSERT_EQ(my_metric->value(), test.new_value);
 
         auto metrics = my_server_entity->metrics();
-        ASSERT_EQ(metrics[&METRIC_test_server_gauge_int64].get(), static_cast<metric *>(my_metric.get()));
+        ASSERT_EQ(metrics[&METRIC_test_server_gauge_int64].get(),
+                  static_cast<metric *>(my_metric.get()));
 
         ASSERT_EQ(my_metric->prototype(),
                   static_cast<const metric_prototype *>(&METRIC_test_server_gauge_int64));
@@ -373,7 +375,8 @@ TEST(metrics_test, gauge_double)
         if (test.use_default_value) {
             my_metric = METRIC_test_server_gauge_double.instantiate(my_server_entity);
         } else {
-            my_metric = METRIC_test_server_gauge_double.instantiate(my_server_entity, test.initial_value);
+            my_metric =
+                METRIC_test_server_gauge_double.instantiate(my_server_entity, test.initial_value);
         }
 
         ASSERT_DOUBLE_EQ(my_metric->value(), test.initial_value);
@@ -382,7 +385,8 @@ TEST(metrics_test, gauge_double)
         ASSERT_DOUBLE_EQ(my_metric->value(), test.new_value);
 
         auto metrics = my_server_entity->metrics();
-        ASSERT_EQ(metrics[&METRIC_test_server_gauge_double].get(), static_cast<metric *>(my_metric.get()));
+        ASSERT_EQ(metrics[&METRIC_test_server_gauge_double].get(),
+                  static_cast<metric *>(my_metric.get()));
 
         ASSERT_EQ(my_metric->prototype(),
                   static_cast<const metric_prototype *>(&METRIC_test_server_gauge_double));
@@ -690,7 +694,8 @@ TEST(metrics_test, volatile_counter)
 {
     // Test both kinds of volatile counter
     run_volatile_counter_cases<striped_long_adder>(&METRIC_test_server_volatile_counter);
-    run_volatile_counter_cases<concurrent_long_adder>(&METRIC_test_server_concurrent_volatile_counter);
+    run_volatile_counter_cases<concurrent_long_adder>(
+        &METRIC_test_server_concurrent_volatile_counter);
 }
 
 template <typename T, typename Prototype, typename Checker>
@@ -1080,7 +1085,8 @@ metric_filters::metric_fields_type get_all_single_value_metric_fields()
     return fields;
 }
 
-        const metric_filters::metric_fields_type kAllSingleValueMetricFields =      get_all_single_value_metric_fields();                                                  
+const metric_filters::metric_fields_type kAllSingleValueMetricFields =
+    get_all_single_value_metric_fields();
 
 // Test cases:
 // - with_metric_fields is empty
@@ -1191,7 +1197,10 @@ TEST(metrics_test, take_snapshot_gauge_double)
     RUN_CASES_WITH_SINGLE_VALUE_SNAPSHOT(                                                          \
         metric_prototype, increment_by, int64_t, true, 10, compare_integral_metric_value_map)
 
-TEST(metrics_test, take_snapshot_counter) { RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_server_counter); }
+TEST(metrics_test, take_snapshot_counter)
+{
+    RUN_CASES_WITH_COUNTER_SNAPSHOT(METRIC_test_server_counter);
+}
 
 TEST(metrics_test, take_snapshot_concurrent_counter)
 {
@@ -1413,11 +1422,10 @@ TEST(metrics_test, take_snapshot_percentile_double)
                                        compare_floating_metric_value_map);
 }
 
-    const std::unordered_set<std::string> kAllMetricEntityFields = {
-        kMetricEntityTypeField,
-        kMetricEntityIdField,
-        kMetricEntityAttrsField,
-        kMetricEntityMetricsField};
+const std::unordered_set<std::string> kAllMetricEntityFields = {kMetricEntityTypeField,
+                                                                kMetricEntityIdField,
+                                                                kMetricEntityAttrsField,
+                                                                kMetricEntityMetricsField};
 
 void check_entity_from_json_string(metric_entity *my_entity,
                                    const std::string &json_string,
@@ -1496,12 +1504,12 @@ void check_entity_from_json_string(metric_entity *my_entity,
 
 TEST(metrics_test, take_snapshot_entity)
 {
-    static const std::unordered_set<std::string> kAllServerEntityMetrics = {"test_server_gauge_int64",
-                                                                      "test_server_counter"};
+    static const std::unordered_set<std::string> kAllServerEntityMetrics = {
+        "test_server_gauge_int64", "test_server_counter"};
     static const std::unordered_set<std::string> kAllTableEntityMetrics = {"test_table_gauge_int64",
-                                                                      "test_table_counter"};
-    static const std::unordered_set<std::string> kAllReplicaEntityMetrics = {"test_replica_gauge_int64",
-                                                                      "test_replica_counter"};
+                                                                           "test_table_counter"};
+    static const std::unordered_set<std::string> kAllReplicaEntityMetrics = {
+        "test_replica_gauge_int64", "test_replica_counter"};
 
     // Test cases:
     // - both attributes and filters are empty
@@ -1590,21 +1598,21 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_1",
          {{"table", "test_table_1"}},
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          {},
          {},
          {},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.0",
          {{"table", "test_table_1"}, {"partition", "0"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {},
          {},
          {},
@@ -1720,17 +1728,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"attr_name_1", "attr_value_1", "attr_name_2", "attr_value_2"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_2",
          {{"table", "test_table_2"}},
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          {},
          {},
          {"table", "test_table_2"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_3",
          {{"table", "test_table_3"}},
@@ -1740,7 +1748,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "test_table_3"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_4",
          {{"table", "test_table_4"}},
@@ -1750,7 +1758,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_4"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_5",
          {{"table", "test_table_5"}},
@@ -1760,17 +1768,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_5"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_6",
          {{"table", "test_table_6"}},
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          {},
          {},
          {"another_table", "another_test_table_6", "table", "test_table_6"},
          {}},
         {&METRIC_ENTITY_my_table,
-         kAllServerTableMetrics,
+         kAllTableEntityMetrics,
          "my_table",
          "table_7",
          {{"table", "test_table_7"}},
@@ -1780,17 +1788,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "test_table_7", "table", "another_test_table_7"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.2",
          {{"table", "test_table_1"}, {"partition", "2"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {},
          {},
          {"table", "test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.3",
          {{"table", "test_table_1"}, {"partition", "3"}},
@@ -1800,7 +1808,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_partition", "3"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.4",
          {{"table", "test_table_1"}, {"partition", "4"}},
@@ -1810,7 +1818,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.5",
          {{"table", "test_table_1"}, {"partition", "5"}},
@@ -1820,27 +1828,27 @@ TEST(metrics_test, take_snapshot_entity)
          {"another_table", "another_test_table_1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.6",
          {{"table", "test_table_1"}, {"partition", "6"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {},
          {},
          {"table", "test_table_1", "partition", "6"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_1.7",
          {{"table", "test_table_1"}, {"partition", "7"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {},
          {},
          {"another_table", "another_test_table_1", "partition", "7"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.0",
          {{"table", "test_table_2"}, {"partition", "0"}},
@@ -1980,17 +1988,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.1",
          {{"table", "test_table_2"}, {"partition", "1"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {"another_replica", "my_replica"},
          {},
          {"table", "test_table_2", "partition", "1"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.2",
          {{"table", "test_table_2"}, {"partition", "2"}},
@@ -2020,17 +2028,17 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {"test_server_gauge_double", "test_server_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.3",
          {{"table", "test_table_2"}, {"partition", "3"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {},
          {"another_replica_2.3", "replica_2.3"},
          {"table", "another_test_table_2", "partition", "3"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.4",
          {{"table", "test_table_2"}, {"partition", "4"}},
@@ -2060,7 +2068,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {"test_server_gauge_double", "test_server_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.5",
          {{"table", "test_table_2"}, {"partition", "5"}},
@@ -2070,7 +2078,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_2", "partition", "5"},
          {"test_replica_gauge_int64", "test_replica_gauge_double"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.6",
          {{"table", "test_table_2"}, {"partition", "6"}},
@@ -2080,17 +2088,17 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_2", "partition", "6"},
          {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_2.7",
          {{"table", "test_table_2"}, {"partition", "7"}},
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          {"another_replica", "my_replica"},
          {"another_replica_2.7", "replica_2.7"},
          {"table", "another_test_table_2", "partition", "7"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.0",
          {{"table", "test_table_3"}, {"partition", "0"}},
@@ -2100,7 +2108,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_3", "another_partition", "0"},
          {}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.1",
          {},
@@ -2110,7 +2118,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {"test_replica_gauge_double", "test_replica_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.2",
          {},
@@ -2120,7 +2128,7 @@ TEST(metrics_test, take_snapshot_entity)
          {},
          {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.3",
          {{"table", "test_table_3"}, {"partition", "3"}},
@@ -2130,7 +2138,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_3", "another_partition", "3"},
          {"test_replica_gauge_int64", "test_replica_gauge_double"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.4",
          {{"table", "test_table_3"}, {"partition", "4"}},
@@ -2140,7 +2148,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_3", "partition", "4"},
          {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.5",
          {{"table", "test_table_3"}, {"partition", "5"}},
@@ -2150,7 +2158,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_3", "another_partition", "5"},
          {"test_replica_gauge_double", "test_replica_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.6",
          {{"table", "test_table_3"}, {"partition", "6"}},
@@ -2160,7 +2168,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "another_test_table_3", "partition", "6"},
          {"test_replica_gauge_double", "test_replica_concurrent_counter"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_3.7",
          {{"table", "test_table_3"}, {"partition", "7"}},
@@ -2170,7 +2178,7 @@ TEST(metrics_test, take_snapshot_entity)
          {"table", "test_table_3", "another_partition", "7"},
          {"test_replica_gauge_int64", "test_replica_gauge_double"}},
         {&METRIC_ENTITY_my_replica,
-         kAllReplicaTableMetrics,
+         kAllReplicaEntityMetrics,
          "my_replica",
          "replica_4.0",
          {{"table", "test_table_4"}, {"partition", "0"}},
@@ -2185,7 +2193,7 @@ TEST(metrics_test, take_snapshot_entity)
         auto my_entity =
             test.entity_prototype->instantiate(test.expected_entity_id, test.expected_entity_attrs);
 
-        for (const auto &entity_metric:test.entity_metrics) {
+        for (const auto &entity_metric : test.entity_metrics) {
             if (entity_metric == "test_server_gauge_int64") {
                 auto my_metric = METRIC_test_server_gauge_int64.instantiate(my_entity);
                 my_metric->set(5);
@@ -2224,7 +2232,7 @@ TEST(metrics_test, take_snapshot_entity)
 }
 
 void check_entity_ids_from_json_string(const std::string &json_string,
-                                     const std::unordered_set<std::string> &expected_entity_ids)
+                                       const std::unordered_set<std::string> &expected_entity_ids)
 {
     // Even if there is not any entity selected, `json_string` should be "[]".
     ASSERT_FALSE(json_string.empty());
@@ -2341,7 +2349,7 @@ struct entity_properties
     std::unordered_set<std::string> metrics;
 };
 
-bool operator==(const entity_properties &lhs, const entity_properties &rhs) const
+bool operator==(const entity_properties &lhs, const entity_properties &rhs)
 {
     if (lhs.type != rhs.type) {
         return false;
@@ -2356,9 +2364,10 @@ bool operator==(const entity_properties &lhs, const entity_properties &rhs) cons
 
 using entity_container = std::unordered_map<std::string, entity_properties>;
 
-void check_entities_from_json_string(const std::string &json_string, const http_status_code expected_status_code,const entity_container &expected_entities,
-    const std::unordered_set<std::string> &expected_metric_fields
-        )
+void check_entities_from_json_string(const std::string &json_string,
+                                     const http_status_code expected_status_code,
+                                     const entity_container &expected_entities,
+                                     const std::unordered_set<std::string> &expected_metric_fields)
 {
     // Should not be empty for both success and error response.
     ASSERT_FALSE(json_string.empty());
@@ -2449,12 +2458,19 @@ void check_entities_from_json_string(const std::string &json_string, const http_
     ASSERT_EQ(expected_entities, actual_entities);
 }
 
-void test_http_get_metrics(const char *method, const char *url, const http_status_code expected_status_code, const entity_container &expected_entities,
-    const std::unordered_set<std::string> &expected_metric_fields
-        )
+void test_get_metrics_handler(const http_request &req, http_response &resp)
 {
-    ref_ptr<message_ex> m(message_ex::create_receive_message_with_standalone_header(
-        blob::create_from_bytes(method)));
+    metric_registry::instance()._http_service.get_metrics_handler(req, resp);
+}
+
+void test_http_get_metrics(const char *method,
+                           const char *url,
+                           const http_status_code expected_status_code,
+                           const entity_container &expected_entities,
+                           const std::unordered_set<std::string> &expected_metric_fields)
+{
+    ref_ptr<message_ex> m(
+        message_ex::create_receive_message_with_standalone_header(blob::create_from_bytes(method)));
     m->buffers.emplace_back(blob::create_from_bytes(url));
     m->buffers.resize(HTTP_MSG_BUFFERS_NUM);
 
@@ -2462,28 +2478,30 @@ void test_http_get_metrics(const char *method, const char *url, const http_statu
     ASSERT_TRUE(req_res.is_ok());
 
     http_response resp;
-    metric_registry::instance()._http_service.get_metrics_handler(req_res.get_value(), resp);
+    test_get_metrics_handler(req_res.get_value(), resp);
+
     ASSERT_EQ(expected_status_code, resp.status_code);
-    check_entities_from_json_string(resp.body, expected_status_code, expected_entities, expected_metric_fields);
+    check_entities_from_json_string(
+        resp.body, expected_status_code, expected_entities, expected_metric_fields);
 }
 
 #define URL(fields) "http://127.0.0.1:34601/metrics?" #fields
 
 TEST(metrics_test, http_get_metrics)
 {
-    struct loaded_test_entity;
+    struct loaded_test_entity
     {
         metric_entity_prototype *prototype;
         std::string id;
         metric_entity::attr_map attrs;
     } test_entities[] = {
-        {&METRIC_ENTITY_my_replica,  "replica_5.0", {{"table", "test_table_5"}, {"partition", "0"}}}, 
-        {&METRIC_ENTITY_my_replica,  "replica_5.1", {{"table", "test_table_5"}, {"partition", "1"}}},
-        {&METRIC_ENTITY_my_app,  "app_5", {{"table", "test_table_5"}}}, 
-        {&METRIC_ENTITY_my_app,  "app_6", {{"table", "test_table_6"}}},
+        {&METRIC_ENTITY_my_replica, "replica_5.0", {{"table", "test_table_5"}, {"partition", "0"}}},
+        {&METRIC_ENTITY_my_replica, "replica_5.1", {{"table", "test_table_5"}, {"partition", "1"}}},
+        {&METRIC_ENTITY_my_app, "app_5", {{"table", "test_table_5"}}},
+        {&METRIC_ENTITY_my_app, "app_6", {{"table", "test_table_6"}}},
     };
 
-    for (const auto &entity: test_entities) {
+    for (const auto &entity : test_entities) {
         auto my_entity = entity.prototype->instantiate(entity.id, entity.attrs);
 
         if (std::strcmp(entity.prototype->name(), "my_replica") == 0) {
@@ -2505,29 +2523,42 @@ TEST(metrics_test, http_get_metrics)
     }
 
     // Test cases:
-    // - 
+    // -
     struct test_case
     {
         const char *method;
         const char *url;
         http_status_code expected_status_code;
         std::unordered_map<std::string, std::unordered_set<std::string>> expected_entity_metrics;
-    std::unordered_set<std::string> expected_metric_fields;
+        std::unordered_set<std::string> expected_metric_fields;
     } tests[] = {
-        {"GET", URL(types=my_app), http_status_code::ok, 
-            {{"app_5", {"test_app_gauge_int64", "test_app_counter"}}, {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
-        kAllSingleValueMetricFields},
+        {"GET",
+         URL(types = my_app),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
     };
 
     const auto &entities = metric_registry::instance().entities();
     for (const auto &test : tests) {
         entity_container expected_entities;
-        for (const auto &entity_pair: test.expected_entity_metrics) {
-            const auto &entity = entities[entity_pair.first];
-            expected_entities.emplac(entity->id(), {entity->prototype()->name(), entity->attributes(), entity_pair.second});
+        for (const auto &entity_pair : test.expected_entity_metrics) {
+            const auto &iter = entities.find(entity_pair.first);
+            ASSERT_NE(entities.end(), iter);
+
+            const auto &entity = iter->second;
+            expected_entities.emplace(entity->id(),
+                                      entity_properties{entity->prototype()->name(),
+                                                        entity->attributes(),
+                                                        entity_pair.second});
         }
 
-        test_http_get_metrics(test.method, test.url, test.expected_status_code, expected_entities, expected_metric_fields);
+        test_http_get_metrics(test.method,
+                              test.url,
+                              test.expected_status_code,
+                              expected_entities,
+                              test.expected_metric_fields);
     }
 }
 

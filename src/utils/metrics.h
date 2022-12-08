@@ -161,24 +161,9 @@ public:
 
     metric_map metrics() const;
 
-    // args are the parameters that are used to construct the object of MetricType
+    // `args` are the parameters that are used to construct the object of MetricType.
     template <typename MetricType, typename... Args>
-    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args)
-    {
-        CHECK_EQ_MSG(std::strcmp(prototype->entity_type().data(), _prototype->name()), 0, "the entity type '{}' of the metric '{}' is inconsistent with the prototype '{}' of the attached entity '{}'", prototype->entity_type().data(), prototype->name().data(), _prototype->name(), _id);
-
-        utils::auto_write_lock l(_lock);
-
-        metric_map::const_iterator iter = _metrics.find(prototype);
-        if (iter != _metrics.end()) {
-            auto raw_ptr = down_cast<MetricType *>(iter->second.get());
-            return raw_ptr;
-        }
-
-        ref_ptr<MetricType> ptr(new MetricType(prototype, std::forward<Args>(args)...));
-        _metrics[prototype] = ptr;
-        return ptr;
-    }
+    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args);
 
     void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
 
@@ -312,7 +297,7 @@ struct metric_filters
     entity_metrics_type entity_metrics;
 };
 
-inline std::string encode_as_json(std::function<void(metric_json_writer&)> encoder)
+inline std::string encode_as_json(std::function<void(metric_json_writer &)> encoder)
 {
     std::ostringstream out;
     rapidjson::OStreamWrapper wrapper(out);
@@ -324,9 +309,8 @@ inline std::string encode_as_json(std::function<void(metric_json_writer&)> encod
 template <typename T>
 inline std::string take_snapshot_as_json(T *m, const metric_filters &filters)
 {
-    return encode_as_json([m, &filters](metric_json_writer &writer){
-    m->take_snapshot(writer, filters);
-    });
+    return encode_as_json(
+        [m, &filters](metric_json_writer &writer) { m->take_snapshot(writer, filters); });
 }
 
 class metric_entity_prototype
@@ -355,11 +339,13 @@ public:
     explicit metrics_http_service(metric_registry *registry);
     ~metrics_http_service() = default;
 
-    // There is only one API now whose URI is "/metrics", thus just make 
+    // There is only one API now whose URI is "/metrics", thus just make
     // this URI as sub path while leaving the root path empty.
     std::string path() const override { return ""; }
-    
+
 private:
+    friend void test_get_metrics_handler(const http_request &req, http_response &resp);
+
     void get_metrics_handler(const http_request &req, http_response &resp);
 
     metric_registry *_registry;
@@ -379,6 +365,8 @@ public:
 private:
     friend class metric_entity_prototype;
     friend class utils::singleton<metric_registry>;
+
+    friend void test_get_metrics_handler(const http_request &req, http_response &resp);
 
     metric_registry();
     ~metric_registry();
@@ -488,6 +476,32 @@ public:
 private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
+
+template <typename MetricType, typename... Args>
+ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype,
+                                                  Args &&... args)
+{
+    CHECK_EQ_MSG(std::strcmp(prototype->entity_type().data(), _prototype->name()),
+                 0,
+                 "the entity type '{}' of the metric '{}' is inconsistent with the prototype "
+                 "'{}' of the attached entity '{}'",
+                 prototype->entity_type().data(),
+                 prototype->name().data(),
+                 _prototype->name(),
+                 _id);
+
+    utils::auto_write_lock l(_lock);
+
+    metric_map::const_iterator iter = _metrics.find(prototype);
+    if (iter != _metrics.end()) {
+        auto raw_ptr = down_cast<MetricType *>(iter->second.get());
+        return raw_ptr;
+    }
+
+    ref_ptr<MetricType> ptr(new MetricType(prototype, std::forward<Args>(args)...));
+    _metrics[prototype] = ptr;
+    return ptr;
+}
 
 const std::string kMetricTypeField = "type";
 const std::string kMetricNameField = "name";

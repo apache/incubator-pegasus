@@ -207,8 +207,7 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
-metrics_http_service::metrics_http_service(metric_registry *registry)
-    : _registry(registry) 
+metrics_http_service::metrics_http_service(metric_registry *registry) : _registry(registry)
 {
     register_handler("metrics",
                      std::bind(&metrics_http_service::get_metrics_handler,
@@ -220,11 +219,10 @@ metrics_http_service::metrics_http_service(metric_registry *registry)
 
 namespace {
 
-template<typename Container>
-void parse_as(const std::string &field_value,
-                Container &container)
+template <typename Container>
+void parse_as(const std::string &field_value, Container &container)
 {
-    util::split_args(field_value.c_str(), container, ',');
+    utils::split_args(field_value.c_str(), container, ',');
 }
 
 inline void encode_error(dsn::metric_json_writer &writer, const char *error_message)
@@ -237,9 +235,8 @@ inline void encode_error(dsn::metric_json_writer &writer, const char *error_mess
 
 inline std::string encode_error_as_json(const char *error_message)
 {
-    return encode_as_json([error_message](metric_json_writer &writer){
-            encode_error(writer, error_message);
-            });
+    return encode_as_json(
+        [error_message](metric_json_writer &writer) { encode_error(writer, error_message); });
 }
 
 } // anonymous namespace
@@ -260,8 +257,10 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
             parse_as(field.second, filters.entity_ids);
         } else if (field.first == "attributes") {
             parse_as(field.second, filters.entity_attrs);
-            if ((entity_attrs.size() & 1) != 0) {
-                resp.body = encode_error_as_json("the number of arguments for attributes should be even, since each attribute name always pairs with a value");
+            if ((filters.entity_attrs.size() & 1) != 0) {
+                resp.body =
+                    encode_error_as_json("the number of arguments for attributes should be even, "
+                                         "since each attribute name always pairs with a value");
                 resp.status_code = http_status_code::bad_request;
                 return;
             }
