@@ -2546,6 +2546,10 @@ TEST(metrics_test, http_get_metrics)
     // - get all metrics that belong to an entity type of "my_app"
     // - request by POST method
     // - request with an unknown field name in query string
+    // - request for an entity types which does not exist
+    // - request for 2 entity types one of which does not exist
+    // - request for 2 entity types both of which exist
+    // - request for 2 entity types both of which do not exist
     // - the number of entity attributes in query string is even
     // - the number of entity attributes in query string is odd
     struct test_case
@@ -2565,6 +2569,19 @@ TEST(metrics_test, http_get_metrics)
          http_status_code::bad_request,
          {},
          {}},
+        {REQUEST_STRING(GET, "types=unknown_type"), http_status_code::ok, {}, {}},
+        {REQUEST_STRING(GET, "types=unknown_type,my_app"),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "types=my_app,my_replica&attributes=table,test_app_5"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "types=unknown_type_1,unknown_type_2"), http_status_code::ok, {}, {}},
         {REQUEST_STRING(GET, "attributes=table,test_app_5"),
          http_status_code::ok,
          {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
