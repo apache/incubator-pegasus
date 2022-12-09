@@ -2377,7 +2377,9 @@ void check_entities_from_json_string(const std::string &json_string,
     ASSERT_FALSE(result.IsError());
 
     if (expected_status_code != http_status_code::ok) {
+        // Error response is an object in essence.
         ASSERT_TRUE(doc.IsObject());
+
         for (const auto &elem : doc.GetObject()) {
             // Each name must be a string.
             ASSERT_TRUE(elem.name.IsString());
@@ -2429,9 +2431,11 @@ void check_entities_from_json_string(const std::string &json_string,
             } else if (kMetricEntityMetricsField == elem.name.GetString()) {
                 ASSERT_TRUE(elem.value.IsArray());
 
-                std::unordered_set<std::string> actual_metric_fields;
                 for (const auto &m : elem.value.GetArray()) {
                     ASSERT_TRUE(m.IsObject());
+
+                    // Actual fields for each metric.
+                    std::unordered_set<std::string> actual_metric_fields;
 
                     for (const auto &field : m.GetObject()) {
                         // Each name must be a string.
@@ -2442,9 +2446,10 @@ void check_entities_from_json_string(const std::string &json_string,
                         }
                         actual_metric_fields.emplace(field.name.GetString());
                     }
-                }
 
-                ASSERT_EQ(expected_metric_fields, actual_metric_fields);
+                    // Check if all parsed fields for each metric are expected.
+                    ASSERT_EQ(expected_metric_fields, actual_metric_fields);
+                }
             } else {
                 ASSERT_TRUE(false) << "invalid field name: " << elem.name.GetString();
             }
@@ -2452,10 +2457,13 @@ void check_entities_from_json_string(const std::string &json_string,
             actual_entity_fields.emplace(elem.name.GetString());
         }
 
+        // Check if all parsed fields for each entity are expected.
         ASSERT_EQ(kAllMetricEntityFields, actual_entity_fields);
+
         actual_entities.emplace(id, actual_entity);
     }
 
+    // Check if the contents of all entities are identical with the expected.
     ASSERT_EQ(expected_entities, actual_entities);
 }
 
@@ -2470,6 +2478,7 @@ void test_http_get_metrics(const std::string &request_string,
                            const std::unordered_set<std::string> &expected_metric_fields)
 {
     std::cout << "request_string: " << request_string << std::endl;
+
     message_reader reader(64);
     char *buf = reader.read_buffer_ptr(request_string.size());
     std::memcpy(buf, request_string.data(), request_string.size());
@@ -2502,10 +2511,10 @@ TEST(metrics_test, http_get_metrics)
         std::string id;
         metric_entity::attr_map attrs;
     } test_entities[] = {
-        {&METRIC_ENTITY_my_replica, "replica_5.0", {{"table", "test_table_5"}, {"partition", "0"}}},
-        {&METRIC_ENTITY_my_replica, "replica_5.1", {{"table", "test_table_5"}, {"partition", "1"}}},
-        {&METRIC_ENTITY_my_app, "app_5", {{"table", "test_table_5"}}},
-        {&METRIC_ENTITY_my_app, "app_6", {{"table", "test_table_6"}}},
+        {&METRIC_ENTITY_my_replica, "replica_5.0", {{"table", "test_app_5"}, {"partition", "0"}}},
+        {&METRIC_ENTITY_my_replica, "replica_5.1", {{"table", "test_app_5"}, {"partition", "1"}}},
+        {&METRIC_ENTITY_my_app, "app_5", {{"table", "test_app_5"}}},
+        {&METRIC_ENTITY_my_app, "app_6", {{"table", "test_app_6"}}},
     };
 
     for (const auto &entity : test_entities) {
@@ -2534,7 +2543,11 @@ TEST(metrics_test, http_get_metrics)
 #define REQUEST_STRING(method, fields) (#method " /metrics?" fields " HTTP/1.1\r\n\r\n")
 
     // Test cases:
-    // -
+    // - get all metrics that belong to an entity type of "my_app"
+    // - request by POST method
+    // - request with an unknown field name in query string
+    // - the number of entity attributes in query string is even
+    // - the number of entity attributes in query string is odd
     struct test_case
     {
         std::string request_string;
@@ -2547,6 +2560,21 @@ TEST(metrics_test, http_get_metrics)
          {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
           {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
          kAllSingleValueMetricFields},
+        {REQUEST_STRING(POST, "types=my_app"), http_status_code::bad_request, {}, {}},
+        {REQUEST_STRING(POST, "invalid_field=unknown_value"),
+         http_status_code::bad_request,
+         {},
+         {}},
+        {REQUEST_STRING(GET, "attributes=table,test_app_5"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "attributes=table,test_app_5,partition"),
+         http_status_code::bad_request,
+         {},
+         {}},
     };
 
 #undef REQUEST_STRING

@@ -251,7 +251,9 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
 
     metric_filters filters;
     for (const auto &field : req.query_args) {
-        if (field.first == "types") {
+        if (field.first == "with_metric_fields") {
+            parse_as(field.second, filters.with_metric_fields);
+        } else if (field.first == "types") {
             parse_as(field.second, filters.entity_types);
         } else if (field.first == "ids") {
             parse_as(field.second, filters.entity_ids);
