@@ -2386,6 +2386,7 @@ void check_entities_from_json_string(const std::string &json_string,
             ASSERT_STREQ("error_message", elem.name.GetString());
 
             ASSERT_TRUE(elem.value.IsString());
+            std::cout << "error_message: " << elem.value.GetString() << std::endl;
         }
         return;
     }
@@ -2463,29 +2464,35 @@ void test_get_metrics_handler(const http_request &req, http_response &resp)
     metric_registry::instance()._http_service.get_metrics_handler(req, resp);
 }
 
-void test_http_get_metrics(const char *method,
-                           const char *url,
+void test_http_get_metrics(const std::string &request_string,
                            const http_status_code expected_status_code,
                            const entity_container &expected_entities,
                            const std::unordered_set<std::string> &expected_metric_fields)
 {
-    ref_ptr<message_ex> m(
-        message_ex::create_receive_message_with_standalone_header(blob::create_from_bytes(method)));
-    m->buffers.emplace_back(blob::create_from_bytes(url));
-    m->buffers.resize(HTTP_MSG_BUFFERS_NUM);
+    std::cout << "request_string: " << request_string << std::endl;
+    message_reader reader(64);
+    char *buf = reader.read_buffer_ptr(request_string.size());
+    std::memcpy(buf, request_string.data(), request_string.size());
+    reader.mark_read(request_string.size());
 
-    const auto req_res = http_request::parse(m.get());
+    http_message_parser parser;
+    int read_next = 0;
+    message_ptr msg(parser.get_message_on_receive(&reader, read_next));
+    ASSERT_NE(msg, nullptr);
+
+    const auto &req_res = http_request::parse(msg.get());
     ASSERT_TRUE(req_res.is_ok());
 
+    const auto &req = req_res.get_value();
+    std::cout << "method: " << req.method << std::endl;
+
     http_response resp;
-    test_get_metrics_handler(req_res.get_value(), resp);
+    test_get_metrics_handler(req, resp);
 
     ASSERT_EQ(expected_status_code, resp.status_code);
     check_entities_from_json_string(
         resp.body, expected_status_code, expected_entities, expected_metric_fields);
 }
-
-#define URL(fields) "http://127.0.0.1:34601/metrics?" #fields
 
 TEST(metrics_test, http_get_metrics)
 {
@@ -2522,23 +2529,27 @@ TEST(metrics_test, http_get_metrics)
         }
     }
 
+// Do not use leading '#' for `fields` to replace with the literal text, since clang-format
+// will keep a space before and after '=' in `fields`. Just use double quotes "" instead.
+#define REQUEST_STRING(method, fields) (#method " /metrics?" fields " HTTP/1.1\r\n\r\n")
+
     // Test cases:
     // -
     struct test_case
     {
-        const char *method;
-        const char *url;
+        std::string request_string;
         http_status_code expected_status_code;
         std::unordered_map<std::string, std::unordered_set<std::string>> expected_entity_metrics;
         std::unordered_set<std::string> expected_metric_fields;
     } tests[] = {
-        {"GET",
-         URL(types = my_app),
+        {REQUEST_STRING(GET, "types=my_app"),
          http_status_code::ok,
          {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
           {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
          kAllSingleValueMetricFields},
     };
+
+#undef REQUEST_STRING
 
     const auto &entities = metric_registry::instance().entities();
     for (const auto &test : tests) {
@@ -2554,14 +2565,11 @@ TEST(metrics_test, http_get_metrics)
                                                         entity_pair.second});
         }
 
-        test_http_get_metrics(test.method,
-                              test.url,
+        test_http_get_metrics(test.request_string,
                               test.expected_status_code,
                               expected_entities,
                               test.expected_metric_fields);
     }
 }
-
-#undef URL
 
 } // namespace dsn
