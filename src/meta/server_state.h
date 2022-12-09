@@ -239,7 +239,7 @@ private:
     void do_app_create(std::shared_ptr<app_state> &app);
     void do_app_drop(std::shared_ptr<app_state> &app);
     void do_app_recall(std::shared_ptr<app_state> &app);
-    void do_app_rename(configuration_rename_app_rpc rpc);
+    void rename_app_unlock(configuration_rename_app_rpc rpc);
     void init_app_partition_node(std::shared_ptr<app_state> &app, int pidx, task_ptr callback);
     // do_update_app_info()
     //  -- ensure update app_info to remote storage succeed, if timeout, it will retry autoly

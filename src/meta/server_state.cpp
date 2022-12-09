@@ -1259,7 +1259,7 @@ void server_state::drop_app(dsn::message_ex *msg)
     }
 }
 
-void server_state::do_app_rename(configuration_rename_app_rpc rpc)
+void server_state::rename_app_unlock(configuration_rename_app_rpc rpc)
 {
     zauto_write_lock l(_lock);
 
@@ -1302,22 +1302,21 @@ void server_state::do_app_rename(configuration_rename_app_rpc rpc)
 
 void server_state::rename_app(configuration_rename_app_rpc rpc)
 {
+    auto &response = rpc.response();
+    bool do_rename = false;
+
     const auto &old_app_name = rpc.request().old_app_name;
     const auto &new_app_name = rpc.request().new_app_name;
-    auto &response = rpc.response();
-
-    std::shared_ptr<app_state> target_app;
-    bool do_rename = false;
     LOG_INFO_F(
         "rename app request, old_app_name({}), new_app_name({})", old_app_name, new_app_name);
 
     {
         zauto_read_lock l(_lock);
-        target_app = get_app(old_app_name);
+        std::shared_ptr<app_state> target_app = get_app(old_app_name);
 
-        std::ostringstream oss;
         if (target_app == nullptr) {
             response.err = ERR_APP_NOT_EXIST;
+            std::ostringstream oss;
             oss << "ERROR: app(" << old_app_name << ") not exist. check it!" << std::endl;
             response.hint_message += oss.str();
             return;
@@ -1327,6 +1326,7 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
         case app_status::AS_AVAILABLE: {
             if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
                 response.err = ERR_INVALID_PARAMETERS;
+                std::ostringstream oss;
                 oss << "ERROR: app(" << new_app_name << ") already exist! check it!" << std::endl;
                 response.hint_message += oss.str();
                 return;
@@ -1350,7 +1350,7 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
     }
 
     if (do_rename) {
-        do_app_rename(rpc);
+        rename_app_unlock(rpc);
     } else {
         std::ostringstream oss;
         oss << "ERROR: app(" << old_app_name << ") status can't execute rename!" << std::endl;
