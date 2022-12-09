@@ -684,8 +684,6 @@ void partition_guardian::register_ctrl_commands()
         }));
 }
 
-void partition_guardian::unregister_ctrl_commands() { _cmds.clear(); }
-
 std::string partition_guardian::ctrl_assign_delay_ms(const std::vector<std::string> &args)
 {
     std::string result("OK");

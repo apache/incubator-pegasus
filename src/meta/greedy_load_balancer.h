@@ -44,14 +44,13 @@ class greedy_load_balancer : public server_load_balancer
 {
 public:
     explicit greedy_load_balancer(meta_service *svc);
-    ~greedy_load_balancer() override;
+    virtual ~greedy_load_balancer();
     bool balance(meta_view view, migration_list &list) override;
     bool check(meta_view view, migration_list &list) override;
     void report(const migration_list &list, bool balance_checker) override;
     void score(meta_view view, double &primary_stddev, double &total_stddev) override;
 
     void register_ctrl_commands() override;
-    void unregister_ctrl_commands() override;
 
     std::string get_balance_operation_count(const std::vector<std::string> &args) override;
 

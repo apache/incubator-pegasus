@@ -173,11 +173,6 @@ public:
     virtual void register_ctrl_commands() {}
 
     //
-    // Try to unregister cli-commands
-    //
-    virtual void unregister_ctrl_commands() {}
-
-    //
     // Get balancer proposal counts
     // params:
     //   args: proposal type
