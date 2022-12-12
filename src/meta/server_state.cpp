@@ -1274,7 +1274,7 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
 
     if (target_app == nullptr) {
         response.err = ERR_APP_NOT_EXIST;
-        response.hint_message = fmt::format("ERROR: app({}) not exist. check it!", old_app_name);
+        response.hint_message = fmt::format("ERROR: app({}) not exist!", old_app_name);
         return;
     }
 
@@ -1283,7 +1283,7 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
         if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
             response.err = ERR_INVALID_PARAMETERS;
             response.hint_message =
-                fmt::format("ERROR: app({}) already exist! check it!", old_app_name);
+                fmt::format("ERROR: app({}) already exist!", new_app_name);
             return;
         }
         do_rename = true;
@@ -1318,26 +1318,25 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
     target_app->app_name = new_app_name;
     _exist_apps.emplace(new_app_name, target_app);
 
-    do_update_app_info(app_path, ainfo, [this, app_id, rpc](error_code ec) mutable {
-        const auto &new_app_name = rpc.request().new_app_name;
-        const auto &old_app_name = rpc.request().old_app_name;
-        zauto_write_lock l(_lock);
+    do_update_app_info(
+        app_path, ainfo, [this, app_id, new_app_name, old_app_name](error_code ec) mutable {
+            CHECK_EQ_MSG(
+                ec,
+                ERR_OK,
+                "update remote app info failed: app_id={}, old_app_name={}, new_app_name={}",
+                app_id,
+                old_app_name,
+                new_app_name);
 
-        CHECK_EQ_MSG(ec,
-                     ERR_OK,
-                     "update remote app info failed: app_id={}, old_app_name={}, new_app_name={}",
-                     app_id,
-                     old_app_name,
-                     new_app_name);
+            zauto_write_lock l(_lock);
+            _exist_apps.erase(old_app_name);
 
-        _exist_apps.erase(old_app_name);
-
-        LOG_INFO_F("both remote and local app info of app_name have been updated "
-                   "successfully: app_id={}, old_app_name={}, new_app_name={}",
-                   app_id,
-                   old_app_name,
-                   new_app_name);
-    });
+            LOG_INFO_F("both remote and local app info of app_name have been updated "
+                       "successfully: app_id={}, old_app_name={}, new_app_name={}",
+                       app_id,
+                       old_app_name,
+                       new_app_name);
+        });
 }
 
 void server_state::do_app_recall(std::shared_ptr<app_state> &app)
