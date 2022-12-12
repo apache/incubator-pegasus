@@ -256,7 +256,7 @@ func isPartitionValid(oldCount int, respCount int) bool {
 	return oldCount == 0 || oldCount == respCount || oldCount*2 == respCount || oldCount == respCount*2
 }
 
-func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.ConfigurationQueryByIndexResponse) error {
+func (p *pegasusTableConnector) handleQueryConfigResp(resp *replication.QueryCfgResponse) error {
 	if resp.Err.Errno != base.ERR_OK.String() {
 		return errors.New(resp.Err.Errno)
 	}

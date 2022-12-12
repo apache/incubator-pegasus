@@ -38,9 +38,9 @@ import org.apache.pegasus.client.FutureGroup;
 import org.apache.pegasus.client.PException;
 import org.apache.pegasus.operator.client_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
-import org.apache.pegasus.replication.configuration_query_by_index_request;
-import org.apache.pegasus.replication.configuration_query_by_index_response;
 import org.apache.pegasus.replication.partition_configuration;
+import org.apache.pegasus.replication.query_cfg_request;
+import org.apache.pegasus.replication.query_cfg_response;
 import org.apache.pegasus.rpc.InternalTableOptions;
 import org.apache.pegasus.rpc.ReplicationException;
 import org.apache.pegasus.rpc.Table;
@@ -93,8 +93,7 @@ public class TableHandler extends Table {
           StringEscapeUtils.escapeJava(name));
     }
 
-    configuration_query_by_index_request req =
-        new configuration_query_by_index_request(name, new ArrayList<Integer>());
+    query_cfg_request req = new query_cfg_request(name, new ArrayList<Integer>());
     query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
     mgr.getMetaSession().execute(op, 5);
     error_code.error_types err = MetaSession.getMetaServiceError(op);
@@ -102,7 +101,7 @@ public class TableHandler extends Table {
       handleMetaException(err, mgr, name);
       return;
     }
-    configuration_query_by_index_response resp = op.get_response();
+    query_cfg_response resp = op.get_response();
     logger.info(
         "query meta configuration succeed, table_name({}), app_id({}), partition_count({})",
         name,
@@ -153,7 +152,7 @@ public class TableHandler extends Table {
 
   // update the table configuration & appID_ according to to queried response
   // there should only be one thread to do the table config update
-  void initTableConfiguration(configuration_query_by_index_response resp) {
+  void initTableConfiguration(query_cfg_response resp) {
     int partitionCount = resp.getPartition_count();
     TableConfiguration oldConfig = tableConfig_.get();
 
@@ -243,7 +242,7 @@ public class TableHandler extends Table {
       logger.warn("query meta for table({}) failed, error_code({})", tableName_, err.toString());
     } else {
       logger.info("query meta for table({}) received response", tableName_);
-      configuration_query_by_index_response resp = op.get_response();
+      query_cfg_response resp = op.get_response();
       if (resp.app_id != appID_
           || !isPartitionCountValid(tableConfig_.get().replicas.size(), resp.partition_count)) {
         logger.warn(
@@ -274,8 +273,7 @@ public class TableHandler extends Table {
     }
 
     lastQueryTime_ = now;
-    configuration_query_by_index_request req =
-        new configuration_query_by_index_request(tableName_, new ArrayList<Integer>());
+    query_cfg_request req = new query_cfg_request(tableName_, new ArrayList<Integer>());
     final query_cfg_operator query_op = new query_cfg_operator(new gpid(-1, -1), req);
 
     logger.info("query meta for table({}) query request", tableName_);

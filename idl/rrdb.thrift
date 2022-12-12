@@ -326,6 +326,6 @@ service rrdb
 // ONLY FOR GO & JAVA
 service meta
 {
-    dsn.layer2.configuration_query_by_index_response query_cfg(1:dsn.layer2.configuration_query_by_index_request query);
+    dsn.layer2.query_cfg_response query_cfg(1:dsn.layer2.query_cfg_request query);
 }
 

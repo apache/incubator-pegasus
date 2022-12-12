@@ -43,7 +43,7 @@ struct partition_configuration
     8:i32                    partition_flags;
 }
 
-struct configuration_query_by_index_request
+struct query_cfg_request
 {
     1:string           app_name;
     2:list<i32>        partition_indices;
@@ -51,7 +51,7 @@ struct configuration_query_by_index_request
 
 // for server version > 1.11.2, if err == ERR_FORWARD_TO_OTHERS,
 // then the forward address will be put in partitions[0].primary if exist.
-struct configuration_query_by_index_response
+struct query_cfg_response
 {
     1:dsn.error_code                err;
     2:i32                           app_id;

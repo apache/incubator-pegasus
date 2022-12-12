@@ -240,7 +240,7 @@ task_ptr partition_resolver_simple::query_config(int partition_index, int timeou
         timeout_ms = 0;
     auto msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, timeout_ms);
 
-    configuration_query_by_index_request req;
+    query_cfg_request req;
     req.app_name = _app_name;
     if (partition_index != -1) {
         req.partition_indices.push_back(partition_index);
@@ -264,7 +264,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
     auto client_err = ERR_OK;
 
     if (err == ERR_OK) {
-        configuration_query_by_index_response resp;
+        query_cfg_response resp;
         unmarshall(response, resp);
         if (resp.err == ERR_OK) {
             zauto_write_lock l(_config_lock);

@@ -33,8 +33,7 @@ namespace dsn {
 
 DEFINE_TASK_CODE_RPC(RPC_CODE_FOR_TEST, TASK_PRIORITY_COMMON, THREAD_POOL_DEFAULT)
 
-typedef rpc_holder<configuration_query_by_index_request, configuration_query_by_index_response>
-    t_rpc;
+typedef rpc_holder<query_cfg_request, query_cfg_response> t_rpc;
 
 TEST(message_utils, msg_blob_convertion)
 {
@@ -49,7 +48,7 @@ TEST(message_utils, msg_blob_convertion)
 
 TEST(message_utils, thrift_msg_convertion)
 {
-    configuration_query_by_index_request request;
+    query_cfg_request request;
     request.app_name = "haha";
 
     message_ptr msg =
@@ -61,7 +60,7 @@ TEST(message_utils, thrift_msg_convertion)
 
 TEST(message_utils, complex_convertion)
 {
-    configuration_query_by_index_request request;
+    query_cfg_request request;
     request.app_name = "haha";
 
     message_ptr msg =

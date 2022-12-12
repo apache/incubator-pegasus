@@ -386,7 +386,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     meta_servers.assign_group(dup->follower_cluster_name.c_str());
     meta_servers.group_address()->add_list(dup->follower_cluster_metas);
 
-    configuration_query_by_index_request meta_config_request;
+    query_cfg_request meta_config_request;
     meta_config_request.app_name = dup->app_name;
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
@@ -394,7 +394,7 @@ void meta_duplication_service::check_follower_app_if_create_completed(
     rpc::call(meta_servers,
               msg,
               _meta_svc->tracker(),
-              [=](error_code err, configuration_query_by_index_response &&resp) mutable {
+              [=](error_code err, query_cfg_response &&resp) mutable {
                   FAIL_POINT_INJECT_NOT_RETURN_F("create_app_ok", [&](string_view s) -> void {
                       err = ERR_OK;
                       int count = dup->partition_count;

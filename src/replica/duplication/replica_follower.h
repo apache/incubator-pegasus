@@ -53,8 +53,7 @@ private:
 
     void init_master_info();
     void async_duplicate_checkpoint_from_master_replica();
-    error_code update_master_replica_config(error_code err,
-                                            configuration_query_by_index_response &&resp);
+    error_code update_master_replica_config(error_code err, query_cfg_response &&resp);
     void copy_master_replica_checkpoint();
     error_code nfs_copy_checkpoint(error_code err, learn_response &&resp);
     void nfs_copy_remote_files(const rpc_address &remote_node,

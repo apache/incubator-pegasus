@@ -965,9 +965,8 @@ bool server_state::query_configuration_by_gpid(dsn::gpid id,
     return false;
 }
 
-void server_state::query_configuration_by_index(
-    const configuration_query_by_index_request &request,
-    /*out*/ configuration_query_by_index_response &response)
+void server_state::query_configuration_by_index(const query_cfg_request &request,
+                                                /*out*/ query_cfg_response &response)
 {
     zauto_read_lock l(_lock);
     auto iter = _exist_apps.find(request.app_name.c_str());

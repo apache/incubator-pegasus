@@ -166,7 +166,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
               String.format("Query app:%s Status failed: replicaCount should >= 1!", appName)));
     }
 
-    configuration_query_by_index_request request = new configuration_query_by_index_request();
+    query_cfg_request request = new query_cfg_request();
     request.setApp_name(appName);
 
     query_cfg_operator query_op = new query_cfg_operator(new gpid(-1, -1), request);
@@ -178,7 +178,7 @@ public class PegasusAdminClient extends PegasusAbstractClient
               appName, replicaCount, error.toString()));
     }
 
-    configuration_query_by_index_response response = query_op.get_response();
+    query_cfg_response response = query_op.get_response();
 
     int readyCount = 0;
     for (int i = 0; i < response.partition_count; ++i) {
