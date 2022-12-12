@@ -153,7 +153,7 @@ func DiskBeforeSplit(client *Client, tableName string) error {
 		for _, rCapacity := range nodeDiskStats.ReplicaCapacity {
 			totalSize += rCapacity.Size
 		}
-		diskUsedAfterSplit := totalSize*3 + nodeDiskStats.DiskAvailable
+		diskUsedAfterSplit := totalSize*3 + nodeDiskStats.DiskCapacity - nodeDiskStats.DiskAvailable
 		diskThreshold := nodeDiskStats.DiskCapacity * 9 / 10
 		if diskUsedAfterSplit > diskThreshold {
 			return fmt.Errorf("disk(%s@%s) doesn't have enough space to execute partition split[after(%v) vs capacity(%v)]", nodeDiskStats.NodeAddress, nodeDiskStats.DiskTag, diskUsedAfterSplit, diskThreshold)
