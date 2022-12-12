@@ -25,6 +25,7 @@
  */
 
 namespace cpp dsn
+namespace go base
 
 // place holder
 struct rpc_address

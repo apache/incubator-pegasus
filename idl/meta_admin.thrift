@@ -24,11 +24,16 @@
  * THE SOFTWARE.
  */
 
-include "../../idl/dsn.thrift"
-include "../../idl/dsn.layer2.thrift"
+include "backup.thrift"
+include "bulk_load.thrift"
+include "dsn.thrift"
+include "dsn.layer2.thrift"
+include "duplication.thrift"
 include "metadata.thrift"
+include "partition_split.thrift"
 
 namespace cpp dsn.replication
+namespace go admin
 
 // This file contains the administration RPCs from client to MetaServer.
 
@@ -401,4 +406,61 @@ struct configuration_set_max_replica_count_response
     1:dsn.error_code            err;
     2:i32                       old_max_replica_count;
     3:string                    hint_message;
+}
+
+// ONLY FOR GO
+// A client to MetaServer's administration API.
+service admin_client
+{
+    configuration_create_app_response create_app(1:configuration_create_app_request req);
+
+    configuration_drop_app_response drop_app(1:configuration_drop_app_request req);
+
+    configuration_recall_app_response recall_app(1:configuration_recall_app_request req);
+
+    configuration_list_apps_response list_apps(1:configuration_list_apps_request req);
+
+    duplication.duplication_add_response add_duplication(1: duplication.duplication_add_request req);
+
+    duplication.duplication_query_response query_duplication(1: duplication.duplication_query_request req);
+
+    duplication.duplication_modify_response modify_duplication(1: duplication.duplication_modify_request req);
+
+    query_app_info_response query_app_info(1: query_app_info_request req);
+
+    configuration_update_app_env_response update_app_env(1: configuration_update_app_env_request req);
+
+    configuration_list_nodes_response list_nodes(1: configuration_list_nodes_request req);
+
+    configuration_cluster_info_response query_cluster_info(1: configuration_cluster_info_request req);
+
+    configuration_meta_control_response meta_control(1: configuration_meta_control_request req);
+
+    backup.configuration_query_backup_policy_response query_backup_policy(1: backup.configuration_query_backup_policy_request req);
+
+    configuration_balancer_response balance(1: configuration_balancer_request req);
+
+    backup.start_backup_app_response start_backup_app(1: backup.start_backup_app_request req);
+
+    backup.query_backup_status_response query_backup_status(1: backup.query_backup_status_request req);
+
+    configuration_create_app_response restore_app(1: backup.configuration_restore_request req);
+
+    partition_split.start_partition_split_response start_partition_split(1: partition_split.start_partition_split_request req);
+
+    partition_split.query_split_response query_split_status(1: partition_split.query_split_request req);
+
+    partition_split.control_split_response control_partition_split(1: partition_split.control_split_request req);
+
+    bulk_load.start_bulk_load_response start_bulk_load(1: bulk_load.start_bulk_load_request req);
+
+    bulk_load.query_bulk_load_response query_bulk_load_status(1: bulk_load.query_bulk_load_request req);
+
+    bulk_load.control_bulk_load_response control_bulk_load(1: bulk_load.control_bulk_load_request req);
+
+    bulk_load.clear_bulk_load_state_response clear_bulk_load(1: bulk_load.clear_bulk_load_state_request req);
+
+    start_app_manual_compact_response start_manual_compact(1: start_app_manual_compact_request req);
+
+    query_app_manual_compact_response query_manual_compact(1: query_app_manual_compact_request req);
 }

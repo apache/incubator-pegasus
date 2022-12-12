@@ -219,7 +219,7 @@ func (p *pegasusScanner) startScanPartition(ctx context.Context) (completed bool
 	if p.options.SortKeyFilter.Pattern != nil {
 		request.SortKeyFilterPattern.Data = p.options.SortKeyFilter.Pattern
 	}
-	request.NeedCheckHash = &p.checkHash
+	request.ValidatePartitionHash = &p.checkHash
 
 	part := p.table.getPartitionByGpid(p.curGpid)
 	response, err := part.GetScanner(ctx, p.curGpid, p.curHash, request)

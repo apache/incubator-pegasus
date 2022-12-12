@@ -25,7 +25,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
-/// Primitive for Pegasus thrift framework.
+// ErrorCode / Primitive for Pegasus thrift framework.
 type ErrorCode struct {
 	Errno string
 }

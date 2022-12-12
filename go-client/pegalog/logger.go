@@ -46,8 +46,7 @@ type settableLogger struct {
 }
 
 // StderrLogger is an implementation of Logger that outputs logs to stderr.
-// WARN: Don't use it in your production environment. Lack of logs after failures will make it
-// 		 significantly difficult to track the root cause.
+// WARN: Don't use it in your production environment. Lack of logs after failures will make it significantly difficult to track the root cause.
 var StderrLogger = log.New(os.Stderr, "", log.LstdFlags)
 
 func init() {

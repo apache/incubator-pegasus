@@ -25,9 +25,15 @@
  */
 
 namespace cpp dsn.dist.cmd
+namespace go cmd
 
 struct command
 {
     1:string       cmd;
     2:list<string> arguments;
+}
+
+// ONLY FOR GO
+service remoteCmdService {
+    string callCommand(1:command cmd);
 }

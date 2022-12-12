@@ -26,6 +26,7 @@ import (
 
 	"github.com/apache/incubator-pegasus/go-client/idl/admin"
 	"github.com/apache/incubator-pegasus/go-client/idl/base"
+	"github.com/apache/incubator-pegasus/go-client/idl/replication"
 	"github.com/apache/incubator-pegasus/go-client/session"
 )
 
@@ -89,7 +90,7 @@ func (c *rpcBasedClient) waitTableReady(ctx context.Context, tableName string, p
 }
 
 func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, partitionCount int) error {
-	_, err := c.metaManager.CreateApp(ctx, &admin.CreateAppRequest{
+	_, err := c.metaManager.CreateApp(ctx, &admin.ConfigurationCreateAppRequest{
 		AppName: tableName,
 		Options: &admin.CreateAppOptions{
 			PartitionCount: int32(partitionCount),
@@ -107,7 +108,7 @@ func (c *rpcBasedClient) CreateTable(ctx context.Context, tableName string, part
 }
 
 func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error {
-	req := admin.NewDropAppRequest()
+	req := admin.NewConfigurationDropAppRequest()
 	req.AppName = tableName
 	reserveSeconds := int64(1) // delete immediately. the caller is responsible for the soft deletion of table.
 	req.Options = &admin.DropAppOptions{
@@ -119,8 +120,8 @@ func (c *rpcBasedClient) DropTable(ctx context.Context, tableName string) error 
 }
 
 func (c *rpcBasedClient) ListTables(ctx context.Context) ([]*TableInfo, error) {
-	resp, err := c.metaManager.ListApps(ctx, &admin.ListAppsRequest{
-		Status: admin.AppStatus_AS_AVAILABLE,
+	resp, err := c.metaManager.ListApps(ctx, &admin.ConfigurationListAppsRequest{
+		Status: replication.AppStatus_AS_AVAILABLE,
 	})
 	if err != nil {
 		return nil, err

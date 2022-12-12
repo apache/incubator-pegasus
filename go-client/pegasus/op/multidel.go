@@ -46,9 +46,9 @@ func (r *MultiDel) Validate() error {
 
 	r.req = rrdb.NewMultiRemoveRequest()
 	r.req.HashKey = &base.Blob{Data: r.HashKey}
-	r.req.SorkKeys = make([]*base.Blob, len(r.SortKeys))
+	r.req.SortKeys = make([]*base.Blob, len(r.SortKeys))
 	for i, sortKey := range r.SortKeys {
-		r.req.SorkKeys[i] = &base.Blob{Data: sortKey}
+		r.req.SortKeys[i] = &base.Blob{Data: sortKey}
 	}
 	return nil
 }

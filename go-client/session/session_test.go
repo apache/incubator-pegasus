@@ -152,7 +152,7 @@ func TestNodeSession_WriteFailed(t *testing.T) {
 	n.tom.Go(n.loopForRequest)
 
 	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
+	arg.Query = replication.NewConfigurationQueryByIndexRequest()
 
 	mockCodec := &MockCodec{}
 	mockCodec.MockMarshal(func(v interface{}) ([]byte, error) {
@@ -324,7 +324,7 @@ func TestNodeSession_ReceiveErrorCode(t *testing.T) {
 	defer n.Close()
 
 	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
+	arg.Query = replication.NewConfigurationQueryByIndexRequest()
 
 	mockCodec := &MockCodec{}
 	n.codec = mockCodec
@@ -382,7 +382,7 @@ func TestNodeSession_Redial(t *testing.T) {
 	n.codec = mockCodec
 
 	arg := rrdb.NewMetaQueryCfgArgs()
-	arg.Query = replication.NewQueryCfgRequest()
+	arg.Query = replication.NewConfigurationQueryByIndexRequest()
 	_, err := n.CallWithGpid(context.Background(), &base.Gpid{}, 0, arg, "RPC_NAME")
 
 	assert.Equal(t, n.ConnState(), rpc.ConnStateReady)

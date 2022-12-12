@@ -27,7 +27,7 @@ set(MY_PROJ_NAME dsn_dist_cmd)
 thrift_generate_cpp(
     COMMAND_THRIFT_SRCS
     COMMAND_THRIFT_HDRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/command.thrift
+        ../../idl/command.thrift
 )
 
 seT(MY_PROJ_SRC ${COMMAND_THRIFT_SRCS})
