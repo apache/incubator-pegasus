@@ -32,9 +32,9 @@ import org.apache.pegasus.base.rpc_address;
 import org.apache.pegasus.client.ClientOptions;
 import org.apache.pegasus.operator.client_operator;
 import org.apache.pegasus.operator.query_cfg_operator;
+import org.apache.pegasus.replication.configuration_query_by_index_request;
+import org.apache.pegasus.replication.configuration_query_by_index_response;
 import org.apache.pegasus.replication.partition_configuration;
-import org.apache.pegasus.replication.query_cfg_request;
-import org.apache.pegasus.replication.query_cfg_response;
 import org.apache.pegasus.tools.Toollet;
 import org.apache.pegasus.tools.Tools;
 import org.junit.After;
@@ -90,7 +90,8 @@ public class MetaSessionTest {
 
     ArrayList<FutureTask<Void>> callbacks = new ArrayList<FutureTask<Void>>();
     for (int i = 0; i < 1000; ++i) {
-      query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+      configuration_query_by_index_request req =
+          new configuration_query_by_index_request("temp", new ArrayList<Integer>());
       final client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
       FutureTask<Void> callback =
           new FutureTask<Void>(
@@ -186,7 +187,8 @@ public class MetaSessionTest {
     meta.resolveHost("localhost:34601");
     Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
-    query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+    configuration_query_by_index_request req =
+        new configuration_query_by_index_request("temp", new ArrayList<Integer>());
     client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
     op.rpc_error.errno = error_code.error_types.ERR_SESSION_RESET;
     MetaSession.MetaRequestRound round =
@@ -247,10 +249,11 @@ public class MetaSessionTest {
     meta.resolveHost("localhost:34601");
     Assert.assertArrayEquals(getAddressFromSession(meta.getMetaList()), addrs);
 
-    query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+    configuration_query_by_index_request req =
+        new configuration_query_by_index_request("temp", new ArrayList<Integer>());
     query_cfg_operator op = new query_cfg_operator(new gpid(-1, -1), req);
     op.rpc_error.errno = error_code.error_types.ERR_OK;
-    FieldUtils.writeField(op, "response", new query_cfg_response(), true);
+    FieldUtils.writeField(op, "response", new configuration_query_by_index_response(), true);
     op.get_response().err = new error_code();
     op.get_response().err.errno = error_code.error_types.ERR_FORWARD_TO_OTHERS;
     op.get_response().partitions = Arrays.asList(new partition_configuration[1]);
@@ -304,7 +307,8 @@ public class MetaSessionTest {
     // DNS refreshed
     Mockito.when(metaMock.resolve("localhost:34601")).thenReturn(newAddrs);
 
-    query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+    configuration_query_by_index_request req =
+        new configuration_query_by_index_request("temp", new ArrayList<Integer>());
     client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
 
     // `MetaSession#query` will first query the 3 old addresses (and failed), then resolve the DNS
@@ -337,7 +341,8 @@ public class MetaSessionTest {
           rpc_address.fromIpPort("137.0.0.1:34601")
         };
     Mockito.when(metaMock.resolve("localhost:34601")).thenReturn(newAddrs);
-    query_cfg_request req = new query_cfg_request("temp", new ArrayList<Integer>());
+    configuration_query_by_index_request req =
+        new configuration_query_by_index_request("temp", new ArrayList<Integer>());
     client_operator op = new query_cfg_operator(new gpid(-1, -1), req);
     metaMock.execute(op, metaList.size());
     Assert.assertEquals(error_code.error_types.ERR_TIMEOUT, MetaSession.getMetaServiceError(op));

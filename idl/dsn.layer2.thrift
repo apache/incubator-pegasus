@@ -29,6 +29,7 @@ include "dsn.thrift"
 # TODO(yingchun): reuse the idls for server and all client libs
 namespace cpp dsn
 namespace go replication
+namespace java org.apache.pegasus.replication
 
 struct partition_configuration
 {
@@ -57,6 +58,14 @@ struct configuration_query_by_index_response
     3:i32                           partition_count;
     4:bool                          is_stateful;
     5:list<partition_configuration> partitions;
+}
+
+struct request_meta {
+    1:i32 app_id;
+    2:i32 partition_index;
+    3:i32 client_timeout;
+    4:i64 partition_hash;
+    5:bool is_backup_request;
 }
 
 enum app_status

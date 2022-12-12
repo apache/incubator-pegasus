@@ -34,6 +34,7 @@ include "partition_split.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
+namespace java org.apache.pegasus.replication
 
 // This file contains the administration RPCs from client to MetaServer.
 

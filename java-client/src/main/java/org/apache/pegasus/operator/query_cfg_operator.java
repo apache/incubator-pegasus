@@ -21,15 +21,15 @@ package org.apache.pegasus.operator;
 /** Created by weijiesun on 16-11-8. */
 import org.apache.pegasus.apps.meta;
 import org.apache.pegasus.base.gpid;
-import org.apache.pegasus.replication.query_cfg_request;
-import org.apache.pegasus.replication.query_cfg_response;
+import org.apache.pegasus.replication.configuration_query_by_index_request;
+import org.apache.pegasus.replication.configuration_query_by_index_response;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 
 public class query_cfg_operator extends client_operator {
-  public query_cfg_operator(gpid gpid, query_cfg_request request) {
+  public query_cfg_operator(gpid gpid, configuration_query_by_index_request request) {
     super(gpid, "", 0);
     this.request = request;
   }
@@ -56,10 +56,10 @@ public class query_cfg_operator extends client_operator {
           "query config failed: unknown result");
   }
 
-  public query_cfg_response get_response() {
+  public configuration_query_by_index_response get_response() {
     return response;
   }
 
-  private query_cfg_request request;
-  private query_cfg_response response;
+  private configuration_query_by_index_request request;
+  private configuration_query_by_index_response response;
 }

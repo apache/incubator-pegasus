@@ -21,6 +21,7 @@ include "dsn.thrift"
 
 namespace cpp dsn.apps
 namespace go rrdb
+namespace java org.apache.pegasus.apps
 
 enum filter_type
 {
@@ -127,7 +128,7 @@ struct multi_remove_request
 {
     1:dsn.blob      hash_key;
     // Should not be empty
-    // Except for go-client which empty means remove all sortkeys
+    // Except for go/java-client which empty means remove all sortkeys
     // TODO(yingchun): check
     2:list<dsn.blob> sort_keys;
     3:i64           max_count; // deprecated
@@ -317,13 +318,12 @@ service rrdb
     batch_get_response batch_get(1:batch_get_request request);
     count_response sortkey_count(1:dsn.blob hash_key);
     ttl_response ttl(1:dsn.blob key);
-
     scan_response get_scanner(1:get_scanner_request request);
     scan_response scan(1:scan_request request);
     oneway void clear_scanner(1:i64 context_id);
 }
 
-// ONLY FOR GO
+// ONLY FOR GO & JAVA
 service meta
 {
     dsn.layer2.configuration_query_by_index_response query_cfg(1:dsn.layer2.configuration_query_by_index_request query);
