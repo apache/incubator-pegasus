@@ -1316,9 +1316,8 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
 
         if (target_app == nullptr) {
             response.err = ERR_APP_NOT_EXIST;
-            std::ostringstream oss;
-            oss << "ERROR: app(" << old_app_name << ") not exist. check it!" << std::endl;
-            response.hint_message += oss.str();
+            response.hint_message =
+                fmt::format("ERROR: app({}) not exist. check it!", old_app_name);
             return;
         }
 
@@ -1326,9 +1325,8 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
         case app_status::AS_AVAILABLE: {
             if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
                 response.err = ERR_INVALID_PARAMETERS;
-                std::ostringstream oss;
-                oss << "ERROR: app(" << new_app_name << ") already exist! check it!" << std::endl;
-                response.hint_message += oss.str();
+                response.hint_message =
+                    fmt::format("ERROR: app({}) already exist! check it!", old_app_name);
                 return;
             }
             do_rename = true;
@@ -1352,9 +1350,8 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
     if (do_rename) {
         rename_app_unlock(rpc);
     } else {
-        std::ostringstream oss;
-        oss << "ERROR: app(" << old_app_name << ") status can't execute rename!" << std::endl;
-        response.hint_message += oss.str();
+        response.hint_message =
+            fmt::format("ERROR: app({}) status can't execute rename.", old_app_name);
     }
 }
 

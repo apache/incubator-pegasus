@@ -814,21 +814,20 @@ TEST_F(meta_app_operation_test, rename_app)
     const std::string app_name_1 = APP_NAME + "_rename_1";
     create_app(app_name_1);
     auto app = find_app(app_name_1);
-    CHECK(app, "app({}) does not exist", app_name_1);
+    ASSERT_TRUE(app) << fmt::format("app({}) does not exist", app_name_1);
     auto app_id_1 = app->app_id;
 
     const std::string app_name_2 = APP_NAME + "_rename_2";
     create_app(app_name_2);
     app = find_app(app_name_2);
-    CHECK(app, "app({}) does not exist", app_name_2);
+    ASSERT_TRUE(app) << fmt::format("app({}) does not exist", app_name_2);
     auto app_id_2 = app->app_id;
-
-    const std::string app_name_3 = APP_NAME + "_rename_3";
 
     // case 1: new_app_name table exist
     auto resp = rename_app(app_name_1, app_name_2);
     ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
 
+    const std::string app_name_3 = APP_NAME + "_rename_3";
     // case 2: old_app_name table not exist
     resp = rename_app(APP_NAME + "_rename_invaild", app_name_3);
     ASSERT_EQ(ERR_APP_NOT_EXIST, resp.err);
@@ -837,9 +836,8 @@ TEST_F(meta_app_operation_test, rename_app)
     resp = rename_app(app_name_1, app_name_3);
     ASSERT_EQ(ERR_OK, resp.err);
     app = find_app(app_name_3);
-    CHECK(app, "app({}) does not exist", app_name_3);
+    ASSERT_TRUE(app) << fmt::format("app({}) does not exist", app_name_3);
     ASSERT_EQ(app_id_1, app->app_id);
 }
-
 } // namespace replication
 } // namespace dsn
