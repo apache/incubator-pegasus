@@ -117,8 +117,12 @@ jobs:
 
   build_go:
     name: Build Golang
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
+      - name: Install thrift
+        # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
+        run: sudo apt-get install -y thrift-compiler
       - name: Checkout
         uses: actions/checkout@v2
         with:
