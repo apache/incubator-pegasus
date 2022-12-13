@@ -1282,8 +1282,7 @@ void server_state::rename_app(configuration_rename_app_rpc rpc)
     case app_status::AS_AVAILABLE: {
         if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
             response.err = ERR_INVALID_PARAMETERS;
-            response.hint_message =
-                fmt::format("ERROR: app({}) already exist!", new_app_name);
+            response.hint_message = fmt::format("ERROR: app({}) already exist!", new_app_name);
             return;
         }
         do_rename = true;
