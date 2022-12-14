@@ -92,33 +92,14 @@ jobs:
       - name: Packaging Server
         run: ./run.sh pack_server
 
-  lint_go:
-    name: Lint Golang
-    runs-on: ubuntu-latest
+  build_and_lint_go:
+    name: Build and Lint Golang
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - name: go-client
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.29
-          working-directory: ./go-client
-      - name: admin-cli
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.29
-          working-directory: ./admin-cli
-      - name: pegic
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.29
-          working-directory: ./pegic
-
-  build_go:
-    name: Build Golang
-    runs-on: ubuntu-latest
-    steps:
+      - name: Install thrift
+        # go-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
+        run: sudo apt-get install -y thrift-compiler
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -130,12 +111,27 @@ jobs:
       - name: Build go-client
         run: make
         working-directory: ./go-client
+      - name: Lint go-client
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./go-client
       - name: Build admin-cli
         run: make
         working-directory: ./admin-cli
+      - name: Lint admin-cli
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./admin-cli
       - name: Build pegic
         run: make
         working-directory: ./pegic
+      - name: Lint pegic
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.29
+          working-directory: ./pegic
 
   build_java:
     name: Build Java
