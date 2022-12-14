@@ -721,6 +721,43 @@ bool drop_app(command_executor *e, shell_context *sc, arguments args)
     return true;
 }
 
+bool rename_app(command_executor *e, shell_context *sc, arguments args)
+{
+    if (args.argc <= 2) {
+        return false;
+    }
+
+    const std::string old_app_name = args.argv[1];
+    const std::string new_app_name = args.argv[2];
+
+    auto err_resp = sc->ddl_client->rename_app(old_app_name, new_app_name);
+    auto err = err_resp.get_error();
+    const auto &resp = err_resp.get_value();
+
+    if (dsn_likely(err.is_ok())) {
+        err = dsn::error_s::make(resp.err);
+    }
+
+    if (err.is_ok()) {
+        fmt::print(stdout,
+                   "rename app ok, old_app_name({}), new_app_name({})\n",
+                   old_app_name,
+                   new_app_name);
+    } else {
+        std::string error_message(resp.err.to_string());
+        if (!resp.hint_message.empty()) {
+            error_message += ", ";
+            error_message += resp.hint_message;
+        }
+        fmt::print(stderr,
+                   "rename app failed, old_app_name({}), new_app_name({}), failed: {}\n",
+                   old_app_name,
+                   new_app_name,
+                   error_message);
+    }
+    return true;
+}
+
 bool recall_app(command_executor *e, shell_context *sc, arguments args)
 {
     if (args.argc <= 1)

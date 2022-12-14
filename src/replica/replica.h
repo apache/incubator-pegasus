@@ -496,6 +496,7 @@ private:
     clear_on_failure(replica_stub *stub, replica *rep, const std::string &path, const gpid &pid);
 
     void update_app_max_replica_count(int32_t max_replica_count);
+    void update_app_name(const std::string &app_name);
 
 private:
     friend class ::dsn::replication::test::test_checker;

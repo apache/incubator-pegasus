@@ -53,6 +53,15 @@
 namespace dsn {
 namespace replication {
 
+#define VALIDATE_TABLE_NAME(app_name)                                                              \
+    do {                                                                                           \
+        if (app_name.empty() ||                                                                    \
+            !std::all_of(app_name.cbegin(),                                                        \
+                         app_name.cend(),                                                          \
+                         (bool (*)(int))replication_ddl_client::valid_app_char))                   \
+            return FMT_ERR(ERR_INVALID_PARAMETERS, "Invalid name. Only 0-9a-zA-Z.:_ are valid!");  \
+    } while (false)
+
 using tp_output_format = ::dsn::utils::table_printer::output_format;
 
 replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_address> &meta_servers)
@@ -1740,5 +1749,16 @@ replication_ddl_client::set_max_replica_count(const std::string &app_name,
         configuration_set_max_replica_count_rpc(std::move(req), RPC_CM_SET_MAX_REPLICA_COUNT));
 }
 
+error_with<configuration_rename_app_response>
+replication_ddl_client::rename_app(const std::string &old_app_name, const std::string &new_app_name)
+{
+    VALIDATE_TABLE_NAME(old_app_name);
+    VALIDATE_TABLE_NAME(new_app_name);
+
+    auto req = std::make_unique<configuration_rename_app_request>();
+    req->__set_old_app_name(old_app_name);
+    req->__set_new_app_name(new_app_name);
+    return call_rpc_sync(configuration_rename_app_rpc(std::move(req), RPC_CM_RENAME_APP));
+}
 } // namespace replication
 } // namespace dsn

@@ -1259,6 +1259,85 @@ void server_state::drop_app(dsn::message_ex *msg)
     }
 }
 
+void server_state::rename_app(configuration_rename_app_rpc rpc)
+{
+    auto &response = rpc.response();
+    bool do_rename = false;
+
+    const auto &old_app_name = rpc.request().old_app_name;
+    const auto &new_app_name = rpc.request().new_app_name;
+    LOG_INFO_F(
+        "rename app request, old_app_name({}), new_app_name({})", old_app_name, new_app_name);
+
+    zauto_write_lock l(_lock);
+    auto target_app = get_app(old_app_name);
+
+    if (target_app == nullptr) {
+        response.err = ERR_APP_NOT_EXIST;
+        response.hint_message = fmt::format("ERROR: app({}) not exist!", old_app_name);
+        return;
+    }
+
+    switch (target_app->status) {
+    case app_status::AS_AVAILABLE: {
+        if (_exist_apps.find(new_app_name) != _exist_apps.end()) {
+            response.err = ERR_INVALID_PARAMETERS;
+            response.hint_message = fmt::format("ERROR: app({}) already exist!", new_app_name);
+            return;
+        }
+        do_rename = true;
+    } break;
+    case app_status::AS_CREATING:
+    case app_status::AS_RECALLING: {
+        response.err = ERR_BUSY_CREATING;
+    } break;
+    case app_status::AS_DROPPING: {
+        response.err = ERR_BUSY_DROPPING;
+    } break;
+    case app_status::AS_DROPPED: {
+        response.err = ERR_APP_DROPPED;
+    } break;
+    default: {
+        response.err = ERR_INVALID_STATE;
+    } break;
+    }
+
+    if (!do_rename) {
+        response.hint_message =
+            fmt::format("ERROR: app({}) status can't execute rename.", old_app_name);
+        return;
+    }
+
+    auto app_id = target_app->app_id;
+
+    auto ainfo = *(reinterpret_cast<app_info *>(target_app.get()));
+    ainfo.app_name = new_app_name;
+    auto app_path = get_app_path(*target_app);
+
+    target_app->app_name = new_app_name;
+    _exist_apps.emplace(new_app_name, target_app);
+
+    do_update_app_info(
+        app_path, ainfo, [this, app_id, new_app_name, old_app_name](error_code ec) mutable {
+            CHECK_EQ_MSG(
+                ec,
+                ERR_OK,
+                "update remote app info failed: app_id={}, old_app_name={}, new_app_name={}",
+                app_id,
+                old_app_name,
+                new_app_name);
+
+            zauto_write_lock l(_lock);
+            _exist_apps.erase(old_app_name);
+
+            LOG_INFO_F("both remote and local app info of app_name have been updated "
+                       "successfully: app_id={}, old_app_name={}, new_app_name={}",
+                       app_id,
+                       old_app_name,
+                       new_app_name);
+        });
+}
+
 void server_state::do_app_recall(std::shared_ptr<app_state> &app)
 {
     auto after_recall_app = [this, app](dsn::error_code ec) mutable {

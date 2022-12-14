@@ -1029,6 +1029,7 @@ void replica::on_config_sync(const app_info &info,
         return;
 
     update_app_max_replica_count(info.max_replica_count);
+    update_app_name(info.app_name);
     update_app_envs(info.envs);
     _is_duplication_master = info.duplicating;
 
@@ -1068,6 +1069,24 @@ void replica::on_config_sync(const app_info &info,
             }
         }
     }
+}
+
+void replica::update_app_name(const std::string &app_name)
+{
+    if (app_name == _app_info.app_name) {
+        return;
+    }
+
+    auto old_app_name = _app_info.app_name;
+    _app_info.app_name = app_name;
+
+    CHECK_EQ_PREFIX_MSG(store_app_info(_app_info),
+                        ERR_OK,
+                        "store_app_info for app_name failed: "
+                        "app_name={}, app_id={}, old_app_name={}",
+                        _app_info.app_name,
+                        _app_info.app_id,
+                        old_app_name);
 }
 
 void replica::update_app_max_replica_count(int32_t max_replica_count)
