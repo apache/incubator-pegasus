@@ -100,7 +100,10 @@ void meta_service::stop()
         return;
     }
     _tracker.cancel_outstanding_tasks();
-    unregister_ctrl_commands();
+    _ctrl_node_live_percentage_threshold_for_update.reset();
+    _failure_detector.reset();
+    _balancer.reset();
+    _partition_guardian.reset();
     _started = false;
 }
 
@@ -233,22 +236,6 @@ void meta_service::register_ctrl_commands()
                 }
                 return result;
             });
-}
-
-void meta_service::unregister_ctrl_commands()
-{
-    // TODO(yingchun): the commands can be unregister automatiically, maybe we can remove the manual
-    // unregister code later
-    _ctrl_node_live_percentage_threshold_for_update.reset();
-    if (_partition_guardian != nullptr) {
-        _partition_guardian->unregister_ctrl_commands();
-    }
-    if (_balancer != nullptr) {
-        _balancer->unregister_ctrl_commands();
-    }
-    if (_failure_detector != nullptr) {
-        _failure_detector->unregister_ctrl_commands();
-    }
 }
 
 void meta_service::start_service()

@@ -100,7 +100,6 @@ public:
     virtual void end_ping(::dsn::error_code err, const beacon_ack &ack, void *context);
 
     virtual void register_ctrl_commands();
-    virtual void unregister_ctrl_commands();
 
 public:
     error_code start(uint32_t check_interval_seconds,
@@ -109,6 +108,7 @@ public:
                      uint32_t grace_seconds,
                      bool use_allow_list = false);
 
+    // TODO(yingchun): can it be removed ?
     void stop();
 
     uint32_t get_lease_ms() const { return _lease_milliseconds; }

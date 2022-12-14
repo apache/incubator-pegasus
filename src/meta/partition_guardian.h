@@ -40,7 +40,6 @@ public:
     cure(meta_view view, const dsn::gpid &gpid, configuration_proposal_action &action);
     void reconfig(meta_view view, const configuration_update_request &request);
     void register_ctrl_commands();
-    void unregister_ctrl_commands();
     void get_ddd_partitions(const gpid &pid, std::vector<ddd_partition_info> &partitions);
     void clear_ddd_partitions()
     {

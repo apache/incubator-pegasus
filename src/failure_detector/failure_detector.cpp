@@ -50,11 +50,7 @@ failure_detector::failure_detector()
     _is_started = false;
 }
 
-failure_detector::~failure_detector()
-{
-    stop();
-    unregister_ctrl_commands();
-}
+failure_detector::~failure_detector() { stop(); }
 
 void failure_detector::register_ctrl_commands()
 {
@@ -67,8 +63,6 @@ void failure_detector::register_ctrl_commands()
             [this](const std::vector<std::string> &args) { return get_allow_list(args); });
     });
 }
-
-void failure_detector::unregister_ctrl_commands() { _get_allow_list.reset(); }
 
 error_code failure_detector::start(uint32_t check_interval_seconds,
                                    uint32_t beacon_interval_seconds,

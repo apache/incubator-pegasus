@@ -179,7 +179,6 @@ public:
 private:
     void register_rpc_handlers();
     void register_ctrl_commands();
-    void unregister_ctrl_commands();
 
     // client => meta server
     void on_query_configuration_by_index(configuration_query_by_index_rpc rpc);

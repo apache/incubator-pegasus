@@ -73,7 +73,7 @@ greedy_load_balancer::greedy_load_balancer(meta_service *_svc) : server_load_bal
         "copy secondary count by balancer in the recent period");
 }
 
-greedy_load_balancer::~greedy_load_balancer() { unregister_ctrl_commands(); }
+greedy_load_balancer::~greedy_load_balancer() {}
 
 void greedy_load_balancer::register_ctrl_commands()
 {
@@ -83,8 +83,6 @@ void greedy_load_balancer::register_ctrl_commands()
         "get balance operation count",
         [this](const std::vector<std::string> &args) { return get_balance_operation_count(args); });
 }
-
-void greedy_load_balancer::unregister_ctrl_commands() { _get_balance_operation_count.reset(); }
 
 std::string greedy_load_balancer::get_balance_operation_count(const std::vector<std::string> &args)
 {
