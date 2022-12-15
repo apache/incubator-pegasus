@@ -93,7 +93,7 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
     meta_servers.assign_group(_master_cluster_name.c_str());
     meta_servers.group_address()->add_list(_master_meta_list);
 
-    configuration_query_by_index_request meta_config_request;
+    query_cfg_request meta_config_request;
     meta_config_request.app_name = _master_app_name;
     // just fetch the same partition config
     meta_config_request.partition_indices = {get_gpid().get_partition_index()};
@@ -102,27 +102,21 @@ void replica_follower::async_duplicate_checkpoint_from_master_replica()
     dsn::message_ex *msg = dsn::message_ex::create_request(
         RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX, 0, get_gpid().thread_hash());
     dsn::marshall(msg, meta_config_request);
-    rpc::call(meta_servers,
-              msg,
-              &_tracker,
-              [&](error_code err, configuration_query_by_index_response &&resp) mutable {
-                  FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](string_view s) -> void {
-                      _tracker.set_tasks_success();
-                      return;
-                  });
+    rpc::call(meta_servers, msg, &_tracker, [&](error_code err, query_cfg_response &&resp) mutable {
+        FAIL_POINT_INJECT_F("duplicate_checkpoint_ok", [&](string_view s) -> void {
+            _tracker.set_tasks_success();
+            return;
+        });
 
-                  FAIL_POINT_INJECT_F("duplicate_checkpoint_failed",
-                                      [&](string_view s) -> void { return; });
-                  if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
-                      copy_master_replica_checkpoint();
-                  }
-              });
+        FAIL_POINT_INJECT_F("duplicate_checkpoint_failed", [&](string_view s) -> void { return; });
+        if (update_master_replica_config(err, std::move(resp)) == ERR_OK) {
+            copy_master_replica_checkpoint();
+        }
+    });
 }
 
 // ThreadPool: THREAD_POOL_DEFAULT
-error_code
-replica_follower::update_master_replica_config(error_code err,
-                                               configuration_query_by_index_response &&resp)
+error_code replica_follower::update_master_replica_config(error_code err, query_cfg_response &&resp)
 {
     error_code err_code = err != ERR_OK ? err : resp.err;
     if (dsn_unlikely(err_code != ERR_OK)) {

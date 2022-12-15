@@ -21,6 +21,7 @@ include "metadata.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
+namespace java org.apache.pegasus.replication
 
 // app partition bulk load status
 enum bulk_load_status

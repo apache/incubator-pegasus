@@ -310,7 +310,7 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 	}
 
 	{
-		resp := replication.NewConfigurationQueryByIndexResponse()
+		resp := replication.NewQueryCfgResponse()
 		resp.Err = &base.ErrorCode{Errno: "ERR_BUSY"}
 
 		err := p.handleQueryConfigResp(resp)
@@ -319,7 +319,7 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 	}
 
 	{
-		resp := replication.NewConfigurationQueryByIndexResponse()
+		resp := replication.NewQueryCfgResponse()
 		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
 
 		err := p.handleQueryConfigResp(resp)
@@ -333,7 +333,7 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 	}
 
 	{
-		resp := replication.NewConfigurationQueryByIndexResponse()
+		resp := replication.NewQueryCfgResponse()
 		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
 
 		resp.Partitions = make([]*replication.PartitionConfiguration, 6)
@@ -345,7 +345,7 @@ func TestPegasusTableConnector_HandleInvalidQueryConfigResp(t *testing.T) {
 	}
 
 	{
-		resp := replication.NewConfigurationQueryByIndexResponse()
+		resp := replication.NewQueryCfgResponse()
 		resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
 
 		resp.Partitions = make([]*replication.PartitionConfiguration, 2)
@@ -370,7 +370,7 @@ func TestPegasusTableConnector_QueryConfigRespWhileStartSplit(t *testing.T) {
 	ptb, _ := tb.(*pegasusTableConnector)
 
 	partitionCount := len(ptb.parts)
-	resp := replication.NewConfigurationQueryByIndexResponse()
+	resp := replication.NewQueryCfgResponse()
 	resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
 	resp.AppID = ptb.appID
 	resp.PartitionCount = int32(partitionCount * 2)
@@ -417,7 +417,7 @@ func TestPegasusTableConnector_QueryConfigRespWhileCancelSplit(t *testing.T) {
 		}
 	}
 
-	resp := replication.NewConfigurationQueryByIndexResponse()
+	resp := replication.NewQueryCfgResponse()
 	resp.Err = &base.ErrorCode{Errno: "ERR_OK"}
 	resp.AppID = ptb.appID
 	resp.PartitionCount = int32(partitionCount)

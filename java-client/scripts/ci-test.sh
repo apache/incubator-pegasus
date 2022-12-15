@@ -58,7 +58,7 @@ cd $PEGASUS_PKG
 cd ../
 
 
-pushd idl
+pushd scripts
 echo "bash recompile_thrift.sh"
 bash recompile_thrift.sh
 popd

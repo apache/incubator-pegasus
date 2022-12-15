@@ -153,6 +153,6 @@ jobs:
       - name: Build
         working-directory: ./java-client
         run: |
-          cd idl && bash recompile_thrift.sh && cd -
+          cd scripts && bash recompile_thrift.sh && cd -
           mvn spotless:apply
           mvn clean package -DskipTests

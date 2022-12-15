@@ -640,7 +640,7 @@ void meta_service::on_query_cluster_info(configuration_cluster_info_rpc rpc)
 // client => meta server
 void meta_service::on_query_configuration_by_index(configuration_query_by_index_rpc rpc)
 {
-    configuration_query_by_index_response &response = rpc.response();
+    query_cfg_response &response = rpc.response();
     rpc_address forward_address;
     if (!check_status(rpc, &forward_address)) {
         if (!forward_address.is_invalid()) {

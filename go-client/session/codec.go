@@ -156,7 +156,7 @@ var nameToResultMapLock sync.Mutex
 var nameToResultMap = map[string]func() RpcResponseResult{
 	"RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX_ACK": func() RpcResponseResult {
 		return &rrdb.MetaQueryCfgResult{
-			Success: replication.NewConfigurationQueryByIndexResponse(),
+			Success: replication.NewQueryCfgResponse(),
 		}
 	},
 	"RPC_CM_CREATE_APP_ACK": func() RpcResponseResult {

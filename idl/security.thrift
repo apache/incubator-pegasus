@@ -15,9 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-include "../../../idl/dsn.thrift"
+include "dsn.thrift"
 
 namespace cpp dsn.security
+namespace java org.apache.pegasus.apps
 
 // negotiation process:
 //
@@ -66,4 +67,10 @@ struct negotiation_request {
 struct negotiation_response {
     1: negotiation_status status;
     2: dsn.blob msg;
+}
+
+// JAVA ONLY
+service security
+{
+    negotiation_response negotiate(1:negotiation_request request);
 }

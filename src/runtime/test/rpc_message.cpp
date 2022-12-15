@@ -188,7 +188,7 @@ TEST(core, message_ex)
 TEST(rpc_message, restore_read)
 {
     using namespace dsn;
-    configuration_query_by_index_request request, result;
+    query_cfg_request request, result;
     message_ptr msg = from_thrift_request_to_received_message(request, RPC_CODE_FOR_TEST);
     for (int i = 0; i < 10; i++) {
         unmarshall(msg, result);

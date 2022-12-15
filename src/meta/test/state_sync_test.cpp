@@ -274,8 +274,8 @@ void meta_service_test_app::state_sync_test()
         }
 
         // 2.1 query configuration by index
-        dsn::configuration_query_by_index_request req;
-        dsn::configuration_query_by_index_response resp;
+        dsn::query_cfg_request req;
+        dsn::query_cfg_response resp;
         req.app_name = "test_app15";
         req.partition_indices = {-1, 1, 2, 3, 0x7fffffff};
 

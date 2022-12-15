@@ -29,6 +29,7 @@ include "dsn.layer2.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
+namespace java org.apache.pegasus.replication
 
 enum partition_status
 {

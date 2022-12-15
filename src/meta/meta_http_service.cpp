@@ -71,8 +71,8 @@ void meta_http_service::get_app_handler(const http_request &req, http_response &
     if (!redirect_if_not_primary(req, resp))
         return;
 
-    configuration_query_by_index_request request;
-    configuration_query_by_index_response response;
+    query_cfg_request request;
+    query_cfg_response response;
 
     request.app_name = app_name;
     _service->_state->query_configuration_by_index(request, response);
@@ -288,8 +288,8 @@ void meta_http_service::list_app_handler(const http_request &req, http_response 
             if (info.status != app_status::AS_AVAILABLE) {
                 continue;
             }
-            configuration_query_by_index_request request;
-            configuration_query_by_index_response response;
+            query_cfg_request request;
+            query_cfg_response response;
             request.app_name = info.app_name;
             _service->_state->query_configuration_by_index(request, response);
             CHECK_EQ(info.app_id, response.app_id);
@@ -381,8 +381,8 @@ void meta_http_service::list_node_handler(const http_request &req, http_response
         request.status = dsn::app_status::AS_AVAILABLE;
         _service->_state->list_apps(request, response);
         for (const auto &app : response.infos) {
-            configuration_query_by_index_request request_app;
-            configuration_query_by_index_response response_app;
+            query_cfg_request request_app;
+            query_cfg_response response_app;
             request_app.app_name = app.app_name;
             _service->_state->query_configuration_by_index(request_app, response_app);
             CHECK_EQ(app.app_id, response_app.app_id);

@@ -21,6 +21,7 @@ include "metadata.thrift"
 
 namespace cpp dsn.replication
 namespace go admin
+namespace java org.apache.pegasus.replication
 
 // client to meta server to start partition split
 struct start_partition_split_request

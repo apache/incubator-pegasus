@@ -1211,7 +1211,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
         ::dsn::error_code err, dsn::message_ex * req, dsn::message_ex * resp)
     {
         std::vector<pegasus_scanner *> scanners;
-        configuration_query_by_index_response response;
+        query_cfg_response response;
         if (err == ERR_OK) {
             ::dsn::unmarshall(resp, response);
             if (response.err == ERR_OK) {
@@ -1236,7 +1236,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
         user_callback(ret, std::move(scanners));
     };
 
-    configuration_query_by_index_request req;
+    query_cfg_request req;
     req.app_name = _app_name;
     ::dsn::rpc::call(_meta_server,
                      RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
