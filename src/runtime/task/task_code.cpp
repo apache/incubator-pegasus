@@ -33,6 +33,7 @@ namespace dsn {
 
 typedef dsn::utils::customized_id_mgr<dsn::task_code> task_code_mgr;
 
+namespace utils {
 template <>
 void task_code_mgr::register_commands()
 {
@@ -60,6 +61,7 @@ void task_code_mgr::register_commands()
             }
             return ss.str();
         }));
+}
 }
 
 /*static*/
