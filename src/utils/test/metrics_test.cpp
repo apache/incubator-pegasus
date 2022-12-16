@@ -2511,8 +2511,8 @@ TEST(metrics_test, http_get_metrics)
         std::string id;
         metric_entity::attr_map attrs;
     } test_entities[] = {
-        {&METRIC_ENTITY_my_replica, "replica_5.0", {{"table", "test_app_5"}, {"partition", "0"}}},
-        {&METRIC_ENTITY_my_replica, "replica_5.1", {{"table", "test_app_5"}, {"partition", "1"}}},
+        {&METRIC_ENTITY_my_replica, "replica_5.0", {{"table", "test_app_5"}, {"partition", "5.0"}}},
+        {&METRIC_ENTITY_my_replica, "replica_5.1", {{"table", "test_app_5"}, {"partition", "5.1"}}},
         {&METRIC_ENTITY_my_app, "app_5", {{"table", "test_app_5"}}},
         {&METRIC_ENTITY_my_app, "app_6", {{"table", "test_app_6"}}},
     };
@@ -2554,8 +2554,14 @@ TEST(metrics_test, http_get_metrics)
     // - request for 2 entity ids both of which exist
     // - request for 2 entity ids one of which does not exist
     // - request for 2 entity ids both of which do not exist
-    // - the number of entity attributes in query string is even
-    // - the number of entity attributes in query string is odd
+    // - request for 1 pair of entity attribute that exists
+    // - request for 1 pair of entity attribute that does not exist
+    // - 2 pairs of entity attributes both of which exist have the different keys
+    // - 2 pairs of entity attributes both of which exist have the same key
+    // - 2 pair of entity attribute one of which does not exist have the different keys
+    // - 2 pair of entity attribute one of which does not exist have the same keys
+    // - the number of arguments for entity attributes in query string is odd(1)
+    // - the number of arguments for entity attributes in query string is odd(3)
     struct test_case
     {
         std::string request_string;
@@ -2590,10 +2596,7 @@ TEST(metrics_test, http_get_metrics)
          http_status_code::ok,
          {{"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}}},
          kAllSingleValueMetricFields},
-        {REQUEST_STRING(GET, "ids=another_replica_5.1"),
-         http_status_code::ok,
-         {},
-         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=another_replica_5.1"), http_status_code::ok, {}, {}},
         {REQUEST_STRING(GET, "ids=replica_5.1,app_6"),
          http_status_code::ok,
          {{"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
@@ -2606,13 +2609,40 @@ TEST(metrics_test, http_get_metrics)
         {REQUEST_STRING(GET, "ids=another_replica_5.1,another_app_6"),
          http_status_code::ok,
          {},
-         kAllSingleValueMetricFields},
+         {}},
         {REQUEST_STRING(GET, "attributes=table,test_app_5"),
          http_status_code::ok,
          {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
           {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
           {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
          kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "attributes=table,another_test_app_5"), http_status_code::ok, {}, {}},
+        {REQUEST_STRING(GET, "attributes=table,test_app_5,partition,5.1"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "attributes=table,test_app_5,table,test_app_6"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64", "test_app_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "attributes=table,test_app_5,partition,another_5.1"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "attributes=table,test_app_5,table,another_test_app_6"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "attributes=table"), http_status_code::bad_request, {}, {}},
         {REQUEST_STRING(GET, "attributes=table,test_app_5,partition"),
          http_status_code::bad_request,
          {},
