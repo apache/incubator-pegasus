@@ -2520,22 +2520,21 @@ TEST(metrics_test, http_get_metrics)
     for (const auto &entity : test_entities) {
         auto my_entity = entity.prototype->instantiate(entity.id, entity.attrs);
 
+        gauge_ptr<int64_t> my_gauge_int64;
+        counter_ptr<> my_counter;
         if (std::strcmp(entity.prototype->name(), "my_replica") == 0) {
-            auto my_gauge_int64 = METRIC_test_replica_gauge_int64.instantiate(my_entity);
-            my_gauge_int64->set(5);
-
-            auto my_counter = METRIC_test_replica_counter.instantiate(my_entity);
-            my_counter->increment();
+            my_gauge_int64 = METRIC_test_replica_gauge_int64.instantiate(my_entity);
+            my_counter = METRIC_test_replica_counter.instantiate(my_entity);
         } else if (std::strcmp(entity.prototype->name(), "my_app") == 0) {
-            auto my_gauge_int64 = METRIC_test_app_gauge_int64.instantiate(my_entity);
-            my_gauge_int64->set(5);
-
-            auto my_counter = METRIC_test_app_counter.instantiate(my_entity);
-            my_counter->increment();
-
+            my_gauge_int64 = METRIC_test_app_gauge_int64.instantiate(my_entity);
+            my_counter = METRIC_test_app_counter.instantiate(my_entity);
         } else {
             ASSERT_TRUE(false);
         }
+
+        // Set metrics with arbitrary values.
+        my_gauge_int64->set(5);
+        my_counter->increment();
     }
 
 // Do not use leading '#' for `fields` to replace with the literal text, since clang-format
@@ -2550,6 +2549,11 @@ TEST(metrics_test, http_get_metrics)
     // - request for 2 entity types one of which does not exist
     // - request for 2 entity types both of which exist
     // - request for 2 entity types both of which do not exist
+    // - request for an entity id which exists
+    // - request for an entity id which does not exist
+    // - request for 2 entity ids both of which exist
+    // - request for 2 entity ids one of which does not exist
+    // - request for 2 entity ids both of which do not exist
     // - the number of entity attributes in query string is even
     // - the number of entity attributes in query string is odd
     struct test_case
@@ -2582,6 +2586,27 @@ TEST(metrics_test, http_get_metrics)
           {"app_5", {"test_app_gauge_int64", "test_app_counter"}}},
          kAllSingleValueMetricFields},
         {REQUEST_STRING(GET, "types=unknown_type_1,unknown_type_2"), http_status_code::ok, {}, {}},
+        {REQUEST_STRING(GET, "ids=replica_5.1"),
+         http_status_code::ok,
+         {{"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=another_replica_5.1"),
+         http_status_code::ok,
+         {},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=replica_5.1,app_6"),
+         http_status_code::ok,
+         {{"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=another_replica_5.1,app_6"),
+         http_status_code::ok,
+         {{"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=another_replica_5.1,another_app_6"),
+         http_status_code::ok,
+         {},
+         kAllSingleValueMetricFields},
         {REQUEST_STRING(GET, "attributes=table,test_app_5"),
          http_status_code::ok,
          {{"replica_5.0", {"test_replica_gauge_int64", "test_replica_counter"}},
