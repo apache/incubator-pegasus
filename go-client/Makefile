@@ -28,6 +28,5 @@ build:
 fmt:
 	go fmt ./...
 
-
 ci:
 	go test -race -v -failfast -test.timeout 5m -coverprofile=coverage.txt -covermode=atomic ./...
