@@ -2719,8 +2719,9 @@ TEST(metrics_test, http_get_metrics)
           {"replica_5.1", {"test_replica_counter"}},
           {"app_5", {"test_app_gauge_int64"}}},
          kAllSingleValueMetricFields},
-        {REQUEST_STRING(GET, "ids=replica_5.1,app_5&attributes=table,test_app_5&metrics=test_"
-                             "replica_counter,test_app_counter"),
+        {REQUEST_STRING(GET,
+                        "ids=replica_5.1,app_5&attributes=table,test_app_5&metrics=test_"
+                        "replica_counter,test_app_counter"),
          http_status_code::ok,
          {{"replica_5.1", {"test_replica_counter"}}, {"app_5", {"test_app_counter"}}},
          kAllSingleValueMetricFields},
