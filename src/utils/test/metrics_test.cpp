@@ -2437,15 +2437,19 @@ void check_entities_from_json_string(const std::string &json_string,
                     // Actual fields for each metric.
                     std::unordered_set<std::string> actual_metric_fields;
 
+                    bool has_metric_name_field = false;
                     for (const auto &field : m.GetObject()) {
                         // Each name must be a string.
                         ASSERT_TRUE(field.name.IsString());
                         if (kMetricNameField == field.name.GetString()) {
                             ASSERT_TRUE(field.value.IsString());
                             actual_entity.metrics.emplace(field.value.GetString());
+                            has_metric_name_field = true;
                         }
                         actual_metric_fields.emplace(field.name.GetString());
                     }
+                    ASSERT_TRUE(has_metric_name_field)
+                        << "metric name must be included in the fields";
 
                     // Check if all parsed fields for each metric are expected.
                     ASSERT_EQ(expected_metric_fields, actual_metric_fields);
@@ -2562,6 +2566,13 @@ TEST(metrics_test, http_get_metrics)
     // - 2 pair of entity attribute one of which does not exist have the same keys
     // - the number of arguments for entity attributes in query string is odd(1)
     // - the number of arguments for entity attributes in query string is odd(3)
+    // - request for a metric which exists
+    // - request for a metric which does not exist
+    // - request for 2 metrics ids both of which exist
+    // - request for 2 metrics one of which does not exist
+    // - request for 2 metrics both of which do not exist
+    // - request for one metric field
+    // - request for 2 metric fields
     struct test_case
     {
         std::string request_string;
@@ -2647,6 +2658,34 @@ TEST(metrics_test, http_get_metrics)
          http_status_code::bad_request,
          {},
          {}},
+        {REQUEST_STRING(GET, "metrics=test_app_gauge_int64"),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64"}}, {"app_6", {"test_app_gauge_int64"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "metrics=another_test_app_gauge_int64"), http_status_code::ok, {}, {}},
+        {REQUEST_STRING(GET, "metrics=test_app_gauge_int64,test_app_counter"),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "metrics=test_app_gauge_int64,another_test_app_gauge_int64"),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64"}}, {"app_6", {"test_app_gauge_int64"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "metrics=another_test_app_gauge_int64,another_test_app_counter"),
+         http_status_code::ok,
+         {},
+         {}},
+        {REQUEST_STRING(GET, "types=my_app&with_metric_fields=name"),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         {kMetricNameField}},
+        {REQUEST_STRING(GET, "types=my_app&with_metric_fields=name,value"),
+         http_status_code::ok,
+         {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         {kMetricNameField, kMetricSingleValueField}},
     };
 
 #undef REQUEST_STRING
