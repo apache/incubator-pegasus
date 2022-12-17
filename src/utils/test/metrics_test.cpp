@@ -2573,6 +2573,13 @@ TEST(metrics_test, http_get_metrics)
     // - request for 2 metrics both of which do not exist
     // - request for one metric field
     // - request for 2 metric fields
+    // - filter with types and ids
+    // - filter with types, ids and attributes
+    // - filter with ids and attributes
+    // - filter with ids and metrics
+    // - filter with attributes and metrics
+    // - filter with ids, attributes and metrics
+    // - filter with types, ids, attributes and metrics while request for specified fields
     struct test_case
     {
         std::string request_string;
@@ -2685,6 +2692,44 @@ TEST(metrics_test, http_get_metrics)
          http_status_code::ok,
          {{"app_5", {"test_app_gauge_int64", "test_app_counter"}},
           {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         {kMetricNameField, kMetricSingleValueField}},
+        {REQUEST_STRING(GET, "types=my_app,my_replica&ids=replica_5.1,app_6"),
+         http_status_code::ok,
+         {{"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}},
+          {"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(
+             GET, "types=my_app,my_replica&ids=replica_5.1,app_6&attributes=table,test_app_5"),
+         http_status_code::ok,
+         {{"replica_5.1", {"test_replica_gauge_int64", "test_replica_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=replica_5.1,app_6&attributes=table,test_app_6"),
+         http_status_code::ok,
+         {{"app_6", {"test_app_gauge_int64", "test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET,
+                        "ids=replica_5.1,app_6&metrics=test_replica_gauge_int64,test_app_counter"),
+         http_status_code::ok,
+         {{"replica_5.1", {"test_replica_gauge_int64"}}, {"app_6", {"test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(
+             GET, "attributes=table,test_app_5&metrics=test_replica_counter,test_app_gauge_int64"),
+         http_status_code::ok,
+         {{"replica_5.0", {"test_replica_counter"}},
+          {"replica_5.1", {"test_replica_counter"}},
+          {"app_5", {"test_app_gauge_int64"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(GET, "ids=replica_5.1,app_5&attributes=table,test_app_5&metrics=test_"
+                             "replica_counter,test_app_counter"),
+         http_status_code::ok,
+         {{"replica_5.1", {"test_replica_counter"}}, {"app_5", {"test_app_counter"}}},
+         kAllSingleValueMetricFields},
+        {REQUEST_STRING(
+             GET,
+             "types=my_app,ids=replica_5.1,app_6&attributes=table,test_app_6&"
+             "metrics=test_replica_counter,test_app_counter&with_metric_fields=name,value"),
+         http_status_code::ok,
+         {{"app_6", {"test_app_counter"}}},
          {kMetricNameField, kMetricSingleValueField}},
     };
 
