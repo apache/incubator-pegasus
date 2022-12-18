@@ -115,6 +115,37 @@ TEST(core, check_c_string_empty)
     }
 }
 
+TEST(core, check_c_string_equal)
+{
+    struct test_case
+    {
+        const char *lhs;
+        const char *rhs;
+        bool is_equal;
+    } tests[] = {
+        {nullptr,nullptr,true},
+        {nullptr,"",false},
+        {nullptr,"a",false},
+        {nullptr,"abc",false},
+        {"",nullptr,false},
+        {"a",nullptr,false},
+        {"abc",nullptr,false},
+        {"","",true},
+        {"","a",false},
+        {"","abc",false},
+        {"a","",false},
+        {"abc","",false},
+        {"a","a",true},
+        {"abc","abc",true},
+        {"a","abc",false},
+        {"abc","a",false},
+    };
+
+    for (const auto &test : tests) {
+        EXPECT_EQ(test.is_equal, dsn::utils::equals(test.lhs, test.rhs));
+    }
+}
+
 // For containers such as std::unordered_set, the expected result will be deduplicated
 // at initialization. Therefore, it can be used to compare with actual result safely.
 template <typename Container>
