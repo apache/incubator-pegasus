@@ -39,7 +39,7 @@ namespace utils {
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
 // Decide whether two C strings are equal, even if either is NULL.
-bool equals(const char * lhs, const char * rhs);
+bool equals(const char *lhs, const char *rhs);
 
 // Split the `input` string by the only character `separator` into tokens. Leading and trailing
 // spaces of each token will be stripped. Once the token is empty, or become empty after

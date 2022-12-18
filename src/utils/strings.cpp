@@ -38,13 +38,17 @@
 namespace dsn {
 namespace utils {
 
-bool equals(const char * lhs, const char * rhs)
+bool equals(const char *lhs, const char *rhs)
 {
-  if ( lhs == NULL ) {return rhs == NULL;}
+    if (lhs == NULL) {
+        return rhs == NULL;
+    }
 
-  if ( rhs == NULL ) {return false;}
+    if (rhs == NULL) {
+        return false;
+    }
 
-  return std::strcmp(lhs, rhs) == 0;
+    return std::strcmp(lhs, rhs) == 0;
 }
 
 std::string get_last_component(const std::string &input, const char splitters[])

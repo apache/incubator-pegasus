@@ -61,26 +61,32 @@
 
 namespace {
 
-inline const char *null_str_printer(const char *s) {
-    return s == nullptr ? "(null)" : s;
-}
+inline const char *null_str_printer(const char *s) { return s == nullptr ? "(null)" : s; }
 
 } // anonymous namespace
 
-#define CHECK_STREQ_MSG(var1, var2, ...)                                                              \
+#define CHECK_STREQ_MSG(var1, var2, ...)                                                           \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        CHECK_EXPRESSION(                                                                          \
-            var1 == var2, dsn::utils::equals(_v1, _v2), "{} vs {} {}", null_str_printer(_v1), null_str_printer(_v2), fmt::format(__VA_ARGS__));          \
+        CHECK_EXPRESSION(var1 == var2,                                                             \
+                         dsn::utils::equals(_v1, _v2),                                             \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
     } while (false)
 
-#define CHECK_STRNE_MSG(var1, var2, ...)                                                              \
+#define CHECK_STRNE_MSG(var1, var2, ...)                                                           \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
         const auto &_v2 = (var2);                                                                  \
-        CHECK_EXPRESSION(                                                                          \
-            var1 != var2, !dsn::utils::equals(_v1, _v2), "{} vs {} {}", null_str_printer(_v1), null_str_printer(_v2), fmt::format(__VA_ARGS__));          \
+        CHECK_EXPRESSION(var1 != var2,                                                             \
+                         !dsn::utils::equals(_v1, _v2),                                            \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
     } while (false)
 
 // Macros to check expected condition. It will abort the application
