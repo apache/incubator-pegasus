@@ -2526,10 +2526,10 @@ TEST(metrics_test, http_get_metrics)
 
         gauge_ptr<int64_t> my_gauge_int64;
         counter_ptr<> my_counter;
-        if (std::strcmp(entity.prototype->name(), "my_replica") == 0) {
+        if (utils::equals(entity.prototype->name(), "my_replica")) {
             my_gauge_int64 = METRIC_test_replica_gauge_int64.instantiate(my_entity);
             my_counter = METRIC_test_replica_counter.instantiate(my_entity);
-        } else if (std::strcmp(entity.prototype->name(), "my_app") == 0) {
+        } else if (utils::equals(entity.prototype->name(), "my_app")) {
             my_gauge_int64 = METRIC_test_app_gauge_int64.instantiate(my_entity);
             my_counter = METRIC_test_app_counter.instantiate(my_entity);
         } else {

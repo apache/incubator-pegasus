@@ -40,11 +40,11 @@ namespace utils {
 
 bool equals(const char *lhs, const char *rhs)
 {
-    if (lhs == NULL) {
-        return rhs == NULL;
+    if (lhs == nullptr) {
+        return rhs == nullptr;
     }
 
-    if (rhs == NULL) {
+    if (rhs == nullptr) {
         return false;
     }
 

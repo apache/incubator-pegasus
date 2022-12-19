@@ -21,8 +21,6 @@
 
 #include <fmt/ostream.h>
 
-#include "utils/strings.h"
-
 // The macros below no longer use the default snprintf method for log message formatting,
 // instead we use fmt::format.
 // TODO(wutao1): prevent construction of std::string for each log.

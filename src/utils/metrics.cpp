@@ -340,8 +340,7 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
         entity = new metric_entity(prototype, id, attrs);
         _entities[id] = entity;
     } else {
-        CHECK_EQ_MSG(std::strcmp(prototype->name(), iter->second->prototype()->name()),
-                     0,
+        CHECK_STREQ_MSG(prototype->name(), iter->second->prototype()->name(),
                      "new prototype '{}' is inconsistent with old prototype '{}' for entity '{}'",
                      prototype->name(),
                      iter->second->prototype()->name(),
