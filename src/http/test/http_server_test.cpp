@@ -46,7 +46,7 @@ TEST(http_server, parse_url)
 
     for (auto tt : tests) {
         ref_ptr<message_ex> m = message_ex::create_receive_message_with_standalone_header(
-            blob::create_from_bytes(std::string("POST")));
+            blob::create_from_bytes("POST"));
         m->buffers.emplace_back(blob::create_from_bytes(std::string(tt.url)));
         m->buffers.resize(HTTP_MSG_BUFFERS_NUM);
 
@@ -314,7 +314,7 @@ TEST_F(http_message_parser_test, parse_query_params)
 
     for (auto tt : tests) {
         ref_ptr<message_ex> m = message_ex::create_receive_message_with_standalone_header(
-            blob::create_from_bytes(std::string("POST")));
+            blob::create_from_bytes("POST"));
         m->buffers.emplace_back(blob::create_from_bytes(std::string(tt.url)));
         m->buffers.resize(HTTP_MSG_BUFFERS_NUM);
 
