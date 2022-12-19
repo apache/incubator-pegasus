@@ -29,7 +29,8 @@ set(MY_PROJ_NAME dsn_utils_tests)
 # "GLOB" for non-recursive search
 set(MY_SRC_SEARCH_MODE "GLOB")
 
-set(MY_PROJ_LIBS dsn_runtime
+set(MY_PROJ_LIBS dsn_http
+                 dsn_runtime
                  dsn_utils
                  gtest
                  )

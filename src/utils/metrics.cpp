@@ -19,8 +19,8 @@
 
 #include "utils/api_utilities.h"
 #include "utils/rand.h"
-
-#include "shared_io_service.h"
+#include "utils/shared_io_service.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -207,7 +207,80 @@ metric_entity_prototype::metric_entity_prototype(const char *name) : _name(name)
 
 metric_entity_prototype::~metric_entity_prototype() {}
 
-metric_registry::metric_registry() : _lock(), _entities()
+metrics_http_service::metrics_http_service(metric_registry *registry) : _registry(registry)
+{
+    register_handler("metrics",
+                     std::bind(&metrics_http_service::get_metrics_handler,
+                               this,
+                               std::placeholders::_1,
+                               std::placeholders::_2),
+                     "ip:port/metrics");
+}
+
+namespace {
+
+template <typename Container>
+void parse_as(const std::string &field_value, Container &container)
+{
+    utils::split_args(field_value.c_str(), container, ',');
+}
+
+inline void encode_error(dsn::metric_json_writer &writer, const char *error_message)
+{
+    writer.StartObject();
+    writer.Key("error_message");
+    dsn::json::json_encode(writer, error_message);
+    writer.EndObject();
+}
+
+inline std::string encode_error_as_json(const char *error_message)
+{
+    return encode_as_json(
+        [error_message](metric_json_writer &writer) { encode_error(writer, error_message); });
+}
+
+} // anonymous namespace
+
+void metrics_http_service::get_metrics_handler(const http_request &req, http_response &resp)
+{
+    if (req.method != http_method::HTTP_METHOD_GET) {
+        resp.body = encode_error_as_json("please use 'GET' method while querying for metrics");
+        resp.status_code = http_status_code::bad_request;
+        return;
+    }
+
+    metric_filters filters;
+    for (const auto &field : req.query_args) {
+        if (field.first == "with_metric_fields") {
+            parse_as(field.second, filters.with_metric_fields);
+        } else if (field.first == "types") {
+            parse_as(field.second, filters.entity_types);
+        } else if (field.first == "ids") {
+            parse_as(field.second, filters.entity_ids);
+        } else if (field.first == "attributes") {
+            parse_as(field.second, filters.entity_attrs);
+            if ((filters.entity_attrs.size() & 1) != 0) {
+                resp.body =
+                    encode_error_as_json("the number of arguments for attributes should be even, "
+                                         "since each attribute name always pairs with a value");
+                resp.status_code = http_status_code::bad_request;
+                return;
+            }
+        } else if (field.first == "metrics") {
+            parse_as(field.second, filters.entity_metrics);
+        } else {
+            auto error_message = fmt::format("unknown field {}={}", field.first, field.second);
+            resp.body = encode_error_as_json(error_message.c_str());
+            resp.status_code = http_status_code::bad_request;
+            return;
+        }
+    }
+
+    resp.body = take_snapshot_as_json(_registry, filters);
+    resp.status_code = http_status_code::ok;
+}
+
+metric_registry::metric_registry() : _http_service(this)
 {
     // We should ensure that metric_registry is destructed before shared_io_service is destructed.
     // Once shared_io_service is destructed before metric_registry is destructed,

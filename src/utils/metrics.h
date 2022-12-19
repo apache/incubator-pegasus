@@ -24,6 +24,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -33,19 +34,20 @@
 
 #include <boost/asio/deadline_timer.hpp>
 
-#include "api_utilities.h"
-#include "alloc.h"
-#include "autoref_ptr.h"
-#include "casts.h"
 #include "common/json_helper.h"
-#include "enum_helper.h"
-#include "fmt_logging.h"
-#include "long_adder.h"
-#include "nth_element.h"
-#include "ports.h"
-#include "singleton.h"
-#include "string_view.h"
-#include "synchronize.h"
+#include "http/http_server.h"
+#include "utils/api_utilities.h"
+#include "utils/alloc.h"
+#include "utils/autoref_ptr.h"
+#include "utils/casts.h"
+#include "utils/enum_helper.h"
+#include "utils/fmt_logging.h"
+#include "utils/long_adder.h"
+#include "utils/nth_element.h"
+#include "utils/ports.h"
+#include "utils/singleton.h"
+#include "utils/string_view.h"
+#include "utils/synchronize.h"
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
 // inspired by Kudu metrics (https://github.com/apache/kudu/blob/master/src/kudu/util/metrics.h).
@@ -159,22 +161,9 @@ public:
 
     metric_map metrics() const;
 
-    // args are the parameters that are used to construct the object of MetricType
+    // `args` are the parameters that are used to construct the object of MetricType.
     template <typename MetricType, typename... Args>
-    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args)
-    {
-        utils::auto_write_lock l(_lock);
-
-        metric_map::const_iterator iter = _metrics.find(prototype);
-        if (iter != _metrics.end()) {
-            auto raw_ptr = down_cast<MetricType *>(iter->second.get());
-            return raw_ptr;
-        }
-
-        ref_ptr<MetricType> ptr(new MetricType(prototype, std::forward<Args>(args)...));
-        _metrics[prototype] = ptr;
-        return ptr;
-    }
+    ref_ptr<MetricType> find_or_create(const metric_prototype *prototype, Args &&... args);
 
     void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
 
@@ -308,6 +297,22 @@ struct metric_filters
     entity_metrics_type entity_metrics;
 };
 
+inline std::string encode_as_json(std::function<void(metric_json_writer &)> encoder)
+{
+    std::ostringstream out;
+    rapidjson::OStreamWrapper wrapper(out);
+    metric_json_writer writer(wrapper);
+    encoder(writer);
+    return out.str();
+}
+
+template <typename T>
+inline std::string take_snapshot_as_json(T *m, const metric_filters &filters)
+{
+    return encode_as_json(
+        [m, &filters](metric_json_writer &writer) { m->take_snapshot(writer, filters); });
+}
+
 class metric_entity_prototype
 {
 public:
@@ -327,6 +332,27 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metric_entity_prototype);
 };
 
+class metric_registry;
+class metrics_http_service : public http_server_base
+{
+public:
+    explicit metrics_http_service(metric_registry *registry);
+    ~metrics_http_service() = default;
+
+    // There is only one API now whose URI is "/metrics", thus just make
+    // this URI as sub path while leaving the root path empty.
+    std::string path() const override { return ""; }
+
+private:
+    friend void test_get_metrics_handler(const http_request &req, http_response &resp);
+
+    void get_metrics_handler(const http_request &req, http_response &resp);
+
+    metric_registry *_registry;
+
+    DISALLOW_COPY_AND_ASSIGN(metrics_http_service);
+};
+
 class metric_registry : public utils::singleton<metric_registry>
 {
 public:
@@ -340,6 +366,8 @@ private:
     friend class metric_entity_prototype;
     friend class utils::singleton<metric_registry>;
 
+    friend void test_get_metrics_handler(const http_request &req, http_response &resp);
+
     metric_registry();
     ~metric_registry();
 
@@ -349,6 +377,8 @@ private:
 
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;
+
+    metrics_http_service _http_service;
 
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
 };
@@ -446,6 +476,32 @@ public:
 private:
     DISALLOW_COPY_AND_ASSIGN(metric_prototype_with);
 };
+
+template <typename MetricType, typename... Args>
+ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype,
+                                                  Args &&... args)
+{
+    CHECK_EQ_MSG(std::strcmp(prototype->entity_type().data(), _prototype->name()),
+                 0,
+                 "the entity type '{}' of the metric '{}' is inconsistent with the prototype "
+                 "'{}' of the attached entity '{}'",
+                 prototype->entity_type().data(),
+                 prototype->name().data(),
+                 _prototype->name(),
+                 _id);
+
+    utils::auto_write_lock l(_lock);
+
+    metric_map::const_iterator iter = _metrics.find(prototype);
+    if (iter != _metrics.end()) {
+        auto raw_ptr = down_cast<MetricType *>(iter->second.get());
+        return raw_ptr;
+    }
+
+    ref_ptr<MetricType> ptr(new MetricType(prototype, std::forward<Args>(args)...));
+    _metrics[prototype] = ptr;
+    return ptr;
+}
 
 const std::string kMetricTypeField = "type";
 const std::string kMetricNameField = "name";
