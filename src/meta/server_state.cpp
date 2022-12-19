@@ -112,8 +112,7 @@ void server_state::register_cli_commands()
             } else {
                 const char *target_file = nullptr;
                 for (int i = 0; i < args.size(); i += 2) {
-                    if (strcmp(args[i].c_str(), "-t") == 0 ||
-                        strcmp(args[i].c_str(), "--target") == 0)
+                    if (args[i] == "-t" || args[i] == "--target")
                         target_file = args[i + 1].c_str();
                 }
                 if (target_file == nullptr) {
@@ -434,7 +433,7 @@ error_code server_state::initialize_default_apps()
     app_info default_app;
     for (int i = 0; i < sections.size(); i++) {
         if (strstr(sections[i], "meta_server.apps") == sections[i] ||
-            strcmp(sections[i], "replication.app") == 0) {
+            utils::equals(sections[i], "replication.app")) {
             const char *s = sections[i];
 
             default_app.status = app_status::AS_CREATING;

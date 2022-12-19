@@ -41,6 +41,7 @@
 #include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 #include "utils/string_view.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -100,7 +101,7 @@ uint32_t rpc_address::ipv4_from_network_interface(const char *network_interface)
             if (i->ifa_name != nullptr && i->ifa_addr != nullptr &&
                 i->ifa_addr->sa_family == AF_INET) {
                 uint32_t ip_val = ((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr;
-                if (strcmp(i->ifa_name, network_interface) == 0 ||
+                if (utils::equals(i->ifa_name, network_interface) ||
                     (network_interface[0] == '\0' && !is_docker_netcard(i->ifa_name, ip_val) &&
                      is_site_local_address(ip_val))) {
                     ret = (uint32_t)ntohl(ip_val);

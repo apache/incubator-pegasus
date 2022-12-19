@@ -94,7 +94,7 @@ void response_handler(dsn::error_code ec,
         std::string response_string;
         char *request_str = (char *)(request_buf);
         ::dsn::unmarshall(resp, response_string);
-        ASSERT_TRUE(strcmp(response_string.c_str(), request_str) == 0);
+        ASSERT_EQ(response_string, request_str);
     } else {
         LOG_INFO("error msg: %s", ec.to_string());
     }

@@ -24,37 +24,31 @@
  * THE SOFTWARE.
  */
 
-#include "service_engine.h"
-#include "utils/coredump.h"
-#include "runtime/rpc/rpc_engine.h"
-#include "runtime/task/task_engine.h"
-#include "runtime/security/init.h"
-
 #include <fstream>
-
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "runtime/tool_api.h"
-#include "utils/command_manager.h"
-#include "runtime/rpc/serialization.h"
-#include "utils/filesystem.h"
-#include "utils/process_utils.h"
-#include "utils/flags.h"
-#include "utils/time_utils.h"
-#include "utils/errors.h"
-#include "utils/fmt_logging.h"
 
 #ifdef DSN_ENABLE_GPERF
 #include <gperftools/malloc_extension.h>
 #endif
 
-#include "service_engine.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
 #include "runtime/rpc/rpc_engine.h"
-#include "runtime/task/task_engine.h"
-#include "utils/coredump.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/security/init.h"
 #include "runtime/security/negotiation_manager.h"
+#include "runtime/service_engine.h"
+#include "runtime/task/task_engine.h"
+#include "runtime/tool_api.h"
+#include "utils/api_utilities.h"
+#include "utils/command_manager.h"
+#include "utils/coredump.h"
+#include "utils/errors.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/time_utils.h"
+#include "utils/process_utils.h"
 
 namespace dsn {
 namespace security {
@@ -253,13 +247,13 @@ void dsn_run(int argc, char **argv, bool is_server)
     std::string app_list = "";
 
     for (int i = 2; i < argc;) {
-        if (0 == strcmp(argv[i], "-cargs")) {
+        if (dsn::utils::equals(argv[i], "-cargs")) {
             if (++i < argc) {
                 config_args = std::string(argv[i++]);
             }
         }
 
-        else if (0 == strcmp(argv[i], "-app_list")) {
+        else if (dsn::utils::equals(argv[i], "-app_list")) {
             if (++i < argc) {
                 app_list = std::string(argv[i++]);
             }

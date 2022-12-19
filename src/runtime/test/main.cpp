@@ -35,7 +35,9 @@
 
 #include <iostream>
 #include "gtest/gtest.h"
+
 #include "test_utils.h"
+#include "utils/strings.h"
 
 int g_test_count = 0;
 int g_test_ret = 0;
@@ -62,7 +64,8 @@ GTEST_API_ int main(int argc, char **argv)
         return g_test_ret;
     }
 
-    if (strcmp("simulator", dsn_config_get_value_string("core", "tool", "simulator", "")) != 0) {
+    if (!dsn::utils::equals("simulator",
+                            dsn_config_get_value_string("core", "tool", "simulator", ""))) {
         // run out-rDSN tests in other threads
         std::cout << "=========================================================== " << std::endl;
         std::cout << "================== run in non-rDSN threads ================ " << std::endl;

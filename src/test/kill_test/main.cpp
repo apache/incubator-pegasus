@@ -23,6 +23,7 @@
 #include "data_verifier.h"
 #include "process_kill_testor.h"
 #include "partition_kill_testor.h"
+#include "utils/strings.h"
 
 int main(int argc, const char **argv)
 {
@@ -30,13 +31,13 @@ int main(int argc, const char **argv)
         printf("invalid arguments: pegasus_kill_test configfile "
                "worker_type(verifier|process_killer|partition_killer)\n");
         return -1;
-    } else if (strcmp(argv[2], "verifier") == 0) {
+    } else if (dsn::utils::equals(argv[2], "verifier")) {
         verifier_initialize(argv[1]);
         verifier_start();
-    } else if (strcmp(argv[2], "process_killer") == 0) {
+    } else if (dsn::utils::equals(argv[2], "process_killer")) {
         pegasus::test::kill_testor *killtestor = new pegasus::test::process_kill_testor(argv[1]);
         killtestor->Run();
-    } else if (strcmp(argv[2], "partition_killer") == 0) {
+    } else if (dsn::utils::equals(argv[2], "partition_killer")) {
         pegasus::test::kill_testor *killtestor = new pegasus::test::partition_kill_testor(argv[1]);
         killtestor->Run();
     } else {
