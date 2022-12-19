@@ -24,8 +24,9 @@
  * THE SOFTWARE.
  */
 
-#include <cstring>
 #include "perf_counter/perf_counter.h"
+
+#include "utils/strings.h"
 
 static const char *ctypes[] = {
     "NUMBER", "VOLATILE_NUMBER", "RATE", "PERCENTILE", "INVALID_COUNTER"};
@@ -39,7 +40,7 @@ const char *dsn_counter_type_to_string(dsn_perf_counter_type_t t)
 dsn_perf_counter_type_t dsn_counter_type_from_string(const char *str)
 {
     for (int i = 0; i < COUNTER_TYPE_COUNT; ++i) {
-        if (strcmp(str, ctypes[i]) == 0)
+        if (dsn::utils::equals(str, ctypes[i]))
             return (dsn_perf_counter_type_t)i;
     }
     return COUNTER_TYPE_INVALID;
@@ -56,7 +57,7 @@ const char *dsn_percentile_type_to_string(dsn_perf_counter_percentile_type_t t)
 dsn_perf_counter_percentile_type_t dsn_percentile_type_from_string(const char *str)
 {
     for (int i = 0; i < COUNTER_PERCENTILE_COUNT; ++i) {
-        if (strcmp(str, ptypes[i]) == 0)
+        if (dsn::utils::equals(str, ptypes[i]))
             return (dsn_perf_counter_percentile_type_t)i;
     }
     return COUNTER_PERCENTILE_INVALID;
