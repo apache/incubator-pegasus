@@ -18,14 +18,15 @@
  */
 
 #include <atomic>
-#include <unistd.h>
 #include <memory>
 #include <signal.h>
+#include <unistd.h>
 
 #include <pegasus/version.h>
 
-#include "reporter/pegasus_counter_reporter.h"
 #include "redis_parser.h"
+#include "reporter/pegasus_counter_reporter.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace proxy {
@@ -73,8 +74,8 @@ void signal_handler(int signal_id)
 int main(int argc, char **argv)
 {
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-version") == 0 ||
-            strcmp(argv[i], "--version") == 0) {
+        if (dsn::utils::equals(argv[i], "-v") || dsn::utils::equals(argv[i], "-version") ||
+            dsn::utils::equals(argv[i], "--version")) {
             printf("Pegasus Redis Proxy %s\n", PEGASUS_VERSION);
             return 0;
         }

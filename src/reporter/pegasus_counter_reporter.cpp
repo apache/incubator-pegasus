@@ -142,9 +142,9 @@ void pegasus_counter_reporter::start()
 
     _last_report_time_ms = dsn_now_ms();
 
-    if (dsn::utils::equals("prometheus", FLAGS_perf_counter_sink)) {
+    if (dsn::utils::iequals("prometheus", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
-    } else if (dsn::utils::equals("falcon", FLAGS_perf_counter_sink)) {
+    } else if (dsn::utils::iequals("falcon", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::FALCON;
     } else {
         _perf_counter_sink = perf_counter_sink_t::INVALID;

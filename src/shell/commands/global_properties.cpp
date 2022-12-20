@@ -45,11 +45,11 @@ bool process_escape_all(command_executor *e, shell_context *sc, arguments args)
         fprintf(stderr, "Current escape_all: %s.\n", sc->escape_all ? "true" : "false");
         return true;
     } else if (args.argc == 2) {
-        if (dsn::utils::equals(args.argv[1], "true")) {
+        if (dsn::utils::iequals(args.argv[1], "true")) {
             sc->escape_all = true;
             fprintf(stderr, "OK\n");
             return true;
-        } else if (dsn::utils::equals(args.argv[1], "false")) {
+        } else if (dsn::utils::iequals(args.argv[1], "false")) {
             sc->escape_all = false;
             fprintf(stderr, "OK\n");
             return true;

@@ -17,15 +17,17 @@
  * under the License.
  */
 
-#include <pegasus/version.h>
-#include "utils/strings.h"
+#include <algorithm>
 #include <setjmp.h>
 #include <signal.h>
-#include <algorithm>
+
+#include <pegasus/version.h>
+
 #include "args.h"
+#include "base/pegasus_const.h"
 #include "command_executor.h"
 #include "commands.h"
-#include "base/pegasus_const.h"
+#include "utils/strings.h"
 
 std::map<std::string, command_executor *> s_commands_map;
 shell_context s_global_context;
@@ -612,7 +614,7 @@ static char *hintsCallback(const char *buf, int *color, int *bold)
     bool endWithSpace = buflen && isspace(buf[buflen - 1]);
 
     for (int i = 0; commands[i].name != nullptr; ++i) {
-        if (strcasecmp(argv[0], commands[i].name) == 0) {
+        if (dsn::utils::iequals(argv[0], commands[i].name)) {
             *color = 90;
             *bold = 0;
             sds hint = sdsnew(commands[i].option_usage);

@@ -123,26 +123,41 @@ TEST(core, check_c_string_equal)
         const char *rhs;
         bool is_equal;
     } tests[] = {
-        {nullptr, nullptr, true},
-        {nullptr, "", false},
-        {nullptr, "a", false},
-        {nullptr, "abc", false},
-        {"", nullptr, false},
-        {"a", nullptr, false},
-        {"abc", nullptr, false},
-        {"", "", true},
-        {"", "a", false},
-        {"", "abc", false},
-        {"a", "", false},
-        {"abc", "", false},
-        {"a", "a", true},
-        {"abc", "abc", true},
-        {"a", "abc", false},
-        {"abc", "a", false},
+        {nullptr, nullptr, true}, {nullptr, "", false},  {nullptr, "a", false},
+        {nullptr, "abc", false},  {"", nullptr, false},  {"a", nullptr, false},
+        {"abc", nullptr, false},  {"", "", true},        {"", "a", false},
+        {"", "abc", false},       {"a", "", false},      {"abc", "", false},
+        {"a", "a", true},         {"a", "A", false},     {"A", "A", true},
+        {"abc", "abc", true},     {"aBc", "abc", false}, {"abc", "ABC", false},
+        {"a", "abc", false},      {"A", "abc", false},   {"abc", "a", false},
+        {"Abc", "a", false},
     };
 
     for (const auto &test : tests) {
         EXPECT_EQ(test.is_equal, dsn::utils::equals(test.lhs, test.rhs));
+    }
+}
+
+TEST(core, check_c_string_equal_ignore_case)
+{
+    struct test_case
+    {
+        const char *lhs;
+        const char *rhs;
+        bool is_equal_ignore_case;
+    } tests[] = {
+        {nullptr, nullptr, true}, {nullptr, "", false}, {nullptr, "a", false},
+        {nullptr, "abc", false},  {"", nullptr, false}, {"a", nullptr, false},
+        {"abc", nullptr, false},  {"", "", true},       {"", "a", false},
+        {"", "abc", false},       {"a", "", false},     {"abc", "", false},
+        {"a", "a", true},         {"a", "A", true},     {"A", "A", true},
+        {"abc", "abc", true},     {"aBc", "abc", true}, {"abc", "ABC", true},
+        {"a", "abc", false},      {"A", "abc", false},  {"abc", "a", false},
+        {"Abc", "a", false},
+    };
+
+    for (const auto &test : tests) {
+        EXPECT_EQ(test.is_equal_ignore_case, dsn::utils::iequals(test.lhs, test.rhs));
     }
 }
 

@@ -63,6 +63,9 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 
 } // anonymous namespace
 
+// Macros to check expected condition. It will abort the application
+// and log a fatal message when the condition is not met.
+
 #define CHECK_STREQ_MSG(var1, var2, ...)                                                           \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
@@ -87,8 +90,30 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
                          fmt::format(__VA_ARGS__));                                                \
     } while (false)
 
-// Macros to check expected condition. It will abort the application
-// and log a fatal message when the condition is not met.
+#define CHECK_STRCASEEQ_MSG(var1, var2, ...)                                                       \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION(var1 == var2,                                                             \
+                         dsn::utils::iequals(_v1, _v2),                                            \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
+#define CHECK_STRCASENE_MSG(var1, var2, ...)                                                       \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION(var1 != var2,                                                             \
+                         !dsn::utils::iequals(_v1, _v2),                                           \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
 #define CHECK_NE_MSG(var1, var2, ...)                                                              \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
@@ -139,6 +164,8 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 
 #define CHECK_STREQ(var1, var2) CHECK_STREQ_MSG(var1, var2, "")
 #define CHECK_STRNE(var1, var2) CHECK_STRNE_MSG(var1, var2, "")
+#define CHECK_STRCASEEQ(var1, var2) CHECK_STRCASEEQ_MSG(var1, var2, "")
+#define CHECK_STRCASENE(var1, var2) CHECK_STRCASENE_MSG(var1, var2, "")
 
 #define CHECK_NE(var1, var2) CHECK_NE_MSG(var1, var2, "")
 #define CHECK_EQ(var1, var2) CHECK_EQ_MSG(var1, var2, "")

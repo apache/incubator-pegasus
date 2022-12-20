@@ -21,10 +21,10 @@
 
 #include <rocksdb/status.h>
 
-#include <rrdb/rrdb.client.h>
 #include <pegasus/error.h>
 #include <pegasus_key_schema.h>
 #include <pegasus_utils.h>
+#include <rrdb/rrdb.client.h>
 
 #include "base/pegasus_const.h"
 #include "common/replication_other_types.h"
@@ -939,7 +939,7 @@ void redis_parser::counter_internal(message_entry &entry)
     CHECK_GT(entry.request.sub_requests[0].length, 0);
     const char *command = entry.request.sub_requests[0].data.data();
     int64_t increment = 1;
-    if (strcasecmp(command, "INCR") == 0 || strcasecmp(command, "DECR") == 0) {
+    if (dsn::utils::iequals(command, "INCR") || dsn::utils::iequals(command, "DECR")) {
         if (entry.request.sub_requests.size() != 2) {
             LOG_WARNING_F("{}: command {} seqid({}) with invalid arguments count: {}",
                           _remote_address.to_string(),
@@ -949,7 +949,7 @@ void redis_parser::counter_internal(message_entry &entry)
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
-    } else if (strcasecmp(command, "INCRBY") == 0 || strcasecmp(command, "DECRBY") == 0) {
+    } else if (dsn::utils::iequals(command, "INCRBY") || dsn::utils::iequals(command, "DECRBY")) {
         if (entry.request.sub_requests.size() != 3) {
             LOG_WARNING_F("{}: command {} seqid({}) with invalid arguments count: {}",
                           _remote_address.to_string(),
@@ -1017,7 +1017,7 @@ void redis_parser::parse_set_parameters(const std::vector<redis_bulk_string> &op
     ttl_seconds = 0;
     for (int i = 3; i < opts.size(); ++i) {
         const std::string &opt = opts[i].data.to_string();
-        if (strcasecmp(opt.c_str(), "EX") == 0 && i + 1 < opts.size()) {
+        if (dsn::utils::iequals(opt.c_str(), "EX") && i + 1 < opts.size()) {
             const std::string &str_ttl_seconds = opts[i + 1].data.to_string();
             if (!dsn::buf2int32(str_ttl_seconds, ttl_seconds)) {
                 LOG_WARNING_F("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
@@ -1067,20 +1067,20 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
     // [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC]
     while (base_index < opts.size()) {
         const std::string &opt = opts[base_index].data.to_string();
-        if (strcasecmp(opt.c_str(), "WITHCOORD") == 0) {
+        if (dsn::utils::iequals(opt.c_str(), "WITHCOORD")) {
             WITHCOORD = true;
-        } else if (strcasecmp(opt.c_str(), "WITHDIST") == 0) {
+        } else if (dsn::utils::iequals(opt.c_str(), "WITHDIST")) {
             WITHDIST = true;
-        } else if (strcasecmp(opt.c_str(), "WITHHASH") == 0) {
+        } else if (dsn::utils::iequals(opt.c_str(), "WITHHASH")) {
             WITHHASH = true;
-        } else if (strcasecmp(opt.c_str(), "COUNT") == 0 && base_index + 1 < opts.size()) {
+        } else if (dsn::utils::iequals(opt.c_str(), "COUNT") && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
             if (!dsn::buf2int32(str_count, count)) {
                 LOG_ERROR_F("'COUNT {}' option is error, use {}", str_count, count);
             }
-        } else if (strcasecmp(opt.c_str(), "ASC") == 0) {
+        } else if (dsn::utils::iequals(opt.c_str(), "ASC")) {
             sort_type = geo::geo_client::SortType::asc;
-        } else if (strcasecmp(opt.c_str(), "DESC") == 0) {
+        } else if (dsn::utils::iequals(opt.c_str(), "DESC")) {
             sort_type = geo::geo_client::SortType::desc;
         }
         base_index++;

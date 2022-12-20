@@ -27,9 +27,11 @@
 #include <algorithm>
 #include <cstring>
 #include <sstream>
+#include <strings.h>
 #include <utility>
 
 #include <openssl/md5.h>
+
 #include "utils/api_utilities.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
@@ -49,6 +51,19 @@ bool equals(const char *lhs, const char *rhs)
     }
 
     return std::strcmp(lhs, rhs) == 0;
+}
+
+bool iequals(const char *lhs, const char *rhs)
+{
+    if (lhs == nullptr) {
+        return rhs == nullptr;
+    }
+
+    if (rhs == nullptr) {
+        return false;
+    }
+
+    return ::strcasecmp(lhs, rhs) == 0;
 }
 
 std::string get_last_component(const std::string &input, const char splitters[])
