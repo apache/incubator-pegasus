@@ -631,7 +631,7 @@ bool create_app(command_executor *e, shell_context *sc, arguments args)
 {
     static struct option long_options[] = {{"partition_count", required_argument, 0, 'p'},
                                            {"replica_count", required_argument, 0, 'r'},
-                                           {"fail_if_exist", no_argument, 0, 's'},
+                                           {"fail_if_exist", no_argument, 0, 'f'},
                                            {"envs", required_argument, 0, 'e'},
                                            {0, 0, 0, 0}};
 
