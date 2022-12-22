@@ -134,7 +134,8 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
                                                    int partition_count,
                                                    int replica_count,
                                                    const std::map<std::string, std::string> &envs,
-                                                   bool is_stateless)
+                                                   bool is_stateless,
+                                                   bool success_if_exist)
 {
     if (partition_count < 1) {
         std::cout << "create app " << app_name << " failed: partition_count should >= 1"
@@ -167,7 +168,7 @@ dsn::error_code replication_ddl_client::create_app(const std::string &app_name,
     req->app_name = app_name;
     req->options.partition_count = partition_count;
     req->options.replica_count = replica_count;
-    req->options.success_if_exist = true;
+    req->options.success_if_exist = success_if_exist;
     req->options.app_type = app_type;
     req->options.envs = envs;
     req->options.is_stateful = !is_stateless;

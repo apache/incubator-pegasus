@@ -65,7 +65,8 @@ public:
                                int partition_count,
                                int replica_count,
                                const std::map<std::string, std::string> &envs,
-                               bool is_stateless);
+                               bool is_stateless,
+                               bool success_if_exist = true);
 
     // reserve_seconds == 0 means use default value in configuration 'hold_seconds_for_dropped_app'
     dsn::error_code drop_app(const std::string &app_name, int reserve_seconds);
