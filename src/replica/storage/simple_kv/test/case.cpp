@@ -884,7 +884,7 @@ dsn::replication::config_type::type
 client_case_line::parse_config_command(const std::string &command_name) const
 {
     for (int i = 0; s_replica_config_commands[i] != nullptr; ++i) {
-        if (boost::iequals(command_name.c_str(), s_replica_config_commands[i])) {
+        if (boost::iequals(command_name, s_replica_config_commands[i])) {
             return (dsn::replication::config_type::type)i;
         }
     }

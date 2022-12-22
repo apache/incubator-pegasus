@@ -82,7 +82,7 @@ EnumType type_from_string(const std::map<int, const char *> &type_maps,
                           const EnumType &default_type)
 {
     for (auto it = type_maps.begin(); it != type_maps.end(); it++) {
-        if (dsn::utils::iequals(type_string.c_str(), it->second)) {
+        if (dsn::utils::iequals(type_string, it->second)) {
             return (EnumType)it->first;
         }
     }

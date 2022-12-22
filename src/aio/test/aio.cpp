@@ -24,12 +24,13 @@
  * THE SOFTWARE.
  */
 
+#include <gtest/gtest.h>
+
 #include "runtime/task/async_calls.h"
+#include "utils/fail_point.h"
 #include "utils/filesystem.h"
 #include "utils/smart_pointers.h"
-#include "utils/fail_point.h"
-
-#include <gtest/gtest.h>
+#include "utils/strings.h"
 
 using namespace ::dsn;
 
@@ -121,7 +122,7 @@ TEST(core, aio)
 
         t->wait();
         EXPECT_TRUE(t->get_transferred_size() == (size_t)len);
-        EXPECT_TRUE(memcmp(buffer, buffer2, len) == 0);
+        EXPECT_TRUE(dsn::utils::mequals(buffer, buffer2, len));
     }
 
     err = file::close(fp);
@@ -178,12 +179,12 @@ TEST(core, operation_failed)
     t = ::dsn::file::read(fp2, buffer, 512, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == strlen(str));
-    EXPECT_TRUE(strncmp(buffer, str, 10) == 0);
+    EXPECT_TRUE(dsn::utils::equals(buffer, str, 10));
 
     t = ::dsn::file::read(fp2, buffer, 5, 0, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
     EXPECT_TRUE(*err == ERR_OK && *count == 5);
-    EXPECT_TRUE(strncmp(buffer, str, 5) == 0);
+    EXPECT_TRUE(dsn::utils::equals(buffer, str, 5));
 
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();

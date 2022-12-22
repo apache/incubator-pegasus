@@ -33,6 +33,8 @@
  *     xxxx-xx-xx, author, fix bug about xxx
  */
 
+#include <tuple>
+
 #include <gtest/gtest.h>
 
 #include "runtime/api_layer1.h"
@@ -115,51 +117,137 @@ TEST(core, check_c_string_empty)
     }
 }
 
-TEST(core, check_c_string_equal)
-{
-    struct test_case
-    {
-        const char *lhs;
-        const char *rhs;
-        bool is_equal;
-    } tests[] = {
-        {nullptr, nullptr, true}, {nullptr, "", false},  {nullptr, "a", false},
-        {nullptr, "abc", false},  {"", nullptr, false},  {"a", nullptr, false},
-        {"abc", nullptr, false},  {"", "", true},        {"", "a", false},
-        {"", "abc", false},       {"a", "", false},      {"abc", "", false},
-        {"a", "a", true},         {"a", "A", false},     {"A", "A", true},
-        {"abc", "abc", true},     {"aBc", "abc", false}, {"abc", "ABC", false},
-        {"a", "abc", false},      {"A", "abc", false},   {"abc", "a", false},
-        {"Abc", "a", false},
-    };
+using c_string_equality = std::tuple<const char *, const char *, bool, bool>;
 
-    for (const auto &test : tests) {
-        EXPECT_EQ(test.is_equal, dsn::utils::equals(test.lhs, test.rhs));
+class CStringEqualityTest : public testing::TestWithParam<c_string_equality>
+{
+};
+
+TEST_P(CStringEqualityTest, CStringEquals)
+{
+    const char *lhs;
+    const char *rhs;
+    bool is_equal;
+    bool is_equal_ignore_case;
+    std::tie(lhs, rhs, is_equal, is_equal_ignore_case) = GetParam();
+
+    EXPECT_EQ(is_equal, dsn::utils::equals(lhs, rhs));
+
+    EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs));
+
+    if (rhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string rhs_str(rhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs_str));
+    }
+
+    if (lhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string lhs_str(lhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs_str, rhs));
     }
 }
 
-TEST(core, check_c_string_equal_ignore_case)
-{
-    struct test_case
-    {
-        const char *lhs;
-        const char *rhs;
-        bool is_equal_ignore_case;
-    } tests[] = {
-        {nullptr, nullptr, true}, {nullptr, "", false}, {nullptr, "a", false},
-        {nullptr, "abc", false},  {"", nullptr, false}, {"a", nullptr, false},
-        {"abc", nullptr, false},  {"", "", true},       {"", "a", false},
-        {"", "abc", false},       {"a", "", false},     {"abc", "", false},
-        {"a", "a", true},         {"a", "A", true},     {"A", "A", true},
-        {"abc", "abc", true},     {"aBc", "abc", true}, {"abc", "ABC", true},
-        {"a", "abc", false},      {"A", "abc", false},  {"abc", "a", false},
-        {"Abc", "a", false},
-    };
+const std::vector<c_string_equality> c_string_equality_tests = {
+    {nullptr, nullptr, true, true}, {nullptr, "", false, false}, {nullptr, "a", false, false},
+    {nullptr, "abc", false, false}, {"", nullptr, false, false}, {"a", nullptr, false, false},
+    {"abc", nullptr, false, false}, {"", "", true, true},        {"", "a", false, false},
+    {"", "abc", false, false},      {"a", "", false, false},     {"abc", "", false, false},
+    {"a", "a", true, true},         {"a", "A", false, true},     {"A", "A", true, true},
+    {"abc", "abc", true, true},     {"aBc", "abc", false, true}, {"abc", "ABC", false, true},
+    {"a", "abc", false, false},     {"A", "abc", false, false},  {"abc", "a", false, false},
+    {"Abc", "a", false, false},
+};
 
-    for (const auto &test : tests) {
-        EXPECT_EQ(test.is_equal_ignore_case, dsn::utils::iequals(test.lhs, test.rhs));
+INSTANTIATE_TEST_CASE_P(StringTest,
+                        CStringEqualityTest,
+                        testing::ValuesIn(c_string_equality_tests));
+
+using c_string_n_bytes_equality = std::tuple<const char *, const char *, size_t, bool, bool, bool>;
+
+class CStringNBytesEqualityTest : public testing::TestWithParam<c_string_n_bytes_equality>
+{
+};
+
+TEST_P(CStringNBytesEqualityTest, CStringNBytesEquals)
+{
+    const char *lhs;
+    const char *rhs;
+    size_t n;
+    bool is_equal;
+    bool is_equal_ignore_case;
+    bool is_equal_memory;
+    std::tie(lhs, rhs, n, is_equal, is_equal_ignore_case, is_equal_memory) = GetParam();
+
+    EXPECT_EQ(is_equal, dsn::utils::equals(lhs, rhs, n));
+
+    EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs, n));
+
+    if (rhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string rhs_str(rhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs, rhs_str, n));
     }
+
+    if (lhs != nullptr) {
+        // Since NULL pointer cannot be used to construct std::string, related test cases
+        // are neglected.
+        std::string lhs_str(lhs);
+        EXPECT_EQ(is_equal_ignore_case, dsn::utils::iequals(lhs_str, rhs, n));
+    }
+
+    EXPECT_EQ(is_equal_memory, dsn::utils::mequals(lhs, rhs, n));
 }
+
+const std::vector<c_string_n_bytes_equality> c_string_n_bytes_equality_tests = {
+    {nullptr, nullptr, 0, true, true, true},
+    {nullptr, nullptr, 1, true, true, true},
+    {nullptr, "", 0, false, false, false},
+    {nullptr, "", 1, false, false, false},
+    {nullptr, "a", 0, false, false, false},
+    {nullptr, "a", 1, false, false, false},
+    {nullptr, "abc", 0, false, false, false},
+    {nullptr, "abc", 1, false, false, false},
+    {"", nullptr, 0, false, false, false},
+    {"", nullptr, 1, false, false, false},
+    {"a", nullptr, 0, false, false, false},
+    {"a", nullptr, 1, false, false, false},
+    {"abc", nullptr, 0, false, false, false},
+    {"abc", nullptr, 1, false, false, false},
+    {"", "", 0, true, true, true},
+    {"", "", 1, true, true, true},
+    {"\0", "a", 1, false, false, false},
+    {"\0\0\0", "abc", 3, false, false, false},
+    {"a", "\0", 1, false, false, false},
+    {"abc", "\0\0\0", 3, false, false, false},
+    {"a", "a", 1, true, true, true},
+    {"a", "A", 1, false, true, false},
+    {"A", "A", 1, true, true, true},
+    {"abc", "abc", 3, true, true, true},
+    {"aBc", "abc", 3, false, true, false},
+    {"abc", "ABC", 3, false, true, false},
+    {"a\0\0", "abc", 3, false, false, false},
+    {"A\0\0", "abc", 3, false, false, false},
+    {"abc", "a\0\0", 3, false, false, false},
+    {"abc", "xyz", 0, true, true, true},
+    {"Abc", "a\0\0", 3, false, false, false},
+    {"a", "abc", 1, true, true, true},
+    {"a", "Abc", 1, false, true, false},
+    {"abc", "a", 1, true, true, true},
+    {"Abc", "a", 1, false, true, false},
+    {"abc", "abd", 2, true, true, true},
+    {"abc", "ABd", 2, false, true, false},
+    {"abc\0opq", "abc\0xyz", 7, true, true, false},
+    {"abc\0opq", "ABC\0xyz", 7, false, true, false},
+    {"abc\0xyz", "abc\0xyz", 7, true, true, true},
+};
+
+INSTANTIATE_TEST_CASE_P(StringTest,
+                        CStringNBytesEqualityTest,
+                        testing::ValuesIn(c_string_n_bytes_equality_tests));
 
 // For containers such as std::unordered_set, the expected result will be deduplicated
 // at initialization. Therefore, it can be used to compare with actual result safely.

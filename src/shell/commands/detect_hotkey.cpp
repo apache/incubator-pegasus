@@ -33,9 +33,9 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
                              int partition_index,
                              std::string &err_info)
 {
-    if (dsn::utils::iequals(hotkey_type.c_str(), "read")) {
+    if (dsn::utils::iequals(hotkey_type, "read")) {
         req.type = dsn::replication::hotkey_type::type::READ;
-    } else if (dsn::utils::iequals(hotkey_type.c_str(), "write")) {
+    } else if (dsn::utils::iequals(hotkey_type, "write")) {
         req.type = dsn::replication::hotkey_type::type::WRITE;
     } else {
         err_info = fmt::format("\"{}\" is an invalid hotkey type (should be 'read' or 'write')\n",
@@ -43,11 +43,11 @@ bool generate_hotkey_request(dsn::replication::detect_hotkey_request &req,
         return false;
     }
 
-    if (dsn::utils::iequals(hotkey_action.c_str(), "start")) {
+    if (dsn::utils::iequals(hotkey_action, "start")) {
         req.action = dsn::replication::detect_action::START;
-    } else if (dsn::utils::iequals(hotkey_action.c_str(), "stop")) {
+    } else if (dsn::utils::iequals(hotkey_action, "stop")) {
         req.action = dsn::replication::detect_action::STOP;
-    } else if (dsn::utils::iequals(hotkey_action.c_str(), "query")) {
+    } else if (dsn::utils::iequals(hotkey_action, "query")) {
         req.action = dsn::replication::detect_action::QUERY;
     } else {
         err_info =

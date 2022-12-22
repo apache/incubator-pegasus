@@ -20,37 +20,38 @@
 #pragma once
 
 #include <getopt.h>
-#include <thread>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <queue>
+#include <thread>
+
 #include <boost/algorithm/string.hpp>
 #include <rocksdb/db.h>
-#include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/env.h>
+#include <rocksdb/sst_dump_tool.h>
 #include <rocksdb/statistics.h>
-#include "common/json_helper.h"
-#include "remote_cmd/remote_command.h"
-#include "client/replication_ddl_client.h"
-#include "tools/mutation_log_tool.h"
-#include "perf_counter/perf_counter_utils.h"
-#include "utils/string_view.h"
-#include "utils/synchronize.h"
-#include "utils/time_utils.h"
 
+#include <geo/lib/geo_client.h>
+#include <pegasus/error.h>
+#include <pegasus/git_commit.h>
+#include <pegasus/version.h>
 #include <rrdb/rrdb.code.definition.h>
 #include <rrdb/rrdb_types.h>
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-#include <pegasus/error.h>
-#include <geo/lib/geo_client.h>
 
 #include "base/pegasus_key_schema.h"
-#include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
-
+#include "base/pegasus_value_schema.h"
+#include "client/replication_ddl_client.h"
 #include "command_executor.h"
 #include "command_utils.h"
+#include "common/json_helper.h"
+#include "perf_counter/perf_counter_utils.h"
+#include "remote_cmd/remote_command.h"
+#include "tools/mutation_log_tool.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
+#include "utils/synchronize.h"
+#include "utils/time_utils.h"
 
 using namespace dsn::replication;
 
@@ -250,11 +251,12 @@ inline bool validate_filter(pegasus::pegasus_client::filter_type filter_type,
         if (filter_type == pegasus::pegasus_client::FT_MATCH_ANYWHERE) {
             return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
         } else if (filter_type == pegasus::pegasus_client::FT_MATCH_PREFIX) {
-            return ::memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
+            return dsn::utils::mequals(
+                value.data(), filter_pattern.data(), filter_pattern.length());
         } else { // filter_type == pegasus::pegasus_client::FT_MATCH_POSTFIX
-            return ::memcmp(value.data() + value.length() - filter_pattern.length(),
-                            filter_pattern.data(),
-                            filter_pattern.length()) == 0;
+            return dsn::utils::mequals(value.data() + value.length() - filter_pattern.length(),
+                                       filter_pattern.data(),
+                                       filter_pattern.length());
         }
     }
     default:

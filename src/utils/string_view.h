@@ -350,7 +350,7 @@ public:
     {
         auto min_length = std::min(length_, x.length_);
         if (min_length > 0) {
-            int r = memcmp(ptr_, x.ptr_, min_length);
+            int r = std::memcmp(ptr_, x.ptr_, min_length);
             if (r < 0)
                 return -1;
             if (r > 0)
@@ -417,7 +417,7 @@ inline bool operator==(string_view x, string_view y) noexcept
     if (len != y.size()) {
         return false;
     }
-    return x.data() == y.data() || len <= 0 || memcmp(x.data(), y.data(), len) == 0;
+    return x.data() == y.data() || len <= 0 || std::memcmp(x.data(), y.data(), len) == 0;
 }
 
 inline bool operator!=(string_view x, string_view y) noexcept { return !(x == y); }

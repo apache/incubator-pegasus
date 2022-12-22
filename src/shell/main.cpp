@@ -592,7 +592,7 @@ static void completionCallback(const char *buf, linenoiseCompletions *lc)
         const command_executor &c = commands[i];
 
         size_t matchlen = strlen(buf);
-        if (strncasecmp(buf, c.name, matchlen) == 0) {
+        if (dsn::utils::iequals(buf, c.name, matchlen)) {
             linenoiseAddCompletion(lc, c.name);
         }
     }

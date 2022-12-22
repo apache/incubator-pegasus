@@ -40,31 +40,79 @@
 namespace dsn {
 namespace utils {
 
+#define CHECK_NULL_PTR(lhs, rhs)                                                                   \
+    do {                                                                                           \
+        if (lhs == nullptr) {                                                                      \
+            return rhs == nullptr;                                                                 \
+        }                                                                                          \
+        if (rhs == nullptr) {                                                                      \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
 bool equals(const char *lhs, const char *rhs)
 {
-    if (lhs == nullptr) {
-        return rhs == nullptr;
-    }
-
-    if (rhs == nullptr) {
-        return false;
-    }
-
+    CHECK_NULL_PTR(lhs, rhs);
     return std::strcmp(lhs, rhs) == 0;
+}
+
+bool equals(const char *lhs, const char *rhs, size_t n)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return std::strncmp(lhs, rhs, n) == 0;
 }
 
 bool iequals(const char *lhs, const char *rhs)
 {
-    if (lhs == nullptr) {
-        return rhs == nullptr;
-    }
+    CHECK_NULL_PTR(lhs, rhs);
+    return ::strcasecmp(lhs, rhs) == 0;
+}
 
+bool iequals(const char *lhs, const char *rhs, size_t n)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return ::strncasecmp(lhs, rhs, n) == 0;
+}
+
+bool iequals(const std::string &lhs, const char *rhs)
+{
     if (rhs == nullptr) {
         return false;
     }
-
-    return ::strcasecmp(lhs, rhs) == 0;
+    return ::strcasecmp(lhs.c_str(), rhs) == 0;
 }
+
+bool iequals(const std::string &lhs, const char *rhs, size_t n)
+{
+    if (rhs == nullptr) {
+        return false;
+    }
+    return ::strncasecmp(lhs.c_str(), rhs, n) == 0;
+}
+
+bool iequals(const char *lhs, const std::string &rhs)
+{
+    if (lhs == nullptr) {
+        return false;
+    }
+    return ::strcasecmp(lhs, rhs.c_str()) == 0;
+}
+
+bool iequals(const char *lhs, const std::string &rhs, size_t n)
+{
+    if (lhs == nullptr) {
+        return false;
+    }
+    return ::strncasecmp(lhs, rhs.c_str(), n) == 0;
+}
+
+bool mequals(const void *lhs, const void *rhs, size_t n)
+{
+    CHECK_NULL_PTR(lhs, rhs);
+    return std::memcmp(lhs, rhs, n) == 0;
+}
+
+#undef CHECK_NULL_PTR
 
 std::string get_last_component(const std::string &input, const char splitters[])
 {

@@ -972,7 +972,7 @@ void redis_parser::counter_internal(message_entry &entry)
     } else {
         LOG_FATAL_F("command not support: {}", command);
     }
-    if (strncasecmp(command, "DECR", 4) == 0) {
+    if (dsn::utils::iequals(command, "DECR", 4)) {
         increment = -increment;
     }
 
@@ -1017,7 +1017,7 @@ void redis_parser::parse_set_parameters(const std::vector<redis_bulk_string> &op
     ttl_seconds = 0;
     for (int i = 3; i < opts.size(); ++i) {
         const std::string &opt = opts[i].data.to_string();
-        if (dsn::utils::iequals(opt.c_str(), "EX") && i + 1 < opts.size()) {
+        if (dsn::utils::iequals(opt, "EX") && i + 1 < opts.size()) {
             const std::string &str_ttl_seconds = opts[i + 1].data.to_string();
             if (!dsn::buf2int32(str_ttl_seconds, ttl_seconds)) {
                 LOG_WARNING_F("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
@@ -1067,20 +1067,20 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
     // [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC]
     while (base_index < opts.size()) {
         const std::string &opt = opts[base_index].data.to_string();
-        if (dsn::utils::iequals(opt.c_str(), "WITHCOORD")) {
+        if (dsn::utils::iequals(opt, "WITHCOORD")) {
             WITHCOORD = true;
-        } else if (dsn::utils::iequals(opt.c_str(), "WITHDIST")) {
+        } else if (dsn::utils::iequals(opt, "WITHDIST")) {
             WITHDIST = true;
-        } else if (dsn::utils::iequals(opt.c_str(), "WITHHASH")) {
+        } else if (dsn::utils::iequals(opt, "WITHHASH")) {
             WITHHASH = true;
-        } else if (dsn::utils::iequals(opt.c_str(), "COUNT") && base_index + 1 < opts.size()) {
+        } else if (dsn::utils::iequals(opt, "COUNT") && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
             if (!dsn::buf2int32(str_count, count)) {
                 LOG_ERROR_F("'COUNT {}' option is error, use {}", str_count, count);
             }
-        } else if (dsn::utils::iequals(opt.c_str(), "ASC")) {
+        } else if (dsn::utils::iequals(opt, "ASC")) {
             sort_type = geo::geo_client::SortType::asc;
-        } else if (dsn::utils::iequals(opt.c_str(), "DESC")) {
+        } else if (dsn::utils::iequals(opt, "DESC")) {
             sort_type = geo::geo_client::SortType::desc;
         }
         base_index++;

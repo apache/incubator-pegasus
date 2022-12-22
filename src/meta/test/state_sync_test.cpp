@@ -26,30 +26,29 @@
 
 #include <cmath>
 #include <fstream>
-#include <vector>
 #include <iostream>
+#include <vector>
 
 #include <gtest/gtest.h>
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "utils/error_code.h"
-#include "utils/threadpool_code.h"
-#include "runtime/task/task_code.h"
-#include "common/gpid.h"
-#include "runtime/rpc/serialization.h"
-#include "runtime/rpc/rpc_stream.h"
-#include "runtime/serverlet.h"
-#include "runtime/service_app.h"
-#include "runtime/rpc/rpc_address.h"
 
+#include "common/gpid.h"
 #include "meta/meta_service.h"
 #include "meta/server_state.h"
-
 #include "meta/test/misc/misc.h"
-
 #include "meta_service_test_app.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
+#include "runtime/rpc/rpc_stream.h"
+#include "runtime/rpc/serialization.h"
+#include "runtime/serverlet.h"
+#include "runtime/service_app.h"
+#include "runtime/task/task_code.h"
+#include "runtime/rpc/rpc_address.h"
+#include "utils/api_utilities.h"
+#include "utils/error_code.h"
+#include "utils/strings.h"
+#include "utils/threadpool_code.h"
 
 namespace dsn {
 namespace replication {
@@ -105,7 +104,7 @@ static void file_data_compare(const char *fname1, const char *fname2)
         int up_to_bytes = length < (l - i) ? length : (l - i);
         ifile1.read(buf1, up_to_bytes);
         ifile2.read(buf2, up_to_bytes);
-        ASSERT_TRUE(memcmp(buf1, buf2, up_to_bytes) == 0);
+        ASSERT_TRUE(utils::mequals(buf1, buf2, up_to_bytes));
     }
 }
 

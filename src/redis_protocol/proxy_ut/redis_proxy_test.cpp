@@ -20,16 +20,18 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+
 #include <boost/asio.hpp>
-
-#include "utils/string_conv.h"
-#include "utils/rand.h"
-
 #include <gtest/gtest.h>
-#include <rrdb/rrdb.client.h>
+
 #include <pegasus_utils.h>
+#include <rrdb/rrdb.client.h>
+
 #include "proxy_layer.h"
 #include "redis_parser.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "utils/rand.h"
 
 using namespace boost::asio;
 using namespace ::pegasus::proxy;
@@ -128,7 +130,8 @@ protected:
             ASSERT_EQ(bs1.length, bs2.length);
             if (bs1.length > 0) {
                 ASSERT_EQ(bs1.data.length(), bs2.data.length());
-                ASSERT_EQ(0, memcmp(bs1.data.data(), bs2.data.data(), bs2.data.length()));
+                ASSERT_TRUE(
+                    dsn::utils::mequals(bs1.data.data(), bs2.data.data(), bs2.data.length()));
             }
         }
 
@@ -572,8 +575,8 @@ TEST(proxy, connection)
             boost::asio::read(client_socket, boost::asio::buffer(got_reply, strlen(resps1)));
         got_reply[got_length] = 0;
         ASSERT_EQ(got_length, strlen(resps1));
-        ASSERT_TRUE(strncmp(got_reply, resps1, got_length) == 0 ||
-                    strncmp(got_reply, resps2, got_length) == 0);
+        ASSERT_TRUE(dsn::utils::equals(got_reply, resps1, got_length) ||
+                    dsn::utils::equals(got_reply, resps2, got_length));
     }
 
     {

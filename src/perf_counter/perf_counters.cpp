@@ -31,14 +31,15 @@
 
 #include "builtin_counters.h"
 #include "common/json_helper.h"
+#include "perf_counter/perf_counter.h"
 #include "perf_counter/perf_counter_atomic.h"
 #include "perf_counter/perf_counter_utils.h"
-#include "perf_counter/perf_counter.h"
 #include "runtime/service_app.h"
 #include "runtime/service_engine.h"
 #include "runtime/task/task.h"
 #include "utils/command_manager.h"
 #include "utils/string_view.h"
+#include "utils/strings.h"
 #include "utils/time_utils.h"
 
 namespace dsn {
@@ -139,7 +140,7 @@ perf_counters::perf_counters()
             return perf_counters::instance().list_snapshot_by_literal(
                 args, [](const std::string &arg, const counter_snapshot &cs) {
                     return cs.name.size() >= arg.size() &&
-                           ::memcmp(cs.name.c_str(), arg.c_str(), arg.size()) == 0;
+                           utils::mequals(cs.name.c_str(), arg.c_str(), arg.size());
                 });
         }));
     _cmds.emplace_back(command_manager::instance().register_command(
@@ -150,9 +151,9 @@ perf_counters::perf_counters()
             return perf_counters::instance().list_snapshot_by_literal(
                 args, [](const std::string &arg, const counter_snapshot &cs) {
                     return cs.name.size() >= arg.size() &&
-                           ::memcmp(cs.name.c_str() + cs.name.size() - arg.size(),
-                                    arg.c_str(),
-                                    arg.size()) == 0;
+                           utils::mequals(cs.name.c_str() + cs.name.size() - arg.size(),
+                                          arg.c_str(),
+                                          arg.size());
                 });
         }));
 

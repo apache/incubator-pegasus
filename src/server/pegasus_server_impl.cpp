@@ -20,27 +20,29 @@
 #include "pegasus_server_impl.h"
 
 #include <algorithm>
+
 #include <boost/lexical_cast.hpp>
 #include <rocksdb/convenience.h>
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/utilities/options_util.h>
-#include "utils/chrono_literals.h"
-#include "utils/utils.h"
-#include "utils/filesystem.h"
-#include "utils/string_conv.h"
-#include "utils/fmt_logging.h"
-#include "common/replication.codes.h"
-#include "utils/flags.h"
-#include "utils/token_bucket_throttling_controller.h"
-#include "common//duplication_common.h"
 
 #include "base/pegasus_key_schema.h"
-#include "base/pegasus_value_schema.h"
 #include "base/pegasus_utils.h"
+#include "base/pegasus_value_schema.h"
 #include "capacity_unit_calculator.h"
-#include "pegasus_server_write.h"
-#include "meta_store.h"
+#include "common/duplication_common.h"
+#include "common/replication.codes.h"
 #include "hotkey_collector.h"
+#include "meta_store.h"
+#include "pegasus_server_write.h"
+#include "utils/chrono_literals.h"
+#include "utils/filesystem.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
+#include "utils/token_bucket_throttling_controller.h"
+#include "utils/utils.h"
 
 using namespace dsn::literals::chrono_literals;
 
@@ -2258,11 +2260,12 @@ bool pegasus_server_impl::validate_filter(::dsn::apps::filter_type::type filter_
         if (filter_type == ::dsn::apps::filter_type::FT_MATCH_ANYWHERE) {
             return dsn::string_view(value).find(filter_pattern) != dsn::string_view::npos;
         } else if (filter_type == ::dsn::apps::filter_type::FT_MATCH_PREFIX) {
-            return ::memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
+            return dsn::utils::mequals(
+                value.data(), filter_pattern.data(), filter_pattern.length());
         } else { // filter_type == ::dsn::apps::filter_type::FT_MATCH_POSTFIX
-            return ::memcmp(value.data() + value.length() - filter_pattern.length(),
-                            filter_pattern.data(),
-                            filter_pattern.length()) == 0;
+            return dsn::utils::mequals(value.data() + value.length() - filter_pattern.length(),
+                                       filter_pattern.data(),
+                                       filter_pattern.length());
         }
     }
     default:

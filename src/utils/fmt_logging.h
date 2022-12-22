@@ -164,8 +164,6 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 
 #define CHECK_STREQ(var1, var2) CHECK_STREQ_MSG(var1, var2, "")
 #define CHECK_STRNE(var1, var2) CHECK_STRNE_MSG(var1, var2, "")
-#define CHECK_STRCASEEQ(var1, var2) CHECK_STRCASEEQ_MSG(var1, var2, "")
-#define CHECK_STRCASENE(var1, var2) CHECK_STRCASENE_MSG(var1, var2, "")
 
 #define CHECK_NE(var1, var2) CHECK_NE_MSG(var1, var2, "")
 #define CHECK_EQ(var1, var2) CHECK_EQ_MSG(var1, var2, "")
@@ -173,6 +171,9 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define CHECK_LE(var1, var2) CHECK_LE_MSG(var1, var2, "")
 #define CHECK_GT(var1, var2) CHECK_GT_MSG(var1, var2, "")
 #define CHECK_LT(var1, var2) CHECK_LT_MSG(var1, var2, "")
+
+#define CHECK_TRUE(var) CHECK_EQ(var, true)
+#define CHECK_FALSE(var) CHECK_EQ(var, false)
 
 // TODO(yingchun): add CHECK_NULL(ptr), CHECK_OK(err), CHECK(cond)
 
