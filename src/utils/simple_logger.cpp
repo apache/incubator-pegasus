@@ -31,6 +31,7 @@
 
 #include "utils/filesystem.h"
 #include "utils/flags.h"
+#include "utils/strings.h"
 #include "utils/time_utils.h"
 
 DSN_DECLARE_string(logging_start_level);
@@ -55,7 +56,7 @@ DSN_DEFINE_string("tools.simple_logger",
                   "LOG_LEVEL_WARNING",
                   "copy log messages at or above this level to stderr in addition to logfiles");
 DSN_DEFINE_validator(stderr_start_level, [](const char *level) -> bool {
-    return strcmp(level, "LOG_LEVEL_INVALID") != 0;
+    return !utils::equals(level, "LOG_LEVEL_INVALID");
 });
 
 static void print_header(FILE *fp, dsn_log_level_t log_level)

@@ -17,18 +17,19 @@
 
 #include "block_service/fds/fds_service.h"
 
-#include <fcntl.h>
-
 #include <array>
+#include <fcntl.h>
 #include <fstream>
-#include <gtest/gtest.h>
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "block_service/block_service.h"
-#include "utils/fmt_logging.h"
 #include "utils/filesystem.h"
+#include "utils/fmt_logging.h"
 #include "utils/rand.h"
 #include "utils/safe_strerror_posix.h"
+#include "utils/strings.h"
 #include "utils/utils.h"
 
 using namespace dsn;
@@ -65,7 +66,7 @@ static void file_eq_compare(const std::string &fname1, const std::string &fname2
         int up_to_bytes = length < (l - i) ? length : (l - i);
         ifile1.read(buf1, up_to_bytes);
         ifile2.read(buf2, up_to_bytes);
-        ASSERT_TRUE(memcmp(buf1, buf2, up_to_bytes) == 0);
+        ASSERT_TRUE(dsn::utils::mequals(buf1, buf2, up_to_bytes));
     }
 }
 
@@ -507,7 +508,7 @@ TEST_F(FDSClientTest, test_basic_operation)
 
         ASSERT_EQ(dsn::ERR_OK, r_resp.err);
         ASSERT_EQ(length, r_resp.buffer.length());
-        ASSERT_EQ(0, memcmp(r_resp.buffer.data(), test_buffer, length));
+        ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer, length));
 
         // partitial read
         cf_resp.file_handle
@@ -519,7 +520,7 @@ TEST_F(FDSClientTest, test_basic_operation)
 
         ASSERT_EQ(dsn::ERR_OK, r_resp.err);
         ASSERT_EQ(10, r_resp.buffer.length());
-        ASSERT_EQ(0, memcmp(r_resp.buffer.data(), test_buffer + 5, 10));
+        ASSERT_TRUE(dsn::utils::mequals(r_resp.buffer.data(), test_buffer + 5, 10));
     }
 
     // then test remove path

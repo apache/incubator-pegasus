@@ -20,11 +20,12 @@
 #pragma once
 
 #include <map>
-#include <string>
 #include <set>
+#include <string>
 
 #include "shell/argh.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 class rpc_address;
@@ -75,31 +76,13 @@ bool validate_ip(shell_context *sc,
         }                                                                                          \
     } while (0)
 
-inline int strcmp_ignore_case(const char *left, const char *right)
-{
-    int pos = 0;
-    while (left[pos] && right[pos]) {
-        char left_c = ::tolower(left[pos]);
-        char right_c = ::tolower(right[pos]);
-        if (left_c < right_c)
-            return -1;
-        if (left_c > right_c)
-            return 1;
-        ++pos;
-    }
-    if (left[pos]) {
-        return 1;
-    }
-    return right[pos] ? -1 : 0;
-}
-
 template <typename EnumType>
 EnumType type_from_string(const std::map<int, const char *> &type_maps,
                           const std::string &type_string,
                           const EnumType &default_type)
 {
     for (auto it = type_maps.begin(); it != type_maps.end(); it++) {
-        if (strcmp_ignore_case(type_string.c_str(), it->second) == 0) {
+        if (dsn::utils::iequals(type_string, it->second)) {
             return (EnumType)it->first;
         }
     }

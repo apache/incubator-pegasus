@@ -47,6 +47,7 @@
 #include "utils/ports.h"
 #include "utils/singleton.h"
 #include "utils/string_view.h"
+#include "utils/strings.h"
 #include "utils/synchronize.h"
 
 // A metric library (for details pls see https://github.com/apache/incubator-pegasus/issues/922)
@@ -481,14 +482,14 @@ template <typename MetricType, typename... Args>
 ref_ptr<MetricType> metric_entity::find_or_create(const metric_prototype *prototype,
                                                   Args &&... args)
 {
-    CHECK_EQ_MSG(std::strcmp(prototype->entity_type().data(), _prototype->name()),
-                 0,
-                 "the entity type '{}' of the metric '{}' is inconsistent with the prototype "
-                 "'{}' of the attached entity '{}'",
-                 prototype->entity_type().data(),
-                 prototype->name().data(),
-                 _prototype->name(),
-                 _id);
+    CHECK_STREQ_MSG(prototype->entity_type().data(),
+                    _prototype->name(),
+                    "the entity type '{}' of the metric '{}' is inconsistent with the prototype "
+                    "'{}' of the attached entity '{}'",
+                    prototype->entity_type().data(),
+                    prototype->name().data(),
+                    _prototype->name(),
+                    _id);
 
     utils::auto_write_lock l(_lock);
 

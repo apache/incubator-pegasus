@@ -19,11 +19,12 @@
 
 #include "compaction_filter_rule.h"
 
-#include "utils/fmt_logging.h"
-#include "utils/string_view.h"
-#include "utils/api_utilities.h"
 #include "base/pegasus_utils.h"
 #include "base/pegasus_value_schema.h"
+#include "utils/api_utilities.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_view.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace server {
@@ -40,11 +41,11 @@ bool string_pattern_match(dsn::string_view value,
     case string_match_type::SMT_MATCH_ANYWHERE:
         return value.find(filter_pattern) != dsn::string_view::npos;
     case string_match_type::SMT_MATCH_PREFIX:
-        return memcmp(value.data(), filter_pattern.data(), filter_pattern.length()) == 0;
+        return dsn::utils::mequals(value.data(), filter_pattern.data(), filter_pattern.length());
     case string_match_type::SMT_MATCH_POSTFIX:
-        return memcmp(value.data() + value.length() - filter_pattern.length(),
-                      filter_pattern.data(),
-                      filter_pattern.length()) == 0;
+        return dsn::utils::mequals(value.data() + value.length() - filter_pattern.length(),
+                                   filter_pattern.data(),
+                                   filter_pattern.length());
     default:
         LOG_ERROR_F("invalid match type {}", type);
         return false;

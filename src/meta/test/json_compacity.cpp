@@ -97,7 +97,7 @@ void meta_service_test_app::json_compacity()
     ASSERT_EQ(234, pc.ballot);
     ASSERT_TRUE(pc.primary.is_invalid());
     ASSERT_EQ(1, pc.secondaries.size());
-    ASSERT_EQ(0, strcmp(pc.secondaries[0].to_string(), "127.0.0.1:6"));
+    ASSERT_STREQ("127.0.0.1:6", pc.secondaries[0].to_string());
     ASSERT_EQ(157, pc.last_committed_decree);
     ASSERT_EQ(0, pc.partition_flags);
 

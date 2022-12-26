@@ -57,8 +57,63 @@
 #define LOG_ERROR_PREFIX(...) LOG_ERROR_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 #define LOG_FATAL_PREFIX(...) LOG_FATAL_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 
+namespace {
+
+inline const char *null_str_printer(const char *s) { return s == nullptr ? "(null)" : s; }
+
+} // anonymous namespace
+
 // Macros to check expected condition. It will abort the application
 // and log a fatal message when the condition is not met.
+
+#define CHECK_STREQ_MSG(var1, var2, ...)                                                           \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION(var1 == var2,                                                             \
+                         dsn::utils::equals(_v1, _v2),                                             \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
+#define CHECK_STRNE_MSG(var1, var2, ...)                                                           \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION(var1 != var2,                                                             \
+                         !dsn::utils::equals(_v1, _v2),                                            \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
+#define CHECK_STRCASEEQ_MSG(var1, var2, ...)                                                       \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION(var1 == var2,                                                             \
+                         dsn::utils::iequals(_v1, _v2),                                            \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
+#define CHECK_STRCASENE_MSG(var1, var2, ...)                                                       \
+    do {                                                                                           \
+        const auto &_v1 = (var1);                                                                  \
+        const auto &_v2 = (var2);                                                                  \
+        CHECK_EXPRESSION(var1 != var2,                                                             \
+                         !dsn::utils::iequals(_v1, _v2),                                           \
+                         "{} vs {} {}",                                                            \
+                         null_str_printer(_v1),                                                    \
+                         null_str_printer(_v2),                                                    \
+                         fmt::format(__VA_ARGS__));                                                \
+    } while (false)
+
 #define CHECK_NE_MSG(var1, var2, ...)                                                              \
     do {                                                                                           \
         const auto &_v1 = (var1);                                                                  \
@@ -107,12 +162,18 @@
             var1 < var2, _v1 < _v2, "{} vs {} {}", _v1, _v2, fmt::format(__VA_ARGS__));            \
     } while (false)
 
+#define CHECK_STREQ(var1, var2) CHECK_STREQ_MSG(var1, var2, "")
+#define CHECK_STRNE(var1, var2) CHECK_STRNE_MSG(var1, var2, "")
+
 #define CHECK_NE(var1, var2) CHECK_NE_MSG(var1, var2, "")
 #define CHECK_EQ(var1, var2) CHECK_EQ_MSG(var1, var2, "")
 #define CHECK_GE(var1, var2) CHECK_GE_MSG(var1, var2, "")
 #define CHECK_LE(var1, var2) CHECK_LE_MSG(var1, var2, "")
 #define CHECK_GT(var1, var2) CHECK_GT_MSG(var1, var2, "")
 #define CHECK_LT(var1, var2) CHECK_LT_MSG(var1, var2, "")
+
+#define CHECK_TRUE(var) CHECK_EQ(var, true)
+#define CHECK_FALSE(var) CHECK_EQ(var, false)
 
 // TODO(yingchun): add CHECK_NULL(ptr), CHECK_OK(err), CHECK(cond)
 

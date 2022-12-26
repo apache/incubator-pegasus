@@ -19,11 +19,12 @@
 
 #pragma once
 
-#include "runtime/app_model.h"
-#include "utils/defer.h"
+#include <string>
 
 #include "linenoise/linenoise.h"
+#include "runtime/app_model.h"
 #include "sds/sds.h"
+#include "utils/defer.h"
 
 inline sds *scanfCommand(int *argc)
 {

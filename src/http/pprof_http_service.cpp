@@ -17,25 +17,26 @@
 
 #ifdef DSN_ENABLE_GPERF
 
-#include <fcntl.h>
+#include "pprof_http_service.h"
 
-#include <cstdlib>
 #include <chrono>
+#include <cstdlib>
+#include <fcntl.h>
 #include <fstream>
 #include <sstream>
 
-#include "pprof_http_service.h"
-
-#include "utils/fmt_logging.h"
-#include "runtime/api_layer1.h"
-#include "utils/process_utils.h"
-#include "utils/string_conv.h"
-#include "utils/defer.h"
-#include "utils/timer.h"
-#include "utils/string_splitter.h"
 #include <gperftools/heap-profiler.h>
 #include <gperftools/malloc_extension.h>
 #include <gperftools/profiler.h>
+
+#include "runtime/api_layer1.h"
+#include "utils/defer.h"
+#include "utils/fmt_logging.h"
+#include "utils/process_utils.h"
+#include "utils/string_conv.h"
+#include "utils/string_splitter.h"
+#include "utils/strings.h"
+#include "utils/timer.h"
 
 namespace dsn {
 
@@ -109,9 +110,9 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
             continue;
         }
         const char *name_begin = sp.field();
-        if (strncmp(name_begin, "typeinfo ", 9) == 0 || strncmp(name_begin, "VTT ", 4) == 0 ||
-            strncmp(name_begin, "vtable ", 7) == 0 || strncmp(name_begin, "global ", 7) == 0 ||
-            strncmp(name_begin, "guard ", 6) == 0) {
+        if (utils::equals(name_begin, "typeinfo ", 9) || utils::equals(name_begin, "VTT ", 4) ||
+            utils::equals(name_begin, "vtable ", 7) || utils::equals(name_begin, "global ", 7) ||
+            utils::equals(name_begin, "guard ", 6)) {
             addr_map[addr] = std::string();
             continue;
         }

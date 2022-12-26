@@ -38,6 +38,29 @@ namespace utils {
 
 inline bool is_empty(const char *str) { return str == nullptr || *str == '\0'; }
 
+// Decide whether two C strings are equal, even if one of them is NULL.
+// The second function is similar except it compares the only first (at most) n bytes
+// of both strings.
+bool equals(const char *lhs, const char *rhs);
+bool equals(const char *lhs, const char *rhs, size_t n);
+
+// Decide whether two C strings are equal, ignoring the case of the characters,
+// even if one of them is NULL.
+// The second function is similar except it compares the only first (at most) n bytes
+// of both strings.
+bool iequals(const char *lhs, const char *rhs);
+bool iequals(const char *lhs, const char *rhs, size_t n);
+
+// Decide whether two strings one of which is C string are equal, ignoring the
+// case of the characters, even if the C string is NULL.
+bool iequals(const std::string &lhs, const char *rhs);
+bool iequals(const std::string &lhs, const char *rhs, size_t n);
+bool iequals(const char *lhs, const std::string &rhs);
+bool iequals(const char *lhs, const std::string &rhs, size_t n);
+
+// Decide whether the first n bytes of two memory areas are equal, even if one of them is NULL.
+bool mequals(const void *lhs, const void *rhs, size_t n);
+
 // Split the `input` string by the only character `separator` into tokens. Leading and trailing
 // spaces of each token will be stripped. Once the token is empty, or become empty after
 // stripping, an empty string will be added into `output` if `keep_place_holder` is enabled.

@@ -27,7 +27,6 @@
 #include "meta_state_service_simple.h"
 
 #include <fcntl.h>
-
 #include <stack>
 #include <utility>
 
@@ -35,6 +34,7 @@
 #include "runtime/task/task.h"
 #include "utils/filesystem.h"
 #include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace dist {
@@ -349,7 +349,7 @@ task_ptr meta_state_service_simple::submit_transaction(
                 op._node.push_back('/');
                 std::set<std::string>::iterator iter = snapshot.lower_bound(op._node);
                 if (iter != snapshot.end() && (*iter).length() >= op._node.length() &&
-                    memcmp((*iter).c_str(), op._node.c_str(), op._node.length()) == 0) {
+                    utils::mequals((*iter).c_str(), op._node.c_str(), op._node.length())) {
                     // op._node is the prefix of some path, so we regard this directory as not empty
                     op._result = ERR_INVALID_PARAMETERS;
                 } else {
@@ -507,5 +507,6 @@ meta_state_service_simple::~meta_state_service_simple()
     }
     _quick_map.clear();
 }
-}
-}
+
+} // namespace dist
+} // namespace dsn

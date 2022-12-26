@@ -27,6 +27,7 @@
 #include "utils/long_adder.h"
 #include "utils/process_utils.h"
 #include "utils/string_conv.h"
+#include "utils/strings.h"
 
 // The simplest implementation of long adder: just wrap std::atomic<int64_t>.
 class simple_long_adder
@@ -179,13 +180,13 @@ int main(int argc, char **argv)
     }
 
     const char *long_adder_type = argv[3];
-    if (strcmp(long_adder_type, "simple_long_adder") == 0) {
+    if (dsn::utils::equals(long_adder_type, "simple_long_adder")) {
         run_bench<simple_long_adder>(num_operations, num_threads, long_adder_type);
-    } else if (strcmp(long_adder_type, "divided_long_adder") == 0) {
+    } else if (dsn::utils::equals(long_adder_type, "divided_long_adder")) {
         run_bench<divided_long_adder>(num_operations, num_threads, long_adder_type);
-    } else if (strcmp(long_adder_type, "striped_long_adder") == 0) {
+    } else if (dsn::utils::equals(long_adder_type, "striped_long_adder")) {
         run_bench<dsn::striped_long_adder>(num_operations, num_threads, long_adder_type);
-    } else if (strcmp(long_adder_type, "concurrent_long_adder") == 0) {
+    } else if (dsn::utils::equals(long_adder_type, "concurrent_long_adder")) {
         run_bench<dsn::concurrent_long_adder>(num_operations, num_threads, long_adder_type);
     } else {
         fmt::print(stderr, "Invalid long_adder_type: {}\n\n", long_adder_type);

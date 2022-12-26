@@ -19,27 +19,28 @@
 
 #include "pegasus_counter_reporter.h"
 
-#include <regex>
-#include <ios>
-#include <iomanip>
-#include <iostream>
-#include <unistd.h>
 #include <chrono>
+#include <iomanip>
+#include <ios>
+#include <iostream>
 #include <map>
 #include <memory>
+#include <regex>
 #include <string>
-#include <event2/event.h>
+#include <unistd.h>
+
 #include <event2/buffer.h>
+#include <event2/event.h>
 #include <event2/http.h>
 #include <event2/keyvalq_struct.h>
 
-#include "runtime/service_app.h"
-#include "common/common.h"
-#include "utils/fmt_logging.h"
-#include "utils/flags.h"
-
 #include "base/pegasus_utils.h"
+#include "common/common.h"
 #include "pegasus_io_service.h"
+#include "runtime/service_app.h"
+#include "utils/flags.h"
+#include "utils/fmt_logging.h"
+#include "utils/strings.h"
 
 using namespace ::dsn;
 
@@ -141,9 +142,9 @@ void pegasus_counter_reporter::start()
 
     _last_report_time_ms = dsn_now_ms();
 
-    if (strcmp("prometheus", FLAGS_perf_counter_sink) == 0) {
+    if (dsn::utils::iequals("prometheus", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::PROMETHEUS;
-    } else if (strcmp("falcon", FLAGS_perf_counter_sink) == 0) {
+    } else if (dsn::utils::iequals("falcon", FLAGS_perf_counter_sink)) {
         _perf_counter_sink = perf_counter_sink_t::FALCON;
     } else {
         _perf_counter_sink = perf_counter_sink_t::INVALID;

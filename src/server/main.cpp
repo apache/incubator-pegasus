@@ -17,26 +17,24 @@
  * under the License.
  */
 
-#include "pegasus_server_impl.h"
-#include "pegasus_service_app.h"
-#include "info_collector_app.h"
-#include "compaction_operation.h"
-
-#include <pegasus/version.h>
-#include <pegasus/git_commit.h>
-
-#include "runtime/tool_api.h"
-#include "utils/command_manager.h"
-
-#include "replica/replication_service_app.h"
-#include "meta/meta_service_app.h"
-
 #include <cstdio>
 #include <cstring>
 #include <chrono>
 
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <pegasus/version.h>
+#include <pegasus/git_commit.h>
+
+#include "compaction_operation.h"
+#include "info_collector_app.h"
+#include "meta/meta_service_app.h"
+#include "pegasus_server_impl.h"
+#include "pegasus_service_app.h"
+#include "replica/replication_service_app.h"
+#include "runtime/tool_api.h"
+#include "utils/command_manager.h"
 
 #define STR_I(var) #var
 #define STR(var) STR_I(var)
@@ -75,8 +73,8 @@ void dsn_app_registration_pegasus()
 int main(int argc, char **argv)
 {
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "-version") == 0 ||
-            strcmp(argv[i], "--version") == 0) {
+        if (utils::equals(argv[i], "-v") || utils::equals(argv[i], "-version") ||
+            utils::equals(argv[i], "--version")) {
             printf("Pegasus Server %s (%s) %s\n",
                    PEGASUS_VERSION,
                    PEGASUS_GIT_COMMIT,

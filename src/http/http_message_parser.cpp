@@ -26,14 +26,16 @@
 
 #include "http_message_parser.h"
 
-#include "utils/fmt_logging.h"
-#include "utils/ports.h"
-#include "utils/crc.h"
+#include <iomanip>
+
+#include "http_server.h"
+#include "runtime/api_layer1.h"
 #include "runtime/rpc/rpc_message.h"
 #include "runtime/rpc/serialization.h"
-#include "runtime/api_layer1.h"
-#include "http_server.h"
-#include <iomanip>
+#include "utils/crc.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -98,7 +100,7 @@ http_message_parser::http_message_parser()
         [](http_parser *parser, const char *at, size_t length) -> int {
         http_message_parser *msg_parser = static_cast<parser_context *>(parser->data)->parser;
         msg_parser->_stage = HTTP_ON_HEADER_FIELD;
-        if (strncmp(at, "Content-Type", length) == 0) {
+        if (utils::equals(at, "Content-Type", length)) {
             msg_parser->_is_field_content_type = true;
         }
         return 0;

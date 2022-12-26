@@ -263,11 +263,11 @@ bool get_worker_and_master(test_worker *&worker, std::vector<test_master *> &mas
     worker = nullptr;
 
     for (int i = 0; i != apps.size(); ++i) {
-        if (strcmp(apps[i]->info().type.c_str(), "worker") == 0) {
+        if (apps[i]->info().type == "worker") {
             if (worker != nullptr)
                 return false;
             worker = reinterpret_cast<test_worker *>(apps[i]);
-        } else if (strcmp(apps[i]->info().type.c_str(), "master") == 0) {
+        } else if (apps[i]->info().type == "master") {
             int index = apps[i]->info().index - 1;
             if (index >= masters.size() || masters[index] != nullptr)
                 return false;

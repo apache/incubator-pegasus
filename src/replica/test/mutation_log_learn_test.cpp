@@ -24,13 +24,15 @@
  * THE SOFTWARE.
  */
 
-#include "replica/mutation_log.h"
-#include "replica_test_base.h"
-
-#include "utils/filesystem.h"
-#include <gtest/gtest.h>
 #include <chrono>
 #include <condition_variable>
+
+#include <gtest/gtest.h>
+
+#include "replica/mutation_log.h"
+#include "replica_test_base.h"
+#include "utils/filesystem.h"
+#include "utils/strings.h"
 
 namespace dsn {
 namespace replication {
@@ -149,9 +151,9 @@ TEST_F(mutation_log_test, learn)
                 EXPECT_TRUE(wmu->data.updates.size() == mu->data.updates.size());
                 EXPECT_TRUE(wmu->data.updates[0].data.length() ==
                             mu->data.updates[0].data.length());
-                EXPECT_TRUE(memcmp((const void *)wmu->data.updates[0].data.data(),
-                                   (const void *)mu->data.updates[0].data.data(),
-                                   mu->data.updates[0].data.length()) == 0);
+                EXPECT_TRUE(utils::mequals(wmu->data.updates[0].data.data(),
+                                           mu->data.updates[0].data.data(),
+                                           mu->data.updates[0].data.length()));
                 EXPECT_TRUE(wmu->data.updates[0].code == mu->data.updates[0].code);
                 EXPECT_TRUE(wmu->client_requests.size() == mu->client_requests.size());
 

@@ -326,7 +326,7 @@ bool service_spec::init_app_specs()
             all_section_names.push_back("apps.mimic");
         } else {
             auto type = dsn_config_get_value_string("apps.mimic", "type", "", "");
-            if (strcmp(type, mimic_app_role_name) != 0) {
+            if (!utils::equals(type, mimic_app_role_name)) {
                 printf("invalid config value '%s' for [apps.mimic] type", type);
                 return false;
             }

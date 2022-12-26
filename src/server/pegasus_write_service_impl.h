@@ -19,18 +19,18 @@
 
 #pragma once
 
-#include "pegasus_write_service.h"
-#include "pegasus_server_impl.h"
-#include "logging_utils.h"
+#include <gtest/gtest_prod.h>
 
 #include "base/pegasus_key_schema.h"
+#include "logging_utils.h"
 #include "meta_store.h"
+#include "pegasus_server_impl.h"
+#include "pegasus_write_service.h"
 #include "rocksdb_wrapper.h"
-
+#include "utils/defer.h"
 #include "utils/filesystem.h"
 #include "utils/string_conv.h"
-#include <gtest/gtest_prod.h>
-#include "utils/defer.h"
+#include "utils/strings.h"
 
 namespace pegasus {
 namespace server {
@@ -611,11 +611,12 @@ private:
             if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_ANYWHERE) {
                 return dsn::string_view(value).find(check_operand) != dsn::string_view::npos;
             } else if (check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_PREFIX) {
-                return ::memcmp(value.data(), check_operand.data(), check_operand.length()) == 0;
+                return dsn::utils::mequals(
+                    value.data(), check_operand.data(), check_operand.length());
             } else { // check_type == ::dsn::apps::cas_check_type::CT_VALUE_MATCH_POSTFIX
-                return ::memcmp(value.data() + value.length() - check_operand.length(),
-                                check_operand.data(),
-                                check_operand.length()) == 0;
+                return dsn::utils::mequals(value.data() + value.length() - check_operand.length(),
+                                           check_operand.data(),
+                                           check_operand.length());
             }
         }
         case ::dsn::apps::cas_check_type::CT_VALUE_BYTES_LESS:

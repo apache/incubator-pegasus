@@ -26,18 +26,19 @@
 
 #include "thrift_message_parser.h"
 
-#include "runtime/api_task.h"
-#include "runtime/api_layer1.h"
-#include "runtime/app_model.h"
-#include "utils/api_utilities.h"
-#include "common/serialization_helper/thrift_helper.h"
 #include "common/serialization_helper/dsn.layer2_types.h"
+#include "common/serialization_helper/thrift_helper.h"
+#include "runtime/api_layer1.h"
+#include "runtime/api_task.h"
+#include "runtime/app_model.h"
 #include "runtime/message_utils.h"
-#include "utils/fmt_logging.h"
-#include "utils/ports.h"
+#include "runtime/rpc/rpc_message.h"
+#include "utils/api_utilities.h"
 #include "utils/crc.h"
 #include "utils/endians.h"
-#include "runtime/rpc/rpc_message.h"
+#include "utils/fmt_logging.h"
+#include "utils/ports.h"
+#include "utils/strings.h"
 
 namespace dsn {
 
@@ -149,7 +150,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
 
     // The first 4 bytes is "THFT"
     data_input input(buf);
-    if (memcmp(buf.data(), "THFT", 4) != 0) {
+    if (!utils::mequals(buf.data(), "THFT", 4)) {
         LOG_ERROR("hdr_type mismatch %s", message_parser::get_debug_string(buf.data()).c_str());
         read_next = -1;
         return false;

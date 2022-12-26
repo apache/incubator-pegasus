@@ -34,24 +34,25 @@
  *     2016-04-25, Weijie Sun(sunweijie at xiaomi.com), refactor
  */
 
-#include "utils/fmt_logging.h"
-#include "common/replica_envs.h"
-#include "utils/factory_store.h"
-#include "utils/string_conv.h"
-#include "utils/strings.h"
-#include "runtime/task/task.h"
-#include "utils/command_manager.h"
-#include "runtime/task/async_calls.h"
-#include <sstream>
 #include <cinttypes>
+#include <sstream>
 #include <string>
+
 #include <boost/lexical_cast.hpp>
 
-#include "server_state.h"
-#include "server_load_balancer.h"
-#include "dump_file.h"
 #include "app_env_validator.h"
+#include "common/replica_envs.h"
+#include "dump_file.h"
 #include "meta_bulk_load_service.h"
+#include "runtime/task/async_calls.h"
+#include "runtime/task/task.h"
+#include "server_load_balancer.h"
+#include "server_state.h"
+#include "utils/command_manager.h"
+#include "utils/factory_store.h"
+#include "utils/fmt_logging.h"
+#include "utils/string_conv.h"
+#include "utils/strings.h"
 
 using namespace dsn;
 
@@ -112,8 +113,7 @@ void server_state::register_cli_commands()
             } else {
                 const char *target_file = nullptr;
                 for (int i = 0; i < args.size(); i += 2) {
-                    if (strcmp(args[i].c_str(), "-t") == 0 ||
-                        strcmp(args[i].c_str(), "--target") == 0)
+                    if (args[i] == "-t" || args[i] == "--target")
                         target_file = args[i + 1].c_str();
                 }
                 if (target_file == nullptr) {
@@ -382,7 +382,7 @@ error_code server_state::restore_from_local_storage(const char *local_path)
     CHECK_EQ_MSG(file->read_next_buffer(data), 1, "read format header failed");
     _all_apps.clear();
 
-    CHECK_EQ(memcmp(data.data(), "binary", 6), 0);
+    CHECK_TRUE(utils::mequals(data.data(), "binary", 6));
     while (true) {
         int ans = file->read_next_buffer(data);
         CHECK_NE_MSG(ans, -1, "read file failed");
@@ -434,7 +434,7 @@ error_code server_state::initialize_default_apps()
     app_info default_app;
     for (int i = 0; i < sections.size(); i++) {
         if (strstr(sections[i], "meta_server.apps") == sections[i] ||
-            strcmp(sections[i], "replication.app") == 0) {
+            utils::equals(sections[i], "replication.app")) {
             const char *s = sections[i];
 
             default_app.status = app_status::AS_CREATING;
