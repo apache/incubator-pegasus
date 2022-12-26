@@ -285,9 +285,8 @@ void metrics_http_service::get_metrics_handler(const http_request &req, http_res
             parse_as(field.second, filters.entity_metrics);
         } else if (field.first == "detail") {
             if (!buf2bool(field.second, detail)) {
-                resp.body =
-                    encode_error_as_json("the value of detail should be a boolean value, "
-                                         "i.e. true or false");
+                resp.body = encode_error_as_json("the value of detail should be a boolean value, "
+                                                 "i.e. true or false");
                 resp.status_code = http_status_code::bad_request;
                 return;
             }

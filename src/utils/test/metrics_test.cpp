@@ -2525,11 +2525,14 @@ TEST(metrics_test, http_get_metrics)
     for (const auto &entity : test_entities) {
         auto my_entity = entity.prototype->instantiate(entity.id, entity.attrs);
 
-         if (utils::equals(entity.prototype->name(), "my_server")) {
-        auto my_metric = METRIC_test_server_percentile_int64.instantiate(my_entity, 50, {kth_percentile_type::P95, kth_percentile_type::P99}, 4096);                          
-        my_metric->set(5);
+        if (utils::equals(entity.prototype->name(), "my_server")) {
+            static const std::set<kth_percentile_type> kPercentileTypes = {
+                kth_percentile_type::P95, kth_percentile_type::P99};
+            auto my_metric = METRIC_test_server_percentile_int64.instantiate(
+                my_entity, 50UL, kPercentileTypes, 4096UL);
+            my_metric->set(5);
             continue;
-         }
+        }
 
         gauge_ptr<int64_t> my_gauge_int64;
         counter_ptr<> my_counter;
@@ -2552,8 +2555,9 @@ TEST(metrics_test, http_get_metrics)
 // will keep a space before and after '=' in `fields`. Just use double quotes "" instead.
 #define REQUEST_STRING(method, fields) (#method " /metrics?" fields " HTTP/1.1\r\n\r\n")
 
-static const metric_filters::metric_fields_type kBriefSingleValueMetricFields =  {kMetricNameField, kMetricSingleValueField};
-    
+    static const metric_filters::metric_fields_type kBriefSingleValueMetricFields = {
+        kMetricNameField, kMetricSingleValueField};
+
     auto percentile_metric_fields = kAllPrototypeMetricFields;
     percentile_metric_fields.emplace("p95");
     percentile_metric_fields.emplace("p99");
