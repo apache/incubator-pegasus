@@ -17,6 +17,7 @@
 
 #include "utils/metrics.h"
 
+#include "runtime/api_layer1.h"
 #include "utils/api_utilities.h"
 #include "utils/rand.h"
 #include "utils/shared_io_service.h"
@@ -175,6 +176,65 @@ void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filte
     encode_attrs(writer, my_attrs);
     encode_metrics(writer, target_metrics, filters);
     writer.EndObject();
+}
+
+metric_entity::old_metrics_type metric_entity::collect_old_metrics() const
+{
+    old_metrics_type old_metrics;
+
+    utils::auto_read_lock l(_lock);
+
+    for (const auto &m : _metrics) {
+        if (m.second->get_count() <= 1) {
+            old_metrics.insert(m.first);
+            continue;
+        }
+
+        if (m.second->retire_time_ns() > 0) {
+            old_metrics.insert(m.first);
+        }
+    }
+
+    return old_metrics;
+}
+
+void metric_entity::retire_old_metrics(const old_metrics_type &old_metrics)
+{
+    if (old_metrics.empty()) {
+        return;
+    }
+
+    utils::auto_write_lock l(_lock);
+
+    for (const auto &m : old_metrics) {
+        auto iter = _metrics.find(m);
+        if (iter == _metrics.end()) {
+            continue;
+        }
+
+        if (iter->second->get_count() > 1) {
+            if (iter->second->_retire_time_ns > 0) {
+                iter->second->_retire_time_ns = 0;
+            }
+        }
+
+        auto now = dsn_now_ns();
+        if (iter->second->_retire_time_ns == 0) {
+            iter->second->_retire_time_ns = now + ;
+            continue;
+        }
+
+        if (iter->second->_retire_time_ns < now) {
+            continue;
+        }
+
+        _metrics.erase(iter);
+    }
+}
+
+void metric_entity::process_old_metrics()
+{
+    retire_old_metrics(collect_old_metrics());
 }
 
 void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
@@ -387,7 +447,7 @@ metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}
 
 metric_prototype::~metric_prototype() {}
 
-metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
+metric::metric(const metric_prototype *prototype) : _prototype(prototype), _retire_time_ns(0) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 

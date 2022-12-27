@@ -153,6 +153,7 @@ class metric_entity : public ref_counter
 public:
     using attr_map = std::unordered_map<std::string, std::string>;
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
+    using old_metrics_type = std::unordered_set<const metric_prototype *>;
 
     const metric_entity_prototype *prototype() const { return _prototype; }
 
@@ -196,6 +197,12 @@ private:
     void encode_type(metric_json_writer &writer) const;
 
     void encode_id(metric_json_writer &writer) const;
+
+    old_metrics_type collect_old_metrics() const;
+
+    void retire_old_metrics(const old_metrics_type &old_metrics);
+
+    void process_old_metrics();
 
     const metric_entity_prototype *const _prototype;
     const std::string _id;
@@ -524,6 +531,8 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
+    uint64_t retire_time_ns() const { return _retire_time_ns; }
+
     // Take snapshot of each metric to collect current values as json format with fields chosen
     // by `filters`.
     virtual void take_snapshot(metric_json_writer &writer, const metric_filters &filters) = 0;
@@ -592,7 +601,11 @@ protected:
 
     const metric_prototype *const _prototype;
 
+    uint64_t _retire_time_ns;
+
 private:
+    friend class metric_entity;
+
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
 
@@ -1022,6 +1035,8 @@ protected:
     // interval_ms is the interval between the computations for percentiles. Its unit is
     // milliseconds. It's suggested that interval_ms should be near the period between pulls
     // from or pushes to the monitoring system.
+    // TODO(wangdan): we can also support constructing percentiles from the parameters in
+    // the configuration file.
     percentile(const metric_prototype *prototype,
                uint64_t interval_ms = 10000,
                const std::set<kth_percentile_type> &kth_percentiles = kAllKthPercentileTypes,
