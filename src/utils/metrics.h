@@ -432,6 +432,8 @@ private:
     metric_registry();
     ~metric_registry();
 
+    void on_close();
+
     metric_entity_ptr find_or_create_entity(const metric_entity_prototype *prototype,
                                             const std::string &id,
                                             const metric_entity::attr_map &attrs);
@@ -453,6 +455,8 @@ private:
     entity_map _entities;
 
     metrics_http_service _http_service;
+
+    std::unique_ptr<metric_timer> _timer;
 
     DISALLOW_COPY_AND_ASSIGN(metric_registry);
 };

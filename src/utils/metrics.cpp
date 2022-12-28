@@ -27,7 +27,7 @@
 
 namespace dsn {
 
-DSN_DEFINE_uint64("metrics", metrics_retirement_delay_ms, 120 * 1000,
+DSN_DEFINE_uint64("metrics", metrics_retirement_delay_ms, 5 * 60 * 1000,
              "The minimum number of milliseconds a metric will be kept for after it is "
              "no longer active.");
 
@@ -193,22 +193,30 @@ metric_entity::old_metric_list metric_entity::collect_old_metrics() const
 {
     old_metric_list old_metrics;
 
+    auto now = dsn_now_ms();
+
     utils::auto_read_lock l(_lock);
 
     for (const auto &m : _metrics) {
-        if (is_metric_stale(m.second)) {
-            // There's only one reference for this metric that is kept in the entity. Thus
-            // this metric is not considered to be in use.
-            old_metrics.insert(m.first);
+        if (!is_metric_stale(m.second)) {
+            if (m.second->retire_time_ms() > 0) {
+                // This metric has previously been scheduled to be retired. However, now
+                // this metric is used again since its reference count is more than 1.
+                // Thus its delay time for retirement should be cleared.
+                old_metrics.insert(m.first);
+            }
             continue;
         }
 
-        if (m.second->retire_time_ms() > 0) {
-            // This metric has previously been scheduled to be retired. However, now this
-            // metric is used again since its reference count is more than 1. Thus its
-            // delay time for retirement should be cleared.
-            old_metrics.insert(m.first);
+        if (iter->second->retire_time_ms() > 0) {
+            if (iter->second->retire_time_ms() < now) {
+                // This metric has been scheduled to be retired, but retirement has not
+                // taken effect.
+                continue;
+            }
         }
+
+        old_metrics.insert(m.first);
     }
 
     return old_metrics;
@@ -220,6 +228,8 @@ void metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
         // Do not lock for empty list.
         return;
     }
+
+    auto now = dsn_now_ms();
 
     utils::auto_write_lock l(_lock);
 
@@ -240,7 +250,6 @@ void metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
             continue;
         }
 
-        auto now = dsn_now_ms();
         if (iter->second->_retire_time_ms == 0) {
             // This metric is not in use, thus should be marked with a delay time for
             // retirement.
@@ -248,13 +257,10 @@ void metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
             continue;
         }
 
-        if (iter->second->_retire_time_ms < now) {
-            // This metric has been scheduled to be retired, but has not taken effect.
-            continue;
+        if (dsn_likely(iter->second->_retire_time_ms >= now)) {
+            // Retire the metric from the entity after the delay time.
+            _metrics.erase(iter);
         }
-
-        // Retire the metric from the entity after the delay time.
-        _metrics.erase(iter);
     }
 }
 
@@ -335,12 +341,18 @@ const dsn::metric_filters::metric_fields_type kBriefMetricFields = get_brief_met
 bool is_metric_stale(const dsn::metric_ptr &m)
 {
     CHECK_GE(m.get_count(), 1);
+
+    // There's only one reference for this metric that is kept in the entity. Thus
+    // this metric is not considered to be in use.
     return m.get_count() == 1;
 }
 
 bool is_entity_stale(const dsn::metric_entity_ptr &entity)
 {
     CHECK_GE(entity.second.get_count(), 1);
+
+    // The entity has no metric and there's only one reference for the entity that is kept in the
+    // registry. Thus this entity is not considered to be in use.
     return *entity && entity.get_count() == 1;
 }
 
@@ -409,6 +421,10 @@ metric_registry::metric_registry() : _http_service(this)
     // be released firstly, then will lead to heap-use-after-free error since percentiles in
     // metric_registry are still running but the resources they needed have been released.
     tools::shared_io_service::instance();
+
+    _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
+                                  std::bind(&metric_registry::process_old_metrics(), this),
+                                  std::bind(&metric_registry::on_close, this)));
 }
 
 metric_registry::~metric_registry()
@@ -429,7 +445,12 @@ metric_registry::~metric_registry()
     for (auto &entity : _entities) {
         entity.second->close(metric_entity::close_option::kNoWait);
     }
+
+    _timer->close();
+    _timer->wait();
 }
+
+void metric_registry::on_close() {}
 
 metric_registry::entity_map metric_registry::entities() const
 {
