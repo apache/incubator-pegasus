@@ -405,7 +405,7 @@ metric_registry::metric_registry() : _http_service(this)
 {
     // We should ensure that metric_registry is destructed before shared_io_service is destructed.
     // Once shared_io_service is destructed before metric_registry is destructed,
-    // boost::asio::io_service needed by metrics in metric_registry such as percentile_timer will
+    // boost::asio::io_service needed by metrics in metric_registry such as metric_timer will
     // be released firstly, then will lead to heap-use-after-free error since percentiles in
     // metric_registry are still running but the resources they needed have been released.
     tools::shared_io_service::instance();
@@ -542,7 +542,7 @@ metric::metric(const metric_prototype *prototype) : _prototype(prototype), _reti
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 
-uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
+uint64_t metric_timer::generate_initial_delay_ms(uint64_t interval_ms)
 {
     CHECK_GT(interval_ms, 0);
 
@@ -554,7 +554,7 @@ uint64_t percentile_timer::generate_initial_delay_ms(uint64_t interval_ms)
     return (rand::next_u64() % interval_seconds + 1) * 1000 + rand::next_u64() % 1000;
 }
 
-percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close)
+metric_timer::metric_timer(uint64_t interval_ms, on_exec_fn on_exec, on_close_fn on_close)
     : _initial_delay_ms(generate_initial_delay_ms(interval_ms)),
       _interval_ms(interval_ms),
       _on_exec(on_exec),
@@ -564,10 +564,10 @@ percentile_timer::percentile_timer(uint64_t interval_ms, on_exec_fn on_exec, on_
       _timer(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios))
 {
     _timer->expires_from_now(boost::posix_time::milliseconds(_initial_delay_ms));
-    _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+    _timer->async_wait(std::bind(&metric_timer::on_timer, this, std::placeholders::_1));
 }
 
-void percentile_timer::close()
+void metric_timer::close()
 {
     // If the timer has already expired when cancel() is called, then the handlers for asynchronous
     // wait operations will:
@@ -584,15 +584,15 @@ void percentile_timer::close()
     }
 }
 
-void percentile_timer::wait() { _completed.wait(); }
+void metric_timer::wait() { _completed.wait(); }
 
-void percentile_timer::on_close()
+void metric_timer::on_close()
 {
     _on_close();
     _completed.notify();
 }
 
-void percentile_timer::on_timer(const boost::system::error_code &ec)
+void metric_timer::on_timer(const boost::system::error_code &ec)
 {
 // This macro is defined for the case that handlers for asynchronous wait operations are no
 // longer cancelled. It just checks the internal state atomically (since close() can also be
@@ -616,7 +616,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
         // Cancel can only be launched by close().
         auto expected_state = state::kClosing;
         CHECK(_state.compare_exchange_strong(expected_state, state::kClosed),
-              "wrong state for percentile_timer: {}, while expecting closing state",
+              "wrong state for metric_timer: {}, while expecting closing state",
               static_cast<int>(expected_state));
         on_close();
 
@@ -628,7 +628,7 @@ void percentile_timer::on_timer(const boost::system::error_code &ec)
 
     TRY_PROCESS_TIMER_CLOSING();
     _timer->expires_from_now(boost::posix_time::milliseconds(_interval_ms));
-    _timer->async_wait(std::bind(&percentile_timer::on_timer, this, std::placeholders::_1));
+    _timer->async_wait(std::bind(&metric_timer::on_timer, this, std::placeholders::_1));
 #undef TRY_PROCESS_TIMER_CLOSING
 }
 
