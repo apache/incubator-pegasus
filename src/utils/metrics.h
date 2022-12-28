@@ -153,7 +153,7 @@ class metric_entity : public ref_counter
 public:
     using attr_map = std::unordered_map<std::string, std::string>;
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
-    using old_metrics_type = std::unordered_set<const metric_prototype *>;
+    using old_metric_list = std::unordered_set<const metric_prototype *>;
 
     const metric_entity_prototype *prototype() const { return _prototype; }
 
@@ -179,6 +179,9 @@ private:
 
     ~metric_entity();
 
+    // Return true if the stored metrics are not empty.
+    explicit operator bool() const;
+
     // Close all "closeable" metrics owned by this entity.
     //
     // `option` is used to control how the close operations are performed:
@@ -198,11 +201,10 @@ private:
 
     void encode_id(metric_json_writer &writer) const;
 
-    old_metrics_type collect_old_metrics() const;
-
-    void retire_old_metrics(const old_metrics_type &old_metrics);
-
-    void process_old_metrics();
+    // The whole retirement process is divided two phases "collect" and "retire", please see
+    // `collect_old_metrics()` and `retire_old_metrics()` of registry for details.
+    old_metric_list collect_old_metrics() const;
+    void retire_old_metrics(const old_metric_list &old_metrics);
 
     const metric_entity_prototype *const _prototype;
     const std::string _id;
@@ -365,6 +367,7 @@ class metric_registry : public utils::singleton<metric_registry>
 {
 public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
+    using old_entity_map = std::unordered_map<std::string, metric_entity::old_metric_list>;
 
     entity_map entities() const;
 
@@ -382,6 +385,19 @@ private:
     metric_entity_ptr find_or_create_entity(const metric_entity_prototype *prototype,
                                             const std::string &id,
                                             const metric_entity::attr_map &attrs);
+
+    // Since retirements do not happen frequently, while we traverse over the registry there
+    // tend to be no metric and entity that should be retired. Therefore, we divide the whole
+    // retirement process into two phases: "collect" and "retire".
+    //
+    // In the first phase "collect", we just read and check which metrics and entitie should
+    // be retired, thus it just needs read lock that is lightweight.
+    //
+    // Once some metrics and entities are collected to be retired, in the second phase "retire",
+    // they will be removed according to the specific rules.
+    old_entity_map collect_old_metrics() const;
+    void retire_old_metrics(const old_entity_map &old_entities);
+    void process_old_metrics();
 
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;
@@ -531,7 +547,7 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
-    uint64_t retire_time_ns() const { return _retire_time_ns; }
+    uint64_t retire_time_ms() const { return _retire_time_ms; }
 
     // Take snapshot of each metric to collect current values as json format with fields chosen
     // by `filters`.
@@ -601,7 +617,7 @@ protected:
 
     const metric_prototype *const _prototype;
 
-    uint64_t _retire_time_ns;
+    uint64_t _retire_time_ms;
 
 private:
     friend class metric_entity;
