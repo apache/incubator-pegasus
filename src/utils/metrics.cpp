@@ -27,7 +27,7 @@
 
 namespace dsn {
 
-DSN_DEFINE_uint64("metrics", metrics_retirement_delay_ms, 5 * 60 * 1000,
+DSN_DEFINE_uint64("metrics", metrics_retirement_delay_ms, 10 * 60 * 1000,
              "The minimum number of milliseconds a metric will be kept for after it is "
              "no longer active.");
 
@@ -222,11 +222,13 @@ metric_entity::old_metric_list metric_entity::collect_old_metrics() const
     return old_metrics;
 }
 
-void metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
+std::tuple<size_t, size_t> metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
 {
+    size_t num_retired = 0;
+    size_t num_potential = 0;
     if (old_metrics.empty()) {
         // Do not lock for empty list.
-        return;
+        return std::make_tuple(num_retired, num_potential);
     }
 
     auto now = dsn_now_ms();
@@ -254,14 +256,18 @@ void metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
             // This metric is not in use, thus should be marked with a delay time for
             // retirement.
             iter->second->_retire_time_ms = now + FLAGS_metrics_retirement_delay_ms;
+            ++num_potential;
             continue;
         }
 
         if (dsn_likely(iter->second->_retire_time_ms >= now)) {
             // Retire the metric from the entity after the delay time.
             _metrics.erase(iter);
+            ++num_retired;
         }
     }
+
+    return std::make_tuple(num_retired, num_potential);
 }
 
 void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
@@ -422,9 +428,7 @@ metric_registry::metric_registry() : _http_service(this)
     // metric_registry are still running but the resources they needed have been released.
     tools::shared_io_service::instance();
 
-    _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
-                                  std::bind(&metric_registry::process_old_metrics(), this),
-                                  std::bind(&metric_registry::on_close, this)));
+    start_timer();
 }
 
 metric_registry::~metric_registry()
@@ -446,11 +450,32 @@ metric_registry::~metric_registry()
         entity.second->close(metric_entity::close_option::kNoWait);
     }
 
-    _timer->close();
-    _timer->wait();
+    stop_timer();
 }
 
 void metric_registry::on_close() {}
+
+void metric_registry::start_timer()
+{
+    if (_timer) {
+        return;
+    }
+
+    _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
+                                  std::bind(&metric_registry::process_old_metrics(), this),
+                                  std::bind(&metric_registry::on_close, this)));
+}
+
+void metric_registry::stop_timer()
+{
+    if (!_timer) {
+        return;
+    }
+
+    _timer->close();
+    _timer->wait();
+    _timer->reset();
+}
 
 metric_registry::entity_map metric_registry::entities() const
 {
@@ -522,11 +547,14 @@ metric_registry::old_entity_map metric_registry::collect_old_metrics() const
     return old_entities;
 }
 
-void metric_registry::retire_old_metrics(const old_entity_map &old_entities)
+std::tuple<size_t, size_t, size_t> metric_registry::retire_old_metrics(const old_entity_map &old_entities)
 {
+    size_t num_retired_entities = 0;
+    size_t num_retired_metrics = 0;
+    size_t num_potential_metrics = 0;
     if (old_entities.empty()) {
         // Do not lock for empty list.
-        return;
+        return std::make_tuple(num_retired_entities, num_retired_metrics, num_potential_metrics);
     }
 
     utils::auto_write_lock l(_lock);
@@ -540,19 +568,39 @@ void metric_registry::retire_old_metrics(const old_entity_map &old_entities)
 
         // Try to retire the stale metrics from this entity. Notice that some entities
         // may have no metric in which case it will never be locked.
-        iter->second->retire_old_metrics(old_entity.second);
+        size_t num_retired;
+        size_t num_potential;
+        std::tie(num_retired, num_potential) = iter->second->retire_old_metrics(old_entity.second);
+        num_retired_metrics += num_retired;
+        num_potential_metrics += num_potential;
 
         if (is_entity_stale(iter->second)) {
             // The entity itself is stale and will be retired immediately, for the reason that
             // each metric in it has been delayed for a long enough time before retirement.
             _entities.erase(iter);
+            ++num_retired_entities;
         }
     }
+
+    return std::make_tuple(num_retired_entities, num_retired_metrics, num_potential_metrics);
 }
 
 void metric_registry::process_old_metrics()
 {
-    retire_old_metrics(collect_old_metrics());
+    LOG_INFO("begin to process old metrics");
+
+    size_t num_collected_metrics = 0;
+    const auto &old_entities = collect_old_metrics();
+    for (const auto &old_entity : old_entities) {
+        num_collected_metrics += old_entity.second.size();
+    }
+    LOG_INFO_F("collected_entities={}, collected_metrics={}", old_entities.size(), num_collected_metrics);
+
+    size_t num_retired_entities;
+    size_t num_retired_metrics;
+    size_t num_potential_metrics;
+    std::tie(num_retired_entities, num_retired_metrics) = retire_old_metrics(old_entities);
+    LOG_INFO_F("retired_entities={}, retired_metrics={}, potential_metrics={}", num_retired_entities, num_retired_metrics, num_potential_metrics);
 }
 
 metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}

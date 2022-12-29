@@ -26,6 +26,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
@@ -204,7 +205,7 @@ private:
     // The whole retirement process is divided two phases "collect" and "retire", please see
     // `collect_old_metrics()` and `retire_old_metrics()` of registry for details.
     old_metric_list collect_old_metrics() const;
-    void retire_old_metrics(const old_metric_list &old_metrics);
+    std::tuple<size_t, size_t> retire_old_metrics(const old_metric_list &old_metrics);
 
     const metric_entity_prototype *const _prototype;
     const std::string _id;
@@ -428,11 +429,15 @@ private:
     friend class utils::singleton<metric_registry>;
 
     friend void test_get_metrics_handler(const http_request &req, http_response &resp);
+    friend void test_restart_metric_registry_timer(uint64_t interval_ms);
 
     metric_registry();
     ~metric_registry();
 
     void on_close();
+
+    void start_timer();
+    void stop_timer();
 
     metric_entity_ptr find_or_create_entity(const metric_entity_prototype *prototype,
                                             const std::string &id,
@@ -448,7 +453,7 @@ private:
     // Once some metrics and entities are collected to be retired, in the second phase "retire",
     // they will be removed according to the specific rules.
     old_entity_map collect_old_metrics() const;
-    void retire_old_metrics(const old_entity_map &old_entities);
+    std::tuple<size_t, size_t, size_t> retire_old_metrics(const old_entity_map &old_entities);
     void process_old_metrics();
 
     mutable utils::rw_lock_nr _lock;

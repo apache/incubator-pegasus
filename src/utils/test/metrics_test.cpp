@@ -31,6 +31,8 @@
 
 namespace dsn {
 
+DSN_DECLARE_uint64(metrics_retirement_delay_ms);
+
 class my_gauge : public metric
 {
 public:
@@ -2826,6 +2828,35 @@ TEST(metrics_test, http_get_metrics)
                               expected_entities,
                               test.expected_metric_fields);
     }
+}
+
+void test_restart_metric_registry_timer(uint64_t interval_ms)
+{
+    metric_registry::instance()::stop_timer();
+    FLAGS_metrics_retirement_delay_ms = interval_ms;
+    metric_registry::instance()::start_timer();
+}
+
+TEST(metrics_test, retire_old_metrics)
+{
+    auto reserved_metrics_retirement_delay_ms = FLAGS_metrics_retirement_delay_ms;
+    test_restart_metric_registry_timer(100);
+
+    auto my_entity = METRIC_ENTITY_my_server.instantiate("server_117");
+
+    auto my_gauge_int64 = METRIC_test_server_gauge_int64.instantiate(my_entity);
+    my_gauge_int64->set(5);
+
+    auto my_counter = METRIC_test_server_counter.instantiate(my_entity);
+    my_counter->increment();
+
+    auto my_percentile_int64 = METRIC_test_server_percentile_int64.instantiate(my_entity);
+    my_percentile_int64->set(5);
+
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(500));
+
+    test_restart_metric_registry_timer(reserved_metrics_retirement_delay_ms);
 }
 
 } // namespace dsn
