@@ -180,9 +180,6 @@ private:
 
     ~metric_entity();
 
-    // Return true if the stored metrics are not empty.
-    explicit operator bool() const;
-
     // Close all "closeable" metrics owned by this entity.
     //
     // `option` is used to control how the close operations are performed:
@@ -201,6 +198,8 @@ private:
     void encode_type(metric_json_writer &writer) const;
 
     void encode_id(metric_json_writer &writer) const;
+
+    bool is_stale() const;
 
     // The whole retirement process is divided two phases "collect" and "retire", please see
     // `collect_old_metrics()` and `retire_old_metrics()` of registry for details.
@@ -606,8 +605,6 @@ class metric : public ref_counter
 public:
     const metric_prototype *prototype() const { return _prototype; }
 
-    uint64_t retire_time_ms() const { return _retire_time_ms; }
-
     // Take snapshot of each metric to collect current values as json format with fields chosen
     // by `filters`.
     virtual void take_snapshot(metric_json_writer &writer, const metric_filters &filters) = 0;
@@ -676,10 +673,12 @@ protected:
 
     const metric_prototype *const _prototype;
 
-    uint64_t _retire_time_ms;
-
 private:
     friend class metric_entity;
+
+    bool is_stale() const;
+
+    uint64_t _retire_time_ms;
 
     DISALLOW_COPY_AND_ASSIGN(metric);
 };

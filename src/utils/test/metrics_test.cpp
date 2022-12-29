@@ -2832,9 +2832,9 @@ TEST(metrics_test, http_get_metrics)
 
 void test_restart_metric_registry_timer(uint64_t interval_ms)
 {
-    metric_registry::instance()::stop_timer();
+    metric_registry::instance().stop_timer();
     FLAGS_metrics_retirement_delay_ms = interval_ms;
-    metric_registry::instance()::start_timer();
+    metric_registry::instance().start_timer();
 }
 
 TEST(metrics_test, retire_old_metrics)
@@ -2853,8 +2853,7 @@ TEST(metrics_test, retire_old_metrics)
     auto my_percentile_int64 = METRIC_test_server_percentile_int64.instantiate(my_entity);
     my_percentile_int64->set(5);
 
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     test_restart_metric_registry_timer(reserved_metrics_retirement_delay_ms);
 }
