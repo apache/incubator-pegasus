@@ -2837,23 +2837,145 @@ void test_restart_metric_registry_timer(uint64_t interval_ms)
     metric_registry::instance().start_timer();
 }
 
+class scoped_entity
+{
+public:
+    using surviving_metric_map = std::unordered_map<const metric_prototype *, const metric *>;
+
+    scoped_entity(const std::string &entity_id,
+                  bool is_entity_surviving,
+                  bool is_gauge_surviving,
+                  bool is_counter_surviving,
+                  bool is_percentile_surviving);
+
+    void test_survival_after_retirement() const;
+
+private:
+    template <typename MetricPrototype, typename MetricPtr>
+    void instantiate_metric(bool is_surviving, const MetricPrototype &prototype, MetricPtr &m)
+    {
+        CHECK_NOTNULL(_my_entity,
+                      "entity {} of {} should also set to be surviving since {} is surviving",
+                      _my_entity->id(),
+                      _my_entity->prototype()->name(),
+                      prototype.name().data());
+
+        auto temp_m = prototype.instantiate(_my_entity);
+        _expected_all_metrics.emplace(&prototype, temp_m.get());
+
+        if (is_surviving) {
+            m = temp_m;
+            _expected_surviving_metrics.emplace(&prototype, m.get());
+        }
+    }
+
+    surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &entity) const;
+    void test_survival_immediately_after_initialization() const;
+
+    std::string _entity_id;
+    metric_entity *_expected_entity_raw_ptr;
+    metric_entity_ptr _my_entity;
+
+    gauge_ptr<int64_t> _my_gauge_int64;
+    counter_ptr<> _my_counter;
+    percentile_ptr<int64_t> _my_percentile_int64;
+
+    surviving_metric_map _expected_all_metrics;
+    surviving_metric_map _expected_surviving_metrics;
+};
+
+scoped_entity::scoped_entity(const std::string &entity_id,
+                             bool is_entity_surviving,
+                             bool is_gauge_surviving,
+                             bool is_counter_surviving,
+                             bool is_percentile_surviving)
+    : _entity_id(entity_id)
+{
+    auto my_entity = METRIC_ENTITY_my_server.instantiate(entity_id);
+    _expected_entity_raw_ptr = my_entity.get();
+    if (is_entity_surviving) {
+        _my_entity = my_entity;
+    }
+
+    instantiate_metric(is_gauge_surviving, METRIC_test_server_gauge_int64, _my_gauge_int64);
+    instantiate_metric(is_counter_surviving, METRIC_test_server_counter, _my_counter);
+    instantiate_metric(
+        is_percentile_surviving, METRIC_test_server_percentile_int64, _my_percentile_int64);
+
+    test_survival_immediately_after_initialization();
+}
+
+scoped_entity::surviving_metric_map
+scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &entity) const
+{
+    surviving_metric_map actual_surviving_metrics;
+
+    const auto &metrics = entity->metrics();
+    for (const auto &m : metrics) {
+        actual_surviving_metrics.emplace(m.first, m.second.get());
+    }
+
+    return actual_surviving_metrics;
+}
+
+void scoped_entity::test_survival_immediately_after_initialization() const
+{
+    const auto &entities = metric_registry::instance().entities();
+    auto iter = entities.find(_entity_id);
+    ASSERT_NE(entities.end(), iter);
+    ASSERT_EQ(_expected_entity_raw_ptr, iter->second.get());
+
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
+    ASSERT_EQ(_expected_all_metrics, actual_surviving_metrics);
+}
+
+void scoped_entity::test_survival_after_retirement() const
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    const auto &entities = metric_registry::instance().entities();
+    auto iter = entities.find(_entity_id);
+    if (_my_entity == nullptr) {
+        ASSERT_EQ(entities.end(), iter);
+        ASSERT_TRUE(_expected_surviving_metrics.empty());
+        return;
+    }
+
+    ASSERT_NE(entities.end(), iter);
+    ASSERT_EQ(_expected_entity_raw_ptr, iter->second.get());
+
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
+    ASSERT_EQ(_expected_surviving_metrics, actual_surviving_metrics);
+}
+
 TEST(metrics_test, retire_old_metrics)
 {
     auto reserved_metrics_retirement_delay_ms = FLAGS_metrics_retirement_delay_ms;
     test_restart_metric_registry_timer(100);
 
-    auto my_entity = METRIC_ENTITY_my_server.instantiate("server_117");
+    struct test_case
+    {
+        std::string entity_id;
+        bool is_entity_surviving;
+        bool is_gauge_surviving;
+        bool is_counter_surviving;
+        bool is_percentile_surviving;
+    } tests[] = {
+        {"server_117", true, true, true, true},
+        {"server_118", true, true, true, false},
+        {"server_119", true, true, false, false},
+        {"server_120", true, false, false, false},
+        {"server_121", false, false, false, false},
+    };
 
-    auto my_gauge_int64 = METRIC_test_server_gauge_int64.instantiate(my_entity);
-    my_gauge_int64->set(5);
-
-    auto my_counter = METRIC_test_server_counter.instantiate(my_entity);
-    my_counter->increment();
-
-    auto my_percentile_int64 = METRIC_test_server_percentile_int64.instantiate(my_entity);
-    my_percentile_int64->set(5);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    for (const auto &test : tests) {
+        scoped_entity entity(test.entity_id,
+                             test.is_entity_surviving,
+                             test.is_gauge_surviving,
+                             test.is_counter_surviving,
+                             test.is_percentile_surviving);
+        entity.test_survival_after_retirement();
+    }
 
     test_restart_metric_registry_timer(reserved_metrics_retirement_delay_ms);
 }
