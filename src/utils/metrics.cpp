@@ -49,7 +49,27 @@ metric_entity::~metric_entity()
     close(close_option::kWait);
 }
 
-void metric_entity::close(close_option option)
+namespace {
+
+void close_metric(const dsn::metric_ptr &m)
+{
+    if (m->prototype()->type() == dsn::metric_type::kPercentile) {
+        auto p = dsn::down_cast<dsn::closeable_metric *>(m.get());
+        p->close();
+    }
+}
+
+void wait_metric(const dsn::metric_ptr &m)
+{
+    if (m->prototype()->type() == dsn::metric_type::kPercentile) {
+        auto p = dsn::down_cast<dsn::closeable_metric *>(m.get());
+        p->wait();
+    }
+}
+
+} // anonymous namespace
+
+void metric_entity::close(close_option option) const
 {
     utils::auto_write_lock l(_lock);
 
@@ -61,10 +81,7 @@ void metric_entity::close(close_option option)
     // request for all metrics; then, just wait for all of the close operations to be finished.
     // It's inefficient to wait for each metric to be closed one by one.
     for (auto &m : _metrics) {
-        if (m.second->prototype()->type() == metric_type::kPercentile) {
-            auto p = down_cast<closeable_metric *>(m.second.get());
-            p->close();
-        }
+        close_metric(m.second);
     }
 
     if (option == close_option::kNoWait) {
@@ -73,10 +90,7 @@ void metric_entity::close(close_option option)
 
     // Wait for all of the close operations to be finished.
     for (auto &m : _metrics) {
-        if (m.second->prototype()->type() == metric_type::kPercentile) {
-            auto p = down_cast<closeable_metric *>(m.second.get());
-            p->wait();
-        }
+        wait_metric(m.second);
     }
 }
 
@@ -200,6 +214,7 @@ metric_entity::old_metric_list metric_entity::collect_old_metrics() const
 
     auto now = dsn_now_ms();
 
+    LOG_INFO_F("in metric_entity::collect_old_metrics for entity {}", _id);
     utils::auto_read_lock l(_lock);
 
     for (const auto &m : _metrics) {
@@ -209,19 +224,19 @@ metric_entity::old_metric_list metric_entity::collect_old_metrics() const
                 // this metric is used again since its reference count is more than 1.
                 // Thus its delay time for retirement should be cleared.
                 old_metrics.insert(m.first);
+                LOG_INFO_F("change old metric {} to new", m.second->prototype()->name().data());
             }
             continue;
         }
 
-        if (m.second->_retire_time_ms > 0) {
-            if (m.second->_retire_time_ms < now) {
-                // This metric has been scheduled to be retired, but retirement has not
-                // taken effect.
-                continue;
-            }
+        if (m.second->_retire_time_ms > now) {
+            // This metric has been scheduled to be retired, but retirement has not
+            // taken effect.
+            continue;
         }
 
         old_metrics.insert(m.first);
+        LOG_INFO_F("add metric {} to retire", m.second->prototype()->name().data());
     }
 
     return old_metrics;
@@ -238,22 +253,31 @@ std::tuple<size_t, size_t> metric_entity::retire_old_metrics(const old_metric_li
 
     auto now = dsn_now_ms();
 
+    LOG_INFO_F("in metric_entity::retire_old_metrics for entity {}", _id);
     utils::auto_write_lock l(_lock);
 
     for (const auto &m : old_metrics) {
         auto iter = _metrics.find(m);
         if (iter == _metrics.end()) {
             // This metric has been removed from the entity.
+            LOG_INFO_F("metric {} not found", m->name().data());
             continue;
         }
 
         if (!iter->second->is_stale()) {
+            LOG_INFO_F("not stale for metric {} while count={}, retire_time_ms={}", iter->second->prototype()->name().data(), iter->second->get_count(), iter->second->_retire_time_ms);
             if (iter->second->_retire_time_ms > 0) {
                 // For those metrics which are still in use, their delay time for retirement
                 // should be cleared since previously they could have been scheduled to be
                 // retired.
                 iter->second->_retire_time_ms = 0;
             }
+            continue;
+        }
+
+        LOG_INFO_F("is stale for metric {} while count={}, retire_time_ms={}", iter->second->prototype()->name().data(), iter->second->get_count(), iter->second->_retire_time_ms);
+
+        if (dsn_unlikely(iter->second->_retire_time_ms > now)) {
             continue;
         }
 
@@ -265,11 +289,13 @@ std::tuple<size_t, size_t> metric_entity::retire_old_metrics(const old_metric_li
             continue;
         }
 
-        if (dsn_likely(iter->second->_retire_time_ms >= now)) {
-            // Retire the metric from the entity after the delay time.
-            _metrics.erase(iter);
-            ++num_retired;
-        }
+        close_metric(iter->second);
+        wait_metric(iter->second);
+
+        // Retire the metric from the entity after the delay time.
+        _metrics.erase(iter);
+        LOG_INFO_F("retire metric {}", iter->second->prototype()->name().data());
+        ++num_retired;
     }
 
     return std::make_tuple(num_retired, num_potential);
@@ -521,6 +547,7 @@ metric_registry::old_entity_map metric_registry::collect_old_metrics() const
             // Those entities which have stale metrics that should be retired will be
             // collected.
             old_entities.emplace(entity.first, std::move(old_metrics));
+            LOG_INFO_F("collect entity {} for metrics", entity.first);
             continue;
         }
 
@@ -528,6 +555,7 @@ metric_registry::old_entity_map metric_registry::collect_old_metrics() const
             // Since this entity itself is stale, it will be collected without any
             // metric.
             (void)old_entities[entity.first];
+            LOG_INFO_F("collect entity {} for stale", entity.first);
         }
     }
 
@@ -566,6 +594,7 @@ metric_registry::retire_old_metrics(const old_entity_map &old_entities)
             // The entity itself is stale and will be retired immediately, for the reason that
             // each metric in it has been delayed for a long enough time before retirement.
             _entities.erase(iter);
+            LOG_INFO_F("retire entity {}", iter->second->id());
             ++num_retired_entities;
         }
     }
@@ -605,6 +634,10 @@ metric::metric(const metric_prototype *prototype) : _prototype(prototype), _reti
 bool metric::is_stale() const
 {
     CHECK_GE(get_count(), 1);
+
+    if (_prototype->type() == metric_type::kPercentile && get_count() == 2) {
+        return true;
+    }
 
     // There's only one reference for this metric that is kept in the entity. Thus
     // this metric is not considered to be in use.

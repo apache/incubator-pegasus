@@ -191,7 +191,7 @@ private:
         kWait,
         kNoWait,
     };
-    void close(close_option option);
+    void close(close_option option) const;
 
     void set_attributes(const attr_map &attrs);
 

@@ -2852,28 +2852,26 @@ public:
 
 private:
     template <typename MetricPrototype, typename MetricPtr>
-    void instantiate_metric(bool is_surviving, const MetricPrototype &prototype, MetricPtr &m)
+    void instantiate_metric(const metric_entity_ptr &my_entity,
+                            bool is_surviving,
+                            const MetricPrototype &prototype,
+                            MetricPtr &m)
     {
-        CHECK_NOTNULL(_my_entity,
-                      "entity {} of {} should also set to be surviving since {} is surviving",
-                      _my_entity->id(),
-                      _my_entity->prototype()->name(),
-                      prototype.name().data());
-
-        auto temp_m = prototype.instantiate(_my_entity);
+        auto temp_m = prototype.instantiate(my_entity);
         _expected_all_metrics.emplace(&prototype, temp_m.get());
 
         if (is_surviving) {
             m = temp_m;
             _expected_surviving_metrics.emplace(&prototype, m.get());
+            std::cout << "add expected surviving metrics: " << prototype.name() << std::endl;
         }
     }
 
-    surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &entity) const;
+    surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const;
     void test_survival_immediately_after_initialization() const;
 
-    std::string _entity_id;
-    metric_entity *_expected_entity_raw_ptr;
+    std::string _my_entity_id;
+    metric_entity *_expected_my_entity_raw_ptr;
     metric_entity_ptr _my_entity;
 
     gauge_ptr<int64_t> _my_gauge_int64;
@@ -2889,31 +2887,38 @@ scoped_entity::scoped_entity(const std::string &entity_id,
                              bool is_gauge_surviving,
                              bool is_counter_surviving,
                              bool is_percentile_surviving)
-    : _entity_id(entity_id)
+    : _my_entity_id(entity_id)
 {
     auto my_entity = METRIC_ENTITY_my_server.instantiate(entity_id);
-    _expected_entity_raw_ptr = my_entity.get();
+    _expected_my_entity_raw_ptr = my_entity.get();
+
+    instantiate_metric(
+        my_entity, is_gauge_surviving, METRIC_test_server_gauge_int64, _my_gauge_int64);
+    instantiate_metric(my_entity, is_counter_surviving, METRIC_test_server_counter, _my_counter);
+    instantiate_metric(my_entity,
+                       is_percentile_surviving,
+                       METRIC_test_server_percentile_int64,
+                       _my_percentile_int64);
+    std::cout << std::endl;
+
     if (is_entity_surviving) {
         _my_entity = my_entity;
     }
-
-    instantiate_metric(is_gauge_surviving, METRIC_test_server_gauge_int64, _my_gauge_int64);
-    instantiate_metric(is_counter_surviving, METRIC_test_server_counter, _my_counter);
-    instantiate_metric(
-        is_percentile_surviving, METRIC_test_server_percentile_int64, _my_percentile_int64);
 
     test_survival_immediately_after_initialization();
 }
 
 scoped_entity::surviving_metric_map
-scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &entity) const
+scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const
 {
     surviving_metric_map actual_surviving_metrics;
 
-    const auto &metrics = entity->metrics();
+    const auto &metrics = my_entity->metrics();
     for (const auto &m : metrics) {
         actual_surviving_metrics.emplace(m.first, m.second.get());
+        std::cout << "add actual surviving metrics: " << m.first->name() << std::endl;
     }
+    std::cout << std::endl;
 
     return actual_surviving_metrics;
 }
@@ -2921,9 +2926,9 @@ scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &entity) con
 void scoped_entity::test_survival_immediately_after_initialization() const
 {
     const auto &entities = metric_registry::instance().entities();
-    auto iter = entities.find(_entity_id);
+    const auto &iter = entities.find(_my_entity_id);
     ASSERT_NE(entities.end(), iter);
-    ASSERT_EQ(_expected_entity_raw_ptr, iter->second.get());
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
 
     const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
     ASSERT_EQ(_expected_all_metrics, actual_surviving_metrics);
@@ -2934,7 +2939,7 @@ void scoped_entity::test_survival_after_retirement() const
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     const auto &entities = metric_registry::instance().entities();
-    auto iter = entities.find(_entity_id);
+    const auto &iter = entities.find(_my_entity_id);
     if (_my_entity == nullptr) {
         ASSERT_EQ(entities.end(), iter);
         ASSERT_TRUE(_expected_surviving_metrics.empty());
@@ -2942,7 +2947,7 @@ void scoped_entity::test_survival_after_retirement() const
     }
 
     ASSERT_NE(entities.end(), iter);
-    ASSERT_EQ(_expected_entity_raw_ptr, iter->second.get());
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
 
     const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
     ASSERT_EQ(_expected_surviving_metrics, actual_surviving_metrics);
