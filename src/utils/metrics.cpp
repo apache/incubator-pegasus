@@ -51,6 +51,9 @@ metric_entity::~metric_entity()
 
 namespace {
 
+// Before destructing or retiring a metric, close it first. For example, stop the timer of
+// percentile. Generally close operations in this function are asynchronous, wait_metric()
+// can be used to wait until all close operations are finished.
 void close_metric(const dsn::metric_ptr &m)
 {
     if (m->prototype()->type() == dsn::metric_type::kPercentile) {
@@ -59,6 +62,7 @@ void close_metric(const dsn::metric_ptr &m)
     }
 }
 
+// Wait until all operations in close_metric() are finished.
 void wait_metric(const dsn::metric_ptr &m)
 {
     if (m->prototype()->type() == dsn::metric_type::kPercentile) {
@@ -201,10 +205,11 @@ void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filte
 
 bool metric_entity::is_stale() const
 {
+    // Since this entity itself is still be accessed, its reference count should be 1 at least.
     CHECK_GE(get_count(), 1);
 
-    // The entity has no metric and there's only one reference for the entity that is kept in the
-    // registry. Thus this entity is not considered to be in use.
+    // Once this entity does not have any metric, and has only one reference that must be
+    // kept in the registry, this entity will be considered to be useless.
     return _metrics.empty() && get_count() == 1;
 }
 
@@ -265,7 +270,10 @@ std::tuple<size_t, size_t> metric_entity::retire_old_metrics(const old_metric_li
         }
 
         if (!iter->second->is_stale()) {
-            LOG_INFO_F("not stale for metric {} while count={}, retire_time_ms={}", iter->second->prototype()->name().data(), iter->second->get_count(), iter->second->_retire_time_ms);
+            LOG_INFO_F("not stale for metric {} while count={}, retire_time_ms={}",
+                       iter->second->prototype()->name().data(),
+                       iter->second->get_count(),
+                       iter->second->_retire_time_ms);
             if (iter->second->_retire_time_ms > 0) {
                 // For those metrics which are still in use, their delay time for retirement
                 // should be cleared since previously they could have been scheduled to be
@@ -275,7 +283,10 @@ std::tuple<size_t, size_t> metric_entity::retire_old_metrics(const old_metric_li
             continue;
         }
 
-        LOG_INFO_F("is stale for metric {} while count={}, retire_time_ms={}", iter->second->prototype()->name().data(), iter->second->get_count(), iter->second->_retire_time_ms);
+        LOG_INFO_F("is stale for metric {} while count={}, retire_time_ms={}",
+                   iter->second->prototype()->name().data(),
+                   iter->second->get_count(),
+                   iter->second->_retire_time_ms);
 
         if (dsn_unlikely(iter->second->_retire_time_ms > now)) {
             continue;
