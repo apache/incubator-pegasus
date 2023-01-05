@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -2830,13 +2831,6 @@ TEST(metrics_test, http_get_metrics)
     }
 }
 
-void test_restart_metric_registry_timer(uint64_t interval_ms)
-{
-    metric_registry::instance().stop_timer();
-    FLAGS_metrics_retirement_delay_ms = interval_ms;
-    metric_registry::instance().start_timer();
-}
-
 class scoped_entity
 {
 public:
@@ -2913,8 +2907,9 @@ scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &my_entity) 
 {
     surviving_metric_map actual_surviving_metrics;
 
-    const auto &metrics = my_entity->metrics();
-    for (const auto &m : metrics) {
+    utils::auto_read_lock l(my_entity->_lock);
+
+    for (const auto &m : my_entity->_metrics) {
         actual_surviving_metrics.emplace(m.first, m.second.get());
         std::cout << "add actual surviving metrics: " << m.first->name() << std::endl;
     }
@@ -2953,36 +2948,71 @@ void scoped_entity::test_survival_after_retirement() const
     ASSERT_EQ(_expected_surviving_metrics, actual_surviving_metrics);
 }
 
-TEST(metrics_test, retire_old_metrics)
+using surviving_metrics_case = std::tuple<std::string, bool, bool, bool, bool>;
+
+class MetricsRetirementTest : public testing::TestWithParam<surviving_metrics_case>
 {
-    auto reserved_metrics_retirement_delay_ms = FLAGS_metrics_retirement_delay_ms;
-    test_restart_metric_registry_timer(100);
-
-    struct test_case
+public:
+    // static void SetUpTestSuite()
+    static void SetUpTestCase()
     {
-        std::string entity_id;
-        bool is_entity_surviving;
-        bool is_gauge_surviving;
-        bool is_counter_surviving;
-        bool is_percentile_surviving;
-    } tests[] = {
-        {"server_117", true, true, true, true},
-        {"server_118", true, true, true, false},
-        {"server_119", true, true, false, false},
-        {"server_120", true, false, false, false},
-        {"server_121", false, false, false, false},
-    };
-
-    for (const auto &test : tests) {
-        scoped_entity entity(test.entity_id,
-                             test.is_entity_surviving,
-                             test.is_gauge_surviving,
-                             test.is_counter_surviving,
-                             test.is_percentile_surviving);
-        entity.test_survival_after_retirement();
+        _reserved_metrics_retirement_delay_ms = FLAGS_metrics_retirement_delay_ms;
+        restart_metric_registry_timer(100);
     }
 
-    test_restart_metric_registry_timer(reserved_metrics_retirement_delay_ms);
+    // static void TearDownTestSuite()
+    static void TearDownTestCase()
+    {
+        restart_metric_registry_timer(_reserved_metrics_retirement_delay_ms);
+    }
+
+private:
+    static void restart_metric_registry_timer(uint64_t interval_ms)
+    {
+        metric_registry::instance().stop_timer();
+        FLAGS_metrics_retirement_delay_ms = interval_ms;
+        metric_registry::instance().start_timer();
+
+        std::cout << "restart the timer of metric registry at interval " << interval_ms << " ms."
+                  << std::endl;
+    }
+
+    static uint64_t _reserved_metrics_retirement_delay_ms;
+};
+
+uint64_t MetricsRetirementTest::_reserved_metrics_retirement_delay_ms;
+
+TEST_P(MetricsRetirementTest, RetireOldMetrics)
+{
+    std::string entity_id;
+    bool is_entity_surviving;
+    bool is_gauge_surviving;
+    bool is_counter_surviving;
+    bool is_percentile_surviving;
+    std::tie(entity_id,
+             is_entity_surviving,
+             is_gauge_surviving,
+             is_counter_surviving,
+             is_percentile_surviving) = GetParam();
+
+    scoped_entity entity(entity_id,
+                         is_entity_surviving,
+                         is_gauge_surviving,
+                         is_counter_surviving,
+                         is_percentile_surviving);
+    entity.test_survival_after_retirement();
 }
+
+const std::vector<surviving_metrics_case> metrics_retirement_tests = {
+    {"server_117", true, true, true, true},
+    {"server_118", true, true, true, false},
+    {"server_119", true, true, false, false},
+    {"server_120", true, false, false, false},
+    {"server_121", false, false, false, false},
+};
+
+INSTANTIATE_TEST_CASE_P(MetricsTest,
+                        MetricsRetirementTest,
+                        testing::ValuesIn(metrics_retirement_tests));
 
 } // namespace dsn

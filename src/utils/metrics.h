@@ -26,7 +26,6 @@
 #include <set>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
@@ -156,6 +155,24 @@ public:
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
     using old_metric_list = std::unordered_set<const metric_prototype *>;
 
+    struct collected_old_metrics_info
+    {
+        old_metric_list old_metrics;
+        size_t num_all_metrics = 0;
+        size_t num_scheduled_metrics = 0;
+
+        collected_old_metrics_info() = default;
+    };
+
+    struct retired_metrics_stat
+    {
+        size_t num_retired_metrics = 0;
+        size_t num_recently_scheduled_metrics = 0;
+        size_t num_reemployed_metrics = 0;
+
+        retired_metrics_stat() = default;
+    };
+
     const metric_entity_prototype *prototype() const { return _prototype; }
 
     const std::string &id() const { return _id; }
@@ -173,6 +190,7 @@ public:
 private:
     friend class metric_registry;
     friend class ref_ptr<metric_entity>;
+    friend class scoped_entity;
 
     metric_entity(const metric_entity_prototype *prototype,
                   const std::string &id,
@@ -203,8 +221,8 @@ private:
 
     // The whole retirement process is divided two phases "collect" and "retire", please see
     // `collect_old_metrics()` and `retire_old_metrics()` of registry for details.
-    old_metric_list collect_old_metrics() const;
-    std::tuple<size_t, size_t> retire_old_metrics(const old_metric_list &old_metrics);
+    collected_old_metrics_info collect_old_metrics() const;
+    retired_metrics_stat retire_old_metrics(const old_metric_list &old_metrics);
 
     const metric_entity_prototype *const _prototype;
     const std::string _id;
@@ -419,6 +437,26 @@ public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
     using old_entity_map = std::unordered_map<std::string, metric_entity::old_metric_list>;
 
+    struct collected_old_entities_info
+    {
+        old_entity_map old_entities;
+        size_t num_all_entities = 0;
+        size_t num_all_metrics = 0;
+        size_t num_scheduled_metrics = 0;
+
+        collected_old_entities_info() = default;
+    };
+
+    struct retired_entities_stat
+    {
+        size_t num_retired_entities = 0;
+        size_t num_retired_metrics = 0;
+        size_t num_recently_scheduled_metrics = 0;
+        size_t num_reemployed_metrics = 0;
+
+        retired_entities_stat() = default;
+    };
+
     entity_map entities() const;
 
     void take_snapshot(metric_json_writer &writer, const metric_filters &filters) const;
@@ -428,7 +466,7 @@ private:
     friend class utils::singleton<metric_registry>;
 
     friend void test_get_metrics_handler(const http_request &req, http_response &resp);
-    friend void test_restart_metric_registry_timer(uint64_t interval_ms);
+    friend class MetricsRetirementTest;
 
     metric_registry();
     ~metric_registry();
@@ -451,8 +489,8 @@ private:
     //
     // Once some metrics and entities are collected to be retired, in the second phase "retire",
     // they will be removed according to the specific rules.
-    old_entity_map collect_old_metrics() const;
-    std::tuple<size_t, size_t, size_t> retire_old_metrics(const old_entity_map &old_entities);
+    collected_old_entities_info collect_old_metrics() const;
+    retired_entities_stat retire_old_metrics(const old_entity_map &old_entities);
     void process_old_metrics();
 
     mutable utils::rw_lock_nr _lock;
