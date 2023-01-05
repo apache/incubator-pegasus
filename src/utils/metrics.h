@@ -158,7 +158,11 @@ public:
     struct collected_old_metrics_info
     {
         old_metric_list old_metrics;
+
+        // The number of all metrics in this entity.
         size_t num_all_metrics = 0;
+
+        // The number of the metrics that have been scheduled to be retired for this entity.
         size_t num_scheduled_metrics = 0;
 
         collected_old_metrics_info() = default;
@@ -166,8 +170,15 @@ public:
 
     struct retired_metrics_stat
     {
+        // The number of retired metrics for this entity.
         size_t num_retired_metrics = 0;
+
+        // The number of the metrics that were just considered useless and scheduled to
+        // be retired in this round for this entity.
         size_t num_recently_scheduled_metrics = 0;
+
+        // The number of the metrics that had previously been scheduled to be retired and
+        // were recently reemployed for this entity.
         size_t num_reemployed_metrics = 0;
 
         retired_metrics_stat() = default;
@@ -440,8 +451,14 @@ public:
     struct collected_old_entities_info
     {
         old_entity_map old_entities;
+
+        // The number of all entities in the registry.
         size_t num_all_entities = 0;
+
+        // The number of all metrics in the registry.
         size_t num_all_metrics = 0;
+
+        // The number of the metrics that have been scheduled to be retired for the registry.
         size_t num_scheduled_metrics = 0;
 
         collected_old_entities_info() = default;
@@ -449,9 +466,18 @@ public:
 
     struct retired_entities_stat
     {
+        // The number of retired entities for the registry.
         size_t num_retired_entities = 0;
+
+        // The number of retired metrics for the registry.
         size_t num_retired_metrics = 0;
+
+        // The number of the metrics that were just considered useless and scheduled to
+        // be retired in this round for the registry.
         size_t num_recently_scheduled_metrics = 0;
+
+        // The number of the metrics that had previously been scheduled to be retired and
+        // were recently reemployed for the registry.
         size_t num_reemployed_metrics = 0;
 
         retired_entities_stat() = default;
@@ -466,6 +492,7 @@ private:
     friend class utils::singleton<metric_registry>;
 
     friend void test_get_metrics_handler(const http_request &req, http_response &resp);
+    friend class scoped_entity;
     friend class MetricsRetirementTest;
 
     metric_registry();

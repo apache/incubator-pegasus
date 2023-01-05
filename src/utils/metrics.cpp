@@ -493,6 +493,10 @@ void metric_registry::start_timer()
         return;
     }
 
+    // Once a metric is considered useless, it will retire formally after the retention
+    // interval, namely FLAGS_metrics_retirement_delay_ms milliseconds. Therefore, if
+    // the interval of the timer is also set to FLAGS_metrics_retirement_delay_ms, in
+    // the next round, it's just about time to retire this metric.
     _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
                                   std::bind(&metric_registry::process_old_metrics, this),
                                   std::bind(&metric_registry::on_close, this)));
@@ -504,8 +508,11 @@ void metric_registry::stop_timer()
         return;
     }
 
+    // Close the timer synchronously.
     _timer->close();
     _timer->wait();
+
+    // Reset the timer to mark that it has been stopped, now it could be started.
     _timer.reset();
 }
 
@@ -639,6 +646,7 @@ void metric_registry::process_old_metrics()
         num_collected_metrics += old_entity.second.size();
     }
 
+    // Try to process the collected metrics.
     const auto &retired_stat = retire_old_metrics(collected_info.old_entities);
 
     LOG_INFO_F("stat for entities: total={}, collected={}, retired={}",
@@ -664,14 +672,19 @@ metric::metric(const metric_prototype *prototype) : _prototype(prototype), _reti
 
 bool metric::is_stale() const
 {
+    // Since this metric itself is still being accessed, its reference count should be 1 at least.
     CHECK_GE(get_count(), 1);
 
+    // Each metric (any type of metric) will be referenced by its entity. For a percentile,
+    // it will also be referenced by its timer. Thus the reference count for a percentile
+    // will be at least 2. However, once a percentile has only 2 references, it will be
+    // considered useless since it is not used by any other class.
     if (_prototype->type() == metric_type::kPercentile && get_count() == 2) {
         return true;
     }
 
     // There's only one reference for this metric that is kept in the entity. Thus
-    // this metric is not considered to be in use.
+    // this metric is considered useless.
     return get_count() == 1;
 }
 
