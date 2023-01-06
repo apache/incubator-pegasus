@@ -2906,7 +2906,6 @@ private:
         // Extend the lifetime of the metric since it's marked as "surviving".
         m = temp_m;
         _expected_surviving_metrics.emplace(&prototype, m.get());
-        std::cout << "add expected surviving metrics: " << prototype.name() << std::endl;
     }
 
     surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const;
@@ -2946,7 +2945,6 @@ scoped_entity::scoped_entity(const std::string &entity_id,
                        is_percentile_surviving,
                        METRIC_test_server_percentile_int64,
                        _my_percentile_int64);
-    std::cout << std::endl;
 
     if (is_entity_surviving) {
         // Extend the lifetime of the entity since it's marked as "surviving".
@@ -2967,9 +2965,7 @@ scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &my_entity) 
     // any reference which may affect the test results.
     for (const auto &m : my_entity->_metrics) {
         actual_surviving_metrics.emplace(m.first, m.second.get());
-        std::cout << "add actual surviving metrics: " << m.first->name() << std::endl;
     }
-    std::cout << std::endl;
 
     return actual_surviving_metrics;
 }

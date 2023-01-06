@@ -205,11 +205,12 @@ void metric_entity::take_snapshot(metric_json_writer &writer, const metric_filte
 
 bool metric_entity::is_stale() const
 {
-    // Since this entity itself is still being accessed, its reference count should be 1 at least.
+    // Since this entity itself is still being accessed, its reference count should be 1
+    // at least.
     CHECK_GE(get_count(), 1);
 
-    // Once this entity did not have any metric, and had the only one reference that is
-    // kept in the registry, this entity would be considered useless.
+    // Once this entity did not have any metric, and had only one reference kept in the
+    // registry, this entity would be considered useless.
     return _metrics.empty() && get_count() == 1;
 }
 
@@ -219,7 +220,6 @@ metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() c
 
     auto now = dsn_now_ms();
 
-    LOG_INFO_F("in metric_entity::collect_old_metrics for entity {}", _id);
     utils::auto_read_lock l(_lock);
 
     for (const auto &m : _metrics) {
@@ -229,7 +229,6 @@ metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() c
                 // since this metric is reemployed now, its scheduled time for retirement
                 // should be reset to 0.
                 collected_info.old_metrics.insert(m.first);
-                LOG_INFO_F("change old metric {} to new", m.second->prototype()->name().data());
             }
             continue;
         }
@@ -242,7 +241,6 @@ metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() c
         }
 
         collected_info.old_metrics.insert(m.first);
-        LOG_INFO_F("add metric {} to retire", m.second->prototype()->name().data());
     }
 
     collected_info.num_all_metrics = _metrics.size();
@@ -261,22 +259,16 @@ metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
 
     auto now = dsn_now_ms();
 
-    LOG_INFO_F("in metric_entity::retire_old_metrics for entity {}", _id);
     utils::auto_write_lock l(_lock);
 
     for (const auto &m : old_metrics) {
         auto iter = _metrics.find(m);
         if (dsn_unlikely(iter == _metrics.end())) {
             // This metric has been removed from the entity for some reason.
-            LOG_INFO_F("metric {} not found", m->name().data());
             continue;
         }
 
         if (!iter->second->is_stale()) {
-            LOG_INFO_F("not stale for metric {} while count={}, retire_time_ms={}",
-                       iter->second->prototype()->name().data(),
-                       iter->second->get_count(),
-                       iter->second->_retire_time_ms);
             if (iter->second->_retire_time_ms > 0) {
                 // For those metrics which are still in use, their scheduled time for
                 // retirement should be reset to 0 though previously they could have
@@ -286,11 +278,6 @@ metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
             }
             continue;
         }
-
-        LOG_INFO_F("is stale for metric {} while count={}, retire_time_ms={}",
-                   iter->second->prototype()->name().data(),
-                   iter->second->get_count(),
-                   iter->second->_retire_time_ms);
 
         if (dsn_unlikely(iter->second->_retire_time_ms > now)) {
             // Since in collect_old_metrics() we've filtered the metrics which have been
@@ -314,7 +301,6 @@ metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
         // Then retire it from the entity.
         _metrics.erase(iter);
         ++retired_stat.num_retired_metrics;
-        LOG_INFO_F("retire metric {}", iter->second->prototype()->name().data());
     }
 
     return retired_stat;
@@ -575,7 +561,6 @@ metric_registry::collected_old_entities_info metric_registry::collect_old_metric
         if (!metrics_info.old_metrics.empty()) {
             // Those entities which have metrics that should be retired will be collected.
             entities_info.old_entities.emplace(entity.first, std::move(metrics_info.old_metrics));
-            LOG_INFO_F("collect entity {} for metrics", entity.first);
             continue;
         }
 
@@ -586,7 +571,6 @@ metric_registry::collected_old_entities_info metric_registry::collect_old_metric
         // Since this entity itself should be retired, it will be collected without any
         // metric. Actually it has already not had any metric itself.
         (void)entities_info.old_entities[entity.first];
-        LOG_INFO_F("collect entity {} for stale", entity.first);
     }
 
     entities_info.num_all_entities = _entities.size();
@@ -630,7 +614,6 @@ metric_registry::retire_old_metrics(const old_entity_map &old_entities)
         // been delayed for a long enough time before retirement.
         _entities.erase(iter);
         ++entities_stat.num_retired_entities;
-        LOG_INFO_F("retire entity {}", iter->second->id());
     }
 
     return entities_stat;
@@ -672,7 +655,8 @@ metric::metric(const metric_prototype *prototype) : _prototype(prototype), _reti
 
 bool metric::is_stale() const
 {
-    // Since this metric itself is still being accessed, its reference count should be 1 at least.
+    // Since this metric itself is still being accessed, its reference count should be 1
+    // at least.
     CHECK_GE(get_count(), 1);
 
     // Each metric (any type of metric) will be referenced by its entity. For a percentile,
@@ -683,8 +667,8 @@ bool metric::is_stale() const
         return true;
     }
 
-    // There's only one reference for this metric that is kept in the entity. Thus
-    // this metric is considered useless.
+    // There's only one reference for this metric that is kept in the entity. Thus this
+    // metric is considered useless.
     return get_count() == 1;
 }
 
