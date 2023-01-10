@@ -121,7 +121,7 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
     dsn::error_code err = ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
     if (err == ::dsn::ERR_OK) {
-        LOG_DEBUG("access meta and query partition status success");
+        LOG_DEBUG_F("access meta and query partition status success");
         for (int i = 0; i < partitions.size(); i++) {
             const dsn::partition_configuration &p = partitions[i];
             int replica_count = 0;
@@ -147,13 +147,13 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
                 if (debug_unhealthy) {
                     LOG_INFO("found unhealthy partition, %s", info.str().c_str());
                 } else {
-                    LOG_DEBUG("found unhealthy partition, %s", info.str().c_str());
+                    LOG_DEBUG_F("found unhealthy partition, {}", info.str());
                 }
             }
         }
         unhealthy_partition_cnt = partition_count - healthy_partition_cnt;
     } else {
-        LOG_DEBUG("access meta and query partition status fail");
+        LOG_DEBUG_F("access meta and query partition status fail");
         healthy_partition_cnt = 0;
         unhealthy_partition_cnt = 0;
     }
@@ -172,10 +172,10 @@ bool kill_testor::check_cluster_status()
                                                  unhealthy_partition_cnt);
         if (err == dsn::ERR_OK) {
             if (unhealthy_partition_cnt > 0) {
-                LOG_DEBUG("query partition status success, but still have unhealthy partition, "
-                          "healthy_partition_count = %d, unhealthy_partition_count = %d",
-                          healthy_partition_cnt,
-                          unhealthy_partition_cnt);
+                LOG_DEBUG_F("query partition status success, but still have unhealthy partition, "
+                            "healthy_partition_count = {}, unhealthy_partition_count = {}",
+                            healthy_partition_cnt,
+                            unhealthy_partition_cnt);
                 sleep(1);
             } else
                 return true;

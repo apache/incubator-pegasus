@@ -74,8 +74,6 @@ nfs_service_impl::nfs_service_impl() : ::dsn::serverlet<nfs_service_impl>("nfs")
 void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
                                ::dsn::rpc_replier<::dsn::service::copy_response> &reply)
 {
-    // LOG_DEBUG(">>> on call RPC_COPY end, exec RPC_NFS_COPY");
-
     std::string file_path =
         dsn::utils::filesystem::path_combine(request.source_dir, request.file_name);
     disk_file *dfile = nullptr;
@@ -100,10 +98,8 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
         }
     }
 
-    LOG_DEBUG("nfs: copy file %s [%" PRId64 ", %" PRId64 ")",
-              file_path.c_str(),
-              request.offset,
-              request.offset + request.size);
+    LOG_DEBUG_F(
+        "nfs: copy file {} [{}, {}]", file_path, request.offset, request.offset + request.size);
 
     if (dfile == nullptr) {
         LOG_ERROR("{nfs_service} open file %s failed", file_path.c_str());
@@ -173,8 +169,6 @@ void nfs_service_impl::on_get_file_size(
     const ::dsn::service::get_file_size_request &request,
     ::dsn::rpc_replier<::dsn::service::get_file_size_response> &reply)
 {
-    // LOG_DEBUG(">>> on call RPC_NFS_GET_FILE_SIZE end, exec RPC_NFS_GET_FILE_SIZE");
-
     get_file_size_response resp;
     error_code err = ERR_OK;
     std::vector<std::string> file_list;
@@ -246,7 +240,7 @@ void nfs_service_impl::close_file() // release out-of-date file handle
         // not used and expired
         if (fptr->file_access_count == 0 &&
             dsn_now_ms() - fptr->last_access_time > (uint64_t)FLAGS_file_close_expire_time_ms) {
-            LOG_DEBUG("nfs: close file handle %s", it->first.c_str());
+            LOG_DEBUG_F("nfs: close file handle {}", it->first);
             it = _handles_map.erase(it);
         } else
             it++;

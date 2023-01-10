@@ -500,7 +500,7 @@ error_code fds_file_object::get_content(uint64_t pos,
                                _fds_path,
                                pos + transfered_bytes,
                                length - transfered_bytes);
-            LOG_DEBUG("get object from fds succeed, remote_file(%s)", _fds_path.c_str());
+            LOG_DEBUG_F("get object from fds succeed, remote_file({})", _fds_path);
             std::istream &is = obj->objectContent();
             transfered_bytes += utils::copy_stream(is, os, PIECE_SIZE);
             err = ERR_OK;

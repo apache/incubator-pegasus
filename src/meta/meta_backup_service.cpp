@@ -968,7 +968,7 @@ void policy_context::issue_gc_backup_info_task_unlocked()
     } else {
         // there is no extra backup to gc, we just issue a new task to call
         // issue_gc_backup_info_task_unlocked later
-        LOG_DEBUG("%s: no need to gc backup info, start it later", _policy.policy_name.c_str());
+        LOG_DEBUG_F("{}: no need to gc backup info, start it later", _policy.policy_name);
         tasking::create_task(LPC_DEFAULT_CALLBACK, &_tracker, [this]() {
             zauto_lock l(_lock);
             issue_gc_backup_info_task_unlocked();
@@ -1050,7 +1050,7 @@ backup_service::backup_service(meta_service *meta_svc,
 
 void backup_service::start_create_policy_meta_root(dsn::task_ptr callback)
 {
-    LOG_DEBUG("create policy meta root(%s) on remote_storage", _policy_meta_root.c_str());
+    LOG_DEBUG_F("create policy meta root({}) on remote_storage", _policy_meta_root);
     _meta_svc->get_remote_storage()->create_node(
         _policy_meta_root, LPC_DEFAULT_CALLBACK, [this, callback](dsn::error_code err) {
             if (err == dsn::ERR_OK || err == ERR_NODE_ALREADY_EXIST) {
@@ -1114,7 +1114,7 @@ error_code backup_service::sync_policies_from_remote_storage()
     auto init_backup_info = [this, &err, &tracker](const std::string &policy_name) {
         auto after_get_backup_info = [this, &err, policy_name](error_code ec, const blob &value) {
             if (ec == ERR_OK) {
-                LOG_DEBUG("sync a backup string(%s) from remote storage", value.data());
+                LOG_DEBUG_F("sync a backup string({}) from remote storage", value.data());
                 backup_info tbackup_info;
                 dsn::json::json_forwarder<backup_info>::decode(value, tbackup_info);
 

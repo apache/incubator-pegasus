@@ -363,10 +363,9 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, 
         _pending_mutation = r->new_mutation(invalid_decree);
     }
 
-    LOG_DEBUG("add request with trace_id = %016" PRIx64
-              " into mutation with mutation_tid = %" PRIu64,
-              request->header->trace_id,
-              _pending_mutation->tid());
+    LOG_DEBUG_F("add request with trace_id = {:#018x} into mutation with mutation_tid = {}",
+                request->header->trace_id,
+                _pending_mutation->tid());
 
     _pending_mutation->add_client_request(code, request);
 

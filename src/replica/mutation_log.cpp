@@ -701,7 +701,7 @@ void mutation_log::close()
         _is_opened = false;
     }
 
-    LOG_DEBUG("close mutation log %s", dir().c_str());
+    LOG_DEBUG_F("close mutation log {}", dir());
 
     // make all data is on disk
     flush();
@@ -1481,26 +1481,24 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                     CHECK(valid_start_offset == 0 || valid_start_offset >= log->end_offset(),
                           "valid start offset must be 0 or greater than the end of this log file");
 
-                    LOG_DEBUG("gc @ %d.%d: max_decree for %s is missing vs %" PRId64
-                              " as garbage max decree,"
-                              " safe to delete this and all older logs for this replica",
-                              gpid.get_app_id(),
-                              gpid.get_partition_index(),
-                              log->path().c_str(),
-                              garbage_max_decree);
+                    LOG_DEBUG_F(
+                        "gc @ {}: max_decree for {} is missing vs {} as garbage max decree, it's "
+                        "safe to delete this and all older logs for this replica",
+                        gpid,
+                        log->path(),
+                        garbage_max_decree);
                     delete_ok_for_this_replica = true;
                     kickout_this_replica = true;
                 }
 
                 // log is invalid for this replica, ok to delete
                 else if (log->end_offset() <= valid_start_offset) {
-                    LOG_DEBUG(
-                        "gc @ %d.%d: log is invalid for %s, as"
-                        " valid start offset vs log end offset = %" PRId64 " vs %" PRId64 ","
-                        " it is therefore safe to delete this and all older logs for this replica",
-                        gpid.get_app_id(),
-                        gpid.get_partition_index(),
-                        log->path().c_str(),
+                    LOG_DEBUG_F(
+                        "gc @ {}: log is invalid for {}, as valid start offset vs log end offset = "
+                        "{} vs {}, it is therefore safe to delete this and all older logs for this "
+                        "replica",
+                        gpid,
+                        log->path(),
                         valid_start_offset,
                         log->end_offset());
                     delete_ok_for_this_replica = true;
@@ -1509,13 +1507,11 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
 
                 // all decrees are no more than garbage max decree, ok to delete
                 else if (it3->second.max_decree <= garbage_max_decree) {
-                    LOG_DEBUG(
-                        "gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64
-                        " as garbage max decree,"
-                        " it is therefore safe to delete this and all older logs for this replica",
-                        gpid.get_app_id(),
-                        gpid.get_partition_index(),
-                        log->path().c_str(),
+                    LOG_DEBUG_F(
+                        "gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it is "
+                        "therefore safe to delete this and all older logs for this replica",
+                        gpid,
+                        log->path(),
                         it3->second.max_decree,
                         garbage_max_decree);
                     delete_ok_for_this_replica = true;
@@ -1525,14 +1521,12 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                 else // it3->second.max_decree > garbage_max_decree
                 {
                     // should not delete this file
-                    LOG_DEBUG("gc @ %d.%d: max_decree for %s is %" PRId64 " vs %" PRId64
-                              " as garbage max decree,"
-                              " it is therefore not allowed to delete this and all older logs",
-                              gpid.get_app_id(),
-                              gpid.get_partition_index(),
-                              log->path().c_str(),
-                              it3->second.max_decree,
-                              garbage_max_decree);
+                    LOG_DEBUG_F("gc @ {}: max_decree for {} is {} vs {} as garbage max decree, it "
+                                "is therefore not allowed to delete this and all older logs",
+                                gpid,
+                                log->path(),
+                                it3->second.max_decree,
+                                garbage_max_decree);
                     prevent_gc_replicas_for_this_log.insert(gpid);
                     decree gap = it3->second.max_decree - garbage_max_decree;
                     if (log->index() < stop_gc_log_index || gap > stop_gc_decree_gap) {

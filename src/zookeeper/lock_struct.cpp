@@ -556,7 +556,7 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
     __check_code(ec, allow_ec, 2, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
-    LOG_DEBUG("after create seq and ephe node, error(%s), path(%s)", zerror(ec), path->c_str());
+    LOG_DEBUG_F("after create seq and ephe node, error({}), path({})", zerror(ec), *path);
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
         LOG_INFO("current state(%s), ignore event create lockdir(%s)", _this->_lock_dir.c_str());
         if (ZOK == ec && _this->_state == lock_state::cancelled) {

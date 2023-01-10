@@ -42,7 +42,7 @@ void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const
         load_string << kv.first << ": " << kv.second << std::endl;
     }
     load_string << ">>>>>>>>>>";
-    LOG_DEBUG("%s", load_string.str().c_str());
+    LOG_DEBUG_F("{}", load_string.str());
 }
 
 bool calc_disk_load(node_mapper &nodes,
@@ -57,10 +57,7 @@ bool calc_disk_load(node_mapper &nodes,
     CHECK_NOTNULL(ns, "can't find node({}) from node_state", node.to_string());
 
     auto add_one_replica_to_disk_load = [&](const gpid &pid) {
-        LOG_DEBUG("add gpid(%d.%d) to node(%s) disk load",
-                  pid.get_app_id(),
-                  pid.get_partition_index(),
-                  node.to_string());
+        LOG_DEBUG_F("add gpid({}) to node({}) disk load", pid, node);
         const config_context &cc = *get_config_context(apps, pid);
         auto iter = cc.find_from_serving(node);
         if (iter == cc.serving.end()) {

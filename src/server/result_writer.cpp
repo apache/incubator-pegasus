@@ -64,10 +64,10 @@ void result_writer::set_result(const std::string &hash_key,
                           new_try_count);
             }
         } else {
-            LOG_DEBUG("set_result succeed, hash_key = %s, sort_key = %s, value = %s",
-                      hash_key.c_str(),
-                      sort_key.c_str(),
-                      value.c_str());
+            LOG_DEBUG_F("set_result succeed, hash_key = {}, sort_key = {}, value = {}",
+                        hash_key,
+                        sort_key,
+                        value);
         }
     };
 

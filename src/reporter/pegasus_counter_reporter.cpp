@@ -303,7 +303,7 @@ void pegasus_counter_reporter::http_post_request(const std::string &host,
                                                  const std::string &contentType,
                                                  const std::string &data)
 {
-    LOG_DEBUG("start update_request, %s", data.c_str());
+    LOG_DEBUG_F("start update_request: {}", data);
     struct event_base *base = event_base_new();
     struct evhttp_connection *conn = evhttp_connection_base_new(base, nullptr, host.c_str(), port);
     struct evhttp_request *req =
@@ -330,7 +330,7 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
     } else if (req->response_code == 0) {
         LOG_ERROR("http post request failed: connection refused");
     } else if (req->response_code == HTTP_OK) {
-        LOG_DEBUG("http post request succeed");
+        LOG_DEBUG_F("http post request succeed");
     } else {
         struct evbuffer *buf = evhttp_request_get_input_buffer(req);
         size_t len = evbuffer_get_length(buf);

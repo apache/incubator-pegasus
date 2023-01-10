@@ -81,7 +81,7 @@ void replica::on_config_proposal(configuration_update_request &proposal)
     }
 
     if (_primary_states.reconfiguration_task != nullptr) {
-        LOG_DEBUG("%s: reconfiguration on the way, skip the incoming proposal", name());
+        LOG_DEBUG_PREFIX("reconfiguration on the way, skip the incoming proposal");
         return;
     }
 
@@ -1124,9 +1124,8 @@ void replica::replay_prepare_list()
         mutation_ptr mu = new_mutation(decree);
 
         if (old != nullptr) {
-            LOG_DEBUG("copy mutation from mutation_tid=%" PRIu64 " to mutation_tid=%" PRIu64,
-                      old->tid(),
-                      mu->tid());
+            LOG_DEBUG_PREFIX(
+                "copy mutation from mutation_tid={} to mutation_tid={}", old->tid(), mu->tid());
             mu->copy_from(old);
         } else {
             mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);

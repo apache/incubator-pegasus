@@ -117,7 +117,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
 
     auto ret = _masters.insert(std::make_pair(target, record));
     if (ret.second) {
-        LOG_DEBUG("register master[%s] successfully", target.to_string());
+        LOG_DEBUG_F("register master[{}] successfully", target);
         setup_timer = true;
     } else {
         // active the beacon again in case previously local node is not in target's allow list
@@ -125,7 +125,7 @@ void failure_detector::register_master(::dsn::rpc_address target)
             ret.first->second.rejected = false;
             setup_timer = true;
         }
-        LOG_DEBUG("master[%s] already registered", target.to_string());
+        LOG_DEBUG_F("master[{}] already registered", target);
     }
 
     if (setup_timer) {
@@ -518,9 +518,9 @@ void failure_detector::register_worker(::dsn::rpc_address target, bool is_connec
 
     auto ret = _workers.insert(std::make_pair(target, record));
     if (ret.second) {
-        LOG_DEBUG("register worker[%s] successfully", target.to_string());
+        LOG_DEBUG_F("register worker[{}] successfully", target);
     } else {
-        LOG_DEBUG("worker[%s] already registered", target.to_string());
+        LOG_DEBUG_F("worker[{}] already registered", target);
     }
 }
 
@@ -539,9 +539,7 @@ bool failure_detector::unregister_worker(::dsn::rpc_address node)
         ret = true;
     }
 
-    LOG_DEBUG("unregister worker[%s] successfully, removed entry count is %u",
-              node.to_string(),
-              (uint32_t)count);
+    LOG_DEBUG_F("unregister worker[{}] successfully, removed entry count is {}", node, count);
 
     return ret;
 }

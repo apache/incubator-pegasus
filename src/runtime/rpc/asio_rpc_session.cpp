@@ -45,7 +45,8 @@ void asio_rpc_session::set_options()
         _socket->get_option(option, ec);
         if (ec)
             LOG_WARNING("asio socket get option failed, error = %s", ec.message().c_str());
-        LOG_DEBUG("boost asio send buffer size is %u, set as 16MB, now is %u", old, option.value());
+        LOG_DEBUG_F(
+            "boost asio send buffer size is {}, set as 16MB, now is {}", old, option.value());
 
         boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
         _socket->get_option(option3, ec);
@@ -58,7 +59,8 @@ void asio_rpc_session::set_options()
         _socket->get_option(option3, ec);
         if (ec)
             LOG_WARNING("asio socket get option failed, error = %s", ec.message().c_str());
-        LOG_DEBUG("boost asio recv buffer size is %u, set as 16MB, now is %u", old, option.value());
+        LOG_DEBUG_F(
+            "boost asio recv buffer size is {}, set as 16MB, now is {}", old, option.value());
 
         // Nagle algorithm may cause an extra delay in some cases, because if
         // the data in a single write spans 2n packets, the last packet will be
@@ -71,7 +73,7 @@ void asio_rpc_session::set_options()
         _socket->set_option(boost::asio::ip::tcp::no_delay(true), ec);
         if (ec)
             LOG_WARNING("asio socket set option failed, error = %s", ec.message().c_str());
-        LOG_DEBUG("boost asio set no_delay = true");
+        LOG_DEBUG_F("boost asio set no_delay = true");
     }
 }
 
@@ -184,7 +186,7 @@ void asio_rpc_session::connect()
         add_ref();
         _socket->async_connect(ep, [this](boost::system::error_code ec) {
             if (!ec) {
-                LOG_DEBUG("client session %s connected", _remote_addr.to_string());
+                LOG_DEBUG_F("client session {} connected", _remote_addr);
 
                 set_options();
                 set_connected();

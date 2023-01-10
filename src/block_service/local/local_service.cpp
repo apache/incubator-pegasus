@@ -186,7 +186,7 @@ dsn::task_ptr local_service::create_file(const create_file_request &req,
         if (utils::filesystem::file_exists(file_path) &&
             utils::filesystem::file_exists(meta_file_path)) {
 
-            LOG_DEBUG("file(%s) already exist", file_path.c_str());
+            LOG_DEBUG_F("file({}) already exist", file_path);
             resp.err = f->load_metadata();
         }
 
@@ -332,7 +332,7 @@ dsn::task_ptr local_file_object::write(const write_request &req,
         }
 
         if (resp.err == ERR_OK) {
-            LOG_DEBUG("start write file, file = %s", file_name().c_str());
+            LOG_DEBUG_F("start write file, file = {}", file_name());
 
             std::ofstream fout(file_name(), std::ifstream::out | std::ifstream::trunc);
             if (!fout.is_open()) {
@@ -386,7 +386,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
                     total_sz = req.remote_length;
                 }
 
-                LOG_DEBUG("read file(%s), size = %ld", file_name().c_str(), total_sz);
+                LOG_DEBUG_F("read file({}), size = {}", file_name(), total_sz);
                 std::string buf;
                 buf.resize(total_sz + 1);
                 std::ifstream fin(file_name(), std::ifstream::in);
@@ -439,9 +439,9 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
         }
 
         if (resp.err == ERR_OK) {
-            LOG_DEBUG("start to transfer from src_file(%s) to des_file(%s)",
-                      req.input_local_name.c_str(),
-                      file_name().c_str());
+            LOG_DEBUG_F("start to transfer from src_file({}) to dst_file({})",
+                        req.input_local_name,
+                        file_name());
             int64_t total_sz = 0;
             char buf[max_length] = {'\0'};
             while (!fin.eof()) {
@@ -449,8 +449,7 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
                 total_sz += fin.gcount();
                 fout.write(buf, fin.gcount());
             }
-            LOG_DEBUG(
-                "finish upload file, file = %s, total_size = %d", file_name().c_str(), total_sz);
+            LOG_DEBUG_F("finish upload file, file = {}, total_size = {}", file_name(), total_sz);
             fout.close();
             fin.close();
 
@@ -527,9 +526,8 @@ dsn::task_ptr local_file_object::download(const download_request &req,
             }
 
             if (resp.err == ERR_OK) {
-                LOG_DEBUG("start to transfer, src_file(%s), des_file(%s)",
-                          file_name().c_str(),
-                          target_file.c_str());
+                LOG_DEBUG_F(
+                    "start to transfer, src_file({}), dst_file({})", file_name(), target_file);
                 int64_t total_sz = 0;
                 char buf[max_length] = {'\0'};
                 while (!fin.eof()) {
@@ -537,8 +535,7 @@ dsn::task_ptr local_file_object::download(const download_request &req,
                     total_sz += fin.gcount();
                     fout.write(buf, fin.gcount());
                 }
-                LOG_DEBUG(
-                    "finish download file(%s), total_size = %d", target_file.c_str(), total_sz);
+                LOG_DEBUG_F("finish download file({}), total_size = {}", target_file, total_sz);
                 fout.close();
                 fin.close();
                 resp.downloaded_size = static_cast<uint64_t>(total_sz);

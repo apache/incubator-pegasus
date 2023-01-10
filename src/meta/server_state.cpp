@@ -283,10 +283,10 @@ void server_state::process_one_partition(std::shared_ptr<app_state> &app)
 {
     int ans = --app->helpers->partitions_in_progress;
     if (ans > 0) {
-        LOG_DEBUG("app(%s) in status %s, can't transfer to stable state as some partition is in "
-                  "progressing",
-                  app->get_logname(),
-                  enum_to_string(app->status));
+        LOG_DEBUG_F("app({}) in status {}, can't transfer to stable state as some partition is in "
+                    "progressing",
+                    app->get_logname(),
+                    enum_to_string(app->status));
         return;
     } else if (ans == 0) {
         transition_staging_state(app);
@@ -858,10 +858,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
             // the app is deleted but not expired, we need to ignore it
             // if the app is deleted and expired, we need to gc it
             for (const replica_info &rep : replicas) {
-                LOG_DEBUG("receive stored replica from %s, pid(%d.%d)",
-                          request.node.to_string(),
-                          rep.pid.get_app_id(),
-                          rep.pid.get_partition_index());
+                LOG_DEBUG_F("receive stored replica from {}, pid({})", request.node, rep.pid);
                 std::shared_ptr<app_state> app = get_app(rep.pid.get_app_id());
                 if (app == nullptr || rep.pid.get_partition_index() >= app->partition_count) {
                     // This app has garbage partition after cancel split, the canceled child
@@ -1014,8 +1011,7 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
                                            task_ptr callback)
 {
     auto on_create_app_partition = [this, pidx, app, callback](error_code ec) mutable {
-        LOG_DEBUG(
-            "create partition node: gpid(%d.%d), result: %s", app->app_id, pidx, ec.to_string());
+        LOG_DEBUG_F("create partition node: gpid({}.{}), result: {}", app->app_id, pidx, ec);
         if (ERR_OK == ec || ERR_NODE_ALREADY_EXIST == ec) {
             {
                 zauto_write_lock l(_lock);
@@ -1054,7 +1050,7 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
 {
     auto on_create_app_root = [this, app](error_code ec) mutable {
         if (ERR_OK == ec || ERR_NODE_ALREADY_EXIST == ec) {
-            LOG_DEBUG("create app(%s) on storage service ok", app->get_logname());
+            LOG_DEBUG_F("create app({}) on storage service ok", app->get_logname());
             for (unsigned int i = 0; i != app->partition_count; ++i) {
                 init_app_partition_node(app, i, nullptr);
             }
@@ -1183,7 +1179,7 @@ void server_state::do_app_drop(std::shared_ptr<app_state> &app)
                 drop_partition(app, i);
             }
         } else if (ERR_TIMEOUT == ec) {
-            LOG_DEBUG("drop app(%s) prepare timeout, continue to drop later", app->get_logname());
+            LOG_DEBUG_F("drop app({}) prepare timeout, continue to drop later", app->get_logname());
             tasking::enqueue(LPC_META_STATE_HIGH,
                              tracker(),
                              std::bind(&server_state::do_app_drop, this, app),
@@ -1408,7 +1404,7 @@ void server_state::recall_app(dsn::message_ex *msg)
 void server_state::list_apps(const configuration_list_apps_request &request,
                              configuration_list_apps_response &response)
 {
-    LOG_DEBUG("list app request, status(%d)", request.status);
+    LOG_DEBUG_F("list app request, status({})", request.status);
     zauto_read_lock l(_lock);
     for (auto &kv : _all_apps) {
         app_state &app = *(kv.second);
@@ -2009,7 +2005,7 @@ void server_state::on_partition_node_dead(std::shared_ptr<app_state> &app,
 
 void server_state::on_change_node_state(rpc_address node, bool is_alive)
 {
-    LOG_DEBUG("change node(%s) state to %s", node.to_string(), is_alive ? "alive" : "dead");
+    LOG_DEBUG_F("change node({}) state to {}", node, is_alive ? "alive" : "dead");
     zauto_write_lock l(_lock);
     if (!is_alive) {
         auto iter = _nodes.find(node);
@@ -2489,10 +2485,7 @@ bool server_state::check_all_partitions()
                 configuration_proposal_action action;
                 pc_status s = _meta_svc->get_partition_guardian()->cure(
                     {&_all_apps, &_nodes}, pc.pid, action);
-                LOG_DEBUG("gpid(%d.%d) is in status(%s)",
-                          pc.pid.get_app_id(),
-                          pc.pid.get_partition_index(),
-                          enum_to_string(s));
+                LOG_DEBUG_F("gpid({}) is in status({})", pc.pid, enum_to_string(s));
                 if (pc_status::healthy != s) {
                     if (action.type != config_type::CT_INVALID) {
                         if (action.type == config_type::CT_ADD_SECONDARY ||

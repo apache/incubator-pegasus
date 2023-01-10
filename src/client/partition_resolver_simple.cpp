@@ -105,7 +105,7 @@ partition_resolver_simple::~partition_resolver_simple()
 
 void partition_resolver_simple::clear_all_pending_requests()
 {
-    LOG_DEBUG("%s.client: clear all pending tasks", _app_name.c_str());
+    LOG_DEBUG_PREFIX("clear all pending tasks");
     zauto_lock l(_requests_lock);
     // clear _pending_requests
     for (auto &pc : _pending_requests) {
@@ -230,11 +230,8 @@ DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
 
 task_ptr partition_resolver_simple::query_config(int partition_index, int timeout_ms)
 {
-    LOG_DEBUG("%s.client: start query config, gpid = %d.%d, timeout_ms = %d",
-              _app_name.c_str(),
-              _app_id,
-              partition_index,
-              timeout_ms);
+    LOG_DEBUG_PREFIX(
+        "start query config, gpid = {}.{}, timeout_ms = {}", _app_id, partition_index, timeout_ms);
     task_spec *sp = task_spec::get(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     if (timeout_ms >= sp->rpc_timeout_milliseconds)
         timeout_ms = 0;
@@ -292,13 +289,10 @@ void partition_resolver_simple::query_config_reply(error_code err,
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
                 auto &new_config = *it;
 
-                LOG_DEBUG("%s.client: query config reply, gpid = %d.%d, ballot = %" PRId64
-                          ", primary = %s",
-                          _app_name.c_str(),
-                          new_config.pid.get_app_id(),
-                          new_config.pid.get_partition_index(),
-                          new_config.ballot,
-                          new_config.primary.to_string());
+                LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}",
+                                 new_config.pid,
+                                 new_config.ballot,
+                                 new_config.primary);
 
                 auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                 if (it2 == _config_cache.end()) {

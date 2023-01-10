@@ -278,8 +278,8 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
     for (node_capacity_unit_stat &elem : nodes_stat) {
         if (elem.node_address.empty() || elem.timestamp.empty() ||
             !has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
-            LOG_DEBUG("recent read/write capacity unit value of node %s has not updated",
-                      elem.node_address.c_str());
+            LOG_DEBUG_F("recent read/write capacity unit value of node {} has not updated",
+                        elem.node_address);
             continue;
         }
         _result_writer->set_result(elem.timestamp, "cu@" + elem.node_address, elem.dump_to_json());

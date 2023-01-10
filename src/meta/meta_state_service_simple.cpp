@@ -198,7 +198,7 @@ error_code meta_state_service_simple::set_data_internal(const std::string &node,
 error_code meta_state_service_simple::apply_transaction(
     const std::shared_ptr<meta_state_service::transaction_entries> &t_entries)
 {
-    LOG_DEBUG("internal operation after logged");
+    LOG_DEBUG_F("internal operation after logged");
     simple_transaction_entries *entries =
         dynamic_cast<simple_transaction_entries *>(t_entries.get());
     CHECK_NOTNULL(entries, "invalid input parameter");

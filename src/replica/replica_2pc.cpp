@@ -154,7 +154,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    LOG_DEBUG("%s: got write request from %s", name(), request->header->from_address.to_string());
+    LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
     auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
     if (mu) {
         init_prepare(mu, false);
@@ -346,11 +346,10 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
                   },
                   get_gpid().thread_hash());
 
-    LOG_DEBUG("%s: mutation %s send_prepare_message to %s as %s",
-              name(),
-              mu->name(),
-              addr.to_string(),
-              enum_to_string(rconfig.status));
+    LOG_DEBUG_PREFIX("mutation {} send_prepare_message to {} as {}",
+                     mu->name(),
+                     addr,
+                     enum_to_string(rconfig.status));
 }
 
 void replica::do_possible_commit_on_primary(mutation_ptr &mu)
@@ -383,7 +382,7 @@ void replica::on_prepare(dsn::message_ex *request)
 
     decree decree = mu->data.header.decree;
 
-    LOG_DEBUG("%s: mutation %s on_prepare", name(), mu->name());
+    LOG_DEBUG_PREFIX("mutation {} on_prepare", mu->name());
     mu->_tracer->set_name(fmt::format("mutation[{}]", mu->name()));
     mu->_tracer->set_description("secondary");
     ADD_POINT(mu->_tracer);
@@ -517,11 +516,8 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
 {
     _checker.only_one_thread_access();
 
-    LOG_DEBUG("%s: append shared log completed for mutation %s, size = %u, err = %s",
-              name(),
-              mu->name(),
-              size,
-              err.to_string());
+    LOG_DEBUG_PREFIX(
+        "append shared log completed for mutation {}, size = {}, err = {}", mu->name(), size, err);
 
     ADD_POINT(mu->_tracer);
 
@@ -610,14 +606,13 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     ADD_CUSTOM_POINT(send_prepare_tracer, resp.err.to_string());
 
     if (resp.err == ERR_OK) {
-        LOG_DEBUG("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
-                  "target_status = %s, err = %s",
-                  name(),
-                  mu->name(),
-                  node.to_string(),
-                  mu->appro_data_bytes(),
-                  enum_to_string(target_status),
-                  resp.err.to_string());
+        LOG_DEBUG_PREFIX("mutation {} on_prepare_reply from {}, appro_data_bytes = {}, "
+                         "target_status = {}, err = {}",
+                         mu->name(),
+                         node,
+                         mu->appro_data_bytes(),
+                         enum_to_string(target_status),
+                         resp.err);
     } else {
         LOG_ERROR("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
                   "target_status = %s, err = %s",
