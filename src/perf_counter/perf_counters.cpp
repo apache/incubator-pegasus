@@ -218,7 +218,7 @@ perf_counter_ptr perf_counters::get_global_counter(const char *app,
     }
 }
 
-bool perf_counters::remove_counter(const char *full_name)
+bool perf_counters::remove_counter(const std::string &full_name)
 {
     int remain_ref;
     {
