@@ -119,7 +119,7 @@ void replica::broadcast_group_check()
             request->config.learner_signature = it->second.signature;
         }
 
-        LOG_INFO_PREFIX("send group check to %s with state {}", addr, enum_to_string(it->second));
+        LOG_INFO_PREFIX("send group check to {} with state {}", addr, enum_to_string(it->second));
 
         dsn::task_ptr callback_task =
             rpc::call(addr,

@@ -66,7 +66,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
             LOG_ERROR("%s: remove useless file(%s) failed", name(), pair.second.c_str());
             return false;
         }
-        LOG_INFO_PREFIX("remove useless file(%s) succeed", pair.second);
+        LOG_INFO_PREFIX("remove useless file({}) succeed", pair.second);
     }
     return true;
 }

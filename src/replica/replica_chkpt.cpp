@@ -70,8 +70,7 @@ void replica::on_checkpoint_timer()
                             _last_checkpoint_generate_time_ms);
         init_checkpoint(true);
     } else {
-        LOG_INFO_PREFIX("trigger non-emergency checkpoint by checkpoint_max_interval_hours {}h",
-                        _options->checkpoint_max_interval_hours);
+        LOG_INFO_PREFIX("trigger non-emergency checkpoint");
         init_checkpoint(false);
     }
 

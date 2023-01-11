@@ -202,7 +202,7 @@ void replica::init_learn(uint64_t signature)
     request.signature = _potential_secondary_states.learning_version;
     _app->prepare_get_checkpoint(request.app_specific_learn_request);
 
-    LOG_INFO_PREFIX("init_learn[{:#018x}]: learnee = {}, learn_duration = {}ms, max_gced_decree = "
+    LOG_INFO_PREFIX("init_learn[{:#018x}]: learnee = {}, learn_duration = {} ms, max_gced_decree = "
                     "{}, local_committed_decree = {}, app_committed_decree = {}, "
                     "app_durable_decree = {}, current_learning_status = {}, total_copy_file_count "
                     "= {}, total_copy_file_size = {}, total_copy_buffer_size = {}",

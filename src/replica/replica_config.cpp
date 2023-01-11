@@ -180,7 +180,7 @@ void replica::add_potential_secondary(configuration_update_request &proposal)
                                 "secondary proposal");
                 return;
             } else {
-                LOG_INFO_PREFIX("add a new secondary(%s) for future load balancer", proposal.node);
+                LOG_INFO_PREFIX("add a new secondary({}) for future load balancer", proposal.node);
             }
         } else {
             CHECK(false, "invalid config_type, type = {}", enum_to_string(proposal.type));
