@@ -214,9 +214,9 @@ bool metric_entity::is_stale() const
     return _metrics.empty() && get_count() == 1;
 }
 
-metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() const
+metric_entity::collected_stale_metrics_info metric_entity::collect_stale_metrics() const
 {
-    collected_old_metrics_info collected_info;
+    collected_stale_metrics_info collected_info;
 
     auto now = dsn_now_ms();
 
@@ -228,7 +228,7 @@ metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() c
                 // Previously this metric must have been scheduled to be retired. However,
                 // since this metric is reemployed now, its scheduled time for retirement
                 // should be reset to 0.
-                collected_info.old_metrics.insert(m.first);
+                collected_info.stale_metrics.insert(m.first);
             }
             continue;
         }
@@ -240,7 +240,7 @@ metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() c
             continue;
         }
 
-        collected_info.old_metrics.insert(m.first);
+        collected_info.stale_metrics.insert(m.first);
     }
 
     collected_info.num_all_metrics = _metrics.size();
@@ -248,9 +248,9 @@ metric_entity::collected_old_metrics_info metric_entity::collect_old_metrics() c
 }
 
 metric_entity::retired_metrics_stat
-metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
+metric_entity::retire_stale_metrics(const stale_metric_list &stale_metrics)
 {
-    if (old_metrics.empty()) {
+    if (stale_metrics.empty()) {
         // Do not lock for empty list.
         return retired_metrics_stat();
     }
@@ -261,7 +261,7 @@ metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
 
     utils::auto_write_lock l(_lock);
 
-    for (const auto &m : old_metrics) {
+    for (const auto &m : stale_metrics) {
         auto iter = _metrics.find(m);
         if (dsn_unlikely(iter == _metrics.end())) {
             // This metric has been removed from the entity for some reason.
@@ -280,7 +280,7 @@ metric_entity::retire_old_metrics(const old_metric_list &old_metrics)
         }
 
         if (dsn_unlikely(iter->second->_retire_time_ms > now)) {
-            // Since in collect_old_metrics() we've filtered the metrics which have been
+            // Since in collect_stale_metrics() we've filtered the metrics which have been
             // outside the retention interval, this is unlikely to happen. However, we
             // still check here for some special cases.
             continue;
@@ -484,7 +484,7 @@ void metric_registry::start_timer()
     // the interval of the timer is also set to FLAGS_metrics_retirement_delay_ms, in
     // the next round, it's just about time to retire this metric.
     _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
-                                  std::bind(&metric_registry::process_old_metrics, this),
+                                  std::bind(&metric_registry::process_stale_metrics, this),
                                   std::bind(&metric_registry::on_close, this)));
 }
 
@@ -547,20 +547,21 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     return entity;
 }
 
-metric_registry::collected_old_entities_info metric_registry::collect_old_metrics() const
+metric_registry::collected_stale_entities_info metric_registry::collect_stale_metrics() const
 {
-    collected_old_entities_info entities_info;
+    collected_stale_entities_info entities_info;
 
     utils::auto_read_lock l(_lock);
 
     for (const auto &entity : _entities) {
-        const auto &metrics_info = entity.second->collect_old_metrics();
+        const auto &metrics_info = entity.second->collect_stale_metrics();
 
         entities_info.num_all_metrics += metrics_info.num_all_metrics;
         entities_info.num_scheduled_metrics += metrics_info.num_scheduled_metrics;
-        if (!metrics_info.old_metrics.empty()) {
+        if (!metrics_info.stale_metrics.empty()) {
             // Those entities which have metrics that should be retired will be collected.
-            entities_info.old_entities.emplace(entity.first, std::move(metrics_info.old_metrics));
+            entities_info.stale_entities.emplace(entity.first,
+                                                 std::move(metrics_info.stale_metrics));
             continue;
         }
 
@@ -570,7 +571,7 @@ metric_registry::collected_old_entities_info metric_registry::collect_old_metric
 
         // Since this entity itself should be retired, it will be collected without any
         // metric. Actually it has already not had any metric itself.
-        (void)entities_info.old_entities[entity.first];
+        (void)entities_info.stale_entities[entity.first];
     }
 
     entities_info.num_all_entities = _entities.size();
@@ -578,9 +579,9 @@ metric_registry::collected_old_entities_info metric_registry::collect_old_metric
 }
 
 metric_registry::retired_entities_stat
-metric_registry::retire_old_metrics(const old_entity_map &old_entities)
+metric_registry::retire_stale_metrics(const stale_entity_map &stale_entities)
 {
-    if (old_entities.empty()) {
+    if (stale_entities.empty()) {
         // Do not lock for empty list.
         return retired_entities_stat();
     }
@@ -589,8 +590,8 @@ metric_registry::retire_old_metrics(const old_entity_map &old_entities)
 
     utils::auto_write_lock l(_lock);
 
-    for (const auto &old_entity : old_entities) {
-        auto iter = _entities.find(old_entity.first);
+    for (const auto &stale_entity : stale_entities) {
+        auto iter = _entities.find(stale_entity.first);
         if (dsn_unlikely(iter == _entities.end())) {
             // This entity has been removed from the registry for some reason.
             continue;
@@ -598,8 +599,8 @@ metric_registry::retire_old_metrics(const old_entity_map &old_entities)
 
         // Try to retire metrics from this entity. Note that since the entities that should
         // be retired wouldn't have any metric, they will never get locked in
-        // metric_entity::retire_old_metrics().
-        const auto &metrics_stat = iter->second->retire_old_metrics(old_entity.second);
+        // metric_entity::retire_stale_metrics().
+        const auto &metrics_stat = iter->second->retire_stale_metrics(stale_entity.second);
 
         entities_stat.num_retired_metrics += metrics_stat.num_retired_metrics;
         entities_stat.num_recently_scheduled_metrics += metrics_stat.num_recently_scheduled_metrics;
@@ -619,23 +620,18 @@ metric_registry::retire_old_metrics(const old_entity_map &old_entities)
     return entities_stat;
 }
 
-void metric_registry::process_old_metrics()
+void metric_registry::process_stale_metrics()
 {
-    LOG_INFO("begin to process old metrics");
+    LOG_INFO_F("begin to process stale metrics");
 
     size_t num_collected_metrics = 0;
-    const auto &collected_info = collect_old_metrics();
-    for (const auto &old_entity : collected_info.old_entities) {
-        num_collected_metrics += old_entity.second.size();
+    const auto &collected_info = collect_stale_metrics();
+    for (const auto &stale_entity : collected_info.stale_entities) {
+        num_collected_metrics += stale_entity.second.size();
     }
 
     // Try to process the collected metrics.
-    const auto &retired_stat = retire_old_metrics(collected_info.old_entities);
-
-    LOG_INFO_F("stat for entities: total={}, collected={}, retired={}",
-               collected_info.num_all_entities,
-               collected_info.old_entities.size(),
-               retired_stat.num_retired_entities);
+    const auto &retired_stat = retire_stale_metrics(collected_info.stale_entities);
 
     LOG_INFO_F("stat for metrics: total={}, collected={}, retired={}, scheduled={}, "
                "recently_scheduled={}, reemployed={}",
@@ -645,6 +641,11 @@ void metric_registry::process_old_metrics()
                collected_info.num_scheduled_metrics,
                retired_stat.num_recently_scheduled_metrics,
                retired_stat.num_reemployed_metrics);
+
+    LOG_INFO_F("stat for entities: total={}, collected={}, retired={}",
+               collected_info.num_all_entities,
+               collected_info.stale_entities.size(),
+               retired_stat.num_retired_entities);
 }
 
 metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}
