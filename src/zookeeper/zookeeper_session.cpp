@@ -43,7 +43,7 @@
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
-DSN_DEFINE_string("security",
+DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
                   "zookeeper",
                   "zookeeper kerberos service name");

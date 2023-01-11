@@ -38,19 +38,19 @@ namespace block_service {
 
 DEFINE_TASK_CODE(LPC_HDFS_SERVICE_CALL, TASK_PRIORITY_COMMON, THREAD_POOL_BLOCK_SERVICE)
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   hdfs_read_batch_size_bytes,
                   64 << 20,
                   "hdfs read batch size, the default value is 64MB");
 DSN_TAG_VARIABLE(hdfs_read_batch_size_bytes, FT_MUTABLE);
 
-DSN_DEFINE_uint32("replication", hdfs_read_limit_rate_mb_per_sec, 200, "hdfs read limit(MB/s)");
+DSN_DEFINE_uint32(replication, hdfs_read_limit_rate_mb_per_sec, 200, "hdfs read limit(MB/s)");
 DSN_TAG_VARIABLE(hdfs_read_limit_rate_mb_per_sec, FT_MUTABLE);
 
-DSN_DEFINE_uint32("replication", hdfs_write_limit_rate_mb_per_sec, 200, "hdfs write limit(MB/s)");
+DSN_DEFINE_uint32(replication, hdfs_write_limit_rate_mb_per_sec, 200, "hdfs write limit(MB/s)");
 DSN_TAG_VARIABLE(hdfs_write_limit_rate_mb_per_sec, FT_MUTABLE);
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   hdfs_write_batch_size_bytes,
                   64 << 20,
                   "hdfs write batch size, the default value is 64MB");

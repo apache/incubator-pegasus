@@ -29,7 +29,7 @@
 
 namespace dsn {
 namespace security {
-DSN_DEFINE_string("security", sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
+DSN_DEFINE_string(security, sasl_plugin_path, "/usr/lib/sasl2", "path to search sasl plugins");
 
 dsn_log_level_t get_dsn_log_level(int level)
 {

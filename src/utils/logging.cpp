@@ -36,12 +36,12 @@
 #include "simple_logger.h"
 
 dsn_log_level_t dsn_log_start_level = dsn_log_level_t::LOG_LEVEL_INFO;
-DSN_DEFINE_string("core",
+DSN_DEFINE_string(core,
                   logging_start_level,
                   "LOG_LEVEL_INFO",
                   "logs with level below this will not be logged");
 
-DSN_DEFINE_bool("core", logging_flush_on_exit, true, "flush log when exit system");
+DSN_DEFINE_bool(core, logging_flush_on_exit, true, "flush log when exit system");
 
 namespace dsn {
 

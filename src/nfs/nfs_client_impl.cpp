@@ -39,12 +39,12 @@ namespace dsn {
 namespace service {
 static uint32_t current_max_copy_rate_megabytes = 0;
 
-DSN_DEFINE_uint32("nfs",
+DSN_DEFINE_uint32(nfs,
                   nfs_copy_block_bytes,
                   4 * 1024 * 1024,
                   "max block size (bytes) for each network copy");
 DSN_DEFINE_uint32(
-    "nfs",
+    nfs,
     max_copy_rate_megabytes_per_disk,
     0,
     "max rate per disk of copying from remote node(MB/s), zero means disable rate limiter");
@@ -56,34 +56,31 @@ DSN_DEFINE_group_validator(max_copy_rate_megabytes_per_disk, [](std::string &mes
            (FLAGS_max_copy_rate_megabytes_per_disk << 20) > FLAGS_nfs_copy_block_bytes;
 });
 
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  max_concurrent_remote_copy_requests,
                  50,
                  "max concurrent remote copy to the same server on nfs client");
-DSN_DEFINE_int32("nfs", max_concurrent_local_writes, 50, "max local file writes on nfs client");
-DSN_DEFINE_int32("nfs", max_buffered_local_writes, 500, "max buffered file writes on nfs client");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs, max_concurrent_local_writes, 50, "max local file writes on nfs client");
+DSN_DEFINE_int32(nfs, max_buffered_local_writes, 500, "max buffered file writes on nfs client");
+DSN_DEFINE_int32(nfs,
                  high_priority_speed_rate,
                  2,
                  "the copy speed rate of high priority comparing with low priority on nfs client");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  file_close_expire_time_ms,
                  60 * 1000,
                  "max idle time for an opening file on nfs server");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  file_close_timer_interval_ms_on_server,
                  30 * 1000,
                  "time interval for checking whether cached file handles need to be closed");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs,
                  max_file_copy_request_count_per_file,
                  2,
                  "maximum concurrent remote copy requests for the same file on nfs client"
                  "to limit each file copy speed");
-DSN_DEFINE_int32("nfs",
-                 max_retry_count_per_copy_request,
-                 2,
-                 "maximum retry count when copy failed");
-DSN_DEFINE_int32("nfs",
+DSN_DEFINE_int32(nfs, max_retry_count_per_copy_request, 2, "maximum retry count when copy failed");
+DSN_DEFINE_int32(nfs,
                  rpc_timeout_ms,
                  1e5, // 100s
                  "rpc timeout in milliseconds for nfs copy, "

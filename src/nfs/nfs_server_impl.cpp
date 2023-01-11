@@ -40,7 +40,7 @@ namespace dsn {
 namespace service {
 
 DSN_DEFINE_uint32(
-    "nfs",
+    nfs,
     max_send_rate_megabytes_per_disk,
     0,
     "max rate per disk of send to remote node(MB/s)，zero means disable rate limiter");

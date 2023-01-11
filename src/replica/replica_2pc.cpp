@@ -38,7 +38,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 reject_write_when_disk_insufficient,
                 true,
                 "reject client write requests if disk status is space insufficient");

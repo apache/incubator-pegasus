@@ -66,19 +66,19 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 ignore_broken_disk,
                 true,
                 "true means ignore broken data disk when initialize");
 
-DSN_DEFINE_uint32("replication",
+DSN_DEFINE_uint32(replication,
                   max_concurrent_manual_emergency_checkpointing_count,
                   10,
                   "max concurrent manual emergency checkpoint running count");
 DSN_TAG_VARIABLE(max_concurrent_manual_emergency_checkpointing_count, FT_MUTABLE);
 
 DSN_DEFINE_uint32(
-    "replication",
+    replication,
     config_sync_interval_ms,
     30000,
     "The interval milliseconds of replica server to syncs replica configuration with meta server");

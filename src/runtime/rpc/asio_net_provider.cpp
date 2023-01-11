@@ -35,7 +35,7 @@
 namespace dsn {
 namespace tools {
 
-DSN_DEFINE_uint32("network",
+DSN_DEFINE_uint32(network,
                   io_service_worker_count,
                   1,
                   "thread number for io service (timer and boost network)");

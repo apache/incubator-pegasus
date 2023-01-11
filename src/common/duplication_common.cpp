@@ -32,7 +32,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint32("replication",
+DSN_DEFINE_uint32(replication,
                   duplicate_log_batch_bytes,
                   4096,
                   "send mutation log batch bytes size per rpc");

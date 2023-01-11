@@ -42,7 +42,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_int32("replication",
+DSN_DEFINE_int32(replication,
                  disk_min_available_space_ratio,
                  10,
                  "if disk available space ratio "

@@ -42,7 +42,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   abnormal_write_trace_latency_threshold,
                   1000 * 1000 * 1000, // 1s
                   "latency trace will be logged when exceed the write latency threshold");

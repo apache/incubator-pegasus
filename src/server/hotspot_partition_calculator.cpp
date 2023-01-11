@@ -28,7 +28,7 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int64("pegasus.collector",
+DSN_DEFINE_int64(pegasus.collector,
                  max_hotspot_store_size,
                  100,
                  "the max count of historical data "
@@ -37,20 +37,20 @@ DSN_DEFINE_int64("pegasus.collector",
                  "eliminate outdated historical "
                  "data");
 
-DSN_DEFINE_bool("pegasus.collector",
+DSN_DEFINE_bool(pegasus.collector,
                 enable_detect_hotkey,
                 false,
                 "auto detect hot key in the hot paritition");
 DSN_TAG_VARIABLE(enable_detect_hotkey, FT_MUTABLE);
 
-DSN_DEFINE_uint32("pegasus.collector",
+DSN_DEFINE_uint32(pegasus.collector,
                   hot_partition_threshold,
                   3,
                   "threshold of hotspot partition value, if app.stat.hotspots >= "
                   "FLAGS_hotpartition_threshold, this partition is a hot partition");
 DSN_TAG_VARIABLE(hot_partition_threshold, FT_MUTABLE);
 
-DSN_DEFINE_uint32("pegasus.collector",
+DSN_DEFINE_uint32(pegasus.collector,
                   occurrence_threshold,
                   3,
                   "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
