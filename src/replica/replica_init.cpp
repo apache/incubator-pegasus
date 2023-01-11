@@ -123,7 +123,7 @@ error_code replica::initialize_on_new()
 
 error_code replica::initialize_on_load()
 {
-    LOG_INFO("%s: initialize replica on load, dir = %s", name(), _dir.c_str());
+    LOG_INFO_PREFIX("initialize replica on load, dir = {}", _dir);
 
     if (!dsn::utils::filesystem::directory_exists(_dir)) {
         LOG_ERROR("%s: cannot load replica, because dir %s is not exist", name(), _dir.c_str());
@@ -184,7 +184,7 @@ error_code replica::initialize_on_load()
 
     err = rep->initialize_on_load();
     if (err == ERR_OK) {
-        LOG_INFO("%s: load replica succeed", rep->name());
+        LOG_INFO_F("{}: load replica succeed", rep->name());
         return rep;
     } else {
         LOG_ERROR("%s: load replica failed, err = %s", rep->name(), err.to_string());
@@ -248,7 +248,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             _private_log = new mutation_log_private(
                 log_dir, _options->log_private_file_size_mb, get_gpid(), this);
-            LOG_INFO("%s: plog_dir = %s", name(), log_dir.c_str());
+            LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             // sync valid_start_offset between app and logs
             _stub->_log->set_valid_start_offset_on_open(
@@ -275,22 +275,18 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 uint64_t finish_time = dsn_now_ms();
 
                 if (err == ERR_OK) {
-                    LOG_INFO("%s: replay private log succeed, durable = %" PRId64
-                             ", committed = %" PRId64 ", "
-                             "max_prepared = %" PRId64 ", ballot = %" PRId64
-                             ", valid_offset_in_plog = %" PRId64 ", "
-                             "max_decree_in_plog = %" PRId64
-                             ", max_commit_on_disk_in_plog = %" PRId64 ", "
-                             "time_used = %" PRIu64 " ms",
-                             name(),
-                             _app->last_durable_decree(),
-                             _app->last_committed_decree(),
-                             max_prepared_decree(),
-                             get_ballot(),
-                             _app->init_info().init_offset_in_private_log,
-                             _private_log->max_decree(get_gpid()),
-                             _private_log->max_commit_on_disk(),
-                             finish_time - start_time);
+                    LOG_INFO_PREFIX("replay private log succeed, durable = {}, committed = {}, "
+                                    "max_prepared = {}, ballot = {}, valid_offset_in_plog = {}, "
+                                    "max_decree_in_plog = {}, max_commit_on_disk_in_plog = {}, "
+                                    "time_used = {} ms",
+                                    _app->last_durable_decree(),
+                                    _app->last_committed_decree(),
+                                    max_prepared_decree(),
+                                    get_ballot(),
+                                    _app->init_info().init_offset_in_private_log,
+                                    _private_log->max_decree(get_gpid()),
+                                    _private_log->max_commit_on_disk(),
+                                    finish_time - start_time);
 
                     _private_log->check_valid_start_offset(
                         get_gpid(), _app->init_info().init_offset_in_private_log);
@@ -331,7 +327,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         _app->set_partition_version(_app_info.partition_count - 1);
 
         if (nullptr == _private_log) {
-            LOG_INFO("%s: clear private log, dir = %s", name(), log_dir.c_str());
+            LOG_INFO_PREFIX("clear private log, dir = {}", log_dir);
             CHECK(dsn::utils::filesystem::remove_path(log_dir),
                   "Fail to delete directory {}",
                   log_dir);
@@ -341,7 +337,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
             _private_log = new mutation_log_private(
                 log_dir, _options->log_private_file_size_mb, get_gpid(), this);
-            LOG_INFO("%s: plog_dir = %s", name(), log_dir.c_str());
+            LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             err = _private_log->open(nullptr, [this](error_code err) {
                 tasking::enqueue(LPC_REPLICATION_ERROR,
@@ -450,10 +446,9 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
 void replica::set_inactive_state_transient(bool t)
 {
     if (status() == partition_status::PS_INACTIVE) {
-        LOG_INFO("%s: set inactive_is_transient from %s to %s",
-                 name(),
-                 _inactive_is_transient ? "true" : "false",
-                 t ? "true" : "false");
+        LOG_INFO_PREFIX("set inactive_is_transient from {} to {}",
+                        _inactive_is_transient ? "true" : "false",
+                        t ? "true" : "false");
         _inactive_is_transient = t;
     }
 }

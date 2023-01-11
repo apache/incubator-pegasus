@@ -40,10 +40,10 @@ void replica_backup_server::on_cold_backup(backup_rpc rpc)
     const backup_request &request = rpc.request();
     backup_response &response = rpc.response();
 
-    LOG_INFO("received cold backup request: backup{%s.%s.%" PRId64 "}",
-             request.pid.to_string(),
-             request.policy.policy_name.c_str(),
-             request.backup_id);
+    LOG_INFO_F("received cold backup request: backup[{}.{}.{}]",
+               request.pid,
+               request.policy.policy_name,
+               request.backup_id);
     response.pid = request.pid;
     response.policy_name = request.policy.policy_name;
     response.backup_id = request.backup_id;
