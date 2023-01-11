@@ -228,16 +228,16 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
                           info.server.c_str());
                 exit(-1);
             } else {
-                LOG_DEBUG("GetThread[%d]: round(%d): get succeed: id=%lld, try=%d, time=%ld "
-                          "(gpid=%d.%d, server=%s)",
-                          thread_id,
-                          round_id,
-                          id,
-                          try_count,
-                          (cur_time - last_time),
-                          info.app_id,
-                          info.partition_index,
-                          info.server.c_str());
+                LOG_DEBUG_F("GetThread[{}]: round({}): get succeed: id={}, try={}, time={} "
+                            "(gpid={}.{}, server={})",
+                            thread_id,
+                            round_id,
+                            id,
+                            try_count,
+                            (cur_time - last_time),
+                            info.app_id,
+                            info.partition_index,
+                            info.server);
                 stat_time[stat_count++] = cur_time - last_time;
                 if (stat_count == stat_batch) {
                     std::sort(stat_time.begin(), stat_time.end());

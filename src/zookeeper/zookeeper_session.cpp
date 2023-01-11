@@ -335,9 +335,9 @@ void zookeeper_session::global_watcher(
 void zookeeper_session::global_string_completion(int rc, const char *name, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG_F("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (ZOK == rc && name != nullptr)
-        LOG_DEBUG("created path:%s", name);
+        LOG_DEBUG_F("created path: {}", name);
     output.create_op._created_path = name;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
@@ -347,7 +347,7 @@ void zookeeper_session::global_data_completion(
     int rc, const char *value, int value_length, const Stat *, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG_F("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     output.get_op.value_length = value_length;
     output.get_op.value = value;
     op_ctx->_callback_function(op_ctx);
@@ -357,7 +357,7 @@ void zookeeper_session::global_data_completion(
 void zookeeper_session::global_state_completion(int rc, const Stat *stat, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG_F("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (op_ctx->_optype == ZOO_EXISTS) {
         output.exists_op._node_stat = stat;
         op_ctx->_callback_function(op_ctx);
@@ -373,9 +373,9 @@ void zookeeper_session::global_strings_completion(int rc,
                                                   const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG_F("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (rc == ZOK && strings != nullptr)
-        LOG_DEBUG("child count: %d", strings->count);
+        LOG_DEBUG_F("child count: {}", strings->count);
     output.getchildren_op.strings = strings;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
@@ -385,9 +385,9 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
 {
     COMPLETION_INIT(rc, data);
     if (op_ctx->_optype == ZOO_DELETE)
-        LOG_DEBUG("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
+        LOG_DEBUG_F("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     else
-        LOG_DEBUG("rc(%s)", zerror(rc));
+        LOG_DEBUG_F("rc({})", zerror(rc));
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }

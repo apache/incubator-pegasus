@@ -270,9 +270,9 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
 
     if (resend) {
         auto req = call->get_request();
-        LOG_DEBUG("resend request message for rpc trace_id = %016" PRIx64 ", key = %" PRIu64,
-                  req->header->trace_id,
-                  key);
+        LOG_DEBUG_F("resend request message for rpc trace_id = {:#018x}, key = {}",
+                    req->header->trace_id,
+                    key);
 
         // resend without handling rpc_matcher, use the same request_id
         _engine->call_ip(req->to_address, req, nullptr);
@@ -725,9 +725,9 @@ void rpc_engine::reply(message_ex *response, error_code err)
     // for example, the profiler may be mistakenly calculated
     auto s = response->io_session.get();
     if (s == nullptr && response->to_address.is_invalid()) {
-        LOG_DEBUG("rpc reply %s is dropped (invalid to-address), trace_id = %016" PRIx64,
-                  response->header->rpc_name,
-                  response->header->trace_id);
+        LOG_DEBUG_F("rpc reply {} is dropped (invalid to-address), trace_id = {:#018x}",
+                    response->header->rpc_name,
+                    response->header->trace_id);
         response->add_ref();
         response->release_ref();
         return;

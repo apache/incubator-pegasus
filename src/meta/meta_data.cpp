@@ -250,10 +250,8 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
                          dsn::enum_to_string(info.status));
                 learning_progress_abnormal_detected = true;
             } else {
-                LOG_DEBUG("%d.%d: ignore abnormal status of %s, perhaps learn not start",
-                          info.pid.get_app_id(),
-                          info.pid.get_partition_index(),
-                          node.to_string());
+                LOG_DEBUG_F(
+                    "{}: ignore abnormal status of {}, perhaps learn not start", info.pid, node);
             }
         } else if (info.status == partition_status::PS_POTENTIAL_SECONDARY) {
             if (current_learner.ballot > info.ballot ||

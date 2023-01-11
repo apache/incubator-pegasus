@@ -785,10 +785,9 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         while (!reader.is_eof()) {
             auto mu = mutation::read_from(reader, nullptr);
             if (mu->data.header.decree > last_committed_decree()) {
-                LOG_DEBUG("%s: on_learn_reply[%016" PRIx64 "]: apply learned mutation %s",
-                          name(),
-                          req.signature,
-                          mu->name());
+                LOG_DEBUG_PREFIX("on_learn_reply[{:#018x}]: apply learned mutation {}",
+                                 req.signature,
+                                 mu->name());
 
                 // write to private log with no callback, the later 2pc ensures that logs
                 // are written to the disk

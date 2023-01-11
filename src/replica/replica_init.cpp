@@ -384,22 +384,19 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
     }
 
     if (is_private && offset < _app->init_info().init_offset_in_private_log) {
-        LOG_DEBUG(
-            "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64
-            ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
-            name(),
-            mu->data.header.ballot,
-            d,
-            mu->data.header.last_committed_decree,
-            offset);
+        LOG_DEBUG_PREFIX("replay mutation skipped1 as offset is invalid in private log, ballot = {}"
+                         ", decree = {}, last_committed_decree = {}, offset = {}",
+                         mu->data.header.ballot,
+                         d,
+                         mu->data.header.last_committed_decree,
+                         offset);
         return false;
     }
 
     if (!is_private && offset < _app->init_info().init_offset_in_shared_log) {
-        LOG_DEBUG(
-            "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64
-            ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
-            name(),
+        LOG_DEBUG_PREFIX(
+            "replay mutation skipped2 as offset is invalid in shared log, ballot = {}, "
+            "decree = {}, last_committed_decree = {}, offset = {}",
             mu->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
@@ -413,39 +410,34 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
     }
 
     if (d <= last_committed_decree()) {
-        LOG_DEBUG("%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64
-                  ", decree = %" PRId64 "(vs app %" PRId64 "), last_committed_decree = %" PRId64
-                  ", offset = %" PRId64,
-                  name(),
-                  mu->data.header.ballot,
-                  d,
-                  last_committed_decree(),
-                  mu->data.header.last_committed_decree,
-                  offset);
+        LOG_DEBUG_PREFIX("replay mutation skipped3 as decree is outdated, ballot = {}, "
+                         "decree = {}(vs app {}), last_committed_decree = {}, offset = {}",
+                         mu->data.header.ballot,
+                         d,
+                         last_committed_decree(),
+                         mu->data.header.last_committed_decree,
+                         offset);
         return true;
     }
 
     auto old = _prepare_list->get_mutation_by_decree(d);
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot) {
-        LOG_DEBUG("%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64
-                  " (vs local-ballot=%" PRId64 "), decree = %" PRId64
-                  ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
-                  name(),
-                  mu->data.header.ballot,
-                  old->data.header.ballot,
-                  d,
-                  mu->data.header.last_committed_decree,
-                  offset);
+        LOG_DEBUG_PREFIX(
+            "replay mutation skipped4 as ballot is outdated, ballot = {} (vs local-ballot={}), "
+            "decree = {}, last_committed_decree = {}, offset = {}",
+            mu->data.header.ballot,
+            old->data.header.ballot,
+            d,
+            mu->data.header.last_committed_decree,
+            offset);
 
         return true;
     }
 
-    LOG_DEBUG("%s: replay mutation ballot = %" PRId64 ", decree = %" PRId64
-              ", last_committed_decree = %" PRId64,
-              name(),
-              mu->data.header.ballot,
-              d,
-              mu->data.header.last_committed_decree);
+    LOG_DEBUG_PREFIX("replay mutation ballot = {}, decree = {}, last_committed_decree = {}",
+                     mu->data.header.ballot,
+                     d,
+                     mu->data.header.last_committed_decree);
 
     // prepare
     _uniq_timestamp_us.try_update(mu->data.header.timestamp);

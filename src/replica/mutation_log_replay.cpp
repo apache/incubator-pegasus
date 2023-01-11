@@ -124,7 +124,7 @@ namespace replication {
         if (log == nullptr) {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA ||
                 err == ERR_INVALID_PARAMETERS) {
-                LOG_DEBUG("skip file %s during log replay", fpath.c_str());
+                LOG_DEBUG_F("skip file {} during log replay", fpath);
                 continue;
             } else {
                 return err;

@@ -352,7 +352,7 @@ int meta_service::check_leader(TRpcHolder rpc, rpc_address *forward_address)
             return -1;
         }
 
-        LOG_DEBUG("leader address: %s", leader.to_string());
+        LOG_DEBUG_F("leader address: {}", leader);
         if (!leader.is_invalid()) {
             rpc.forward(leader);
             return 0;

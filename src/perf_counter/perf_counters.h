@@ -71,7 +71,7 @@ public:
     ///
     /// please call remove_counter if a previous get_app_counter/get_global_counter is called
     ///
-    bool remove_counter(const char *full_name);
+    bool remove_counter(const std::string &full_name);
 
     perf_counter_ptr get_counter(const std::string &full_name);
 

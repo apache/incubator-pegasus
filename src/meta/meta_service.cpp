@@ -487,7 +487,7 @@ int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_a
             return -1;
         }
 
-        LOG_DEBUG("leader address: %s", leader.to_string());
+        LOG_DEBUG_F("leader address: {}", leader);
         if (!leader.is_invalid()) {
             dsn_rpc_forward(req, leader);
             return 0;

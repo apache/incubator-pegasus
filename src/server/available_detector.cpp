@@ -285,12 +285,12 @@ void available_detector::on_detect(int32_t idx)
                  _recent_minute_detect_times.load(),
                  _recent_minute_fail_times.load());
     }
-    LOG_DEBUG("available_detector begin to detect partition[%d] of table[%s] with id[%d] on the "
-              "cluster[%s]",
-              idx,
-              _app_name.c_str(),
-              _app_id,
-              _cluster_name.c_str());
+    LOG_DEBUG_F("available_detector begin to detect partition[{}] of table[{}] with id[{}] on the "
+                "cluster[{}]",
+                idx,
+                _app_name,
+                _app_id,
+                _cluster_name);
     auto time = dsn_now_ms();
     std::string value = "detect_value_" + std::to_string((time / 1000));
     _recent_day_detect_times.fetch_add(1);
@@ -314,10 +314,10 @@ void available_detector::on_detect(int32_t idx)
             check_and_send_email(&cnt, idx);
         } else {
             cnt.store(0);
-            LOG_DEBUG("async_get partition[%d] ok, hash_key = %s, value = %s",
-                      idx,
-                      _hash_keys[idx].c_str(),
-                      _value.c_str());
+            LOG_DEBUG_F("async_get partition[{}] ok, hash_key = {}, value = {}",
+                        idx,
+                        _hash_keys[idx],
+                        _value);
         }
     };
 
@@ -339,7 +339,7 @@ void available_detector::on_detect(int32_t idx)
                       _client->get_error_string(err));
             check_and_send_email(&cnt, idx);
         } else {
-            LOG_DEBUG("async_set partition[%d] ok, hash_key = %s", idx, _hash_keys[idx].c_str());
+            LOG_DEBUG_F("async_set partition[{}] ok, hash_key = {}", idx, _hash_keys[idx]);
             _client->async_get(
                 _hash_keys[idx], "", std::move(user_async_get_callback), _detect_timeout);
         }

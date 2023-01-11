@@ -240,9 +240,8 @@ int rpc_session::prepare_parser()
         }
     }
     _parser = _net.new_message_parser(hdr_format);
-    LOG_DEBUG("message parser created, remote_client = %s, header_format = %s",
-              _remote_addr.to_string(),
-              hdr_format.to_string());
+    LOG_DEBUG_F(
+        "message parser created, remote_client = {}, header_format = {}", _remote_addr, hdr_format);
 
     return 0;
 }
@@ -754,9 +753,9 @@ void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr
 bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_address ep)
 {
     if (_cfg_conn_threshold_per_ip <= 0) {
-        LOG_DEBUG("new client from %s is connecting to server %s, no connection threshold",
-                  ep.ipv4_str(),
-                  address().to_string());
+        LOG_DEBUG_F("new client from {} is connecting to server {}, no connection threshold",
+                    ep.ipv4_str(),
+                    address());
         return false;
     }
 
@@ -773,12 +772,12 @@ bool connection_oriented_network::check_if_conn_threshold_exceeded(::dsn::rpc_ad
         exceeded = true;
     }
 
-    LOG_DEBUG("new client from %s is connecting to server %s, existing connection count "
-              "= %d, threshold = %u",
-              ep.ipv4_str(),
-              address().to_string(),
-              ip_conn_count,
-              _cfg_conn_threshold_per_ip);
+    LOG_DEBUG_F("new client from {} is connecting to server {}, existing connection count = {}, "
+                "threshold = {}",
+                ep.ipv4_str(),
+                address(),
+                ip_conn_count,
+                _cfg_conn_threshold_per_ip);
 
     return exceeded;
 }

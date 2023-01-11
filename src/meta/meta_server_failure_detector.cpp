@@ -208,9 +208,8 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
     } else {
         worker_stability &w = iter->second;
         if (beacon.start_time == w.last_start_time_ms) {
-            LOG_DEBUG("%s isn't restarted, last_start_time(%lld)",
-                      beacon.from_addr.to_string(),
-                      w.last_start_time_ms);
+            LOG_DEBUG_F(
+                "{} isn't restarted, last_start_time({})", beacon.from_addr, w.last_start_time_ms);
             if (dsn_now_ms() - w.last_start_time_ms >=
                     _fd_opts->stable_rs_min_running_seconds * 1000 &&
                 w.unstable_restart_count > 0) {

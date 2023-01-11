@@ -70,6 +70,8 @@ protected:
     virtual bool parse(dsn::message_ex *msg) = 0;
     dsn::message_ex *create_response();
 
+    const char *log_prefix() const { return _remote_address.to_string(); }
+
 protected:
     proxy_stub *_stub;
     std::atomic_bool _is_session_reset;

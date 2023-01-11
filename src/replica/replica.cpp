@@ -197,7 +197,7 @@ replica::~replica(void)
 {
     close();
     _prepare_list = nullptr;
-    LOG_DEBUG("%s: replica destroyed", name());
+    LOG_DEBUG_PREFIX("replica destroyed");
 }
 
 void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
@@ -285,10 +285,8 @@ void replica::check_state_completeness()
 
 void replica::execute_mutation(mutation_ptr &mu)
 {
-    LOG_DEBUG("%s: execute mutation %s: request_count = %u",
-              name(),
-              mu->name(),
-              static_cast<int>(mu->client_requests.size()));
+    LOG_DEBUG_PREFIX(
+        "execute mutation {}: request_count = {}", mu->name(), mu->client_requests.size());
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;
@@ -298,11 +296,10 @@ void replica::execute_mutation(mutation_ptr &mu)
         if (_app->last_committed_decree() + 1 == d) {
             err = _app->apply_mutation(mu);
         } else {
-            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      _app->last_committed_decree());
+            LOG_DEBUG_PREFIX("mutation {} commit to {} skipped, app.last_committed_decree = {}",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _app->last_committed_decree());
         }
         break;
     case partition_status::PS_PRIMARY: {
@@ -318,11 +315,10 @@ void replica::execute_mutation(mutation_ptr &mu)
             CHECK_EQ(_app->last_committed_decree() + 1, d);
             err = _app->apply_mutation(mu);
         } else {
-            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      _app->last_committed_decree());
+            LOG_DEBUG_PREFIX("mutation {} commit to {} skipped, app.last_committed_decree = {}",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _app->last_committed_decree());
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
@@ -336,11 +332,10 @@ void replica::execute_mutation(mutation_ptr &mu)
             CHECK_EQ(_app->last_committed_decree() + 1, d);
             err = _app->apply_mutation(mu);
         } else {
-            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      _app->last_committed_decree());
+            LOG_DEBUG_PREFIX("mutation {} commit to {} skipped, app.last_committed_decree = {}",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _app->last_committed_decree());
 
             // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,
@@ -360,8 +355,7 @@ void replica::execute_mutation(mutation_ptr &mu)
         CHECK(false, "invalid partition_status, status = {}", enum_to_string(status()));
     }
 
-    LOG_DEBUG(
-        "TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+    LOG_DEBUG_PREFIX("TwoPhaseCommit, mutation {} committed, err = {}", mu->name(), err);
 
     if (err != ERR_OK) {
         handle_local_failure(err);
