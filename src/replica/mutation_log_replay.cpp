@@ -29,12 +29,11 @@ namespace replication {
                                            /*out*/ int64_t &end_offset)
 {
     end_offset = log->start_offset();
-    LOG_INFO("start to replay mutation log %s, offset = [%" PRId64 ", %" PRId64
-             "), size = %" PRId64,
-             log->path().c_str(),
-             log->start_offset(),
-             log->end_offset(),
-             log->end_offset() - log->start_offset());
+    LOG_INFO_F("start to replay mutation log {}, offset = [{}, {}), size = {}",
+               log->path(),
+               log->start_offset(),
+               log->end_offset(),
+               log->end_offset() - log->start_offset());
 
     ::dsn::blob bb;
     log->reset_stream();
@@ -50,9 +49,7 @@ namespace replication {
         start_offset = static_cast<size_t>(end_offset - log->start_offset());
     }
 
-    LOG_INFO("finish to replay mutation log (%s) [err: %s]",
-             log->path().c_str(),
-             err.description().c_str());
+    LOG_INFO_F("finish to replay mutation log ({}) [err: {}]", log->path(), err);
     return err.code();
 }
 

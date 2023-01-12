@@ -485,7 +485,7 @@ void replica::close()
 
     _split_mgr.reset();
 
-    LOG_INFO("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
+    LOG_INFO_PREFIX("replica closed, time_used = {} ms", dsn_now_ms() - start_time);
 }
 
 std::string replica::query_manual_compact_state() const

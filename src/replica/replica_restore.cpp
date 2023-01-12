@@ -66,7 +66,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
             LOG_ERROR("%s: remove useless file(%s) failed", name(), pair.second.c_str());
             return false;
         }
-        LOG_INFO("%s: remove useless file(%s) succeed", name(), pair.second.c_str());
+        LOG_INFO_PREFIX("remove useless file({}) succeed", pair.second);
     }
     return true;
 }
@@ -400,7 +400,7 @@ dsn::error_code replica::skip_restore_partition(const std::string &restore_dir)
     // it because we use restore_dir to tell storage engine that start an app from restore
     if (utils::filesystem::remove_path(restore_dir) &&
         utils::filesystem::create_directory(restore_dir)) {
-        LOG_INFO("%s: clear restore_dir(%s) succeed", name(), restore_dir.c_str());
+        LOG_INFO_PREFIX("clear restore_dir({}) succeed", restore_dir);
         _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
         return ERR_OK;
     } else {
@@ -430,7 +430,7 @@ void replica::tell_meta_to_restore_rollback()
                       configuration_drop_app_response response;
                       ::dsn::unmarshall(resp, response);
                       if (response.err == ERR_OK) {
-                          LOG_INFO("restore rolling backup succeed");
+                          LOG_INFO_PREFIX("restore rolling backup succeed");
                           return;
                       } else {
                           tell_meta_to_restore_rollback();

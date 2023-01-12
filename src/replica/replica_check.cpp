@@ -55,7 +55,7 @@ void replica::init_group_check()
 
     _checker.only_one_thread_access();
 
-    LOG_INFO("%s: init group check", name());
+    LOG_INFO_PREFIX("init group check");
 
     if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
         return;
@@ -75,7 +75,7 @@ void replica::broadcast_group_check()
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 
-    LOG_INFO("%s: start to broadcast group check", name());
+    LOG_INFO_PREFIX("start to broadcast group check");
 
     if (_primary_states.group_check_pending_replies.size() > 0) {
         LOG_WARNING(
@@ -119,10 +119,7 @@ void replica::broadcast_group_check()
             request->config.learner_signature = it->second.signature;
         }
 
-        LOG_INFO("%s: send group check to %s with state %s",
-                 name(),
-                 addr.to_string(),
-                 enum_to_string(it->second));
+        LOG_INFO_PREFIX("send group check to {} with state {}", addr, enum_to_string(it->second));
 
         dsn::task_ptr callback_task =
             rpc::call(addr,

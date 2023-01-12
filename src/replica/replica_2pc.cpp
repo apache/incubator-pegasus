@@ -670,11 +670,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                           prepare_timeout_ms,
                           dsn_now_ms());
             } else {
-                LOG_INFO("%s: mutation %s retry prepare to %s after %d ms",
-                         name(),
-                         mu->name(),
-                         node.to_string(),
-                         delay_time_ms);
+                LOG_INFO_PREFIX(
+                    "mutation {} retry prepare to {} after {} ms", mu->name(), node, delay_time_ms);
                 int64_t learn_signature = invalid_signature;
                 if (target_status == partition_status::PS_POTENTIAL_SECONDARY) {
                     auto it = _primary_states.learners.find(node);
