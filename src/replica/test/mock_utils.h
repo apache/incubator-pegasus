@@ -204,7 +204,7 @@ public:
     void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
     {
         if (backup_context->status() != ColdBackupCheckpointing) {
-            LOG_INFO_F("ignore generating backup checkpoint because backup_status = {}",
+            LOG_INFO_F("{}: ignore generating backup checkpoint because backup_status = {}",
                        backup_context->name,
                        cold_backup_status_to_string(backup_context->status()));
             backup_context->ignore_checkpoint();

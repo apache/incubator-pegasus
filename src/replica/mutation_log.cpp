@@ -1568,7 +1568,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                        "reserved_log_count = {}, reserved_log_size = {}, "
                        "reserved_smallest_log = {}, reserved_largest_log = {}, "
                        "stop_gc_log_index = {}, stop_gc_replica_count = {}, "
-                       "stop_gc_replica = {}.{}, stop_gc_decree_gap = {}, "
+                       "stop_gc_replica = {}, stop_gc_decree_gap = {}, "
                        "stop_gc_garbage_max_decree = {}, stop_gc_log_max_decree = {}",
                        file_count_limit,
                        reserved_log_count,
@@ -1577,8 +1577,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                        reserved_largest_log,
                        stop_gc_log_index,
                        prevent_gc_replicas.size(),
-                       stop_gc_replica.get_app_id(),
-                       stop_gc_replica.get_partition_index(),
+                       stop_gc_replica,
                        stop_gc_decree_gap,
                        stop_gc_garbage_max_decree,
                        stop_gc_log_max_decree);
@@ -1656,7 +1655,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                    "deleted_log_count = {}, deleted_log_size = {}, "
                    "deleted_smallest_log = {}, deleted_largest_log = {}, "
                    "stop_gc_log_index = {}, stop_gc_replica_count = {}, "
-                   "stop_gc_replica = {}.{}, stop_gc_decree_gap = {}, "
+                   "stop_gc_replica = {}, stop_gc_decree_gap = {}, "
                    "stop_gc_garbage_max_decree = {}, stop_gc_log_max_decree = {}",
                    file_count_limit,
                    reserved_log_count,
@@ -1671,8 +1670,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
                    deleted_largest_log,
                    stop_gc_log_index,
                    prevent_gc_replicas.size(),
-                   stop_gc_replica.get_app_id(),
-                   stop_gc_replica.get_partition_index(),
+                   stop_gc_replica,
                    stop_gc_decree_gap,
                    stop_gc_garbage_max_decree,
                    stop_gc_log_max_decree);

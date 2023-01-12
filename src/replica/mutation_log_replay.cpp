@@ -49,7 +49,7 @@ namespace replication {
         start_offset = static_cast<size_t>(end_offset - log->start_offset());
     }
 
-    LOG_INFO_F("finish to replay mutation log ({}) [err: {}]", log->path(), err.description());
+    LOG_INFO_F("finish to replay mutation log ({}) [err: {}]", log->path(), err);
     return err.code();
 }
 
