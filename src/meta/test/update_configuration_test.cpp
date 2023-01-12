@@ -120,7 +120,7 @@ class null_meta_service : public dsn::replication::meta_service
 public:
     void send_message(const dsn::rpc_address &target, dsn::message_ex *request)
     {
-        LOG_INFO("send request to %s", target.to_string());
+        LOG_INFO_F("send request to {}", target);
         request->add_ref();
         request->release_ref();
     }

@@ -155,14 +155,13 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     pc.partition_flags = 0;
     pc.max_replica_count = max_replica_count;
 
-    LOG_INFO("construct for (%d.%d), select %s as primary, ballot(%" PRId64
-             "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
-             pid.get_app_id(),
-             pid.get_partition_index(),
-             server.node.to_string(),
-             server.ballot,
-             server.last_committed_decree,
-             server.last_prepared_decree);
+    LOG_INFO_F("construct for ({}), select {} as primary, ballot({}), committed_decree({}), "
+               "prepare_decree({})",
+               pid,
+               server.node,
+               server.ballot,
+               server.last_committed_decree,
+               server.last_prepared_decree);
 
     drop_list.pop_back();
 
@@ -178,14 +177,13 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
             break;
         // similar to cc.drop_list, pc.last_drop is also a stack structure
         pc.last_drops.insert(pc.last_drops.begin(), iter->node);
-        LOG_INFO("construct for (%d.%d), select %s into last_drops, ballot(%" PRId64
-                 "), committed_decree(%" PRId64 "), prepare_decree(%" PRId64 ")",
-                 pid.get_app_id(),
-                 pid.get_partition_index(),
-                 iter->node.to_string(),
-                 iter->ballot,
-                 iter->last_committed_decree,
-                 iter->last_prepared_decree);
+        LOG_INFO_F("construct for ({}), select {} into last_drops, ballot({}), "
+                   "committed_decree({}), prepare_decree({})",
+                   pid,
+                   iter->node,
+                   iter->ballot,
+                   iter->last_committed_decree,
+                   iter->last_prepared_decree);
     }
 
     cc.prefered_dropped = (int)drop_list.size() - 1;
@@ -244,10 +242,9 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
             // if we've collected inforamtions for the learner, then it claims it's down
             // we will treat the learning process failed
             if (current_learner.ballot != invalid_ballot) {
-                LOG_INFO("%d.%d: a learner's is down to status(%s), perhaps learn failed",
-                         info.pid.get_app_id(),
-                         info.pid.get_partition_index(),
-                         dsn::enum_to_string(info.status));
+                LOG_INFO_F("{}: a learner's is down to status({}), perhaps learn failed",
+                           info.pid,
+                           dsn::enum_to_string(info.status));
                 learning_progress_abnormal_detected = true;
             } else {
                 LOG_DEBUG_F(

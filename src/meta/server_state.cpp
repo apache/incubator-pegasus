@@ -215,7 +215,7 @@ bool server_state::spin_wait_staging(int timeout_seconds)
         if (c == 0) {
             return true;
         }
-        LOG_INFO("there are (%d) apps still in staging, just wait...", c);
+        LOG_INFO_F("there are {} apps still in staging, just wait...", c);
         std::this_thread::sleep_for(std::chrono::seconds(1));
         if (timeout_seconds > 0) {
             --timeout_seconds;
@@ -272,10 +272,10 @@ void server_state::transition_staging_state(std::shared_ptr<app_state> &app)
               enum_to_string(app->status));
     }
 
-    LOG_INFO("app(%s) transfer from %s to %s",
-             app->get_logname(),
-             enum_to_string(old_status),
-             enum_to_string(app->status));
+    LOG_INFO_F("app({}) transfer from {} to {}",
+               app->get_logname(),
+               enum_to_string(old_status),
+               enum_to_string(app->status));
 #undef send_response
 }
 
@@ -328,7 +328,7 @@ error_code server_state::dump_from_remote_storage(const char *local_path, bool s
     if (sync_immediately) {
         ec = sync_apps_from_remote_storage();
         if (ec == ERR_OBJECT_NOT_FOUND) {
-            LOG_INFO("remote storage is empty, just stop the dump");
+            LOG_INFO_F("remote storage is empty, just stop the dump");
             return ERR_OK;
         } else if (ec != ERR_OK) {
             LOG_ERROR("sync from remote storage failed, err(%s)", ec.to_string());
@@ -350,7 +350,7 @@ error_code server_state::dump_from_remote_storage(const char *local_path, bool s
         {
             zauto_read_lock l(_lock);
             if (count_staging_app() != 0) {
-                LOG_INFO("there are apps in staging, skip this dump");
+                LOG_INFO_F("there are apps in staging, skip this dump");
                 return ERR_INVALID_STATE;
             }
             snapshots.reserve(_all_apps.size());
@@ -429,7 +429,7 @@ error_code server_state::initialize_default_apps()
 {
     std::vector<const char *> sections;
     dsn_config_get_all_sections(sections);
-    LOG_INFO("start to do initialize");
+    LOG_INFO_F("start to do initialize");
 
     app_info default_app;
     for (int i = 0; i < sections.size(); i++) {
@@ -502,7 +502,7 @@ error_code server_state::sync_apps_to_remote_storage()
         LOG_ERROR("create root node /apps in meta store failed, err = %s", err.to_string());
         return err;
     } else {
-        LOG_INFO("set %s to lock state in remote storage", _apps_root.c_str());
+        LOG_INFO_F("set {} to lock state in remote storage", _apps_root);
     }
 
     err = ERR_OK;
@@ -524,7 +524,7 @@ error_code server_state::sync_apps_to_remote_storage()
                                                  ec.to_string());
                                      err = ec;
                                  } else {
-                                     LOG_INFO("create app node %s ok", path.c_str());
+                                     LOG_INFO_F("create app node {} ok", path);
                                  }
                              },
                              value,
@@ -551,7 +551,7 @@ error_code server_state::sync_apps_to_remote_storage()
                                                   [&err](dsn::error_code e) { err = e; });
     t->wait();
     if (dsn::ERR_OK == err) {
-        LOG_INFO("set %s to unlock state in remote storage", _apps_root.c_str());
+        LOG_INFO_F("set {} to unlock state in remote storage", _apps_root);
         return err;
     } else {
         LOG_ERROR("set %s to unlock state in remote storage failed, reason(%s)",
@@ -756,7 +756,7 @@ error_code server_state::initialize_data_structure()
         if (_meta_svc->get_meta_options().recover_from_replica_server) {
             return ERR_OBJECT_NOT_FOUND;
         } else {
-            LOG_INFO("can't find apps from remote storage, start to initialize default apps");
+            LOG_INFO_F("can't find apps from remote storage, start to initialize default apps");
             err = initialize_default_apps();
         }
     } else if (err == ERR_OK) {
@@ -765,8 +765,8 @@ error_code server_state::initialize_data_structure()
                   "find apps from remote storage, but "
                   "[meta_server].recover_from_replica_server = true");
         } else {
-            LOG_INFO(
-                "sync apps from remote storage ok, get %d apps, init the node state accordingly",
+            LOG_INFO_F(
+                "sync apps from remote storage ok, get {} apps, init the node state accordingly",
                 _all_apps.size());
             initialize_node_state();
         }
@@ -794,9 +794,9 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
 
     bool reject_this_request = false;
     response.__isset.gc_replicas = false;
-    LOG_INFO("got config sync request from %s, stored_replicas_count(%d)",
-             request.node.to_string(),
-             (int)request.stored_replicas.size());
+    LOG_INFO_F("got config sync request from {}, stored_replicas_count({})",
+               request.node,
+               request.stored_replicas.size());
 
     {
         zauto_read_lock l(_lock);
@@ -804,7 +804,7 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
         // sync the partitions to the replica server
         node_state *ns = get_node_state(_nodes, request.node, false);
         if (ns == nullptr) {
-            LOG_INFO("node(%s) not found in meta server", request.node.to_string());
+            LOG_INFO_F("node({}) not found in meta server", request.node);
             response.err = ERR_OBJECT_NOT_FOUND;
         } else {
             response.err = ERR_OK;
@@ -882,23 +882,20 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                     }
                 } else if (app->status == app_status::AS_DROPPED) {
                     if (app->expire_second == 0) {
-                        LOG_INFO(
-                            "gpid(%d.%d) on node(%s) is of dropped table, but expire second is "
-                            "not specified, do not delete it for safety reason",
-                            rep.pid.get_app_id(),
-                            rep.pid.get_partition_index(),
-                            request.node.to_string());
+                        LOG_INFO_F("gpid({}) on node({}) is of dropped table, but expire second is "
+                                   "not specified, do not delete it for safety reason",
+                                   rep.pid,
+                                   request.node);
                     } else if (has_seconds_expired(app->expire_second)) {
                         // can delete replica only when expire second is explicitely specified and
                         // expired.
                         if (level <= meta_function_level::fl_steady) {
-                            LOG_INFO("gpid(%d.%d) on node(%s) is of dropped and expired table, but "
-                                     "current function level is %s, do not delete it for safety "
-                                     "reason",
-                                     rep.pid.get_app_id(),
-                                     rep.pid.get_partition_index(),
-                                     request.node.to_string(),
-                                     _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+                            LOG_INFO_F("gpid({}) on node({}) is of dropped and expired table, but "
+                                       "current function level is {}, do not delete it for safety "
+                                       "reason",
+                                       rep.pid,
+                                       request.node,
+                                       _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
                             LOG_WARNING(
@@ -914,13 +911,11 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                         collect_replica({&_all_apps, &_nodes}, request.node, rep);
                     if (!is_useful_replica) {
                         if (level <= meta_function_level::fl_steady) {
-                            LOG_INFO(
-                                "gpid(%d.%d) on node(%s) is useless, but current function level "
-                                "is %s, do not delete it for safety reason",
-                                rep.pid.get_app_id(),
-                                rep.pid.get_partition_index(),
-                                request.node.to_string(),
-                                _meta_function_level_VALUES_TO_NAMES.find(level)->second);
+                            LOG_INFO_F("gpid({}) on node({}) is useless, but current function "
+                                       "level is {}, do not delete it for safety reason",
+                                       rep.pid,
+                                       request.node,
+                                       _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
                             LOG_WARNING("notify node(%s) to gc replica(%d.%d) coz it is useless",
@@ -1204,7 +1199,7 @@ void server_state::drop_app(dsn::message_ex *msg)
     bool do_dropping = false;
     std::shared_ptr<app_state> app;
     dsn::unmarshall(msg, request);
-    LOG_INFO("drop app request, name(%s)", request.app_name.c_str());
+    LOG_INFO_F("drop app request, name({})", request.app_name);
     {
         zauto_write_lock l(_lock);
         app = get_app(request.app_name);
@@ -1355,7 +1350,7 @@ void server_state::recall_app(dsn::message_ex *msg)
     std::shared_ptr<app_state> target_app;
 
     dsn::unmarshall(msg, request);
-    LOG_INFO("recall app request, app_id(%d)", request.app_id);
+    LOG_INFO_F("recall app request, app_id({})", request.app_id);
 
     bool do_recalling = false;
     {
@@ -1417,13 +1412,13 @@ void server_state::list_apps(const configuration_list_apps_request &request,
 
 void server_state::send_proposal(rpc_address target, const configuration_update_request &proposal)
 {
-    LOG_INFO("send proposal %s for gpid(%d.%d), ballot = %" PRId64 ", target = %s, node = %s",
-             ::dsn::enum_to_string(proposal.type),
-             proposal.config.pid.get_app_id(),
-             proposal.config.pid.get_partition_index(),
-             proposal.config.ballot,
-             target.to_string(),
-             proposal.node.to_string());
+    LOG_INFO_F("send proposal %s for gpid({}), ballot = {}, target = {}, node = {}",
+               ::dsn::enum_to_string(proposal.type),
+               proposal.config.pid.get_app_id(),
+               proposal.config.pid.get_partition_index(),
+               proposal.config.ballot,
+               target,
+               proposal.node);
     dsn::message_ex *msg =
         dsn::message_ex::create_request(RPC_CONFIG_PROPOSAL, 0, proposal.config.pid.thread_hash());
     ::marshall(msg, proposal);
@@ -1592,15 +1587,15 @@ void server_state::update_configuration_locally(
     old_cfg = config_request->config;
     auto find_name = _config_type_VALUES_TO_NAMES.find(config_request->type);
     if (find_name != _config_type_VALUES_TO_NAMES.end()) {
-        LOG_INFO("meta update config ok: type(%s), old_config=%s, %s",
-                 find_name->second,
-                 old_config_str.c_str(),
-                 boost::lexical_cast<std::string>(*config_request).c_str());
+        LOG_INFO_F("meta update config ok: type({}), old_config={}, {}",
+                   find_name->second,
+                   old_config_str,
+                   boost::lexical_cast<std::string>(*config_request));
     } else {
-        LOG_INFO("meta update config ok: type(%d), old_config=%s, %s",
-                 config_request->type,
-                 old_config_str.c_str(),
-                 boost::lexical_cast<std::string>(*config_request).c_str());
+        LOG_INFO_F("meta update config ok: type({}), old_config={}, {}",
+                   config_request->type,
+                   old_config_str,
+                   boost::lexical_cast<std::string>(*config_request));
     }
 
 #ifndef NDEBUG
@@ -1624,8 +1619,8 @@ task_ptr server_state::update_configuration_on_remote(
 {
     meta_function_level::type l = _meta_svc->get_function_level();
     if (l <= meta_function_level::fl_blind) {
-        LOG_INFO("ignore update configuration on remote due to level is %s",
-                 _meta_function_level_VALUES_TO_NAMES.find(l)->second);
+        LOG_INFO_F("ignore update configuration on remote due to level is {}",
+                   _meta_function_level_VALUES_TO_NAMES.find(l)->second);
         // NOTICE: pending_sync_task need to be reassigned
         return tasking::enqueue(
             LPC_META_STATE_HIGH,
@@ -1849,10 +1844,10 @@ void server_state::downgrade_secondary_to_inactive(std::shared_ptr<app_state> &a
         request.node = node;
         send_proposal(pc.primary, request);
     } else {
-        LOG_INFO("gpid(%d.%d) is syncing with remote storage, ignore the remove seconary(%s)",
-                 app->app_id,
-                 pidx,
-                 node.to_string());
+        LOG_INFO_F("gpid({}.{}) is syncing with remote storage, ignore the remove seconary({})",
+                   app->app_id,
+                   pidx,
+                   node);
     }
 }
 
@@ -1918,13 +1913,13 @@ void server_state::on_update_configuration(
     CHECK(app->is_stateful, "don't support stateless apps currently, id({})", gpid.get_app_id());
     auto find_name = _config_type_VALUES_TO_NAMES.find(cfg_request->type);
     if (find_name != _config_type_VALUES_TO_NAMES.end()) {
-        LOG_INFO("recv update config request: type(%s), %s",
-                 find_name->second,
-                 boost::lexical_cast<std::string>(*cfg_request).c_str());
+        LOG_INFO_F("recv update config request: type({}), {}",
+                   find_name->second,
+                   boost::lexical_cast<std::string>(*cfg_request));
     } else {
-        LOG_INFO("recv update config request: type(%d), %s",
-                 cfg_request->type,
-                 boost::lexical_cast<std::string>(*cfg_request).c_str());
+        LOG_INFO_F("recv update config request: type({}), {}",
+                   cfg_request->type,
+                   boost::lexical_cast<std::string>(*cfg_request));
     }
 
     if (is_partition_config_equal(pc, cfg_request->config)) {
