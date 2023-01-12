@@ -50,7 +50,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint64("meta_server",
+DSN_DEFINE_uint64(meta_server,
                   min_live_node_count_for_unfreeze,
                   3,
                   "minimum live node count without which the state is freezed");

@@ -39,7 +39,7 @@
 
 namespace dsn {
 namespace replication {
-DSN_DEFINE_bool("meta_server", balance_cluster, false, "whether to enable cluster balancer");
+DSN_DEFINE_bool(meta_server, balance_cluster, false, "whether to enable cluster balancer");
 DSN_TAG_VARIABLE(balance_cluster, FT_MUTABLE);
 
 DSN_DECLARE_uint64(min_live_node_count_for_unfreeze);

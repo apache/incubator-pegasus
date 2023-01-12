@@ -59,7 +59,7 @@ using namespace dsn;
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_int32("meta_server",
+DSN_DEFINE_int32(meta_server,
                  max_allowed_replica_count,
                  5,
                  "max replica count allowed for any app of a cluster");
@@ -68,7 +68,7 @@ DSN_DEFINE_validator(max_allowed_replica_count, [](int32_t allowed_replica_count
     return allowed_replica_count > 0;
 });
 
-DSN_DEFINE_int32("meta_server",
+DSN_DEFINE_int32(meta_server,
                  min_allowed_replica_count,
                  1,
                  "min replica count allowed for any app of a cluster");

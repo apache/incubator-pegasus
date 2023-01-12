@@ -23,7 +23,7 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int32("pegasus.collector",
+DSN_DEFINE_int32(pegasus.collector,
                  capacity_unit_saving_ttl_days,
                  90,
                  "the ttl of the CU data, 0 if no ttl");

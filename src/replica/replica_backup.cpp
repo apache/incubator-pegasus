@@ -33,7 +33,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   max_concurrent_uploading_file_count,
                   10,
                   "concurrent uploading file count to block service");

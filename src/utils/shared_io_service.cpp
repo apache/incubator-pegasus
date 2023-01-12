@@ -23,7 +23,7 @@ namespace dsn {
 namespace tools {
 
 const uint32_t kMinTimerServiceWorkerCount = 3;
-DSN_DEFINE_uint32("core",
+DSN_DEFINE_uint32(core,
                   timer_service_worker_count,
                   kMinTimerServiceWorkerCount,
                   "the number of threads for timer service");

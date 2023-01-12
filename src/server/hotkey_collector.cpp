@@ -29,20 +29,20 @@ namespace pegasus {
 namespace server {
 
 DSN_DEFINE_uint32(
-    "pegasus.server",
+    pegasus.server,
     hot_bucket_variance_threshold,
     7,
     "the variance threshold to detect hot bucket during coarse analysis of hotkey detection");
 DSN_TAG_VARIABLE(hot_bucket_variance_threshold, FT_MUTABLE);
 
 DSN_DEFINE_uint32(
-    "pegasus.server",
+    pegasus.server,
     hot_key_variance_threshold,
     5,
     "the variance threshold to detect hot key during fine analysis of hotkey detection");
 DSN_TAG_VARIABLE(hot_key_variance_threshold, FT_MUTABLE);
 
-DSN_DEFINE_uint32("pegasus.server",
+DSN_DEFINE_uint32(pegasus.server,
                   hotkey_buckets_num,
                   37,
                   "the number of data capture hash buckets");
@@ -61,7 +61,7 @@ DSN_DEFINE_validator(hotkey_buckets_num, [](uint32_t bucket_num) -> bool {
 });
 
 DSN_DEFINE_uint32(
-    "pegasus.server",
+    pegasus.server,
     max_seconds_to_detect_hotkey,
     150,
     "the max time (in seconds) allowed to capture hotkey, will stop if hotkey's not found");

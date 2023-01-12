@@ -48,7 +48,7 @@
 namespace dsn {
 namespace tools {
 
-DSN_DEFINE_bool("network", enable_udp, true, "whether to enable udp rpc engine");
+DSN_DEFINE_bool(network, enable_udp, true, "whether to enable udp rpc engine");
 
 void register_std_lock_providers()
 {

@@ -22,7 +22,7 @@
 
 namespace dsn {
 namespace replication {
-DSN_DEFINE_uint32("meta_server",
+DSN_DEFINE_uint32(meta_server,
                   balance_op_count_per_round,
                   10,
                   "balance operation count per round for cluster balancer");

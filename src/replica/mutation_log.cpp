@@ -38,7 +38,7 @@
 
 namespace dsn {
 namespace replication {
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 plog_force_flush,
                 false,
                 "when write private log, whether to flush file after write done");

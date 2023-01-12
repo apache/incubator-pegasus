@@ -84,7 +84,7 @@ namespace replication {
 // To be consistent with `max_replicas_in_group`, default value of `max_reserved_dropped_replicas`
 // is set to 1 so that the unit tests can be passed. For production environments, it should be set
 // to 0.
-DSN_DEFINE_uint32("meta_server",
+DSN_DEFINE_uint32(meta_server,
                   max_reserved_dropped_replicas,
                   1,
                   "max reserved number allowed for dropped replicas");

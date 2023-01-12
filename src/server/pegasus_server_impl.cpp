@@ -52,7 +52,7 @@ namespace server {
 DEFINE_TASK_CODE(LPC_PEGASUS_SERVER_DELAY, TASK_PRIORITY_COMMON, ::dsn::THREAD_POOL_DEFAULT)
 DSN_DECLARE_int32(read_amp_bytes_per_bit);
 
-DSN_DEFINE_int32("pegasus.server",
+DSN_DEFINE_int32(pegasus.server,
                  hotkey_analyse_time_interval_s,
                  10,
                  "hotkey analyse interval in seconds");

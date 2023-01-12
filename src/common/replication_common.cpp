@@ -37,7 +37,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_int32("replication",
+DSN_DEFINE_int32(replication,
                  max_concurrent_bulk_load_downloading_count,
                  5,
                  "concurrent bulk load downloading replica count");
@@ -46,7 +46,7 @@ DSN_DEFINE_int32("replication",
  * Empty write is used for flushing WAL log entry which is submit asynchronously.
  * Make sure it can work well if you diable it.
  */
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 empty_write_disabled,
                 false,
                 "whether to disable empty write, default is false");

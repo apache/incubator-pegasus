@@ -25,7 +25,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint32("meta_server",
+DSN_DEFINE_uint32(meta_server,
                   bulk_load_max_rollback_times,
                   10,
                   "if bulk load rollback time "
@@ -35,13 +35,13 @@ DSN_DEFINE_uint32("meta_server",
                   "failed");
 DSN_TAG_VARIABLE(bulk_load_max_rollback_times, FT_MUTABLE);
 
-DSN_DEFINE_bool("meta_server",
+DSN_DEFINE_bool(meta_server,
                 bulk_load_verify_before_ingest,
                 false,
                 "verify files according to metadata before ingest");
 DSN_TAG_VARIABLE(bulk_load_verify_before_ingest, FT_MUTABLE);
 
-DSN_DEFINE_bool("meta_server",
+DSN_DEFINE_bool(meta_server,
                 enable_concurrent_bulk_load,
                 false,
                 "whether to enable different apps to execute bulk load at the same time");

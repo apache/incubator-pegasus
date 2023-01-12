@@ -32,7 +32,7 @@
 
 namespace dsn {
 
-DSN_DEFINE_bool("http", enable_http_server, true, "whether to enable the embedded HTTP server");
+DSN_DEFINE_bool(http, enable_http_server, true, "whether to enable the embedded HTTP server");
 
 namespace {
 error_s update_config(const http_request &req)

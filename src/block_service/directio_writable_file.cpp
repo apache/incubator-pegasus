@@ -34,13 +34,13 @@ namespace dsn {
 namespace dist {
 namespace block_service {
 
-DSN_DEFINE_uint32("replication",
+DSN_DEFINE_uint32(replication,
                   direct_io_buffer_pages,
                   64,
                   "Number of pages we need to set to direct io buffer");
 DSN_TAG_VARIABLE(direct_io_buffer_pages, FT_MUTABLE);
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 enable_direct_io,
                 false,
                 "Whether to enable direct I/O when download files");

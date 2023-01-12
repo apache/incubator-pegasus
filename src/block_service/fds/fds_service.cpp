@@ -46,16 +46,16 @@ namespace dsn {
 namespace dist {
 namespace block_service {
 
-DSN_DEFINE_uint32("replication", fds_write_limit_rate, 100, "write rate limit of fds(MB/s)");
+DSN_DEFINE_uint32(replication, fds_write_limit_rate, 100, "write rate limit of fds(MB/s)");
 DSN_TAG_VARIABLE(fds_write_limit_rate, FT_MUTABLE);
 
-DSN_DEFINE_uint32("replication", fds_write_burst_size, 500, "write burst size of fds(MB)");
+DSN_DEFINE_uint32(replication, fds_write_burst_size, 500, "write burst size of fds(MB)");
 DSN_TAG_VARIABLE(fds_write_burst_size, FT_MUTABLE);
 
-DSN_DEFINE_uint32("replication", fds_read_limit_rate, 100, "read rate limit of fds(MB/s)");
+DSN_DEFINE_uint32(replication, fds_read_limit_rate, 100, "read rate limit of fds(MB/s)");
 DSN_TAG_VARIABLE(fds_read_limit_rate, FT_MUTABLE);
 
-DSN_DEFINE_uint32("replication", fds_read_batch_size, 100, "read batch size of fds(MB)");
+DSN_DEFINE_uint32(replication, fds_read_batch_size, 100, "read batch size of fds(MB)");
 DSN_TAG_VARIABLE(fds_read_batch_size, FT_MUTABLE);
 
 class utils
