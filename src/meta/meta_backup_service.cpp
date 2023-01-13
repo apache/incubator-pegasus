@@ -613,8 +613,8 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
 
     auto callback = [this, b_info, sync_callback, create_new_node](dsn::error_code err) {
         if (dsn::ERR_OK == err || (create_new_node && ERR_NODE_ALREADY_EXIST == err)) {
-            LOG_INFO_F("{}: synced backup_info({}) to remote storage successfully,"
-                       " start real backup work, new_node_create({})",
+            LOG_INFO_F("{}: synced backup_info({}) to remote storage successfully, "
+                       "start real backup work, new_node_create({})",
                        _policy.policy_name,
                        b_info.backup_id,
                        create_new_node ? "true" : "false");

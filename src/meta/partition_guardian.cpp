@@ -189,8 +189,7 @@ invalid_action:
     ss << action;
     LOG_INFO_F("proposal action({}) for gpid({}) is invalid, clear all proposal actions: {}",
                ss.str(),
-               gpid.get_app_id(),
-               gpid.get_partition_index(),
+               gpid,
                reason);
     action.type = config_type::CT_INVALID;
 

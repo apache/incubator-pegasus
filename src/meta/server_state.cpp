@@ -1412,10 +1412,9 @@ void server_state::list_apps(const configuration_list_apps_request &request,
 
 void server_state::send_proposal(rpc_address target, const configuration_update_request &proposal)
 {
-    LOG_INFO_F("send proposal %s for gpid({}), ballot = {}, target = {}, node = {}",
+    LOG_INFO_F("send proposal {} for gpid({}), ballot = {}, target = {}, node = {}",
                ::dsn::enum_to_string(proposal.type),
-               proposal.config.pid.get_app_id(),
-               proposal.config.pid.get_partition_index(),
+               proposal.config.pid,
                proposal.config.ballot,
                target,
                proposal.node);
