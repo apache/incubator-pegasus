@@ -155,13 +155,12 @@ generate_balancer_request(const app_mapper &apps,
     default:
         CHECK(false, "");
     }
-    LOG_INFO("generate balancer: %d.%d %s from %s of disk_tag(%s) to %s",
-             pc.pid.get_app_id(),
-             pc.pid.get_partition_index(),
-             ans.c_str(),
-             from.to_string(),
-             get_disk_tag(apps, from, pc.pid).c_str(),
-             to.to_string());
+    LOG_INFO_F("generate balancer: {} {} from {} of disk_tag({}) to {}",
+               pc.pid,
+               ans,
+               from,
+               get_disk_tag(apps, from, pc.pid),
+               to);
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
@@ -370,8 +369,8 @@ bool load_balance_policy::execute_balance(
         if (!balance_checker) {
             if (!_migration_result->empty()) {
                 if (balance_in_turn) {
-                    LOG_INFO("stop to handle more apps after we found some actions for %s",
-                             app->get_logname());
+                    LOG_INFO_F("stop to handle more apps after we found some actions for {}",
+                               app->get_logname());
                     return false;
                 }
             }

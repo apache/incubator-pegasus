@@ -197,11 +197,10 @@ void server_state::on_recv_restore_report(configuration_report_restore_status_rp
         if (request.__isset.reason) {
             r_state.reason = request.reason;
         }
-        LOG_INFO("%d.%d restore report: restore_status(%s), progress(%d)",
-                 request.pid.get_app_id(),
-                 request.pid.get_partition_index(),
-                 request.restore_status.to_string(),
-                 request.progress);
+        LOG_INFO_F("{} restore report: restore_status({}), progress({})",
+                   request.pid,
+                   request.restore_status,
+                   request.progress);
     }
 }
 

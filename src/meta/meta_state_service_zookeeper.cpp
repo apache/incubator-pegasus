@@ -168,7 +168,7 @@ error_code meta_state_service_zookeeper::initialize(const std::vector<std::strin
             return ERR_TIMEOUT;
     }
 
-    LOG_INFO("init meta_state_service_zookeeper succeed");
+    LOG_INFO_F("init meta_state_service_zookeeper succeed");
 
     // Notice: this reference is released in finalize
     add_ref();

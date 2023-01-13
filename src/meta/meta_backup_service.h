@@ -92,6 +92,10 @@ struct backup_start_time
            << std::setfill('0') << std::to_string(minute);
         return ss.str();
     }
+    friend std::ostream &operator<<(std::ostream &os, const backup_start_time &t)
+    {
+        return os << t.to_string();
+    }
     // NOTICE: this function will modify hour and minute, if time is invalid, this func will set
     // hour = 24, minute = 0
     bool parse_from(const std::string &time)
