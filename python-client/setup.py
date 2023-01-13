@@ -27,8 +27,8 @@ setup(
     platforms='any',
     url='https://github.com/apache/incubator-pegasus/python-client',
     license='Apache License 2.0',
-    author='Lai Yingchun',
-    author_email='laiyingchun@xiaomi.com',
+    author='Yingchun Lai',
+    author_email='laiyingchun@apache.org',
     description='python3 client for apache/incubator-pegasus',
     classifiers=[
         'Development Status :: 4 - Beta',

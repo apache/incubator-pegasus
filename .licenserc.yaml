@@ -29,6 +29,7 @@ header:
     - '.github/ISSUE_TEMPLATE/general_question.md'
     - '.rat-excludes'
     - 'DISCLAIMER-WIP'
+    - 'python-client/requirement.txt'
     # TODO(yingchun): shell/* files are import from thirdparties, we can move them to thirdparty later.
     - 'src/shell/argh.h'
     - 'src/shell/linenoise/linenoise.c'

@@ -22,6 +22,12 @@ PY_CLIENT_DIR=`pwd`
 PEGASUS_PKG="pegasus-tools-2.0.0-5d969e8-glibc2.12-release"
 PEGASUS_PKG_URL="https://github.com/apache/incubator-pegasus/releases/download/v2.0.0/pegasus-tools-2.0.0-5d969e8-glibc2.12-release.tar.gz"
 
+thrift -v --gen py -out . ../idl/dsn.layer2.thrift
+thrift -v --gen py -out . ../idl/rrdb.thrift
+
+# TODO(yingchun): how to install pypegasus before generating thrift files?
+python setup.py install
+
 # start pegasus onebox environment
 if [ ! -f ${PEGASUS_PKG}.tar.gz ]; then
     wget --quiet ${PEGASUS_PKG_URL}
@@ -31,5 +37,8 @@ cd ${PEGASUS_PKG}
 ./run.sh clear_onebox
 ./run.sh start_onebox -m 3 -r 3 -w
 
-cd ${PY_CLIENT_DIR}/tests
+cd "${PY_CLIENT_DIR}"
+python3 sample.py
+
+cd "${PY_CLIENT_DIR}"/tests
 python3 -m unittest -v test_basics.TestBasics
