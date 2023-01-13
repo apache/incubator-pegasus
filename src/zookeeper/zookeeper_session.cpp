@@ -317,10 +317,10 @@ void zookeeper_session::global_watcher(
 {
     zookeeper_session *zoo_session = (zookeeper_session *)ctx;
     zoo_session->init_non_dsn_thread();
-    LOG_INFO(
-        "global watcher, type(%s), state(%s)", string_zoo_event(type), string_zoo_state(state));
+    LOG_INFO_F(
+        "global watcher, type({}), state({})", string_zoo_event(type), string_zoo_state(state));
     if (type != ZOO_SESSION_EVENT && path != nullptr)
-        LOG_INFO("watcher path: %s", path);
+        LOG_INFO_F("watcher path: {}", path);
 
     CHECK(zoo_session->_handle == handle, "");
     zoo_session->dispatch_event(type, state, type == ZOO_SESSION_EVENT ? "" : path);

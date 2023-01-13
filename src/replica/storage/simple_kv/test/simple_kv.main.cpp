@@ -72,7 +72,7 @@ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    LOG_INFO("=== exiting ...");
+    LOG_INFO_F("=== exiting ...");
 
     dsn::replication::test::test_checker::instance().exit();
 

@@ -45,7 +45,7 @@ namespace application {
 simple_kv_service_impl::simple_kv_service_impl(replica *r) : simple_kv_service(r), _lock(true)
 {
     reset_state();
-    LOG_INFO("simple_kv_service_impl inited");
+    LOG_INFO_F("simple_kv_service_impl inited");
 }
 
 void simple_kv_service_impl::reset_state()

@@ -199,6 +199,11 @@ public:
     virtual bool check_satisfied(const event *ev) const = 0;
 
     std::string to_string() const;
+    friend std::ostream &operator<<(std::ostream &os, const event &evt)
+    {
+        return os << evt.to_string();
+    }
+
     static event *parse(int line_no, const std::string &params);
 };
 

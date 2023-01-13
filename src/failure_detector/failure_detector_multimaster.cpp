@@ -74,14 +74,14 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
                                                        const fd::beacon_ack &ack,
                                                        void *)
 {
-    LOG_INFO("end ping result, error[%s], time[%" PRId64
-             "], ack.this_node[%s], ack.primary_node[%s], ack.is_master[%s], ack.allowed[%s]",
-             err.to_string(),
-             ack.time,
-             ack.this_node.to_string(),
-             ack.primary_node.to_string(),
-             ack.is_master ? "true" : "false",
-             ack.allowed ? "true" : "false");
+    LOG_INFO_F("end ping result, error[{}], time[{}], ack.this_node[{}], ack.primary_node[{}], "
+               "ack.is_master[{}], ack.allowed[{}]",
+               err,
+               ack.time,
+               ack.this_node,
+               ack.primary_node,
+               ack.is_master ? "true" : "false",
+               ack.allowed ? "true" : "false");
 
     zauto_lock l(failure_detector::_lock);
     if (!failure_detector::end_ping_internal(err, ack))

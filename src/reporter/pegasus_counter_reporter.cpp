@@ -119,9 +119,8 @@ void pegasus_counter_reporter::falcon_initialize()
     _falcon_metric.tags = fmt::format(
         "service=pegasus,cluster={},job={},port={}", _cluster_name, _app_name, _local_port);
 
-    LOG_INFO("falcon initialize: endpoint(%s), tag(%s)",
-             _falcon_metric.endpoint.c_str(),
-             _falcon_metric.tags.c_str());
+    LOG_INFO_F(
+        "falcon initialize: endpoint({}), tag({})", _falcon_metric.endpoint, _falcon_metric.tags);
 }
 
 void pegasus_counter_reporter::start()
@@ -180,7 +179,7 @@ void pegasus_counter_reporter::stop()
 void pegasus_counter_reporter::update_counters_to_falcon(const std::string &result,
                                                          int64_t timestamp)
 {
-    LOG_INFO("update counters to falcon with timestamp = %" PRId64, timestamp);
+    LOG_INFO_F("update counters to falcon with timestamp = {}", timestamp);
     http_post_request(FLAGS_falcon_host,
                       FLAGS_falcon_port,
                       FLAGS_falcon_path,
@@ -204,7 +203,7 @@ void pegasus_counter_reporter::update()
                 oss << "[" << cs.name << ", " << dsn_counter_type_to_string(cs.type) << ", "
                     << cs.value << "]" << std::endl;
             });
-        LOG_INFO("%s", oss.str().c_str());
+        LOG_INFO_F("{}", oss.str());
     }
 
     if (perf_counter_sink_t::FALCON == _perf_counter_sink) {
@@ -293,7 +292,7 @@ void pegasus_counter_reporter::update()
         });
     }
 
-    LOG_INFO("update now_ms(%lld), last_report_time_ms(%lld)", now, _last_report_time_ms);
+    LOG_INFO_F("update now_ms({}), last_report_time_ms({})", now, _last_report_time_ms);
     _last_report_time_ms = now;
 }
 

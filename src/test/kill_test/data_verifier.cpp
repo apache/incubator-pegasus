@@ -119,33 +119,33 @@ void do_set(int thread_id)
             client->set(hash_key, sort_key, value, set_and_get_timeout_milliseconds, 0, &info);
         if (ret == PERR_OK) {
             long cur_time = get_time();
-            LOG_INFO("SetThread[%d]: set succeed: id=%lld, try=%d, time=%ld (gpid=%d.%d, "
-                     "decree=%lld, server=%s)",
-                     thread_id,
-                     id,
-                     try_count,
-                     (cur_time - last_time),
-                     info.app_id,
-                     info.partition_index,
-                     info.decree,
-                     info.server.c_str());
+            LOG_INFO_F("SetThread[{}]: set succeed: id={}, try={}, time={} (gpid={}.{}, decree={}, "
+                       "server={})",
+                       thread_id,
+                       id,
+                       try_count,
+                       (cur_time - last_time),
+                       info.app_id,
+                       info.partition_index,
+                       info.decree,
+                       info.server);
             stat_time[stat_count++] = cur_time - last_time;
             if (stat_count == stat_batch) {
                 std::sort(stat_time.begin(), stat_time.end());
                 long total_time = 0;
                 for (auto t : stat_time)
                     total_time += t;
-                LOG_INFO("SetThread[%d]: set statistics: count=%lld, min=%lld, P90=%lld, P99=%lld, "
-                         "P999=%lld, P9999=%lld, max=%lld, avg=%lld",
-                         thread_id,
-                         stat_count,
-                         stat_time[stat_min_pos],
-                         stat_time[stat_p90_pos],
-                         stat_time[stat_p99_pos],
-                         stat_time[stat_p999_pos],
-                         stat_time[stat_p9999_pos],
-                         stat_time[stat_max_pos],
-                         total_time / stat_batch);
+                LOG_INFO_F("SetThread[{}]: set statistics: count={}, min={}, P90={}, P99={}, "
+                           "P999={}, P9999={}, max={}, avg={}",
+                           thread_id,
+                           stat_count,
+                           stat_time[stat_min_pos],
+                           stat_time[stat_p90_pos],
+                           stat_time[stat_p99_pos],
+                           stat_time[stat_p999_pos],
+                           stat_time[stat_p9999_pos],
+                           stat_time[stat_max_pos],
+                           total_time / stat_batch);
                 stat_count = 0;
             }
             last_time = cur_time;
@@ -174,8 +174,8 @@ void do_set(int thread_id)
 // - loop from range [start_id, end_id]
 void do_get_range(int thread_id, int round_id, long long start_id, long long end_id)
 {
-    LOG_INFO(
-        "GetThread[%d]: round(%d): start get range [%u,%u]", thread_id, round_id, start_id, end_id);
+    LOG_INFO_F(
+        "GetThread[{}]: round({}): start get range [{},{}]", thread_id, round_id, start_id, end_id);
     char buf[1024];
     std::string hash_key;
     std::string sort_key;
@@ -244,17 +244,17 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
                     long total_time = 0;
                     for (auto t : stat_time)
                         total_time += t;
-                    LOG_INFO("GetThread[%d]: get statistics: count=%lld, min=%lld, P90=%lld, "
-                             "P99=%lld, P999=%lld, P9999=%lld, max=%lld, avg=%lld",
-                             thread_id,
-                             stat_count,
-                             stat_time[stat_min_pos],
-                             stat_time[stat_p90_pos],
-                             stat_time[stat_p99_pos],
-                             stat_time[stat_p999_pos],
-                             stat_time[stat_p9999_pos],
-                             stat_time[stat_max_pos],
-                             total_time / stat_batch);
+                    LOG_INFO_F("GetThread[{}]: get statistics: count={}, min={}, P90={}, "
+                               "P99={}, P999={}, P9999={}, max={}, avg={}",
+                               thread_id,
+                               stat_count,
+                               stat_time[stat_min_pos],
+                               stat_time[stat_p90_pos],
+                               stat_time[stat_p99_pos],
+                               stat_time[stat_p999_pos],
+                               stat_time[stat_p9999_pos],
+                               stat_time[stat_max_pos],
+                               total_time / stat_batch);
                     stat_count = 0;
                 }
             }
@@ -279,11 +279,11 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
             }
         }
     }
-    LOG_INFO("GetThread[%d]: round(%d): finish get range [%u,%u]",
-             thread_id,
-             round_id,
-             start_id,
-             end_id);
+    LOG_INFO_F("GetThread[{}]: round({}): finish get range [{},{}]",
+               thread_id,
+               round_id,
+               start_id,
+               end_id);
 }
 
 void do_check(int thread_count)
@@ -295,7 +295,7 @@ void do_check(int thread_count)
             sleep(1);
             continue;
         }
-        LOG_INFO("CheckThread: round(%d): start check round, range_end=%lld", round_id, range_end);
+        LOG_INFO_F("CheckThread: round({}): start check round, range_end={}", round_id, range_end);
         long start_time = get_time();
         std::vector<std::thread> worker_threads;
         long long piece_count = range_end / thread_count;
@@ -308,8 +308,8 @@ void do_check(int thread_count)
             t.join();
         }
         long finish_time = get_time();
-        LOG_INFO(
-            "CheckThread: round(%d): finish check round, range_end=%lld, total_time=%ld seconds",
+        LOG_INFO_F(
+            "CheckThread: round({}): finish check round, range_end={}, total_time={} seconds",
             round_id,
             range_end,
             (finish_time - start_time) / 1000000);
@@ -320,10 +320,10 @@ void do_check(int thread_count)
             sprintf(buf, "%lld", range_end);
             int ret = client->set(check_max_key, "", buf, set_and_get_timeout_milliseconds);
             if (ret == PERR_OK) {
-                LOG_INFO("CheckThread: round(%d): update \"%s\" succeed: check_max=%lld",
-                         round_id,
-                         check_max_key,
-                         range_end);
+                LOG_INFO_F("CheckThread: round({}): update \"{}\" succeed: check_max={}",
+                           round_id,
+                           check_max_key,
+                           range_end);
                 break;
             } else {
                 LOG_ERROR("CheckThread: round(%d): update \"%s\" failed: check_max=%lld, ret=%d, "
@@ -358,10 +358,10 @@ void do_mark()
         int ret = client->set(set_next_key, "", value, set_and_get_timeout_milliseconds);
         if (ret == PERR_OK) {
             long cur_time = get_time();
-            LOG_INFO("MarkThread: update \"%s\" succeed: set_next=%lld, time=%ld",
-                     set_next_key,
-                     new_id,
-                     (cur_time - last_time));
+            LOG_INFO_F("MarkThread: update \"{}\" succeed: set_next={}, time={}",
+                       set_next_key,
+                       new_id,
+                       cur_time - last_time);
             old_id = new_id;
         } else {
             LOG_ERROR("MarkThread: update \"%s\" failed: set_next=%lld, ret=%d, error=%s",
@@ -416,11 +416,11 @@ void verifier_start()
                           set_next_value.c_str());
                 exit(-1);
             }
-            LOG_INFO("MainThread: read \"%s\" succeed: value=%lld", set_next_key, i);
+            LOG_INFO_F("MainThread: read \"{}\" succeed: value={}", set_next_key, i);
             set_next.store(i);
             break;
         } else if (ret == PERR_NOT_FOUND) {
-            LOG_INFO("MainThread: read \"%s\" not found, init set_next to 0", set_next_key);
+            LOG_INFO_F("MainThread: read \"{}\" not found, init set_next to 0", set_next_key);
             set_next.store(0);
             break;
         } else {

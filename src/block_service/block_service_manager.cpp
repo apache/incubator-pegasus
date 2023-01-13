@@ -52,7 +52,7 @@ block_service_manager::block_service_manager()
 
 block_service_manager::~block_service_manager()
 {
-    LOG_INFO("close block service manager.");
+    LOG_INFO_F("close block service manager.");
     zauto_write_lock l(_fs_lock);
     _fs_map.clear();
 }

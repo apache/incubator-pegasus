@@ -197,12 +197,12 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
         rpc_address paddr = node.second->rpc()->primary_address();
         int port = paddr.port();
         _node_to_address[name] = paddr;
-        LOG_INFO("=== node_to_address[%s]=%s", name.c_str(), paddr.to_string());
+        LOG_INFO_F("=== node_to_address[{}]={}", name, paddr);
         _address_to_node[port] = name;
-        LOG_INFO("=== address_to_node[%u]=%s", port, name.c_str());
+        LOG_INFO_F("=== address_to_node[{}]={}", port, name);
         if (id != port) {
             _address_to_node[id] = name;
-            LOG_INFO("=== address_to_node[%u]=%s", id, name.c_str());
+            LOG_INFO_F("=== address_to_node[{}]={}", id, name);
         }
     }
 

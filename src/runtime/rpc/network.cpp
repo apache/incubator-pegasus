@@ -649,9 +649,9 @@ void connection_oriented_network::send_message(message_ex *request)
 
     // init connection if necessary
     if (new_client) {
-        LOG_INFO("client session created, remote_server = %s, current_count = %d",
-                 client->remote_address().to_string(),
-                 ip_count);
+        LOG_INFO_F("client session created, remote_server = {}, current_count = {}",
+                   client->remote_address(),
+                   ip_count);
         _client_session_count->set(ip_count);
         client->connect();
     }
@@ -691,14 +691,14 @@ void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &s)
         }
     }
 
-    LOG_INFO("server session accepted, remote_client = %s, current_count = %d",
-             s->remote_address().to_string(),
-             ip_count);
+    LOG_INFO_F("server session accepted, remote_client = {}, current_count = {}",
+               s->remote_address(),
+               ip_count);
 
-    LOG_INFO("ip session %s, remote_client = %s, current_count = %d",
-             ip_conn_count == 1 ? "inserted" : "increased",
-             s->remote_address().to_string(),
-             ip_conn_count);
+    LOG_INFO_F("ip session {}, remote_client = {}, current_count = {}",
+               ip_conn_count == 1 ? "inserted" : "increased",
+               s->remote_address(),
+               ip_conn_count);
 
     _client_session_count->set(ip_count);
 }
@@ -733,20 +733,19 @@ void connection_oriented_network::on_server_session_disconnected(rpc_session_ptr
     }
 
     if (session_removed) {
-        LOG_INFO("session %s disconnected, the total client sessions count remains %d",
-                 s->remote_address().to_string(),
-                 ip_count);
+        LOG_INFO_F("session {} disconnected, the total client sessions count remains {}",
+                   s->remote_address(),
+                   ip_count);
         _client_session_count->set(ip_count);
     }
 
     if (ip_conn_count == 0) {
         // TODO(wutao1): print ip only
-        LOG_INFO("client ip %s has no more session to this server",
-                 s->remote_address().to_string());
+        LOG_INFO_F("client ip {} has no more session to this server", s->remote_address());
     } else {
-        LOG_INFO("client ip %s has still %d of sessions to this server",
-                 s->remote_address().to_string(),
-                 ip_conn_count);
+        LOG_INFO_F("client ip {} has still {} of sessions to this server",
+                   s->remote_address(),
+                   ip_conn_count);
     }
 }
 
@@ -796,9 +795,9 @@ void connection_oriented_network::on_client_session_connected(rpc_session_ptr &s
     }
 
     if (r) {
-        LOG_INFO("client session connected, remote_server = %s, current_count = %d",
-                 s->remote_address().to_string(),
-                 ip_count);
+        LOG_INFO_F("client session connected, remote_server = {}, current_count = {}",
+                   s->remote_address(),
+                   ip_count);
         _client_session_count->set(ip_count);
     }
 }
@@ -818,9 +817,9 @@ void connection_oriented_network::on_client_session_disconnected(rpc_session_ptr
     }
 
     if (r) {
-        LOG_INFO("client session disconnected, remote_server = %s, current_count = %d",
-                 s->remote_address().to_string(),
-                 ip_count);
+        LOG_INFO_F("client session disconnected, remote_server = {}, current_count = {}",
+                   s->remote_address(),
+                   ip_count);
         _client_session_count->set(ip_count);
     }
 }

@@ -170,7 +170,7 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
         _masters.insert(std::make_pair(to, it->second));
         _masters.erase(from);
 
-        LOG_INFO("switch master successfully, from[%s], to[%s]", from.to_string(), to.to_string());
+        LOG_INFO_F("switch master successfully, from[{}], to[{}]", from, to);
     } else {
         LOG_WARNING("switch master failed as from node is not registered yet, from[%s], to[%s]",
                     from.to_string(),
@@ -184,10 +184,8 @@ bool failure_detector::is_time_greater_than(uint64_t ts, uint64_t base) { return
 
 void failure_detector::report(::dsn::rpc_address node, bool is_master, bool is_connected)
 {
-    LOG_INFO("%s %sconnected: %s",
-             is_master ? "master" : "worker",
-             is_connected ? "" : "dis",
-             node.to_string());
+    LOG_INFO_F(
+        "{} {}connected: {}", is_master ? "master" : "worker", is_connected ? "" : "dis", node);
 }
 
 /*
@@ -374,9 +372,9 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
         // update last_beacon_recv_time
         itr->second.last_beacon_recv_time = now;
 
-        LOG_INFO("master %s update last_beacon_recv_time=%" PRId64,
-                 itr->second.node.to_string(),
-                 itr->second.last_beacon_recv_time);
+        LOG_INFO_F("master {} update last_beacon_recv_time={}",
+                   itr->second.node,
+                   itr->second.last_beacon_recv_time);
 
         if (itr->second.is_alive == false) {
             itr->second.is_alive = true;
@@ -385,9 +383,7 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
             on_worker_connected(node);
         }
     } else {
-        LOG_INFO("now[%" PRId64 "] <= last_recv_time[%" PRId64 "]",
-                 now,
-                 itr->second.last_beacon_recv_time);
+        LOG_INFO_F("now[{}] <= last_recv_time[{}]", now, itr->second.last_beacon_recv_time);
     }
 }
 
@@ -442,9 +438,9 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
 
     if (!is_time_greater_than(beacon_send_time, record.last_send_time_for_beacon_with_ack)) {
         // out-dated beacon acks, do nothing
-        LOG_INFO("ignore out dated beacon acks, send_time(%lld), last_beacon(%lld)",
-                 beacon_send_time,
-                 record.last_send_time_for_beacon_with_ack);
+        LOG_INFO_F("ignore out dated beacon acks, send_time({}), last_beacon({})",
+                   beacon_send_time,
+                   record.last_send_time_for_beacon_with_ack);
         return false;
     }
 
@@ -465,9 +461,9 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     record.last_send_time_for_beacon_with_ack = beacon_send_time;
     record.rejected = false;
 
-    LOG_INFO("worker %s send beacon succeed, update last_send_time=%" PRId64,
-             record.node.to_string(),
-             record.last_send_time_for_beacon_with_ack);
+    LOG_INFO_F("worker {} send beacon succeed, update last_send_time={}",
+               record.node,
+               record.last_send_time_for_beacon_with_ack);
 
     uint64_t now = dsn_now_ms();
     // we should ensure now is greater than record.last_beacon_recv_time to aviod integer overflow
@@ -490,10 +486,10 @@ bool failure_detector::unregister_master(::dsn::rpc_address node)
     if (it != _masters.end()) {
         it->second.send_beacon_timer->cancel(true);
         _masters.erase(it);
-        LOG_INFO("unregister master[%s] successfully", node.to_string());
+        LOG_INFO_F("unregister master[{}] successfully", node);
         return true;
     } else {
-        LOG_INFO("unregister master[%s] failed, cannot find it in FD", node.to_string());
+        LOG_INFO_F("unregister master[{}] failed, cannot find it in FD", node);
         return false;
     }
 }
@@ -568,10 +564,8 @@ void failure_detector::send_beacon(::dsn::rpc_address target, uint64_t time)
     beacon.to_addr = target;
     beacon.__set_start_time(static_cast<int64_t>(dsn::utils::process_start_millis()));
 
-    LOG_INFO("send ping message, from[%s], to[%s], time[%" PRId64 "]",
-             beacon.from_addr.to_string(),
-             beacon.to_addr.to_string(),
-             time);
+    LOG_INFO_F(
+        "send ping message, from[{}], to[{}], time[{}]", beacon.from_addr, beacon.to_addr, time);
 
     ::dsn::rpc::call(target,
                      RPC_FD_FAILURE_DETECTOR_PING,

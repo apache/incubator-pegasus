@@ -78,7 +78,7 @@ error_code local_service::initialize(const std::vector<std::string> &args)
         _root = args[0];
 
     if (_root.empty()) {
-        LOG_INFO("initialize local block service succeed with empty root");
+        LOG_INFO_F("initialize local block service succeed with empty root");
     } else {
         if (::dsn::utils::filesystem::directory_exists(_root)) {
             LOG_WARNING("old local block service root dir has already exist, path(%s)",
@@ -88,7 +88,7 @@ error_code local_service::initialize(const std::vector<std::string> &args)
                   "local block service create directory({}) fail",
                   _root);
         }
-        LOG_INFO("local block service initialize succeed with root(%s)", _root.c_str());
+        LOG_INFO_F("local block service initialize succeed with root({})", _root);
     }
     return ERR_OK;
 }
@@ -110,10 +110,10 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
         resp.err = ERR_OK;
 
         if (::dsn::utils::filesystem::file_exists(dir_path)) {
-            LOG_INFO("list_dir: invalid parameter(%s)", dir_path.c_str());
+            LOG_INFO_F("list_dir: invalid parameter({})", dir_path);
             resp.err = ERR_INVALID_PARAMETERS;
         } else if (!::dsn::utils::filesystem::directory_exists(dir_path)) {
-            LOG_INFO("directory does not exist, dir = %s", dir_path.c_str());
+            LOG_INFO_F("directory does not exist, dir = {}", dir_path);
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!::dsn::utils::filesystem::get_subfiles(dir_path, children, false)) {

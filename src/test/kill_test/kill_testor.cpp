@@ -145,7 +145,7 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
                 info << "], ";
                 info << "last_committed_decree=" << p.last_committed_decree;
                 if (debug_unhealthy) {
-                    LOG_INFO("found unhealthy partition, %s", info.str().c_str());
+                    LOG_INFO_F("found unhealthy partition, {}", info.str());
                 } else {
                     LOG_DEBUG_F("found unhealthy partition, {}", info.str());
                 }
@@ -180,7 +180,7 @@ bool kill_testor::check_cluster_status()
             } else
                 return true;
         } else {
-            LOG_INFO("query partition status fail, try times = %d", try_count);
+            LOG_INFO_F("query partition status fail, try times = {}", try_count);
             sleep(1);
         }
         try_count += 1;
