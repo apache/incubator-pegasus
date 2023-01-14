@@ -62,7 +62,7 @@ error_s update_config(const http_request &req)
     case http_status_code::internal_server_error:
         return "500 Internal Server Error";
     default:
-        LOG_FATAL_F("invalid code: {}", http_status_code_to_string(code));
+        LOG_FATAL_F("invalid code: {}", static_cast<int>(code));
         __builtin_unreachable();
     }
 }
