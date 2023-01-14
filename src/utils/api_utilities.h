@@ -89,7 +89,6 @@ extern void dsn_coredump();
 
 #define LOG_WARNING(...) dlog(LOG_LEVEL_WARNING, __VA_ARGS__)
 #define LOG_ERROR(...) dlog(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define LOG_FATAL(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)
 
 #define dreturn_not_ok_logged(err, ...)                                                            \
     do {                                                                                           \

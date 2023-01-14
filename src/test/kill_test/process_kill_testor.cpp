@@ -223,7 +223,7 @@ void process_kill_testor::stop_verifier_and_exit(const char *msg)
     int ret = dsn::utils::pipe_execute(
         "ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9", ss);
     CHECK(ret == 0 || ret == 256, "");
-    LOG_FATAL(msg);
+    LOG_FATAL_F(msg);
 }
 
 bool process_kill_testor::check_coredump()

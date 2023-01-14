@@ -202,30 +202,30 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
         if (ret == PERR_OK || ret == PERR_NOT_FOUND) {
             long cur_time = get_time();
             if (ret == PERR_NOT_FOUND) {
-                LOG_FATAL("GetThread[%d]: round(%d): get not found: id=%lld, try=%d, time=%ld "
-                          "(gpid=%d.%d, server=%s), and exit",
-                          thread_id,
-                          round_id,
-                          id,
-                          try_count,
-                          (cur_time - last_time),
-                          info.app_id,
-                          info.partition_index,
-                          info.server.c_str());
+                LOG_FATAL_F("GetThread[{}]: round({}): get not found: id={}, try={}, time={} "
+                            "(gpid={}.{}, server={}), and exit",
+                            thread_id,
+                            round_id,
+                            id,
+                            try_count,
+                            (cur_time - last_time),
+                            info.app_id,
+                            info.partition_index,
+                            info.server);
                 exit(-1);
             } else if (value != get_value) {
-                LOG_FATAL("GetThread[%d]: round(%d): get mismatched: id=%lld, try=%d, time=%ld, "
-                          "expect_value=%s, real_value=%s (gpid=%d.%d, server=%s), and exit",
-                          thread_id,
-                          round_id,
-                          id,
-                          try_count,
-                          (cur_time - last_time),
-                          value.c_str(),
-                          get_value.c_str(),
-                          info.app_id,
-                          info.partition_index,
-                          info.server.c_str());
+                LOG_FATAL_F("GetThread[{}]: round({}): get mismatched: id={}, try={}, time={}, "
+                            "expect_value={}, real_value={} (gpid={}.{}, server={}), and exit",
+                            thread_id,
+                            round_id,
+                            id,
+                            try_count,
+                            (cur_time - last_time),
+                            value,
+                            get_value,
+                            info.app_id,
+                            info.partition_index,
+                            info.server);
                 exit(-1);
             } else {
                 LOG_DEBUG_F("GetThread[{}]: round({}): get succeed: id={}, try={}, time={} "
