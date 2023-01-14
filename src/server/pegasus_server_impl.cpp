@@ -1823,8 +1823,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _pfc_rdb_memtable_mem_usage->set(0);
     }
 
-    LOG_INFO_F(
-        "{}: close app succeed, clear_state = {}", replica_name(), clear_state ? "true" : "false");
+    LOG_INFO_PREFIX("close app succeed, clear_state = {}", clear_state ? "true" : "false");
     return ::dsn::ERR_OK;
 }
 
@@ -2568,8 +2567,7 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 
     it = env_kvs.find(ROCKSDB_ENV_RESTORE_BACKUP_ID);
     if (it != env_kvs.end()) {
-        LOG_INFO_F(
-            "{}: found {} in envs: {}", replica_name(), ROCKSDB_ENV_RESTORE_BACKUP_ID, it->second);
+        LOG_INFO_PREFIX("found {} in envs: {}", ROCKSDB_ENV_RESTORE_BACKUP_ID, it->second);
         os << it->second;
     } else {
         return res;
@@ -3123,8 +3121,7 @@ bool pegasus_server_impl::set_options(
     }
     rocksdb::Status status = _db->SetOptions(_data_cf, new_options);
     if (status == rocksdb::Status::OK()) {
-        LOG_INFO_F(
-            "{}: rocksdb set options returns {}: {}", replica_name(), status.ToString(), oss.str());
+        LOG_INFO_PREFIX("rocksdb set options returns {}: {}", status.ToString(), oss.str());
         return true;
     } else {
         LOG_ERROR("%s: rocksdb set options returns %s: {%s}",

@@ -124,7 +124,7 @@ void do_set(int thread_id)
                        thread_id,
                        id,
                        try_count,
-                       (cur_time - last_time),
+                       cur_time - last_time,
                        info.app_id,
                        info.partition_index,
                        info.decree,
