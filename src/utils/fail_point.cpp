@@ -62,7 +62,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
     case fail_point::Void:
         return "Void";
     default:
-        LOG_FATAL("unexpected type: %d", t);
+        LOG_FATAL_F("unexpected type: {}", t);
         __builtin_unreachable();
     }
 }
@@ -92,7 +92,7 @@ inline const char *task_type_to_string(fail_point::task_type t)
 void fail_point::set_action(string_view action)
 {
     if (!parse_from_string(action)) {
-        LOG_FATAL("unrecognized command: %s", action.data());
+        LOG_FATAL_F("unrecognized command: {}", action);
     }
 }
 
