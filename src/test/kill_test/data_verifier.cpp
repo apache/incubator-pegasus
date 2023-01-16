@@ -208,7 +208,7 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
                             round_id,
                             id,
                             try_count,
-                            (cur_time - last_time),
+                            cur_time - last_time,
                             info.app_id,
                             info.partition_index,
                             info.server);
