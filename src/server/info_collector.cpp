@@ -140,7 +140,7 @@ void info_collector::stop() { _tracker.cancel_outstanding_tasks(); }
 
 void info_collector::on_app_stat()
 {
-    LOG_INFO("start to stat apps");
+    LOG_INFO_F("start to stat apps");
     std::map<std::string, std::vector<row_data>> all_rows;
     if (!get_app_partition_stat(_shell_context.get(), all_rows)) {
         LOG_ERROR("call get_app_stat() failed");
@@ -257,7 +257,7 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
 
 void info_collector::on_capacity_unit_stat(int remaining_retry_count)
 {
-    LOG_INFO("start to stat capacity unit, remaining_retry_count = %d", remaining_retry_count);
+    LOG_INFO_F("start to stat capacity unit, remaining_retry_count = {}", remaining_retry_count);
     std::vector<node_capacity_unit_stat> nodes_stat;
     if (!get_capacity_unit_stat(_shell_context.get(), nodes_stat)) {
         if (remaining_retry_count > 0) {
@@ -304,7 +304,7 @@ bool info_collector::has_capacity_unit_updated(const std::string &node_address,
 
 void info_collector::on_storage_size_stat(int remaining_retry_count)
 {
-    LOG_INFO("start to stat storage size, remaining_retry_count = %d", remaining_retry_count);
+    LOG_INFO_F("start to stat storage size, remaining_retry_count = {}", remaining_retry_count);
     app_storage_size_stat st_stat;
     if (!get_storage_size_stat(_shell_context.get(), st_stat)) {
         if (remaining_retry_count > 0) {

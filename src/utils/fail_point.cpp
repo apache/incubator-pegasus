@@ -71,12 +71,12 @@ inline const char *task_type_to_string(fail_point::task_type t)
 {
     fail_point &p = REGISTRY.create_if_not_exists(name);
     p.set_action(action);
-    LOG_INFO("add fail_point [name: %s, task: %s(%s), frequency: %d%, max_count: %d]",
-             name.data(),
-             task_type_to_string(p.get_task()),
-             p.get_arg().data(),
-             p.get_frequency(),
-             p.get_max_count());
+    LOG_INFO_F("add fail_point [name: {}, task: {}({}), frequency: {}%, max_count: {}]",
+               name,
+               task_type_to_string(p.get_task()),
+               p.get_arg(),
+               p.get_frequency(),
+               p.get_max_count());
 }
 
 /*static*/ bool _S_FAIL_POINT_ENABLED = false;
@@ -152,7 +152,7 @@ const std::string *fail_point::eval()
         return nullptr;
     }
     _max_cnt--;
-    LOG_INFO("fail on %s", _name.data());
+    LOG_INFO_F("fail on {}", _name);
 
     switch (_task) {
     case Off:
@@ -161,7 +161,7 @@ const std::string *fail_point::eval()
     case Return:
         return &_arg;
     case Print:
-        LOG_INFO(_arg.data());
+        LOG_INFO_F(_arg);
         break;
     }
     return nullptr;

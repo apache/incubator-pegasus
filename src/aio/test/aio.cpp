@@ -188,7 +188,7 @@ TEST(core, operation_failed)
 
     t = ::dsn::file::read(fp2, buffer, 512, 100, LPC_AIO_TEST, nullptr, io_callback, 0);
     t->wait();
-    LOG_INFO("error code: %s", err->to_string());
+    LOG_INFO_F("error code: {}", *err);
     file::close(fp);
     file::close(fp2);
     fail::teardown();

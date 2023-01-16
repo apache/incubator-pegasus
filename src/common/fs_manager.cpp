@@ -177,10 +177,7 @@ dsn::error_code fs_manager::initialize(const std::vector<std::string> &data_dirs
         utils::filesystem::get_normalized_path(data_dirs[i], norm_path);
         dir_node *n = new dir_node(tags[i], norm_path);
         _dir_nodes.emplace_back(n);
-        LOG_INFO("%s: mark data dir(%s) as tag(%s)",
-                 dsn_primary_address().to_string(),
-                 norm_path.c_str(),
-                 tags[i].c_str());
+        LOG_INFO_F("{}: mark data dir({}) as tag({})", dsn_primary_address(), norm_path, tags[i]);
     }
     _available_data_dirs = data_dirs;
 
@@ -221,11 +218,7 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
                         pid.get_partition_index(),
                         n->tag.c_str());
         } else {
-            LOG_INFO("%s: add gpid(%d.%d) to dir_node(%s)",
-                     dsn_primary_address().to_string(),
-                     pid.get_app_id(),
-                     pid.get_partition_index(),
-                     n->tag.c_str());
+            LOG_INFO_F("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, n->tag);
         }
     }
 }
@@ -258,12 +251,11 @@ void fs_manager::allocate_dir(const gpid &pid, const std::string &type, /*out*/ 
         }
     }
 
-    LOG_INFO(
-        "%s: put pid(%d.%d) to dir(%s), which has %u replicas of current app, %u replicas totally",
-        dsn_primary_address().to_string(),
-        pid.get_app_id(),
-        pid.get_partition_index(),
-        selected->tag.c_str(),
+    LOG_INFO_F(
+        "{}: put pid({}) to dir({}), which has {} replicas of current app, {} replicas totally",
+        dsn_primary_address(),
+        pid,
+        selected->tag,
         least_app_replicas_count,
         least_total_replicas_count);
 
@@ -283,11 +275,7 @@ void fs_manager::remove_replica(const gpid &pid)
                      pid,
                      n->tag);
         if (r != 0) {
-            LOG_INFO("%s: remove gpid(%d.%d) from dir(%s)",
-                     dsn_primary_address().to_string(),
-                     pid.get_app_id(),
-                     pid.get_partition_index(),
-                     n->tag.c_str());
+            LOG_INFO_F("{}: remove gpid({}) from dir({})", dsn_primary_address(), pid, n->tag);
         }
         remove_count += r;
     }

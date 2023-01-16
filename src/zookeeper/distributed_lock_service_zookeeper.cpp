@@ -134,7 +134,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
     }
     _lock_root = current.empty() ? "/" : current;
 
-    LOG_INFO("init distributed_lock_service_zookeeper succeed, lock_root = %s", _lock_root.c_str());
+    LOG_INFO_F("init distributed_lock_service_zookeeper succeed, lock_root = {}", _lock_root);
     // Notice: this reference is released in the finalize
     add_ref();
     return ERR_OK;

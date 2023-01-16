@@ -605,7 +605,7 @@ TEST(proxy, connection)
             client_socket.shutdown(boost::asio::socket_base::shutdown_both);
             client_socket.close();
         } catch (...) {
-            LOG_INFO("exception in shutdown");
+            LOG_INFO_F("exception in shutdown");
         }
     }
 }

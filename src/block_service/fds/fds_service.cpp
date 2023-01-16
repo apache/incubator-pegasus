@@ -561,7 +561,7 @@ error_code fds_file_object::put_content(/*in-out*/ std::istream &is,
         return err;
     }
 
-    LOG_INFO("start to synchronize meta data after successfully wrote data to fds");
+    LOG_INFO_F("start to synchronize meta data after successfully wrote data to fds");
     err = get_file_meta();
     if (err == ERR_OK) {
         transfered_bytes = _size;

@@ -97,7 +97,7 @@ redis_parser::~redis_parser()
 {
     clear_reply_queue();
     reset_parser();
-    LOG_INFO("%s: redis parser destroyed", _remote_address.to_string());
+    LOG_INFO_PREFIX("redis parser destroyed");
 }
 
 void redis_parser::prepare_current_buffer()
@@ -408,7 +408,7 @@ void redis_parser::default_handler(redis_parser::message_entry &entry)
 {
     ::dsn::blob &cmd = entry.request.sub_requests[0].data;
     std::string message = "unknown command '" + std::string(cmd.data(), cmd.length()) + "'";
-    LOG_INFO_F("{}: {} with seqid {}", _remote_address.to_string(), message, entry.sequence_id);
+    LOG_INFO_PREFIX("{} with seqid {}", message, entry.sequence_id);
     simple_error_reply(entry, message);
 }
 
@@ -425,9 +425,7 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
 {
     redis_request &request = entry.request;
     if (request.sub_requests.size() < 3) {
-        LOG_INFO("%s: set command with invalid arguments, seqid(%" PRId64 ")",
-                 _remote_address.to_string(),
-                 entry.sequence_id);
+        LOG_INFO_PREFIX("SET command with invalid arguments, seqid({})", entry.sequence_id);
         simple_error_reply(entry, "wrong number of arguments for 'set' command");
     } else {
         int ttl_seconds = 0;
@@ -435,15 +433,14 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
 
         // with a reference to prevent the object from being destroyed
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
-        LOG_DEBUG_PREFIX("send set command({})", entry.sequence_id);
+        LOG_DEBUG_PREFIX("send SET command({})", entry.sequence_id);
         auto on_set_reply = [ref_this, this, &entry](
             ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
             // when the "is_session_reset" flag is set, the socket may be broken.
             // so continue to reply the message is not necessary
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: set command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("SET command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
@@ -452,12 +449,10 @@ void redis_parser::set_internal(redis_parser::message_entry &entry)
             //
             // currently we only clear an entry when it is replied or
             // in the redis_parser's destructor
-            LOG_DEBUG_PREFIX("set command seqid({}) got reply", entry.sequence_id);
+            LOG_DEBUG_PREFIX("SET command seqid({}) got reply", entry.sequence_id);
             if (::dsn::ERR_OK != ec) {
-                LOG_INFO("%s: set command seqid(%" PRId64 ") got reply with error = %s",
-                         _remote_address.to_string(),
-                         entry.sequence_id,
-                         ec.to_string());
+                LOG_INFO_PREFIX(
+                    "SET command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::update_response rrdb_response;
@@ -504,9 +499,8 @@ void redis_parser::set_geo_internal(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto set_callback = [ref_this, this, &entry](int ec, pegasus_client::internal_info &&) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("SETEX command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
@@ -530,12 +524,10 @@ void redis_parser::setex(message_entry &entry)
     redis_request &redis_req = entry.request;
     // setex key ttl_SECONDS value
     if (redis_req.sub_requests.size() != 4) {
-        LOG_INFO("%s: setex command seqid(%" PRId64 ") with invalid arguments",
-                 _remote_address.to_string(),
-                 entry.sequence_id);
+        LOG_INFO_PREFIX("SETEX command seqid({}) with invalid arguments", entry.sequence_id);
         simple_error_reply(entry, "wrong number of arguments for 'setex' command");
     } else {
-        LOG_DEBUG_PREFIX("send setex command seqid({})", entry.sequence_id);
+        LOG_DEBUG_PREFIX("send SETEX command seqid({})", entry.sequence_id);
         ::dsn::blob &ttl_blob = redis_req.sub_requests[2].data;
         int ttl_seconds;
         if (!dsn::buf2int32(ttl_blob, ttl_seconds)) {
@@ -551,17 +543,14 @@ void redis_parser::setex(message_entry &entry)
         auto on_setex_reply = [ref_this, this, &entry](
             ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("SETEX command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
             if (::dsn::ERR_OK != ec) {
-                LOG_INFO("%s: setex command seqid(%" PRId64 ") got reply with error = %s",
-                         _remote_address.to_string(),
-                         entry.sequence_id,
-                         ec.to_string());
+                LOG_INFO_PREFIX(
+                    "SETEX command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
                 return;
             }
@@ -594,27 +583,22 @@ void redis_parser::get(message_entry &entry)
 {
     redis_request &redis_req = entry.request;
     if (redis_req.sub_requests.size() != 2) {
-        LOG_INFO("%s: get command seqid(%" PRId64 ") with invalid arguments",
-                 _remote_address.to_string(),
-                 entry.sequence_id);
+        LOG_INFO_PREFIX("GET command seqid({}) with invalid arguments", entry.sequence_id);
         simple_error_reply(entry, "wrong number of arguments for 'get' command");
     } else {
-        LOG_DEBUG_PREFIX("send get command seqid({})", entry.sequence_id);
+        LOG_DEBUG_PREFIX("send GET command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_get_reply = [ref_this, this, &entry](
             ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: get command(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("GET command({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
             if (::dsn::ERR_OK != ec) {
-                LOG_INFO("%s: get command seqid(%" PRId64 ") got reply with error = %s",
-                         _remote_address.to_string(),
-                         entry.sequence_id,
-                         ec.to_string());
+                LOG_INFO_PREFIX(
+                    "GET command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::read_response rrdb_response;
@@ -653,28 +637,23 @@ void redis_parser::del_internal(message_entry &entry)
 {
     redis_request &redis_req = entry.request;
     if (redis_req.sub_requests.size() != 2) {
-        LOG_INFO("%s: del command seqid(%" PRId64 ") with invalid arguments",
-                 _remote_address.to_string(),
-                 entry.sequence_id);
+        LOG_INFO_PREFIX("DEL command seqid({}) with invalid arguments", entry.sequence_id);
         simple_error_reply(entry, "wrong number of arguments for 'del' command");
     } else {
-        LOG_DEBUG_PREFIX("send del command seqid({})", entry.sequence_id);
+        LOG_DEBUG_PREFIX("send DEL command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_del_reply = [ref_this, this, &entry](
             ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: del command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("DEL command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
-            LOG_DEBUG_PREFIX("del command seqid({}) got reply", entry.sequence_id);
+            LOG_DEBUG_PREFIX("DEL command seqid({}) got reply", entry.sequence_id);
             if (::dsn::ERR_OK != ec) {
-                LOG_INFO("%s: del command seqid(%" PRId64 ") got reply with error = %s",
-                         _remote_address.to_string(),
-                         entry.sequence_id,
-                         ec.to_string());
+                LOG_INFO_PREFIX(
+                    "DEL command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::read_response rrdb_response;
@@ -717,9 +696,8 @@ void redis_parser::del_geo_internal(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto del_callback = [ref_this, this, &entry](int ec, pegasus_client::internal_info &&) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("SETEX command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
@@ -743,29 +721,24 @@ void redis_parser::ttl(message_entry &entry)
     redis_request &redis_req = entry.request;
     bool is_ttl = (toupper(redis_req.sub_requests[0].data.data()[0]) == 'T');
     if (redis_req.sub_requests.size() != 2) {
-        LOG_INFO("%s: ttl/pttl command seqid(%" PRId64 ") with invalid arguments",
-                 _remote_address.to_string(),
-                 entry.sequence_id);
+        LOG_INFO_PREFIX("TTL/PTTL command seqid({}) with invalid arguments", entry.sequence_id);
         simple_error_reply(
             entry, fmt::format("wrong number of arguments for '{}'", is_ttl ? "ttl" : "pttl"));
     } else {
-        LOG_DEBUG_PREFIX("send pttl/ttl command seqid({})", entry.sequence_id);
+        LOG_DEBUG_PREFIX("send PTTL/TTL command seqid({})", entry.sequence_id);
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto on_ttl_reply = [ref_this, this, &entry, is_ttl](
             ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: ttl/pttl command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("TTL/PTTL command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
-            LOG_DEBUG_PREFIX("ttl/pttl command seqid({}) got reply", entry.sequence_id);
+            LOG_DEBUG_PREFIX("TTL/PTTL command seqid({}) got reply", entry.sequence_id);
             if (::dsn::ERR_OK != ec) {
-                LOG_INFO("%s: del command seqid(%" PRId64 ") got reply with error = %s",
-                         _remote_address.to_string(),
-                         entry.sequence_id,
-                         ec.to_string());
+                LOG_INFO_PREFIX(
+                    "DEL command seqid({}) got reply with error = {}", entry.sequence_id, ec);
                 simple_error_reply(entry, ec.to_string());
             } else {
                 ::dsn::apps::ttl_response rrdb_response;
@@ -1080,9 +1053,8 @@ void redis_parser::process_geo_radius_result(message_entry &entry,
                                              std::list<geo::SearchResult> &&results)
 {
     if (_is_session_reset.load(std::memory_order_acquire)) {
-        LOG_INFO("%s: setex command seqid(%" PRId64 ") got reply, but session has reset",
-                 _remote_address.to_string(),
-                 entry.sequence_id);
+        LOG_INFO_PREFIX("SETEX command seqid({}) got reply, but session has reset",
+                        entry.sequence_id);
         return;
     }
 
@@ -1166,9 +1138,8 @@ void redis_parser::geo_add(message_entry &entry)
     auto set_latlng_callback = [ref_this, this, &entry, result, set_count](
         int error_code, pegasus_client::internal_info &&info) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
-            LOG_INFO("%s: GEOADD command seqid(%" PRId64 ") got reply, but session has reset",
-                     _remote_address.to_string(),
-                     entry.sequence_id);
+            LOG_INFO_PREFIX("GEOADD command seqid({}) got reply, but session has reset",
+                            entry.sequence_id);
             return;
         }
 
@@ -1221,9 +1192,8 @@ void redis_parser::geo_dist(message_entry &entry)
         std::shared_ptr<proxy_session> ref_this = shared_from_this();
         auto get_callback = [ref_this, this, &entry, unit](int error_code, double &&distance) {
             if (_is_session_reset.load(std::memory_order_acquire)) {
-                LOG_INFO("%s: GEODIST command seqid(%" PRId64 ") got reply, but session has reset",
-                         _remote_address.to_string(),
-                         entry.sequence_id);
+                LOG_INFO_PREFIX("GEODIST command seqid({}) got reply, but session has reset",
+                                entry.sequence_id);
                 return;
             }
 
@@ -1269,9 +1239,8 @@ void redis_parser::geo_pos(message_entry &entry)
     auto get_latlng_callback = [ref_this, this, &entry, result, get_count](
         int error_code, int index, double lat_degrees, double lng_degrees) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
-            LOG_INFO("%s: GEOPOS command seqid(%" PRId64 ") got reply, but session has reset",
-                     _remote_address.to_string(),
-                     entry.sequence_id);
+            LOG_INFO_PREFIX("GEOPOS command seqid({}) got reply, but session has reset",
+                            entry.sequence_id);
             return;
         }
 

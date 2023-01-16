@@ -73,7 +73,7 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
     std::string cmd = "nm -C -p ";
     cmd.append(lib_info.path);
     std::stringstream ss;
-    LOG_INFO("executing `%s`", cmd.c_str());
+    LOG_INFO_F("executing `{}`", cmd);
     const int rc = utils::pipe_execute(cmd.c_str(), ss);
     if (rc < 0) {
         LOG_ERROR("fail to popen `%s`", cmd.c_str());
@@ -162,7 +162,7 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
         addr_map[lib_info.end_addr] = std::string();
     }
     tm.stop();
-    LOG_INFO("Loaded %s in %zdms", lib_info.path.c_str(), tm.m_elapsed());
+    LOG_INFO_F("Loaded {} in {}ms", lib_info.path, tm.m_elapsed().count());
     return 0;
 }
 
@@ -259,11 +259,11 @@ static void load_symbols()
     }
     tm2.stop();
     if (num_removed) {
-        LOG_INFO("Removed %zd entries in %zdms", num_removed, tm2.m_elapsed());
+        LOG_INFO_F("Removed {} entries in {}ms", num_removed, tm2.m_elapsed().count());
     }
 
     tm.stop();
-    LOG_INFO("Loaded all symbols in %zdms", tm.m_elapsed());
+    LOG_INFO_F("Loaded all symbols in {}ms", tm.m_elapsed().count());
 }
 
 static void find_symbols(std::string *out, std::vector<uintptr_t> &addr_list)
@@ -401,7 +401,7 @@ ssize_t read_command_line(char *buf, size_t len, bool with_args)
             }
         }
         if ((size_t)nr == len) {
-            LOG_INFO("buf is not big enough");
+            LOG_INFO_F("buf is not big enough");
             return -1;
         }
         return nr;
@@ -432,7 +432,7 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
     }
 
     MallocExtension *malloc_ext = MallocExtension::instance();
-    LOG_INFO("received requests for growth profile");
+    LOG_INFO_F("received requests for growth profile");
     malloc_ext->GetHeapGrowthStacks(&resp.body);
 
     _in_pprof_action.store(false);

@@ -429,10 +429,10 @@ bool run(const char *config_file,
     // prepare minimum necessary
     ::dsn::service_engine::instance().init_before_toollets(spec);
 
-    LOG_INFO("process(%ld) start: %" PRIu64 ", date: %s",
-             getpid(),
-             dsn::utils::process_start_millis(),
-             dsn::utils::process_start_date_time_mills());
+    LOG_INFO_F("process({}) start: {}, date: {}",
+               getpid(),
+               dsn::utils::process_start_millis(),
+               dsn::utils::process_start_date_time_mills());
 
     // init toollets
     for (auto it = spec.toollets.begin(); it != spec.toollets.end(); ++it) {

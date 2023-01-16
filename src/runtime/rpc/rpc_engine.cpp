@@ -185,9 +185,9 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
 
         // failure injection applied
         if (!call->enqueue(err, reply)) {
-            LOG_INFO("rpc reply %s is dropped (fault inject), trace_id = %016" PRIx64,
-                     reply->header->rpc_name,
-                     reply->header->trace_id);
+            LOG_INFO_F("rpc reply {} is dropped (fault inject), trace_id = {:#018x}",
+                       reply->header->rpc_name,
+                       reply->header->trace_id);
 
             // call network failure model
             net->inject_drop_message(reply, false);
@@ -472,11 +472,11 @@ error_code rpc_engine::start(const service_app_spec &aspec)
                 return ERR_NETWORK_INIT_FAILED;
             pnet[j].reset(net);
 
-            LOG_INFO("[%s] network client started at port %u, channel = %s, fmt = %s ...",
-                     node()->full_name(),
-                     (uint32_t)(cs.port),
-                     cs.channel.to_string(),
-                     client_hdr_format.to_string());
+            LOG_INFO_F("[{}] network client started at port {}, channel = {}, fmt = {} ...",
+                       node()->full_name(),
+                       cs.port,
+                       cs.channel,
+                       client_hdr_format);
         }
     }
 
@@ -511,9 +511,9 @@ error_code rpc_engine::start(const service_app_spec &aspec)
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
     _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id);
 
-    LOG_INFO("=== service_node=[%s], primary_address=[%s] ===",
-             _node->full_name(),
-             _local_primary_address.to_string());
+    LOG_INFO_F("=== service_node=[{}], primary_address=[{}] ===",
+               _node->full_name(),
+               _local_primary_address);
 
     _is_running = true;
     return ERR_OK;
@@ -571,9 +571,9 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 
             // release the task when necessary
             else {
-                LOG_INFO("rpc request %s is dropped (fault inject), trace_id = %016" PRIx64,
-                         msg->header->rpc_name,
-                         msg->header->trace_id);
+                LOG_INFO_F("rpc request {} is dropped (fault inject), trace_id = {:#018x}",
+                           msg->header->rpc_name,
+                           msg->header->trace_id);
 
                 // call network failure model when network is present
                 net->inject_drop_message(msg, false);
@@ -693,9 +693,9 @@ void rpc_engine::call_ip(rpc_address addr,
 
     // join point and possible fault injection
     if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true)) {
-        LOG_INFO("rpc request %s is dropped (fault inject), trace_id = %016" PRIx64,
-                 request->header->rpc_name,
-                 request->header->trace_id);
+        LOG_INFO_F("rpc request {} is dropped (fault inject), trace_id = {:#018x}",
+                   request->header->rpc_name,
+                   request->header->trace_id);
 
         // call network failure model
         net->inject_drop_message(request, true);

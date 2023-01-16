@@ -96,7 +96,7 @@ void pegasus_server_impl::parse_checkpoints()
         if (chkpt_init_from_dir(d1.c_str(), ci)) {
             _checkpoints.push_back(ci);
         } else if (d1.find("checkpoint") != std::string::npos) {
-            LOG_INFO("%s: invalid checkpoint directory %s, remove it", replica_name(), d.c_str());
+            LOG_INFO_PREFIX("invalid checkpoint directory {}, remove it", d);
             ::dsn::utils::filesystem::remove_path(d);
             if (!::dsn::utils::filesystem::remove_path(d)) {
                 LOG_ERROR(
@@ -165,9 +165,8 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
     }
     if (max_del_d == -1) {
         // no checkpoint to delete
-        LOG_INFO("%s: no checkpoint to garbage collection, checkpoints_count = %d",
-                 replica_name(),
-                 (int)temp_list.size());
+        LOG_INFO_PREFIX("no checkpoint to garbage collection, checkpoints_count = {}",
+                        temp_list.size());
         return;
     }
     std::list<int64_t> to_delete_list;
@@ -206,9 +205,7 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
             ::dsn::utils::filesystem::path_combine(data_dir(), chkpt_get_dir_name(del_d));
         if (::dsn::utils::filesystem::directory_exists(cpt_dir)) {
             if (::dsn::utils::filesystem::remove_path(cpt_dir)) {
-                LOG_INFO("%s: checkpoint directory %s removed by garbage collection",
-                         replica_name(),
-                         cpt_dir.c_str());
+                LOG_INFO_PREFIX("checkpoint directory {} removed by garbage collection", cpt_dir);
             } else {
                 LOG_ERROR("%s: checkpoint directory %s remove failed by garbage collection",
                           replica_name(),
@@ -216,9 +213,8 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
                 put_back_list.push_back(del_d);
             }
         } else {
-            LOG_INFO("%s: checkpoint directory %s does not exist, ignored by garbage collection",
-                     replica_name(),
-                     cpt_dir.c_str());
+            LOG_INFO_PREFIX("checkpoint directory {} does not exist, ignored by garbage collection",
+                            cpt_dir);
         }
     }
 
@@ -247,12 +243,11 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
         }
     }
 
-    LOG_INFO("%s: after checkpoint garbage collection, checkpoints_count = %d, "
-             "min_checkpoint = %" PRId64 ", max_checkpoint = %" PRId64,
-             replica_name(),
-             checkpoints_count,
-             min_d,
-             max_d);
+    LOG_INFO_PREFIX("after checkpoint garbage collection, checkpoints_count = {}, min_checkpoint = "
+                    "{}, max_checkpoint = {}",
+                    checkpoints_count,
+                    min_d,
+                    max_d);
 }
 
 int pegasus_server_impl::on_batched_write_requests(int64_t decree,
@@ -1828,8 +1823,7 @@ void pegasus_server_impl::cancel_background_work(bool wait)
         _pfc_rdb_memtable_mem_usage->set(0);
     }
 
-    LOG_INFO(
-        "%s: close app succeed, clear_state = %s", replica_name(), clear_state ? "true" : "false");
+    LOG_INFO_PREFIX("close app succeed, clear_state = {}", clear_state ? "true" : "false");
     return ::dsn::ERR_OK;
 }
 
@@ -2151,10 +2145,8 @@ private:
     state.from_decree_excluded = 0;
     state.to_decree_included = ci;
 
-    LOG_INFO("%s: get checkpoint succeed, from_decree_excluded = 0, to_decree_included = %" PRId64
-             "",
-             replica_name(),
-             state.to_decree_included);
+    LOG_INFO_PREFIX("get checkpoint succeed, from_decree_excluded = 0, to_decree_included = {}",
+                    state.to_decree_included);
     return ::dsn::ERR_OK;
 }
 
@@ -2225,7 +2217,7 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
 
         err = start(0, nullptr);
     } else {
-        LOG_INFO("%s: apply empty checkpoint, create new rocksdb", replica_name());
+        LOG_INFO_PREFIX("apply empty checkpoint, create new rocksdb");
         err = start(0, nullptr);
     }
 
@@ -2237,9 +2229,7 @@ pegasus_server_impl::storage_apply_checkpoint(chkpt_apply_mode mode,
     CHECK(_is_open, "");
     CHECK_EQ(ci, last_durable_decree());
 
-    LOG_INFO("%s: apply checkpoint succeed, last_durable_decree = %" PRId64,
-             replica_name(),
-             last_durable_decree());
+    LOG_INFO_PREFIX("apply checkpoint succeed, last_durable_decree = {}", last_durable_decree());
     return ::dsn::ERR_OK;
 }
 
@@ -2563,16 +2553,13 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 
     auto it = env_kvs.find(ROCKSDB_ENV_RESTORE_FORCE_RESTORE);
     if (it != env_kvs.end()) {
-        LOG_INFO("%s: found %s in envs", replica_name(), ROCKSDB_ENV_RESTORE_FORCE_RESTORE.c_str());
+        LOG_INFO_PREFIX("found {} in envs", ROCKSDB_ENV_RESTORE_FORCE_RESTORE);
         res.second = true;
     }
 
     it = env_kvs.find(ROCKSDB_ENV_RESTORE_POLICY_NAME);
     if (it != env_kvs.end()) {
-        LOG_INFO("%s: found %s in envs: %s",
-                 replica_name(),
-                 ROCKSDB_ENV_RESTORE_POLICY_NAME.c_str(),
-                 it->second.c_str());
+        LOG_INFO_PREFIX("found {} in envs: {}", ROCKSDB_ENV_RESTORE_POLICY_NAME, it->second);
         os << it->second << ".";
     } else {
         return res;
@@ -2580,10 +2567,7 @@ pegasus_server_impl::get_restore_dir_from_env(const std::map<std::string, std::s
 
     it = env_kvs.find(ROCKSDB_ENV_RESTORE_BACKUP_ID);
     if (it != env_kvs.end()) {
-        LOG_INFO("%s: found %s in envs: %s",
-                 replica_name(),
-                 ROCKSDB_ENV_RESTORE_BACKUP_ID.c_str(),
-                 it->second.c_str());
+        LOG_INFO_PREFIX("found {} in envs: {}", ROCKSDB_ENV_RESTORE_BACKUP_ID, it->second);
         os << it->second;
     } else {
         return res;
@@ -3109,10 +3093,8 @@ void pegasus_server_impl::recalculate_data_cf_options(
     }
     if (new_options.size() > 0) {
         if (set_options(new_options)) {
-            LOG_INFO_PREFIX(
-                "{}: recalculate the value of the options related to usage scenario \"{}\"",
-                replica_name(),
-                _usage_scenario);
+            LOG_INFO_PREFIX("recalculate the value of the options related to usage scenario \"{}\"",
+                            _usage_scenario);
         }
     }
     _table_data_cf_opts_recalculated = true;
@@ -3139,10 +3121,7 @@ bool pegasus_server_impl::set_options(
     }
     rocksdb::Status status = _db->SetOptions(_data_cf, new_options);
     if (status == rocksdb::Status::OK()) {
-        LOG_INFO("%s: rocksdb set options returns %s: {%s}",
-                 replica_name(),
-                 status.ToString().c_str(),
-                 oss.str().c_str());
+        LOG_INFO_PREFIX("rocksdb set options returns {}: {}", status.ToString(), oss.str());
         return true;
     } else {
         LOG_ERROR("%s: rocksdb set options returns %s: {%s}",
@@ -3242,9 +3221,8 @@ bool pegasus_server_impl::release_storage_after_manual_compact()
     LOG_INFO_PREFIX("start async_checkpoint");
     start_time = dsn_now_ms();
     ::dsn::error_code err = async_checkpoint(false);
-    LOG_INFO_PREFIX("finish async_checkpoint, return = {}, time_used = {}ms",
-                    err.to_string(),
-                    dsn_now_ms() - start_time);
+    LOG_INFO_PREFIX(
+        "finish async_checkpoint, return = {}, time_used = {}ms", err, dsn_now_ms() - start_time);
 
     // gc checkpoints
     LOG_INFO_PREFIX("start gc_checkpoints");

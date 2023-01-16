@@ -87,7 +87,6 @@ extern void dsn_coredump();
             dsn_logf(__FILENAME__, __FUNCTION__, __LINE__, level, __VA_ARGS__);                    \
     } while (false)
 
-#define LOG_INFO(...) dlog(LOG_LEVEL_INFO, __VA_ARGS__)
 #define LOG_WARNING(...) dlog(LOG_LEVEL_WARNING, __VA_ARGS__)
 #define LOG_ERROR(...) dlog(LOG_LEVEL_ERROR, __VA_ARGS__)
 #define LOG_FATAL(...) dlog(LOG_LEVEL_FATAL, __VA_ARGS__)

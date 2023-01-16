@@ -89,9 +89,7 @@ void asio_rpc_session::do_read(int read_next)
         [this](boost::system::error_code ec, std::size_t length) {
             if (!!ec) {
                 if (ec == boost::asio::error::make_error_code(boost::asio::error::eof)) {
-                    LOG_INFO("asio read from %s failed: %s",
-                             _remote_addr.to_string(),
-                             ec.message().c_str());
+                    LOG_INFO_F("asio read from {} failed: {}", _remote_addr, ec.message());
                 } else {
                     LOG_ERROR("asio read from %s failed: %s",
                               _remote_addr.to_string(),

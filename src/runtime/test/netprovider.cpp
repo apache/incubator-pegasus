@@ -75,8 +75,8 @@ public:
 public:
     void change_test_cfg_conn_threshold_per_ip(uint32_t n)
     {
-        LOG_INFO(
-            "change _cfg_conn_threshold_per_ip %u -> %u for test", _cfg_conn_threshold_per_ip, n);
+        LOG_INFO_F(
+            "change _cfg_conn_threshold_per_ip {} -> {} for test", _cfg_conn_threshold_per_ip, n);
         _cfg_conn_threshold_per_ip = n;
     }
 };
@@ -96,7 +96,7 @@ void response_handler(dsn::error_code ec,
         ::dsn::unmarshall(resp, response_string);
         ASSERT_EQ(response_string, request_str);
     } else {
-        LOG_INFO("error msg: %s", ec.to_string());
+        LOG_INFO_F("error msg: {}", ec);
     }
     wait_flag = 1;
 }
@@ -179,11 +179,11 @@ TEST(tools_common, asio_net_provider)
 
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_OK);
-    LOG_INFO("result: %s", start_result.to_string());
+    LOG_INFO_F("result: {}", start_result);
 
     start_result = asio_network2->start(RPC_CHANNEL_TCP, TEST_PORT, false);
     ASSERT_TRUE(start_result == ERR_SERVICE_ALREADY_RUNNING);
-    LOG_INFO("result: %s", start_result.to_string());
+    LOG_INFO_F("result: {}", start_result);
 
     rpc_session_ptr client_session =
         asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
@@ -290,7 +290,7 @@ TEST(tools_common, asio_network_provider_connection_threshold)
 
     // not exceed threshold
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
-        LOG_INFO("client # %d", count);
+        LOG_INFO_F("client # {}", count);
         rpc_session_ptr client_session =
             asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
         client_session->connect();
@@ -304,7 +304,7 @@ TEST(tools_common, asio_network_provider_connection_threshold)
     // exceed threshold
     bool reject = false;
     for (int count = 0; count < CONN_THRESHOLD + 2; count++) {
-        LOG_INFO("client # %d", count);
+        LOG_INFO_F("client # {}", count);
         rpc_session_ptr client_session =
             asio_network->create_client_session(rpc_address("localhost", TEST_PORT));
         client_session->connect();

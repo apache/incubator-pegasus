@@ -96,7 +96,7 @@ void proxy_stub::remove_session(dsn::rpc_address remote_address)
             LOG_WARNING("%s has been removed from proxy stub", remote_address.to_string());
             return;
         }
-        LOG_INFO("remove %s from proxy stub", remote_address.to_string());
+        LOG_INFO_F("remove {} from proxy stub", remote_address);
         session = std::move(iter->second);
         _sessions.erase(iter);
     }
@@ -116,7 +116,7 @@ proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
 proxy_session::~proxy_session()
 {
     _backup_one_request->release_ref();
-    LOG_INFO("proxy session %s destroyed", _remote_address.to_string());
+    LOG_INFO_F("proxy session {} destroyed", _remote_address);
 }
 
 void proxy_session::on_recv_request(dsn::message_ex *msg)

@@ -139,7 +139,7 @@ std::vector<replica_ptr> duplication_sync_timer::get_all_replicas()
 
 void duplication_sync_timer::close()
 {
-    LOG_INFO("stop duplication sync");
+    LOG_INFO_F("stop duplication sync");
 
     {
         zauto_lock l(_lock);

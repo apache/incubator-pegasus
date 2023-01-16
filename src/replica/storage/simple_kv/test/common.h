@@ -172,6 +172,11 @@ struct state_snapshot
     std::string to_string() const;
     bool from_string(const std::string &str);
     std::string diff_string(const state_snapshot &other) const;
+
+    friend std::ostream &operator<<(std::ostream &os, const state_snapshot &ss)
+    {
+        return os << ss.to_string();
+    }
 };
 
 struct parti_config
@@ -201,6 +206,11 @@ struct parti_config
     std::string to_string() const;
     bool from_string(const std::string &str);
     void convert_from(const partition_configuration &c);
+
+    friend std::ostream &operator<<(std::ostream &os, const parti_config &pc)
+    {
+        return os << pc.to_string();
+    }
 };
 }
 }
