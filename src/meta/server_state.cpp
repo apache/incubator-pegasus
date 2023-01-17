@@ -897,11 +897,10 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                                        _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
-                            LOG_WARNING_F("notify node({}) to gc replica({}.{}) coz the app is "
+                            LOG_WARNING_F("notify node({}) to gc replica({}) coz the app is "
                                           "dropped and expired",
                                           request.node,
-                                          rep.pid.get_app_id(),
-                                          rep.pid.get_partition_index());
+                                          rep.pid);
                         }
                     }
                 } else if (app->status == app_status::AS_AVAILABLE) {
@@ -916,10 +915,9 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                                        _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
-                            LOG_WARNING_F("notify node({}) to gc replica({}.{}) coz it is useless",
+                            LOG_WARNING_F("notify node({}) to gc replica({}) coz it is useless",
                                           request.node,
-                                          rep.pid.get_app_id(),
-                                          rep.pid.get_partition_index());
+                                          rep.pid);
                         }
                     }
                 }
@@ -1798,12 +1796,10 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
                 "stop downgrade primary as the partitions({}.{}) is dropping", app->app_id, pidx);
             return;
         } else {
-            LOG_WARNING_F(
-                "gpid({}.{}) is syncing another request with remote, cancel it due to the "
-                "primary({}) is down",
-                pc.pid.get_app_id(),
-                pc.pid.get_partition_index(),
-                pc.primary);
+            LOG_WARNING_F("gpid({}) is syncing another request with remote, cancel it due to the "
+                          "primary({}) is down",
+                          pc.pid.get_app_id(),
+                          pc.primary);
             cc.cancel_sync();
         }
     }
@@ -1881,13 +1877,11 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     pc.last_drops.pop_back();
 
     if (config_status::pending_remote_sync == cc.stage) {
-        LOG_WARNING_F(
-            "gpid({}.{}) is syncing another request with remote, cancel it due to meta is "
-            "removing host({}) worker({})",
-            pc.pid.get_app_id(),
-            pc.pid.get_partition_index(),
-            req->host_node,
-            req->node);
+        LOG_WARNING_F("gpid({}) is syncing another request with remote, cancel it due to meta is "
+                      "removing host({}) worker({})",
+                      pc.pid,
+                      req->host_node,
+                      req->node);
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
