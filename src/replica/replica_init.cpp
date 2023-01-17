@@ -200,7 +200,7 @@ error_code replica::initialize_on_load()
                   "load_replica: failed to move directory '{}' to '{}'",
                   dir,
                   rename_dir);
-            LOG_WARNING_F("load_replica: [replica_dir_op] succeed to move directory '{}' to '{}'",
+            LOG_WARNING_F("load_replica: replica_dir_op succeed to move directory '{}' to '{}'",
                           dir,
                           rename_dir);
             stub->_counter_replicas_recent_replica_move_error_count->increment();
