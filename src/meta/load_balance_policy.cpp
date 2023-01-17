@@ -61,10 +61,10 @@ bool calc_disk_load(node_mapper &nodes,
         const config_context &cc = *get_config_context(apps, pid);
         auto iter = cc.find_from_serving(node);
         if (iter == cc.serving.end()) {
-            LOG_WARNING("can't collect gpid(%d.%d)'s info from %s, which should be primary",
-                        pid.get_app_id(),
-                        pid.get_partition_index(),
-                        node.to_string());
+            LOG_WARNING_F("can't collect gpid({}.{})'s info from {}, which should be primary",
+                          pid.get_app_id(),
+                          pid.get_partition_index(),
+                          node);
             return false;
         } else {
             load[iter->disk_tag]++;

@@ -114,7 +114,7 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
         if (err == dsn::ERR_OK && leader->from_string_ipv4(lock_owner.c_str())) {
             return (*leader) == dsn_primary_address();
         } else {
-            LOG_WARNING("query leader from cache got error(%s)", err.to_string());
+            LOG_WARNING_F("query leader from cache got error({})", err);
             leader->set_invalid();
             return false;
         }
@@ -226,9 +226,9 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
             if (beacon.start_time - w.last_start_time_ms <
                 _fd_opts->stable_rs_min_running_seconds * 1000) {
                 w.unstable_restart_count++;
-                LOG_WARNING("%s encounter an unstable restart, total_count(%d)",
-                            beacon.from_addr.to_string(),
-                            w.unstable_restart_count);
+                LOG_WARNING_F("{} encounter an unstable restart, total_count({})",
+                              beacon.from_addr,
+                              w.unstable_restart_count);
             } else if (w.unstable_restart_count > 0) {
                 LOG_INFO_F("{} restart in {} ms after last restart, may recover ok, reset "
                            "it's unstable count({}) to 0",
@@ -240,8 +240,7 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
 
             w.last_start_time_ms = beacon.start_time;
         } else {
-            LOG_WARNING("%s: possible encounter a staled message, ignore it",
-                        beacon.from_addr.to_string());
+            LOG_WARNING_F("{}: possible encounter a staled message, ignore it", beacon.from_addr);
         }
         return w.unstable_restart_count < _fd_opts->max_succssive_unstable_restart;
     }
@@ -256,7 +255,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
     ack.allowed = true;
 
     if (beacon.__isset.start_time && !update_stability_stat(beacon)) {
-        LOG_WARNING("%s is unstable, don't response to it's beacon", beacon.from_addr.to_string());
+        LOG_WARNING_F("{} is unstable, don't response to it's beacon", beacon.from_addr);
         return;
     }
 

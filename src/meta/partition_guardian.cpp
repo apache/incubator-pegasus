@@ -279,9 +279,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
     }
     // well, all replicas in this partition is dead
     else {
-        LOG_WARNING("%s enters DDD state, we are waiting for all replicas to come back, "
-                    "and select primary according to informations collected",
-                    gpid_name);
+        LOG_WARNING_F("{} enters DDD state, we are waiting for all replicas to come back, "
+                      "and select primary according to informations collected",
+                      gpid_name);
         // when considering how to handle the DDD state, we must keep in mind that our
         // shared/private-log data only write to OS-cache.
         // so the last removed replica can't act as primary directly.
@@ -321,9 +321,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         }
 
         if (pc.last_drops.size() == 1) {
-            LOG_WARNING("%s: the only node(%s) is dead, waiting it to come back",
-                        gpid_name,
-                        pc.last_drops.back().to_string());
+            LOG_WARNING_F("{}: the only node({}) is dead, waiting it to come back",
+                          gpid_name,
+                          pc.last_drops.back());
             action.node = pc.last_drops.back();
         } else {
             std::vector<dsn::rpc_address> nodes(pc.last_drops.end() - 2, pc.last_drops.end());
@@ -341,7 +341,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                     ready = false;
                     reason = "the last dropped node(" + nodes[i].to_std_string() +
                              ") haven't come back yet";
-                    LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
+                    LOG_WARNING_F("{}: don't select primary: {}", gpid_name, reason);
                 } else {
                     std::vector<dropped_replica>::iterator it = cc.find_from_dropped(nodes[i]);
                     if (it == cc.dropped.end() || it->ballot == invalid_ballot) {
@@ -360,7 +360,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                             } else {
                                 reason += "replica info has not been collected from the node";
                             }
-                            LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
+                            LOG_WARNING_F("{}: don't select primary: {}", gpid_name, reason);
                         }
                     } else {
                         collected_info[i] = *it;
@@ -371,7 +371,7 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             if (ready && collected_info[0].ballot == -1 && collected_info[1].ballot == -1) {
                 ready = false;
                 reason = "no replica info collected from the last two drops";
-                LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
+                LOG_WARNING_F("{}: don't select primary: {}", gpid_name, reason);
             }
 
             if (ready) {
@@ -412,12 +412,12 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
                                 larger_pd,
                                 pc.last_committed_decree,
                                 larger_cd);
-                        LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
+                        LOG_WARNING_F("{}: don't select primary: {}", gpid_name, reason);
                     }
                 } else {
                     reason = "for the last two drops, the node with larger ballot has smaller last "
                              "committed decree";
-                    LOG_WARNING("%s: don't select primary: %s", gpid_name, reason.c_str());
+                    LOG_WARNING_F("{}: don't select primary: {}", gpid_name, reason);
                 }
             }
         }
@@ -429,9 +429,9 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
             get_newly_partitions(*view.nodes, action.node)
                 ->newly_add_primary(gpid.get_app_id(), false);
         } else {
-            LOG_WARNING("%s: don't select any node for security reason, administrator can select "
-                        "a proper one by shell",
-                        gpid_name);
+            LOG_WARNING_F("{}: don't select any node for security reason, administrator can select "
+                          "a proper one by shell",
+                          gpid_name);
             _recent_choose_primary_fail_count->increment();
             ddd_partition_info pinfo;
             pinfo.config = pc;

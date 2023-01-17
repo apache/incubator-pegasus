@@ -442,7 +442,7 @@ error_code server_state::initialize_default_apps()
 
             default_app.app_name = dsn_config_get_value_string(s, "app_name", "", "app name");
             if (default_app.app_name.length() == 0) {
-                LOG_WARNING("'[%s] app_name' not specified, ignore this section", s);
+                LOG_WARNING_F("'[{}] app_name' not specified, ignore this section", s);
                 continue;
             }
 
@@ -519,9 +519,8 @@ error_code server_state::sync_apps_to_remote_storage()
                              LPC_META_CALLBACK,
                              [&err, path](error_code ec) {
                                  if (ec != ERR_OK && ec != ERR_NODE_ALREADY_EXIST) {
-                                     LOG_WARNING("create app node failed, path(%s) reason(%s)",
-                                                 path.c_str(),
-                                                 ec.to_string());
+                                     LOG_WARNING_F(
+                                         "create app node failed, path({}) reason({})", path, ec);
                                      err = ec;
                                  } else {
                                      LOG_INFO_F("create app node {} ok", path);
@@ -898,12 +897,11 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                                        _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
-                            LOG_WARNING(
-                                "notify node(%s) to gc replica(%d.%d) coz the app is dropped and "
-                                "expired",
-                                request.node.to_string(),
-                                rep.pid.get_app_id(),
-                                rep.pid.get_partition_index());
+                            LOG_WARNING_F("notify node({}) to gc replica({}.{}) coz the app is "
+                                          "dropped and expired",
+                                          request.node,
+                                          rep.pid.get_app_id(),
+                                          rep.pid.get_partition_index());
                         }
                     }
                 } else if (app->status == app_status::AS_AVAILABLE) {
@@ -918,10 +916,10 @@ void server_state::on_config_sync(configuration_query_by_node_rpc rpc)
                                        _meta_function_level_VALUES_TO_NAMES.find(level)->second);
                         } else {
                             response.gc_replicas.push_back(rep);
-                            LOG_WARNING("notify node(%s) to gc replica(%d.%d) coz it is useless",
-                                        request.node.to_string(),
-                                        rep.pid.get_app_id(),
-                                        rep.pid.get_partition_index());
+                            LOG_WARNING_F("notify node({}) to gc replica({}.{}) coz it is useless",
+                                          request.node,
+                                          rep.pid.get_app_id(),
+                                          rep.pid.get_partition_index());
                         }
                     }
                 }
@@ -1016,8 +1014,8 @@ void server_state::init_app_partition_node(std::shared_ptr<app_state> &app,
                 callback->enqueue();
             }
         } else if (ERR_TIMEOUT == ec) {
-            LOG_WARNING(
-                "create partition node failed, gpid(%d.%d), retry later", app->app_id, pidx);
+            LOG_WARNING_F(
+                "create partition node failed, gpid({}.{}), retry later", app->app_id, pidx);
             // TODO: add parameter of the retry time interval in config file
             tasking::enqueue(
                 LPC_META_STATE_HIGH,
@@ -1050,7 +1048,8 @@ void server_state::do_app_create(std::shared_ptr<app_state> &app)
                 init_app_partition_node(app, i, nullptr);
             }
         } else if (ERR_TIMEOUT == ec) {
-            LOG_WARNING("the storage service is not available currently, continue to create later");
+            LOG_WARNING_F(
+                "the storage service is not available currently, continue to create later");
             tasking::enqueue(LPC_META_STATE_HIGH,
                              tracker(),
                              std::bind(&server_state::do_app_create, this, app),
@@ -1770,11 +1769,10 @@ void server_state::drop_partition(std::shared_ptr<app_state> &app, int pidx)
     request.config.ballot++;
 
     if (config_status::pending_remote_sync == cc.stage) {
-        LOG_WARNING(
-            "gpid(%d.%d) is syncing another request with remote, cancel it due to partition is "
-            "dropped",
-            app->app_id,
-            pidx);
+        LOG_WARNING_F("gpid({}.{}) is syncing another request with remote, cancel it due to "
+                      "partition is dropped",
+                      app->app_id,
+                      pidx);
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
@@ -1796,15 +1794,16 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
                          "app({}) not in dropping state ({})",
                          app->get_logname(),
                          enum_to_string(app->status));
-            LOG_WARNING(
-                "stop downgrade primary as the partitions(%d.%d) is dropping", app->app_id, pidx);
+            LOG_WARNING_F(
+                "stop downgrade primary as the partitions({}.{}) is dropping", app->app_id, pidx);
             return;
         } else {
-            LOG_WARNING("gpid(%d.%d) is syncing another request with remote, cancel it due to the "
-                        "primary(%s) is down",
-                        pc.pid.get_app_id(),
-                        pc.pid.get_partition_index(),
-                        pc.primary.to_string());
+            LOG_WARNING_F(
+                "gpid({}.{}) is syncing another request with remote, cancel it due to the "
+                "primary({}) is down",
+                pc.pid.get_app_id(),
+                pc.pid.get_partition_index(),
+                pc.primary);
             cc.cancel_sync();
         }
     }
@@ -1882,12 +1881,13 @@ void server_state::downgrade_stateless_nodes(std::shared_ptr<app_state> &app,
     pc.last_drops.pop_back();
 
     if (config_status::pending_remote_sync == cc.stage) {
-        LOG_WARNING("gpid(%d.%d) is syncing another request with remote, cancel it due to meta is "
-                    "removing host(%s) worker(%s)",
-                    pc.pid.get_app_id(),
-                    pc.pid.get_partition_index(),
-                    req->host_node.to_string(),
-                    req->node.to_string());
+        LOG_WARNING_F(
+            "gpid({}.{}) is syncing another request with remote, cancel it due to meta is "
+            "removing host({}) worker({})",
+            pc.pid.get_app_id(),
+            pc.pid.get_partition_index(),
+            req->host_node,
+            req->node);
         cc.cancel_sync();
     }
     cc.stage = config_status::pending_remote_sync;
@@ -2114,10 +2114,10 @@ server_state::construct_apps(const std::vector<query_app_info_response> &query_a
             app->app_name = app->app_name + "__" + boost::lexical_cast<std::string>(app_id);
         }
         if (app->app_name != old_name) {
-            LOG_WARNING("app(%d)'s old name(%s) is conflict with others, rename it to (%s)",
-                        app_id,
-                        old_name.c_str(),
-                        app->app_name.c_str());
+            LOG_WARNING_F("app({})'s old name({}) is conflict with others, rename it to ({})",
+                          app_id,
+                          old_name,
+                          app->app_name);
             std::ostringstream oss;
             oss << "WARNING: app(" << app_id << ")'s old name(" << old_name
                 << ") is conflict with others, rename it to (" << app->app_name << ")" << std::endl;
@@ -2185,9 +2185,9 @@ error_code server_state::construct_partitions(
                     }
                     succeed_count++;
                 } else {
-                    LOG_WARNING("construct partition(%d.%d) failed",
-                                app->app_id,
-                                pc.pid.get_partition_index());
+                    LOG_WARNING_F("construct partition({}.{}) failed",
+                                  app->app_id,
+                                  pc.pid.get_partition_index());
                     std::ostringstream oss;
                     if (skip_lost_partitions) {
                         oss << "WARNING: partition(" << app->app_id << "."
@@ -2283,15 +2283,15 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
     for (int i = 0; i < n_replicas; ++i) {
         error_code err = dsn::ERR_OK;
         if (query_app_errors[i] != dsn::ERR_OK) {
-            LOG_WARNING("query app info from node(%s) failed, reason: %s",
-                        replica_nodes[i].to_string(),
-                        query_app_errors[i].to_string());
+            LOG_WARNING_F("query app info from node({}) failed, reason: {}",
+                          replica_nodes[i],
+                          query_app_errors[i]);
             err = query_app_errors[i];
         }
         if (query_replica_errors[i] != dsn::ERR_OK) {
-            LOG_WARNING("query replica info from node(%s) failed, reason: %s",
-                        replica_nodes[i].to_string(),
-                        query_replica_errors[i].to_string());
+            LOG_WARNING_F("query replica info from node({}) failed, reason: {}",
+                          replica_nodes[i],
+                          query_replica_errors[i]);
             err = query_replica_errors[i];
         }
         if (err != dsn::ERR_OK) {
@@ -2670,9 +2670,9 @@ void server_state::do_update_app_info(const std::string &app_path,
         if (ec == ERR_OK) {
             user_cb(ec);
         } else if (ec == ERR_TIMEOUT) {
-            LOG_WARNING(
-                "update app_info(app = %s) to remote storage timeout, continue to update later",
-                info.app_name.c_str());
+            LOG_WARNING_F(
+                "update app_info(app = {}) to remote storage timeout, continue to update later",
+                info.app_name);
             tasking::enqueue(
                 LPC_META_STATE_NORMAL,
                 tracker(),
@@ -2696,7 +2696,7 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
     if (!request.__isset.keys || !request.__isset.values ||
         request.keys.size() != request.values.size() || request.keys.size() <= 0) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("set app envs failed with invalid request");
+        LOG_WARNING_F("set app envs failed with invalid request");
         return;
     }
     const std::vector<std::string> &keys = request.keys;
@@ -2726,7 +2726,7 @@ void server_state::set_app_envs(const app_env_rpc &env_rpc)
         zauto_read_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
         if (app == nullptr) {
-            LOG_WARNING("set app envs failed with invalid app_name(%s)", app_name.c_str());
+            LOG_WARNING_F("set app envs failed with invalid app_name({})", app_name);
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             env_rpc.response().hint_message = "invalid app name";
             return;
@@ -2757,7 +2757,7 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
     const configuration_update_app_env_request &request = env_rpc.request();
     if (!request.__isset.keys || request.keys.size() <= 0) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("del app envs failed with invalid request");
+        LOG_WARNING_F("del app envs failed with invalid request");
         return;
     }
     const std::vector<std::string> &keys = request.keys;
@@ -2780,7 +2780,7 @@ void server_state::del_app_envs(const app_env_rpc &env_rpc)
         zauto_read_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
         if (app == nullptr) {
-            LOG_WARNING("del app envs failed with invalid app_name(%s)", app_name.c_str());
+            LOG_WARNING_F("del app envs failed with invalid app_name({})", app_name);
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             env_rpc.response().hint_message = "invalid app name";
             return;
@@ -2827,7 +2827,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
     const configuration_update_app_env_request &request = env_rpc.request();
     if (!request.__isset.clear_prefix) {
         env_rpc.response().err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("clear app envs failed with invalid request");
+        LOG_WARNING_F("clear app envs failed with invalid request");
         return;
     }
 
@@ -2844,7 +2844,7 @@ void server_state::clear_app_envs(const app_env_rpc &env_rpc)
         zauto_read_lock l(_lock);
         std::shared_ptr<app_state> app = get_app(app_name);
         if (app == nullptr) {
-            LOG_WARNING("clear app envs failed with invalid app_name(%s)", app_name.c_str());
+            LOG_WARNING_F("clear app envs failed with invalid app_name({})", app_name);
             env_rpc.response().err = ERR_INVALID_PARAMETERS;
             env_rpc.response().hint_message = "invalid app name";
             return;

@@ -58,9 +58,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
     // if app is dropped when app is under backuping, we just skip backup this app this time, and
     // also we will not write backup-finish-flag on fds
     if (!app_available) {
-        LOG_WARNING(
-            "%s: can't encode app_info for app(%d), perhaps removed, treat it as backup finished",
-            _backup_sig.c_str(),
+        LOG_WARNING_F(
+            "{}: can't encode app_info for app({}), perhaps removed, treat it as backup finished",
+            _backup_sig,
             app_id);
         auto iter = _progress.unfinished_partitions_per_app.find(app_id);
         CHECK(iter != _progress.unfinished_partitions_per_app.end(),
@@ -134,9 +134,9 @@ void policy_context::start_backup_app_meta_unlocked(int32_t app_id)
                             resp.err.to_string());
                 return;
             } else {
-                LOG_WARNING("write %s failed, reason(%s), try it later",
-                            remote_file->file_name().c_str(),
-                            resp.err.to_string());
+                LOG_WARNING_F("write {} failed, reason({}), try it later",
+                              remote_file->file_name(),
+                              resp.err);
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  [this, app_id]() {
@@ -166,7 +166,8 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                                                            dsn::task_ptr write_callback)
 {
     if (_progress.is_app_skipped[app_id]) {
-        LOG_WARNING("app is unavaliable, skip write finish flag for this app(app_id = %d)", app_id);
+        LOG_WARNING_F("app is unavaliable, skip write finish flag for this app(app_id = {})",
+                      app_id);
         if (write_callback != nullptr) {
             write_callback->enqueue();
         }
@@ -250,9 +251,9 @@ void policy_context::write_backup_app_finish_flag_unlocked(int32_t app_id,
                             resp.err.to_string());
                 return;
             } else {
-                LOG_WARNING("write %s failed, reason(%s), try it later",
-                            remote_file->file_name().c_str(),
-                            resp.err.to_string());
+                LOG_WARNING_F("write {} failed, reason({}), try it later",
+                              remote_file->file_name(),
+                              resp.err);
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  [this, app_id, write_callback]() {
@@ -357,9 +358,9 @@ void policy_context::write_backup_info_unlocked(const backup_info &b_info,
                             resp.err.to_string());
                 return;
             } else {
-                LOG_WARNING("write %s failed, reason(%s), try it later",
-                            remote_file->file_name().c_str(),
-                            resp.err.to_string());
+                LOG_WARNING_F("write {} failed, reason({}), try it later",
+                              remote_file->file_name(),
+                              resp.err);
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  [this, b_info, write_callback]() {
@@ -569,12 +570,12 @@ void policy_context::initialize_backup_progress_unlocked()
         const std::shared_ptr<app_state> &app = _backup_service->get_state()->get_app(app_id);
         _progress.is_app_skipped[app_id] = true;
         if (app == nullptr) {
-            LOG_WARNING("%s: app id(%d) is invalid", _policy.policy_name.c_str(), app_id);
+            LOG_WARNING_F("{}: app id({}) is invalid", _policy.policy_name, app_id);
         } else if (app->status != app_status::AS_AVAILABLE) {
-            LOG_WARNING("%s: %s is not available, status(%s)",
-                        _policy.policy_name.c_str(),
-                        app->get_logname(),
-                        enum_to_string(app->status));
+            LOG_WARNING_F("{}: {} is not available, status({})",
+                          _policy.policy_name,
+                          app->get_logname(),
+                          enum_to_string(app->status));
         } else {
             // NOTICE: only available apps have entry in
             // unfinished_partitions_per_app & partition_progress & app_chkpt_size
@@ -621,7 +622,7 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
             if (sync_callback != nullptr) {
                 sync_callback->enqueue();
             } else {
-                LOG_WARNING("%s: empty callback", _policy.policy_name.c_str());
+                LOG_WARNING_F("{}: empty callback", _policy.policy_name);
             }
         } else if (ERR_TIMEOUT == err) {
             LOG_ERROR("%s: sync backup info(" PRId64
@@ -774,8 +775,8 @@ void policy_context::issue_new_backup_unlocked()
     // if all apps are dropped, we don't issue a new backup
     if (_progress.unfinished_partitions_per_app.empty()) {
         // TODO: just ignore this backup and wait next backup
-        LOG_WARNING("%s: all apps have been dropped, ignore this backup and retry it later",
-                    _backup_sig.c_str());
+        LOG_WARNING_F("{}: all apps have been dropped, ignore this backup and retry it later",
+                      _backup_sig);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this]() {
@@ -939,11 +940,11 @@ void policy_context::gc_backup_info_unlocked(const backup_info &info_to_gc)
                             });
                         sync_remove_backup_info(info_to_gc, remove_local_backup_info_task);
                     } else { // ERR_FS_INTERNAL, ERR_TIMEOUT, ERR_DIR_NOT_EMPTY
-                        LOG_WARNING("%s: gc backup info, id(%" PRId64
-                                    ") failed, with err = %s, just try again",
-                                    _policy.policy_name.c_str(),
-                                    info_to_gc.backup_id,
-                                    resp.err.to_string());
+                        LOG_WARNING_F(
+                            "{}: gc backup info, id({}) failed, with err = {}, just try again",
+                            _policy.policy_name,
+                            info_to_gc.backup_id,
+                            resp.err);
                         gc_backup_info_unlocked(info_to_gc);
                     }
                 });
@@ -1078,7 +1079,7 @@ void backup_service::start_sync_policies()
             policy_kv.second->start();
         }
         if (_policy_states.empty()) {
-            LOG_WARNING(
+            LOG_WARNING_F(
                 "can't sync policies from remote storage, user should config some policies");
         }
         _in_initialize.store(false);
@@ -1493,9 +1494,9 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             const auto &app = _state->get_app(appid);
             // TODO: if app is dropped, how to process
             if (app == nullptr) {
-                LOG_WARNING("%s: add app to policy failed, because invalid app(%d), ignore it",
-                            cur_policy.policy_name.c_str(),
-                            appid);
+                LOG_WARNING_F("{}: add app to policy failed, because invalid app({}), ignore it",
+                              cur_policy.policy_name,
+                              appid);
             } else {
                 valid_app_ids_to_add.emplace_back(appid);
                 id_to_app_names.insert(std::make_pair(appid, app->app_name));
@@ -1545,8 +1546,7 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
                 LOG_INFO_F("{}: remove app({}) to policy", cur_policy.policy_name, appid);
                 have_modify_policy = true;
             } else {
-                LOG_WARNING(
-                    "%s: invalid app_id(%d)", cur_policy.policy_name.c_str(), (int32_t)appid);
+                LOG_WARNING_F("{}: invalid app_id({})", cur_policy.policy_name, (int32_t)appid);
             }
         }
     }
@@ -1560,9 +1560,9 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             cur_policy.backup_interval_seconds = request.new_backup_interval_sec;
             have_modify_policy = true;
         } else {
-            LOG_WARNING("%s: invalid backup_interval_sec(%" PRId64 ")",
-                        cur_policy.policy_name.c_str(),
-                        request.new_backup_interval_sec);
+            LOG_WARNING_F("{}: invalid backup_interval_sec({})",
+                          cur_policy.policy_name.c_str(),
+                          request.new_backup_interval_sec);
         }
     }
 

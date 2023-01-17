@@ -980,7 +980,7 @@ void meta_service::update_app_env(app_env_rpc env_rpc)
                          std::bind(&server_state::clear_app_envs, _state.get(), env_rpc));
         break;
     default: // app_env_operation::type::APP_ENV_OP_INVALID
-        LOG_WARNING("recv a invalid update app_env request, just ignore");
+        LOG_WARNING_F("recv a invalid update app_env request, just ignore");
         response.err = ERR_INVALID_PARAMETERS;
         response.hint_message =
             "recv a invalid update_app_env request with op = APP_ENV_OP_INVALID";
