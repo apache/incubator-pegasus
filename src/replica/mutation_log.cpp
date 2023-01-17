@@ -541,8 +541,7 @@ error_code mutation_log::open(replay_callback read_callback,
         if (log == nullptr) {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA ||
                 err == ERR_INVALID_PARAMETERS) {
-                LOG_WARNING(
-                    "skip file %s during log init, err = %s", fpath.c_str(), err.to_string());
+                LOG_WARNING_F("skip file {} during log init, err = {}", fpath, err);
                 continue;
             } else {
                 return err;
@@ -997,26 +996,26 @@ int64_t mutation_log::on_partition_reset(gpid gpid, decree max_decree)
         replica_log_info old_info = _private_log_info;
         _private_log_info.max_decree = max_decree;
         _private_log_info.valid_start_offset = _global_end_offset;
-        LOG_WARNING("replica %d.%d has changed private log max_decree from %" PRId64 " to %" PRId64
-                    ", valid_start_offset from %" PRId64 " to %" PRId64,
-                    gpid.get_app_id(),
-                    gpid.get_partition_index(),
-                    old_info.max_decree,
-                    _private_log_info.max_decree,
-                    old_info.valid_start_offset,
-                    _private_log_info.valid_start_offset);
+        LOG_WARNING_F("replica {}.{} has changed private log max_decree from {} to {}, "
+                      "valid_start_offset from {} to {}",
+                      gpid,
+                      gpid.get_partition_index(),
+                      old_info.max_decree,
+                      _private_log_info.max_decree,
+                      old_info.valid_start_offset,
+                      _private_log_info.valid_start_offset);
     } else {
         replica_log_info info(max_decree, _global_end_offset);
         auto it = _shared_log_info_map.insert(replica_log_info_map::value_type(gpid, info));
         if (!it.second) {
-            LOG_WARNING("replica %d.%d has changed shared log max_decree from %" PRId64
-                        " to %" PRId64 ", valid_start_offset from %" PRId64 " to %" PRId64,
-                        gpid.get_app_id(),
-                        gpid.get_partition_index(),
-                        it.first->second.max_decree,
-                        info.max_decree,
-                        it.first->second.valid_start_offset,
-                        info.valid_start_offset);
+            LOG_WARNING_F("replica {}.{} has changed shared log max_decree from {} to {}, "
+                          "valid_start_offset from {} to {} ",
+                          gpid,
+                          gpid.get_partition_index(),
+                          it.first->second.max_decree,
+                          info.max_decree,
+                          it.first->second.valid_start_offset,
+                          info.valid_start_offset);
             _shared_log_info_map[gpid] = info;
         }
     }
@@ -1247,7 +1246,7 @@ static bool should_reserve_file(log_file_ptr log,
         time_t tm;
         if (!dsn::utils::filesystem::last_write_time(log->path(), tm)) {
             // get file last write time failed, reserve it for safety
-            LOG_WARNING("get last write time of file %s failed", log->path().c_str());
+            LOG_WARNING_F("get last write time of file {} failed", log->path());
             return true;
         }
         file_last_write_time = (uint64_t)tm;

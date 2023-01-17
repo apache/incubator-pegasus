@@ -462,7 +462,7 @@ void replica::close()
         std::unique_ptr<replication_app_base> tmp_app = std::move(_app);
         error_code err = tmp_app->close(false);
         if (err != dsn::ERR_OK) {
-            LOG_WARNING("%s: close app failed, err = %s", name(), err.to_string());
+            LOG_WARNING_PREFIX("close app failed, err = {}", err);
         }
     }
 

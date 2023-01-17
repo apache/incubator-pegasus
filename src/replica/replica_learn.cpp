@@ -51,35 +51,31 @@ void replica::init_learn(uint64_t signature)
     _checker.only_one_thread_access();
 
     if (status() != partition_status::PS_POTENTIAL_SECONDARY) {
-        LOG_WARNING(
-            "%s: state is not potential secondary but %s, skip learning with signature[%016" PRIx64
-            "]",
-            name(),
+        LOG_WARNING_PREFIX(
+            "state is not potential secondary but {}, skip learning with signature[{:#018x}]",
             enum_to_string(status()),
             signature);
         return;
     }
 
     if (signature == invalid_signature) {
-        LOG_WARNING("%s: invalid learning signature, skip", name());
+        LOG_WARNING_PREFIX("invalid learning signature, skip");
         return;
     }
 
     // at most one learning task running
     if (_potential_secondary_states.learning_round_is_running) {
-        LOG_WARNING(
-            "%s: previous learning is still running, skip learning with signature [%016" PRIx64 "]",
-            name(),
+        LOG_WARNING_PREFIX(
+            "previous learning is still running, skip learning with signature [{:#018x}]",
             signature);
         return;
     }
 
     if (signature < _potential_secondary_states.learning_version) {
-        LOG_WARNING("%s: learning request is out-dated, therefore skipped: [%016" PRIx64
-                    "] vs [%016" PRIx64 "]",
-                    name(),
-                    signature,
-                    _potential_secondary_states.learning_version);
+        LOG_WARNING_PREFIX(
+            "learning request is out-dated, therefore skipped: [{:#018x}] vs [{:#018x}]",
+            signature,
+            _potential_secondary_states.learning_version);
         return;
     }
 
@@ -87,12 +83,11 @@ void replica::init_learn(uint64_t signature)
     // be cautious: primary should not issue signatures frequently to avoid learning abort
     if (signature != _potential_secondary_states.learning_version) {
         if (!_potential_secondary_states.cleanup(false)) {
-            LOG_WARNING("%s: previous learning with signature[%016" PRIx64
-                        "] is still in-process, skip init new learning with signature [%016" PRIx64
-                        "]",
-                        name(),
-                        _potential_secondary_states.learning_version,
-                        signature);
+            LOG_WARNING_PREFIX(
+                "previous learning with signature[{:#018x}] is still in-process, skip "
+                "init new learning with signature [{:#018x}]",
+                _potential_secondary_states.learning_version,
+                signature);
             return;
         }
 
@@ -178,15 +173,15 @@ void replica::init_learn(uint64_t signature)
 
     if (_app->last_committed_decree() == 0 &&
         _stub->_learn_app_concurrent_count.load() >= _options->learn_app_max_concurrent_count) {
-        LOG_WARNING("%s: init_learn[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-                    "ms, need to learn app because app_committed_decree = 0, but "
-                    "learn_app_concurrent_count(%d) >= learn_app_max_concurrent_count(%d), skip",
-                    name(),
-                    _potential_secondary_states.learning_version,
-                    _config.primary.to_string(),
-                    _potential_secondary_states.duration_ms(),
-                    _stub->_learn_app_concurrent_count.load(),
-                    _options->learn_app_max_concurrent_count);
+        LOG_WARNING_PREFIX(
+            "init_learn[{:#018x}]: learnee = {}, learn_duration = {} ms, need to learn app "
+            "because app_committed_decree = 0, but learn_app_concurrent_count({}) >= "
+            "learn_app_max_concurrent_count({}), skip",
+            _potential_secondary_states.learning_version,
+            _config.primary,
+            _potential_secondary_states.duration_ms(),
+            _stub->_learn_app_concurrent_count.load(),
+            _options->learn_app_max_concurrent_count);
         return;
     }
 
@@ -572,13 +567,11 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE || resp.err == ERR_INCONSISTENT_STATE) {
-            LOG_WARNING(
-                "%s: on_learn_reply[%016" PRIx64
-                "]: learnee = %s, learnee is updating ballot(inactive state) or "
-                "reconciliation(inconsistent state), delay to start another round of learning",
-                name(),
-                req.signature,
-                resp.config.primary.to_string());
+            LOG_WARNING_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learnee is updating "
+                               "ballot(inactive state) or reconciliation(inconsistent state), "
+                               "delay to start another round of learning",
+                               req.signature,
+                               resp.config.primary);
             _potential_secondary_states.learning_round_is_running = false;
             _potential_secondary_states.delay_learning_task =
                 tasking::create_task(LPC_DELAY_LEARN,
@@ -612,14 +605,12 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     // local state is newer than learnee
     if (resp.last_committed_decree < _app->last_committed_decree()) {
-        LOG_WARNING("%s: on_learn_reply[%016" PRIx64
-                    "]: learnee = %s, learner state is newer than learnee (primary): %" PRId64
-                    " vs %" PRId64 ", create new app",
-                    name(),
-                    req.signature,
-                    resp.config.primary.to_string(),
-                    _app->last_committed_decree(),
-                    resp.last_committed_decree);
+        LOG_WARNING_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learner state is newer than "
+                           "learnee (primary): {} vs {}, create new app",
+                           req.signature,
+                           resp.config.primary,
+                           _app->last_committed_decree(),
+                           resp.last_committed_decree);
 
         _stub->_counter_replicas_learning_recent_learn_reset_count->increment();
 
@@ -694,14 +685,13 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     if (resp.type == learn_type::LT_APP) {
         if (++_stub->_learn_app_concurrent_count > _options->learn_app_max_concurrent_count) {
             --_stub->_learn_app_concurrent_count;
-            LOG_WARNING("%s: on_learn_reply[%016" PRIx64
-                        "]: learnee = %s, learn_app_concurrent_count(%d) >= "
-                        "learn_app_max_concurrent_count(%d), skip this round",
-                        name(),
-                        _potential_secondary_states.learning_version,
-                        _config.primary.to_string(),
-                        _stub->_learn_app_concurrent_count.load(),
-                        _options->learn_app_max_concurrent_count);
+            LOG_WARNING_PREFIX(
+                "on_learn_reply[{:#018x}]: learnee = {}, learn_app_concurrent_count({}) >= "
+                "learn_app_max_concurrent_count({}), skip this round",
+                _potential_secondary_states.learning_version,
+                _config.primary,
+                _stub->_learn_app_concurrent_count.load(),
+                _options->learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
             return;
         } else {
@@ -1169,15 +1159,14 @@ void replica::on_learn_remote_state_completed(error_code err)
     _checker.only_one_thread_access();
 
     if (partition_status::PS_POTENTIAL_SECONDARY != status()) {
-        LOG_WARNING("%s: on_learn_remote_state_completed[%016" PRIx64
-                    "]: learnee = %s, learn_duration = %" PRIu64 " ms, err = %s, "
-                    "the learner status is not PS_POTENTIAL_SECONDARY, but %s, ignore",
-                    name(),
-                    _potential_secondary_states.learning_version,
-                    _config.primary.to_string(),
-                    _potential_secondary_states.duration_ms(),
-                    err.to_string(),
-                    enum_to_string(status()));
+        LOG_WARNING_PREFIX("on_learn_remote_state_completed[{:#018x}]: learnee = {}, "
+                           "learn_duration = {} ms, err = {}, the learner status is not "
+                           "PS_POTENTIAL_SECONDARY, but {}, ignore",
+                           _potential_secondary_states.learning_version,
+                           _config.primary,
+                           _potential_secondary_states.duration_ms(),
+                           err,
+                           enum_to_string(status()));
         return;
     }
 
@@ -1369,13 +1358,12 @@ void replica::on_learn_completion_notification_reply(error_code err,
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE) {
-            LOG_WARNING("%s: on_learn_completion_notification_reply[%016" PRIx64
-                        "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                        "learnee is updating ballot, delay to start another round of learning",
-                        name(),
-                        report.learner_signature,
-                        _config.primary.to_string(),
-                        _potential_secondary_states.duration_ms());
+            LOG_WARNING_PREFIX("on_learn_completion_notification_reply[{:#018x}]: learnee = {}, "
+                               "learn_duration = {} ms, learnee is updating ballot, delay to start "
+                               "another round of learning",
+                               report.learner_signature,
+                               _config.primary,
+                               _potential_secondary_states.duration_ms());
             _potential_secondary_states.learning_round_is_running = false;
             _potential_secondary_states.delay_learning_task = tasking::create_task(
                 LPC_DELAY_LEARN,
