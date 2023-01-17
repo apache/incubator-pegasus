@@ -996,10 +996,9 @@ int64_t mutation_log::on_partition_reset(gpid gpid, decree max_decree)
         replica_log_info old_info = _private_log_info;
         _private_log_info.max_decree = max_decree;
         _private_log_info.valid_start_offset = _global_end_offset;
-        LOG_WARNING_F("replica {}.{} has changed private log max_decree from {} to {}, "
+        LOG_WARNING_F("replica {} has changed private log max_decree from {} to {}, "
                       "valid_start_offset from {} to {}",
                       gpid,
-                      gpid.get_partition_index(),
                       old_info.max_decree,
                       _private_log_info.max_decree,
                       old_info.valid_start_offset,
@@ -1008,10 +1007,9 @@ int64_t mutation_log::on_partition_reset(gpid gpid, decree max_decree)
         replica_log_info info(max_decree, _global_end_offset);
         auto it = _shared_log_info_map.insert(replica_log_info_map::value_type(gpid, info));
         if (!it.second) {
-            LOG_WARNING_F("replica {}.{} has changed shared log max_decree from {} to {}, "
+            LOG_WARNING_F("replica {} has changed shared log max_decree from {} to {}, "
                           "valid_start_offset from {} to {} ",
                           gpid,
-                          gpid.get_partition_index(),
                           it.first->second.max_decree,
                           info.max_decree,
                           it.first->second.valid_start_offset,
