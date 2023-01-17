@@ -636,7 +636,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                       name(),
                       old_dir,
                       rename_dir);
-                LOG_WARNING_PREFIX("{replica_dir_op} succeed to move directory from '{}' to '{}'",
+                LOG_WARNING_PREFIX("replica_dir_op succeed to move directory from '{}' to '{}'",
                                    old_dir,
                                    rename_dir);
             }

@@ -632,7 +632,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                   "init_replica: failed to move directory '{}' to '{}'",
                   dir,
                   rename_dir);
-            LOG_WARNING_F("init_replica: {replica_dir_op} succeed to move directory '{}' to '{}'",
+            LOG_WARNING_F("init_replica: replica_dir_op succeed to move directory '{}' to '{}'",
                           dir,
                           rename_dir);
             _counter_replicas_recent_replica_move_error_count->increment();
@@ -1694,7 +1694,7 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
         _fs_manager.add_replica(id, replica_path);
         _closed_replicas.emplace(id, closed_info);
     } else {
-        LOG_WARNING_F("gc_replica: {replica_dir_op} succeed to move directory '{}' to '{}'",
+        LOG_WARNING_F("gc_replica: replica_dir_op succeed to move directory '{}' to '{}'",
                       replica_path,
                       rename_path);
         _counter_replicas_recent_replica_move_garbage_count->increment();
