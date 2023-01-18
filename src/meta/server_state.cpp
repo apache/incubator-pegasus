@@ -1798,7 +1798,7 @@ void server_state::downgrade_primary_to_inactive(std::shared_ptr<app_state> &app
         } else {
             LOG_WARNING_F("gpid({}) is syncing another request with remote, cancel it due to the "
                           "primary({}) is down",
-                          pc.pid.get_app_id(),
+                          pc.pid,
                           pc.primary);
             cc.cancel_sync();
         }

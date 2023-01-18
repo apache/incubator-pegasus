@@ -1546,7 +1546,7 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
                 LOG_INFO_F("{}: remove app({}) to policy", cur_policy.policy_name, appid);
                 have_modify_policy = true;
             } else {
-                LOG_WARNING_F("{}: invalid app_id({})", cur_policy.policy_name, (int32_t)appid);
+                LOG_WARNING_F("{}: invalid app_id({})", cur_policy.policy_name, appid);
             }
         }
     }
@@ -1561,7 +1561,7 @@ void backup_service::modify_backup_policy(configuration_modify_backup_policy_rpc
             have_modify_policy = true;
         } else {
             LOG_WARNING_F("{}: invalid backup_interval_sec({})",
-                          cur_policy.policy_name.c_str(),
+                          cur_policy.policy_name,
                           request.new_backup_interval_sec);
         }
     }
