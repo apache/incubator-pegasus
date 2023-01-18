@@ -651,13 +651,13 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                                           : _options->prepare_timeout_ms_for_potential_secondaries);
             int delay_time_ms = 5; // delay some time before retry to avoid sending too frequently
             if (mu->is_prepare_close_to_timeout(delay_time_ms + 2, prepare_timeout_ms)) {
-                LOG_ERROR_PREFIX(
-                    "mutation {} do not retry prepare to {} for no enought time left, prepare_ts_ms = {}, prepare_timeout_ms = {}, now_ms = {},
-                    mu->name(),
-                    node,
-                    mu->prepare_ts_ms(),
-                    prepare_timeout_ms,
-                    dsn_now_ms());
+                LOG_ERROR_PREFIX("mutation {} do not retry prepare to {} for no enought time left, "
+                                 "prepare_ts_ms = {}, prepare_timeout_ms = {}, now_ms = {}",
+                                 mu->name(),
+                                 node,
+                                 mu->prepare_ts_ms(),
+                                 prepare_timeout_ms,
+                                 dsn_now_ms());
             } else {
                 LOG_INFO_PREFIX(
                     "mutation {} retry prepare to {} after {} ms", mu->name(), node, delay_time_ms);
