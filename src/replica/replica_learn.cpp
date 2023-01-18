@@ -1210,11 +1210,12 @@ error_code replica::handle_learning_succeeded_on_primary(::dsn::rpc_address node
     }
 
     if (it->second.signature != (int64_t)learn_signature) {
-        LOG_ERROR_F("handle_learning_succeeded_on_primary[{:#018x}]: learner = {}, signature not "
-                    "matched, current signature on primary is [{:#018x}], return ERR_INVALID_STATE",
-                    learn_signature,
-                    node,
-                    it->second.signature);
+        LOG_ERROR_PREFIX("handle_learning_succeeded_on_primary[{:#018x}]: learner = {}, signature "
+                         "not matched, current signature on primary is [{:#018x}], return "
+                         "ERR_INVALID_STATE",
+                         learn_signature,
+                         node,
+                         it->second.signature);
         return ERR_INVALID_STATE;
     }
 
