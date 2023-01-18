@@ -679,8 +679,8 @@ void connection_oriented_network::on_server_session_accepted(rpc_session_ptr &s)
             // nothing to do
         } else {
             pr.first->second = s;
-            LOG_WARNING("server session already exists, remote_client = %s, preempted",
-                        s->remote_address().to_string());
+            LOG_WARNING_F("server session already exists, remote_client = {}, preempted",
+                          s->remote_address());
         }
         ip_count = (int)_servers.size();
 

@@ -129,10 +129,10 @@ protected:
         if (ptr != nullptr) {
             (*ptr)(static_cast<T *>(this), request);
         } else {
-            LOG_WARNING("recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
-                        t.to_string(),
-                        request->header->from_address.to_string(),
-                        request->header->trace_id);
+            LOG_WARNING_F("recv message with unhandled rpc name {} from {}, trace_id = {:#018x} ",
+                          t,
+                          request->header->from_address,
+                          request->header->trace_id);
             dsn_rpc_reply(request->create_response(), ::dsn::ERR_HANDLER_NOT_FOUND);
         }
         return 0;

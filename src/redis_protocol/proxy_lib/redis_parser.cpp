@@ -899,7 +899,7 @@ void redis_parser::counter_internal(message_entry &entry)
     if (dsn::utils::iequals(command, "INCR") || dsn::utils::iequals(command, "DECR")) {
         if (entry.request.sub_requests.size() != 2) {
             LOG_WARNING_F("{}: command {} seqid({}) with invalid arguments count: {}",
-                          _remote_address.to_string(),
+                          _remote_address,
                           command,
                           entry.sequence_id,
                           entry.request.sub_requests.size());
@@ -909,7 +909,7 @@ void redis_parser::counter_internal(message_entry &entry)
     } else if (dsn::utils::iequals(command, "INCRBY") || dsn::utils::iequals(command, "DECRBY")) {
         if (entry.request.sub_requests.size() != 3) {
             LOG_WARNING_F("{}: command {} seqid({}) with invalid arguments count: {}",
-                          _remote_address.to_string(),
+                          _remote_address,
                           command,
                           entry.sequence_id,
                           entry.request.sub_requests.size());
@@ -918,10 +918,10 @@ void redis_parser::counter_internal(message_entry &entry)
         }
         if (!dsn::buf2int64(entry.request.sub_requests[2].data, increment)) {
             LOG_WARNING_F("{}: command {} seqid({}) with invalid 'increment': {}",
-                          _remote_address.to_string(),
+                          _remote_address,
                           command,
                           entry.sequence_id,
-                          entry.request.sub_requests[2].data.to_string());
+                          entry.request.sub_requests[2].data);
             simple_error_reply(entry,
                                fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;
@@ -938,7 +938,7 @@ void redis_parser::counter_internal(message_entry &entry)
         ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
             LOG_WARNING_F("{}: command {} seqid({}) got reply, but session has reset",
-                          _remote_address.to_string(),
+                          _remote_address,
                           command,
                           entry.sequence_id);
             return;
@@ -946,7 +946,7 @@ void redis_parser::counter_internal(message_entry &entry)
 
         if (::dsn::ERR_OK != ec) {
             LOG_WARNING_F("{}: command {} seqid({}) got reply with error = {}",
-                          _remote_address.to_string(),
+                          _remote_address,
                           command,
                           entry.sequence_id,
                           ec.to_string());

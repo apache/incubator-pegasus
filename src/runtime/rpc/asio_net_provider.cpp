@@ -164,10 +164,10 @@ void asio_network_provider::do_accept()
 
                 // when server connection threshold is hit, close the session, otherwise accept it
                 if (check_if_conn_threshold_exceeded(s->remote_address())) {
-                    LOG_WARNING("close rpc connection from %s to %s due to hitting server "
-                                "connection threshold per ip",
-                                s->remote_address().to_string(),
-                                address().to_string());
+                    LOG_WARNING_F("close rpc connection from {} to {} due to hitting server "
+                                  "connection threshold per ip",
+                                  s->remote_address(),
+                                  address());
                     s->close();
                 } else {
                     on_server_session_accepted(s);
@@ -210,10 +210,10 @@ void asio_udp_provider::send_message(message_ex *request)
         ep,
         [=](const boost::system::error_code &error, std::size_t bytes_transferred) {
             if (error) {
-                LOG_WARNING("send udp packet to ep %s:%d failed, message = %s",
-                            ep.address().to_string().c_str(),
-                            ep.port(),
-                            error.message().c_str());
+                LOG_WARNING_F("send udp packet to ep {}:{} failed, message = {}",
+                              ep.address(),
+                              ep.port(),
+                              error.message());
                 // we do not handle failure here, rpc matcher would handle timeouts
             }
         });

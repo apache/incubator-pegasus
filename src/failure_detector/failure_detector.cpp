@@ -150,9 +150,8 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
     auto it2 = _masters.find(to);
     if (it != _masters.end()) {
         if (it2 != _masters.end()) {
-            LOG_WARNING("switch master failed as both are already registered, from[%s], to[%s]",
-                        from.to_string(),
-                        to.to_string());
+            LOG_WARNING_F(
+                "switch master failed as both are already registered, from[{}], to[{}]", from, to);
             return false;
         }
 
@@ -172,9 +171,8 @@ bool failure_detector::switch_master(::dsn::rpc_address from,
 
         LOG_INFO_F("switch master successfully, from[{}], to[{}]", from, to);
     } else {
-        LOG_WARNING("switch master failed as from node is not registered yet, from[%s], to[%s]",
-                    from.to_string(),
-                    to.to_string());
+        LOG_WARNING_F(
+            "switch master failed as from node is not registered yet, from[{}], to[{}]", from, to);
         return false;
     }
     return true;
@@ -312,8 +310,8 @@ void failure_detector::set_allow_list(const std::vector<std::string> &replica_ad
     for (auto &addr : replica_addrs) {
         rpc_address node;
         if (!node.from_string_ipv4(addr.c_str())) {
-            LOG_WARNING("replica_white_list has invalid ip %s, the allow list won't be modified",
-                        addr.c_str());
+            LOG_WARNING_F("replica_white_list has invalid ip {}, the allow list won't be modified",
+                          addr);
             return;
         }
         nodes.push_back(node);
@@ -356,7 +354,7 @@ void failure_detector::on_ping_internal(const beacon_msg &beacon, /*out*/ beacon
     if (itr == _workers.end()) {
         // if is a new worker, check allow list first if need
         if (_use_allow_list && _allow_list.find(node) == _allow_list.end()) {
-            LOG_WARNING("new worker[%s] is rejected", node.to_string());
+            LOG_WARNING_F("new worker[{}] is rejected", node);
             ack.allowed = false;
             return;
         }
@@ -408,29 +406,29 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
     auto node = ack.this_node;
 
     if (err != ERR_OK) {
-        LOG_WARNING("ping master(%s) failed, timeout_ms = %u, err = %s",
-                    node.to_string(),
-                    _beacon_timeout_milliseconds,
-                    err.to_string());
+        LOG_WARNING_F("ping master({}) failed, timeout_ms = {}, err = {}",
+                      node,
+                      _beacon_timeout_milliseconds,
+                      err);
         _recent_beacon_fail_count->increment();
     }
 
     master_map::iterator itr = _masters.find(node);
 
     if (itr == _masters.end()) {
-        LOG_WARNING("received beacon ack without corresponding master, ignore it, "
-                    "remote_master[%s], local_worker[%s]",
-                    node.to_string(),
-                    dsn_primary_address().to_string());
+        LOG_WARNING_F("received beacon ack without corresponding master, ignore it, "
+                      "remote_master[{}], local_worker[{}]",
+                      node,
+                      dsn_primary_address());
         return false;
     }
 
     master_record &record = itr->second;
     if (!ack.allowed) {
-        LOG_WARNING("worker rejected, stop sending beacon message, "
-                    "remote_master[%s], local_worker[%s]",
-                    node.to_string(),
-                    dsn_primary_address().to_string());
+        LOG_WARNING_F(
+            "worker rejected, stop sending beacon message, remote_master[{}], local_worker[{}]",
+            node,
+            dsn_primary_address());
         record.rejected = true;
         record.send_beacon_timer->cancel(true);
         return false;
@@ -451,9 +449,8 @@ bool failure_detector::end_ping_internal(::dsn::error_code err, const beacon_ack
 
     // if ack is not from master meta, worker should not update its last send time
     if (!ack.is_master) {
-        LOG_WARNING("node[%s] is not master, ack.primary_node[%s] is real master",
-                    node.to_string(),
-                    ack.primary_node.to_string());
+        LOG_WARNING_F(
+            "node[{}] is not master, ack.primary_node[{}] is real master", node, ack.primary_node);
         return true;
     }
 

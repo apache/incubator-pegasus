@@ -152,7 +152,7 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
             }
             time_t tm;
             if (!dsn::utils::filesystem::last_write_time(current_file, tm)) {
-                LOG_WARNING("get last write time of file %s failed", current_file.c_str());
+                LOG_WARNING_F("get last write time of file {} failed", current_file);
                 break;
             }
             auto last_write_time = (uint64_t)tm;
@@ -327,7 +327,7 @@ void pegasus_server_impl::on_get(get_rpc rpc)
         LOG_WARNING_PREFIX("rocksdb abnormal get from {}: "
                            "hash_key = {}, sort_key = {}, return = {}, "
                            "value_size = {}, time_used = {} ns",
-                           rpc.remote_address().to_string(),
+                           rpc.remote_address(),
                            ::pegasus::utils::c_escape_string(hash_key),
                            ::pegasus::utils::c_escape_string(sort_key),
                            status.ToString(),
@@ -438,24 +438,24 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
             // empty sort key range
             if (_verbose_log) {
-                LOG_WARNING(
-                    "%s: empty sort key range for multi_get from %s: hash_key = \"%s\", "
-                    "start_sort_key = \"%s\" (%s), stop_sort_key = \"%s\" (%s), "
-                    "sort_key_filter_type = %s, sort_key_filter_pattern = \"%s\", "
-                    "final_start = \"%s\" (%s), final_stop = \"%s\" (%s)",
+                LOG_WARNING_F(
+                    "{}: empty sort key range for multi_get from {}: hash_key = \"{}\", "
+                    "start_sort_key = \"{}\" ({}), stop_sort_key = \"{}\" ({}), "
+                    "sort_key_filter_type = {}, sort_key_filter_pattern = \"{}\", final_start = "
+                    "\"{}\" ({}), final_stop = \"{}\" ({})",
                     replica_name(),
-                    rpc.remote_address().to_string(),
-                    ::pegasus::utils::c_escape_string(request.hash_key).c_str(),
-                    ::pegasus::utils::c_escape_string(request.start_sortkey).c_str(),
+                    rpc.remote_address(),
+                    ::pegasus::utils::c_escape_string(request.hash_key),
+                    ::pegasus::utils::c_escape_string(request.start_sortkey),
                     request.start_inclusive ? "inclusive" : "exclusive",
-                    ::pegasus::utils::c_escape_string(request.stop_sortkey).c_str(),
+                    ::pegasus::utils::c_escape_string(request.stop_sortkey),
                     request.stop_inclusive ? "inclusive" : "exclusive",
                     ::dsn::apps::_filter_type_VALUES_TO_NAMES.find(request.sort_key_filter_type)
                         ->second,
-                    ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern).c_str(),
-                    ::pegasus::utils::c_escape_string(start).c_str(),
+                    ::pegasus::utils::c_escape_string(request.sort_key_filter_pattern),
+                    ::pegasus::utils::c_escape_string(start),
                     start_inclusive ? "inclusive" : "exclusive",
-                    ::pegasus::utils::c_escape_string(stop).c_str(),
+                    ::pegasus::utils::c_escape_string(stop),
                     stop_inclusive ? "inclusive" : "exclusive");
             }
             resp.error = rocksdb::Status::kOk;
@@ -641,7 +641,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             if (limiter->exceed_limit()) {
                 LOG_WARNING_PREFIX(
                     "rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
-                    rpc.remote_address().to_string(),
+                    rpc.remote_address(),
                     limiter->duration_time(),
                     limiter->max_duration_time());
             }
@@ -744,7 +744,7 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
             "max_kv_count = {}, max_kv_size = {}, reverse = {}, "
             "result_count = {}, result_size = {}, iteration_count = {}, "
             "expire_count = {}, filter_count = {}, time_used = {} ns",
-            rpc.remote_address().to_string(),
+            rpc.remote_address(),
             ::pegasus::utils::c_escape_string(request.hash_key),
             ::pegasus::utils::c_escape_string(request.start_sortkey),
             request.start_inclusive ? "inclusive" : "exclusive",
@@ -881,7 +881,7 @@ void pegasus_server_impl::on_batch_get(batch_get_rpc rpc)
         LOG_WARNING_PREFIX(
             "rocksdb abnormal batch_get from {}: total data size = {}, row count = {}, "
             "time_used = {} us",
-            rpc.remote_address().to_string(),
+            rpc.remote_address(),
             total_data_size,
             request.keys.size(),
             time_used / 1000);
@@ -966,7 +966,7 @@ void pegasus_server_impl::on_sortkey_count(sortkey_count_rpc rpc)
         resp.count = 0;
     } else if (limiter->exceed_limit()) {
         LOG_WARNING_PREFIX("rocksdb abnormal scan from {}: time_used({}ns) VS time_threshold({}ns)",
-                           rpc.remote_address().to_string(),
+                           rpc.remote_address(),
                            limiter->duration_time(),
                            limiter->max_duration_time());
         resp.count = -1;
@@ -1129,14 +1129,14 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
         // empty key range
         if (_verbose_log) {
-            LOG_WARNING("%s: empty key range for get_scanner from %s: "
-                        "start_key = \"%s\" (%s), stop_key = \"%s\" (%s)",
-                        replica_name(),
-                        rpc.remote_address().to_string(),
-                        ::pegasus::utils::c_escape_string(request.start_key).c_str(),
-                        request.start_inclusive ? "inclusive" : "exclusive",
-                        ::pegasus::utils::c_escape_string(request.stop_key).c_str(),
-                        request.stop_inclusive ? "inclusive" : "exclusive");
+            LOG_WARNING_F("{}: empty key range for get_scanner from {}: start_key = \"{}\" ({}), "
+                          "stop_key = \"{}\" ({})",
+                          replica_name(),
+                          rpc.remote_address(),
+                          ::pegasus::utils::c_escape_string(request.start_key),
+                          request.start_inclusive ? "inclusive" : "exclusive",
+                          ::pegasus::utils::c_escape_string(request.stop_key),
+                          request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
@@ -1260,7 +1260,7 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
         resp.error = rocksdb::Status::kIncomplete;
         LOG_WARNING_PREFIX("rocksdb abnormal scan from {}: batch_count={}, time_used_ns({}) VS "
                            "time_threshold_ns({})",
-                           rpc.remote_address().to_string(),
+                           rpc.remote_address(),
                            batch_count,
                            limiter->duration_time(),
                            limiter->max_duration_time());
@@ -1432,7 +1432,7 @@ void pegasus_server_impl::on_scan(scan_rpc rpc)
             resp.error = rocksdb::Status::kIncomplete;
             LOG_WARNING_PREFIX("rocksdb abnormal scan from {}: batch_count={}, time_used({}ns) VS "
                                "time_threshold({}ns)",
-                               rpc.remote_address().to_string(),
+                               rpc.remote_address(),
                                batch_count,
                                limiter->duration_time(),
                                limiter->max_duration_time());

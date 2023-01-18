@@ -335,7 +335,7 @@ static bool remove_directory(const std::string &npath)
     boost::filesystem::remove_all(npath, ec);
     // TODO(wutao1): return the specific error to caller
     if (dsn_unlikely(bool(ec))) {
-        LOG_WARNING("remove %s failed, err = %s", npath.c_str(), ec.message().c_str());
+        LOG_WARNING_F("remove {} failed, err = {}", npath, ec.message());
         return false;
     }
     return true;
@@ -358,8 +358,7 @@ bool remove_path(const std::string &path)
     if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
         if (!ret) {
-            LOG_WARNING(
-                "remove file %s failed, err = %s", path.c_str(), safe_strerror(errno).c_str());
+            LOG_WARNING_F("remove file {} failed, err = {}", path, safe_strerror(errno));
         }
         return ret;
     } else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
@@ -375,10 +374,8 @@ bool rename_path(const std::string &path1, const std::string &path2)
 
     ret = (::rename(path1.c_str(), path2.c_str()) == 0);
     if (!ret) {
-        LOG_WARNING("rename from '%s' to '%s' failed, err = %s",
-                    path1.c_str(),
-                    path2.c_str(),
-                    safe_strerror(errno).c_str());
+        LOG_WARNING_F(
+            "rename from '{}' to '{}' failed, err = {}", path1, path2, safe_strerror(errno));
     }
 
     return ret;
@@ -483,10 +480,10 @@ bool create_directory(const std::string &path)
     return true;
 
 out_error:
-    LOG_WARNING("create_directory %s failed due to cannot create the component: %s, err = %s",
-                path.c_str(),
-                cpath.c_str(),
-                safe_strerror(err).c_str());
+    LOG_WARNING_F("create_directory {} failed due to cannot create the component: {}, err = {}",
+                  path,
+                  cpath,
+                  safe_strerror(err));
     return false;
 }
 
@@ -531,12 +528,12 @@ bool create_file(const std::string &path)
     fd = ::creat(npath.c_str(), mode);
     if (fd == -1) {
         err = errno;
-        LOG_WARNING("create_file %s failed, err = %s", path.c_str(), safe_strerror(err).c_str());
+        LOG_WARNING_F("create_file {} failed, err = {}", path, safe_strerror(err));
         return false;
     }
 
     if (::close_(fd) != 0) {
-        LOG_WARNING("create_file %s, failed to close the file handle.", path.c_str());
+        LOG_WARNING_F("create_file {}, failed to close the file handle.", path);
     }
 
     return true;

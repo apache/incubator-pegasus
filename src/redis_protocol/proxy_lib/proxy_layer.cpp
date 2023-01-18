@@ -93,7 +93,7 @@ void proxy_stub::remove_session(dsn::rpc_address remote_address)
         ::dsn::zauto_write_lock l(_lock);
         auto iter = _sessions.find(remote_address);
         if (iter == _sessions.end()) {
-            LOG_WARNING("%s has been removed from proxy stub", remote_address.to_string());
+            LOG_WARNING_F("{} has been removed from proxy stub", remote_address);
             return;
         }
         LOG_INFO_F("remove {} from proxy stub", remote_address);

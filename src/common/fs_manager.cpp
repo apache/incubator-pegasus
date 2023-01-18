@@ -212,11 +212,8 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
         std::set<dsn::gpid> &replicas_for_app = n->holding_replicas[pid.get_app_id()];
         auto result = replicas_for_app.emplace(pid);
         if (!result.second) {
-            LOG_WARNING("%s: gpid(%d.%d) already in the dir_node(%s)",
-                        dsn_primary_address().to_string(),
-                        pid.get_app_id(),
-                        pid.get_partition_index(),
-                        n->tag.c_str());
+            LOG_WARNING_F(
+                "{}: gpid({}) already in the dir_node({})", dsn_primary_address(), pid, n->tag);
         } else {
             LOG_INFO_F("{}: add gpid({}) to dir_node({})", dsn_primary_address(), pid, n->tag);
         }

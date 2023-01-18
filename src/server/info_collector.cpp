@@ -261,10 +261,10 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
     std::vector<node_capacity_unit_stat> nodes_stat;
     if (!get_capacity_unit_stat(_shell_context.get(), nodes_stat)) {
         if (remaining_retry_count > 0) {
-            LOG_WARNING("get capacity unit stat failed, remaining_retry_count = %d, "
-                        "wait %u seconds to retry",
-                        remaining_retry_count,
-                        _capacity_unit_retry_wait_seconds);
+            LOG_WARNING_F("get capacity unit stat failed, remaining_retry_count = {}, "
+                          "wait {} seconds to retry",
+                          remaining_retry_count,
+                          _capacity_unit_retry_wait_seconds);
             ::dsn::tasking::enqueue(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
                                     &_tracker,
                                     [=] { on_capacity_unit_stat(remaining_retry_count - 1); },
@@ -308,10 +308,10 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
     app_storage_size_stat st_stat;
     if (!get_storage_size_stat(_shell_context.get(), st_stat)) {
         if (remaining_retry_count > 0) {
-            LOG_WARNING("get storage size stat failed, remaining_retry_count = %d, "
-                        "wait %u seconds to retry",
-                        remaining_retry_count,
-                        _storage_size_retry_wait_seconds);
+            LOG_WARNING_F("get storage size stat failed, remaining_retry_count = {}, wait {} "
+                          "seconds to retry",
+                          remaining_retry_count,
+                          _storage_size_retry_wait_seconds);
             ::dsn::tasking::enqueue(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,
                                     &_tracker,
                                     [=] { on_storage_size_stat(remaining_retry_count - 1); },

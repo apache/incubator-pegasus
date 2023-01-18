@@ -457,9 +457,8 @@ error_code rpc_engine::start(const service_app_spec &aspec)
                 factory = it1->second.factory_name;
                 blk_size = it1->second.message_buffer_block_size;
             } else {
-                LOG_WARNING(
-                    "network client for channel %s not registered, assuming not used further",
-                    c.to_string());
+                LOG_WARNING_F(
+                    "network client for channel {} not registered, assuming not used further", c);
                 continue;
             }
 
@@ -502,10 +501,10 @@ error_code rpc_engine::start(const service_app_spec &aspec)
 
         (*pnets)[sp.second.channel].reset(net);
 
-        LOG_WARNING("[%s] network server started at port %u, channel = %s, ...",
-                    node()->full_name(),
-                    (uint32_t)(port),
-                    sp.second.channel.to_string());
+        LOG_WARNING_F("[{}] network server started at port {}, channel = {}, ...",
+                      node()->full_name(),
+                      (uint32_t)(port),
+                      sp.second.channel);
     }
 
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
@@ -534,11 +533,10 @@ bool rpc_engine::unregister_rpc_handler(dsn::task_code rpc_code)
 void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 {
     if (!_is_serving) {
-        LOG_WARNING(
-            "recv message with rpc name %s from %s when rpc engine is not serving, trace_id = "
-            "%" PRIu64,
+        LOG_WARNING_F(
+            "recv message with rpc name {} from {} when rpc engine is not serving, trace_id = {}",
             msg->header->rpc_name,
-            msg->header->from_address.to_string(),
+            msg->header->from_address,
             msg->header->trace_id);
 
         CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
@@ -584,10 +582,10 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
                 tsk->release_ref();
             }
         } else {
-            LOG_WARNING("recv message with unhandled rpc name %s from %s, trace_id = %016" PRIx64,
-                        msg->header->rpc_name,
-                        msg->header->from_address.to_string(),
-                        msg->header->trace_id);
+            LOG_WARNING_F("recv message with unhandled rpc name {} from {}, trace_id = {:#018x}",
+                          msg->header->rpc_name,
+                          msg->header->from_address,
+                          msg->header->trace_id);
 
             CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
             msg->add_ref();
@@ -595,10 +593,10 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
             msg->release_ref();
         }
     } else {
-        LOG_WARNING("recv message with unknown rpc name %s from %s, trace_id = %016" PRIx64,
-                    msg->header->rpc_name,
-                    msg->header->from_address.to_string(),
-                    msg->header->trace_id);
+        LOG_WARNING_F("recv message with unknown rpc name {} from {}, trace_id = {:#018x}",
+                      msg->header->rpc_name,
+                      msg->header->from_address,
+                      msg->header->trace_id);
 
         CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
         msg->add_ref();
@@ -652,10 +650,10 @@ void rpc_engine::call_ip(rpc_address addr,
           "from address must be set before call call_ip");
 
     while (!request->dl.is_alone()) {
-        LOG_WARNING("msg request %s (trace_id = %016" PRIx64
-                    ") is in sending queue, try to pick out ...",
-                    request->header->rpc_name,
-                    request->header->trace_id);
+        LOG_WARNING_F(
+            "msg request {} (trace_id = {:#018x}) is in sending queue, try to pick out ...",
+            request->header->rpc_name,
+            request->header->trace_id);
         auto s = request->io_session;
         if (s.get() != nullptr) {
             s->cancel(request);

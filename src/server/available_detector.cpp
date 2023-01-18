@@ -260,9 +260,8 @@ bool available_detector::generate_hash_keys()
         }
         return true;
     } else {
-        LOG_WARNING("Get partition count of table '%s' on cluster '%s' failed",
-                    _app_name.c_str(),
-                    _cluster_name.c_str());
+        LOG_WARNING_F(
+            "Get partition count of table '{}' on cluster '{}' failed", _app_name, _cluster_name);
         return false;
     }
 }
