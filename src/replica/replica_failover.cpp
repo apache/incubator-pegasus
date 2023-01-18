@@ -57,11 +57,11 @@ void replica::handle_remote_failure(partition_status::type st,
                                     error_code error,
                                     const std::string &caused_by)
 {
-    LOG_ERROR__PREFIX("handle remote failure caused by {}, error = {}, status = {}, node = {}",
-                      caused_by,
-                      error,
-                      enum_to_string(st),
-                      node);
+    LOG_ERROR_PREFIX("handle remote failure caused by {}, error = {}, status = {}, node = {}",
+                     caused_by,
+                     error,
+                     enum_to_string(st),
+                     node);
 
     CHECK_EQ(status(), partition_status::PS_PRIMARY);
     CHECK_NE(node, _stub->_primary_address);
