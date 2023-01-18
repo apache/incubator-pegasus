@@ -71,10 +71,8 @@ void replica::on_config_proposal(configuration_update_request &proposal)
         "process config proposal {} for {}", enum_to_string(proposal.type), proposal.node);
 
     if (proposal.config.ballot < get_ballot()) {
-        LOG_WARNING("%s: on_config_proposal out-dated, %" PRId64 " vs %" PRId64,
-                    name(),
-                    proposal.config.ballot,
-                    get_ballot());
+        LOG_WARNING_PREFIX(
+            "on_config_proposal out-dated, {} vs {}", proposal.config.ballot, get_ballot());
         return;
     }
 
@@ -119,18 +117,16 @@ void replica::assign_primary(configuration_update_request &proposal)
     CHECK_EQ(proposal.node, _stub->_primary_address);
 
     if (status() == partition_status::PS_PRIMARY) {
-        LOG_WARNING("%s: invalid assgin primary proposal as the node is in %s",
-                    name(),
-                    enum_to_string(status()));
+        LOG_WARNING_PREFIX("invalid assgin primary proposal as the node is in {}",
+                           enum_to_string(status()));
         return;
     }
 
     if (proposal.type == config_type::CT_UPGRADE_TO_PRIMARY &&
         (status() != partition_status::PS_SECONDARY || _secondary_states.checkpoint_is_running) &&
         status() != partition_status::PS_PARTITION_SPLIT) {
-        LOG_WARNING(
-            "%s: invalid upgrade to primary proposal as the node is in %s or during checkpointing",
-            name(),
+        LOG_WARNING_PREFIX(
+            "invalid upgrade to primary proposal as the node is in {} or during checkpointing",
             enum_to_string(status()));
 
         // TODO: tell meta server so new primary is built more quickly
@@ -147,9 +143,8 @@ void replica::assign_primary(configuration_update_request &proposal)
 void replica::add_potential_secondary(configuration_update_request &proposal)
 {
     if (status() != partition_status::PS_PRIMARY) {
-        LOG_WARNING("%s: ignore add secondary proposal for invalid state, state = %s",
-                    name(),
-                    enum_to_string(status()));
+        LOG_WARNING_PREFIX("ignore add secondary proposal for invalid state, state = {}",
+                           enum_to_string(status()));
         return;
     }
 
@@ -312,10 +307,10 @@ void replica::on_remove(const replica_configuration &request)
     // - here we ignore the lately arrived remove request, which is proper
     //
     if (request.ballot == get_ballot() && partition_status::PS_POTENTIAL_SECONDARY == status()) {
-        LOG_WARNING("this implies that a config proposal request (e.g. add secondary) "
-                    "with the same ballot arrived before this remove request, "
-                    "current status is %s",
-                    enum_to_string(status()));
+        LOG_WARNING_F("this implies that a config proposal request (e.g. add secondary) "
+                      "with the same ballot arrived before this remove request, "
+                      "current status is {}",
+                      enum_to_string(status()));
         return;
     }
 
@@ -648,38 +643,35 @@ bool replica::update_local_configuration(const replica_configuration &config,
     // must be handled immmediately
     switch (old_status) {
     case partition_status::PS_ERROR: {
-        LOG_WARNING("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64 " is not allowed",
-                    name(),
-                    enum_to_string(old_status),
-                    old_ballot,
-                    enum_to_string(config.status),
-                    config.ballot);
+        LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed",
+                           enum_to_string(old_status),
+                           old_ballot,
+                           enum_to_string(config.status),
+                           config.ballot);
         return false;
     } break;
     case partition_status::PS_INACTIVE:
         if ((config.status == partition_status::PS_PRIMARY ||
              config.status == partition_status::PS_SECONDARY) &&
             !_inactive_is_transient) {
-            LOG_WARNING("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64
-                        " is not allowed when inactive state is not transient",
-                        name(),
-                        enum_to_string(old_status),
-                        old_ballot,
-                        enum_to_string(config.status),
-                        config.ballot);
+            LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed when "
+                               "inactive state is not transient",
+                               enum_to_string(old_status),
+                               old_ballot,
+                               enum_to_string(config.status),
+                               config.ballot);
             return false;
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY:
         if (config.status == partition_status::PS_INACTIVE) {
             if (!_potential_secondary_states.cleanup(false)) {
-                LOG_WARNING("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64
-                            " is not allowed coz learning remote state is still running",
-                            name(),
-                            enum_to_string(old_status),
-                            old_ballot,
-                            enum_to_string(config.status),
-                            config.ballot);
+                LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed coz "
+                                   "learning remote state is still running",
+                                   enum_to_string(old_status),
+                                   old_ballot,
+                                   enum_to_string(config.status),
+                                   config.ballot);
                 return false;
             }
         }
@@ -699,14 +691,13 @@ bool replica::update_local_configuration(const replica_configuration &config,
                 else
                     native_handle = nullptr;
 
-                LOG_WARNING("%s: status change from %s @ %" PRId64 " to %s @ %" PRId64
-                            " is not allowed coz checkpointing %p is still running",
-                            name(),
-                            enum_to_string(old_status),
-                            old_ballot,
-                            enum_to_string(config.status),
-                            config.ballot,
-                            native_handle);
+                LOG_WARNING_PREFIX("status change from {} @ {} to {} @ {} is not allowed coz "
+                                   "checkpointing {} is still running",
+                                   enum_to_string(old_status),
+                                   old_ballot,
+                                   enum_to_string(config.status),
+                                   config.ballot,
+                                   fmt::ptr(native_handle));
                 return false;
             }
         }
@@ -735,11 +726,8 @@ bool replica::update_local_configuration(const replica_configuration &config,
             LOG_INFO_PREFIX(
                 "update ballot to init file from {} to {} OK", old_ballot, _config.ballot);
         } else {
-            LOG_WARNING("%s: update ballot to init file from %" PRId64 " to %" PRId64 " %s",
-                        name(),
-                        old_ballot,
-                        _config.ballot,
-                        result.to_string());
+            LOG_WARNING_PREFIX(
+                "update ballot to init file from {} to {} {}", old_ballot, _config.ballot, result);
         }
         _split_mgr->parent_cleanup_split_context();
     }

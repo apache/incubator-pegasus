@@ -78,11 +78,9 @@ void replica::broadcast_group_check()
     LOG_INFO_PREFIX("start to broadcast group check");
 
     if (_primary_states.group_check_pending_replies.size() > 0) {
-        LOG_WARNING(
-            "%s: %u group check replies are still pending when doing next round check, cancel "
-            "first",
-            name(),
-            static_cast<int>(_primary_states.group_check_pending_replies.size()));
+        LOG_WARNING_PREFIX(
+            "{} group check replies are still pending when doing next round check, cancel first",
+            _primary_states.group_check_pending_replies.size());
 
         for (auto it = _primary_states.group_check_pending_replies.begin();
              it != _primary_states.group_check_pending_replies.end();
@@ -160,12 +158,12 @@ void replica::on_group_check(const group_check_request &request,
 
     if (request.config.ballot < get_ballot()) {
         response.err = ERR_VERSION_OUTDATED;
-        LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
         return;
     } else if (request.config.ballot > get_ballot()) {
         if (!update_local_configuration(request.config)) {
             response.err = ERR_INVALID_STATE;
-            LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
+            LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
             return;
         }
     } else if (is_same_ballot_status_change_allowed(status(), request.config.status)) {
@@ -199,7 +197,7 @@ void replica::on_group_check(const group_check_request &request,
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
-        LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
     }
 
     response.last_committed_decree_in_app = _app->last_committed_decree();

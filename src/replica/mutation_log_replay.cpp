@@ -178,7 +178,7 @@ namespace replication {
         } else if (err == ERR_INCOMPLETE_DATA) {
             // If the file is not corrupted, it may also return the value of ERR_INCOMPLETE_DATA.
             // In this case, the correctness is relying on the check of start_offset.
-            LOG_WARNING("delay handling error: %s", err.to_string());
+            LOG_WARNING_F("delay handling error: {}", err);
         } else {
             // for other errors, we should break
             break;

@@ -46,7 +46,7 @@ log_file::~log_file() { close(); }
     // log.index.start_offset
     if (name.length() < strlen("log.") || name.substr(0, strlen("log.")) != std::string("log.")) {
         err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path %s", path);
+        LOG_WARNING_F("invalid log path {}", path);
         return nullptr;
     }
 
@@ -55,7 +55,7 @@ log_file::~log_file() { close(); }
     auto pos2 = name.find_first_of('.', pos + 1);
     if (pos2 == std::string::npos) {
         err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path %s", path);
+        LOG_WARNING_F("invalid log path {}", path);
         return nullptr;
     }
 
@@ -64,7 +64,7 @@ log_file::~log_file() { close(); }
     std::string start_offset_str = name.substr(pos2 + 1);
     if (index_str.empty() || start_offset_str.empty()) {
         err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path %s", path);
+        LOG_WARNING_F("invalid log path {}", path);
         return nullptr;
     }
 
@@ -72,20 +72,20 @@ log_file::~log_file() { close(); }
     int index = static_cast<int>(strtol(index_str.c_str(), &p, 10));
     if (*p != 0) {
         err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path %s", path);
+        LOG_WARNING_F("invalid log path {}", path);
         return nullptr;
     }
     int64_t start_offset = static_cast<int64_t>(strtoll(start_offset_str.c_str(), &p, 10));
     if (*p != 0) {
         err = ERR_INVALID_PARAMETERS;
-        LOG_WARNING("invalid log path %s", path);
+        LOG_WARNING_F("invalid log path {}", path);
         return nullptr;
     }
 
     disk_file *hfile = file::open(path, O_RDONLY | O_BINARY, 0);
     if (!hfile) {
         err = ERR_FILE_OPERATION_FAILED;
-        LOG_WARNING("open log file %s failed", path);
+        LOG_WARNING_F("open log file {} failed", path);
         return nullptr;
     }
 
@@ -135,13 +135,13 @@ log_file::~log_file() { close(); }
     sprintf(path, "%s/log.%d.%" PRId64, dir, index, start_offset);
 
     if (dsn::utils::filesystem::path_exists(std::string(path))) {
-        LOG_WARNING("log file %s already exist", path);
+        LOG_WARNING_F("log file {} already exist", path);
         return nullptr;
     }
 
     disk_file *hfile = file::open(path, O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!hfile) {
-        LOG_WARNING("create log %s failed", path);
+        LOG_WARNING_F("create log {} failed", path);
         return nullptr;
     }
 

@@ -632,9 +632,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
                   "init_replica: failed to move directory '{}' to '{}'",
                   dir,
                   rename_dir);
-            LOG_WARNING("init_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
-                        dir,
-                        rename_dir);
+            LOG_WARNING_F("init_replica: replica_dir_op succeed to move directory '{}' to '{}'",
+                          dir,
+                          rename_dir);
             _counter_replicas_recent_replica_move_error_count->increment();
         }
         rps.clear();
@@ -939,11 +939,11 @@ void replica_stub::on_client_read(gpid id, dsn::message_ex *request)
 void replica_stub::on_config_proposal(const configuration_update_request &proposal)
 {
     if (!is_connected()) {
-        LOG_WARNING("%s@%s: received config proposal %s for %s: not connected, ignore",
-                    proposal.config.pid.to_string(),
-                    _primary_address_str,
-                    enum_to_string(proposal.type),
-                    proposal.node.to_string());
+        LOG_WARNING_F("{}@{}: received config proposal {} for {}: not connected, ignore",
+                      proposal.config.pid,
+                      _primary_address_str,
+                      enum_to_string(proposal.type),
+                      proposal.node);
         return;
     }
 
@@ -1196,9 +1196,9 @@ void replica_stub::on_group_check(group_check_rpc rpc)
     const group_check_request &request = rpc.request();
     group_check_response &response = rpc.response();
     if (!is_connected()) {
-        LOG_WARNING("%s@%s: received group check: not connected, ignore",
-                    request.config.pid.to_string(),
-                    _primary_address_str);
+        LOG_WARNING_F("{}@{}: received group check: not connected, ignore",
+                      request.config.pid,
+                      _primary_address_str);
         return;
     }
 
@@ -1260,10 +1260,10 @@ void replica_stub::on_learn_completion_notification(learn_completion_notificatio
 void replica_stub::on_add_learner(const group_check_request &request)
 {
     if (!is_connected()) {
-        LOG_WARNING("%s@%s: received add learner: not connected, ignore",
-                    request.config.pid.to_string(),
-                    _primary_address_str,
-                    request.config.primary.to_string());
+        LOG_WARNING_F("{}@{}: received add learner, primary = {}, not connected, ignore",
+                      request.config.pid,
+                      _primary_address_str,
+                      request.config.primary);
         return;
     }
 
@@ -1306,7 +1306,7 @@ void replica_stub::get_replica_info(replica_info &info, replica_ptr r)
 
     dsn::error_code err = _fs_manager.get_disk_tag(r->dir(), info.disk_tag);
     if (dsn::ERR_OK != err) {
-        LOG_WARNING("get disk tag of %s failed: %s", r->dir().c_str(), err.to_string());
+        LOG_WARNING_F("get disk tag of {} failed: {}", r->dir(), err);
     }
 
     info.__set_manual_compact_status(r->get_manual_compact_status());
@@ -1677,9 +1677,8 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
 
     replica_path = get_replica_dir(closed_info.first.app_type.c_str(), id, false);
     if (replica_path.empty()) {
-        LOG_WARNING("gc closed replica(%s.%s) failed, no exist data",
-                    id.to_string(),
-                    closed_info.first.app_type.c_str());
+        LOG_WARNING_F(
+            "gc closed replica({}.{}) failed, no exist data", id, closed_info.first.app_type);
         return;
     }
 
@@ -1687,17 +1686,17 @@ void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
     char rename_path[1024];
     sprintf(rename_path, "%s.%" PRIu64 ".gar", replica_path.c_str(), dsn_now_us());
     if (!dsn::utils::filesystem::rename_path(replica_path, rename_path)) {
-        LOG_WARNING(
-            "gc_replica: failed to move directory '%s' to '%s'", replica_path.c_str(), rename_path);
+        LOG_WARNING_F(
+            "gc_replica: failed to move directory '{}' to '{}'", replica_path, rename_path);
 
         // if gc the replica failed, add it back
         zauto_write_lock l(_replicas_lock);
         _fs_manager.add_replica(id, replica_path);
         _closed_replicas.emplace(id, closed_info);
     } else {
-        LOG_WARNING("gc_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
-                    replica_path.c_str(),
-                    rename_path);
+        LOG_WARNING_F("gc_replica: replica_dir_op succeed to move directory '{}' to '{}'",
+                      replica_path,
+                      rename_path);
         _counter_replicas_recent_replica_move_garbage_count->increment();
     }
 }

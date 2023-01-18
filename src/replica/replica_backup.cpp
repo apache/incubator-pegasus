@@ -198,8 +198,8 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             _backup_mgr->background_clear_backup_checkpoint(policy_name);
             response.err = ERR_OK;
         } else {
-            LOG_WARNING(
-                "%s: unhandled case, handle_status = %s, real_time_status = %s, response ERR_BUSY",
+            LOG_WARNING_F(
+                "{}: unhandled case, handle_status = {}, real_time_status = {}, response ERR_BUSY",
                 backup_context->name,
                 cold_backup_status_to_string(backup_status),
                 cold_backup_status_to_string(backup_context->status()));
@@ -297,8 +297,8 @@ static int is_related_or_valid_checkpoint(const std::string &chkpt_dirname,
         }
     } else {
         // unknown dir, ignore it
-        LOG_WARNING(
-            "%s: found a invalid checkpoint dir(%s)", backup_context->name, chkpt_dirname.c_str());
+        LOG_WARNING_F(
+            "{}: found a invalid checkpoint dir({})", backup_context->name, chkpt_dirname);
     }
     return 0;
 }
@@ -480,9 +480,9 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
                    backup_context->name,
                    full_path);
         if (!utils::filesystem::remove_path(full_path)) {
-            LOG_WARNING("%s: remove obsolete backup checkpoint dir(%s) failed",
-                        backup_context->name,
-                        full_path.c_str());
+            LOG_WARNING_F("{}: remove obsolete backup checkpoint dir({}) failed",
+                          backup_context->name,
+                          full_path);
         }
     }
 }

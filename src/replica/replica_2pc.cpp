@@ -291,11 +291,11 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             int delay_ms = _options->log_shared_pending_size_throttling_delay_ms;
             for (dsn::message_ex *r : mu->client_requests) {
                 if (r && r->io_session->delay_recv(delay_ms)) {
-                    LOG_WARNING("too large pending shared log (%" PRId64 "), "
-                                "delay traffic from %s for %d milliseconds",
-                                pending_size,
-                                r->header->from_address.to_string(),
-                                delay_ms);
+                    LOG_WARNING_F("too large pending shared log ({}), delay traffic from {} for {} "
+                                  "milliseconds",
+                                  pending_size,
+                                  r->header->from_address,
+                                  delay_ms);
                 }
             }
         }
@@ -645,9 +645,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
             }
             break;
         default:
-            LOG_WARNING("%s: mutation %s prepare ack skipped coz the node is now inactive",
-                        name(),
-                        mu->name());
+            LOG_WARNING_PREFIX("mutation {} prepare ack skipped coz the node is now inactive",
+                               mu->name());
             break;
         }
     }
