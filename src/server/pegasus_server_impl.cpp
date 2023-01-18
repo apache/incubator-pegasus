@@ -1129,14 +1129,13 @@ void pegasus_server_impl::on_get_scanner(get_scanner_rpc rpc)
     if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
         // empty key range
         if (_verbose_log) {
-            LOG_WARNING_F("{}: empty key range for get_scanner from {}: start_key = \"{}\" ({}), "
-                          "stop_key = \"{}\" ({})",
-                          replica_name(),
-                          rpc.remote_address(),
-                          ::pegasus::utils::c_escape_string(request.start_key),
-                          request.start_inclusive ? "inclusive" : "exclusive",
-                          ::pegasus::utils::c_escape_string(request.stop_key),
-                          request.stop_inclusive ? "inclusive" : "exclusive");
+            LOG_WARNING_PREFIX("empty key range for get_scanner from {}: start_key = \"{}\" ({}), "
+                               "stop_key = \"{}\" ({})",
+                               rpc.remote_address(),
+                               ::pegasus::utils::c_escape_string(request.start_key),
+                               request.start_inclusive ? "inclusive" : "exclusive",
+                               ::pegasus::utils::c_escape_string(request.stop_key),
+                               request.stop_inclusive ? "inclusive" : "exclusive");
         }
         resp.error = rocksdb::Status::kOk;
         _cu_calculator->add_scan_cu(req, resp.error, resp.kvs);
