@@ -44,7 +44,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     // filename --> file_path such as: file --> ***/***/file
     std::map<std::string, std::string> name_to_filepath;
     if (!::dsn::utils::filesystem::get_subfiles(chkpt_dir, sub_files, false)) {
-        LOG_ERROR_PREFIX("get subfile of dir(%s) failed", chkpt_dir);
+        LOG_ERROR_PREFIX("get subfile of dir({}) failed", chkpt_dir);
         return false;
     }
 

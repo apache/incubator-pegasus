@@ -518,8 +518,7 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
     if (err == ERR_OK) {
         mu->set_logged();
     } else {
-        LOG_ERROR_PREFIX(
-            "append shared log failed for mutation {}, err = {}", mu->name(), err.to_string());
+        LOG_ERROR_PREFIX("append shared log failed for mutation {}, err = {}", mu->name(), err);
     }
 
     // skip old mutations

@@ -204,7 +204,7 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
         } else {
             LOG_ERROR_F("read data block header failed, size = {} vs {}, err = {}",
                         bb.length(),
-                        (int)sizeof(log_block_header),
+                        sizeof(log_block_header),
                         err);
         }
 
@@ -219,10 +219,8 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
 
     err = _stream->read_next(hdr.length, bb);
     if (err != ERR_OK || hdr.length != bb.length()) {
-        LOG_ERROR_F("read data block body failed, size = {} vs {}, err = {}",
-                    bb.length(),
-                    (int)hdr.length,
-                    err);
+        LOG_ERROR_F(
+            "read data block body failed, size = {} vs {}, err = {}", bb.length(), hdr.length, err);
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF) {
             // because already read log_block_header above, so here must be imcomplete data
