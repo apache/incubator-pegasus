@@ -536,7 +536,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
         LOG_WARNING_F(
             "recv message with rpc name {} from {} when rpc engine is not serving, trace_id = {}",
             msg->header->rpc_name,
-            msg->header->from_address,
+            msg->header->from_address.to_string(),
             msg->header->trace_id);
 
         CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
@@ -584,7 +584,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
         } else {
             LOG_WARNING_F("recv message with unhandled rpc name {} from {}, trace_id = {:#018x}",
                           msg->header->rpc_name,
-                          msg->header->from_address,
+                          msg->header->from_address.to_string(),
                           msg->header->trace_id);
 
             CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
@@ -595,7 +595,7 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
     } else {
         LOG_WARNING_F("recv message with unknown rpc name {} from {}, trace_id = {:#018x}",
                       msg->header->rpc_name,
-                      msg->header->from_address,
+                      msg->header->from_address.to_string(),
                       msg->header->trace_id);
 
         CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
