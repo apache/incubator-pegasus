@@ -138,9 +138,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
 
     std::vector<dropped_replica> &drop_list = cc.dropped;
     if (drop_list.empty()) {
-        LOG_WARNING("construct for (%d.%d) failed, coz no replicas collected",
-                    pid.get_app_id(),
-                    pid.get_partition_index());
+        LOG_WARNING_F("construct for ({}) failed, coz no replicas collected", pid);
         return false;
     }
 
@@ -256,10 +254,9 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
                 current_learner.last_prepared_decree > info.last_prepared_decree) {
 
                 // TODO: need to add a perf counter here
-                LOG_WARNING("%d.%d: learner(%s)'s progress step back, please trace this carefully",
-                            info.pid.get_app_id(),
-                            info.pid.get_partition_index(),
-                            node.to_string());
+                LOG_WARNING_F("{}: learner({})'s progress step back, please trace this carefully",
+                              info.pid,
+                              node);
             }
 
             // NOTICE: the flag may be abormal currently. it's balancer's duty to make use of the
