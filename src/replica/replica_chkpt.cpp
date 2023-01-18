@@ -281,10 +281,8 @@ error_code replica::background_async_checkpoint(bool is_emergency)
             "call app.async_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = {}, just ignore",
             used_time);
     } else {
-        LOG_ERROR("%s: call app.async_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-                  name(),
-                  used_time,
-                  err.to_string());
+        LOG_ERROR_PREFIX(
+            "call app.async_checkpoint() failed, time_used_ns = {}, err = {}", used_time, err);
     }
     return err;
 }
@@ -316,10 +314,8 @@ error_code replica::background_sync_checkpoint()
             "call app.sync_checkpoint() returns ERR_WRONG_TIMING, time_used_ns = {}, just ignore",
             used_time);
     } else {
-        LOG_ERROR("%s: call app.sync_checkpoint() failed, time_used_ns = %" PRIu64 ", err = %s",
-                  name(),
-                  used_time,
-                  err.to_string());
+        LOG_ERROR_PREFIX(
+            "call app.sync_checkpoint() failed, time_used_ns = {}, err = {}", used_time, err);
     }
     return err;
 }

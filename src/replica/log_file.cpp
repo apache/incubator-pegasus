@@ -96,10 +96,10 @@ log_file::~log_file() { close(); }
     if (err == ERR_INVALID_DATA || err == ERR_INCOMPLETE_DATA || err == ERR_HANDLE_EOF ||
         err == ERR_FILE_OPERATION_FAILED) {
         std::string removed = std::string(path) + ".removed";
-        LOG_ERROR("read first log entry of file %s failed, err = %s. Rename the file to %s",
-                  path,
-                  err.to_string(),
-                  removed.c_str());
+        LOG_ERROR_F("read first log entry of file {} failed, err = {}. Rename the file to {}",
+                    path,
+                    err,
+                    removed);
         delete lf;
         lf = nullptr;
 
@@ -113,8 +113,7 @@ log_file::~log_file() { close(); }
     lf->read_file_header(reader);
     if (!lf->is_right_header()) {
         std::string removed = std::string(path) + ".removed";
-        LOG_ERROR(
-            "invalid log file header of file %s. Rename the file to %s", path, removed.c_str());
+        LOG_ERROR_F("invalid log file header of file {}. Rename the file to {}", path, removed);
         delete lf;
         lf = nullptr;
 
@@ -203,10 +202,10 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
             // if read_count is 0, then we meet the end of file
             err = (bb.length() == 0 ? ERR_HANDLE_EOF : ERR_INCOMPLETE_DATA);
         } else {
-            LOG_ERROR("read data block header failed, size = %d vs %d, err = %s",
-                      bb.length(),
-                      (int)sizeof(log_block_header),
-                      err.to_string());
+            LOG_ERROR_F("read data block header failed, size = {} vs {}, err = {}",
+                        bb.length(),
+                        (int)sizeof(log_block_header),
+                        err);
         }
 
         return err;
@@ -214,16 +213,16 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
     log_block_header hdr = *reinterpret_cast<const log_block_header *>(bb.data());
 
     if (hdr.magic != 0xdeadbeef) {
-        LOG_ERROR("invalid data header magic: 0x%x", hdr.magic);
+        LOG_ERROR_F("invalid data header magic: {:#x}", static_cast<uint32_t>(hdr.magic));
         return ERR_INVALID_DATA;
     }
 
     err = _stream->read_next(hdr.length, bb);
     if (err != ERR_OK || hdr.length != bb.length()) {
-        LOG_ERROR("read data block body failed, size = %d vs %d, err = %s",
-                  bb.length(),
-                  (int)hdr.length,
-                  err.to_string());
+        LOG_ERROR_F("read data block body failed, size = {} vs {}, err = {}",
+                    bb.length(),
+                    (int)hdr.length,
+                    err);
 
         if (err == ERR_OK || err == ERR_HANDLE_EOF) {
             // because already read log_block_header above, so here must be imcomplete data
@@ -236,7 +235,7 @@ error_code log_file::read_next_log_block(/*out*/ ::dsn::blob &bb)
     auto crc = dsn::utils::crc32_calc(
         static_cast<const void *>(bb.data()), static_cast<size_t>(hdr.length), _crc32);
     if (crc != hdr.body_crc) {
-        LOG_ERROR("crc checking failed");
+        LOG_ERROR_F("crc checking failed");
         return ERR_INVALID_DATA;
     }
     _crc32 = crc;

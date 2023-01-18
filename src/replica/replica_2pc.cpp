@@ -391,7 +391,7 @@ void replica::on_prepare(dsn::message_ex *request)
     CHECK_EQ(mu->data.header.ballot, rconfig.ballot);
 
     if (mu->data.header.ballot < get_ballot()) {
-        LOG_ERROR("%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
+        LOG_ERROR_PREFIX("mutation {} on_prepare skipped due to old view", mu->name());
         // no need response because the rpc should have been cancelled on primary in this case
         return;
     }
@@ -399,10 +399,8 @@ void replica::on_prepare(dsn::message_ex *request)
     // update configuration when necessary
     else if (rconfig.ballot > get_ballot()) {
         if (!update_local_configuration(rconfig)) {
-            LOG_ERROR(
-                "%s: mutation %s on_prepare failed as update local configuration failed, state "
-                "= %s",
-                name(),
+            LOG_ERROR_PREFIX(
+                "mutation {} on_prepare failed as update local configuration failed, state = {}",
                 mu->name(),
                 enum_to_string(status()));
             ack_prepare_message(ERR_INVALID_STATE, mu);
@@ -411,10 +409,9 @@ void replica::on_prepare(dsn::message_ex *request)
     }
 
     if (partition_status::PS_INACTIVE == status() || partition_status::PS_ERROR == status()) {
-        LOG_ERROR("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()));
+        LOG_ERROR_PREFIX("mutation {} on_prepare failed as invalid replica state, state = {}",
+                         mu->name(),
+                         enum_to_string(status()));
         ack_prepare_message((partition_status::PS_INACTIVE == status() && _inactive_is_transient)
                                 ? ERR_INACTIVE_STATE
                                 : ERR_INVALID_STATE,
@@ -423,14 +420,12 @@ void replica::on_prepare(dsn::message_ex *request)
     } else if (partition_status::PS_POTENTIAL_SECONDARY == status()) {
         // new learning process
         if (rconfig.learner_signature != _potential_secondary_states.learning_version) {
-            LOG_ERROR(
-                "%s: mutation %s on_prepare failed as unmatched learning signature, state = %s"
-                ", old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
-                name(),
-                mu->name(),
-                enum_to_string(status()),
-                _potential_secondary_states.learning_version,
-                rconfig.learner_signature);
+            LOG_ERROR_PREFIX("mutation {} on_prepare failed as unmatched learning signature, state "
+                             "= {}, old_signature[{:#018x}] vs new_signature[{:#018x}]",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _potential_secondary_states.learning_version,
+                             rconfig.learner_signature);
             handle_learning_error(ERR_INVALID_STATE, false);
             ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
@@ -444,13 +439,13 @@ void replica::on_prepare(dsn::message_ex *request)
             error_code ack_code =
                 (learning_status == learner_status::LearningWithoutPrepare ? ERR_TRY_AGAIN
                                                                            : ERR_INVALID_STATE);
-            LOG_ERROR("%s: mutation %s on_prepare skipped as invalid learning status, state = %s, "
-                      "learning_status = %s, ack %s",
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      enum_to_string(learning_status),
-                      ack_code.to_string());
+            LOG_ERROR_PREFIX(
+                "mutation {} on_prepare skipped as invalid learning status, state = {}, "
+                "learning_status = {}, ack {}",
+                mu->name(),
+                enum_to_string(status()),
+                enum_to_string(learning_status),
+                ack_code);
             ack_prepare_message(ack_code, mu);
             return;
         }
@@ -487,10 +482,9 @@ void replica::on_prepare(dsn::message_ex *request)
                      last_committed_decree(),
                      _options->max_mutation_count_in_prepare_list);
     } else {
-        LOG_ERROR("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()));
+        LOG_ERROR_PREFIX("mutation {} on_prepare failed as invalid replica state, state = {}",
+                         mu->name(),
+                         enum_to_string(status()));
         ack_prepare_message(ERR_INVALID_STATE, mu);
         return;
     }
@@ -524,10 +518,8 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
     if (err == ERR_OK) {
         mu->set_logged();
     } else {
-        LOG_ERROR("%s: append shared log failed for mutation %s, err = %s",
-                  name(),
-                  mu->name(),
-                  err.to_string());
+        LOG_ERROR_PREFIX(
+            "append shared log failed for mutation {}, err = {}", mu->name(), err.to_string());
     }
 
     // skip old mutations
@@ -614,14 +606,13 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                          enum_to_string(target_status),
                          resp.err);
     } else {
-        LOG_ERROR("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
-                  "target_status = %s, err = %s",
-                  name(),
-                  mu->name(),
-                  node.to_string(),
-                  mu->appro_data_bytes(),
-                  enum_to_string(target_status),
-                  resp.err.to_string());
+        LOG_ERROR_PREFIX("mutation {} on_prepare_reply from {}, appro_data_bytes = {}, "
+                         "target_status = {}, err = {}",
+                         mu->name(),
+                         node,
+                         mu->appro_data_bytes(),
+                         enum_to_string(target_status),
+                         resp.err);
     }
 
     if (resp.err == ERR_OK) {
@@ -660,14 +651,13 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
                                           : _options->prepare_timeout_ms_for_potential_secondaries);
             int delay_time_ms = 5; // delay some time before retry to avoid sending too frequently
             if (mu->is_prepare_close_to_timeout(delay_time_ms + 2, prepare_timeout_ms)) {
-                LOG_ERROR("%s: mutation %s do not retry prepare to %s for no enought time left, "
-                          "prepare_ts_ms = %" PRIu64 ", prepare_timeout_ms = %d, now_ms = %" PRIu64,
-                          name(),
-                          mu->name(),
-                          node.to_string(),
-                          mu->prepare_ts_ms(),
-                          prepare_timeout_ms,
-                          dsn_now_ms());
+                LOG_ERROR_PREFIX(
+                    "mutation {} do not retry prepare to {} for no enought time left, prepare_ts_ms = {}, prepare_timeout_ms = {}, now_ms = {},
+                    mu->name(),
+                    node,
+                    mu->prepare_ts_ms(),
+                    prepare_timeout_ms,
+                    dsn_now_ms());
             } else {
                 LOG_INFO_PREFIX(
                     "mutation {} retry prepare to {} after {} ms", mu->name(), node, delay_time_ms);

@@ -209,10 +209,10 @@ void cold_backup_context::check_backup_on_remote()
                     read_current_chkpt_file(file_handle);
                 }
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR(
-                    "%s: block service create file timeout, retry after 10 seconds, file = %s",
+                LOG_ERROR_F(
+                    "{}: block service create file timeout, retry after 10 seconds, file = {}",
                     name,
-                    current_chkpt_file.c_str());
+                    current_chkpt_file);
 
                 // before retry, should add_ref(), and must release_ref() after retry
                 add_ref();
@@ -236,10 +236,10 @@ void cold_backup_context::check_backup_on_remote()
                                  0,
                                  std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: block service create file failed, file = %s, err = %s",
-                          name,
-                          current_chkpt_file.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: block service create file failed, file = {}, err = {}",
+                            name,
+                            current_chkpt_file,
+                            resp.err);
                 fail_check("block service create file failed");
             }
             release_ref();
@@ -276,9 +276,9 @@ void cold_backup_context::read_current_chkpt_file(
                     remote_chkpt_dir_exist(chkpt_dirname);
                 }
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: read remote file timeout, retry after 10s, file = %s",
-                          name,
-                          file_handle->file_name().c_str());
+                LOG_ERROR_F("{}: read remote file timeout, retry after 10s, file = {}",
+                            name,
+                            file_handle->file_name());
                 add_ref();
 
                 tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
@@ -298,10 +298,10 @@ void cold_backup_context::read_current_chkpt_file(
                                  0,
                                  std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: read remote file failed, file = %s, err = %s",
-                          name,
-                          file_handle->file_name().c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: read remote file failed, file = {}, err = {}",
+                            name,
+                            file_handle->file_name(),
+                            resp.err);
                 fail_check("read remote file failed");
             }
             release_ref();
@@ -356,10 +356,10 @@ void cold_backup_context::remote_chkpt_dir_exist(const std::string &chkpt_dirnam
                     chkpt_dirname);
                 complete_check(false);
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR(
-                    "%s: block service list remote dir timeout, retry after 10s, dirname = %s",
+                LOG_ERROR_F(
+                    "{}: block service list remote dir timeout, retry after 10s, dirname = {}",
                     name,
-                    chkpt_dirname.c_str());
+                    chkpt_dirname);
                 add_ref();
 
                 tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
@@ -379,10 +379,10 @@ void cold_backup_context::remote_chkpt_dir_exist(const std::string &chkpt_dirnam
                                  0,
                                  std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: block service list remote dir failed, dirname = %s, err = %s",
-                          name,
-                          chkpt_dirname.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: block service list remote dir failed, dirname = {}, err = {}",
+                            name,
+                            chkpt_dirname,
+                            resp.err);
                 fail_check("list remote dir failed");
             }
             release_ref();
@@ -438,9 +438,9 @@ void cold_backup_context::upload_checkpoint_to_remote()
                     read_backup_metadata(resp.file_handle);
                 }
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: block service create file timeout, retry after 10s, file = %s",
-                          name,
-                          metadata.c_str());
+                LOG_ERROR_F("{}: block service create file timeout, retry after 10s, file = {}",
+                            name,
+                            metadata);
                 // when create backup_metadata timeout, should reset _have_check_upload_status
                 // false to allow re-check
                 _have_check_upload_status.store(false);
@@ -463,10 +463,10 @@ void cold_backup_context::upload_checkpoint_to_remote()
                     0,
                     std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: block service create file failed, file = %s, err = %s",
-                          name,
-                          metadata.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: block service create file failed, file = {}, err = {}",
+                            name,
+                            metadata,
+                            resp.err);
                 _have_check_upload_status.store(false);
                 fail_upload("block service create file failed");
             }
@@ -495,9 +495,9 @@ void cold_backup_context::read_backup_metadata(
                 verify_backup_metadata(resp.buffer);
                 on_upload_chkpt_dir();
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: read remote file timeout, retry after 10s, file = %s",
-                          name,
-                          file_handle->file_name().c_str());
+                LOG_ERROR_F("{}: read remote file timeout, retry after 10s, file = {}",
+                            name,
+                            file_handle->file_name());
                 add_ref();
 
                 tasking::enqueue(
@@ -518,10 +518,10 @@ void cold_backup_context::read_backup_metadata(
                     0,
                     std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: read remote file failed, file = %s, err = %s",
-                          name,
-                          file_handle->file_name().c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: read remote file failed, file = {}, err = {}",
+                            name,
+                            file_handle->file_name(),
+                            resp.err);
                 _have_check_upload_status.store(false);
                 fail_upload("read remote file failed");
             }
@@ -566,9 +566,9 @@ void cold_backup_context::on_upload_chkpt_dir()
 
     // prepare_upload maybe fail, so here check status
     if (!is_ready_for_upload()) {
-        LOG_ERROR("%s: backup status has changed to %s, stop upload checkpoint dir",
-                  name,
-                  cold_backup_status_to_string(status()));
+        LOG_ERROR_F("{}: backup status has changed to {}, stop upload checkpoint dir",
+                    name,
+                    cold_backup_status_to_string(status()));
         return;
     }
 
@@ -626,8 +626,7 @@ void cold_backup_context::prepare_upload()
         int64_t file_size = checkpoint_file_sizes[idx];
         std::string file_md5;
         if (::dsn::utils::filesystem::md5sum(file_full_path, file_md5) != ERR_OK) {
-            LOG_ERROR(
-                "%s: get local file size or md5 fail, file = %s", name, file_full_path.c_str());
+            LOG_ERROR_F("{}: get local file size or md5 fail, file = {}", name, file_full_path);
             fail_upload("compute local file size or md5 failed");
             return;
         }
@@ -674,9 +673,9 @@ void cold_backup_context::upload_file(const std::string &local_filename)
                     on_upload(file_handle, full_path_local_file);
                 }
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: block service create file timeout, retry after 10s, file = %s",
-                          name,
-                          local_filename.c_str());
+                LOG_ERROR_F("{}: block service create file timeout, retry after 10s, file = {}",
+                            name,
+                            local_filename);
                 add_ref();
 
                 tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
@@ -709,10 +708,10 @@ void cold_backup_context::upload_file(const std::string &local_filename)
                                  0,
                                  std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: block service create file failed, file = %s, err = %s",
-                          name,
-                          local_filename.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: block service create file failed, file = {}, err = {}",
+                            name,
+                            local_filename,
+                            resp.err);
                 fail_upload("create file failed");
             }
             if (resp.err != ERR_OK && _owner_replica != nullptr) {
@@ -746,9 +745,9 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
                     "{}: upload checkpoint file complete, file = {}", name, full_path_local_file);
                 on_upload_file_complete(local_filename);
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: upload checkpoint file timeout, retry after 10s, file = %s",
-                          name,
-                          full_path_local_file.c_str());
+                LOG_ERROR_F("{}: upload checkpoint file timeout, retry after 10s, file = {}",
+                            name,
+                            full_path_local_file);
                 add_ref();
 
                 tasking::enqueue(
@@ -756,11 +755,11 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
                     nullptr,
                     [this, file_handle, full_path_local_file]() {
                         if (!is_ready_for_upload()) {
-                            LOG_ERROR("%s: backup status has changed to %s, stop upload "
-                                      "checkpoint file to remote, file = %s",
-                                      name,
-                                      cold_backup_status_to_string(status()),
-                                      full_path_local_file.c_str());
+                            LOG_ERROR_F("{}: backup status has changed to {}, stop upload "
+                                        "checkpoint file to remote, file = {}",
+                                        name,
+                                        cold_backup_status_to_string(status()),
+                                        full_path_local_file);
                             std::string local_filename =
                                 ::dsn::utils::filesystem::get_file_name(full_path_local_file);
                             file_upload_uncomplete(local_filename);
@@ -772,10 +771,10 @@ void cold_backup_context::on_upload(const dist::block_service::block_file_ptr &f
                     0,
                     std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: upload checkpoint file to remote failed, file = %s, err = %s",
-                          name,
-                          full_path_local_file.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: upload checkpoint file to remote failed, file = {}, err = {}",
+                            name,
+                            full_path_local_file,
+                            resp.err);
                 fail_upload("upload checkpoint file to remote failed");
             }
             if (resp.err != ERR_OK && _owner_replica != nullptr) {
@@ -827,9 +826,9 @@ void cold_backup_context::write_backup_metadata()
                     release_ref();
                 });
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: block service create file timeout, retry after 10s, file = %s",
-                          name,
-                          metadata.c_str());
+                LOG_ERROR_F("{}: block service create file timeout, retry after 10s, file = {}",
+                            name,
+                            metadata);
                 add_ref();
 
                 tasking::enqueue(
@@ -838,8 +837,8 @@ void cold_backup_context::write_backup_metadata()
                     [this]() {
                         if (!is_ready_for_upload()) {
                             _have_write_backup_metadata.store(false);
-                            LOG_ERROR(
-                                "%s: backup status has changed to %s, stop write backup_metadata",
+                            LOG_ERROR_F(
+                                "{}: backup status has changed to {}, stop write backup_metadata",
                                 name,
                                 cold_backup_status_to_string(status()));
                         } else {
@@ -850,10 +849,10 @@ void cold_backup_context::write_backup_metadata()
                     0,
                     std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: block service create file failed, file = %s, err = %s",
-                          name,
-                          metadata.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: block service create file failed, file = {}, err = {}",
+                            name,
+                            metadata,
+                            resp.err);
                 _have_write_backup_metadata.store(false);
                 fail_upload("create file failed");
             }
@@ -908,9 +907,9 @@ void cold_backup_context::write_current_chkpt_file(const std::string &value)
                     release_ref();
                 });
             } else if (resp.err == ERR_TIMEOUT) {
-                LOG_ERROR("%s: block file create file timeout, retry after 10s, file = %s",
-                          name,
-                          current_chkpt_file.c_str());
+                LOG_ERROR_F("{}: block file create file timeout, retry after 10s, file = {}",
+                            name,
+                            current_chkpt_file);
                 add_ref();
 
                 tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP,
@@ -931,10 +930,10 @@ void cold_backup_context::write_current_chkpt_file(const std::string &value)
                                  0,
                                  std::chrono::seconds(10));
             } else {
-                LOG_ERROR("%s: block service create file failed, file = %s, err = %s",
-                          name,
-                          current_chkpt_file.c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: block service create file failed, file = {}, err = {}",
+                            name,
+                            current_chkpt_file,
+                            resp.err);
                 fail_upload("create file failed");
             }
             release_ref();
@@ -986,10 +985,10 @@ void cold_backup_context::on_write(const dist::block_service::block_file_ptr &fi
             } else {
                 // here, must call the callback to release_ref
                 callback(false);
-                LOG_ERROR("%s: write remote file failed, file = %s, err = %s",
-                          name,
-                          file_handle->file_name().c_str(),
-                          resp.err.to_string());
+                LOG_ERROR_F("{}: write remote file failed, file = {}, err = {}",
+                            name,
+                            file_handle->file_name(),
+                            resp.err);
                 fail_upload("write remote file failed");
             }
             release_ref();

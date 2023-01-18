@@ -161,10 +161,9 @@ namespace replication {
         log_file_ptr &log = kv.second;
 
         if (log->start_offset() != end_offset) {
-            LOG_ERROR("offset mismatch in log file offset and global offset %" PRId64
-                      " vs %" PRId64,
-                      log->start_offset(),
-                      end_offset);
+            LOG_ERROR_F("offset mismatch in log file offset and global offset {} vs {}",
+                        log->start_offset(),
+                        end_offset);
             return ERR_INVALID_DATA;
         }
 
@@ -194,7 +193,7 @@ namespace replication {
         err = ERR_OK;
     } else {
         // bad error
-        LOG_ERROR("replay mutation log failed: %s", err.to_string());
+        LOG_ERROR_F("replay mutation log failed: {}", err);
     }
 
     return err;

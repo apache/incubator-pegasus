@@ -44,7 +44,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
     // filename --> file_path such as: file --> ***/***/file
     std::map<std::string, std::string> name_to_filepath;
     if (!::dsn::utils::filesystem::get_subfiles(chkpt_dir, sub_files, false)) {
-        LOG_ERROR("%s: get subfile of dir(%s) failed", name(), chkpt_dir.c_str());
+        LOG_ERROR_PREFIX("get subfile of dir(%s) failed", chkpt_dir);
         return false;
     }
 
@@ -63,7 +63,7 @@ bool replica::remove_useless_file_under_chkpt(const std::string &chkpt_dir,
             continue;
         if (::dsn::utils::filesystem::file_exists(pair.second) &&
             !::dsn::utils::filesystem::remove_path(pair.second)) {
-            LOG_ERROR("%s: remove useless file(%s) failed", name(), pair.second.c_str());
+            LOG_ERROR_PREFIX("remove useless file({}) failed", pair.second);
             return false;
         }
         LOG_INFO_PREFIX("remove useless file({}) succeed", pair.second);
@@ -75,21 +75,20 @@ bool replica::read_cold_backup_metadata(const std::string &file,
                                         cold_backup_metadata &backup_metadata)
 {
     if (!::dsn::utils::filesystem::file_exists(file)) {
-        LOG_ERROR("%s: checkpoint on remote storage media is damaged, coz file(%s) doesn't exist",
-                  name(),
-                  file.c_str());
+        LOG_ERROR_PREFIX(
+            "checkpoint on remote storage media is damaged, coz file({}) doesn't exist", file);
         return false;
     }
     int64_t file_sz = 0;
     if (!::dsn::utils::filesystem::file_size(file, file_sz)) {
-        LOG_ERROR("%s: get file(%s) size failed", name(), file.c_str());
+        LOG_ERROR_PREFIX("get file({}) size failed", file);
         return false;
     }
     std::shared_ptr<char> buf = utils::make_shared_array<char>(file_sz + 1);
 
     std::ifstream fin(file, std::ifstream::in);
     if (!fin.is_open()) {
-        LOG_ERROR("%s: open file(%s) failed", name(), file.c_str());
+        LOG_ERROR_PREFIX("open file({}) failed", file);
         return false;
     }
     fin.read(buf.get(), file_sz);
@@ -106,7 +105,7 @@ bool replica::read_cold_backup_metadata(const std::string &file,
     blob bb;
     bb.assign(std::move(buf), 0, file_sz);
     if (!::dsn::json::json_forwarder<cold_backup_metadata>::decode(bb, backup_metadata)) {
-        LOG_ERROR("%s: file(%s) under checkpoint is damaged", name(), file.c_str());
+        LOG_ERROR_PREFIX("file({}) under checkpoint is damaged", file);
         return false;
     }
     return true;
@@ -360,7 +359,7 @@ dsn::error_code replica::restore_checkpoint()
 
     // then create a local restore dir if it doesn't exist
     if (!utils::filesystem::directory_exists(_dir) && !utils::filesystem::create_directory(_dir)) {
-        LOG_ERROR("create dir %s failed", _dir.c_str());
+        LOG_ERROR_F("create dir {} failed", _dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -404,7 +403,7 @@ dsn::error_code replica::skip_restore_partition(const std::string &restore_dir)
         _restore_progress.store(cold_backup_constant::PROGRESS_FINISHED);
         return ERR_OK;
     } else {
-        LOG_ERROR("clear dir %s failed", restore_dir.c_str());
+        LOG_ERROR_F("clear dir {} failed", restore_dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 }

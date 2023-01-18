@@ -63,11 +63,11 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 _stub->_block_service_manager.get_or_create_block_filesystem(
                     request.policy.backup_provider_type);
             if (block_service == nullptr) {
-                LOG_ERROR(
-                    "%s: create cold backup block service failed, provider_type = %s, response "
+                LOG_ERROR_F(
+                    "{}: create cold backup block service failed, provider_type = {}, response "
                     "ERR_INVALID_PARAMETERS",
                     new_context->name,
-                    request.policy.backup_provider_type.c_str());
+                    request.policy.backup_provider_type);
                 response.err = ERR_INVALID_PARAMETERS;
                 return;
             }
@@ -117,10 +117,10 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
         if (backup_context->request.backup_id > backup_id) {
             // backup_id is outdated
-            LOG_ERROR("%s: request outdated cold backup, current_backup_id = %" PRId64
-                      ", response ERR_VERSION_OUTDATED",
-                      new_context->name,
-                      backup_context->request.backup_id);
+            LOG_ERROR_F("{}: request outdated cold backup, current_backup_id = {}, response "
+                        "ERR_VERSION_OUTDATED",
+                        new_context->name,
+                        backup_context->request.backup_id);
             response.err = ERR_VERSION_OUTDATED;
             return;
         }
@@ -183,9 +183,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             });
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupFailed) {
-            LOG_ERROR("%s: upload checkpoint failed, reason = %s, response ERR_LOCAL_APP_FAILURE",
-                      backup_context->name,
-                      backup_context->reason());
+            LOG_ERROR_F("{}: upload checkpoint failed, reason = {}, response ERR_LOCAL_APP_FAILURE",
+                        backup_context->name,
+                        backup_context->reason());
             response.err = ERR_LOCAL_APP_FAILURE;
             backup_context->cancel();
             _cold_backup_contexts.erase(policy_name);
@@ -210,8 +210,8 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         response.checkpoint_total_size = backup_context->get_checkpoint_total_size();
         LOG_INFO_F("{}: backup progress is {}", backup_context->name, response.progress);
     } else {
-        LOG_ERROR(
-            "%s: invalid state for cold backup, partition_status = %s, response ERR_INVALID_STATE",
+        LOG_ERROR_F(
+            "{}: invalid state for cold backup, partition_status = {}, response ERR_INVALID_STATE",
             new_context->name,
             enum_to_string(status()));
         response.err = ERR_INVALID_STATE;
@@ -316,7 +316,7 @@ static bool filter_checkpoint(const std::string &dir,
     // list sub dirs
     std::vector<std::string> sub_dirs;
     if (!utils::filesystem::get_subdirectories(dir, sub_dirs, false)) {
-        LOG_ERROR("%s: list sub dirs of dir %s failed", backup_context->name, dir.c_str());
+        LOG_ERROR_F("{}: list sub dirs of dir {} failed", backup_context->name, dir);
         return false;
     }
 
@@ -344,7 +344,7 @@ statistic_file_infos_under_dir(const std::string &dir,
 {
     std::vector<std::string> sub_files;
     if (!utils::filesystem::get_subfiles(dir, sub_files, false)) {
-        LOG_ERROR("list sub files of dir %s failed", dir.c_str());
+        LOG_ERROR_F("list sub files of dir {} failed", dir);
         return false;
     }
 
@@ -355,7 +355,7 @@ statistic_file_infos_under_dir(const std::string &dir,
         std::pair<std::string, int64_t> file_info;
 
         if (!utils::filesystem::file_size(file, file_info.second)) {
-            LOG_ERROR("get file size of %s failed", file.c_str());
+            LOG_ERROR_F("get file size of {} failed", file);
             return false;
         }
         file_info.first = utils::filesystem::get_file_name(file);
@@ -407,7 +407,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
     auto backup_dir = _app->backup_dir();
     if (!utils::filesystem::directory_exists(backup_dir) &&
         !utils::filesystem::create_directory(backup_dir)) {
-        LOG_ERROR("%s: create backup dir %s failed", backup_context->name, backup_dir.c_str());
+        LOG_ERROR_F("{}: create backup dir {} failed", backup_context->name, backup_dir);
         backup_context->fail_checkpoint("create backup dir failed");
         return;
     }
@@ -659,10 +659,10 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
                                 backup_context->checkpoint_timestamp));
         if (!utils::filesystem::rename_path(backup_checkpoint_tmp_dir_path,
                                             backup_checkpoint_dir_path)) {
-            LOG_ERROR("%s: rename checkpoint dir(%s) to dir(%s) failed",
-                      backup_context->name,
-                      backup_checkpoint_tmp_dir_path.c_str(),
-                      backup_checkpoint_dir_path.c_str());
+            LOG_ERROR_F("{}: rename checkpoint dir({}) to dir({}) failed",
+                        backup_context->name,
+                        backup_checkpoint_tmp_dir_path,
+                        backup_checkpoint_dir_path);
             utils::filesystem::remove_path(backup_checkpoint_tmp_dir_path);
             utils::filesystem::remove_path(backup_checkpoint_dir_path);
             backup_context->fail_checkpoint("rename checkpoint dir failed");
@@ -672,9 +672,9 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
         std::vector<std::pair<std::string, int64_t>> file_infos;
         int64_t total_size = 0;
         if (!statistic_file_infos_under_dir(backup_checkpoint_dir_path, file_infos, total_size)) {
-            LOG_ERROR("%s: statistic file info under dir(%s) failed",
-                      backup_context->name,
-                      backup_checkpoint_dir_path.c_str());
+            LOG_ERROR_F("{}: statistic file info under dir({}) failed",
+                        backup_context->name,
+                        backup_checkpoint_dir_path);
             backup_context->fail_checkpoint("statistic file info under dir failed");
             return;
         }
