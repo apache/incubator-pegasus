@@ -33,6 +33,7 @@
 
 #include "aio/disk_engine.h"
 #include "runtime/task/async_calls.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/filesystem.h"
 #include "utils/string_conv.h"
 
