@@ -433,11 +433,11 @@ bool config_context::check_order()
                         dropped[i].last_committed_decree,
                         dropped[i].last_prepared_decree,
                         i,
-                        dropped[i].node,
-                        dropped[i].time,
-                        dropped[i].ballot,
-                        dropped[i].last_committed_decree,
-                        dropped[i].last_prepared_decree,
+                        dropped[i + 1].node,
+                        dropped[i + 1].time,
+                        dropped[i + 1].ballot,
+                        dropped[i + 1].last_committed_decree,
+                        dropped[i + 1].last_prepared_decree,
                         i + 1);
             return false;
         }

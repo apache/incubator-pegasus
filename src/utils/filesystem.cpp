@@ -746,7 +746,7 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
                 break;
             } else {
                 int err = ferror(fp);
-                LOG_ERROR_F("md5sum error: read file {} failed: errno = %d ({})",
+                LOG_ERROR_F("md5sum error: read file {} failed: errno = {} ({})",
                             file_path,
                             err,
                             safe_strerror(err));

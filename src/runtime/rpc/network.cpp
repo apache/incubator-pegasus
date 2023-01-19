@@ -418,8 +418,7 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
         // - the remote address is not listened, which means the remote port is not occupied
         // - operating system chooses the remote port as client's ephemeral port
         if (is_client() && msg->header->from_address == _net.engine()->primary_address()) {
-            LOG_ERROR_F("self connection detected, address = {}",
-                        msg->header->from_address.to_string());
+            LOG_ERROR_F("self connection detected, address = {}", msg->header->from_address);
             CHECK_EQ_MSG(msg->get_count(), 0, "message should not be referenced by anybody so far");
             delete msg;
             return false;
