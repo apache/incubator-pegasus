@@ -438,12 +438,11 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
         if (c > 0 || (c == 0 && (!start_inclusive || !stop_inclusive))) {
             // empty sort key range
             if (_verbose_log) {
-                LOG_WARNING_F(
-                    "{}: empty sort key range for multi_get from {}: hash_key = \"{}\", "
-                    "start_sort_key = \"{}\" ({}), stop_sort_key = \"{}\" ({}), "
-                    "sort_key_filter_type = {}, sort_key_filter_pattern = \"{}\", final_start = "
-                    "\"{}\" ({}), final_stop = \"{}\" ({})",
-                    replica_name(),
+                LOG_WARNING_PREFIX(
+                    "empty sort key range for multi_get from {}: hash_key = \"{}\", start_sort_key "
+                    "= \"{}\" ({}), stop_sort_key = \"{}\" ({}), sort_key_filter_type = {}, "
+                    "sort_key_filter_pattern = \"{}\", final_start = \"{}\" ({}), final_stop = "
+                    "\"{}\" ({})",
                     rpc.remote_address(),
                     ::pegasus::utils::c_escape_string(request.hash_key),
                     ::pegasus::utils::c_escape_string(request.start_sortkey),

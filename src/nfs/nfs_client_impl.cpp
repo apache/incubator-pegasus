@@ -334,7 +334,7 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
 
         if (!fc->user_req->is_finished) {
             if (reqc->retry_count > 0) {
-                LOG_WARNING_F("{nfs_service} remote copy failed, source = {}, dir = {}, file = {}, "
+                LOG_WARNING_F("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
                               "err = {}, retry_count = {}",
                               fc->user_req->file_size_req.source,
                               fc->user_req->file_size_req.source_dir,

@@ -269,7 +269,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
             if (_app_id != -1 && _app_id != resp.app_id) {
                 LOG_WARNING_F(
                     "app id is changed (mostly the app was removed and created with the same "
-                    "name), local Vs remote: {} vs {} ",
+                    "name), local vs remote: {} vs {} ",
                     _app_id,
                     resp.app_id);
             }
@@ -277,7 +277,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
                 _app_partition_count * 2 != resp.partition_count &&
                 _app_partition_count != resp.partition_count * 2) {
                 LOG_WARNING_F("partition count is changed (mostly the app was removed and created "
-                              "with the same name), local Vs remote: {} vs {} ",
+                              "with the same name), local vs remote: {} vs {} ",
                               _app_partition_count,
                               resp.partition_count);
             }

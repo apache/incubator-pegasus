@@ -921,7 +921,7 @@ void redis_parser::counter_internal(message_entry &entry)
                           _remote_address,
                           command,
                           entry.sequence_id,
-                          entry.request.sub_requests[2].data);
+                          entry.request.sub_requests[2].data.to_string());
             simple_error_reply(entry,
                                fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;
@@ -949,7 +949,7 @@ void redis_parser::counter_internal(message_entry &entry)
                           _remote_address,
                           command,
                           entry.sequence_id,
-                          ec.to_string());
+                          ec);
             simple_error_reply(entry, ec.to_string());
         } else {
             ::dsn::apps::incr_response incr_resp;
