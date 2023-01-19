@@ -124,7 +124,7 @@ error_code meta_service::remote_storage_initialize()
             _meta_opts.meta_state_service_type.c_str(), PROVIDER_TYPE_MAIN);
     error_code err = storage->initialize(_meta_opts.meta_state_service_args);
     if (err != ERR_OK) {
-        LOG_ERROR("init meta_state_service failed, err = %s", err.to_string());
+        LOG_ERROR_F("init meta_state_service failed, err = {}", err);
         return err;
     }
     _storage.reset(storage);
@@ -139,8 +139,7 @@ error_code meta_service::remote_storage_initialize()
             _storage->create_node(current, LPC_META_CALLBACK, [&err](error_code ec) { err = ec; });
         tsk->wait();
         if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST) {
-            LOG_ERROR(
-                "create node failed, node_path = %s, err = %s", current.c_str(), err.to_string());
+            LOG_ERROR_F("create node failed, node_path = {}, err = {}", current, err);
             return err;
         }
     }
@@ -301,7 +300,7 @@ error_code meta_service::start()
     error_code err;
 
     err = remote_storage_initialize();
-    dreturn_not_ok_logged(err, "init remote storage failed, err = %s", err.to_string());
+    dreturn_not_ok_logged(err, "init remote storage failed, err = {}", err);
     LOG_INFO_F("remote storage is successfully initialized");
 
     // start failure detector, and try to acquire the leader lock
@@ -316,7 +315,7 @@ error_code meta_service::start()
                                    _opts.fd_grace_seconds,
                                    _meta_opts.enable_white_list);
 
-    dreturn_not_ok_logged(err, "start failure_detector failed, err = %s", err.to_string());
+    dreturn_not_ok_logged(err, "start failure_detector failed, err = {}", err);
     LOG_INFO_F("meta service failure detector is successfully started {}",
                _meta_opts.enable_white_list ? "with whitelist enabled" : "");
 
@@ -368,8 +367,7 @@ error_code meta_service::start()
                        "administrator should recover this cluster manually later");
             return dsn::ERR_OK;
         }
-        LOG_ERROR("initialize server state from remote storage failed, err = %s, retry ...",
-                  err.to_string());
+        LOG_ERROR_F("initialize server state from remote storage failed, err = {}, retry ...", err);
     }
 
     _state->recover_from_max_replica_count_env();
@@ -797,7 +795,7 @@ void meta_service::on_add_backup_policy(dsn::message_ex *req)
     }
 
     if (_backup_handler == nullptr) {
-        LOG_ERROR("meta doesn't enable backup service");
+        LOG_ERROR_F("meta doesn't enable backup service");
         response.err = ERR_SERVICE_NOT_ACTIVE;
         reply(req, response);
     } else {
@@ -816,7 +814,7 @@ void meta_service::on_query_backup_policy(query_backup_policy_rpc policy_rpc)
 
     auto &response = policy_rpc.response();
     if (_backup_handler == nullptr) {
-        LOG_ERROR("meta doesn't enable backup service");
+        LOG_ERROR_F("meta doesn't enable backup service");
         response.err = ERR_SERVICE_NOT_ACTIVE;
     } else {
         tasking::enqueue(
@@ -833,7 +831,7 @@ void meta_service::on_modify_backup_policy(configuration_modify_backup_policy_rp
     }
 
     if (_backup_handler == nullptr) {
-        LOG_ERROR("meta doesn't enable backup service");
+        LOG_ERROR_F("meta doesn't enable backup service");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
     } else {
         tasking::enqueue(

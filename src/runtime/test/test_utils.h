@@ -117,7 +117,7 @@ public:
         } else if (command.substr(0, 5) == "echo ") {
             reply(message, command.substr(5));
         } else {
-            LOG_ERROR("unknown command");
+            LOG_ERROR_F("unknown command");
         }
     }
 

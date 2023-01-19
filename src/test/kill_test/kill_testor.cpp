@@ -57,7 +57,7 @@ kill_testor::kill_testor(const char *config_file)
     pegasus_cluster_name =
         dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
     if (pegasus_cluster_name.empty()) {
-        LOG_ERROR("Should config the cluster name for killer");
+        LOG_ERROR_F("Should config the cluster name for killer");
         exit(-1);
     }
 
@@ -66,13 +66,13 @@ kill_testor::kill_testor(const char *config_file)
     dsn::replication::replica_helper::load_meta_servers(
         meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), pegasus_cluster_name.c_str());
     if (meta_list.empty()) {
-        LOG_ERROR("Should config the meta address for killer");
+        LOG_ERROR_F("Should config the meta address for killer");
         exit(-1);
     }
 
     ddl_client.reset(new replication_ddl_client(meta_list));
     if (ddl_client == nullptr) {
-        LOG_ERROR("Initialize the _ddl_client failed");
+        LOG_ERROR_F("Initialize the _ddl_client failed");
         exit(-1);
     }
 

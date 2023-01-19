@@ -114,7 +114,7 @@ static message_ex *create_message_from_request_blob(const blob &body_data)
         dsn_hdr->context.u.is_request = 1;
     }
     if (dsn_hdr->context.u.is_request != 1) {
-        LOG_ERROR("invalid message type: %d", mtype);
+        LOG_ERROR_F("invalid message type: {}", mtype);
         delete msg;
         /// set set rpc_read_stream::_msg to nullptr,
         /// to avoid the dstor to call read_commit of _msg, which is deleted here.
@@ -151,7 +151,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
     // The first 4 bytes is "THFT"
     data_input input(buf);
     if (!utils::mequals(buf.data(), "THFT", 4)) {
-        LOG_ERROR("hdr_type mismatch %s", message_parser::get_debug_string(buf.data()).c_str());
+        LOG_ERROR_F("hdr_type mismatch {}", message_parser::get_debug_string(buf.data()));
         read_next = -1;
         return false;
     }
@@ -167,7 +167,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
 
         uint32_t hdr_length = input.read_u32();
         if (hdr_length != HEADER_LENGTH_V0) {
-            LOG_ERROR("hdr_length should be %u, but %u", HEADER_LENGTH_V0, hdr_length);
+            LOG_ERROR_F("hdr_length should be {}, but {}", HEADER_LENGTH_V0, hdr_length);
             read_next = -1;
             return false;
         }
@@ -184,7 +184,7 @@ bool thrift_message_parser::parse_request_header(message_reader *reader, int &re
         _v1_specific_vars->_body_length = input.read_u32();
         reader->consume_buffer(HEADER_LENGTH_V1);
     } else {
-        LOG_ERROR("invalid hdr_version %d", _header_version);
+        LOG_ERROR_F("invalid hdr_version {}", _header_version);
         read_next = -1;
         return false;
     }

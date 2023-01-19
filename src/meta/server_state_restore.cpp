@@ -42,7 +42,7 @@ void server_state::sync_app_from_backup_media(
         _meta_svc->get_block_service_manager().get_or_create_block_filesystem(
             request.backup_provider_name);
     if (blk_fs == nullptr) {
-        LOG_ERROR("acquire block_filesystem(%s) failed", request.backup_provider_name.c_str());
+        LOG_ERROR_F("acquire block_filesystem({}) failed", request.backup_provider_name);
         callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, dsn::blob());
         return;
     }
@@ -148,8 +148,7 @@ void server_state::restore_app(dsn::message_ex *msg)
             dsn::error_code ec = ERR_OK;
             // if err != ERR_OK, then sync_app_from_backup_media ecounter some error
             if (err != ERR_OK) {
-                LOG_ERROR("sync app_info_data from backup media failed with err(%s)",
-                          err.to_string());
+                LOG_ERROR_F("sync app_info_data from backup media failed with err({})", err);
                 ec = err;
             } else {
                 auto pair = restore_app_info(msg, request, app_info_data);

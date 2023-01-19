@@ -197,7 +197,7 @@ bool dsn_mimic_app(const char *app_role, int index)
         if (cnode->spec().role_name == std::string(app_role) && cnode->spec().index == index) {
             return true;
         } else {
-            LOG_ERROR("current thread is already attached to another rDSN app %s", name.c_str());
+            LOG_ERROR_F("current thread is already attached to another rDSN app {}", name);
             return false;
         }
     }
@@ -211,7 +211,7 @@ bool dsn_mimic_app(const char *app_role, int index)
         }
     }
 
-    LOG_ERROR("cannot find host app %s with index %d", app_role, index);
+    LOG_ERROR_F("cannot find host app {} with index {}", app_role, index);
     return false;
 }
 

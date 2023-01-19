@@ -225,13 +225,13 @@ void failure_detector::check_all_records()
                 is_time_greater_than(now, record.last_send_time_for_beacon_with_ack) &&
                 now + _check_interval_milliseconds - record.last_send_time_for_beacon_with_ack >
                     _lease_milliseconds) {
-                LOG_ERROR("master %s disconnected, now=%" PRId64 ", last_send_time=%" PRId64
-                          ", now+check_interval-last_send_time=%" PRId64,
-                          record.node.to_string(),
-                          now,
-                          record.last_send_time_for_beacon_with_ack,
-                          now + _check_interval_milliseconds -
-                              record.last_send_time_for_beacon_with_ack);
+                LOG_ERROR_F("master {} disconnected, now={:#018x}, last_send_time={:#018x}, "
+                            "now+check_interval-last_send_time={:#018x}",
+                            record.node,
+                            now,
+                            record.last_send_time_for_beacon_with_ack,
+                            now + _check_interval_milliseconds -
+                                record.last_send_time_for_beacon_with_ack);
 
                 expire.push_back(record.node);
                 record.is_alive = false;
@@ -268,12 +268,12 @@ void failure_detector::check_all_records()
             // overflow
             if (record.is_alive && is_time_greater_than(now, record.last_beacon_recv_time) &&
                 now - record.last_beacon_recv_time > _grace_milliseconds) {
-                LOG_ERROR("worker %s disconnected, now=%" PRId64 ", last_beacon_recv_time=%" PRId64
-                          ", now-last_recv=%" PRId64,
-                          record.node.to_string(),
-                          now,
-                          record.last_beacon_recv_time,
-                          now - record.last_beacon_recv_time);
+                LOG_ERROR_F("worker {} disconnected, now={:#018x}, last_beacon_recv_time={:#018x}, "
+                            "now-last_recv={:#018x}",
+                            record.node,
+                            now,
+                            record.last_beacon_recv_time,
+                            now - record.last_beacon_recv_time);
 
                 expire.push_back(record.node);
                 record.is_alive = false;

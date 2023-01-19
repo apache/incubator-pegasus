@@ -236,8 +236,8 @@ pc_status partition_guardian::on_missing_primary(meta_view &view, const dsn::gpi
         }
 
         if (action.node.is_invalid()) {
-            LOG_ERROR(
-                "all nodes for gpid(%s) are dead, waiting for some secondary to come back....",
+            LOG_ERROR_F(
+                "all nodes for gpid({}) are dead, waiting for some secondary to come back....",
                 gpid_name);
             result = pc_status::dead;
         } else {

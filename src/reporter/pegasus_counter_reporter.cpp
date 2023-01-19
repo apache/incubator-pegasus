@@ -325,9 +325,9 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
 {
     struct event_base *event = (struct event_base *)arg;
     if (req == nullptr) {
-        LOG_ERROR("http post request failed: unknown reason");
+        LOG_ERROR_F("http post request failed: unknown reason");
     } else if (req->response_code == 0) {
-        LOG_ERROR("http post request failed: connection refused");
+        LOG_ERROR_F("http post request failed: connection refused");
     } else if (req->response_code == HTTP_OK) {
         LOG_DEBUG_F("http post request succeed");
     } else {
@@ -336,10 +336,10 @@ void pegasus_counter_reporter::http_request_done(struct evhttp_request *req, voi
         char *tmp = (char *)alloca(len + 1);
         memcpy(tmp, evbuffer_pullup(buf, -1), len);
         tmp[len] = '\0';
-        LOG_ERROR("http post request failed: code = %u, code_line = %s, input_buffer = %s",
-                  req->response_code,
-                  req->response_code_line,
-                  tmp);
+        LOG_ERROR_F("http post request failed: code = {}, code_line = {}, input_buffer = {}",
+                    req->response_code,
+                    req->response_code_line,
+                    tmp);
     }
     event_base_loopexit(event, 0);
 }

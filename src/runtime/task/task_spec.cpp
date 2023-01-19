@@ -223,15 +223,15 @@ bool task_spec::init()
 
         if (spec->rpc_request_throttling_mode != TM_NONE) {
             if (spec->type != TASK_TYPE_RPC_REQUEST) {
-                LOG_ERROR("%s: only rpc request type can have non TM_NONE throttling_mode",
-                          spec->name.c_str());
+                LOG_ERROR_F("{}: only rpc request type can have non TM_NONE throttling_mode",
+                            spec->name);
                 return false;
             }
         }
 
         if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !dsn::tools::FLAGS_enable_udp) {
-            LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
-                      "[network].enable_udp");
+            LOG_ERROR_F("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
+                        "[network].enable_udp");
             return false;
         }
     }

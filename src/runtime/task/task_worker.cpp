@@ -188,8 +188,8 @@ void task_worker::run_internal()
     } else {
         uint64_t current_mask = pool_spec().worker_affinity_mask;
         if (0 == current_mask) {
-            LOG_ERROR("mask for %s is set to 0x0, mostly due to that #core > 64, set to 64 now",
-                      pool_spec().name.c_str());
+            LOG_ERROR_F("mask for {} is set to 0x0, mostly due to that #core > 64, set to 64 now",
+                        pool_spec().name);
 
             current_mask = ~((uint64_t)0);
         }

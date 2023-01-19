@@ -233,14 +233,14 @@ bool process_kill_testor::check_coredump()
     // make sure all generated core are logged
     for (int i = 1; i <= _total_meta_count; ++i) {
         if (_killer_handler->has_meta_dumped_core(i)) {
-            LOG_ERROR("meta server %d generate core dump", i);
+            LOG_ERROR_F("meta server {} generate core dump", i);
             has_core = true;
         }
     }
 
     for (int i = 1; i <= _total_replica_count; ++i) {
         if (_killer_handler->has_replica_dumped_core(i)) {
-            LOG_ERROR("replica server %d generate core dump", i);
+            LOG_ERROR_F("replica server {} generate core dump", i);
             has_core = true;
         }
     }

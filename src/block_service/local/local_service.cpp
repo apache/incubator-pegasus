@@ -116,7 +116,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!::dsn::utils::filesystem::get_subfiles(dir_path, children, false)) {
-                LOG_ERROR("get files under directory: %s fail", dir_path.c_str());
+                LOG_ERROR_F("get files under directory: {} fail", dir_path);
                 resp.err = ERR_FS_INTERNAL;
                 children.clear();
             } else {
@@ -137,7 +137,7 @@ dsn::task_ptr local_service::list_dir(const ls_request &req,
 
             children.clear();
             if (!::dsn::utils::filesystem::get_subdirectories(dir_path, children, false)) {
-                LOG_ERROR("get subpaths under directory: %s fail", dir_path.c_str());
+                LOG_ERROR_F("get subpaths under directory: {} fail", dir_path);
                 resp.err = ERR_FS_INTERNAL;
                 children.clear();
             } else {
@@ -492,9 +492,8 @@ dsn::task_ptr local_file_object::download(const download_request &req,
         resp.err = ERR_OK;
         std::string target_file = req.output_local_name;
         if (target_file.empty()) {
-            LOG_ERROR("download %s failed, because target name(%s) is invalid",
-                      file_name().c_str(),
-                      target_file.c_str());
+            LOG_ERROR_F(
+                "download {} failed, because target name({}) is invalid", file_name(), target_file);
             resp.err = ERR_INVALID_PARAMETERS;
         }
 
@@ -508,9 +507,9 @@ dsn::task_ptr local_file_object::download(const download_request &req,
         if (resp.err == ERR_OK) {
             std::ifstream fin(file_name(), std::ifstream::in);
             if (!fin.is_open()) {
-                LOG_ERROR("open block file(%s) failed, err(%s)",
-                          file_name().c_str(),
-                          utils::safe_strerror(errno).c_str());
+                LOG_ERROR_F("open block file({}) failed, err({})",
+                            file_name(),
+                            utils::safe_strerror(errno));
                 resp.err = ERR_FS_INTERNAL;
             }
 
@@ -518,9 +517,9 @@ dsn::task_ptr local_file_object::download(const download_request &req,
             if (!fout.is_open()) {
                 if (fin.is_open())
                     fin.close();
-                LOG_ERROR("open target file(%s) failed, err(%s)",
-                          target_file.c_str(),
-                          utils::safe_strerror(errno).c_str());
+                LOG_ERROR_F("open target file({}) failed, err({})",
+                            target_file,
+                            utils::safe_strerror(errno));
                 resp.err = ERR_FILE_OPERATION_FAILED;
             }
 

@@ -156,7 +156,7 @@ void available_detector::stop() { _tracker.cancel_outstanding_tasks(); }
 void available_detector::detect_available()
 {
     if (!generate_hash_keys()) {
-        LOG_ERROR("initialize hash_keys failed, do not detect available, retry after 60 seconds");
+        LOG_ERROR_F("initialize hash_keys failed, do not detect available, retry after 60 seconds");
         _detect_timer =
             ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
                                     &_tracker,
@@ -305,11 +305,11 @@ void available_detector::on_detect(int32_t idx)
             _recent_day_fail_times.fetch_add(1);
             _recent_hour_fail_times.fetch_add(1);
             _recent_minute_fail_times.fetch_add(1);
-            LOG_ERROR("async_get partition[%d] fail, fail_count = %d, hash_key = %s, error = %s",
-                      idx,
-                      prev + 1,
-                      _hash_keys[idx].c_str(),
-                      _client->get_error_string(err));
+            LOG_ERROR_F("async_get partition[{}] fail, fail_count = {}, hash_key = {}, error = {}",
+                        idx,
+                        prev + 1,
+                        _hash_keys[idx],
+                        _client->get_error_string(err));
             check_and_send_email(&cnt, idx);
         } else {
             cnt.store(0);
@@ -331,11 +331,11 @@ void available_detector::on_detect(int32_t idx)
             _recent_day_fail_times.fetch_add(1);
             _recent_hour_fail_times.fetch_add(1);
             _recent_minute_fail_times.fetch_add(1);
-            LOG_ERROR("async_set partition[%d] fail, fail_count = %d, hash_key = %s , error = %s",
-                      idx,
-                      prev + 1,
-                      _hash_keys[idx].c_str(),
-                      _client->get_error_string(err));
+            LOG_ERROR_F("async_set partition[{}] fail, fail_count = {}, hash_key = {}, error = {}",
+                        idx,
+                        prev + 1,
+                        _hash_keys[idx],
+                        _client->get_error_string(err));
             check_and_send_email(&cnt, idx);
         } else {
             LOG_DEBUG_F("async_set partition[{}] ok, hash_key = {}", idx, _hash_keys[idx]);
@@ -371,10 +371,8 @@ void available_detector::check_and_send_email(std::atomic<int> *cnt, int32_t idx
             if (r == 0) {
                 LOG_INFO_F("send alert email done, partition_index = {}", idx);
             } else {
-                LOG_ERROR("send alert email failed, partition_index = %d, "
-                          "command_return = %d",
-                          idx,
-                          r);
+                LOG_ERROR_F(
+                    "send alert email failed, partition_index = {}, command_return = {}", idx, r);
             }
         }
     }
@@ -419,12 +417,12 @@ void available_detector::on_day_report()
                        detect_times,
                        fail_times);
         } else {
-            LOG_ERROR("send availability email fail, date = %s, "
-                      "total_detect_times = %u, total_fail_times = %u, command_return = %d",
-                      _old_day.c_str(),
-                      detect_times,
-                      fail_times,
-                      r);
+            LOG_ERROR_F("send availability email fail, date = {}, total_detect_times = {}, "
+                        "total_fail_times = {}, command_return = {}",
+                        _old_day,
+                        detect_times,
+                        fail_times,
+                        r);
         }
     }
 

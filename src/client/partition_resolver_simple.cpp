@@ -310,28 +310,28 @@ void partition_resolver_simple::query_config_reply(error_code err,
                 }
             }
         } else if (resp.err == ERR_OBJECT_NOT_FOUND) {
-            LOG_ERROR("%s.client: query config reply, gpid = %d.%d, err = %s",
-                      _app_name.c_str(),
-                      _app_id,
-                      partition_index,
-                      resp.err.to_string());
+            LOG_ERROR_F("{}.client: query config reply, gpid = {}.{}, err = {}",
+                        _app_name,
+                        _app_id,
+                        partition_index,
+                        resp.err);
 
             client_err = ERR_APP_NOT_EXIST;
         } else {
-            LOG_ERROR("%s.client: query config reply, gpid = %d.%d, err = %s",
-                      _app_name.c_str(),
-                      _app_id,
-                      partition_index,
-                      resp.err.to_string());
+            LOG_ERROR_F("{}.client: query config reply, gpid = {}.{}, err = {}",
+                        _app_name,
+                        _app_id,
+                        partition_index,
+                        resp.err);
 
             client_err = resp.err;
         }
     } else {
-        LOG_ERROR("%s.client: query config reply, gpid = %d.%d, err = %s",
-                  _app_name.c_str(),
-                  _app_id,
-                  partition_index,
-                  err.to_string());
+        LOG_ERROR_F("{}.client: query config reply, gpid = {}.{}, err = {}",
+                    _app_name,
+                    _app_id,
+                    partition_index,
+                    err);
     }
 
     // get specific or all partition update
