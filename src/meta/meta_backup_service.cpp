@@ -1358,7 +1358,7 @@ void backup_service::do_update_policy_to_remote_storage(
                 p_context_ptr->set_policy(p);
             } else if (err == ERR_TIMEOUT) {
                 LOG_ERROR_F("update backup policy to remote storage failed, policy_name = {}, "
-                            "retry after {:#018x} ms",
+                            "retry after {} ms",
                             p.policy_name,
                             _opt.meta_retry_delay_ms.count());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
