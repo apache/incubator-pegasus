@@ -30,6 +30,7 @@
 
 #include <sstream>
 #include "utils/process_utils.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/smart_pointers.h"
 
 #include "task_engine.h"
