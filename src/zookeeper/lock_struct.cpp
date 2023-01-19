@@ -247,9 +247,9 @@ void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this,
                    _this->_lock_id,
                    *path);
     } else {
-        LOG_ERROR("lock struct(%s), myself(%s) got session expire",
-                  _this->_lock_dir.c_str(),
-                  _this->_myself._node_seq_name.c_str());
+        LOG_ERROR_F("lock struct({}), myself({}) got session expire",
+                    _this->_lock_dir,
+                    _this->_myself._node_seq_name);
         _this->on_expire();
     }
 }
@@ -330,9 +330,9 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this,
                        _this->_myself._node_value);
         }
     } else {
-        LOG_ERROR("lock_dir(%s), myself(%s), sessin expired",
-                  _this->_lock_dir.c_str(),
-                  _this->_myself._node_seq_name.c_str());
+        LOG_ERROR_F("lock_dir({}), myself({}), sessin expired",
+                    _this->_lock_dir,
+                    _this->_myself._node_seq_name);
         _this->on_expire();
     }
 }
@@ -446,7 +446,7 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
         return;
     }
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("get lockdir(%s) children got session expired", _this->_lock_dir.c_str());
+        LOG_ERROR_F("get lockdir({}) children got session expired", _this->_lock_dir);
         _this->on_expire();
         return;
     }
@@ -564,9 +564,9 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
         return;
     }
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("create seq/ephe node (%s) in dir(%s) got session expired",
-                  distributed_lock_service_zookeeper::LOCK_NODE_PREFIX.c_str(),
-                  _this->_lock_dir.c_str());
+        LOG_ERROR_F("create seq/ephe node ({}) in dir({}) got session expired",
+                    distributed_lock_service_zookeeper::LOCK_NODE_PREFIX,
+                    _this->_lock_dir);
         _this->on_expire();
         return;
     }
@@ -629,7 +629,7 @@ void lock_struct::after_create_lockdir(lock_struct_ptr _this, int ec)
         return;
     }
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("create lock dir failed got session expire, _path(%s)", _this->_lock_dir.c_str());
+        LOG_ERROR_F("create lock dir failed got session expire, _path({})", _this->_lock_dir);
         _this->_lock_dir.clear();
         _this->on_expire();
         return;

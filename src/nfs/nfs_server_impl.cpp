@@ -34,6 +34,7 @@
 #include "aio/disk_engine.h"
 #include "runtime/task/async_calls.h"
 #include "utils/filesystem.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/string_conv.h"
 
 namespace dsn {
@@ -102,7 +103,7 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
         "nfs: copy file {} [{}, {}]", file_path, request.offset, request.offset + request.size);
 
     if (dfile == nullptr) {
-        LOG_ERROR("{nfs_service} open file %s failed", file_path.c_str());
+        LOG_ERROR_F("[nfs_service] open file {} failed", file_path);
         ::dsn::service::copy_response resp;
         resp.error = ERR_OBJECT_NOT_FOUND;
         reply(resp);
@@ -148,8 +149,7 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
     }
 
     if (err != ERR_OK) {
-        LOG_ERROR(
-            "{nfs_service} read file %s failed, err = %s", cp.file_path.c_str(), err.to_string());
+        LOG_ERROR_F("[nfs_service] read file {} failed, err = {}", cp.file_path, err);
         _recent_copy_fail_count->increment();
     } else {
         _recent_copy_data_size->add(sz);
@@ -176,11 +176,11 @@ void nfs_service_impl::on_get_file_size(
     if (request.file_list.size() == 0) // return all file size in the destination file folder
     {
         if (!dsn::utils::filesystem::directory_exists(folder)) {
-            LOG_ERROR("{nfs_service} directory %s not exist", folder.c_str());
+            LOG_ERROR_F("[nfs_service] directory {} not exist", folder);
             err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true)) {
-                LOG_ERROR("{nfs_service} get subfiles of directory %s failed", folder.c_str());
+                LOG_ERROR_F("[nfs_service] get subfiles of directory {} failed", folder);
                 err = ERR_FILE_OPERATION_FAILED;
             } else {
                 for (auto &fpath : file_list) {
@@ -188,7 +188,7 @@ void nfs_service_impl::on_get_file_size(
                     // Done
                     int64_t sz;
                     if (!dsn::utils::filesystem::file_size(fpath, sz)) {
-                        LOG_ERROR("{nfs_service} get size of file %s failed", fpath.c_str());
+                        LOG_ERROR_F("[nfs_service] get size of file {} failed", fpath);
                         err = ERR_FILE_OPERATION_FAILED;
                         break;
                     }
@@ -208,9 +208,9 @@ void nfs_service_impl::on_get_file_size(
 
             struct stat st;
             if (0 != ::stat(file_path.c_str(), &st)) {
-                LOG_ERROR("{nfs_service} get stat of file %s failed, err = %s",
-                          file_path.c_str(),
-                          strerror(errno));
+                LOG_ERROR_F("[nfs_service] get stat of file {} failed, err = {}",
+                            file_path,
+                            dsn::utils::safe_strerror(errno));
                 err = ERR_OBJECT_NOT_FOUND;
                 break;
             }

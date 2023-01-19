@@ -233,9 +233,9 @@ int rpc_session::prepare_parser()
         hdr_format = _net.unknown_msg_hdr_format();
 
         if (hdr_format == NET_HDR_INVALID) {
-            LOG_ERROR("invalid header type, remote_client = %s, header_type = '%s'",
-                      _remote_addr.to_string(),
-                      message_parser::get_debug_string(_reader._buffer.data()).c_str());
+            LOG_ERROR_F("invalid header type, remote_client = {}, header_type = '{}'",
+                        _remote_addr,
+                        message_parser::get_debug_string(_reader._buffer.data()));
             return -1;
         }
     }
@@ -418,8 +418,7 @@ bool rpc_session::on_recv_message(message_ex *msg, int delay_ms)
         // - the remote address is not listened, which means the remote port is not occupied
         // - operating system chooses the remote port as client's ephemeral port
         if (is_client() && msg->header->from_address == _net.engine()->primary_address()) {
-            LOG_ERROR("self connection detected, address = %s",
-                      msg->header->from_address.to_string());
+            LOG_ERROR_F("self connection detected, address = {}", msg->header->from_address);
             CHECK_EQ_MSG(msg->get_count(), 0, "message should not be referenced by anybody so far");
             delete msg;
             return false;

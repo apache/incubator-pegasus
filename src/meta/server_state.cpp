@@ -300,7 +300,7 @@ error_code server_state::dump_app_states(const char *local_path,
 {
     std::shared_ptr<dump_file> file = dump_file::open_file(local_path, true);
     if (file == nullptr) {
-        LOG_ERROR("open file failed, file(%s)", local_path);
+        LOG_ERROR_F("open file failed, file({})", local_path);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -331,7 +331,7 @@ error_code server_state::dump_from_remote_storage(const char *local_path, bool s
             LOG_INFO_F("remote storage is empty, just stop the dump");
             return ERR_OK;
         } else if (ec != ERR_OK) {
-            LOG_ERROR("sync from remote storage failed, err(%s)", ec.to_string());
+            LOG_ERROR_F("sync from remote storage failed, err({})", ec);
             return ec;
         } else {
             spin_wait_staging();
@@ -374,7 +374,7 @@ error_code server_state::restore_from_local_storage(const char *local_path)
 
     std::shared_ptr<dump_file> file = dump_file::open_file(local_path, false);
     if (file == nullptr) {
-        LOG_ERROR("open file failed, file(%s)", local_path);
+        LOG_ERROR_F("open file failed, file({})", local_path);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -499,7 +499,7 @@ error_code server_state::sync_apps_to_remote_storage()
     t->wait();
 
     if (err != ERR_NODE_ALREADY_EXIST && err != ERR_OK) {
-        LOG_ERROR("create root node /apps in meta store failed, err = %s", err.to_string());
+        LOG_ERROR_F("create root node /apps in meta store failed, err = {}", err);
         return err;
     } else {
         LOG_INFO_F("set {} to lock state in remote storage", _apps_root);
@@ -553,9 +553,7 @@ error_code server_state::sync_apps_to_remote_storage()
         LOG_INFO_F("set {} to unlock state in remote storage", _apps_root);
         return err;
     } else {
-        LOG_ERROR("set %s to unlock state in remote storage failed, reason(%s)",
-                  _apps_root.c_str(),
-                  err.to_string());
+        LOG_ERROR_F("set {} to unlock state in remote storage failed, reason({})", _apps_root, err);
         return err;
     }
 }
@@ -627,7 +625,7 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                     }
 
                 } else {
-                    LOG_ERROR("get partition node failed, reason(%s)", ec.to_string());
+                    LOG_ERROR_F("get partition node failed, reason({})", ec);
                     err = ec;
                 }
             },
@@ -666,9 +664,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                         sync_partition(app, i, partition_path);
                     }
                 } else {
-                    LOG_ERROR("get app info from meta state service failed, path = %s, err = %s",
-                              app_path.c_str(),
-                              ec.to_string());
+                    LOG_ERROR_F("get app info from meta state service failed, path = {}, err = {}",
+                                app_path,
+                                ec);
                     err = ec;
                 }
             },
@@ -706,9 +704,9 @@ dsn::error_code server_state::sync_apps_from_remote_storage()
                     sync_app(_apps_root + "/" + appid_str);
                 }
             } else {
-                LOG_ERROR("get app list from meta state service failed, path = %s, err = %s",
-                          _apps_root.c_str(),
-                          ec.to_string());
+                LOG_ERROR_F("get app list from meta state service failed, path = {}, err = {}",
+                            _apps_root,
+                            ec);
                 err = ec;
             }
         },
@@ -965,10 +963,10 @@ void server_state::query_configuration_by_index(const query_cfg_request &request
 
     std::shared_ptr<app_state> &app = iter->second;
     if (app->status != app_status::AS_AVAILABLE) {
-        LOG_ERROR("invalid status(%s) in exist app(%s), app_id(%d)",
-                  enum_to_string(app->status),
-                  (app->app_name).c_str(),
-                  app->app_id);
+        LOG_ERROR_F("invalid status({}) in exist app({}), app_id({})",
+                    enum_to_string(app->status),
+                    app->app_name,
+                    app->app_id);
 
         switch (app->status) {
         case app_status::AS_CREATING:
@@ -1097,7 +1095,7 @@ void server_state::create_app(dsn::message_ex *msg)
 
     auto level = _meta_svc->get_function_level();
     if (level <= meta_function_level::fl_freezed) {
-        LOG_ERROR("current meta function level is freezed, since there are too few alive nodes");
+        LOG_ERROR_F("current meta function level is freezed, since there are too few alive nodes");
         response.err = ERR_STATE_FREEZED;
         will_create_app = false;
     } else if (request.options.partition_count <= 0 ||
@@ -2322,14 +2320,14 @@ server_state::sync_apps_from_replica_nodes(const std::vector<dsn::rpc_address> &
 
     dsn::error_code err = construct_apps(query_app_responses, replica_nodes, hint_message);
     if (err != dsn::ERR_OK) {
-        LOG_ERROR("construct apps failed, err = %s", err.to_string());
+        LOG_ERROR_F("construct apps failed, err = {}", err);
         return err;
     }
 
     err = construct_partitions(
         query_replica_responses, replica_nodes, skip_lost_partitions, hint_message);
     if (err != dsn::ERR_OK) {
-        LOG_ERROR("construct partitions failed, err = %s", err.to_string());
+        LOG_ERROR_F("construct partitions failed, err = {}", err);
         return err;
     }
 
@@ -2347,8 +2345,7 @@ void server_state::on_start_recovery(const configuration_recovery_request &req,
     resp.err = sync_apps_from_replica_nodes(
         req.recovery_set, req.skip_bad_nodes, req.skip_lost_partitions, resp.hint_message);
     if (resp.err != dsn::ERR_OK) {
-        LOG_ERROR("sync apps from replica nodes failed when do recovery, err = %s",
-                  resp.err.to_string());
+        LOG_ERROR_F("sync apps from replica nodes failed when do recovery, err = {}", resp.err);
         _all_apps.clear();
         return;
     }

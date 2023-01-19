@@ -696,8 +696,7 @@ bool get_disk_space_info(const std::string &path, disk_space_info &info)
     boost::system::error_code ec;
     boost::filesystem::space_info in = boost::filesystem::space(path, ec);
     if (ec) {
-        LOG_ERROR(
-            "get disk space info failed: path = %s, err = %s", path.c_str(), ec.message().c_str());
+        LOG_ERROR_F("get disk space info failed: path = {}, err = {}", path, ec.message());
         return false;
     } else {
         info.capacity = in.capacity;
@@ -722,13 +721,13 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
     result.clear();
     // if file not exist, we return ERR_OBJECT_NOT_FOUND
     if (!::dsn::utils::filesystem::file_exists(file_path)) {
-        LOG_ERROR("md5sum error: file %s not exist", file_path.c_str());
+        LOG_ERROR_F("md5sum error: file {} not exist", file_path);
         return ERR_OBJECT_NOT_FOUND;
     }
 
     FILE *fp = fopen(file_path.c_str(), "rb");
     if (fp == nullptr) {
-        LOG_ERROR("md5sum error: open file %s failed", file_path.c_str());
+        LOG_ERROR_F("md5sum error: open file {} failed", file_path);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -747,10 +746,10 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
                 break;
             } else {
                 int err = ferror(fp);
-                LOG_ERROR("md5sum error: read file %s failed: errno = %d (%s)",
-                          file_path.c_str(),
-                          err,
-                          safe_strerror(err).c_str());
+                LOG_ERROR_F("md5sum error: read file {} failed: errno = {} ({})",
+                            file_path,
+                            err,
+                            safe_strerror(err));
                 fclose(fp);
                 MD5_Final(out, &c);
                 return ERR_FILE_OPERATION_FAILED;

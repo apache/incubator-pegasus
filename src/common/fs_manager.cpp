@@ -202,11 +202,8 @@ void fs_manager::add_replica(const gpid &pid, const std::string &pid_dir)
 {
     dir_node *n = get_dir_node(pid_dir);
     if (nullptr == n) {
-        LOG_ERROR("%s: dir(%s) of gpid(%d.%d) haven't registered",
-                  dsn_primary_address().to_string(),
-                  pid_dir.c_str(),
-                  pid.get_app_id(),
-                  pid.get_partition_index());
+        LOG_ERROR_F(
+            "{}: dir({}) of gpid({}) haven't registered", dsn_primary_address(), pid_dir, pid);
     } else {
         zauto_write_lock l(_lock);
         std::set<dsn::gpid> &replicas_for_app = n->holding_replicas[pid.get_app_id()];

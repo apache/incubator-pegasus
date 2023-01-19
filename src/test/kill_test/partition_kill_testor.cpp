@@ -100,7 +100,7 @@ void partition_kill_testor::run()
     }
 
     if (failed > 0) {
-        LOG_ERROR("call replica.kill_partition failed");
+        LOG_ERROR_F("call replica.kill_partition failed");
     }
 }
 } // namespace test

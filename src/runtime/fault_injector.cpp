@@ -221,7 +221,7 @@ static void corrupt_data(message_ex *request, const std::string &corrupt_type)
         replace_value(request->buffers,
                       rand::next_u32(0, request->body_size() + sizeof(message_header) - 1));
     else {
-        LOG_ERROR("try to inject an unknown data corrupt type: %s", corrupt_type.c_str());
+        LOG_ERROR_F("try to inject an unknown data corrupt type: {}", corrupt_type);
     }
 }
 

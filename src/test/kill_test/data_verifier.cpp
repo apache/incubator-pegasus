@@ -151,17 +151,17 @@ void do_set(int thread_id)
             last_time = cur_time;
             try_count = 0;
         } else {
-            LOG_ERROR("SetThread[%d]: set failed: id=%lld, try=%d, ret=%d, error=%s (gpid=%d.%d, "
-                      "decree=%lld, server=%s)",
-                      thread_id,
-                      id,
-                      try_count,
-                      ret,
-                      client->get_error_string(ret),
-                      info.app_id,
-                      info.partition_index,
-                      info.decree,
-                      info.server.c_str());
+            LOG_ERROR_F("SetThread[{}]: set failed: id={}, try={}, ret={}, error={} (gpid={}.{}, "
+                        "decree={}, server={})",
+                        thread_id,
+                        id,
+                        try_count,
+                        ret,
+                        client->get_error_string(ret),
+                        info.app_id,
+                        info.partition_index,
+                        info.decree,
+                        info.server);
             try_count++;
             if (try_count > 3) {
                 sleep(1);
@@ -262,17 +262,17 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
             try_count = 0;
             id++;
         } else {
-            LOG_ERROR("GetThread[%d]: round(%d): get failed: id=%lld, try=%d, ret=%d, error=%s "
-                      "(gpid=%d.%d, server=%s)",
-                      thread_id,
-                      round_id,
-                      id,
-                      try_count,
-                      ret,
-                      client->get_error_string(ret),
-                      info.app_id,
-                      info.partition_index,
-                      info.server.c_str());
+            LOG_ERROR_F("GetThread[{}]: round({}): get failed: id={}, try={}, ret={}, error={} "
+                        "(gpid={}.{}, server={})",
+                        thread_id,
+                        round_id,
+                        id,
+                        try_count,
+                        ret,
+                        client->get_error_string(ret),
+                        info.app_id,
+                        info.partition_index,
+                        info.server);
             try_count++;
             if (try_count > 3) {
                 sleep(1);
@@ -326,13 +326,13 @@ void do_check(int thread_count)
                            range_end);
                 break;
             } else {
-                LOG_ERROR("CheckThread: round(%d): update \"%s\" failed: check_max=%lld, ret=%d, "
-                          "error=%s",
-                          round_id,
-                          check_max_key,
-                          range_end,
-                          ret,
-                          client->get_error_string(ret));
+                LOG_ERROR_F(
+                    "CheckThread: round({}): update \"{}\" failed: check_max={}, ret={}, error={}",
+                    round_id,
+                    check_max_key,
+                    range_end,
+                    ret,
+                    client->get_error_string(ret));
             }
         }
 
@@ -364,11 +364,11 @@ void do_mark()
                        cur_time - last_time);
             old_id = new_id;
         } else {
-            LOG_ERROR("MarkThread: update \"%s\" failed: set_next=%lld, ret=%d, error=%s",
-                      set_next_key,
-                      new_id,
-                      ret,
-                      client->get_error_string(ret));
+            LOG_ERROR_F("MarkThread: update \"{}\" failed: set_next={}, ret={}, error={}",
+                        set_next_key,
+                        new_id,
+                        ret,
+                        client->get_error_string(ret));
         }
     }
 }
@@ -385,12 +385,12 @@ void verifier_initialize(const char *config_file)
     pegasus_cluster_name =
         dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
     if (pegasus_cluster_name.empty()) {
-        LOG_ERROR("Should config the cluster name for verifier");
+        LOG_ERROR_F("Should config the cluster name for verifier");
         exit(-1);
     }
     client = pegasus_client_factory::get_client(pegasus_cluster_name.c_str(), app_name.c_str());
     if (client == nullptr) {
-        LOG_ERROR("Initialize the _client failed");
+        LOG_ERROR_F("Initialize the _client failed");
         exit(-1);
     }
 
@@ -411,9 +411,8 @@ void verifier_start()
         if (ret == PERR_OK) {
             long long i = atoll(set_next_value.c_str());
             if (i == 0 && !set_next_value.empty()) {
-                LOG_ERROR("MainThread: read \"%s\" failed: value_str=%s",
-                          set_next_key,
-                          set_next_value.c_str());
+                LOG_ERROR_F(
+                    "MainThread: read \"{}\" failed: value_str={}", set_next_key, set_next_value);
                 exit(-1);
             }
             LOG_INFO_F("MainThread: read \"{}\" succeed: value={}", set_next_key, i);
@@ -424,9 +423,9 @@ void verifier_start()
             set_next.store(0);
             break;
         } else {
-            LOG_ERROR("MainThread: read \"%s\" failed: error=%s",
-                      set_next_key,
-                      client->get_error_string(ret));
+            LOG_ERROR_F("MainThread: read \"{}\" failed: error={}",
+                        set_next_key,
+                        client->get_error_string(ret));
         }
     }
     set_thread_setting_id.resize(set_thread_count);

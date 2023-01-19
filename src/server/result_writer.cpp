@@ -55,13 +55,13 @@ void result_writer::set_result(const std::string &hash_key,
                     0,
                     std::chrono::minutes(1));
             } else {
-                LOG_ERROR("set_result fail, hash_key = %s, sort_key = %s, value = %s, "
-                          "error = %s, left_try_count = %d, do not try again",
-                          hash_key.c_str(),
-                          sort_key.c_str(),
-                          value.c_str(),
-                          _client->get_error_string(err),
-                          new_try_count);
+                LOG_ERROR_F("set_result fail, hash_key = {}, sort_key = {}, value = {}, error = "
+                            "{}, left_try_count = {}, do not try again",
+                            hash_key,
+                            sort_key,
+                            value,
+                            _client->get_error_string(err),
+                            new_try_count);
             }
         } else {
             LOG_DEBUG_F("set_result succeed, hash_key = {}, sort_key = {}, value = {}",

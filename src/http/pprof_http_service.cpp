@@ -76,7 +76,7 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
     LOG_INFO_F("executing `{}`", cmd);
     const int rc = utils::pipe_execute(cmd.c_str(), ss);
     if (rc < 0) {
-        LOG_ERROR("fail to popen `%s`", cmd.c_str());
+        LOG_ERROR_F("fail to popen `{}`", cmd);
         return -1;
     }
     std::string line;
@@ -372,19 +372,19 @@ ssize_t read_command_line(char *buf, size_t len, bool with_args)
 {
     auto fd = open("/proc/self/cmdline", O_RDONLY);
     if (fd < 0) {
-        LOG_ERROR("Fail to open /proc/self/cmdline");
+        LOG_ERROR_F("Fail to open /proc/self/cmdline");
         return -1;
     }
     auto cleanup = defer([fd]() { close(fd); });
     ssize_t nr = read(fd, buf, len);
     if (nr <= 0) {
-        LOG_ERROR("Fail to read /proc/self/cmdline");
+        LOG_ERROR_F("Fail to read /proc/self/cmdline");
         return -1;
     }
 
     if (with_args) {
         if ((size_t)nr == len) {
-            LOG_ERROR("buf is not big enough");
+            LOG_ERROR_F("buf is not big enough");
             return -1;
         }
         for (ssize_t i = 0; i < nr; ++i) {

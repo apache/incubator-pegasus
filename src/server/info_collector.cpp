@@ -143,7 +143,7 @@ void info_collector::on_app_stat()
     LOG_INFO_F("start to stat apps");
     std::map<std::string, std::vector<row_data>> all_rows;
     if (!get_app_partition_stat(_shell_context.get(), all_rows)) {
-        LOG_ERROR("call get_app_stat() failed");
+        LOG_ERROR_F("call get_app_stat() failed");
         return;
     }
 
@@ -271,7 +271,8 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
                                     0,
                                     std::chrono::seconds(_capacity_unit_retry_wait_seconds));
         } else {
-            LOG_ERROR("get capacity unit stat failed, remaining_retry_count = 0, no retry anymore");
+            LOG_ERROR_F(
+                "get capacity unit stat failed, remaining_retry_count = 0, no retry anymore");
         }
         return;
     }
@@ -318,7 +319,8 @@ void info_collector::on_storage_size_stat(int remaining_retry_count)
                                     0,
                                     std::chrono::seconds(_storage_size_retry_wait_seconds));
         } else {
-            LOG_ERROR("get storage size stat failed, remaining_retry_count = 0, no retry anymore");
+            LOG_ERROR_F(
+                "get storage size stat failed, remaining_retry_count = 0, no retry anymore");
         }
         return;
     }

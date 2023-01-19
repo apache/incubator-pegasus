@@ -52,11 +52,11 @@ pegasus_client *pegasus_client_factory_impl::get_client(const char *cluster_name
                                                         const char *app_name)
 {
     if (cluster_name == nullptr || cluster_name[0] == '\0') {
-        LOG_ERROR("invalid parameter 'cluster_name'");
+        LOG_ERROR_F("invalid parameter 'cluster_name'");
         return nullptr;
     }
     if (app_name == nullptr || app_name[0] == '\0') {
-        LOG_ERROR("invalid parameter 'app_name'");
+        LOG_ERROR_F("invalid parameter 'app_name'");
         return nullptr;
     }
 

@@ -91,9 +91,7 @@ void asio_rpc_session::do_read(int read_next)
                 if (ec == boost::asio::error::make_error_code(boost::asio::error::eof)) {
                     LOG_INFO_F("asio read from {} failed: {}", _remote_addr, ec.message());
                 } else {
-                    LOG_ERROR("asio read from %s failed: %s",
-                              _remote_addr.to_string(),
-                              ec.message().c_str());
+                    LOG_ERROR_F("asio read from {} failed: {}", _remote_addr, ec.message());
                 }
                 on_failure();
             } else {
@@ -115,7 +113,7 @@ void asio_rpc_session::do_read(int read_next)
                 }
 
                 if (read_next == -1) {
-                    LOG_ERROR("asio read from %s failed", _remote_addr.to_string());
+                    LOG_ERROR_F("asio read from {} failed", _remote_addr);
                     on_failure();
                 } else {
                     start_read_next(read_next);
@@ -142,8 +140,7 @@ void asio_rpc_session::send(uint64_t signature)
     boost::asio::async_write(
         *_socket, asio_wbufs, [this, signature](boost::system::error_code ec, std::size_t length) {
             if (ec) {
-                LOG_ERROR(
-                    "asio write to %s failed: %s", _remote_addr.to_string(), ec.message().c_str());
+                LOG_ERROR_F("asio write to {} failed: {}", _remote_addr, ec.message());
                 on_failure(true);
             } else {
                 on_send_completed(signature);
@@ -191,9 +188,8 @@ void asio_rpc_session::connect()
                 on_send_completed();
                 start_read_next();
             } else {
-                LOG_ERROR("client session connect to %s failed, error = %s",
-                          _remote_addr.to_string(),
-                          ec.message().c_str());
+                LOG_ERROR_F(
+                    "client session connect to {} failed, error = {}", _remote_addr, ec.message());
                 on_failure(true);
             }
             release_ref();

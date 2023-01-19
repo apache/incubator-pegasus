@@ -424,22 +424,21 @@ bool config_context::check_order()
         return true;
     for (unsigned int i = 0; i < dropped.size() - 1; ++i) {
         if (dropped_cmp(dropped[i], dropped[i + 1]) > 0) {
-            LOG_ERROR("check dropped order for gpid(%d.%d) failed, [%s,%llu,%lld,%lld,%lld@%d] vs "
-                      "[%s,%llu,%lld,%lld,%lld@%d]",
-                      config_owner->pid.get_app_id(),
-                      config_owner->pid.get_partition_index(),
-                      dropped[i].node.to_string(),
-                      dropped[i].time,
-                      dropped[i].ballot,
-                      dropped[i].last_committed_decree,
-                      dropped[i].last_prepared_decree,
-                      i,
-                      dropped[i].node.to_string(),
-                      dropped[i].time,
-                      dropped[i].ballot,
-                      dropped[i].last_committed_decree,
-                      dropped[i].last_prepared_decree,
-                      i + 1);
+            LOG_ERROR_F("check dropped order for gpid({}) failed, [{},{},{},{},{}@{}] vs "
+                        "[{},{},{},{},{}@{}]",
+                        config_owner->pid,
+                        dropped[i].node,
+                        dropped[i].time,
+                        dropped[i].ballot,
+                        dropped[i].last_committed_decree,
+                        dropped[i].last_prepared_decree,
+                        i,
+                        dropped[i + 1].node,
+                        dropped[i + 1].time,
+                        dropped[i + 1].ballot,
+                        dropped[i + 1].last_committed_decree,
+                        dropped[i + 1].last_prepared_decree,
+                        i + 1);
             return false;
         }
     }

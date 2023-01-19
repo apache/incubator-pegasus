@@ -88,10 +88,10 @@ void partition_resolver::call_task(const rpc_response_task_ptr &t)
                                  std::chrono::milliseconds(gap));
                 return;
             } else {
-                LOG_ERROR("service access failed (%s), no more time for further "
-                          "tries, set error = ERR_TIMEOUT, trace_id = %016" PRIx64,
-                          err.to_string(),
-                          req->header->trace_id);
+                LOG_ERROR_F("service access failed ({}), no more time for further tries, set error "
+                            "= ERR_TIMEOUT, trace_id = {:#018x}",
+                            err,
+                            req->header->trace_id);
                 err = ERR_TIMEOUT;
             }
         }

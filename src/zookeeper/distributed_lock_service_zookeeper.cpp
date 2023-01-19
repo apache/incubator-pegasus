@@ -90,7 +90,7 @@ void distributed_lock_service_zookeeper::erase(const lock_key &key)
 error_code distributed_lock_service_zookeeper::initialize(const std::vector<std::string> &args)
 {
     if (args.empty()) {
-        LOG_ERROR("need parameters: <lock_root>");
+        LOG_ERROR_F("need parameters: <lock_root>");
         return ERR_INVALID_PARAMETERS;
     }
     const char *lock_root = args[0].c_str();
@@ -128,7 +128,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
         _session->visit(op);
         e.wait();
         if (zerr != ZOK && zerr != ZNODEEXISTS) {
-            LOG_ERROR("create zk node failed, path = %s, err = %s", current.c_str(), zerror(zerr));
+            LOG_ERROR_F("create zk node failed, path = {}, err = {}", current, zerror(zerr));
             return from_zerror(zerr);
         }
     }
@@ -278,8 +278,8 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
     }
 
     if (ZOO_EXPIRED_SESSION_STATE == zoo_state || ZOO_AUTH_FAILED_STATE == zoo_state) {
-        LOG_ERROR("get zoo state: %s, which means the session is expired",
-                  zookeeper_session::string_zoo_state(zoo_state));
+        LOG_ERROR_F("get zoo state: {}, which means the session is expired",
+                    zookeeper_session::string_zoo_state(zoo_state));
         _this->dispatch_zookeeper_session_expire();
     } else {
         LOG_WARNING_F("get zoo state: {}, ignore it",
