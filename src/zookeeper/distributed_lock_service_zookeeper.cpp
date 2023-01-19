@@ -104,7 +104,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
     if (_zoo_state != ZOO_CONNECTED_STATE) {
         _waiting_attach.wait_for(zookeeper_session_mgr::instance().timeout());
         if (_zoo_state != ZOO_CONNECTED_STATE) {
-            LOG_WARNING(
+            LOG_WARNING_F(
                 "attach to zookeeper session timeout, distributed lock service initialized failed");
             return ERR_TIMEOUT;
         }
@@ -282,7 +282,8 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
                   zookeeper_session::string_zoo_state(zoo_state));
         _this->dispatch_zookeeper_session_expire();
     } else {
-        LOG_WARNING("get zoo state: %s, ignore it", zookeeper_session::string_zoo_state(zoo_state));
+        LOG_WARNING_F("get zoo state: {}, ignore it",
+                      zookeeper_session::string_zoo_state(zoo_state));
     }
 }
 }

@@ -30,6 +30,7 @@
 
 #include <sstream>
 #include "utils/process_utils.h"
+#include "utils/safe_strerror_posix.h"
 #include "utils/smart_pointers.h"
 
 #include "task_engine.h"
@@ -103,7 +104,8 @@ void task_worker::set_name(const char *name)
 #endif // defined(__linux__)
     // We expect EPERM failures in sandboxed processes, just ignore those.
     if (err < 0 && errno != EPERM) {
-        LOG_WARNING("Fail to set pthread name. err = %d", err);
+        LOG_WARNING_F(
+            "Fail to set pthread name: err = {}, msg = {}", err, utils::safe_strerror(errno));
     }
 }
 
@@ -128,7 +130,9 @@ void task_worker::set_priority(worker_priority_t pri)
         succ = false;
     }
     if (!succ) {
-        LOG_WARNING("You may need priviledge to set thread priority. errno = %d", errno);
+        LOG_WARNING_F("You may need priviledge to set thread priority: errno = {}, msg = {}",
+                      errno,
+                      utils::safe_strerror(errno));
     }
 }
 
@@ -159,7 +163,8 @@ void task_worker::set_affinity(uint64_t affinity)
     err = pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
 
     if (err != 0) {
-        LOG_WARNING("Fail to set thread affinity. err = %d", err);
+        LOG_WARNING_F(
+            "Fail to set thread affinity: err = {}, msg = {}", err, utils::safe_strerror(errno));
     }
 #endif // defined(__linux__)
 }

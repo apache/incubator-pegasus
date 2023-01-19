@@ -81,8 +81,7 @@ error_code local_service::initialize(const std::vector<std::string> &args)
         LOG_INFO_F("initialize local block service succeed with empty root");
     } else {
         if (::dsn::utils::filesystem::directory_exists(_root)) {
-            LOG_WARNING("old local block service root dir has already exist, path(%s)",
-                        _root.c_str());
+            LOG_WARNING_F("old local block service root dir has already exist, path({})", _root);
         } else {
             CHECK(::dsn::utils::filesystem::create_directory(_root),
                   "local block service create directory({}) fail",
@@ -265,7 +264,8 @@ error_code local_file_object::load_metadata()
     std::string metadata_path = local_service::get_metafile(file_name());
     std::ifstream is(metadata_path, std::ios::in);
     if (!is.is_open()) {
-        LOG_WARNING("load meta data from %s failed, err = %s", utils::safe_strerror(errno).c_str());
+        LOG_WARNING_F(
+            "load meta data from {} failed, err = {}", metadata_path, utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
     auto cleanup = dsn::defer([&is]() { is.close(); });
@@ -290,9 +290,8 @@ error_code local_file_object::store_metadata()
     std::string metadata_path = local_service::get_metafile(file_name());
     std::ofstream os(metadata_path, std::ios::out | std::ios::trunc);
     if (!os.is_open()) {
-        LOG_WARNING("store to metadata file %s failed, err=%s",
-                    metadata_path.c_str(),
-                    utils::safe_strerror(errno).c_str());
+        LOG_WARNING_F(
+            "store to metadata file {} failed, err={}", metadata_path, utils::safe_strerror(errno));
         return ERR_FS_INTERNAL;
     }
     auto cleanup = dsn::defer([&os]() { os.close(); });
@@ -376,7 +375,7 @@ dsn::task_ptr local_file_object::read(const read_request &req,
             resp.err = ERR_OBJECT_NOT_FOUND;
         } else {
             if ((resp.err = load_metadata()) != ERR_OK) {
-                LOG_WARNING("load meta data of %s failed", file_name().c_str());
+                LOG_WARNING_F("load meta data of {} failed", file_name());
             } else {
                 int64_t file_sz = _size;
                 int64_t total_sz = 0;
@@ -423,18 +422,18 @@ dsn::task_ptr local_file_object::upload(const upload_request &req,
         resp.err = ERR_OK;
         std::ifstream fin(req.input_local_name, std::ios_base::in);
         if (!fin.is_open()) {
-            LOG_WARNING("open source file %s for read failed, err(%s)",
-                        req.input_local_name.c_str(),
-                        utils::safe_strerror(errno).c_str());
+            LOG_WARNING_F("open source file {} for read failed, err({})",
+                          req.input_local_name,
+                          utils::safe_strerror(errno));
             resp.err = ERR_FILE_OPERATION_FAILED;
         }
 
         utils::filesystem::create_file(file_name());
         std::ofstream fout(file_name(), std::ios_base::out | std::ios_base::trunc);
         if (!fout.is_open()) {
-            LOG_WARNING("open target file %s for write failed, err(%s)",
-                        file_name().c_str(),
-                        utils::safe_strerror(errno).c_str());
+            LOG_WARNING_F("open target file {} for write failed, err({})",
+                          file_name(),
+                          utils::safe_strerror(errno));
             resp.err = ERR_FS_INTERNAL;
         }
 
@@ -542,9 +541,9 @@ dsn::task_ptr local_file_object::download(const download_request &req,
 
                 _size = total_sz;
                 if ((resp.err = utils::filesystem::md5sum(target_file, _md5_value)) != ERR_OK) {
-                    LOG_WARNING("download %s failed when calculate the md5sum of %s",
-                                file_name().c_str(),
-                                target_file.c_str());
+                    LOG_WARNING_F("download {} failed when calculate the md5sum of {}",
+                                  file_name(),
+                                  target_file);
                 } else {
                     _has_meta_synced = true;
                     resp.file_md5 = _md5_value;

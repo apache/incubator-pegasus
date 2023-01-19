@@ -154,11 +154,9 @@ void test_get(int32_t qps)
                                   val);
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
-                            // LOG_WARNING("hashkey(%s) - sortkey(%s) doesn't exist in the server",
-                            //    hashkey.c_str(), sortkey.c_str());
                         } else if (ec == PERR_TIMEOUT) {
-                            LOG_WARNING("access server failed with err(%s)",
-                                        pg_client->get_error_string(ec));
+                            LOG_WARNING_F("access server failed with err({})",
+                                          pg_client->get_error_string(ec));
                         }
                     });
                 cnt -= 1;

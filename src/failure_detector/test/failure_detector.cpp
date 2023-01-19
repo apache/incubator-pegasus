@@ -328,7 +328,7 @@ void clear(test_worker *worker, std::vector<test_master *> masters)
 
 void finish(test_worker *worker, test_master *master, int master_index)
 {
-    LOG_WARNING("start to finish");
+    LOG_WARNING_F("start to finish");
     std::atomic_int wait_count;
     wait_count.store(2);
     worker->fd()->when_disconnected(

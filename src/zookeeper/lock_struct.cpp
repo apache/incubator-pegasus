@@ -79,9 +79,9 @@ static bool is_zookeeper_timeout(int zookeeper_error)
 #define __execute(cb, _this) tasking::enqueue(TASK_CODE_DLOCK, nullptr, cb, _this->hash())
 
 #define __add_ref_and_delay_call(op, _this)                                                        \
-    LOG_WARNING("operation %s on %s encounter error, retry later",                                 \
-                zookeeper_session::string_zoo_operation(op->_optype),                              \
-                op->_input._path.c_str());                                                         \
+    LOG_WARNING_F("operation {} on {} encounter error, retry later",                               \
+                  zookeeper_session::string_zoo_operation(op->_optype),                            \
+                  op->_input._path);                                                               \
     zookeeper_session::add_ref(op);                                                                \
     tasking::enqueue(TASK_CODE_DLOCK,                                                              \
                      nullptr,                                                                      \
@@ -167,7 +167,7 @@ int64_t lock_struct::parse_seq_path(const std::string &path)
     for (; i >= 0 && j >= 0 && path[i] == match[j]; --i, --j)
         ;
     if (power == 1 || j >= 0) {
-        LOG_WARNING("invalid path: %s", path.c_str());
+        LOG_WARNING_F("invalid path: {}", path);
         return -1;
     }
     return ans;
@@ -196,8 +196,8 @@ void lock_struct::owner_change(lock_struct_ptr _this, int zoo_event)
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::uninitialized) {
-        LOG_WARNING("this is mainly due to a timeout happens before, just ignore the event %s",
-                    zookeeper_session::string_zoo_event(zoo_event));
+        LOG_WARNING_F("this is mainly due to a timeout happens before, just ignore the event {}",
+                      zookeeper_session::string_zoo_event(zoo_event));
         return;
     }
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
@@ -257,11 +257,11 @@ void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this,
 void lock_struct::remove_duplicated_locknode(std::string &&znode_path)
 {
     lock_struct_ptr _this = this;
-    LOG_WARNING(
-        "duplicated value(%s) ephe/seq node(%s and %s) create on zookeeper, remove the smaller one",
-        _myself._node_value.c_str(),
-        _owner._node_seq_name.c_str(),
-        _myself._node_seq_name.c_str());
+    LOG_WARNING_F(
+        "duplicated value({}) ephe/seq node({} and {}) create on zookeeper, remove the smaller one",
+        _myself._node_value,
+        _owner._node_seq_name,
+        _myself._node_seq_name);
 
     auto delete_callback_wrapper = [_this](zookeeper_session::zoo_opcontext *op) {
         if (is_zookeeper_timeout(op->_output.error)) {
@@ -458,9 +458,7 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
         std::string &child = (*children)[i];
         int64_t seq = parse_seq_path(child);
         if (seq == -1) {
-            LOG_WARNING("an invalid node(%s) in lockdir(%s), ignore",
-                        child.c_str(),
-                        _this->_lock_dir.c_str());
+            LOG_WARNING_F("an invalid node({}) in lockdir({}), ignore", child, _this->_lock_dir);
             continue;
         }
         if (min_pos == -1 || min_seq > seq)
@@ -472,11 +470,10 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
     LOG_INFO_F("min sequece number({}) in lockdir({})", min_seq, _this->_lock_dir);
     if (my_pos == -1) {
         // znode removed on zookeeper, may timeout or removed by other procedure
-        LOG_WARNING(
-            "sequence and ephemeral node(%s/%s) removed when get_children, this is abnormal, "
-            "try to reaquire the lock",
-            _this->_lock_dir.c_str(),
-            _this->_myself._node_seq_name.c_str());
+        LOG_WARNING_F("sequence and ephemeral node({}/{}) removed when get_children, this is "
+                      "abnormal, try to reaquire the lock",
+                      _this->_lock_dir,
+                      _this->_myself._node_seq_name);
         _this->_myself._node_seq_name.clear();
         _this->_myself._sequence_id = -1;
         _this->create_locknode();

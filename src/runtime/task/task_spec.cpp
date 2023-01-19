@@ -84,19 +84,19 @@ void task_spec::register_task_code(task_code code,
             enum_to_string(spec->type));
 
         if (spec->priority != pri) {
-            LOG_WARNING("overwrite priority for task %s from %s to %s",
-                        code.to_string(),
-                        enum_to_string(spec->priority),
-                        enum_to_string(pri));
+            LOG_WARNING_F("overwrite priority for task {} from {} to {}",
+                          code,
+                          enum_to_string(spec->priority),
+                          enum_to_string(pri));
             spec->priority = pri;
         }
 
         if (spec->pool_code != pool) {
             if (spec->pool_code != THREAD_POOL_INVALID) {
-                LOG_WARNING("overwrite default thread pool for task %s from %s to %s",
-                            code.to_string(),
-                            spec->pool_code.to_string(),
-                            pool.to_string());
+                LOG_WARNING_F("overwrite default thread pool for task {} from {} to {}",
+                              code,
+                              spec->pool_code,
+                              pool);
             }
             spec->pool_code = pool;
         }

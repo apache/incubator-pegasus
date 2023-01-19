@@ -37,28 +37,28 @@ void asio_rpc_session::set_options()
         boost::asio::socket_base::send_buffer_size option, option2(16 * 1024 * 1024);
         _socket->get_option(option, ec);
         if (ec)
-            LOG_WARNING("asio socket get option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket get option failed, error = {}", ec.message());
         int old = option.value();
         _socket->set_option(option2, ec);
         if (ec)
-            LOG_WARNING("asio socket set option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket set option failed, error = {}", ec.message());
         _socket->get_option(option, ec);
         if (ec)
-            LOG_WARNING("asio socket get option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket get option failed, error = {}", ec.message());
         LOG_DEBUG_F(
             "boost asio send buffer size is {}, set as 16MB, now is {}", old, option.value());
 
         boost::asio::socket_base::receive_buffer_size option3, option4(16 * 1024 * 1024);
         _socket->get_option(option3, ec);
         if (ec)
-            LOG_WARNING("asio socket get option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket get option failed, error = {}", ec.message());
         old = option3.value();
         _socket->set_option(option4, ec);
         if (ec)
-            LOG_WARNING("asio socket set option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket set option failed, error = {}", ec.message());
         _socket->get_option(option3, ec);
         if (ec)
-            LOG_WARNING("asio socket get option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket get option failed, error = {}", ec.message());
         LOG_DEBUG_F(
             "boost asio recv buffer size is {}, set as 16MB, now is {}", old, option.value());
 
@@ -72,7 +72,7 @@ void asio_rpc_session::set_options()
         //   * decrease the qps (negative)
         _socket->set_option(boost::asio::ip::tcp::no_delay(true), ec);
         if (ec)
-            LOG_WARNING("asio socket set option failed, error = %s", ec.message().c_str());
+            LOG_WARNING_F("asio socket set option failed, error = {}", ec.message());
         LOG_DEBUG_F("boost asio set no_delay = true");
     }
 }
@@ -169,10 +169,10 @@ void asio_rpc_session::close()
     boost::system::error_code ec;
     _socket->shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
     if (ec)
-        LOG_WARNING("asio socket shutdown failed, error = %s", ec.message().c_str());
+        LOG_WARNING_F("asio socket shutdown failed, error = {}", ec.message());
     _socket->close(ec);
     if (ec)
-        LOG_WARNING("asio socket close failed, error = %s", ec.message().c_str());
+        LOG_WARNING_F("asio socket close failed, error = {}", ec.message());
 }
 
 void asio_rpc_session::connect()

@@ -126,7 +126,7 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
     if (!err_s.is_ok()) {
         LOG_WARNING_F("{}: initialize sasl client failed, error = {}, reason = {}",
                       _name,
-                      err_s.code().to_string(),
+                      err_s.code(),
                       err_s.description());
         fail_negotiation();
         return;
@@ -141,7 +141,7 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
     } else {
         LOG_WARNING_F("{}: start sasl client failed, error = {}, reason = {}",
                       _name,
-                      err_s.code().to_string(),
+                      err_s.code(),
                       err_s.description());
         fail_negotiation();
     }

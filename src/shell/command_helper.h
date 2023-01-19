@@ -1265,8 +1265,7 @@ inline bool get_capacity_unit_stat(shell_context *sc,
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node(%s) failed, just ignore it",
-                        node_addr.to_string());
+            LOG_WARNING_F("decode perf counter from node({}) failed, just ignore it", node_addr);
             continue;
         }
         nodes_stat[i].timestamp = info.timestamp_str;
@@ -1333,8 +1332,7 @@ inline bool get_storage_size_stat(shell_context *sc, app_storage_size_stat &st_s
         dsn::rpc_address node_addr = nodes[i].address;
         dsn::perf_counter_info info;
         if (!decode_node_perf_counter_info(node_addr, results[i], info)) {
-            LOG_WARNING("decode perf counter from node(%s) failed, just ignore it",
-                        node_addr.to_string());
+            LOG_WARNING_F("decode perf counter from node({}) failed, just ignore it", node_addr);
             continue;
         }
         for (dsn::perf_counter_metric &m : info.counters) {

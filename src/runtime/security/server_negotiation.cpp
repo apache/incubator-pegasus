@@ -92,7 +92,7 @@ void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
     if (!err_s.is_ok()) {
         LOG_WARNING_F("{}: server initialize sasl failed, error = {}, msg = {}",
                       _name,
-                      err_s.code().to_string(),
+                      err_s.code(),
                       err_s.description());
         fail_negotiation();
         return;
@@ -147,7 +147,7 @@ void server_negotiation::do_challenge(negotiation_rpc rpc, error_s err_s, const 
         } else {
             LOG_WARNING_F("{}: retrive user name failed: with err = {}, msg = {}",
                           _name,
-                          retrive_err.code().to_string(),
+                          retrive_err.code(),
                           retrive_err.description());
             fail_negotiation();
         }
