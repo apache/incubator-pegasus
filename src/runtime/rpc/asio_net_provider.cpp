@@ -148,7 +148,7 @@ void asio_network_provider::do_accept()
         if (!ec) {
             auto remote = socket->remote_endpoint(ec);
             if (ec) {
-                LOG_ERROR_F("failed to get the remote endpoint: {}", ec.message().data());
+                LOG_ERROR_F("failed to get the remote endpoint: {}", ec.message());
             } else {
                 auto ip = remote.address().to_v4().to_ulong();
                 auto port = remote.port();

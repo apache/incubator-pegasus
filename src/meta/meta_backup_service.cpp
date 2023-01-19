@@ -625,10 +625,9 @@ void policy_context::sync_backup_to_remote_storage_unlocked(const backup_info &b
                 LOG_WARNING_F("{}: empty callback", _policy.policy_name);
             }
         } else if (ERR_TIMEOUT == err) {
-            LOG_ERROR_F(
-                "{}: sync backup info({:#018x}) to remote storage got timeout, retry it later",
-                _policy.policy_name,
-                b_info.backup_id);
+            LOG_ERROR_F("{}: sync backup info({}) to remote storage got timeout, retry it later",
+                        _policy.policy_name,
+                        b_info.backup_id);
             tasking::enqueue(LPC_DEFAULT_CALLBACK,
                              &_tracker,
                              [this, b_info, sync_callback, create_new_node]() {
@@ -1325,9 +1324,8 @@ void backup_service::do_add_policy(dsn::message_ex *req,
                 }
                 p->start();
             } else if (err == ERR_TIMEOUT) {
-                LOG_ERROR_F(
-                    "create backup policy on remote storage timeout, retry after {:#018x} (ms)",
-                    _opt.meta_retry_delay_ms.count());
+                LOG_ERROR_F("create backup policy on remote storage timeout, retry after {} (ms)",
+                            _opt.meta_retry_delay_ms.count());
                 tasking::enqueue(LPC_DEFAULT_CALLBACK,
                                  &_tracker,
                                  std::bind(&backup_service::do_add_policy, this, req, p, hint_msg),

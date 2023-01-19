@@ -209,7 +209,7 @@ void nfs_service_impl::on_get_file_size(
             if (0 != ::stat(file_path.c_str(), &st)) {
                 LOG_ERROR_F("[nfs_service] get stat of file {} failed, err = {}",
                             file_path,
-                            strerror(errno));
+                            dsn::utils::safe_strerror(errno));
                 err = ERR_OBJECT_NOT_FOUND;
                 break;
             }
