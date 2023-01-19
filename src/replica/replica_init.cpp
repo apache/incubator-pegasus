@@ -44,7 +44,7 @@ error_code replica::initialize_on_new()
     // if (dsn::utils::filesystem::directory_exists(_dir) &&
     //    !dsn::utils::filesystem::remove_path(_dir))
     //{
-    //    LOG_ERROR("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
+    //    LOG_ERROR_F("cannot allocate new replica @ {}, as the dir is already exists", _dir);
     //    return ERR_PATH_ALREADY_EXIST;
     //}
     //
@@ -53,7 +53,7 @@ error_code replica::initialize_on_new()
     // which is applied to restore from cold backup
     if (!dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::create_directory(_dir)) {
-        LOG_ERROR("cannot allocate new replica @ %s, because create dir failed", _dir.c_str());
+        LOG_ERROR_F("cannot allocate new replica @ {}, because create dir failed", _dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -126,7 +126,7 @@ error_code replica::initialize_on_load()
     LOG_INFO_PREFIX("initialize replica on load, dir = {}", _dir);
 
     if (!dsn::utils::filesystem::directory_exists(_dir)) {
-        LOG_ERROR("%s: cannot load replica, because dir %s is not exist", name(), _dir.c_str());
+        LOG_ERROR_PREFIX("cannot load replica, because dir {} is not exist", _dir);
         return ERR_PATH_NOT_FOUND;
     }
 
@@ -140,20 +140,20 @@ error_code replica::initialize_on_load()
     char splitters[] = {'\\', '/', 0};
     std::string name = utils::get_last_component(std::string(dir), splitters);
     if (name == "") {
-        LOG_ERROR("invalid replica dir %s", dir);
+        LOG_ERROR_F("invalid replica dir {}", dir);
         return nullptr;
     }
 
     char app_type[128];
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        LOG_ERROR("invalid replica dir %s", dir);
+        LOG_ERROR_F("invalid replica dir {}", dir);
         return nullptr;
     }
 
     gpid pid(app_id, pidx);
     if (!utils::filesystem::directory_exists(dir)) {
-        LOG_ERROR("replica dir %s not exist", dir);
+        LOG_ERROR_F("replica dir {} not exist", dir);
         return nullptr;
     }
 
@@ -162,12 +162,12 @@ error_code replica::initialize_on_load()
     std::string path = utils::filesystem::path_combine(dir, kAppInfo);
     auto err = info2.load(path);
     if (ERR_OK != err) {
-        LOG_ERROR("load app-info from %s failed, err = %s", path.c_str(), err.to_string());
+        LOG_ERROR_F("load app-info from {} failed, err = {}", path, err);
         return nullptr;
     }
 
     if (info.app_type != app_type) {
-        LOG_ERROR("unmatched app type %s for %s", info.app_type.c_str(), path.c_str());
+        LOG_ERROR_F("unmatched app type {} for {}", info.app_type, path);
         return nullptr;
     }
 
@@ -187,7 +187,7 @@ error_code replica::initialize_on_load()
         LOG_INFO_F("{}: load replica succeed", rep->name());
         return rep;
     } else {
-        LOG_ERROR("%s: load replica failed, err = %s", rep->name(), err.to_string());
+        LOG_ERROR_F("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
         delete rep;
         rep = nullptr;
@@ -295,19 +295,16 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 }
                 /* in the beginning the prepare_list is reset to the durable_decree */
                 else {
-                    LOG_ERROR("%s: replay private log failed, err = %s, durable = %" PRId64
-                              ", committed = %" PRId64 ", "
-                              "maxpd = %" PRId64 ", ballot = %" PRId64
-                              ", valid_offset_in_plog = %" PRId64 ", "
-                              "time_used = %" PRIu64 " ms",
-                              name(),
-                              err.to_string(),
-                              _app->last_durable_decree(),
-                              _app->last_committed_decree(),
-                              max_prepared_decree(),
-                              get_ballot(),
-                              _app->init_info().init_offset_in_private_log,
-                              finish_time - start_time);
+                    LOG_ERROR_PREFIX("replay private log failed, err = {}, durable = {}, committed "
+                                     "= {}, maxpd = {}, ballot = {}, valid_offset_in_plog = {}, "
+                                     "time_used = {} ms",
+                                     err,
+                                     _app->last_durable_decree(),
+                                     _app->last_committed_decree(),
+                                     max_prepared_decree(),
+                                     get_ballot(),
+                                     _app->init_info().init_offset_in_private_log,
+                                     finish_time - start_time);
 
                     _private_log->close();
                     _private_log = nullptr;
@@ -319,7 +316,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     }
 
     if (err != ERR_OK) {
-        LOG_ERROR("%s: open replica failed, err = %s", name(), err.to_string());
+        LOG_ERROR_PREFIX("open replica failed, err = {}", err);
         _app->close(false);
         _app = nullptr;
     } else {

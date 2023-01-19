@@ -266,7 +266,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
     } else {
         state.from_decree_excluded = 0;
         state.to_decree_included = 0;
-        LOG_ERROR("simple_kv_service_impl get checkpoint failed, no checkpoint found");
+        LOG_ERROR_F("simple_kv_service_impl get checkpoint failed, no checkpoint found");
         return ERR_OBJECT_NOT_FOUND;
     }
 }
@@ -290,7 +290,7 @@ void simple_kv_service_impl::recover(const std::string &name, int64_t version)
         std::string lname(name);
 
         if (!utils::filesystem::rename_path(state.files[0], lname)) {
-            LOG_ERROR("simple_kv_service_impl copy checkpoint failed, rename path failed");
+            LOG_ERROR_F("simple_kv_service_impl copy checkpoint failed, rename path failed");
             return ERR_CHECKPOINT_FAILED;
         } else {
             set_last_durable_decree(state.to_decree_included);

@@ -610,10 +610,9 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     if (err == ERR_OK) {
         LOG_INFO_F("replay shared log succeed, time_used = {} ms", finish_time - start_time);
     } else {
-        LOG_ERROR("replay shared log failed, err = %s, time_used = %" PRIu64
-                  " ms, clear all logs ...",
-                  err.to_string(),
-                  finish_time - start_time);
+        LOG_ERROR_F("replay shared log failed, err = {}, time_used = {} ms, clear all logs ...",
+                    err,
+                    finish_time - start_time);
 
         // we must delete or update meta server the error for all replicas
         // before we fix the logs
@@ -686,9 +685,8 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
 
     // we will mark all replicas inactive not transient unless all logs are complete
     if (!is_log_complete) {
-        LOG_ERROR(
-            "logs are not complete for some replicas, which means that shared log is truncated, "
-            "mark all replicas as inactive");
+        LOG_ERROR_F("logs are not complete for some replicas, which means that shared log is "
+                    "truncated, mark all replicas as inactive");
         for (auto it = rps.begin(); it != rps.end(); ++it) {
             it->second->set_inactive_state_transient(false);
         }
@@ -1633,15 +1631,15 @@ void replica_stub::response_client(gpid id,
             _counter_recent_read_fail_count->increment();
         else
             _counter_recent_write_fail_count->increment();
-        LOG_ERROR("%s@%s: %s fail: client = %s, code = %s, timeout = %d, status = %s, error = %s",
-                  id.to_string(),
-                  _primary_address_str,
-                  is_read ? "read" : "write",
-                  request == nullptr ? "null" : request->header->from_address.to_string(),
-                  request == nullptr ? "null" : request->header->rpc_name,
-                  request == nullptr ? 0 : request->header->client.timeout_ms,
-                  enum_to_string(status),
-                  error.to_string());
+        LOG_ERROR_F("{}@{}: {} fail: client = {}, code = {}, timeout = {}, status = {}, error = {}",
+                    id,
+                    _primary_address_str,
+                    is_read ? "read" : "write",
+                    request == nullptr ? "null" : request->header->from_address.to_string(),
+                    request == nullptr ? "null" : request->header->rpc_name,
+                    request == nullptr ? 0 : request->header->client.timeout_ms,
+                    enum_to_string(status),
+                    error);
     }
 
     if (request != nullptr) {
@@ -2206,7 +2204,7 @@ void replica_stub::trigger_checkpoint(replica_ptr r, bool is_emergency)
 
 void replica_stub::handle_log_failure(error_code err)
 {
-    LOG_ERROR("handle log failure: %s", err.to_string());
+    LOG_ERROR_F("handle log failure: {}", err);
     CHECK(s_not_exit_on_log_failure, "");
 }
 

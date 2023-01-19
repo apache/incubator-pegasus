@@ -1081,7 +1081,7 @@ void test_case::fail(const std::string &other)
     case_line *cl = _case_lines[_next];
     output(other);
     print(cl, other);
-    LOG_ERROR("=== on_case_failure:line=%d,case=%s", cl->line_no(), cl->to_string().c_str());
+    LOG_ERROR_F("=== on_case_failure:line={},case={}", cl->line_no(), cl->to_string());
     g_fail = true;
     g_done = true;
     notify_check_client();

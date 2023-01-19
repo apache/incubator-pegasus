@@ -170,7 +170,7 @@ void mutation_log_shared::commit_pending_mutations(log_file_ptr &lf,
                     (*_write_size_counter)->add(sz);
                 }
             } else {
-                LOG_ERROR("write shared log failed, err = %s", err.to_string());
+                LOG_ERROR_F("write shared log failed, err = {}", err);
             }
 
             // here we use _is_writing instead of _issued_write.expired() to check writing done,
@@ -426,7 +426,7 @@ void mutation_log_private::commit_pending_mutations(log_file_ptr &lf,
                               }
 
                               if (err != ERR_OK) {
-                                  LOG_ERROR("write private log failed, err = %s", err.to_string());
+                                  LOG_ERROR_F("write private log failed, err = {}", err);
                                   _is_writing.store(false, std::memory_order_relaxed);
                                   if (_io_error_callback) {
                                       _io_error_callback(err);
@@ -514,7 +514,7 @@ error_code mutation_log::open(replay_callback read_callback,
     // create dir if necessary
     if (!dsn::utils::filesystem::path_exists(_dir)) {
         if (!dsn::utils::filesystem::create_directory(_dir)) {
-            LOG_ERROR("open mutation_log: create log path failed");
+            LOG_ERROR_F("open mutation_log: create log path failed");
             return ERR_FILE_OPERATION_FAILED;
         }
     }
@@ -525,7 +525,7 @@ error_code mutation_log::open(replay_callback read_callback,
 
     std::vector<std::string> file_list;
     if (!dsn::utils::filesystem::get_subfiles(_dir, file_list, false)) {
-        LOG_ERROR("open mutation_log: get subfiles failed.");
+        LOG_ERROR_F("open mutation_log: get subfiles failed.");
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -724,7 +724,7 @@ error_code mutation_log::create_new_log_file()
     log_file_ptr logf =
         log_file::create_write(_dir.c_str(), _last_file_index + 1, _global_end_offset);
     if (logf == nullptr) {
-        LOG_ERROR("cannot create log file with index %d", _last_file_index + 1);
+        LOG_ERROR_F("cannot create log file with index {}", _last_file_index + 1);
         return ERR_FILE_OPERATION_FAILED;
     }
     CHECK_EQ(logf->end_offset(), logf->start_offset());
@@ -767,10 +767,10 @@ error_code mutation_log::create_new_log_file()
                            [this, blk, logf](::dsn::error_code err, size_t sz) {
                                delete blk;
                                if (ERR_OK != err) {
-                                   LOG_ERROR(
-                                       "write mutation log file header failed, file = %s, err = %s",
-                                       logf->path().c_str(),
-                                       err.to_string());
+                                   LOG_ERROR_F(
+                                       "write mutation log file header failed, file = {}, err = {}",
+                                       logf->path(),
+                                       err);
                                    CHECK(_io_error_callback, "");
                                    _io_error_callback(err);
                                }
@@ -1362,10 +1362,9 @@ int mutation_log::garbage_collection(gpid gpid,
         // delete file
         auto &fpath = log->path();
         if (!dsn::utils::filesystem::remove_path(fpath)) {
-            LOG_ERROR("gc_private @ %d.%d: fail to remove %s, stop current gc cycle ...",
-                      _private_gpid.get_app_id(),
-                      _private_gpid.get_partition_index(),
-                      fpath.c_str());
+            LOG_ERROR_F("gc_private @ {}: fail to remove {}, stop current gc cycle ...",
+                        _private_gpid,
+                        fpath);
             break;
         }
 
@@ -1614,7 +1613,7 @@ int mutation_log::garbage_collection(const replica_log_info_map &gc_condition,
         // delete file
         auto &fpath = log->path();
         if (!dsn::utils::filesystem::remove_path(fpath)) {
-            LOG_ERROR("gc_shared: fail to remove %s, stop current gc cycle ...", fpath.c_str());
+            LOG_ERROR_F("gc_shared: fail to remove {}, stop current gc cycle ...", fpath);
             break;
         }
 

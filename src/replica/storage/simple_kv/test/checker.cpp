@@ -96,11 +96,10 @@ public:
             else {
                 action.node = *pc.last_drops.rbegin();
                 action.type = config_type::CT_ASSIGN_PRIMARY;
-                LOG_ERROR("%d.%d enters DDD state, we are waiting for its last primary node %s to "
-                          "come back ...",
-                          pc.pid.get_app_id(),
-                          pc.pid.get_partition_index(),
-                          action.node.to_string());
+                LOG_ERROR_F("{} enters DDD state, we are waiting for its last primary node {} to "
+                            "come back ...",
+                            pc.pid,
+                            action.node);
                 result = pc_status::dead;
             }
             action.target = action.node;
