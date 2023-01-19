@@ -321,7 +321,8 @@ void partition_resolver_simple::query_config_reply(error_code err,
             client_err = resp.err;
         }
     } else {
-        LOG_ERROR_F("query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, err);
+        LOG_ERROR_PREFIX(
+            "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, err);
     }
 
     // get specific or all partition update

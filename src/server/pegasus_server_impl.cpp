@@ -359,9 +359,10 @@ void pegasus_server_impl::on_multi_get(multi_get_rpc rpc)
     }
 
     if (!is_filter_type_supported(request.sort_key_filter_type)) {
-        LOG_ERROR_F("invalid argument for multi_get from {}: sort key filter type {} not supported",
-                    rpc.remote_address(),
-                    request.sort_key_filter_type);
+        LOG_ERROR_PREFIX(
+            "invalid argument for multi_get from {}: sort key filter type {} not supported",
+            rpc.remote_address(),
+            request.sort_key_filter_type);
         resp.error = rocksdb::Status::kInvalidArgument;
         _cu_calculator->add_multi_get_cu(req, resp.error, request.hash_key, resp.kvs);
         _pfc_multi_get_latency->set(dsn_now_ns() - start_time);
