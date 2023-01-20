@@ -30,6 +30,7 @@ include "dsn.thrift"
 namespace cpp dsn
 namespace go replication
 namespace java org.apache.pegasus.replication
+namespace py pypegasus.replication
 
 struct partition_configuration
 {

@@ -37,8 +37,12 @@ defaults:
 jobs:
   test:
     name: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
+      - name: Install thrift
+        # python-client imports thrift package of 0.13.0, so we must use thrift-compiler 0.13.0
+        # to generate code as well. The thrift-compiler version on ubuntu-20.04 is 0.13.0
+        run: sudo apt-get install -y thrift-compiler
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
@@ -46,5 +50,5 @@ jobs:
       - name: test
         working-directory: ./python-client
         run: |
-          python setup.py install
+          pip install -r requirement.txt
           ./test.sh
