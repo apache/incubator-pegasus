@@ -50,7 +50,7 @@ slave_failure_detector_with_multimaster::slave_failure_detector_with_multimaster
     _meta_servers.assign_group("meta-servers");
     for (const auto &s : meta_servers) {
         if (!_meta_servers.group_address()->add(s)) {
-            LOG_WARNING_F("duplicate adress {}", s);
+            LOG_WARNING("duplicate adress {}", s);
         }
     }
 
@@ -74,14 +74,14 @@ void slave_failure_detector_with_multimaster::end_ping(::dsn::error_code err,
                                                        const fd::beacon_ack &ack,
                                                        void *)
 {
-    LOG_INFO_F("end ping result, error[{}], time[{}], ack.this_node[{}], ack.primary_node[{}], "
-               "ack.is_master[{}], ack.allowed[{}]",
-               err,
-               ack.time,
-               ack.this_node,
-               ack.primary_node,
-               ack.is_master ? "true" : "false",
-               ack.allowed ? "true" : "false");
+    LOG_INFO("end ping result, error[{}], time[{}], ack.this_node[{}], ack.primary_node[{}], "
+             "ack.is_master[{}], ack.allowed[{}]",
+             err,
+             ack.time,
+             ack.this_node,
+             ack.primary_node,
+             ack.is_master ? "true" : "false",
+             ack.allowed ? "true" : "false");
 
     zauto_lock l(failure_detector::_lock);
     if (!failure_detector::end_ping_internal(err, ack))

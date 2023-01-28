@@ -185,9 +185,9 @@ bool rpc_client_matcher::on_recv_reply(network *net, uint64_t key, message_ex *r
 
         // failure injection applied
         if (!call->enqueue(err, reply)) {
-            LOG_INFO_F("rpc reply {} is dropped (fault inject), trace_id = {:#018x}",
-                       reply->header->rpc_name,
-                       reply->header->trace_id);
+            LOG_INFO("rpc reply {} is dropped (fault inject), trace_id = {:#018x}",
+                     reply->header->rpc_name,
+                     reply->header->trace_id);
 
             // call network failure model
             net->inject_drop_message(reply, false);
@@ -270,9 +270,9 @@ void rpc_client_matcher::on_rpc_timeout(uint64_t key)
 
     if (resend) {
         auto req = call->get_request();
-        LOG_DEBUG_F("resend request message for rpc trace_id = {:#018x}, key = {}",
-                    req->header->trace_id,
-                    key);
+        LOG_DEBUG("resend request message for rpc trace_id = {:#018x}, key = {}",
+                  req->header->trace_id,
+                  key);
 
         // resend without handling rpc_matcher, use the same request_id
         _engine->call_ip(req->to_address, req, nullptr);
@@ -457,7 +457,7 @@ error_code rpc_engine::start(const service_app_spec &aspec)
                 factory = it1->second.factory_name;
                 blk_size = it1->second.message_buffer_block_size;
             } else {
-                LOG_WARNING_F(
+                LOG_WARNING(
                     "network client for channel {} not registered, assuming not used further", c);
                 continue;
             }
@@ -471,11 +471,11 @@ error_code rpc_engine::start(const service_app_spec &aspec)
                 return ERR_NETWORK_INIT_FAILED;
             pnet[j].reset(net);
 
-            LOG_INFO_F("[{}] network client started at port {}, channel = {}, fmt = {} ...",
-                       node()->full_name(),
-                       cs.port,
-                       cs.channel,
-                       client_hdr_format);
+            LOG_INFO("[{}] network client started at port {}, channel = {}, fmt = {} ...",
+                     node()->full_name(),
+                     cs.port,
+                     cs.channel,
+                     client_hdr_format);
         }
     }
 
@@ -501,18 +501,18 @@ error_code rpc_engine::start(const service_app_spec &aspec)
 
         (*pnets)[sp.second.channel].reset(net);
 
-        LOG_WARNING_F("[{}] network server started at port {}, channel = {}, ...",
-                      node()->full_name(),
-                      port,
-                      sp.second.channel);
+        LOG_WARNING("[{}] network server started at port {}, channel = {}, ...",
+                    node()->full_name(),
+                    port,
+                    sp.second.channel);
     }
 
     _local_primary_address = _client_nets[NET_HDR_DSN][0]->address();
     _local_primary_address.set_port(aspec.ports.size() > 0 ? *aspec.ports.begin() : aspec.id);
 
-    LOG_INFO_F("=== service_node=[{}], primary_address=[{}] ===",
-               _node->full_name(),
-               _local_primary_address);
+    LOG_INFO("=== service_node=[{}], primary_address=[{}] ===",
+             _node->full_name(),
+             _local_primary_address);
 
     _is_running = true;
     return ERR_OK;
@@ -533,7 +533,7 @@ bool rpc_engine::unregister_rpc_handler(dsn::task_code rpc_code)
 void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 {
     if (!_is_serving) {
-        LOG_WARNING_F(
+        LOG_WARNING(
             "recv message with rpc name {} from {} when rpc engine is not serving, trace_id = {}",
             msg->header->rpc_name,
             msg->header->from_address,
@@ -569,9 +569,9 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
 
             // release the task when necessary
             else {
-                LOG_INFO_F("rpc request {} is dropped (fault inject), trace_id = {:#018x}",
-                           msg->header->rpc_name,
-                           msg->header->trace_id);
+                LOG_INFO("rpc request {} is dropped (fault inject), trace_id = {:#018x}",
+                         msg->header->rpc_name,
+                         msg->header->trace_id);
 
                 // call network failure model when network is present
                 net->inject_drop_message(msg, false);
@@ -582,10 +582,10 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
                 tsk->release_ref();
             }
         } else {
-            LOG_WARNING_F("recv message with unhandled rpc name {} from {}, trace_id = {:#018x}",
-                          msg->header->rpc_name,
-                          msg->header->from_address,
-                          msg->header->trace_id);
+            LOG_WARNING("recv message with unhandled rpc name {} from {}, trace_id = {:#018x}",
+                        msg->header->rpc_name,
+                        msg->header->from_address,
+                        msg->header->trace_id);
 
             CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
             msg->add_ref();
@@ -593,10 +593,10 @@ void rpc_engine::on_recv_request(network *net, message_ex *msg, int delay_ms)
             msg->release_ref();
         }
     } else {
-        LOG_WARNING_F("recv message with unknown rpc name {} from {}, trace_id = {:#018x}",
-                      msg->header->rpc_name,
-                      msg->header->from_address,
-                      msg->header->trace_id);
+        LOG_WARNING("recv message with unknown rpc name {} from {}, trace_id = {:#018x}",
+                    msg->header->rpc_name,
+                    msg->header->from_address,
+                    msg->header->trace_id);
 
         CHECK_EQ_MSG(msg->get_count(), 0, "request should not be referenced by anybody so far");
         msg->add_ref();
@@ -650,10 +650,9 @@ void rpc_engine::call_ip(rpc_address addr,
           "from address must be set before call call_ip");
 
     while (!request->dl.is_alone()) {
-        LOG_WARNING_F(
-            "msg request {} (trace_id = {:#018x}) is in sending queue, try to pick out ...",
-            request->header->rpc_name,
-            request->header->trace_id);
+        LOG_WARNING("msg request {} (trace_id = {:#018x}) is in sending queue, try to pick out ...",
+                    request->header->rpc_name,
+                    request->header->trace_id);
         auto s = request->io_session;
         if (s.get() != nullptr) {
             s->cancel(request);
@@ -672,14 +671,14 @@ void rpc_engine::call_ip(rpc_address addr,
                   sp->rpc_call_header_format,
                   hdr.rpc_name);
 
-    LOG_DEBUG_F("rpc_name = {}, remote_addr = {}, header_format = {}, channel = {}, seq_id = {}, "
-                "trace_id = {:#018x}",
-                hdr.rpc_name,
-                addr,
-                request->hdr_format,
-                sp->rpc_call_channel,
-                hdr.id,
-                hdr.trace_id);
+    LOG_DEBUG("rpc_name = {}, remote_addr = {}, header_format = {}, channel = {}, seq_id = {}, "
+              "trace_id = {:#018x}",
+              hdr.rpc_name,
+              addr,
+              request->hdr_format,
+              sp->rpc_call_channel,
+              hdr.id,
+              hdr.trace_id);
 
     if (reset_request_id) {
         hdr.id = message_ex::new_id();
@@ -691,9 +690,9 @@ void rpc_engine::call_ip(rpc_address addr,
 
     // join point and possible fault injection
     if (!sp->on_rpc_call.execute(task::get_current_task(), request, call, true)) {
-        LOG_INFO_F("rpc request {} is dropped (fault inject), trace_id = {:#018x}",
-                   request->header->rpc_name,
-                   request->header->trace_id);
+        LOG_INFO("rpc request {} is dropped (fault inject), trace_id = {:#018x}",
+                 request->header->rpc_name,
+                 request->header->trace_id);
 
         // call network failure model
         net->inject_drop_message(request, true);
@@ -723,9 +722,9 @@ void rpc_engine::reply(message_ex *response, error_code err)
     // for example, the profiler may be mistakenly calculated
     auto s = response->io_session.get();
     if (s == nullptr && response->to_address.is_invalid()) {
-        LOG_DEBUG_F("rpc reply {} is dropped (invalid to-address), trace_id = {:#018x}",
-                    response->header->rpc_name,
-                    response->header->trace_id);
+        LOG_DEBUG("rpc reply {} is dropped (invalid to-address), trace_id = {:#018x}",
+                  response->header->rpc_name,
+                  response->header->trace_id);
         response->add_ref();
         response->release_ref();
         return;

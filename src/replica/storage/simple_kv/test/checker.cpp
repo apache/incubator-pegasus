@@ -96,10 +96,10 @@ public:
             else {
                 action.node = *pc.last_drops.rbegin();
                 action.type = config_type::CT_ASSIGN_PRIMARY;
-                LOG_ERROR_F("{} enters DDD state, we are waiting for its last primary node {} to "
-                            "come back ...",
-                            pc.pid,
-                            action.node);
+                LOG_ERROR("{} enters DDD state, we are waiting for its last primary node {} to "
+                          "come back ...",
+                          pc.pid,
+                          action.node);
                 result = pc_status::dead;
             }
             action.target = action.node;
@@ -196,12 +196,12 @@ bool test_checker::init(const std::string &name, const std::vector<service_app *
         rpc_address paddr = node.second->rpc()->primary_address();
         int port = paddr.port();
         _node_to_address[name] = paddr;
-        LOG_INFO_F("=== node_to_address[{}]={}", name, paddr);
+        LOG_INFO("=== node_to_address[{}]={}", name, paddr);
         _address_to_node[port] = name;
-        LOG_INFO_F("=== address_to_node[{}]={}", port, name);
+        LOG_INFO("=== address_to_node[{}]={}", port, name);
         if (id != port) {
             _address_to_node[id] = name;
-            LOG_INFO_F("=== address_to_node[{}]={}", id, name);
+            LOG_INFO("=== address_to_node[{}]={}", id, name);
         }
     }
 

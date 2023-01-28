@@ -39,7 +39,7 @@ bool replica_access_controller::allowed(message_ex *msg)
         // they are finally ensured to be fully upgraded, they can specify some usernames to ACL and
         // the table will be truly protected.
         if (!_users.empty() && _users.find(user_name) == _users.end()) {
-            LOG_INFO_F("{}: user_name {} doesn't exist in acls map", _name, user_name);
+            LOG_INFO("{}: user_name {} doesn't exist in acls map", _name, user_name);
             return false;
         }
         return true;

@@ -32,11 +32,11 @@
                 __FILENAME__, __FUNCTION__, __LINE__, level, fmt::format(__VA_ARGS__).c_str());    \
     } while (false)
 
-#define LOG_DEBUG_F(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
-#define LOG_INFO_F(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
-#define LOG_WARNING_F(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
-#define LOG_ERROR_F(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
-#define LOG_FATAL_F(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
+#define LOG_DEBUG(...) dlog_f(LOG_LEVEL_DEBUG, __VA_ARGS__)
+#define LOG_INFO(...) dlog_f(LOG_LEVEL_INFO, __VA_ARGS__)
+#define LOG_WARNING(...) dlog_f(LOG_LEVEL_WARNING, __VA_ARGS__)
+#define LOG_ERROR(...) dlog_f(LOG_LEVEL_ERROR, __VA_ARGS__)
+#define LOG_FATAL(...) dlog_f(LOG_LEVEL_FATAL, __VA_ARGS__)
 
 #define CHECK_EXPRESSION(expression, evaluation, ...)                                              \
     do {                                                                                           \
@@ -51,11 +51,11 @@
 #define CHECK_NOTNULL(p, ...) CHECK(p != nullptr, __VA_ARGS__)
 
 // Macros for writing log message prefixed by log_prefix().
-#define LOG_DEBUG_PREFIX(...) LOG_DEBUG_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
-#define LOG_INFO_PREFIX(...) LOG_INFO_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
-#define LOG_WARNING_PREFIX(...) LOG_WARNING_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
-#define LOG_ERROR_PREFIX(...) LOG_ERROR_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
-#define LOG_FATAL_PREFIX(...) LOG_FATAL_F("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_DEBUG_PREFIX(...) LOG_DEBUG("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_INFO_PREFIX(...) LOG_INFO("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_WARNING_PREFIX(...) LOG_WARNING("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_ERROR_PREFIX(...) LOG_ERROR("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
+#define LOG_FATAL_PREFIX(...) LOG_FATAL("[{}] {}", log_prefix(), fmt::format(__VA_ARGS__))
 
 namespace {
 
@@ -243,7 +243,7 @@ inline const char *null_str_printer(const char *s) { return s == nullptr ? "(nul
 #define ERR_LOG_AND_RETURN_NOT_TRUE(s, err, ...)                                                   \
     do {                                                                                           \
         if (dsn_unlikely(!(s))) {                                                                  \
-            LOG_ERROR_F("{}: {}", err, fmt::format(__VA_ARGS__));                                  \
+            LOG_ERROR("{}: {}", err, fmt::format(__VA_ARGS__));                                    \
             return err;                                                                            \
         }                                                                                          \
     } while (0)

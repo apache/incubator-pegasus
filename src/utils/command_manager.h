@@ -108,10 +108,10 @@ inline std::string remote_command_set_bool_flag(bool &flag,
     } else {
         if (args[0] == "true") {
             flag = true;
-            LOG_INFO_F("set {} to true by remote command", flag_name);
+            LOG_INFO("set {} to true by remote command", flag_name);
         } else if (args[0] == "false") {
             flag = false;
-            LOG_INFO_F("set {} to false by remote command", flag_name);
+            LOG_INFO("set {} to false by remote command", flag_name);
         } else {
             ret_msg = "ERR: invalid arguments";
         }

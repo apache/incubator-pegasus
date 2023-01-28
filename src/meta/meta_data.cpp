@@ -138,7 +138,7 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
 
     std::vector<dropped_replica> &drop_list = cc.dropped;
     if (drop_list.empty()) {
-        LOG_WARNING_F("construct for ({}) failed, coz no replicas collected", pid);
+        LOG_WARNING("construct for ({}) failed, coz no replicas collected", pid);
         return false;
     }
 
@@ -153,13 +153,13 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
     pc.partition_flags = 0;
     pc.max_replica_count = max_replica_count;
 
-    LOG_INFO_F("construct for ({}), select {} as primary, ballot({}), committed_decree({}), "
-               "prepare_decree({})",
-               pid,
-               server.node,
-               server.ballot,
-               server.last_committed_decree,
-               server.last_prepared_decree);
+    LOG_INFO("construct for ({}), select {} as primary, ballot({}), committed_decree({}), "
+             "prepare_decree({})",
+             pid,
+             server.node,
+             server.ballot,
+             server.last_committed_decree,
+             server.last_prepared_decree);
 
     drop_list.pop_back();
 
@@ -175,13 +175,13 @@ bool construct_replica(meta_view view, const gpid &pid, int max_replica_count)
             break;
         // similar to cc.drop_list, pc.last_drop is also a stack structure
         pc.last_drops.insert(pc.last_drops.begin(), iter->node);
-        LOG_INFO_F("construct for ({}), select {} into last_drops, ballot({}), "
-                   "committed_decree({}), prepare_decree({})",
-                   pid,
-                   iter->node,
-                   iter->ballot,
-                   iter->last_committed_decree,
-                   iter->last_prepared_decree);
+        LOG_INFO("construct for ({}), select {} into last_drops, ballot({}), "
+                 "committed_decree({}), prepare_decree({})",
+                 pid,
+                 iter->node,
+                 iter->ballot,
+                 iter->last_committed_decree,
+                 iter->last_prepared_decree);
     }
 
     cc.prefered_dropped = (int)drop_list.size() - 1;
@@ -240,12 +240,12 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
             // if we've collected inforamtions for the learner, then it claims it's down
             // we will treat the learning process failed
             if (current_learner.ballot != invalid_ballot) {
-                LOG_INFO_F("{}: a learner's is down to status({}), perhaps learn failed",
-                           info.pid,
-                           dsn::enum_to_string(info.status));
+                LOG_INFO("{}: a learner's is down to status({}), perhaps learn failed",
+                         info.pid,
+                         dsn::enum_to_string(info.status));
                 learning_progress_abnormal_detected = true;
             } else {
-                LOG_DEBUG_F(
+                LOG_DEBUG(
                     "{}: ignore abnormal status of {}, perhaps learn not start", info.pid, node);
             }
         } else if (info.status == partition_status::PS_POTENTIAL_SECONDARY) {
@@ -254,9 +254,9 @@ void proposal_actions::track_current_learner(const dsn::rpc_address &node, const
                 current_learner.last_prepared_decree > info.last_prepared_decree) {
 
                 // TODO: need to add a perf counter here
-                LOG_WARNING_F("{}: learner({})'s progress step back, please trace this carefully",
-                              info.pid,
-                              node);
+                LOG_WARNING("{}: learner({})'s progress step back, please trace this carefully",
+                            info.pid,
+                            node);
             }
 
             // NOTICE: the flag may be abormal currently. it's balancer's duty to make use of the
@@ -424,21 +424,21 @@ bool config_context::check_order()
         return true;
     for (unsigned int i = 0; i < dropped.size() - 1; ++i) {
         if (dropped_cmp(dropped[i], dropped[i + 1]) > 0) {
-            LOG_ERROR_F("check dropped order for gpid({}) failed, [{},{},{},{},{}@{}] vs "
-                        "[{},{},{},{},{}@{}]",
-                        config_owner->pid,
-                        dropped[i].node,
-                        dropped[i].time,
-                        dropped[i].ballot,
-                        dropped[i].last_committed_decree,
-                        dropped[i].last_prepared_decree,
-                        i,
-                        dropped[i + 1].node,
-                        dropped[i + 1].time,
-                        dropped[i + 1].ballot,
-                        dropped[i + 1].last_committed_decree,
-                        dropped[i + 1].last_prepared_decree,
-                        i + 1);
+            LOG_ERROR("check dropped order for gpid({}) failed, [{},{},{},{},{}@{}] vs "
+                      "[{},{},{},{},{}@{}]",
+                      config_owner->pid,
+                      dropped[i].node,
+                      dropped[i].time,
+                      dropped[i].ballot,
+                      dropped[i].last_committed_decree,
+                      dropped[i].last_prepared_decree,
+                      i,
+                      dropped[i + 1].node,
+                      dropped[i + 1].time,
+                      dropped[i + 1].ballot,
+                      dropped[i + 1].last_committed_decree,
+                      dropped[i + 1].last_prepared_decree,
+                      i + 1);
             return false;
         }
     }

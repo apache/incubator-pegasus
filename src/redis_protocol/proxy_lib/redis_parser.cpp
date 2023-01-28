@@ -164,7 +164,7 @@ bool redis_parser::eat(char c)
         --_total_length;
         return true;
     } else {
-        LOG_ERROR_F("{}: expect token: {}, got {}", _remote_address.to_string(), c, peek());
+        LOG_ERROR("{}: expect token: {}, got {}", _remote_address.to_string(), c, peek());
         return false;
     }
 }
@@ -190,14 +190,14 @@ bool redis_parser::end_array_size()
 {
     int32_t count = 0;
     if (dsn_unlikely(!dsn::buf2int32(dsn::string_view(_current_size), count))) {
-        LOG_ERROR_F(
+        LOG_ERROR(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
     }
     if (dsn_unlikely(count <= 0)) {
-        LOG_ERROR_F("{}: array size should be positive in redis request, but got {}",
-                    _remote_address.to_string(),
-                    count);
+        LOG_ERROR("{}: array size should be positive in redis request, but got {}",
+                  _remote_address.to_string(),
+                  count);
         return false;
     }
 
@@ -229,7 +229,7 @@ bool redis_parser::end_bulk_string_size()
     int32_t length = 0;
     if (dsn_unlikely(!dsn::buf2int32(
             dsn::string_view(_current_size.c_str(), _current_size.length()), length))) {
-        LOG_ERROR_F(
+        LOG_ERROR(
             "{}: invalid size string \"{}\"", _remote_address.to_string(), _current_size.c_str());
         return false;
     }
@@ -248,7 +248,7 @@ bool redis_parser::end_bulk_string_size()
         return true;
     }
 
-    LOG_ERROR_F(
+    LOG_ERROR(
         "{}: invalid bulk string length: {}", _remote_address.to_string(), _current_str.length);
     return false;
 }
@@ -791,12 +791,12 @@ void redis_parser::geo_radius(message_entry &entry)
     double lng_degrees = 0.0;
     const std::string &str_lng_degrees = redis_request.sub_requests[2].data.to_string();
     if (!dsn::buf2double(str_lng_degrees, lng_degrees)) {
-        LOG_WARNING_F("longitude parameter '{}' is error, use {}", str_lng_degrees, lng_degrees);
+        LOG_WARNING("longitude parameter '{}' is error, use {}", str_lng_degrees, lng_degrees);
     }
     double lat_degrees = 0.0;
     const std::string &str_lat_degrees = redis_request.sub_requests[3].data.to_string();
     if (!dsn::buf2double(str_lat_degrees, lat_degrees)) {
-        LOG_WARNING_F("latitude parameter '{}' is error, use {}", str_lat_degrees, lat_degrees);
+        LOG_WARNING("latitude parameter '{}' is error, use {}", str_lat_degrees, lat_degrees);
     }
 
     // radius m|km|ft|mi [WITHCOORD] [WITHDIST] [COUNT count] [ASC|DESC]
@@ -898,36 +898,36 @@ void redis_parser::counter_internal(message_entry &entry)
     int64_t increment = 1;
     if (dsn::utils::iequals(command, "INCR") || dsn::utils::iequals(command, "DECR")) {
         if (entry.request.sub_requests.size() != 2) {
-            LOG_WARNING_F("{}: command {} seqid({}) with invalid arguments count: {}",
-                          _remote_address,
-                          command,
-                          entry.sequence_id,
-                          entry.request.sub_requests.size());
+            LOG_WARNING("{}: command {} seqid({}) with invalid arguments count: {}",
+                        _remote_address,
+                        command,
+                        entry.sequence_id,
+                        entry.request.sub_requests.size());
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
     } else if (dsn::utils::iequals(command, "INCRBY") || dsn::utils::iequals(command, "DECRBY")) {
         if (entry.request.sub_requests.size() != 3) {
-            LOG_WARNING_F("{}: command {} seqid({}) with invalid arguments count: {}",
-                          _remote_address,
-                          command,
-                          entry.sequence_id,
-                          entry.request.sub_requests.size());
+            LOG_WARNING("{}: command {} seqid({}) with invalid arguments count: {}",
+                        _remote_address,
+                        command,
+                        entry.sequence_id,
+                        entry.request.sub_requests.size());
             simple_error_reply(entry, fmt::format("wrong number of arguments for '{}'", command));
             return;
         }
         if (!dsn::buf2int64(entry.request.sub_requests[2].data, increment)) {
-            LOG_WARNING_F("{}: command {} seqid({}) with invalid 'increment': {}",
-                          _remote_address,
-                          command,
-                          entry.sequence_id,
-                          entry.request.sub_requests[2].data.to_string());
+            LOG_WARNING("{}: command {} seqid({}) with invalid 'increment': {}",
+                        _remote_address,
+                        command,
+                        entry.sequence_id,
+                        entry.request.sub_requests[2].data.to_string());
             simple_error_reply(entry,
                                fmt::format("wrong type of argument 'increment 'for '{}'", command));
             return;
         }
     } else {
-        LOG_FATAL_F("command not support: {}", command);
+        LOG_FATAL("command not support: {}", command);
     }
     if (dsn::utils::iequals(command, "DECR", 4)) {
         increment = -increment;
@@ -937,19 +937,19 @@ void redis_parser::counter_internal(message_entry &entry)
     auto on_incr_reply = [ref_this, this, command, &entry](
         ::dsn::error_code ec, dsn::message_ex *, dsn::message_ex *response) {
         if (_is_session_reset.load(std::memory_order_acquire)) {
-            LOG_WARNING_F("{}: command {} seqid({}) got reply, but session has reset",
-                          _remote_address,
-                          command,
-                          entry.sequence_id);
+            LOG_WARNING("{}: command {} seqid({}) got reply, but session has reset",
+                        _remote_address,
+                        command,
+                        entry.sequence_id);
             return;
         }
 
         if (::dsn::ERR_OK != ec) {
-            LOG_WARNING_F("{}: command {} seqid({}) got reply with error = {}",
-                          _remote_address,
-                          command,
-                          entry.sequence_id,
-                          ec);
+            LOG_WARNING("{}: command {} seqid({}) got reply with error = {}",
+                        _remote_address,
+                        command,
+                        entry.sequence_id,
+                        ec);
             simple_error_reply(entry, ec.to_string());
         } else {
             ::dsn::apps::incr_response incr_resp;
@@ -977,10 +977,10 @@ void redis_parser::parse_set_parameters(const std::vector<redis_bulk_string> &op
         if (dsn::utils::iequals(opt, "EX") && i + 1 < opts.size()) {
             const std::string &str_ttl_seconds = opts[i + 1].data.to_string();
             if (!dsn::buf2int32(str_ttl_seconds, ttl_seconds)) {
-                LOG_WARNING_F("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
+                LOG_WARNING("'EX {}' option is error, use {}", str_ttl_seconds, ttl_seconds);
             }
         } else {
-            LOG_WARNING_F("only 'EX' option is supported");
+            LOG_WARNING("only 'EX' option is supported");
         }
     }
 }
@@ -1001,7 +1001,7 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
     }
     const std::string &str_radius = opts[base_index++].data.to_string();
     if (!dsn::buf2double(str_radius, radius_m)) {
-        LOG_WARNING_F("radius parameter '{}' is error, use {}", str_radius, radius_m);
+        LOG_WARNING("radius parameter '{}' is error, use {}", str_radius, radius_m);
     }
 
     // m|km|ft|mi
@@ -1033,7 +1033,7 @@ void redis_parser::parse_geo_radius_parameters(const std::vector<redis_bulk_stri
         } else if (dsn::utils::iequals(opt, "COUNT") && base_index + 1 < opts.size()) {
             const std::string &str_count = opts[base_index + 1].data.to_string();
             if (!dsn::buf2int32(str_count, count)) {
-                LOG_ERROR_F("'COUNT {}' option is error, use {}", str_count, count);
+                LOG_ERROR("'COUNT {}' option is error, use {}", str_count, count);
             }
         } else if (dsn::utils::iequals(opt, "ASC")) {
             sort_type = geo::geo_client::SortType::asc;

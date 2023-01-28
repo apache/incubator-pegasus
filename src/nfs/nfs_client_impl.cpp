@@ -147,20 +147,20 @@ void nfs_client_impl::end_get_file_size(::dsn::error_code err,
                                         const user_request_ptr &ureq)
 {
     if (err != ::dsn::ERR_OK) {
-        LOG_ERROR_F("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
-                    ureq->file_size_req.source,
-                    ureq->file_size_req.source_dir,
-                    err);
+        LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
+                  ureq->file_size_req.source,
+                  ureq->file_size_req.source_dir,
+                  err);
         ureq->nfs_task->enqueue(err, 0);
         return;
     }
 
     err = dsn::error_code(resp.error);
     if (err != ::dsn::ERR_OK) {
-        LOG_ERROR_F("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
-                    ureq->file_size_req.source,
-                    ureq->file_size_req.source_dir,
-                    err);
+        LOG_ERROR("[nfs_service] remote get file size failed, source = {}, dir = {}, err = {}",
+                  ureq->file_size_req.source,
+                  ureq->file_size_req.source_dir,
+                  err);
         ureq->nfs_task->enqueue(err, 0);
         return;
     }
@@ -334,13 +334,13 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
 
         if (!fc->user_req->is_finished) {
             if (reqc->retry_count > 0) {
-                LOG_WARNING_F("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
-                              "err = {}, retry_count = {}",
-                              fc->user_req->file_size_req.source,
-                              fc->user_req->file_size_req.source_dir,
-                              fc->file_name,
-                              err,
-                              reqc->retry_count);
+                LOG_WARNING("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
+                            "err = {}, retry_count = {}",
+                            fc->user_req->file_size_req.source,
+                            fc->user_req->file_size_req.source_dir,
+                            fc->file_name,
+                            err,
+                            reqc->retry_count);
 
                 // retry copy
                 reqc->retry_count--;
@@ -352,13 +352,13 @@ void nfs_client_impl::end_copy(::dsn::error_code err,
                 else
                     _copy_requests_low.push_retry(reqc);
             } else {
-                LOG_ERROR_F("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
-                            "err = {}, retry_count = {}",
-                            fc->user_req->file_size_req.source,
-                            fc->user_req->file_size_req.source_dir,
-                            fc->file_name,
-                            err,
-                            reqc->retry_count);
+                LOG_ERROR("[nfs_service] remote copy failed, source = {}, dir = {}, file = {}, "
+                          "err = {}, retry_count = {}",
+                          fc->user_req->file_size_req.source,
+                          fc->user_req->file_size_req.source_dir,
+                          fc->file_name,
+                          err,
+                          reqc->retry_count);
 
                 handle_completion(fc->user_req, err);
             }
@@ -458,7 +458,7 @@ void nfs_client_impl::continue_write()
 
     if (!fc->file_holder->file_handle) {
         --_concurrent_local_write_count;
-        LOG_ERROR_F("open file {} failed", file_path);
+        LOG_ERROR("open file {} failed", file_path);
         handle_completion(fc->user_req, ERR_FILE_OPERATION_FAILED);
     } else {
         zauto_lock l(reqc->lock);
@@ -499,10 +499,10 @@ void nfs_client_impl::end_write(error_code err, size_t sz, const copy_request_ex
     if (err != ERR_OK) {
         _recent_write_fail_count->increment();
 
-        LOG_ERROR_F("[nfs_service] local write failed, dir = {}, file = {}, err = {}",
-                    fc->user_req->file_size_req.dst_dir,
-                    fc->file_name,
-                    err);
+        LOG_ERROR("[nfs_service] local write failed, dir = {}, file = {}, err = {}",
+                  fc->user_req->file_size_req.dst_dir,
+                  fc->file_name,
+                  err);
         completed = true;
     } else {
         _recent_write_data_size->add(sz);

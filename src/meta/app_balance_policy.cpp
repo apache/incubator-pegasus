@@ -96,11 +96,11 @@ void app_balance_policy::balance(bool checker, const meta_view *global_view, mig
 bool app_balance_policy::need_balance_secondaries(bool balance_checker)
 {
     if (!balance_checker && !_migration_result->empty()) {
-        LOG_INFO_F("stop to do secondary balance coz we already have actions to do");
+        LOG_INFO("stop to do secondary balance coz we already have actions to do");
         return false;
     }
     if (_only_primary_balancer) {
-        LOG_INFO_F("stop to do secondary balancer coz it is not allowed");
+        LOG_INFO("stop to do secondary balancer coz it is not allowed");
         return false;
     }
     return true;
@@ -134,7 +134,7 @@ bool copy_secondary_operation::can_continue()
     int id_max = *_ordered_address_ids.rbegin();
     if (_partition_counts[id_max] <= _replicas_low ||
         _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
-        LOG_INFO_F("{}: stop copy secondary coz it will be balanced later", _app->get_logname());
+        LOG_INFO("{}: stop copy secondary coz it will be balanced later", _app->get_logname());
         return false;
     }
     return true;
@@ -150,29 +150,29 @@ bool copy_secondary_operation::can_select(gpid pid, migration_list *result)
     int id_max = *_ordered_address_ids.rbegin();
     const node_state &max_ns = _nodes.at(_address_vec[id_max]);
     if (max_ns.served_as(pid) == partition_status::PS_PRIMARY) {
-        LOG_DEBUG_F("{}: skip gpid({}.{}) coz it is primary",
-                    _app->get_logname(),
-                    pid.get_app_id(),
-                    pid.get_partition_index());
+        LOG_DEBUG("{}: skip gpid({}.{}) coz it is primary",
+                  _app->get_logname(),
+                  pid.get_app_id(),
+                  pid.get_partition_index());
         return false;
     }
 
     // if the pid have been used
     if (result->find(pid) != result->end()) {
-        LOG_DEBUG_F("{}: skip gpid({}.{}) coz it is already copyed",
-                    _app->get_logname(),
-                    pid.get_app_id(),
-                    pid.get_partition_index());
+        LOG_DEBUG("{}: skip gpid({}.{}) coz it is already copyed",
+                  _app->get_logname(),
+                  pid.get_app_id(),
+                  pid.get_partition_index());
         return false;
     }
 
     int id_min = *_ordered_address_ids.begin();
     const node_state &min_ns = _nodes.at(_address_vec[id_min]);
     if (min_ns.served_as(pid) != partition_status::PS_INACTIVE) {
-        LOG_DEBUG_F("{}: skip gpid({}.{}) coz it is already a member on the target node",
-                    _app->get_logname(),
-                    pid.get_app_id(),
-                    pid.get_partition_index());
+        LOG_DEBUG("{}: skip gpid({}.{}) coz it is already a member on the target node",
+                  _app->get_logname(),
+                  pid.get_app_id(),
+                  pid.get_partition_index());
         return false;
     }
     return true;

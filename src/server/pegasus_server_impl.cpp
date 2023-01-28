@@ -151,7 +151,7 @@ void pegasus_server_impl::gc_checkpoints(bool force_reserve_one)
             }
             time_t tm;
             if (!dsn::utils::filesystem::last_write_time(current_file, tm)) {
-                LOG_WARNING_F("get last write time of file {} failed", current_file);
+                LOG_WARNING("get last write time of file {} failed", current_file);
                 break;
             }
             auto last_write_time = (uint64_t)tm;

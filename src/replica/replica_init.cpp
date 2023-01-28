@@ -44,7 +44,7 @@ error_code replica::initialize_on_new()
     // if (dsn::utils::filesystem::directory_exists(_dir) &&
     //    !dsn::utils::filesystem::remove_path(_dir))
     //{
-    //    LOG_ERROR_F("cannot allocate new replica @ {}, as the dir is already exists", _dir);
+    //    LOG_ERROR("cannot allocate new replica @ {}, as the dir is already exists", _dir);
     //    return ERR_PATH_ALREADY_EXIST;
     //}
     //
@@ -53,7 +53,7 @@ error_code replica::initialize_on_new()
     // which is applied to restore from cold backup
     if (!dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::create_directory(_dir)) {
-        LOG_ERROR_F("cannot allocate new replica @ {}, because create dir failed", _dir);
+        LOG_ERROR("cannot allocate new replica @ {}, because create dir failed", _dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -83,25 +83,25 @@ error_code replica::initialize_on_new()
         new replica(stub, gpid, app, dir.c_str(), restore_if_necessary, is_duplication_follower);
     error_code err;
     if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {
-        LOG_ERROR_F("{}: try to restore replica failed, error({})", rep->name(), err.to_string());
+        LOG_ERROR("{}: try to restore replica failed, error({})", rep->name(), err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 
     if (is_duplication_follower &&
         (err = rep->get_replica_follower()->duplicate_checkpoint()) != dsn::ERR_OK) {
-        LOG_ERROR_F("{}: try to duplicate replica checkpoint failed, error({}) and please check "
-                    "previous detail error log",
-                    rep->name(),
-                    err.to_string());
+        LOG_ERROR("{}: try to duplicate replica checkpoint failed, error({}) and please check "
+                  "previous detail error log",
+                  rep->name(),
+                  err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 
     err = rep->initialize_on_new();
     if (err == ERR_OK) {
-        LOG_DEBUG_F("{}: new replica succeed", rep->name());
+        LOG_DEBUG("{}: new replica succeed", rep->name());
         return rep;
     } else {
-        LOG_ERROR_F("{}: new replica failed, err = {}", rep->name(), err.to_string());
+        LOG_ERROR("{}: new replica failed, err = {}", rep->name(), err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 }
@@ -140,20 +140,20 @@ error_code replica::initialize_on_load()
     char splitters[] = {'\\', '/', 0};
     std::string name = utils::get_last_component(std::string(dir), splitters);
     if (name == "") {
-        LOG_ERROR_F("invalid replica dir {}", dir);
+        LOG_ERROR("invalid replica dir {}", dir);
         return nullptr;
     }
 
     char app_type[128];
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        LOG_ERROR_F("invalid replica dir {}", dir);
+        LOG_ERROR("invalid replica dir {}", dir);
         return nullptr;
     }
 
     gpid pid(app_id, pidx);
     if (!utils::filesystem::directory_exists(dir)) {
-        LOG_ERROR_F("replica dir {} not exist", dir);
+        LOG_ERROR("replica dir {} not exist", dir);
         return nullptr;
     }
 
@@ -162,21 +162,20 @@ error_code replica::initialize_on_load()
     std::string path = utils::filesystem::path_combine(dir, kAppInfo);
     auto err = info2.load(path);
     if (ERR_OK != err) {
-        LOG_ERROR_F("load app-info from {} failed, err = {}", path, err);
+        LOG_ERROR("load app-info from {} failed, err = {}", path, err);
         return nullptr;
     }
 
     if (info.app_type != app_type) {
-        LOG_ERROR_F("unmatched app type {} for {}", info.app_type, path);
+        LOG_ERROR("unmatched app type {} for {}", info.app_type, path);
         return nullptr;
     }
 
     if (info.partition_count < pidx) {
-        LOG_ERROR_F(
-            "partition[{}], count={}, this replica may be partition split garbage partition, "
-            "ignore it",
-            pid,
-            info.partition_count);
+        LOG_ERROR("partition[{}], count={}, this replica may be partition split garbage partition, "
+                  "ignore it",
+                  pid,
+                  info.partition_count);
         return nullptr;
     }
 
@@ -184,10 +183,10 @@ error_code replica::initialize_on_load()
 
     err = rep->initialize_on_load();
     if (err == ERR_OK) {
-        LOG_INFO_F("{}: load replica succeed", rep->name());
+        LOG_INFO("{}: load replica succeed", rep->name());
         return rep;
     } else {
-        LOG_ERROR_F("{}: load replica failed, err = {}", rep->name(), err);
+        LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
         delete rep;
         rep = nullptr;
@@ -200,9 +199,9 @@ error_code replica::initialize_on_load()
                   "load_replica: failed to move directory '{}' to '{}'",
                   dir,
                   rename_dir);
-            LOG_WARNING_F("load_replica: replica_dir_op succeed to move directory '{}' to '{}'",
-                          dir,
-                          rename_dir);
+            LOG_WARNING("load_replica: replica_dir_op succeed to move directory '{}' to '{}'",
+                        dir,
+                        rename_dir);
             stub->_counter_replicas_recent_replica_move_error_count->increment();
             stub->_fs_manager.remove_replica(pid);
         }

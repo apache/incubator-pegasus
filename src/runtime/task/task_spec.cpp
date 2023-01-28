@@ -84,19 +84,19 @@ void task_spec::register_task_code(task_code code,
             enum_to_string(spec->type));
 
         if (spec->priority != pri) {
-            LOG_WARNING_F("overwrite priority for task {} from {} to {}",
-                          code,
-                          enum_to_string(spec->priority),
-                          enum_to_string(pri));
+            LOG_WARNING("overwrite priority for task {} from {} to {}",
+                        code,
+                        enum_to_string(spec->priority),
+                        enum_to_string(pri));
             spec->priority = pri;
         }
 
         if (spec->pool_code != pool) {
             if (spec->pool_code != THREAD_POOL_INVALID) {
-                LOG_WARNING_F("overwrite default thread pool for task {} from {} to {}",
-                              code,
-                              spec->pool_code,
-                              pool);
+                LOG_WARNING("overwrite default thread pool for task {} from {} to {}",
+                            code,
+                            spec->pool_code,
+                            pool);
             }
             spec->pool_code = pool;
         }
@@ -223,15 +223,15 @@ bool task_spec::init()
 
         if (spec->rpc_request_throttling_mode != TM_NONE) {
             if (spec->type != TASK_TYPE_RPC_REQUEST) {
-                LOG_ERROR_F("{}: only rpc request type can have non TM_NONE throttling_mode",
-                            spec->name);
+                LOG_ERROR("{}: only rpc request type can have non TM_NONE throttling_mode",
+                          spec->name);
                 return false;
             }
         }
 
         if (spec->rpc_call_channel == RPC_CHANNEL_UDP && !dsn::tools::FLAGS_enable_udp) {
-            LOG_ERROR_F("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
-                        "[network].enable_udp");
+            LOG_ERROR("task rpc_call_channel RPC_CHANNEL_UCP need udp service, make sure "
+                      "[network].enable_udp");
             return false;
         }
     }

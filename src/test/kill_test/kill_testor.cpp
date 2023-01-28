@@ -57,7 +57,7 @@ kill_testor::kill_testor(const char *config_file)
     pegasus_cluster_name =
         dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
     if (pegasus_cluster_name.empty()) {
-        LOG_ERROR_F("Should config the cluster name for killer");
+        LOG_ERROR("Should config the cluster name for killer");
         exit(-1);
     }
 
@@ -66,13 +66,13 @@ kill_testor::kill_testor(const char *config_file)
     dsn::replication::replica_helper::load_meta_servers(
         meta_list, PEGASUS_CLUSTER_SECTION_NAME.c_str(), pegasus_cluster_name.c_str());
     if (meta_list.empty()) {
-        LOG_ERROR_F("Should config the meta address for killer");
+        LOG_ERROR("Should config the meta address for killer");
         exit(-1);
     }
 
     ddl_client.reset(new replication_ddl_client(meta_list));
     if (ddl_client == nullptr) {
-        LOG_ERROR_F("Initialize the _ddl_client failed");
+        LOG_ERROR("Initialize the _ddl_client failed");
         exit(-1);
     }
 
@@ -121,7 +121,7 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
     dsn::error_code err = ddl_client->list_app(app_name, app_id, partition_count, partitions);
 
     if (err == ::dsn::ERR_OK) {
-        LOG_DEBUG_F("access meta and query partition status success");
+        LOG_DEBUG("access meta and query partition status success");
         for (int i = 0; i < partitions.size(); i++) {
             const dsn::partition_configuration &p = partitions[i];
             int replica_count = 0;
@@ -145,15 +145,15 @@ dsn::error_code kill_testor::get_partition_info(bool debug_unhealthy,
                 info << "], ";
                 info << "last_committed_decree=" << p.last_committed_decree;
                 if (debug_unhealthy) {
-                    LOG_INFO_F("found unhealthy partition, {}", info.str());
+                    LOG_INFO("found unhealthy partition, {}", info.str());
                 } else {
-                    LOG_DEBUG_F("found unhealthy partition, {}", info.str());
+                    LOG_DEBUG("found unhealthy partition, {}", info.str());
                 }
             }
         }
         unhealthy_partition_cnt = partition_count - healthy_partition_cnt;
     } else {
-        LOG_DEBUG_F("access meta and query partition status fail");
+        LOG_DEBUG("access meta and query partition status fail");
         healthy_partition_cnt = 0;
         unhealthy_partition_cnt = 0;
     }
@@ -172,15 +172,15 @@ bool kill_testor::check_cluster_status()
                                                  unhealthy_partition_cnt);
         if (err == dsn::ERR_OK) {
             if (unhealthy_partition_cnt > 0) {
-                LOG_DEBUG_F("query partition status success, but still have unhealthy partition, "
-                            "healthy_partition_count = {}, unhealthy_partition_count = {}",
-                            healthy_partition_cnt,
-                            unhealthy_partition_cnt);
+                LOG_DEBUG("query partition status success, but still have unhealthy partition, "
+                          "healthy_partition_count = {}, unhealthy_partition_count = {}",
+                          healthy_partition_cnt,
+                          unhealthy_partition_cnt);
                 sleep(1);
             } else
                 return true;
         } else {
-            LOG_INFO_F("query partition status fail, try times = {}", try_count);
+            LOG_INFO("query partition status fail, try times = {}", try_count);
             sleep(1);
         }
         try_count += 1;

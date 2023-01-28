@@ -134,7 +134,7 @@ public:
 
     void mock_partition_bulk_load(const std::string &app_name, const gpid &pid)
     {
-        LOG_INFO_F("mock function, app({}), pid({})", app_name, pid);
+        LOG_INFO("mock function, app({}), pid({})", app_name, pid);
     }
 
     gpid before_check_partition_status(bulk_load_status::type status)
@@ -373,11 +373,11 @@ public:
             std::move(app_path),
             std::move(value),
             [this, app_path, &ainfo, &partition_bulk_load_info_map]() {
-                LOG_INFO_F("create app({}) app_id={} bulk load dir({}), bulk_load_status={}",
-                           ainfo.app_name,
-                           ainfo.app_id,
-                           app_path,
-                           dsn::enum_to_string(ainfo.status));
+                LOG_INFO("create app({}) app_id={} bulk load dir({}), bulk_load_status={}",
+                         ainfo.app_name,
+                         ainfo.app_id,
+                         app_path,
+                         dsn::enum_to_string(ainfo.status));
                 for (const auto &kv : partition_bulk_load_info_map) {
                     mock_partition_bulk_load_info_on_remote_storage(gpid(ainfo.app_id, kv.first),
                                                                     kv.second);
@@ -392,10 +392,10 @@ public:
         blob value = json::json_forwarder<partition_bulk_load_info>::encode(pinfo);
         _ms->get_meta_storage()->create_node(
             std::move(partition_path), std::move(value), [partition_path, pid, &pinfo]() {
-                LOG_INFO_F("create partition[{}] bulk load dir({}), bulk_load_status={}",
-                           pid,
-                           partition_path,
-                           dsn::enum_to_string(pinfo.status));
+                LOG_INFO("create partition[{}] bulk load dir({}), bulk_load_status={}",
+                         pid,
+                         partition_path,
+                         dsn::enum_to_string(pinfo.status));
             });
     }
 
@@ -407,7 +407,7 @@ public:
 
         _ms->get_meta_storage()->create_node(
             std::move(path), blob(lock_state, 0, strlen(lock_state)), [this]() {
-                LOG_INFO_F("create app root {}", _app_root);
+                LOG_INFO("create app root {}", _app_root);
             });
         wait_all();
 
@@ -416,7 +416,7 @@ public:
             _app_root + "/" + boost::lexical_cast<std::string>(info.app_id),
             std::move(value),
             [this, &info]() {
-                LOG_INFO_F("create app({}) app_id={}, dir succeed", info.app_name, info.app_id);
+                LOG_INFO("create app({}) app_id={}, dir succeed", info.app_name, info.app_id);
                 for (int i = 0; i < info.partition_count; ++i) {
                     partition_configuration config;
                     config.max_replica_count = 3;
@@ -428,10 +428,10 @@ public:
                             boost::lexical_cast<std::string>(i),
                         std::move(v),
                         [info, i]() {
-                            LOG_INFO_F("create app({}), partition({}.{}) dir succeed",
-                                       info.app_name,
-                                       info.app_id,
-                                       i);
+                            LOG_INFO("create app({}), partition({}.{}) dir succeed",
+                                     info.app_name,
+                                     info.app_id,
+                                     i);
                         });
                 }
             });

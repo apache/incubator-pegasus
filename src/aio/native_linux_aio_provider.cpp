@@ -47,7 +47,7 @@ linux_fd_t native_linux_aio_provider::open(const char *file_name, int flag, int 
 {
     auto fd = ::open(file_name, flag, pmode);
     if (fd == DSN_INVALID_FILE_HANDLE) {
-        LOG_ERROR_F("create file failed, err = {}", utils::safe_strerror(errno));
+        LOG_ERROR("create file failed, err = {}", utils::safe_strerror(errno));
     }
     return linux_fd_t(fd);
 }
@@ -58,7 +58,7 @@ error_code native_linux_aio_provider::close(linux_fd_t fd)
         return ERR_OK;
     }
 
-    LOG_ERROR_F("close file failed, err = {}", utils::safe_strerror(errno));
+    LOG_ERROR("close file failed, err = {}", utils::safe_strerror(errno));
     return ERR_FILE_OPERATION_FAILED;
 }
 
@@ -68,7 +68,7 @@ error_code native_linux_aio_provider::flush(linux_fd_t fd)
         return ERR_OK;
     }
 
-    LOG_ERROR_F("flush file failed, err = {}", utils::safe_strerror(errno));
+    LOG_ERROR("flush file failed, err = {}", utils::safe_strerror(errno));
     return ERR_FILE_OPERATION_FAILED;
 }
 
@@ -85,13 +85,12 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
                             aio_ctx.file_offset + buffer_offset);
         if (dsn_unlikely(ret < 0)) {
             if (errno == EINTR) {
-                LOG_WARNING_F("write failed with errno={} and will retry it.",
-                              utils::safe_strerror(errno));
+                LOG_WARNING("write failed with errno={} and will retry it.",
+                            utils::safe_strerror(errno));
                 continue;
             }
             resp = ERR_FILE_OPERATION_FAILED;
-            LOG_ERROR_F(
-                "write failed with errno={}, return {}.", utils::safe_strerror(errno), resp);
+            LOG_ERROR("write failed with errno={}, return {}.", utils::safe_strerror(errno), resp);
             return resp;
         }
 
@@ -104,7 +103,7 @@ error_code native_linux_aio_provider::write(const aio_context &aio_ctx,
 
         buffer_offset += ret;
         if (dsn_unlikely(buffer_offset != aio_ctx.buffer_size)) {
-            LOG_WARNING_F(
+            LOG_WARNING(
                 "write incomplete, request_size={}, total_write_size={}, this_write_size={}, "
                 "and will retry it.",
                 aio_ctx.buffer_size,
@@ -125,7 +124,7 @@ error_code native_linux_aio_provider::read(const aio_context &aio_ctx,
                        aio_ctx.buffer_size,
                        aio_ctx.file_offset);
     if (dsn_unlikely(ret < 0)) {
-        LOG_WARNING_F("write failed with errno={} and will retry it.", utils::safe_strerror(errno));
+        LOG_WARNING("write failed with errno={} and will retry it.", utils::safe_strerror(errno));
         return ERR_FILE_OPERATION_FAILED;
     }
     if (ret == 0) {

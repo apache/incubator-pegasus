@@ -83,16 +83,16 @@ void partition_resolver_simple::on_access_failure(int partition_index, error_cod
 
     zauto_write_lock l(_config_lock);
     if (err == ERR_PARENT_PARTITION_MISUSED) {
-        LOG_INFO_F("clear all partition configuration cache due to access failure {} at {}.{}",
-                   err,
-                   _app_id,
-                   partition_index);
+        LOG_INFO("clear all partition configuration cache due to access failure {} at {}.{}",
+                 err,
+                 _app_id,
+                 partition_index);
         _app_partition_count = -1;
     } else {
-        LOG_INFO_F("clear partition configuration cache {}.{} due to access failure {}",
-                   _app_id,
-                   partition_index,
-                   err);
+        LOG_INFO("clear partition configuration cache {}.{} due to access failure {}",
+                 _app_id,
+                 partition_index,
+                 err);
         _config_cache.erase(partition_index);
     }
 }
@@ -267,7 +267,7 @@ void partition_resolver_simple::query_config_reply(error_code err,
             zauto_write_lock l(_config_lock);
 
             if (_app_id != -1 && _app_id != resp.app_id) {
-                LOG_WARNING_F(
+                LOG_WARNING(
                     "app id is changed (mostly the app was removed and created with the same "
                     "name), local vs remote: {} vs {} ",
                     _app_id,
@@ -276,10 +276,10 @@ void partition_resolver_simple::query_config_reply(error_code err,
             if (_app_partition_count != -1 && _app_partition_count != resp.partition_count &&
                 _app_partition_count * 2 != resp.partition_count &&
                 _app_partition_count != resp.partition_count * 2) {
-                LOG_WARNING_F("partition count is changed (mostly the app was removed and created "
-                              "with the same name), local vs remote: {} vs {} ",
-                              _app_partition_count,
-                              resp.partition_count);
+                LOG_WARNING("partition count is changed (mostly the app was removed and created "
+                            "with the same name), local vs remote: {} vs {} ",
+                            _app_partition_count,
+                            resp.partition_count);
             }
             _app_id = resp.app_id;
             _app_partition_count = resp.partition_count;

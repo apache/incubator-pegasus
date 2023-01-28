@@ -307,10 +307,10 @@ void replica::on_remove(const replica_configuration &request)
     // - here we ignore the lately arrived remove request, which is proper
     //
     if (request.ballot == get_ballot() && partition_status::PS_POTENTIAL_SECONDARY == status()) {
-        LOG_WARNING_F("this implies that a config proposal request (e.g. add secondary) "
-                      "with the same ballot arrived before this remove request, "
-                      "current status is {}",
-                      enum_to_string(status()));
+        LOG_WARNING("this implies that a config proposal request (e.g. add secondary) "
+                    "with the same ballot arrived before this remove request, "
+                    "current status is {}",
+                    enum_to_string(status()));
         return;
     }
 

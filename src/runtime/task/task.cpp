@@ -251,11 +251,11 @@ static void check_wait_task(task *waitee)
         task::get_current_worker()->pool_spec().worker_count > 1)
         return;
 
-    LOG_WARNING_F("task {} waits for another task {} sharing the same thread pool "
-                  "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool "
-                  "is partitioned)",
-                  task::get_current_task()->code(),
-                  waitee->code());
+    LOG_WARNING("task {} waits for another task {} sharing the same thread pool "
+                "- will lead to deadlocks easily (e.g., when worker_count = 1 or when the pool "
+                "is partitioned)",
+                task::get_current_task()->code(),
+                waitee->code());
 }
 
 bool task::wait_on_cancel()

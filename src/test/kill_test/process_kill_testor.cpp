@@ -96,7 +96,7 @@ bool process_kill_testor::verifier_process_alive()
 
 void process_kill_testor::Run()
 {
-    LOG_INFO_F("begin the kill-thread");
+    LOG_INFO("begin the kill-thread");
     while (true) {
         if (!check_cluster_status()) {
             stop_verifier_and_exit("check_cluster_status() fail, and exit");
@@ -105,7 +105,7 @@ void process_kill_testor::Run()
             stop_verifier_and_exit("the verifier process is dead");
         }
         run();
-        LOG_INFO_F("sleep {} seconds before checking", kill_interval_seconds);
+        LOG_INFO("sleep {} seconds before checking", kill_interval_seconds);
         sleep(kill_interval_seconds);
     }
 }
@@ -117,9 +117,9 @@ void process_kill_testor::run()
     }
 
     if (kill_round == 0) {
-        LOG_INFO_F("Number of meta-server: {}", _total_meta_count);
-        LOG_INFO_F("Number of replica-server: {}", _total_replica_count);
-        LOG_INFO_F("Number of zookeeper: {}", _total_zookeeper_count);
+        LOG_INFO("Number of meta-server: {}", _total_meta_count);
+        LOG_INFO("Number of replica-server: {}", _total_replica_count);
+        LOG_INFO("Number of zookeeper: {}", _total_zookeeper_count);
     }
     kill_round += 1;
     int meta_cnt = 0;
@@ -132,26 +132,25 @@ void process_kill_testor::run()
         replica_cnt = generate_one_number(0, _kill_replica_max_count);
         zk_cnt = generate_one_number(0, _kill_zk_max_count);
     }
-    LOG_INFO_F("************************");
-    LOG_INFO_F("Round [{}]", kill_round);
-    LOG_INFO_F("start kill...");
-    LOG_INFO_F(
-        "kill meta number={}, replica number={}, zk number={}", meta_cnt, replica_cnt, zk_cnt);
+    LOG_INFO("************************");
+    LOG_INFO("Round [{}]", kill_round);
+    LOG_INFO("start kill...");
+    LOG_INFO("kill meta number={}, replica number={}, zk number={}", meta_cnt, replica_cnt, zk_cnt);
 
     if (!kill(meta_cnt, replica_cnt, zk_cnt)) {
         stop_verifier_and_exit("kill jobs failed");
     }
 
     auto sleep_time_random_seconds = generate_one_number(1, _sleep_time_before_recover_seconds);
-    LOG_INFO_F("sleep {} seconds before recovery", sleep_time_random_seconds);
+    LOG_INFO("sleep {} seconds before recovery", sleep_time_random_seconds);
     sleep(sleep_time_random_seconds);
 
-    LOG_INFO_F("start recover...");
+    LOG_INFO("start recover...");
     if (!start()) {
         stop_verifier_and_exit("recover jobs failed");
     }
-    LOG_INFO_F("after recover...");
-    LOG_INFO_F("************************");
+    LOG_INFO("after recover...");
+    LOG_INFO("************************");
 }
 
 bool process_kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
@@ -166,12 +165,12 @@ bool process_kill_testor::kill(int meta_cnt, int replica_cnt, int zookeeper_cnt)
         job_index_to_kill.clear();
         generate_random(job_index_to_kill, kill_counts[id], 1, total_count[id]);
         for (auto index : job_index_to_kill) {
-            LOG_INFO_F("start to kill {}@{}", job_type_str(_job_types[id]), index);
+            LOG_INFO("start to kill {}@{}", job_type_str(_job_types[id]), index);
             if (!kill_job_by_index(_job_types[id], index)) {
-                LOG_INFO_F("kill {}@{} failed", job_type_str(_job_types[id]), index);
+                LOG_INFO("kill {}@{} failed", job_type_str(_job_types[id]), index);
                 return false;
             }
-            LOG_INFO_F("kill {}@{} succeed", job_type_str(_job_types[id]), index);
+            LOG_INFO("kill {}@{} succeed", job_type_str(_job_types[id]), index);
         }
     }
     return true;
@@ -184,12 +183,12 @@ bool process_kill_testor::start()
     for (auto id : random_idxs) {
         std::vector<int> &job_index_to_kill = _job_index_to_kill[_job_types[id]];
         for (auto index : job_index_to_kill) {
-            LOG_INFO_F("start to recover {}@{}", job_type_str(_job_types[id]), index);
+            LOG_INFO("start to recover {}@{}", job_type_str(_job_types[id]), index);
             if (!start_job_by_index(_job_types[id], index)) {
-                LOG_INFO_F("recover {}@{} failed", job_type_str(_job_types[id]), index);
+                LOG_INFO("recover {}@{} failed", job_type_str(_job_types[id]), index);
                 return false;
             }
-            LOG_INFO_F("recover {}@{} succeed", job_type_str(_job_types[id]), index);
+            LOG_INFO("recover {}@{} succeed", job_type_str(_job_types[id]), index);
         }
     }
     return true;
@@ -223,7 +222,7 @@ void process_kill_testor::stop_verifier_and_exit(const char *msg)
     int ret = dsn::utils::pipe_execute(
         "ps aux | grep pegasus | grep verifier | awk '{print $2}' | xargs kill -9", ss);
     CHECK(ret == 0 || ret == 256, "");
-    LOG_FATAL_F(msg);
+    LOG_FATAL(msg);
 }
 
 bool process_kill_testor::check_coredump()
@@ -233,14 +232,14 @@ bool process_kill_testor::check_coredump()
     // make sure all generated core are logged
     for (int i = 1; i <= _total_meta_count; ++i) {
         if (_killer_handler->has_meta_dumped_core(i)) {
-            LOG_ERROR_F("meta server {} generate core dump", i);
+            LOG_ERROR("meta server {} generate core dump", i);
             has_core = true;
         }
     }
 
     for (int i = 1; i <= _total_replica_count; ++i) {
         if (_killer_handler->has_replica_dumped_core(i)) {
-            LOG_ERROR_F("replica server {} generate core dump", i);
+            LOG_ERROR("replica server {} generate core dump", i);
             has_core = true;
         }
     }

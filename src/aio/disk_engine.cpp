@@ -236,10 +236,10 @@ void disk_engine::process_write(aio_task *aio, uint64_t sz)
 void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
 {
     if (err != ERR_OK) {
-        LOG_DEBUG_F("disk operation failure with code {}, err = {}, aio_task_id = {:#018x}",
-                    aio->spec().name,
-                    err,
-                    aio->id());
+        LOG_DEBUG("disk operation failure with code {}, err = {}, aio_task_id = {:#018x}",
+                  aio->spec().name,
+                  err,
+                  aio->id());
     }
 
     // batching

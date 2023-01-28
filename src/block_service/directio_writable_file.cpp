@@ -74,7 +74,7 @@ direct_io_writable_file::~direct_io_writable_file()
 bool direct_io_writable_file::initialize()
 {
     if (posix_memalign(&_buffer, g_page_size, _buffer_size) != 0) {
-        LOG_ERROR_F("Allocate memaligned buffer failed, err = {}", utils::safe_strerror(errno));
+        LOG_ERROR("Allocate memaligned buffer failed, err = {}", utils::safe_strerror(errno));
         return false;
     }
 
@@ -86,10 +86,10 @@ bool direct_io_writable_file::initialize()
     // maybe just terminate the process or mark the disk as failed would be better
     _fd = ::open(_file_path.c_str(), flag, S_IRUSR | S_IWUSR | S_IRGRP);
     if (_fd < 0) {
-        LOG_ERROR_F("Failed to open {} with flag {}, err = {}",
-                    _file_path,
-                    flag,
-                    utils::safe_strerror(errno));
+        LOG_ERROR("Failed to open {} with flag {}, err = {}",
+                  _file_path,
+                  flag,
+                  utils::safe_strerror(errno));
         ::free(_buffer);
         _buffer = nullptr;
         return false;
@@ -104,23 +104,23 @@ bool direct_io_writable_file::finalize()
     if (_offset > 0) {
         ssize_t written_bytes = ::write(_fd, _buffer, _buffer_size);
         if (dsn_unlikely(written_bytes < 0)) {
-            LOG_ERROR_F("Failed to write the last chunk, file_path = {}, err = {}",
-                        _file_path,
-                        utils::safe_strerror(errno));
+            LOG_ERROR("Failed to write the last chunk, file_path = {}, err = {}",
+                      _file_path,
+                      utils::safe_strerror(errno));
             return false;
         }
         // TODO(yingchun): would better to retry
         if (dsn_unlikely(written_bytes != _buffer_size)) {
-            LOG_ERROR_F("Failed to write the last chunk, file_path = {}, data bytes = {}, written "
-                        "bytes = {}",
-                        _file_path,
-                        _buffer_size,
-                        written_bytes);
+            LOG_ERROR("Failed to write the last chunk, file_path = {}, data bytes = {}, written "
+                      "bytes = {}",
+                      _file_path,
+                      _buffer_size,
+                      written_bytes);
             return false;
         }
         _offset = 0;
         if (::ftruncate(_fd, _file_size) < 0) {
-            LOG_ERROR_F("Failed to truncate {}, err = {}", _file_path, utils::safe_strerror(errno));
+            LOG_ERROR("Failed to truncate {}, err = {}", _file_path, utils::safe_strerror(errno));
             return false;
         }
     }
@@ -142,14 +142,14 @@ bool direct_io_writable_file::write(const char *s, size_t n)
         if (_offset == _buffer_size) {
             ssize_t written_bytes = ::write(_fd, _buffer, _buffer_size);
             if (dsn_unlikely(written_bytes < 0)) {
-                LOG_ERROR_F("Failed to write chunk, file_path = {}, err = {}",
-                            _file_path,
-                            utils::safe_strerror(errno));
+                LOG_ERROR("Failed to write chunk, file_path = {}, err = {}",
+                          _file_path,
+                          utils::safe_strerror(errno));
                 return false;
             }
             // TODO(yingchun): would better to retry
             if (dsn_unlikely(written_bytes != _buffer_size)) {
-                LOG_ERROR_F(
+                LOG_ERROR(
                     "Failed to write chunk, file_path = {}, data bytes = {}, written bytes = {}",
                     _file_path,
                     _buffer_size,

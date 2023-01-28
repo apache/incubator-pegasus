@@ -41,13 +41,13 @@ void result_writer::set_result(const std::string &hash_key,
         if (err != PERR_OK) {
             int new_try_count = try_count - 1;
             if (new_try_count > 0) {
-                LOG_WARNING_F("set_result fail, hash_key = {}, sort_key = {}, value = {}, "
-                              "error = {}, left_try_count = {}, try again after 1 minute",
-                              hash_key,
-                              sort_key,
-                              value,
-                              _client->get_error_string(err),
-                              new_try_count);
+                LOG_WARNING("set_result fail, hash_key = {}, sort_key = {}, value = {}, "
+                            "error = {}, left_try_count = {}, try again after 1 minute",
+                            hash_key,
+                            sort_key,
+                            value,
+                            _client->get_error_string(err),
+                            new_try_count);
                 ::dsn::tasking::enqueue(
                     LPC_WRITE_RESULT,
                     &_tracker,
@@ -55,19 +55,19 @@ void result_writer::set_result(const std::string &hash_key,
                     0,
                     std::chrono::minutes(1));
             } else {
-                LOG_ERROR_F("set_result fail, hash_key = {}, sort_key = {}, value = {}, error = "
-                            "{}, left_try_count = {}, do not try again",
-                            hash_key,
-                            sort_key,
-                            value,
-                            _client->get_error_string(err),
-                            new_try_count);
+                LOG_ERROR("set_result fail, hash_key = {}, sort_key = {}, value = {}, error = "
+                          "{}, left_try_count = {}, do not try again",
+                          hash_key,
+                          sort_key,
+                          value,
+                          _client->get_error_string(err),
+                          new_try_count);
             }
         } else {
-            LOG_DEBUG_F("set_result succeed, hash_key = {}, sort_key = {}, value = {}",
-                        hash_key,
-                        sort_key,
-                        value);
+            LOG_DEBUG("set_result succeed, hash_key = {}, sort_key = {}, value = {}",
+                      hash_key,
+                      sort_key,
+                      value);
         }
     };
 

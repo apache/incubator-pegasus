@@ -146,9 +146,8 @@ bool token_bucket_throttling_controller::transform_env_string(const std::string 
         reject_size_value = 1;
         enabled = false;
 
-        LOG_DEBUG_F(
-            "token_bucket_throttling_controller doesn't support delay method, so throttling "
-            "controller is disabled now");
+        LOG_DEBUG("token_bucket_throttling_controller doesn't support delay method, so throttling "
+                  "controller is disabled now");
         return true;
     }
 

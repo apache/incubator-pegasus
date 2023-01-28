@@ -68,8 +68,8 @@ raw_message_parser::raw_message_parser()
     bool hooked = false;
     static std::atomic_bool s_handler_hooked(false);
     if (s_handler_hooked.compare_exchange_strong(hooked, true)) {
-        LOG_INFO_F("join point on_rpc_session_disconnected registered to notify disconnect with "
-                   "RPC_CALL_RAW_SESSION_DISCONNECT");
+        LOG_INFO("join point on_rpc_session_disconnected registered to notify disconnect with "
+                 "RPC_CALL_RAW_SESSION_DISCONNECT");
         rpc_session::on_rpc_session_disconnected.put_back(
             raw_message_parser::notify_rpc_session_disconnected,
             "notify disconnect with RPC_CALL_RAW_SESSION_DISCONNECT");

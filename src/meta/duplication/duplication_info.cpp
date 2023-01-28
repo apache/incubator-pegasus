@@ -48,7 +48,7 @@ namespace replication {
         s = it->second;
         return true;
     }
-    LOG_ERROR_F("unexpected duplication_status name: {}", name);
+    LOG_ERROR("unexpected duplication_status name: {}", name);
 
     // for forward compatibility issue, duplication of unexpected status
     // will be marked as invisible.
@@ -77,7 +77,7 @@ namespace replication {
         fmode = it->second;
         return true;
     }
-    LOG_ERROR_F("unexpected duplication_fail_mode name: {}", name);
+    LOG_ERROR("unexpected duplication_fail_mode name: {}", name);
     // marked as default value.
     fmode = duplication_fail_mode::FAIL_SLOW;
     return false;
@@ -196,7 +196,7 @@ void duplication_info::report_progress_if_time_up()
     // progress report is not supposed to be too frequent.
     if (dsn_now_ms() > _last_progress_report_ms + PROGRESS_REPORT_PERIOD_MS) {
         _last_progress_report_ms = dsn_now_ms();
-        LOG_INFO_F("duplication report: {}", to_string());
+        LOG_INFO("duplication report: {}", to_string());
     }
 }
 

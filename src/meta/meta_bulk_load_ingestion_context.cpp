@@ -81,20 +81,20 @@ bool ingestion_context::node_context::check_if_add(const std::string &disk_tag)
 {
     auto max_node_ingestion_count = FLAGS_bulk_load_node_max_ingesting_count;
     if (node_ingesting_count >= max_node_ingestion_count) {
-        LOG_WARNING_F("node[{}] has {} partition executing ingestion, max_count = {}",
-                      address.to_string(),
-                      node_ingesting_count,
-                      max_node_ingestion_count);
+        LOG_WARNING("node[{}] has {} partition executing ingestion, max_count = {}",
+                    address.to_string(),
+                    node_ingesting_count,
+                    max_node_ingestion_count);
         return false;
     }
 
     auto max_disk_ingestion_count = get_max_disk_ingestion_count(max_node_ingestion_count);
     if (disk_ingesting_counts[disk_tag] >= max_disk_ingestion_count) {
-        LOG_WARNING_F("node[{}] disk[{}] has {} partition executing ingestion, max_count = {}",
-                      address.to_string(),
-                      disk_tag,
-                      disk_ingesting_counts[disk_tag],
-                      max_disk_ingestion_count);
+        LOG_WARNING("node[{}] disk[{}] has {} partition executing ingestion, max_count = {}",
+                    address.to_string(),
+                    disk_tag,
+                    disk_ingesting_counts[disk_tag],
+                    max_disk_ingestion_count);
         return false;
     }
     return true;

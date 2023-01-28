@@ -156,7 +156,7 @@ void available_detector::stop() { _tracker.cancel_outstanding_tasks(); }
 void available_detector::detect_available()
 {
     if (!generate_hash_keys()) {
-        LOG_ERROR_F("initialize hash_keys failed, do not detect available, retry after 60 seconds");
+        LOG_ERROR("initialize hash_keys failed, do not detect available, retry after 60 seconds");
         _detect_timer =
             ::dsn::tasking::enqueue(LPC_DETECT_AVAILABLE,
                                     &_tracker,
@@ -260,7 +260,7 @@ bool available_detector::generate_hash_keys()
         }
         return true;
     } else {
-        LOG_WARNING_F(
+        LOG_WARNING(
             "Get partition count of table '{}' on cluster '{}' failed", _app_name, _cluster_name);
         return false;
     }
@@ -269,27 +269,27 @@ bool available_detector::generate_hash_keys()
 void available_detector::on_detect(int32_t idx)
 {
     if (idx == 0) {
-        LOG_INFO_F("detecting table[{}] with app_id[{}] and partition_count[{}] on cluster[{}], "
-                   "recent_day_detect_times({}), recent_day_fail_times({}), "
-                   "recent_hour_detect_times({}), recent_hour_fail_times({}) "
-                   "recent_minute_detect_times({}), recent_minute_fail_times({})",
-                   _app_name,
-                   _app_id,
-                   _partition_count,
-                   _cluster_name,
-                   _recent_day_detect_times,
-                   _recent_day_fail_times,
-                   _recent_hour_detect_times,
-                   _recent_hour_fail_times,
-                   _recent_minute_detect_times,
-                   _recent_minute_fail_times);
+        LOG_INFO("detecting table[{}] with app_id[{}] and partition_count[{}] on cluster[{}], "
+                 "recent_day_detect_times({}), recent_day_fail_times({}), "
+                 "recent_hour_detect_times({}), recent_hour_fail_times({}) "
+                 "recent_minute_detect_times({}), recent_minute_fail_times({})",
+                 _app_name,
+                 _app_id,
+                 _partition_count,
+                 _cluster_name,
+                 _recent_day_detect_times,
+                 _recent_day_fail_times,
+                 _recent_hour_detect_times,
+                 _recent_hour_fail_times,
+                 _recent_minute_detect_times,
+                 _recent_minute_fail_times);
     }
-    LOG_DEBUG_F("available_detector begin to detect partition[{}] of table[{}] with id[{}] on the "
-                "cluster[{}]",
-                idx,
-                _app_name,
-                _app_id,
-                _cluster_name);
+    LOG_DEBUG("available_detector begin to detect partition[{}] of table[{}] with id[{}] on the "
+              "cluster[{}]",
+              idx,
+              _app_name,
+              _app_id,
+              _cluster_name);
     auto time = dsn_now_ms();
     std::string value = "detect_value_" + std::to_string((time / 1000));
     _recent_day_detect_times.fetch_add(1);
@@ -305,18 +305,18 @@ void available_detector::on_detect(int32_t idx)
             _recent_day_fail_times.fetch_add(1);
             _recent_hour_fail_times.fetch_add(1);
             _recent_minute_fail_times.fetch_add(1);
-            LOG_ERROR_F("async_get partition[{}] fail, fail_count = {}, hash_key = {}, error = {}",
-                        idx,
-                        prev + 1,
-                        _hash_keys[idx],
-                        _client->get_error_string(err));
+            LOG_ERROR("async_get partition[{}] fail, fail_count = {}, hash_key = {}, error = {}",
+                      idx,
+                      prev + 1,
+                      _hash_keys[idx],
+                      _client->get_error_string(err));
             check_and_send_email(&cnt, idx);
         } else {
             cnt.store(0);
-            LOG_DEBUG_F("async_get partition[{}] ok, hash_key = {}, value = {}",
-                        idx,
-                        _hash_keys[idx],
-                        _value);
+            LOG_DEBUG("async_get partition[{}] ok, hash_key = {}, value = {}",
+                      idx,
+                      _hash_keys[idx],
+                      _value);
         }
     };
 
@@ -331,14 +331,14 @@ void available_detector::on_detect(int32_t idx)
             _recent_day_fail_times.fetch_add(1);
             _recent_hour_fail_times.fetch_add(1);
             _recent_minute_fail_times.fetch_add(1);
-            LOG_ERROR_F("async_set partition[{}] fail, fail_count = {}, hash_key = {}, error = {}",
-                        idx,
-                        prev + 1,
-                        _hash_keys[idx],
-                        _client->get_error_string(err));
+            LOG_ERROR("async_set partition[{}] fail, fail_count = {}, hash_key = {}, error = {}",
+                      idx,
+                      prev + 1,
+                      _hash_keys[idx],
+                      _client->get_error_string(err));
             check_and_send_email(&cnt, idx);
         } else {
-            LOG_DEBUG_F("async_set partition[{}] ok, hash_key = {}", idx, _hash_keys[idx]);
+            LOG_DEBUG("async_set partition[{}] ok, hash_key = {}", idx, _hash_keys[idx]);
             _client->async_get(
                 _hash_keys[idx], "", std::move(user_async_get_callback), _detect_timeout);
         }
@@ -361,17 +361,17 @@ void available_detector::check_and_send_email(std::atomic<int> *cnt, int32_t idx
         }
     }
     if (send_email) {
-        LOG_INFO_F("start to send alert email, partition_index = {}", idx);
+        LOG_INFO("start to send alert email, partition_index = {}", idx);
         if (_send_alert_email_cmd.empty()) {
-            LOG_INFO_F("ignore sending alert email because email address is not set, "
-                       "partition_index = {}",
-                       idx);
+            LOG_INFO("ignore sending alert email because email address is not set, "
+                     "partition_index = {}",
+                     idx);
         } else {
             int r = system((_send_alert_email_cmd + std::to_string(idx)).c_str());
             if (r == 0) {
-                LOG_INFO_F("send alert email done, partition_index = {}", idx);
+                LOG_INFO("send alert email done, partition_index = {}", idx);
             } else {
-                LOG_ERROR_F(
+                LOG_ERROR(
                     "send alert email failed, partition_index = {}, command_return = {}", idx, r);
             }
         }
@@ -380,7 +380,7 @@ void available_detector::check_and_send_email(std::atomic<int> *cnt, int32_t idx
 
 void available_detector::on_day_report()
 {
-    LOG_INFO_F("start to report on new day, last_day = {}", _old_day);
+    LOG_INFO("start to report on new day, last_day = {}", _old_day);
     int64_t detect_times = _recent_day_detect_times.fetch_and(0);
     int64_t fail_times = _recent_day_fail_times.fetch_and(0);
     int64_t succ_times = std::max<int64_t>(0L, detect_times - fail_times);
@@ -399,30 +399,30 @@ void available_detector::on_day_report()
     _pfc_fail_times_day->set(fail_times);
     _pfc_available_day->set(available);
 
-    LOG_INFO_F("start to send availability email, date = {}", _old_day);
+    LOG_INFO("start to send availability email, date = {}", _old_day);
     if (_send_availability_info_email_cmd.empty()) {
-        LOG_INFO_F("ignore sending availability email because email address is not set, "
-                   "date = {}, total_detect_times = {}, total_fail_times = {}",
-                   _old_day,
-                   detect_times,
-                   fail_times);
+        LOG_INFO("ignore sending availability email because email address is not set, "
+                 "date = {}, total_detect_times = {}, total_fail_times = {}",
+                 _old_day,
+                 detect_times,
+                 fail_times);
     } else {
         int r = system((_send_availability_info_email_cmd + std::to_string(detect_times) + " " +
                         std::to_string(fail_times) + " " + _old_day)
                            .c_str());
         if (r == 0) {
-            LOG_INFO_F("send availability email done, date = {}, "
-                       "total_detect_times = {}, total_fail_times = {}",
-                       _old_day,
-                       detect_times,
-                       fail_times);
+            LOG_INFO("send availability email done, date = {}, "
+                     "total_detect_times = {}, total_fail_times = {}",
+                     _old_day,
+                     detect_times,
+                     fail_times);
         } else {
-            LOG_ERROR_F("send availability email fail, date = {}, total_detect_times = {}, "
-                        "total_fail_times = {}, command_return = {}",
-                        _old_day,
-                        detect_times,
-                        fail_times,
-                        r);
+            LOG_ERROR("send availability email fail, date = {}, total_detect_times = {}, "
+                      "total_fail_times = {}, command_return = {}",
+                      _old_day,
+                      detect_times,
+                      fail_times,
+                      r);
         }
     }
 
@@ -431,7 +431,7 @@ void available_detector::on_day_report()
 
 void available_detector::on_hour_report()
 {
-    LOG_INFO_F("start to report on new hour, last_hour = {}", _old_hour);
+    LOG_INFO("start to report on new hour, last_hour = {}", _old_hour);
     int64_t detect_times = _recent_hour_detect_times.fetch_and(0);
     int64_t fail_times = _recent_hour_fail_times.fetch_and(0);
     int64_t succ_times = std::max<int64_t>(0L, detect_times - fail_times);
@@ -455,7 +455,7 @@ void available_detector::on_hour_report()
 
 void available_detector::on_minute_report()
 {
-    LOG_INFO_F("start to report on new minute, last_minute = {}", _old_minute);
+    LOG_INFO("start to report on new minute, last_minute = {}", _old_minute);
     int64_t detect_times = _recent_minute_detect_times.fetch_and(0);
     int64_t fail_times = _recent_minute_fail_times.fetch_and(0);
     int64_t succ_times = std::max<int64_t>(0L, detect_times - fail_times);

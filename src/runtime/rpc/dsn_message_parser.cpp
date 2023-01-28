@@ -55,7 +55,7 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
     if (buf_len >= sizeof(message_header)) {
         if (!_header_checked) {
             if (!is_right_header(buf_ptr)) {
-                LOG_ERROR_F("dsn message header check failed");
+                LOG_ERROR("dsn message header check failed");
                 read_next = -1;
                 return nullptr;
             } else {
@@ -71,12 +71,12 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
             message_ex *msg = message_ex::create_receive_message(msg_bb);
             if (!is_right_body(msg)) {
                 message_header *header = (message_header *)buf_ptr;
-                LOG_ERROR_F("dsn message body check failed, id = {}, trace_id = {:#018x}, rpc_name "
-                            "= {}, from_addr = {}",
-                            header->id,
-                            header->trace_id,
-                            header->rpc_name,
-                            header->from_address);
+                LOG_ERROR("dsn message body check failed, id = {}, trace_id = {:#018x}, rpc_name "
+                          "= {}, from_addr = {}",
+                          header->id,
+                          header->trace_id,
+                          header->rpc_name,
+                          header->from_address);
                 read_next = -1;
                 delete msg;
                 return nullptr;
@@ -169,7 +169,7 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
         bool r = (crc32 == dsn::utils::crc32_calc(hdr, sizeof(message_header), 0));
         *pcrc = crc32;
         if (!r) {
-            LOG_ERROR_F("dsn message header crc check failed");
+            LOG_ERROR("dsn message header crc check failed");
         }
         return r;
     }
@@ -202,7 +202,7 @@ int dsn_message_parser::get_buffers_on_send(message_ex *msg, /*out*/ send_buf *b
         CHECK_EQ(len, header->body_length);
         bool r = (header->body_crc32 == crc32);
         if (!r) {
-            LOG_ERROR_F("dsn message body crc check failed");
+            LOG_ERROR("dsn message body crc check failed");
         }
         return r;
     }
