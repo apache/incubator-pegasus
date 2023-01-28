@@ -51,7 +51,7 @@ public:
         stub->on_add_new_disk(rpc);
         error_code err = rpc.response().err;
         if (err != ERR_OK) {
-            LOG_INFO_F("error msg: {}", rpc.response().err_hint);
+            LOG_INFO("error msg: {}", rpc.response().err_hint);
         }
         return err;
     }

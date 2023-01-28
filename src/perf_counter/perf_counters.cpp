@@ -235,8 +235,7 @@ bool perf_counters::remove_counter(const std::string &full_name)
         }
     }
 
-    LOG_DEBUG_F(
-        "performance counter {} is removed, remaining reference ({})", full_name, remain_ref);
+    LOG_DEBUG("performance counter {} is removed, remaining reference ({})", full_name, remain_ref);
     return true;
 }
 

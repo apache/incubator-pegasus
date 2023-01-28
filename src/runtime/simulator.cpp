@@ -121,8 +121,8 @@ void simulator::install(service_spec &spec)
 
 void simulator::on_system_exit(sys_exit_type st)
 {
-    LOG_ERROR_F("system exits, you can replay this process using random seed {}",
-                sim_env_provider::seed());
+    LOG_ERROR("system exits, you can replay this process using random seed {}",
+              sim_env_provider::seed());
 }
 
 void simulator::run()

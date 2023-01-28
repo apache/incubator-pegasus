@@ -96,9 +96,9 @@ bool hostname_from_ip(uint32_t ip, std::string *hostname_result)
         char ip_str[256];
         inet_ntop(AF_INET, &net_addr, ip_str, sizeof(ip_str));
         if (err == EAI_SYSTEM) {
-            LOG_WARNING_F("got error {} when try to resolve {}", strerror(errno), ip_str);
+            LOG_WARNING("got error {} when try to resolve {}", strerror(errno), ip_str);
         } else {
-            LOG_WARNING_F("return error({}) when try to resolve {}", gai_strerror(err), ip_str);
+            LOG_WARNING("return error({}) when try to resolve {}", gai_strerror(err), ip_str);
         }
         return false;
     } else {
@@ -126,7 +126,7 @@ bool hostname_from_ip_port(const char *ip_port, std::string *hostname_result)
 {
     dsn::rpc_address addr;
     if (!addr.from_string_ipv4(ip_port)) {
-        LOG_WARNING_F("invalid ip_port({})", ip_port);
+        LOG_WARNING("invalid ip_port({})", ip_port);
         *hostname_result = ip_port;
         return false;
     }
@@ -155,7 +155,7 @@ bool list_hostname_from_ip(const char *ip_list, std::string *hostname_result_lis
     dsn::utils::split_args(ip_list, splitted_ip, ',');
 
     if (splitted_ip.empty()) {
-        LOG_WARNING_F("invalid ip_list({})", ip_list);
+        LOG_WARNING("invalid ip_list({})", ip_list);
         *hostname_result_list = *ip_list;
         return false;
     }
@@ -182,7 +182,7 @@ bool list_hostname_from_ip_port(const char *ip_port_list, std::string *hostname_
     dsn::utils::split_args(ip_port_list, splitted_ip_port, ',');
 
     if (splitted_ip_port.empty()) {
-        LOG_WARNING_F("invalid ip_list({})", ip_port_list);
+        LOG_WARNING("invalid ip_list({})", ip_port_list);
         *hostname_result_list = *ip_port_list;
         return false;
     }

@@ -90,7 +90,7 @@ void distributed_lock_service_zookeeper::erase(const lock_key &key)
 error_code distributed_lock_service_zookeeper::initialize(const std::vector<std::string> &args)
 {
     if (args.empty()) {
-        LOG_ERROR_F("need parameters: <lock_root>");
+        LOG_ERROR("need parameters: <lock_root>");
         return ERR_INVALID_PARAMETERS;
     }
     const char *lock_root = args[0].c_str();
@@ -104,7 +104,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
     if (_zoo_state != ZOO_CONNECTED_STATE) {
         _waiting_attach.wait_for(zookeeper_session_mgr::instance().timeout());
         if (_zoo_state != ZOO_CONNECTED_STATE) {
-            LOG_WARNING_F(
+            LOG_WARNING(
                 "attach to zookeeper session timeout, distributed lock service initialized failed");
             return ERR_TIMEOUT;
         }
@@ -128,13 +128,13 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
         _session->visit(op);
         e.wait();
         if (zerr != ZOK && zerr != ZNODEEXISTS) {
-            LOG_ERROR_F("create zk node failed, path = {}, err = {}", current, zerror(zerr));
+            LOG_ERROR("create zk node failed, path = {}, err = {}", current, zerror(zerr));
             return from_zerror(zerr);
         }
     }
     _lock_root = current.empty() ? "/" : current;
 
-    LOG_INFO_F("init distributed_lock_service_zookeeper succeed, lock_root = {}", _lock_root);
+    LOG_INFO("init distributed_lock_service_zookeeper succeed, lock_root = {}", _lock_root);
     // Notice: this reference is released in the finalize
     add_ref();
     return ERR_OK;
@@ -278,12 +278,11 @@ void distributed_lock_service_zookeeper::on_zoo_session_evt(lock_srv_ptr _this, 
     }
 
     if (ZOO_EXPIRED_SESSION_STATE == zoo_state || ZOO_AUTH_FAILED_STATE == zoo_state) {
-        LOG_ERROR_F("get zoo state: {}, which means the session is expired",
-                    zookeeper_session::string_zoo_state(zoo_state));
+        LOG_ERROR("get zoo state: {}, which means the session is expired",
+                  zookeeper_session::string_zoo_state(zoo_state));
         _this->dispatch_zookeeper_session_expire();
     } else {
-        LOG_WARNING_F("get zoo state: {}, ignore it",
-                      zookeeper_session::string_zoo_state(zoo_state));
+        LOG_WARNING("get zoo state: {}, ignore it", zookeeper_session::string_zoo_state(zoo_state));
     }
 }
 }

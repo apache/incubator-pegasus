@@ -79,9 +79,9 @@ bool killer_handler_shell::kill_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "stop");
     int res = system(cmd.c_str());
-    LOG_INFO_F("kill meta command: {}", cmd);
+    LOG_INFO("kill meta command: {}", cmd);
     if (res != 0) {
-        LOG_INFO_F("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "stop");
@@ -91,9 +91,9 @@ bool killer_handler_shell::kill_replica(int index)
 {
     std::string cmd = generate_cmd(index, "replica", "stop");
     int res = system(cmd.c_str());
-    LOG_INFO_F("kill replica command: {}", cmd);
+    LOG_INFO("kill replica command: {}", cmd);
     if (res != 0) {
-        LOG_INFO_F("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("replica", index, "stop");
@@ -109,9 +109,9 @@ bool killer_handler_shell::start_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "start");
     int res = system(cmd.c_str());
-    LOG_INFO_F("start meta command: {}", cmd);
+    LOG_INFO("start meta command: {}", cmd);
     if (res != 0) {
-        LOG_INFO_F("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");
@@ -122,9 +122,9 @@ bool killer_handler_shell::start_replica(int index)
     std::string cmd = generate_cmd(index, "replica", "start");
 
     int res = system(cmd.c_str());
-    LOG_INFO_F("start replica command: {}", cmd);
+    LOG_INFO("start replica command: {}", cmd);
     if (res != 0) {
-        LOG_INFO_F("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");

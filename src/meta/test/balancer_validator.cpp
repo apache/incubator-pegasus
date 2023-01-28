@@ -239,25 +239,25 @@ void meta_service_test_app::balancer_validator()
     migration_list ml;
 
     for (auto &iter : nodes) {
-        LOG_DEBUG_F("node({}) have {} primaries, {} partitions",
-                    iter.first,
-                    iter.second.primary_count(),
-                    iter.second.partition_count());
+        LOG_DEBUG("node({}) have {} primaries, {} partitions",
+                  iter.first,
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
     }
 
     // iterate 1000000 times
     for (int i = 0; i < 1000000 && glb.balance({&apps, &nodes}, ml); ++i) {
-        LOG_DEBUG_F("the {}th round of balancer", i);
+        LOG_DEBUG("the {}th round of balancer", i);
         migration_check_and_apply(apps, nodes, ml, &manager);
         glb.check({&apps, &nodes}, ml);
-        LOG_DEBUG_F("balance checker operation count = {}", ml.size());
+        LOG_DEBUG("balance checker operation count = {}", ml.size());
     }
 
     for (auto &iter : nodes) {
-        LOG_DEBUG_F("node({}) have {} primaries, {} partitions",
-                    iter.first,
-                    iter.second.primary_count(),
-                    iter.second.partition_count());
+        LOG_DEBUG("node({}) have {} primaries, {} partitions",
+                  iter.first,
+                  iter.second.primary_count(),
+                  iter.second.partition_count());
     }
 
     std::shared_ptr<app_state> &the_app = apps[1];
@@ -345,10 +345,10 @@ void meta_service_test_app::balance_config_file()
 
         // iterate 1000 times
         for (int i = 0; i < 1000 && lb->balance({&apps, &nodes}, ml); ++i) {
-            LOG_DEBUG_F("the {}th round of balancer", i);
+            LOG_DEBUG("the {}th round of balancer", i);
             migration_check_and_apply(apps, nodes, ml, nullptr);
             lb->check({&apps, &nodes}, ml);
-            LOG_DEBUG_F("balance checker operation count = {}", ml.size());
+            LOG_DEBUG("balance checker operation count = {}", ml.size());
         }
     }
 }

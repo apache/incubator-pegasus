@@ -78,7 +78,7 @@ void simple_timer_service::add_timer(task *task)
         if (!ec) {
             task->enqueue();
         } else if (ec != ::boost::asio::error::operation_aborted) {
-            LOG_FATAL_F("timer failed for task {}, err = {}", task->spec().name, ec.message());
+            LOG_FATAL("timer failed for task {}, err = {}", task->spec().name, ec.message());
         }
 
         // to consume the added ref count by task::enqueue for add_timer

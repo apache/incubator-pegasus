@@ -352,7 +352,7 @@ int meta_service::check_leader(TRpcHolder rpc, rpc_address *forward_address)
             return -1;
         }
 
-        LOG_DEBUG_F("leader address: {}", leader);
+        LOG_DEBUG("leader address: {}", leader);
         if (!leader.is_invalid()) {
             rpc.forward(leader);
             return 0;
@@ -370,7 +370,7 @@ bool meta_service::check_status(TRpcHolder rpc, rpc_address *forward_address)
 {
     if (!_access_controller->allowed(rpc.dsn_request())) {
         rpc.response().err = ERR_ACL_DENY;
-        LOG_INFO_F("reject request with ERR_ACL_DENY");
+        LOG_INFO("reject request with ERR_ACL_DENY");
         return false;
     }
 
@@ -385,7 +385,7 @@ bool meta_service::check_status(TRpcHolder rpc, rpc_address *forward_address)
         } else {
             rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         }
-        LOG_INFO_F("reject request with {}", rpc.response().err);
+        LOG_INFO("reject request with {}", rpc.response().err);
         return false;
     }
 
@@ -396,7 +396,7 @@ template <typename TRespType>
 bool meta_service::check_status_with_msg(message_ex *req, TRespType &response_struct)
 {
     if (!_access_controller->allowed(req)) {
-        LOG_INFO_F("reject request with ERR_ACL_DENY");
+        LOG_INFO("reject request with ERR_ACL_DENY");
         response_struct.err = ERR_ACL_DENY;
         reply(req, response_struct);
         return false;
@@ -414,7 +414,7 @@ bool meta_service::check_status_with_msg(message_ex *req, TRespType &response_st
         } else {
             response_struct.err = ERR_SERVICE_NOT_ACTIVE;
         }
-        LOG_INFO_F("reject request with {}", response_struct.err);
+        LOG_INFO("reject request with {}", response_struct.err);
         reply(req, response_struct);
         return false;
     }

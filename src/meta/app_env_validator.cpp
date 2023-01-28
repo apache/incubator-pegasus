@@ -154,7 +154,7 @@ bool app_env_validator::validate_app_env(const std::string &env_name,
     if (func_iter != _validator_funcs.end()) {
         // check function == nullptr means no check
         if (nullptr != func_iter->second && !func_iter->second(env_value, hint_message)) {
-            LOG_WARNING_F("{}={} is invalid.", env_name, env_value);
+            LOG_WARNING("{}={} is invalid.", env_name, env_value);
             return false;
         }
 

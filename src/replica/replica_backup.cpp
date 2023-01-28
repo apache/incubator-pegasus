@@ -63,7 +63,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 _stub->_block_service_manager.get_or_create_block_filesystem(
                     request.policy.backup_provider_type);
             if (block_service == nullptr) {
-                LOG_ERROR_F(
+                LOG_ERROR(
                     "{}: create cold backup block service failed, provider_type = {}, response "
                     "ERR_INVALID_PARAMETERS",
                     new_context->name,
@@ -86,10 +86,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
         if (backup_context->request.backup_id < backup_id || backup_status == ColdBackupCanceled) {
             if (backup_status == ColdBackupCheckpointing) {
-                LOG_INFO_F(
-                    "{}: delay clearing obsoleted cold backup context, cause backup_status == "
-                    "ColdBackupCheckpointing",
-                    new_context->name);
+                LOG_INFO("{}: delay clearing obsoleted cold backup context, cause backup_status == "
+                         "ColdBackupCheckpointing",
+                         new_context->name);
                 tasking::enqueue(LPC_REPLICATION_COLD_BACKUP,
                                  &_tracker,
                                  [this, request]() {
@@ -102,11 +101,11 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
                 // TODO(wutao1): deleting cold backup context should be
                 //               extracted as a function like try_delete_cold_backup_context;
                 // clear obsoleted backup context firstly
-                LOG_INFO_F("{}: clear obsoleted cold backup context, old_backup_id = {}, "
-                           "old_backup_status = {}",
-                           new_context->name,
-                           backup_context->request.backup_id,
-                           cold_backup_status_to_string(backup_status));
+                LOG_INFO("{}: clear obsoleted cold backup context, old_backup_id = {}, "
+                         "old_backup_status = {}",
+                         new_context->name,
+                         backup_context->request.backup_id,
+                         cold_backup_status_to_string(backup_status));
                 backup_context->cancel();
                 _cold_backup_contexts.erase(policy_name);
                 // go to another round
@@ -117,10 +116,10 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
         if (backup_context->request.backup_id > backup_id) {
             // backup_id is outdated
-            LOG_ERROR_F("{}: request outdated cold backup, current_backup_id = {}, response "
-                        "ERR_VERSION_OUTDATED",
-                        new_context->name,
-                        backup_context->request.backup_id);
+            LOG_ERROR("{}: request outdated cold backup, current_backup_id = {}, response "
+                      "ERR_VERSION_OUTDATED",
+                      new_context->name,
+                      backup_context->request.backup_id);
             response.err = ERR_VERSION_OUTDATED;
             return;
         }
@@ -154,22 +153,22 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         if (backup_status == ColdBackupChecking || backup_status == ColdBackupCheckpointing ||
             backup_status == ColdBackupUploading) {
             // do nothing
-            LOG_INFO_F("{}: backup is busy, status = {}, progress = {}, response ERR_BUSY",
-                       backup_context->name,
-                       cold_backup_status_to_string(backup_status),
-                       backup_context->progress());
+            LOG_INFO("{}: backup is busy, status = {}, progress = {}, response ERR_BUSY",
+                     backup_context->name,
+                     cold_backup_status_to_string(backup_status),
+                     backup_context->progress());
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupInvalid && backup_context->start_check()) {
             _stub->_counter_cold_backup_recent_start_count->increment();
-            LOG_INFO_F("{}: start checking backup on remote, response ERR_BUSY",
-                       backup_context->name);
+            LOG_INFO("{}: start checking backup on remote, response ERR_BUSY",
+                     backup_context->name);
             tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, nullptr, [backup_context]() {
                 backup_context->check_backup_on_remote();
             });
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupChecked && backup_context->start_checkpoint()) {
             // start generating checkpoint
-            LOG_INFO_F("{}: start generating checkpoint, response ERR_BUSY", backup_context->name);
+            LOG_INFO("{}: start generating checkpoint, response ERR_BUSY", backup_context->name);
             tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
                 generate_backup_checkpoint(backup_context);
             });
@@ -177,20 +176,20 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
         } else if ((backup_status == ColdBackupCheckpointed || backup_status == ColdBackupPaused) &&
                    backup_context->start_upload()) {
             // start uploading checkpoint
-            LOG_INFO_F("{}: start uploading checkpoint, response ERR_BUSY", backup_context->name);
+            LOG_INFO("{}: start uploading checkpoint, response ERR_BUSY", backup_context->name);
             tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, nullptr, [backup_context]() {
                 backup_context->upload_checkpoint_to_remote();
             });
             response.err = ERR_BUSY;
         } else if (backup_status == ColdBackupFailed) {
-            LOG_ERROR_F("{}: upload checkpoint failed, reason = {}, response ERR_LOCAL_APP_FAILURE",
-                        backup_context->name,
-                        backup_context->reason());
+            LOG_ERROR("{}: upload checkpoint failed, reason = {}, response ERR_LOCAL_APP_FAILURE",
+                      backup_context->name,
+                      backup_context->reason());
             response.err = ERR_LOCAL_APP_FAILURE;
             backup_context->cancel();
             _cold_backup_contexts.erase(policy_name);
         } else if (backup_status == ColdBackupCompleted) {
-            LOG_INFO_F("{}: upload checkpoint completed, response ERR_OK", backup_context->name);
+            LOG_INFO("{}: upload checkpoint completed, response ERR_OK", backup_context->name);
             _backup_mgr->send_clear_request_to_secondaries(backup_context->request.pid,
                                                            policy_name);
 
@@ -198,7 +197,7 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
             _backup_mgr->background_clear_backup_checkpoint(policy_name);
             response.err = ERR_OK;
         } else {
-            LOG_WARNING_F(
+            LOG_WARNING(
                 "{}: unhandled case, handle_status = {}, real_time_status = {}, response ERR_BUSY",
                 backup_context->name,
                 cold_backup_status_to_string(backup_status),
@@ -208,9 +207,9 @@ void replica::on_cold_backup(const backup_request &request, /*out*/ backup_respo
 
         response.progress = backup_context->progress();
         response.checkpoint_total_size = backup_context->get_checkpoint_total_size();
-        LOG_INFO_F("{}: backup progress is {}", backup_context->name, response.progress);
+        LOG_INFO("{}: backup progress is {}", backup_context->name, response.progress);
     } else {
-        LOG_ERROR_F(
+        LOG_ERROR(
             "{}: invalid state for cold backup, partition_status = {}, response ERR_INVALID_STATE",
             new_context->name,
             enum_to_string(status()));
@@ -297,8 +296,7 @@ static int is_related_or_valid_checkpoint(const std::string &chkpt_dirname,
         }
     } else {
         // unknown dir, ignore it
-        LOG_WARNING_F(
-            "{}: found a invalid checkpoint dir({})", backup_context->name, chkpt_dirname);
+        LOG_WARNING("{}: found a invalid checkpoint dir({})", backup_context->name, chkpt_dirname);
     }
     return 0;
 }
@@ -316,7 +314,7 @@ static bool filter_checkpoint(const std::string &dir,
     // list sub dirs
     std::vector<std::string> sub_dirs;
     if (!utils::filesystem::get_subdirectories(dir, sub_dirs, false)) {
-        LOG_ERROR_F("{}: list sub dirs of dir {} failed", backup_context->name, dir);
+        LOG_ERROR("{}: list sub dirs of dir {} failed", backup_context->name, dir);
         return false;
     }
 
@@ -344,7 +342,7 @@ statistic_file_infos_under_dir(const std::string &dir,
 {
     std::vector<std::string> sub_files;
     if (!utils::filesystem::get_subfiles(dir, sub_files, false)) {
-        LOG_ERROR_F("list sub files of dir {} failed", dir);
+        LOG_ERROR("list sub files of dir {} failed", dir);
         return false;
     }
 
@@ -355,7 +353,7 @@ statistic_file_infos_under_dir(const std::string &dir,
         std::pair<std::string, int64_t> file_info;
 
         if (!utils::filesystem::file_size(file, file_info.second)) {
-            LOG_ERROR_F("get file size of {} failed", file);
+            LOG_ERROR("get file size of {} failed", file);
             return false;
         }
         file_info.first = utils::filesystem::get_file_name(file);
@@ -396,9 +394,9 @@ static bool backup_parse_dir_name(const char *name,
 void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
 {
     if (backup_context->status() != ColdBackupCheckpointing) {
-        LOG_INFO_F("{}: ignore generating backup checkpoint because backup_status = {}",
-                   backup_context->name,
-                   cold_backup_status_to_string(backup_context->status()));
+        LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
+                 backup_context->name,
+                 cold_backup_status_to_string(backup_context->status()));
         backup_context->ignore_checkpoint();
         return;
     }
@@ -407,7 +405,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
     auto backup_dir = _app->backup_dir();
     if (!utils::filesystem::directory_exists(backup_dir) &&
         !utils::filesystem::create_directory(backup_dir)) {
-        LOG_ERROR_F("{}: create backup dir {} failed", backup_context->name, backup_dir);
+        LOG_ERROR("{}: create backup dir {} failed", backup_context->name, backup_dir);
         backup_context->fail_checkpoint("create backup dir failed");
         return;
     }
@@ -445,7 +443,7 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
             backup_context->checkpoint_file_total_size = total_size;
             backup_context->complete_checkpoint();
 
-            LOG_INFO_F(
+            LOG_INFO(
                 "{}: backup checkpoint aleady exist, dir = {}, file_count = {}, total_size = {}",
                 backup_context->name,
                 backup_context->checkpoint_dir,
@@ -464,8 +462,8 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
             return;
         }
     } else {
-        LOG_INFO_F("{}: backup checkpoint not exist, start to trigger async checkpoint",
-                   backup_context->name);
+        LOG_INFO("{}: backup checkpoint not exist, start to trigger async checkpoint",
+                 backup_context->name);
         tasking::enqueue(
             LPC_REPLICATION_COLD_BACKUP,
             &_tracker,
@@ -476,13 +474,13 @@ void replica::generate_backup_checkpoint(cold_backup_context_ptr backup_context)
     // clear related but not valid checkpoint
     for (const std::string &dirname : related_backup_chkpt_dirname) {
         std::string full_path = utils::filesystem::path_combine(backup_dir, dirname);
-        LOG_INFO_F("{}: found obsolete backup checkpoint dir({}), remove it",
-                   backup_context->name,
-                   full_path);
+        LOG_INFO("{}: found obsolete backup checkpoint dir({}), remove it",
+                 backup_context->name,
+                 full_path);
         if (!utils::filesystem::remove_path(full_path)) {
-            LOG_WARNING_F("{}: remove obsolete backup checkpoint dir({}) failed",
-                          backup_context->name,
-                          full_path);
+            LOG_WARNING("{}: remove obsolete backup checkpoint dir({}) failed",
+                        backup_context->name,
+                        full_path);
         }
     }
 }
@@ -497,17 +495,17 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
     _checker.only_one_thread_access();
 
     if (backup_context->status() != ColdBackupCheckpointing) {
-        LOG_INFO_F("{}: ignore triggering async checkpoint because backup_status = {}",
-                   backup_context->name,
-                   cold_backup_status_to_string(backup_context->status()));
+        LOG_INFO("{}: ignore triggering async checkpoint because backup_status = {}",
+                 backup_context->name,
+                 cold_backup_status_to_string(backup_context->status()));
         backup_context->ignore_checkpoint();
         return;
     }
 
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY) {
-        LOG_INFO_F("{}: ignore triggering async checkpoint because partition_status = {}",
-                   backup_context->name,
-                   enum_to_string(status()));
+        LOG_INFO("{}: ignore triggering async checkpoint because partition_status = {}",
+                 backup_context->name,
+                 enum_to_string(status()));
         backup_context->ignore_checkpoint();
         return;
     }
@@ -521,14 +519,14 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
         // already triggered, just wait
         char time_buf[20];
         dsn::utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
-        LOG_INFO_F("{}: do not trigger async checkpoint because it is already triggered, "
-                   "checkpoint_decree = {}, checkpoint_timestamp = {} ({}), "
-                   "durable_decree_when_checkpoint = {}",
-                   backup_context->name,
-                   backup_context->checkpoint_decree,
-                   backup_context->checkpoint_timestamp,
-                   time_buf,
-                   backup_context->durable_decree_when_checkpoint);
+        LOG_INFO("{}: do not trigger async checkpoint because it is already triggered, "
+                 "checkpoint_decree = {}, checkpoint_timestamp = {} ({}), "
+                 "durable_decree_when_checkpoint = {}",
+                 backup_context->name,
+                 backup_context->checkpoint_decree,
+                 backup_context->checkpoint_timestamp,
+                 time_buf,
+                 backup_context->durable_decree_when_checkpoint);
     } else { // backup_context->checkpoint_decree == 0 ||
              // backup_context->durable_decree_when_checkpoint != durable_decree
         if (backup_context->checkpoint_decree == 0) {
@@ -537,20 +535,20 @@ void replica::trigger_async_checkpoint_for_backup(cold_backup_context_ptr backup
         } else { // backup_context->durable_decree_when_checkpoint != durable_decree
             // checkpoint generated, but is behind checkpoint_decree, need trigger again
             CHECK_LT(backup_context->durable_decree_when_checkpoint, durable_decree);
-            LOG_INFO_F("{}: need trigger async checkpoint again", backup_context->name);
+            LOG_INFO("{}: need trigger async checkpoint again", backup_context->name);
         }
         backup_context->checkpoint_timestamp = dsn_now_ms();
         backup_context->durable_decree_when_checkpoint = durable_decree;
         char time_buf[20];
         dsn::utils::time_ms_to_date_time(backup_context->checkpoint_timestamp, time_buf, 20);
-        LOG_INFO_F("{}: trigger async checkpoint, "
-                   "checkpoint_decree = {}, checkpoint_timestamp = {} ({}), "
-                   "durable_decree_when_checkpoint = {}",
-                   backup_context->name,
-                   backup_context->checkpoint_decree,
-                   backup_context->checkpoint_timestamp,
-                   time_buf,
-                   backup_context->durable_decree_when_checkpoint);
+        LOG_INFO("{}: trigger async checkpoint, "
+                 "checkpoint_decree = {}, checkpoint_timestamp = {} ({}), "
+                 "durable_decree_when_checkpoint = {}",
+                 backup_context->name,
+                 backup_context->checkpoint_decree,
+                 backup_context->checkpoint_timestamp,
+                 time_buf,
+                 backup_context->durable_decree_when_checkpoint);
         init_checkpoint(true);
     }
 
@@ -569,28 +567,28 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
     _checker.only_one_thread_access();
 
     if (backup_context->status() != ColdBackupCheckpointing) {
-        LOG_INFO_F("{}: ignore waiting async checkpoint because backup_status = {}",
-                   backup_context->name,
-                   cold_backup_status_to_string(backup_context->status()));
+        LOG_INFO("{}: ignore waiting async checkpoint because backup_status = {}",
+                 backup_context->name,
+                 cold_backup_status_to_string(backup_context->status()));
         backup_context->ignore_checkpoint();
         return;
     }
 
     if (status() != partition_status::PS_PRIMARY && status() != partition_status::PS_SECONDARY) {
-        LOG_INFO_F("{}: ignore waiting async checkpoint because partition_status = {}",
-                   backup_context->name,
-                   enum_to_string(status()));
+        LOG_INFO("{}: ignore waiting async checkpoint because partition_status = {}",
+                 backup_context->name,
+                 enum_to_string(status()));
         backup_context->ignore_checkpoint();
         return;
     }
 
     decree du = last_durable_decree();
     if (du < backup_context->checkpoint_decree) {
-        LOG_INFO_F("{}: async checkpoint not done, we just wait it done, "
-                   "last_durable_decree = {}, backup_checkpoint_decree = {}",
-                   backup_context->name,
-                   du,
-                   backup_context->checkpoint_decree);
+        LOG_INFO("{}: async checkpoint not done, we just wait it done, "
+                 "last_durable_decree = {}, backup_checkpoint_decree = {}",
+                 backup_context->name,
+                 du,
+                 backup_context->checkpoint_decree);
         tasking::enqueue(
             LPC_REPLICATION_COLD_BACKUP,
             &_tracker,
@@ -598,11 +596,11 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
             get_gpid().thread_hash(),
             std::chrono::seconds(10));
     } else {
-        LOG_INFO_F("{}: async checkpoint done, last_durable_decree = {}, "
-                   "backup_context->checkpoint_decree = {}",
-                   backup_context->name,
-                   du,
-                   backup_context->checkpoint_decree);
+        LOG_INFO("{}: async checkpoint done, last_durable_decree = {}, "
+                 "backup_context->checkpoint_decree = {}",
+                 backup_context->name,
+                 du,
+                 backup_context->checkpoint_decree);
         tasking::enqueue(LPC_BACKGROUND_COLD_BACKUP, &_tracker, [this, backup_context]() {
             local_create_backup_checkpoint(backup_context);
         });
@@ -618,9 +616,9 @@ void replica::wait_async_checkpoint_for_backup(cold_backup_context_ptr backup_co
 void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_context)
 {
     if (backup_context->status() != ColdBackupCheckpointing) {
-        LOG_INFO_F("{}: ignore generating backup checkpoint because backup_status = {}",
-                   backup_context->name,
-                   cold_backup_status_to_string(backup_context->status()));
+        LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
+                 backup_context->name,
+                 cold_backup_status_to_string(backup_context->status()));
         backup_context->ignore_checkpoint();
         return;
     }
@@ -637,10 +635,10 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
         _app->copy_checkpoint_to_dir(backup_checkpoint_tmp_dir_path.c_str(), &last_decree);
     if (err != ERR_OK) {
         // try local_create_backup_checkpoint 10s later
-        LOG_INFO_F("{}: create backup checkpoint failed with err = {}, try call "
-                   "local_create_backup_checkpoint 10s later",
-                   backup_context->name,
-                   err);
+        LOG_INFO("{}: create backup checkpoint failed with err = {}, try call "
+                 "local_create_backup_checkpoint 10s later",
+                 backup_context->name,
+                 err);
         utils::filesystem::remove_path(backup_checkpoint_tmp_dir_path);
         tasking::enqueue(
             LPC_BACKGROUND_COLD_BACKUP,
@@ -659,10 +657,10 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
                                 backup_context->checkpoint_timestamp));
         if (!utils::filesystem::rename_path(backup_checkpoint_tmp_dir_path,
                                             backup_checkpoint_dir_path)) {
-            LOG_ERROR_F("{}: rename checkpoint dir({}) to dir({}) failed",
-                        backup_context->name,
-                        backup_checkpoint_tmp_dir_path,
-                        backup_checkpoint_dir_path);
+            LOG_ERROR("{}: rename checkpoint dir({}) to dir({}) failed",
+                      backup_context->name,
+                      backup_checkpoint_tmp_dir_path,
+                      backup_checkpoint_dir_path);
             utils::filesystem::remove_path(backup_checkpoint_tmp_dir_path);
             utils::filesystem::remove_path(backup_checkpoint_dir_path);
             backup_context->fail_checkpoint("rename checkpoint dir failed");
@@ -672,14 +670,14 @@ void replica::local_create_backup_checkpoint(cold_backup_context_ptr backup_cont
         std::vector<std::pair<std::string, int64_t>> file_infos;
         int64_t total_size = 0;
         if (!statistic_file_infos_under_dir(backup_checkpoint_dir_path, file_infos, total_size)) {
-            LOG_ERROR_F("{}: statistic file info under dir({}) failed",
-                        backup_context->name,
-                        backup_checkpoint_dir_path);
+            LOG_ERROR("{}: statistic file info under dir({}) failed",
+                      backup_context->name,
+                      backup_checkpoint_dir_path);
             backup_context->fail_checkpoint("statistic file info under dir failed");
             return;
         }
 
-        LOG_INFO_F(
+        LOG_INFO(
             "{}: generate backup checkpoint succeed, dir = {}, file_count = {}, total_size = {}",
             backup_context->name,
             backup_checkpoint_dir_path,

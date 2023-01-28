@@ -119,49 +119,49 @@ void do_set(int thread_id)
             client->set(hash_key, sort_key, value, set_and_get_timeout_milliseconds, 0, &info);
         if (ret == PERR_OK) {
             long cur_time = get_time();
-            LOG_INFO_F("SetThread[{}]: set succeed: id={}, try={}, time={} (gpid={}.{}, decree={}, "
-                       "server={})",
-                       thread_id,
-                       id,
-                       try_count,
-                       cur_time - last_time,
-                       info.app_id,
-                       info.partition_index,
-                       info.decree,
-                       info.server);
+            LOG_INFO("SetThread[{}]: set succeed: id={}, try={}, time={} (gpid={}.{}, decree={}, "
+                     "server={})",
+                     thread_id,
+                     id,
+                     try_count,
+                     cur_time - last_time,
+                     info.app_id,
+                     info.partition_index,
+                     info.decree,
+                     info.server);
             stat_time[stat_count++] = cur_time - last_time;
             if (stat_count == stat_batch) {
                 std::sort(stat_time.begin(), stat_time.end());
                 long total_time = 0;
                 for (auto t : stat_time)
                     total_time += t;
-                LOG_INFO_F("SetThread[{}]: set statistics: count={}, min={}, P90={}, P99={}, "
-                           "P999={}, P9999={}, max={}, avg={}",
-                           thread_id,
-                           stat_count,
-                           stat_time[stat_min_pos],
-                           stat_time[stat_p90_pos],
-                           stat_time[stat_p99_pos],
-                           stat_time[stat_p999_pos],
-                           stat_time[stat_p9999_pos],
-                           stat_time[stat_max_pos],
-                           total_time / stat_batch);
+                LOG_INFO("SetThread[{}]: set statistics: count={}, min={}, P90={}, P99={}, "
+                         "P999={}, P9999={}, max={}, avg={}",
+                         thread_id,
+                         stat_count,
+                         stat_time[stat_min_pos],
+                         stat_time[stat_p90_pos],
+                         stat_time[stat_p99_pos],
+                         stat_time[stat_p999_pos],
+                         stat_time[stat_p9999_pos],
+                         stat_time[stat_max_pos],
+                         total_time / stat_batch);
                 stat_count = 0;
             }
             last_time = cur_time;
             try_count = 0;
         } else {
-            LOG_ERROR_F("SetThread[{}]: set failed: id={}, try={}, ret={}, error={} (gpid={}.{}, "
-                        "decree={}, server={})",
-                        thread_id,
-                        id,
-                        try_count,
-                        ret,
-                        client->get_error_string(ret),
-                        info.app_id,
-                        info.partition_index,
-                        info.decree,
-                        info.server);
+            LOG_ERROR("SetThread[{}]: set failed: id={}, try={}, ret={}, error={} (gpid={}.{}, "
+                      "decree={}, server={})",
+                      thread_id,
+                      id,
+                      try_count,
+                      ret,
+                      client->get_error_string(ret),
+                      info.app_id,
+                      info.partition_index,
+                      info.decree,
+                      info.server);
             try_count++;
             if (try_count > 3) {
                 sleep(1);
@@ -174,7 +174,7 @@ void do_set(int thread_id)
 // - loop from range [start_id, end_id]
 void do_get_range(int thread_id, int round_id, long long start_id, long long end_id)
 {
-    LOG_INFO_F(
+    LOG_INFO(
         "GetThread[{}]: round({}): start get range [{},{}]", thread_id, round_id, start_id, end_id);
     char buf[1024];
     std::string hash_key;
@@ -202,59 +202,59 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
         if (ret == PERR_OK || ret == PERR_NOT_FOUND) {
             long cur_time = get_time();
             if (ret == PERR_NOT_FOUND) {
-                LOG_FATAL_F("GetThread[{}]: round({}): get not found: id={}, try={}, time={} "
-                            "(gpid={}.{}, server={}), and exit",
-                            thread_id,
-                            round_id,
-                            id,
-                            try_count,
-                            cur_time - last_time,
-                            info.app_id,
-                            info.partition_index,
-                            info.server);
+                LOG_FATAL("GetThread[{}]: round({}): get not found: id={}, try={}, time={} "
+                          "(gpid={}.{}, server={}), and exit",
+                          thread_id,
+                          round_id,
+                          id,
+                          try_count,
+                          cur_time - last_time,
+                          info.app_id,
+                          info.partition_index,
+                          info.server);
                 exit(-1);
             } else if (value != get_value) {
-                LOG_FATAL_F("GetThread[{}]: round({}): get mismatched: id={}, try={}, time={}, "
-                            "expect_value={}, real_value={} (gpid={}.{}, server={}), and exit",
-                            thread_id,
-                            round_id,
-                            id,
-                            try_count,
-                            cur_time - last_time,
-                            value,
-                            get_value,
-                            info.app_id,
-                            info.partition_index,
-                            info.server);
+                LOG_FATAL("GetThread[{}]: round({}): get mismatched: id={}, try={}, time={}, "
+                          "expect_value={}, real_value={} (gpid={}.{}, server={}), and exit",
+                          thread_id,
+                          round_id,
+                          id,
+                          try_count,
+                          cur_time - last_time,
+                          value,
+                          get_value,
+                          info.app_id,
+                          info.partition_index,
+                          info.server);
                 exit(-1);
             } else {
-                LOG_DEBUG_F("GetThread[{}]: round({}): get succeed: id={}, try={}, time={} "
-                            "(gpid={}.{}, server={})",
-                            thread_id,
-                            round_id,
-                            id,
-                            try_count,
-                            (cur_time - last_time),
-                            info.app_id,
-                            info.partition_index,
-                            info.server);
+                LOG_DEBUG("GetThread[{}]: round({}): get succeed: id={}, try={}, time={} "
+                          "(gpid={}.{}, server={})",
+                          thread_id,
+                          round_id,
+                          id,
+                          try_count,
+                          (cur_time - last_time),
+                          info.app_id,
+                          info.partition_index,
+                          info.server);
                 stat_time[stat_count++] = cur_time - last_time;
                 if (stat_count == stat_batch) {
                     std::sort(stat_time.begin(), stat_time.end());
                     long total_time = 0;
                     for (auto t : stat_time)
                         total_time += t;
-                    LOG_INFO_F("GetThread[{}]: get statistics: count={}, min={}, P90={}, "
-                               "P99={}, P999={}, P9999={}, max={}, avg={}",
-                               thread_id,
-                               stat_count,
-                               stat_time[stat_min_pos],
-                               stat_time[stat_p90_pos],
-                               stat_time[stat_p99_pos],
-                               stat_time[stat_p999_pos],
-                               stat_time[stat_p9999_pos],
-                               stat_time[stat_max_pos],
-                               total_time / stat_batch);
+                    LOG_INFO("GetThread[{}]: get statistics: count={}, min={}, P90={}, "
+                             "P99={}, P999={}, P9999={}, max={}, avg={}",
+                             thread_id,
+                             stat_count,
+                             stat_time[stat_min_pos],
+                             stat_time[stat_p90_pos],
+                             stat_time[stat_p99_pos],
+                             stat_time[stat_p999_pos],
+                             stat_time[stat_p9999_pos],
+                             stat_time[stat_max_pos],
+                             total_time / stat_batch);
                     stat_count = 0;
                 }
             }
@@ -262,28 +262,28 @@ void do_get_range(int thread_id, int round_id, long long start_id, long long end
             try_count = 0;
             id++;
         } else {
-            LOG_ERROR_F("GetThread[{}]: round({}): get failed: id={}, try={}, ret={}, error={} "
-                        "(gpid={}.{}, server={})",
-                        thread_id,
-                        round_id,
-                        id,
-                        try_count,
-                        ret,
-                        client->get_error_string(ret),
-                        info.app_id,
-                        info.partition_index,
-                        info.server);
+            LOG_ERROR("GetThread[{}]: round({}): get failed: id={}, try={}, ret={}, error={} "
+                      "(gpid={}.{}, server={})",
+                      thread_id,
+                      round_id,
+                      id,
+                      try_count,
+                      ret,
+                      client->get_error_string(ret),
+                      info.app_id,
+                      info.partition_index,
+                      info.server);
             try_count++;
             if (try_count > 3) {
                 sleep(1);
             }
         }
     }
-    LOG_INFO_F("GetThread[{}]: round({}): finish get range [{},{}]",
-               thread_id,
-               round_id,
-               start_id,
-               end_id);
+    LOG_INFO("GetThread[{}]: round({}): finish get range [{},{}]",
+             thread_id,
+             round_id,
+             start_id,
+             end_id);
 }
 
 void do_check(int thread_count)
@@ -295,7 +295,7 @@ void do_check(int thread_count)
             sleep(1);
             continue;
         }
-        LOG_INFO_F("CheckThread: round({}): start check round, range_end={}", round_id, range_end);
+        LOG_INFO("CheckThread: round({}): start check round, range_end={}", round_id, range_end);
         long start_time = get_time();
         std::vector<std::thread> worker_threads;
         long long piece_count = range_end / thread_count;
@@ -308,11 +308,10 @@ void do_check(int thread_count)
             t.join();
         }
         long finish_time = get_time();
-        LOG_INFO_F(
-            "CheckThread: round({}): finish check round, range_end={}, total_time={} seconds",
-            round_id,
-            range_end,
-            (finish_time - start_time) / 1000000);
+        LOG_INFO("CheckThread: round({}): finish check round, range_end={}, total_time={} seconds",
+                 round_id,
+                 range_end,
+                 (finish_time - start_time) / 1000000);
 
         // update check_max
         while (true) {
@@ -320,13 +319,13 @@ void do_check(int thread_count)
             sprintf(buf, "%lld", range_end);
             int ret = client->set(check_max_key, "", buf, set_and_get_timeout_milliseconds);
             if (ret == PERR_OK) {
-                LOG_INFO_F("CheckThread: round({}): update \"{}\" succeed: check_max={}",
-                           round_id,
-                           check_max_key,
-                           range_end);
+                LOG_INFO("CheckThread: round({}): update \"{}\" succeed: check_max={}",
+                         round_id,
+                         check_max_key,
+                         range_end);
                 break;
             } else {
-                LOG_ERROR_F(
+                LOG_ERROR(
                     "CheckThread: round({}): update \"{}\" failed: check_max={}, ret={}, error={}",
                     round_id,
                     check_max_key,
@@ -358,17 +357,17 @@ void do_mark()
         int ret = client->set(set_next_key, "", value, set_and_get_timeout_milliseconds);
         if (ret == PERR_OK) {
             long cur_time = get_time();
-            LOG_INFO_F("MarkThread: update \"{}\" succeed: set_next={}, time={}",
-                       set_next_key,
-                       new_id,
-                       cur_time - last_time);
+            LOG_INFO("MarkThread: update \"{}\" succeed: set_next={}, time={}",
+                     set_next_key,
+                     new_id,
+                     cur_time - last_time);
             old_id = new_id;
         } else {
-            LOG_ERROR_F("MarkThread: update \"{}\" failed: set_next={}, ret={}, error={}",
-                        set_next_key,
-                        new_id,
-                        ret,
-                        client->get_error_string(ret));
+            LOG_ERROR("MarkThread: update \"{}\" failed: set_next={}, ret={}, error={}",
+                      set_next_key,
+                      new_id,
+                      ret,
+                      client->get_error_string(ret));
         }
     }
 }
@@ -385,12 +384,12 @@ void verifier_initialize(const char *config_file)
     pegasus_cluster_name =
         dsn_config_get_value_string(section, "pegasus_cluster_name", "", "pegasus cluster name");
     if (pegasus_cluster_name.empty()) {
-        LOG_ERROR_F("Should config the cluster name for verifier");
+        LOG_ERROR("Should config the cluster name for verifier");
         exit(-1);
     }
     client = pegasus_client_factory::get_client(pegasus_cluster_name.c_str(), app_name.c_str());
     if (client == nullptr) {
-        LOG_ERROR_F("Initialize the _client failed");
+        LOG_ERROR("Initialize the _client failed");
         exit(-1);
     }
 
@@ -411,21 +410,21 @@ void verifier_start()
         if (ret == PERR_OK) {
             long long i = atoll(set_next_value.c_str());
             if (i == 0 && !set_next_value.empty()) {
-                LOG_ERROR_F(
+                LOG_ERROR(
                     "MainThread: read \"{}\" failed: value_str={}", set_next_key, set_next_value);
                 exit(-1);
             }
-            LOG_INFO_F("MainThread: read \"{}\" succeed: value={}", set_next_key, i);
+            LOG_INFO("MainThread: read \"{}\" succeed: value={}", set_next_key, i);
             set_next.store(i);
             break;
         } else if (ret == PERR_NOT_FOUND) {
-            LOG_INFO_F("MainThread: read \"{}\" not found, init set_next to 0", set_next_key);
+            LOG_INFO("MainThread: read \"{}\" not found, init set_next to 0", set_next_key);
             set_next.store(0);
             break;
         } else {
-            LOG_ERROR_F("MainThread: read \"{}\" failed: error={}",
-                        set_next_key,
-                        client->get_error_string(ret));
+            LOG_ERROR("MainThread: read \"{}\" failed: error={}",
+                      set_next_key,
+                      client->get_error_string(ret));
         }
     }
     set_thread_setting_id.resize(set_thread_count);

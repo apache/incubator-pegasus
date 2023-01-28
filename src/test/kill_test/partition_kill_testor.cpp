@@ -38,14 +38,14 @@ partition_kill_testor::partition_kill_testor(const char *config_file) : kill_tes
 
 void partition_kill_testor::Run()
 {
-    LOG_INFO_F("begin the kill-partition");
+    LOG_INFO("begin the kill-partition");
     while (true) {
         if (!check_cluster_status()) {
-            LOG_INFO_F("check_cluster_status() failed");
+            LOG_INFO("check_cluster_status() failed");
         } else {
             run();
         }
-        LOG_INFO_F("sleep {} seconds before checking", kill_interval_seconds);
+        LOG_INFO("sleep {} seconds before checking", kill_interval_seconds);
         sleep(kill_interval_seconds);
     }
 }
@@ -53,7 +53,7 @@ void partition_kill_testor::Run()
 void partition_kill_testor::run()
 {
     if (partitions.size() == 0) {
-        LOG_INFO_F("partitions empty");
+        LOG_INFO("partitions empty");
         return;
     }
 
@@ -100,7 +100,7 @@ void partition_kill_testor::run()
     }
 
     if (failed > 0) {
-        LOG_ERROR_F("call replica.kill_partition failed");
+        LOG_ERROR("call replica.kill_partition failed");
     }
 }
 } // namespace test

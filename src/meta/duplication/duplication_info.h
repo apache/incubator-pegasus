@@ -75,10 +75,10 @@ public:
         if (is_duplicating_checkpoint) {
             return alter_status(duplication_status::DS_PREPARE);
         }
-        LOG_WARNING_F("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
-                      id,
-                      follower_cluster_name,
-                      app_name);
+        LOG_WARNING("you now create duplication[{}[{}.{}]] without duplicating checkpoint",
+                    id,
+                    follower_cluster_name,
+                    app_name);
         return alter_status(duplication_status::DS_LOG);
     }
 
@@ -169,7 +169,7 @@ public:
                             return item.second.checkpoint_prepared;
                         });
         if (!completed) {
-            LOG_WARNING_F("replica checkpoint still running: {}/{}", prepared, _progress.size());
+            LOG_WARNING("replica checkpoint still running: {}/{}", prepared, _progress.size());
         }
         return completed;
     }

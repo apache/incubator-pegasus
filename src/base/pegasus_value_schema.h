@@ -107,7 +107,7 @@ inline void pegasus_update_expire_ts(uint32_t version, std::string &value, uint3
         new_expire_ts = dsn::endian::hton(new_expire_ts);
         memcpy(const_cast<char *>(value.data()), &new_expire_ts, sizeof(uint32_t));
     } else {
-        LOG_FATAL_F("unsupported value schema version: {}", version);
+        LOG_FATAL("unsupported value schema version: {}", version);
         __builtin_unreachable();
     }
 }
@@ -148,7 +148,7 @@ public:
         } else if (value_schema_version == 1) {
             return generate_value_v1(expire_ts, timetag, user_data);
         } else {
-            LOG_FATAL_F("unsupported value schema version: {}", value_schema_version);
+            LOG_FATAL("unsupported value schema version: {}", value_schema_version);
             __builtin_unreachable();
         }
     }

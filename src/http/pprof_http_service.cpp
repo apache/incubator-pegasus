@@ -73,10 +73,10 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
     std::string cmd = "nm -C -p ";
     cmd.append(lib_info.path);
     std::stringstream ss;
-    LOG_INFO_F("executing `{}`", cmd);
+    LOG_INFO("executing `{}`", cmd);
     const int rc = utils::pipe_execute(cmd.c_str(), ss);
     if (rc < 0) {
-        LOG_ERROR_F("fail to popen `{}`", cmd);
+        LOG_ERROR("fail to popen `{}`", cmd);
         return -1;
     }
     std::string line;
@@ -162,7 +162,7 @@ static int extract_symbols_from_binary(std::map<uintptr_t, std::string> &addr_ma
         addr_map[lib_info.end_addr] = std::string();
     }
     tm.stop();
-    LOG_INFO_F("Loaded {} in {}ms", lib_info.path, tm.m_elapsed().count());
+    LOG_INFO("Loaded {} in {}ms", lib_info.path, tm.m_elapsed().count());
     return 0;
 }
 
@@ -259,11 +259,11 @@ static void load_symbols()
     }
     tm2.stop();
     if (num_removed) {
-        LOG_INFO_F("Removed {} entries in {}ms", num_removed, tm2.m_elapsed().count());
+        LOG_INFO("Removed {} entries in {}ms", num_removed, tm2.m_elapsed().count());
     }
 
     tm.stop();
-    LOG_INFO_F("Loaded all symbols in {}ms", tm.m_elapsed().count());
+    LOG_INFO("Loaded all symbols in {}ms", tm.m_elapsed().count());
 }
 
 static void find_symbols(std::string *out, std::vector<uintptr_t> &addr_list)
@@ -329,7 +329,7 @@ void pprof_http_service::heap_handler(const http_request &req, http_response &re
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        LOG_WARNING_F("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
@@ -372,19 +372,19 @@ ssize_t read_command_line(char *buf, size_t len, bool with_args)
 {
     auto fd = open("/proc/self/cmdline", O_RDONLY);
     if (fd < 0) {
-        LOG_ERROR_F("Fail to open /proc/self/cmdline");
+        LOG_ERROR("Fail to open /proc/self/cmdline");
         return -1;
     }
     auto cleanup = defer([fd]() { close(fd); });
     ssize_t nr = read(fd, buf, len);
     if (nr <= 0) {
-        LOG_ERROR_F("Fail to read /proc/self/cmdline");
+        LOG_ERROR("Fail to read /proc/self/cmdline");
         return -1;
     }
 
     if (with_args) {
         if ((size_t)nr == len) {
-            LOG_ERROR_F("buf is not big enough");
+            LOG_ERROR("buf is not big enough");
             return -1;
         }
         for (ssize_t i = 0; i < nr; ++i) {
@@ -401,7 +401,7 @@ ssize_t read_command_line(char *buf, size_t len, bool with_args)
             }
         }
         if ((size_t)nr == len) {
-            LOG_INFO_F("buf is not big enough");
+            LOG_INFO("buf is not big enough");
             return -1;
         }
         return nr;
@@ -426,13 +426,13 @@ void pprof_http_service::growth_handler(const http_request &req, http_response &
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        LOG_WARNING_F("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }
 
     MallocExtension *malloc_ext = MallocExtension::instance();
-    LOG_INFO_F("received requests for growth profile");
+    LOG_INFO("received requests for growth profile");
     malloc_ext->GetHeapGrowthStacks(&resp.body);
 
     _in_pprof_action.store(false);
@@ -469,7 +469,7 @@ void pprof_http_service::profile_handler(const http_request &req, http_response 
 {
     bool in_pprof = false;
     if (!_in_pprof_action.compare_exchange_strong(in_pprof, true)) {
-        LOG_WARNING_F("node is already exectuting pprof action, please wait and retry");
+        LOG_WARNING("node is already exectuting pprof action, please wait and retry");
         resp.status_code = http_status_code::internal_server_error;
         return;
     }

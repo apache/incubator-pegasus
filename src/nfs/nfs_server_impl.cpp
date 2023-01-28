@@ -99,11 +99,11 @@ void nfs_service_impl::on_copy(const ::dsn::service::copy_request &request,
         }
     }
 
-    LOG_DEBUG_F(
+    LOG_DEBUG(
         "nfs: copy file {} [{}, {}]", file_path, request.offset, request.offset + request.size);
 
     if (dfile == nullptr) {
-        LOG_ERROR_F("[nfs_service] open file {} failed", file_path);
+        LOG_ERROR("[nfs_service] open file {} failed", file_path);
         ::dsn::service::copy_response resp;
         resp.error = ERR_OBJECT_NOT_FOUND;
         reply(resp);
@@ -149,7 +149,7 @@ void nfs_service_impl::internal_read_callback(error_code err, size_t sz, callbac
     }
 
     if (err != ERR_OK) {
-        LOG_ERROR_F("[nfs_service] read file {} failed, err = {}", cp.file_path, err);
+        LOG_ERROR("[nfs_service] read file {} failed, err = {}", cp.file_path, err);
         _recent_copy_fail_count->increment();
     } else {
         _recent_copy_data_size->add(sz);
@@ -176,11 +176,11 @@ void nfs_service_impl::on_get_file_size(
     if (request.file_list.size() == 0) // return all file size in the destination file folder
     {
         if (!dsn::utils::filesystem::directory_exists(folder)) {
-            LOG_ERROR_F("[nfs_service] directory {} not exist", folder);
+            LOG_ERROR("[nfs_service] directory {} not exist", folder);
             err = ERR_OBJECT_NOT_FOUND;
         } else {
             if (!dsn::utils::filesystem::get_subfiles(folder, file_list, true)) {
-                LOG_ERROR_F("[nfs_service] get subfiles of directory {} failed", folder);
+                LOG_ERROR("[nfs_service] get subfiles of directory {} failed", folder);
                 err = ERR_FILE_OPERATION_FAILED;
             } else {
                 for (auto &fpath : file_list) {
@@ -188,7 +188,7 @@ void nfs_service_impl::on_get_file_size(
                     // Done
                     int64_t sz;
                     if (!dsn::utils::filesystem::file_size(fpath, sz)) {
-                        LOG_ERROR_F("[nfs_service] get size of file {} failed", fpath);
+                        LOG_ERROR("[nfs_service] get size of file {} failed", fpath);
                         err = ERR_FILE_OPERATION_FAILED;
                         break;
                     }
@@ -208,9 +208,9 @@ void nfs_service_impl::on_get_file_size(
 
             struct stat st;
             if (0 != ::stat(file_path.c_str(), &st)) {
-                LOG_ERROR_F("[nfs_service] get stat of file {} failed, err = {}",
-                            file_path,
-                            dsn::utils::safe_strerror(errno));
+                LOG_ERROR("[nfs_service] get stat of file {} failed, err = {}",
+                          file_path,
+                          dsn::utils::safe_strerror(errno));
                 err = ERR_OBJECT_NOT_FOUND;
                 break;
             }
@@ -240,7 +240,7 @@ void nfs_service_impl::close_file() // release out-of-date file handle
         // not used and expired
         if (fptr->file_access_count == 0 &&
             dsn_now_ms() - fptr->last_access_time > (uint64_t)FLAGS_file_close_expire_time_ms) {
-            LOG_DEBUG_F("nfs: close file handle {}", it->first);
+            LOG_DEBUG("nfs: close file handle {}", it->first);
             it = _handles_map.erase(it);
         } else
             it++;

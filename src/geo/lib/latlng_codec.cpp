@@ -94,7 +94,7 @@ bool latlng_codec::encode_to_value(double lat_degrees, double lng_degrees, std::
     CHECK_EQ(_sorted_indices.size(), 2);
     S2LatLng latlng = S2LatLng::FromDegrees(lat_degrees, lng_degrees);
     if (!latlng.is_valid()) {
-        LOG_ERROR_F("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);
+        LOG_ERROR("latlng is invalid. lat_degrees={}, lng_degrees={}", lat_degrees, lng_degrees);
         return false;
     }
 

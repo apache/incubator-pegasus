@@ -114,7 +114,7 @@ bool meta_server_failure_detector::get_leader(rpc_address *leader)
         if (err == dsn::ERR_OK && leader->from_string_ipv4(lock_owner.c_str())) {
             return (*leader) == dsn_primary_address();
         } else {
-            LOG_WARNING_F("query leader from cache got error({})", err);
+            LOG_WARNING("query leader from cache got error({})", err);
             leader->set_invalid();
             return false;
         }
@@ -136,10 +136,10 @@ void meta_server_failure_detector::acquire_leader_lock()
             // lock granted
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [this, &err](error_code ec, const std::string &owner, uint64_t version) {
-                LOG_INFO_F("leader lock granted callback: err({}), owner({}), version({})",
-                           ec,
-                           owner,
-                           version);
+                LOG_INFO("leader lock granted callback: err({}), owner({}), version({})",
+                         ec,
+                         owner,
+                         version);
                 err = ec;
                 if (err == dsn::ERR_OK) {
                     leader_initialize(owner);
@@ -149,10 +149,10 @@ void meta_server_failure_detector::acquire_leader_lock()
             // lease expire
             LPC_META_SERVER_LEADER_LOCK_CALLBACK,
             [](error_code ec, const std::string &owner, uint64_t version) {
-                LOG_ERROR_F("leader lock expired callback: err({}), owner({}), version({})",
-                            ec,
-                            owner,
-                            version);
+                LOG_ERROR("leader lock expired callback: err({}), owner({}), version({})",
+                          ec,
+                          owner,
+                          version);
                 // let's take the easy way right now
                 dsn_exit(0);
             },
@@ -178,11 +178,11 @@ void meta_server_failure_detector::reset_stability_stat(const rpc_address &node)
     if (iter == _stablity.end())
         return;
     else {
-        LOG_INFO_F("old stability stat: node({}), start_time({}), unstable_count({}), will reset "
-                   "unstable count to 0",
-                   node,
-                   iter->second.last_start_time_ms,
-                   iter->second.unstable_restart_count);
+        LOG_INFO("old stability stat: node({}), start_time({}), unstable_count({}), will reset "
+                 "unstable count to 0",
+                 node,
+                 iter->second.last_start_time_ms,
+                 iter->second.unstable_restart_count);
         iter->second.unstable_restart_count = 0;
     }
 }
@@ -208,39 +208,39 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
     } else {
         worker_stability &w = iter->second;
         if (beacon.start_time == w.last_start_time_ms) {
-            LOG_DEBUG_F(
+            LOG_DEBUG(
                 "{} isn't restarted, last_start_time({})", beacon.from_addr, w.last_start_time_ms);
             if (dsn_now_ms() - w.last_start_time_ms >=
                     _fd_opts->stable_rs_min_running_seconds * 1000 &&
                 w.unstable_restart_count > 0) {
-                LOG_INFO_F("{} has stably run for a while, reset it's unstable count({}) to 0",
-                           beacon.from_addr,
-                           w.unstable_restart_count);
+                LOG_INFO("{} has stably run for a while, reset it's unstable count({}) to 0",
+                         beacon.from_addr,
+                         w.unstable_restart_count);
                 w.unstable_restart_count = 0;
             }
         } else if (beacon.start_time > w.last_start_time_ms) {
-            LOG_INFO_F("check {} restarted, last_time({}), this_time({})",
-                       beacon.from_addr,
-                       w.last_start_time_ms,
-                       beacon.start_time);
+            LOG_INFO("check {} restarted, last_time({}), this_time({})",
+                     beacon.from_addr,
+                     w.last_start_time_ms,
+                     beacon.start_time);
             if (beacon.start_time - w.last_start_time_ms <
                 _fd_opts->stable_rs_min_running_seconds * 1000) {
                 w.unstable_restart_count++;
-                LOG_WARNING_F("{} encounter an unstable restart, total_count({})",
-                              beacon.from_addr,
-                              w.unstable_restart_count);
+                LOG_WARNING("{} encounter an unstable restart, total_count({})",
+                            beacon.from_addr,
+                            w.unstable_restart_count);
             } else if (w.unstable_restart_count > 0) {
-                LOG_INFO_F("{} restart in {} ms after last restart, may recover ok, reset "
-                           "it's unstable count({}) to 0",
-                           beacon.from_addr,
-                           beacon.start_time - w.last_start_time_ms,
-                           w.unstable_restart_count);
+                LOG_INFO("{} restart in {} ms after last restart, may recover ok, reset "
+                         "it's unstable count({}) to 0",
+                         beacon.from_addr,
+                         beacon.start_time - w.last_start_time_ms,
+                         w.unstable_restart_count);
                 w.unstable_restart_count = 0;
             }
 
             w.last_start_time_ms = beacon.start_time;
         } else {
-            LOG_WARNING_F("{}: possible encounter a staled message, ignore it", beacon.from_addr);
+            LOG_WARNING("{}: possible encounter a staled message, ignore it", beacon.from_addr);
         }
         return w.unstable_restart_count < _fd_opts->max_succssive_unstable_restart;
     }
@@ -255,7 +255,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
     ack.allowed = true;
 
     if (beacon.__isset.start_time && !update_stability_stat(beacon)) {
-        LOG_WARNING_F("{} is unstable, don't response to it's beacon", beacon.from_addr);
+        LOG_WARNING("{} is unstable, don't response to it's beacon", beacon.from_addr);
         return;
     }
 
@@ -269,13 +269,13 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
         failure_detector::on_ping_internal(beacon, ack);
     }
 
-    LOG_INFO_F("on_ping, beacon send time[{}], is_master({}), from_node({}), this_node({}), "
-               "primary_node({})",
-               ack.time,
-               ack.is_master ? "true" : "false",
-               beacon.from_addr,
-               ack.this_node,
-               ack.primary_node);
+    LOG_INFO("on_ping, beacon send time[{}], is_master({}), from_node({}), this_node({}), "
+             "primary_node({})",
+             ack.time,
+             ack.is_master ? "true" : "false",
+             beacon.from_addr,
+             ack.this_node,
+             ack.primary_node);
 
     reply(ack);
 }
@@ -284,7 +284,7 @@ void meta_server_failure_detector::on_ping(const fd::beacon_msg &beacon,
 meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_address,
                                                            bool is_myself_leader)
 {
-    LOG_INFO_F("set {} as leader", leader_address);
+    LOG_INFO("set {} as leader", leader_address);
     _lock_svc = nullptr;
     _is_leader.store(is_myself_leader);
 }
@@ -292,7 +292,7 @@ meta_server_failure_detector::meta_server_failure_detector(rpc_address leader_ad
 void meta_server_failure_detector::set_leader_for_test(rpc_address leader_address,
                                                        bool is_myself_leader)
 {
-    LOG_INFO_F("set {} as leader", leader_address);
+    LOG_INFO("set {} as leader", leader_address);
     _is_leader.store(is_myself_leader);
 }
 

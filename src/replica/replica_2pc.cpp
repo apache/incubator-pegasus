@@ -83,10 +83,10 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     task_spec *spec = task_spec::get(request->rpc_code());
     if (dsn_unlikely(nullptr == spec || request->rpc_code() == TASK_CODE_INVALID)) {
-        LOG_ERROR_F("recv message with unhandled rpc name {} from {}, trace_id = {}",
-                    request->rpc_code().to_string(),
-                    request->header->from_address.to_string(),
-                    request->header->trace_id);
+        LOG_ERROR("recv message with unhandled rpc name {} from {}, trace_id = {}",
+                  request->rpc_code().to_string(),
+                  request->header->from_address.to_string(),
+                  request->header->trace_id);
         response_client_write(request, ERR_HANDLER_NOT_FOUND);
         return;
     }
@@ -291,11 +291,11 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             int delay_ms = _options->log_shared_pending_size_throttling_delay_ms;
             for (dsn::message_ex *r : mu->client_requests) {
                 if (r && r->io_session->delay_recv(delay_ms)) {
-                    LOG_WARNING_F("too large pending shared log ({}), delay traffic from {} for {} "
-                                  "milliseconds",
-                                  pending_size,
-                                  r->header->from_address,
-                                  delay_ms);
+                    LOG_WARNING("too large pending shared log ({}), delay traffic from {} for {} "
+                                "milliseconds",
+                                pending_size,
+                                r->header->from_address,
+                                delay_ms);
                 }
             }
         }

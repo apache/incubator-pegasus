@@ -154,7 +154,7 @@ bool greedy_load_balancer::all_replica_infos_collected(const node_state &ns)
     return ns.for_each_partition([this, n](const dsn::gpid &pid) {
         config_context &cc = *get_config_context(*(t_global_view->apps), pid);
         if (cc.find_from_serving(n) == cc.serving.end()) {
-            LOG_INFO_F("meta server hasn't collected gpid({})'s info of {}", pid, n);
+            LOG_INFO("meta server hasn't collected gpid({})'s info of {}", pid, n);
             return false;
         }
         return true;
@@ -186,7 +186,7 @@ void greedy_load_balancer::greedy_balancer(const bool balance_checker)
 
 bool greedy_load_balancer::balance(meta_view view, migration_list &list)
 {
-    LOG_INFO_F("balancer round");
+    LOG_INFO("balancer round");
     list.clear();
 
     t_alive_nodes = view.nodes->size();
@@ -200,7 +200,7 @@ bool greedy_load_balancer::balance(meta_view view, migration_list &list)
 
 bool greedy_load_balancer::check(meta_view view, migration_list &list)
 {
-    LOG_INFO_F("balance checker round");
+    LOG_INFO("balance checker round");
     list.clear();
 
     t_alive_nodes = view.nodes->size();
