@@ -48,6 +48,24 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 checkpoint_max_interval_hours,
+                 2,
+                 "maximum time interval (hours) where a new checkpoint must be created");
+
+// ATTENTION: only when FLAGS_log_private_reserve_max_size_mb and
+// FLAGS_log_private_reserve_max_time_seconds
+// are both satisfied, the useless logs can be reserved.
+DSN_DEFINE_int32(replication,
+                 log_private_reserve_max_size_mb,
+                 0,
+                 "max size of useless private log to be reserved");
+
+DSN_DEFINE_int32(replication,
+                 log_private_reserve_max_time_seconds,
+                 0,
+                 "max time in seconds of useless private log to be reserved");
+
 const std::string kCheckpointFolderPrefix /*NOLINT*/ = "checkpoint";
 
 static std::string checkpoint_folder(int64_t decree)
@@ -62,10 +80,10 @@ void replica::on_checkpoint_timer()
 
     if (dsn_now_ms() > _next_checkpoint_interval_trigger_time_ms) {
         // we trigger emergency checkpoint if no checkpoint generated for a long time
-        LOG_INFO_PREFIX("trigger emergency checkpoint by checkpoint_max_interval_hours, "
+        LOG_INFO_PREFIX("trigger emergency checkpoint by FLAGS_checkpoint_max_interval_hours, "
                         "config_interval = {}h ({}ms), random_interval = {}ms",
-                        _options->checkpoint_max_interval_hours,
-                        _options->checkpoint_max_interval_hours * 3600000UL,
+                        FLAGS_checkpoint_max_interval_hours,
+                        FLAGS_checkpoint_max_interval_hours * 3600000UL,
                         _next_checkpoint_interval_trigger_time_ms -
                             _last_checkpoint_generate_time_ms);
         init_checkpoint(true);
@@ -120,8 +138,8 @@ void replica::on_checkpoint_timer()
                                  get_gpid(),
                                  cleanable_decree,
                                  valid_start_offset,
-                                 (int64_t)_options->log_private_reserve_max_size_mb * 1024 * 1024,
-                                 (int64_t)_options->log_private_reserve_max_time_seconds);
+                                 (int64_t)FLAGS_log_private_reserve_max_size_mb * 1024 * 1024,
+                                 (int64_t)FLAGS_log_private_reserve_max_time_seconds);
                              if (status() == partition_status::PS_PRIMARY)
                                  _counter_private_log_size->set(_private_log->total_size() /
                                                                 1000000);

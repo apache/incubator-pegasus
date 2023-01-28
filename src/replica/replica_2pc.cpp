@@ -44,6 +44,34 @@ DSN_DEFINE_bool(replication,
                 "reject client write requests if disk status is space insufficient");
 DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
 
+DSN_DEFINE_int32(replication,
+                 prepare_timeout_ms_for_secondaries,
+                 1000,
+                 "timeout (ms) for prepare message to secondaries in two phase commit");
+
+DSN_DEFINE_int32(replication,
+                 prepare_timeout_ms_for_potential_secondaries,
+                 3000,
+                 "timeout (ms) for prepare message to potential secondaries in two phase commit");
+
+DSN_DEFINE_int32(replication,
+                 prepare_decree_gap_for_debug_logging,
+                 10000,
+                 "if greater than 0, then print debug log every decree gap of preparing");
+
+DSN_DEFINE_int32(replication,
+                 log_shared_pending_size_throttling_threshold_kb,
+                 0,
+                 "log_shared_pending_size_throttling_threshold_kb");
+
+DSN_DEFINE_int32(replication,
+                 log_shared_pending_size_throttling_delay_ms,
+                 0,
+                 "log_shared_pending_size_throttling_delay_ms");
+
+DSN_DECLARE_int32(staleness_for_commit);
+DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+
 void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {
     _checker.only_one_thread_access();
@@ -177,8 +205,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
         // print a debug log if necessary
-        if (_options->prepare_decree_gap_for_debug_logging > 0 &&
-            mu->get_decree() % _options->prepare_decree_gap_for_debug_logging == 0)
+        if (FLAGS_prepare_decree_gap_for_debug_logging > 0 &&
+            mu->get_decree() % FLAGS_prepare_decree_gap_for_debug_logging == 0)
             level = LOG_LEVEL_INFO;
         mu->set_timestamp(_uniq_timestamp_us.next());
     } else {
@@ -196,7 +224,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     mu->set_is_sync_to_child(_primary_states.sync_send_write_request);
 
     // check bounded staleness
-    if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit) {
+    if (mu->data.header.decree > last_committed_decree() + FLAGS_staleness_for_commit) {
         err = ERR_CAPACITY_EXCEEDED;
         goto ErrOut;
     }
@@ -245,7 +273,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         send_prepare_message(*it,
                              partition_status::PS_SECONDARY,
                              mu,
-                             _options->prepare_timeout_ms_for_secondaries,
+                             FLAGS_prepare_timeout_ms_for_secondaries,
                              pop_all_committed_mutations);
     }
 
@@ -256,7 +284,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             send_prepare_message(it->first,
                                  partition_status::PS_POTENTIAL_SECONDARY,
                                  mu,
-                                 _options->prepare_timeout_ms_for_potential_secondaries,
+                                 FLAGS_prepare_timeout_ms_for_potential_secondaries,
                                  pop_all_committed_mutations,
                                  it->second.signature);
             count++;
@@ -285,10 +313,10 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                                               get_gpid().thread_hash(),
                                               &pending_size);
         CHECK_NOTNULL(mu->log_task(), "");
-        if (_options->log_shared_pending_size_throttling_threshold_kb > 0 &&
-            _options->log_shared_pending_size_throttling_delay_ms > 0 &&
-            pending_size >= _options->log_shared_pending_size_throttling_threshold_kb * 1024) {
-            int delay_ms = _options->log_shared_pending_size_throttling_delay_ms;
+        if (FLAGS_log_shared_pending_size_throttling_threshold_kb > 0 &&
+            FLAGS_log_shared_pending_size_throttling_delay_ms > 0 &&
+            pending_size >= FLAGS_log_shared_pending_size_throttling_threshold_kb * 1024) {
+            int delay_ms = FLAGS_log_shared_pending_size_throttling_delay_ms;
             for (dsn::message_ex *r : mu->client_requests) {
                 if (r && r->io_session->delay_recv(delay_ms)) {
                     LOG_WARNING("too large pending shared log ({}), delay traffic from {} for {} "
@@ -477,10 +505,10 @@ void replica::on_prepare(dsn::message_ex *request)
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
         partition_status::PS_SECONDARY == status()) {
         CHECK_LE_MSG(mu->data.header.decree,
-                     last_committed_decree() + _options->max_mutation_count_in_prepare_list,
-                     "last_committed_decree: {}, _options->max_mutation_count_in_prepare_list: {}",
+                     last_committed_decree() + FLAGS_max_mutation_count_in_prepare_list,
+                     "last_committed_decree: {}, FLAGS_max_mutation_count_in_prepare_list: {}",
                      last_committed_decree(),
-                     _options->max_mutation_count_in_prepare_list);
+                     FLAGS_max_mutation_count_in_prepare_list);
     } else {
         LOG_ERROR_PREFIX("mutation {} on_prepare failed as invalid replica state, state = {}",
                          mu->name(),
@@ -646,8 +674,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
         // retry for INACTIVE or TRY_AGAIN if there is still time.
         if (resp.err == ERR_INACTIVE_STATE || resp.err == ERR_TRY_AGAIN) {
             int prepare_timeout_ms = (target_status == partition_status::PS_SECONDARY
-                                          ? _options->prepare_timeout_ms_for_secondaries
-                                          : _options->prepare_timeout_ms_for_potential_secondaries);
+                                          ? FLAGS_prepare_timeout_ms_for_secondaries
+                                          : FLAGS_prepare_timeout_ms_for_potential_secondaries);
             int delay_time_ms = 5; // delay some time before retry to avoid sending too frequently
             if (mu->is_prepare_close_to_timeout(delay_time_ms + 2, prepare_timeout_ms)) {
                 LOG_ERROR_PREFIX("mutation {} do not retry prepare to {} for no enought time left, "

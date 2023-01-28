@@ -71,59 +71,26 @@ public:
     bool delay_for_fd_timeout_on_start;
     bool duplication_enabled;
 
-    int32_t prepare_timeout_ms_for_secondaries;
-    int32_t prepare_timeout_ms_for_potential_secondaries;
-    int32_t prepare_decree_gap_for_debug_logging;
-
     bool batch_write_disabled;
-    int32_t staleness_for_commit;
-    int32_t max_mutation_count_in_prepare_list;
-    int32_t mutation_2pc_min_replica_count;
 
     bool group_check_disabled;
-    int32_t group_check_interval_ms;
 
     bool checkpoint_disabled;
-    int32_t checkpoint_interval_seconds;
     int64_t checkpoint_min_decree_gap;
-    int32_t checkpoint_max_interval_hours;
 
     bool gc_disabled;
-    int32_t gc_interval_ms;
-    int32_t gc_memory_replica_interval_ms;
 
     bool disk_stat_disabled;
-    int32_t disk_stat_interval_seconds;
 
     bool fd_disabled;
-    int32_t fd_check_interval_seconds;
-    int32_t fd_beacon_interval_seconds;
-    int32_t fd_lease_seconds;
-    int32_t fd_grace_seconds;
 
-    int32_t log_private_file_size_mb;
-    int32_t log_private_reserve_max_size_mb;
-    int32_t log_private_reserve_max_time_seconds;
-
-    int32_t log_shared_file_size_mb;
-    int32_t log_shared_file_count_limit;
-    int32_t log_shared_batch_buffer_kb;
     bool log_shared_force_flush;
-    int32_t log_shared_pending_size_throttling_threshold_kb;
-    int32_t log_shared_pending_size_throttling_delay_ms;
 
     bool config_sync_disabled;
 
     bool mem_release_enabled;
-    int32_t mem_release_check_interval_ms;
-    int32_t mem_release_max_reserved_mem_percentage;
-
-    int32_t lb_interval_ms;
-
-    int32_t learn_app_max_concurrent_count;
 
     std::string cold_backup_root;
-    int32_t cold_backup_checkpoint_reserve_minutes;
 
     int32_t max_concurrent_bulk_load_downloading_count;
 
@@ -143,9 +110,6 @@ public:
                                             /*out*/ std::vector<std::string> &dirs);
     static bool check_if_in_black_list(const std::vector<std::string> &black_list_dir,
                                        const std::string &dir);
-
-private:
-    void sanity_check();
 };
 } // namespace replication
 } // namespace dsn
