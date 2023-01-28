@@ -42,11 +42,11 @@ DSN_DEFINE_int32(replication,
                  5,
                  "concurrent bulk load downloading replica count");
 
-DSN_DEFINE_int32(replication, mutation_2pc_min_replica_count, 2, "minimum number of alive replicas "
-                                                                 "under which write is allowed. "
-                                                                 "it's valid if larger than 0, "
-                                                                 "otherwise, the final value is "
-                                                                 "based on app_max_replica_count");
+DSN_DEFINE_int32(replication,
+                 mutation_2pc_min_replica_count,
+                 2,
+                 "minimum number of alive replicas under which write is allowed. it's valid if "
+                 "larger than 0, otherwise, the final value is based on app_max_replica_count");
 DSN_DEFINE_int32(
     replication,
     gc_interval_ms,
