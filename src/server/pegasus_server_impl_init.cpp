@@ -83,14 +83,11 @@ DSN_DEFINE_int32(
 // option for early opt-in.
 // Reference from rocksdb commit:
 // https://github.com/facebook/rocksdb/commit/f059c7d9b96300091e07429a60f4ad55dac84859
-DSN_DEFINE_int32(pegasus.server,
-                 rocksdb_format_version,
-                 2,
-                 "block based table data format version, "
-                 "only 2 and 5 is supported in Pegasus. "
-                 "2 is the old version, 5 is the new "
-                 "version supported since rocksdb "
-                 "v6.6.4");
+DSN_DEFINE_int32(pegasus.server, rocksdb_format_version, 2, "block based table data format "
+                                                            "version, only 2 and 5 is supported in "
+                                                            "Pegasus. 2 is the old version, 5 is "
+                                                            "the new version supported since "
+                                                            "rocksdb v6.6.4");
 DSN_DEFINE_validator(rocksdb_format_version,
                      [](int32_t value) -> bool { return value == 2 || value == 5; });
 
@@ -121,13 +118,10 @@ DSN_DEFINE_bool(pegasus.server,
 //
 // Default: 0 (disabled)
 // see https://github.com/XiaoMi/pegasus-rocksdb/blob/v6.6.4-compatible/include/rocksdb/table.h#L247
-DSN_DEFINE_int32(pegasus.server,
-                 read_amp_bytes_per_bit,
-                 0,
-                 "config for using to calculate the "
-                 "read amplification, must be a power "
-                 "of 2, zero means disable count read "
-                 "amplification");
+DSN_DEFINE_int32(pegasus.server, read_amp_bytes_per_bit, 0, "config for using to calculate the "
+                                                            "read amplification, must be a power "
+                                                            "of 2, zero means disable count read "
+                                                            "amplification");
 
 DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per_bit) -> bool {
     return read_amp_bytes_per_bit == 0 ||

@@ -89,27 +89,22 @@ DSN_DEFINE_int32(replication,
                  disk_stat_interval_seconds,
                  600,
                  "every what period (ms) we do disk stat");
-
-DSN_DEFINE_int32(
-    replication,
-    gc_memory_replica_interval_ms,
-    10 * 60 * 1000,
-    "after closing a healthy replica (due to LB), the replica will remain in memory for this "
-    "long (ms) for quick recover");
-
+DSN_DEFINE_int32(replication,
+                 gc_memory_replica_interval_ms,
+                 10 * 60 * 1000,
+                 "after closing a healthy replica (due to LB), the replica will remain in memory "
+                 "for this long (ms) for quick recover");
 DSN_DEFINE_int32(replication,
                  log_shared_file_size_mb,
                  32,
                  "shared log maximum segment file size (MB)");
 
 DSN_DEFINE_int32(replication, log_shared_file_count_limit, 100, "shared log maximum file count");
-
 DSN_DEFINE_int32(
     replication,
     mem_release_check_interval_ms,
     3600000,
     "the replica check if should release memory to the system every this period of time(ms)");
-
 DSN_DEFINE_int32(
     replication,
     mem_release_max_reserved_mem_percentage,

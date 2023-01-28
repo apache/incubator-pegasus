@@ -42,18 +42,16 @@ DSN_DEFINE_int32(replication,
                  5,
                  "concurrent bulk load downloading replica count");
 
+DSN_DEFINE_int32(replication, mutation_2pc_min_replica_count, 2, "minimum number of alive replicas "
+                                                                 "under which write is allowed. "
+                                                                 "it's valid if larger than 0, "
+                                                                 "otherwise, the final value is "
+                                                                 "based on app_max_replica_count");
 DSN_DEFINE_int32(
     replication,
-    mutation_2pc_min_replica_count,
-    2,
-    "minimum number of alive replicas under which write is allowed. it's valid if larger than "
-    "0, otherwise, the final value is based on app_max_replica_count");
-DSN_DEFINE_int32(replication,
-                 gc_interval_ms,
-                 30 * 1000,
-                 "every what period (ms) we do garbage "
-                 "collection for dead replicas, on-disk "
-                 "state, log, etc.");
+    gc_interval_ms,
+    30 * 1000,
+    "every what period (ms) we do garbage collection for dead replicas, on-disk state, log, etc.");
 DSN_DEFINE_int32(replication,
                  fd_check_interval_seconds,
                  2,
@@ -68,6 +66,7 @@ DSN_DEFINE_int32(replication,
                  10,
                  "grace (seconds) assigned to remote FD slaves (grace > lease)");
 
+// TODO(yingchun): useless any more, remove it from all config files later.
 // DSN_DEFINE_int32(replication,
 //                     log_shared_batch_buffer_kb,
 //                     0,

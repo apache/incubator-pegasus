@@ -52,19 +52,20 @@ DSN_DEFINE_int32(replication,
                  checkpoint_max_interval_hours,
                  2,
                  "maximum time interval (hours) where a new checkpoint must be created");
-
-// ATTENTION: only when FLAGS_log_private_reserve_max_size_mb and
-// FLAGS_log_private_reserve_max_time_seconds
-// are both satisfied, the useless logs can be reserved.
 DSN_DEFINE_int32(replication,
                  log_private_reserve_max_size_mb,
                  0,
-                 "max size of useless private log to be reserved");
-
+                 "max size of useless private log to be reserved. NOTE: only when "
+                 "FLAGS_log_private_reserve_max_size_mb and "
+                 "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
+                 "can be reserved.");
 DSN_DEFINE_int32(replication,
                  log_private_reserve_max_time_seconds,
                  0,
-                 "max time in seconds of useless private log to be reserved");
+                 "max time in seconds of useless private log to be reserved. NOTE: only when "
+                 "FLAGS_log_private_reserve_max_size_mb and "
+                 "FLAGS_log_private_reserve_max_time_seconds are both satisfied, the useless logs "
+                 "can be reserved.");
 
 const std::string kCheckpointFolderPrefix /*NOLINT*/ = "checkpoint";
 

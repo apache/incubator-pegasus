@@ -59,8 +59,16 @@ DSN_DEFINE_int32(replication,
                  max_mutation_count_in_prepare_list,
                  110,
                  "maximum number of mutations in prepare list");
-// TODO(yingchun): check
-// CHECK_GE(FLAGS_max_mutation_count_in_prepare_list, FLAGS_staleness_for_commit);
+DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
+    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
+        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
+                              "replication.staleness_for_commit({})",
+                              FLAGS_max_mutation_count_in_prepare_list,
+                              FLAGS_staleness_for_commit);
+        return false;
+    }
+    return true;
+});
 
 DSN_DECLARE_int32(checkpoint_max_interval_hours);
 

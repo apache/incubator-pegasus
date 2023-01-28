@@ -48,29 +48,25 @@ DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_secondaries,
                  1000,
                  "timeout (ms) for prepare message to secondaries in two phase commit");
-
 DSN_DEFINE_int32(replication,
                  prepare_timeout_ms_for_potential_secondaries,
                  3000,
                  "timeout (ms) for prepare message to potential secondaries in two phase commit");
-
 DSN_DEFINE_int32(replication,
                  prepare_decree_gap_for_debug_logging,
                  10000,
                  "if greater than 0, then print debug log every decree gap of preparing");
-
 DSN_DEFINE_int32(replication,
                  log_shared_pending_size_throttling_threshold_kb,
                  0,
                  "log_shared_pending_size_throttling_threshold_kb");
-
 DSN_DEFINE_int32(replication,
                  log_shared_pending_size_throttling_delay_ms,
                  0,
                  "log_shared_pending_size_throttling_delay_ms");
 
-DSN_DECLARE_int32(staleness_for_commit);
 DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+DSN_DECLARE_int32(staleness_for_commit);
 
 void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {

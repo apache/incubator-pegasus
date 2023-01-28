@@ -31,10 +31,10 @@
 namespace pegasus {
 namespace test {
 
-DSN_DECLARE_int32(pegasus_timeout_ms);
-DSN_DECLARE_int32(threads);
 DSN_DECLARE_int32(hashkey_size);
+DSN_DECLARE_int32(pegasus_timeout_ms);
 DSN_DECLARE_int32(sortkey_size);
+DSN_DECLARE_int32(threads);
 DSN_DECLARE_int32(value_size);
 
 benchmark::benchmark()
