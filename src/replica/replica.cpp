@@ -51,6 +51,27 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 staleness_for_commit,
+                 10,
+                 "how many concurrent two phase commit rounds are allowed");
+DSN_DEFINE_int32(replication,
+                 max_mutation_count_in_prepare_list,
+                 110,
+                 "maximum number of mutations in prepare list");
+DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
+    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
+        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
+                              "replication.staleness_for_commit({})",
+                              FLAGS_max_mutation_count_in_prepare_list,
+                              FLAGS_staleness_for_commit);
+        return false;
+    }
+    return true;
+});
+
+DSN_DECLARE_int32(checkpoint_max_interval_hours);
+
 const std::string replica::kAppInfo = ".app-info";
 
 replica::replica(replica_stub *stub,
@@ -62,8 +83,7 @@ replica::replica(replica_stub *stub,
     : serverlet<replica>("replica"),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
       _app_info(app),
-      _primary_states(
-          gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled),
+      _primary_states(gpid, FLAGS_staleness_for_commit, stub->options().batch_write_disabled),
       _potential_secondary_states(this),
       _cold_backup_running_count(0),
       _cold_backup_max_duration_time_ms(0),
@@ -155,7 +175,7 @@ replica::replica(replica_stub *stub,
 void replica::update_last_checkpoint_generate_time()
 {
     _last_checkpoint_generate_time_ms = dsn_now_ms();
-    uint64_t max_interval_ms = _options->checkpoint_max_interval_hours * 3600000UL;
+    uint64_t max_interval_ms = FLAGS_checkpoint_max_interval_hours * 3600000UL;
     // use random trigger time to avoid flush peek
     _next_checkpoint_interval_trigger_time_ms =
         _last_checkpoint_generate_time_ms + rand::next_u64(max_interval_ms / 2, max_interval_ms);
@@ -177,7 +197,7 @@ void replica::init_state()
     _prepare_list = dsn::make_unique<prepare_list>(
         this,
         0,
-        _options->max_mutation_count_in_prepare_list,
+        FLAGS_max_mutation_count_in_prepare_list,
         std::bind(&replica::execute_mutation, this, std::placeholders::_1));
 
     _config.ballot = 0;

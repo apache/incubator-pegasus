@@ -26,7 +26,9 @@
 
 namespace dsn {
 namespace replication {
+
 DSN_DECLARE_bool(empty_write_disabled);
+DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
 
 replica_split_manager::replica_split_manager(replica *r)
     : replica_base(r), _replica(r), _stub(r->get_replica_stub())
@@ -400,7 +402,7 @@ replica_split_manager::child_apply_private_logs(std::vector<std::string> plog_fi
     // temp prepare_list used for apply states
     prepare_list plist(_replica,
                        _replica->_app->last_committed_decree(),
-                       _replica->_options->max_mutation_count_in_prepare_list,
+                       FLAGS_max_mutation_count_in_prepare_list,
                        [this](mutation_ptr &mu) {
                            if (mu->data.header.decree ==
                                _replica->_app->last_committed_decree() + 1) {

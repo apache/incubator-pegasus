@@ -30,6 +30,9 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+DSN_DECLARE_int32(fd_lease_seconds);
+
 // TODO: backup_service and policy_context should need two locks, its own _lock and server_state's
 // _lock this maybe lead to deadlock, should refactor this
 
@@ -1227,12 +1230,11 @@ void backup_service::add_backup_policy(dsn::message_ex *msg)
 
     // The backup interval must be greater than checkpoint reserve time.
     // Or the next cold backup checkpoint may be cleared by the clear operation.
-    if (request.backup_interval_seconds <=
-        _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes * 60) {
+    if (request.backup_interval_seconds <= FLAGS_cold_backup_checkpoint_reserve_minutes * 60) {
         response.err = ERR_INVALID_PARAMETERS;
         response.hint_message = fmt::format(
-            "backup interval must be greater than cold_backup_checkpoint_reserve_minutes={}",
-            _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes);
+            "backup interval must be greater than FLAGS_cold_backup_checkpoint_reserve_minutes={}",
+            FLAGS_cold_backup_checkpoint_reserve_minutes);
         _meta_svc->reply_data(msg, response);
         msg->release_ref();
         return;

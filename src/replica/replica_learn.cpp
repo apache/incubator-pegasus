@@ -46,6 +46,13 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 learn_app_max_concurrent_count,
+                 5,
+                 "max count of learning app concurrently");
+
+DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+
 void replica::init_learn(uint64_t signature)
 {
     _checker.only_one_thread_access();
@@ -172,16 +179,16 @@ void replica::init_learn(uint64_t signature)
     }
 
     if (_app->last_committed_decree() == 0 &&
-        _stub->_learn_app_concurrent_count.load() >= _options->learn_app_max_concurrent_count) {
+        _stub->_learn_app_concurrent_count.load() >= FLAGS_learn_app_max_concurrent_count) {
         LOG_WARNING_PREFIX(
             "init_learn[{:#018x}]: learnee = {}, learn_duration = {} ms, need to learn app "
             "because app_committed_decree = 0, but learn_app_concurrent_count({}) >= "
-            "learn_app_max_concurrent_count({}), skip",
+            "FLAGS_learn_app_max_concurrent_count({}), skip",
             _potential_secondary_states.learning_version,
             _config.primary,
             _potential_secondary_states.duration_ms(),
             _stub->_learn_app_concurrent_count,
-            _options->learn_app_max_concurrent_count);
+            FLAGS_learn_app_max_concurrent_count);
         return;
     }
 
@@ -674,15 +681,15 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     }
 
     if (resp.type == learn_type::LT_APP) {
-        if (++_stub->_learn_app_concurrent_count > _options->learn_app_max_concurrent_count) {
+        if (++_stub->_learn_app_concurrent_count > FLAGS_learn_app_max_concurrent_count) {
             --_stub->_learn_app_concurrent_count;
             LOG_WARNING_PREFIX(
                 "on_learn_reply[{:#018x}]: learnee = {}, learn_app_concurrent_count({}) >= "
-                "learn_app_max_concurrent_count({}), skip this round",
+                "FLAGS_learn_app_max_concurrent_count({}), skip this round",
                 _potential_secondary_states.learning_version,
                 _config.primary,
                 _stub->_learn_app_concurrent_count,
-                _options->learn_app_max_concurrent_count);
+                FLAGS_learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
             return;
         } else {
@@ -1443,7 +1450,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
     // temp prepare list for learning purpose
     prepare_list plist(this,
                        _app->last_committed_decree(),
-                       _options->max_mutation_count_in_prepare_list,
+                       FLAGS_max_mutation_count_in_prepare_list,
                        [this, duplicating, step_back](mutation_ptr &mu) {
                            if (mu->data.header.decree == _app->last_committed_decree() + 1) {
                                // TODO: assign the returned error_code to err and check it

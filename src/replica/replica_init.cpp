@@ -39,6 +39,16 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 checkpoint_interval_seconds,
+                 100,
+                 "every what period (seconds) we do checkpoints for replicated apps");
+
+DSN_DEFINE_int32(replication,
+                 log_private_file_size_mb,
+                 32,
+                 "private log maximum segment file size (MB)");
+
 error_code replica::initialize_on_new()
 {
     // if (dsn::utils::filesystem::directory_exists(_dir) &&
@@ -245,8 +255,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             _config.ballot = _app->init_info().init_ballot;
             _prepare_list->reset(_app->last_committed_decree());
 
-            _private_log = new mutation_log_private(
-                log_dir, _options->log_private_file_size_mb, get_gpid(), this);
+            _private_log =
+                new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
             LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             // sync valid_start_offset between app and logs
@@ -331,8 +341,8 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                   "Fail to create directory {}",
                   log_dir);
 
-            _private_log = new mutation_log_private(
-                log_dir, _options->log_private_file_size_mb, get_gpid(), this);
+            _private_log =
+                new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
             LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             err = _private_log->open(nullptr, [this](error_code err) {
@@ -345,12 +355,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
         if (err == ERR_OK) {
             if (_checkpoint_timer == nullptr && !_options->checkpoint_disabled) {
-                _checkpoint_timer = tasking::enqueue_timer(
-                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    &_tracker,
-                    [this] { on_checkpoint_timer(); },
-                    std::chrono::seconds(_options->checkpoint_interval_seconds),
-                    get_gpid().thread_hash());
+                _checkpoint_timer =
+                    tasking::enqueue_timer(LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                                           &_tracker,
+                                           [this] { on_checkpoint_timer(); },
+                                           std::chrono::seconds(FLAGS_checkpoint_interval_seconds),
+                                           get_gpid().thread_hash());
             }
 
             _backup_mgr->start_collect_backup_info();

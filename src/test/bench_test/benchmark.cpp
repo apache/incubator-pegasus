@@ -24,11 +24,19 @@
 #include "rand.h"
 #include "runtime/app_model.h"
 #include "utils/api_utilities.h"
+#include "utils/flags.h"
 #include "utils/fmt_logging.h"
 #include "utils/ports.h"
 
 namespace pegasus {
 namespace test {
+
+DSN_DECLARE_int32(hashkey_size);
+DSN_DECLARE_int32(pegasus_timeout_ms);
+DSN_DECLARE_int32(sortkey_size);
+DSN_DECLARE_int32(threads);
+DSN_DECLARE_int32(value_size);
+
 benchmark::benchmark()
 {
     _client = pegasus_client_factory::get_client(config::instance().pegasus_cluster_name.c_str(),
@@ -52,7 +60,7 @@ void benchmark::run()
     while (std::getline(benchmark_stream, name, ',')) {
         // run the specified benchmark
         operation_type op_type = get_operation_type(name);
-        run_benchmark(config::instance().threads, op_type);
+        run_benchmark(FLAGS_threads, op_type);
     }
 }
 
@@ -111,10 +119,9 @@ void benchmark::write_random(thread_arg *thread)
         int try_count = 0;
         while (true) {
             try_count++;
-            int ret = _client->set(hashkey, sortkey, value, config::instance().pegasus_timeout_ms);
+            int ret = _client->set(hashkey, sortkey, value, FLAGS_pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
-                bytes += config::instance().value_size + config::instance().hashkey_size +
-                         config::instance().sortkey_size;
+                bytes += FLAGS_value_size + FLAGS_hashkey_size + FLAGS_sortkey_size;
                 count++;
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
@@ -147,7 +154,7 @@ void benchmark::read_random(thread_arg *thread)
         int try_count = 0;
         while (true) {
             try_count++;
-            int ret = _client->get(hashkey, sortkey, value, config::instance().pegasus_timeout_ms);
+            int ret = _client->get(hashkey, sortkey, value, FLAGS_pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 found++;
                 bytes += hashkey.size() + sortkey.size() + value.size();
@@ -184,7 +191,7 @@ void benchmark::delete_random(thread_arg *thread)
         int try_count = 0;
         while (true) {
             try_count++;
-            int ret = _client->del(hashkey, sortkey, config::instance().pegasus_timeout_ms);
+            int ret = _client->del(hashkey, sortkey, FLAGS_pegasus_timeout_ms);
             if (ret == ::pegasus::PERR_OK) {
                 break;
             } else if (ret != ::pegasus::PERR_TIMEOUT || try_count > 3) {
@@ -202,9 +209,9 @@ void benchmark::delete_random(thread_arg *thread)
 
 void benchmark::generate_kv_pair(std::string &hashkey, std::string &sortkey, std::string &value)
 {
-    hashkey = generate_string(config::instance().hashkey_size);
-    sortkey = generate_string(config::instance().sortkey_size);
-    value = generate_string(config::instance().value_size);
+    hashkey = generate_string(FLAGS_hashkey_size);
+    sortkey = generate_string(FLAGS_sortkey_size);
+    value = generate_string(FLAGS_value_size);
 }
 
 operation_type benchmark::get_operation_type(const std::string &name)
@@ -227,14 +234,13 @@ operation_type benchmark::get_operation_type(const std::string &name)
 void benchmark::print_header()
 {
     const config &config_ = config::instance();
-    fmt::print(stdout, "Hashkeys:       {} bytes each\n", config_.hashkey_size);
-    fmt::print(stdout, "Sortkeys:       {} bytes each\n", config_.sortkey_size);
-    fmt::print(stdout, "Values:         {} bytes each\n", config_.value_size);
+    fmt::print(stdout, "Hashkeys:       {} bytes each\n", FLAGS_hashkey_size);
+    fmt::print(stdout, "Sortkeys:       {} bytes each\n", FLAGS_sortkey_size);
+    fmt::print(stdout, "Values:         {} bytes each\n", FLAGS_value_size);
     fmt::print(stdout, "Entries:        {}\n", config_.num);
     fmt::print(stdout,
                "FileSize:       {} MB (estimated)\n",
-               ((config_.hashkey_size + config_.sortkey_size + config_.value_size) * config_.num) >>
-                   20);
+               ((FLAGS_hashkey_size + FLAGS_sortkey_size + FLAGS_value_size) * config_.num) >> 20);
 
     print_warnings();
     fmt::print(stdout, "------------------------------------------------\n");

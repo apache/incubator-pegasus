@@ -47,6 +47,11 @@
 
 namespace dsn {
 namespace replication {
+DSN_DEFINE_int32(replication,
+                 group_check_interval_ms,
+                 10000,
+                 "every what period (ms) we check the replica healthness");
+
 DSN_DECLARE_bool(empty_write_disabled);
 
 void replica::init_group_check()
@@ -65,7 +70,7 @@ void replica::init_group_check()
         tasking::enqueue_timer(LPC_GROUP_CHECK,
                                &_tracker,
                                [this] { broadcast_group_check(); },
-                               std::chrono::milliseconds(_options->group_check_interval_ms),
+                               std::chrono::milliseconds(FLAGS_group_check_interval_ms),
                                get_gpid().thread_hash());
 }
 
@@ -136,7 +141,7 @@ void replica::broadcast_group_check()
 
     // send empty prepare when necessary
     if (!FLAGS_empty_write_disabled &&
-        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms) {
+        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + FLAGS_group_check_interval_ms) {
         mutation_ptr mu = new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
         init_prepare(mu, false);

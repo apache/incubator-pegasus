@@ -58,6 +58,16 @@ DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
 DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
                      [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
 
+DSN_DEFINE_int32(replication,
+                 lb_interval_ms,
+                 10000,
+                 "every this period(ms) the meta server will do load balance");
+
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+
 meta_service::meta_service()
     : serverlet("meta_service"), _failure_detector(nullptr), _started(false), _recovering(false)
 {
@@ -272,9 +282,9 @@ void meta_service::start_service()
     tasking::enqueue_timer(LPC_META_STATE_NORMAL,
                            nullptr,
                            std::bind(&meta_service::balancer_run, this),
-                           std::chrono::milliseconds(_opts.lb_interval_ms),
+                           std::chrono::milliseconds(FLAGS_lb_interval_ms),
                            server_state::sStateHash,
-                           std::chrono::milliseconds(_opts.lb_interval_ms));
+                           std::chrono::milliseconds(FLAGS_lb_interval_ms));
 
     if (!_meta_opts.cold_backup_disabled) {
         LOG_INFO("start backup service");
@@ -309,10 +319,10 @@ error_code meta_service::start()
         _failure_detector->set_allow_list(_meta_opts.replica_white_list);
     _failure_detector->register_ctrl_commands();
 
-    err = _failure_detector->start(_opts.fd_check_interval_seconds,
-                                   _opts.fd_beacon_interval_seconds,
-                                   _opts.fd_lease_seconds,
-                                   _opts.fd_grace_seconds,
+    err = _failure_detector->start(FLAGS_fd_check_interval_seconds,
+                                   FLAGS_fd_beacon_interval_seconds,
+                                   FLAGS_fd_lease_seconds,
+                                   FLAGS_fd_grace_seconds,
                                    _meta_opts.enable_white_list);
 
     dreturn_not_ok_logged(err, "start failure_detector failed, err = {}", err);

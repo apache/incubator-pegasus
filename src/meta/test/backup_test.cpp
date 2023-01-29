@@ -41,6 +41,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+
 struct method_record
 {
     dsn::utils::notify_event event;
@@ -793,8 +795,8 @@ TEST_F(meta_backup_service_test, test_add_backup_policy)
         fake_wait_rpc(r, resp);
 
         std::string hint_message = fmt::format(
-            "backup interval must be greater than cold_backup_checkpoint_reserve_minutes={}",
-            _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes);
+            "backup interval must be greater than FLAGS_cold_backup_checkpoint_reserve_minutes={}",
+            FLAGS_cold_backup_checkpoint_reserve_minutes);
         ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
         ASSERT_EQ(hint_message, resp.hint_message);
         req.backup_interval_seconds = old_backup_interval_seconds;

@@ -85,6 +85,39 @@ DSN_DEFINE_uint32(
 DSN_TAG_VARIABLE(config_sync_interval_ms, FT_MUTABLE);
 DSN_DEFINE_validator(config_sync_interval_ms, [](uint32_t value) -> bool { return value > 0; });
 
+DSN_DEFINE_int32(replication,
+                 disk_stat_interval_seconds,
+                 600,
+                 "every what period (ms) we do disk stat");
+DSN_DEFINE_int32(replication,
+                 gc_memory_replica_interval_ms,
+                 10 * 60 * 1000,
+                 "after closing a healthy replica (due to LB), the replica will remain in memory "
+                 "for this long (ms) for quick recover");
+DSN_DEFINE_int32(replication,
+                 log_shared_file_size_mb,
+                 32,
+                 "shared log maximum segment file size (MB)");
+
+DSN_DEFINE_int32(replication, log_shared_file_count_limit, 100, "shared log maximum file count");
+DSN_DEFINE_int32(
+    replication,
+    mem_release_check_interval_ms,
+    3600000,
+    "the replica check if should release memory to the system every this period of time(ms)");
+DSN_DEFINE_int32(
+    replication,
+    mem_release_max_reserved_mem_percentage,
+    10,
+    "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
+    "memory, replica server will release the exceeding memory back to operating system");
+
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
+DSN_DECLARE_int32(gc_interval_ms);
+
 bool replica_stub::s_not_exit_on_log_failure = false;
 
 replica_stub::replica_stub(replica_state_subscriber subscriber /*= nullptr*/,
@@ -495,7 +528,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     _verbose_client_log = _options.verbose_client_log_on_start;
     _verbose_commit_log = _options.verbose_commit_log_on_start;
     _release_tcmalloc_memory = _options.mem_release_enabled;
-    _mem_release_max_reserved_mem_percentage = _options.mem_release_max_reserved_mem_percentage;
+    _mem_release_max_reserved_mem_percentage = FLAGS_mem_release_max_reserved_mem_percentage;
     _max_concurrent_bulk_load_downloading_count =
         _options.max_concurrent_bulk_load_downloading_count;
 
@@ -518,7 +551,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     initialize_fs_manager(_options.data_dirs, _options.data_dir_tags);
 
     _log = new mutation_log_shared(_options.slog_dir,
-                                   _options.log_shared_file_size_mb,
+                                   FLAGS_log_shared_file_size_mb,
                                    _options.log_shared_force_flush,
                                    &_counter_shared_log_recent_write_size);
     LOG_INFO("slog_dir = {}", _options.slog_dir);
@@ -645,7 +678,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
               "remove directory {} failed",
               _options.slog_dir);
         _log = new mutation_log_shared(_options.slog_dir,
-                                       _options.log_shared_file_size_mb,
+                                       FLAGS_log_shared_file_size_mb,
                                        _options.log_shared_force_flush,
                                        &_counter_shared_log_recent_write_size);
         CHECK_EQ_MSG(_log->open(nullptr, [this](error_code err) { this->handle_log_failure(err); }),
@@ -698,20 +731,20 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
             LPC_GARBAGE_COLLECT_LOGS_AND_REPLICAS,
             &_tracker,
             [this] { on_gc(); },
-            std::chrono::milliseconds(_options.gc_interval_ms),
+            std::chrono::milliseconds(FLAGS_gc_interval_ms),
             0,
-            std::chrono::milliseconds(rand::next_u32(0, _options.gc_interval_ms)));
+            std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms)));
     }
 
     // disk stat
     if (false == _options.disk_stat_disabled) {
-        _disk_stat_timer_task = ::dsn::tasking::enqueue_timer(
-            LPC_DISK_STAT,
-            &_tracker,
-            [this]() { on_disk_stat(); },
-            std::chrono::seconds(_options.disk_stat_interval_seconds),
-            0,
-            std::chrono::seconds(_options.disk_stat_interval_seconds));
+        _disk_stat_timer_task =
+            ::dsn::tasking::enqueue_timer(LPC_DISK_STAT,
+                                          &_tracker,
+                                          [this]() { on_disk_stat(); },
+                                          std::chrono::seconds(FLAGS_disk_stat_interval_seconds),
+                                          0,
+                                          std::chrono::seconds(FLAGS_disk_stat_interval_seconds));
     }
 
     // attach rps
@@ -729,7 +762,7 @@ void replica_stub::initialize(const replication_options &opts, bool clear /* = f
     if (_options.delay_for_fd_timeout_on_start) {
         uint64_t now_time_ms = dsn_now_ms();
         uint64_t delay_time_ms =
-            (_options.fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
+            (FLAGS_fd_grace_seconds + 3) * 1000; // for more 3 seconds than grace seconds
         if (now_time_ms < dsn::utils::process_start_millis() + delay_time_ms) {
             uint64_t delay = dsn::utils::process_start_millis() + delay_time_ms - now_time_ms;
             LOG_INFO("delay for {} ms to make failure detector timeout", delay);
@@ -803,9 +836,9 @@ void replica_stub::initialize_start()
         tasking::enqueue_timer(LPC_MEM_RELEASE,
                                &_tracker,
                                std::bind(&replica_stub::gc_tcmalloc_memory, this, false),
-                               std::chrono::milliseconds(_options.mem_release_check_interval_ms),
+                               std::chrono::milliseconds(FLAGS_mem_release_check_interval_ms),
                                0,
-                               std::chrono::milliseconds(_options.mem_release_check_interval_ms));
+                               std::chrono::milliseconds(FLAGS_mem_release_check_interval_ms));
 #endif
 
     if (_options.duplication_enabled) {
@@ -823,10 +856,10 @@ void replica_stub::initialize_start()
             [this]() { this->on_meta_server_disconnected(); },
             [this]() { this->on_meta_server_connected(); });
 
-        CHECK_EQ_MSG(_failure_detector->start(_options.fd_check_interval_seconds,
-                                              _options.fd_beacon_interval_seconds,
-                                              _options.fd_lease_seconds,
-                                              _options.fd_grace_seconds),
+        CHECK_EQ_MSG(_failure_detector->start(FLAGS_fd_check_interval_seconds,
+                                              FLAGS_fd_beacon_interval_seconds,
+                                              FLAGS_fd_lease_seconds,
+                                              FLAGS_fd_grace_seconds),
                      ERR_OK,
                      "FD start failed");
 
@@ -1534,7 +1567,7 @@ void replica_stub::on_node_query_reply_scatter2(replica_stub_ptr this_, gpid id)
         replica->status() != partition_status::PS_PARTITION_SPLIT) {
         if (replica->status() == partition_status::PS_INACTIVE &&
             dsn_now_ms() - replica->create_time_milliseconds() <
-                _options.gc_memory_replica_interval_ms) {
+                FLAGS_gc_memory_replica_interval_ms) {
             LOG_INFO("{}: replica not exists on meta server, wait to close", replica->name());
             return;
         }
@@ -1655,7 +1688,7 @@ void replica_stub::init_gc_for_test()
                                       &_tracker,
                                       [this] { on_gc(); },
                                       0,
-                                      std::chrono::milliseconds(_options.gc_interval_ms));
+                                      std::chrono::milliseconds(FLAGS_gc_interval_ms));
 }
 
 void replica_stub::on_gc_replica(replica_stub_ptr this_, gpid id)
@@ -1782,22 +1815,23 @@ void replica_stub::on_gc()
 
         std::set<gpid> prevent_gc_replicas;
         int reserved_log_count = _log->garbage_collection(
-            gc_condition, _options.log_shared_file_count_limit, prevent_gc_replicas);
-        if (reserved_log_count > _options.log_shared_file_count_limit * 2) {
-            LOG_INFO("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
-                     "file_count_limit = {}, reserved_log_count = {}, trigger all replicas to do "
-                     "checkpoint",
-                     _options.log_shared_file_count_limit,
-                     reserved_log_count);
+            gc_condition, FLAGS_log_shared_file_count_limit, prevent_gc_replicas);
+        if (reserved_log_count > FLAGS_log_shared_file_count_limit * 2) {
+            LOG_INFO(
+                "gc_shared: trigger emergency checkpoint by FLAGS_log_shared_file_count_limit, "
+                "file_count_limit = {}, reserved_log_count = {}, trigger all replicas to do "
+                "checkpoint",
+                FLAGS_log_shared_file_count_limit,
+                reserved_log_count);
             for (auto &kv : rs) {
                 tasking::enqueue(
                     LPC_PER_REPLICA_CHECKPOINT_TIMER,
                     kv.second.rep->tracker(),
                     std::bind(&replica_stub::trigger_checkpoint, this, kv.second.rep, true),
                     kv.first.thread_hash(),
-                    std::chrono::milliseconds(rand::next_u32(0, _options.gc_interval_ms / 2)));
+                    std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
             }
-        } else if (reserved_log_count > _options.log_shared_file_count_limit) {
+        } else if (reserved_log_count > FLAGS_log_shared_file_count_limit) {
             std::ostringstream oss;
             int c = 0;
             for (auto &i : prevent_gc_replicas) {
@@ -1806,13 +1840,14 @@ void replica_stub::on_gc()
                 oss << i.to_string();
                 c++;
             }
-            LOG_INFO("gc_shared: trigger emergency checkpoint by log_shared_file_count_limit, "
-                     "file_count_limit = {}, reserved_log_count = {}, prevent_gc_replica_count = "
-                     "{}, trigger them to do checkpoint: {}",
-                     _options.log_shared_file_count_limit,
-                     reserved_log_count,
-                     prevent_gc_replicas.size(),
-                     oss.str());
+            LOG_INFO(
+                "gc_shared: trigger emergency checkpoint by FLAGS_log_shared_file_count_limit, "
+                "file_count_limit = {}, reserved_log_count = {}, prevent_gc_replica_count = "
+                "{}, trigger them to do checkpoint: {}",
+                FLAGS_log_shared_file_count_limit,
+                reserved_log_count,
+                prevent_gc_replicas.size(),
+                oss.str());
             for (auto &id : prevent_gc_replicas) {
                 auto find = rs.find(id);
                 if (find != rs.end()) {
@@ -1821,7 +1856,7 @@ void replica_stub::on_gc()
                         find->second.rep->tracker(),
                         std::bind(&replica_stub::trigger_checkpoint, this, find->second.rep, true),
                         id.thread_hash(),
-                        std::chrono::milliseconds(rand::next_u32(0, _options.gc_interval_ms / 2)));
+                        std::chrono::milliseconds(rand::next_u32(0, FLAGS_gc_interval_ms / 2)));
                 }
             }
         }
@@ -2136,7 +2171,7 @@ task_ptr replica_stub::begin_close_replica(replica_ptr r)
 
         int delay_ms = 0;
         if (r->status() == partition_status::PS_INACTIVE) {
-            delay_ms = _options.gc_memory_replica_interval_ms;
+            delay_ms = FLAGS_gc_memory_replica_interval_ms;
             LOG_INFO("{}: delay {} milliseconds to close replica, status = PS_INACTIVE",
                      r->name(),
                      delay_ms);
@@ -2412,7 +2447,7 @@ void replica_stub::register_ctrl_command()
                 if (args[0] == "DEFAULT") {
                     // set to default value
                     _mem_release_max_reserved_mem_percentage =
-                        _options.mem_release_max_reserved_mem_percentage;
+                        FLAGS_mem_release_max_reserved_mem_percentage;
                     return result;
                 }
                 int32_t percentage = 0;
@@ -2435,6 +2470,7 @@ void replica_stub::register_ctrl_command()
 #elif defined(DSN_USE_JEMALLOC)
         register_jemalloc_ctrl_command();
 #endif
+        // TODO(yingchun): use http
         _cmds.emplace_back(::dsn::command_manager::instance().register_command(
             {"replica.max-concurrent-bulk-load-downloading-count"},
             "replica.max-concurrent-bulk-load-downloading-count [num | DEFAULT]",

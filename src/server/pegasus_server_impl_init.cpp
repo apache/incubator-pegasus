@@ -39,6 +39,57 @@ DSN_DEFINE_int64(
     rocksdb_limiter_max_write_megabytes_per_sec,
     500,
     "max rate of rocksdb flush and compaction(MB/s), if less than or equal to 0 means close limit");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_max_background_flushes,
+                 4,
+                 "rocksdb options.max_background_flushes, flush threads are shared among all "
+                 "rocksdb instances in one process");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_max_background_compactions,
+                 12,
+                 "rocksdb options.max_background_compactions, compaction threads are shared among "
+                 "all rocksdb instances in one process");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_max_write_buffer_number,
+                 3,
+                 "rocksdb options.max_write_buffer_number");
+DSN_DEFINE_int32(pegasus.server, rocksdb_num_levels, 6, "rocksdb options.num_levels");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_target_file_size_multiplier,
+                 1,
+                 "rocksdb options.target_file_size_multiplier");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_level0_file_num_compaction_trigger,
+                 4,
+                 "rocksdb options.level0_file_num_compaction_trigger");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_level0_slowdown_writes_trigger,
+                 30,
+                 "rocksdb options.level0_slowdown_writes_trigger, default 30");
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_level0_stop_writes_trigger,
+                 60,
+                 "rocksdb options.level0_stop_writes_trigger");
+DSN_DEFINE_int32(
+    pegasus.server,
+    rocksdb_block_cache_num_shard_bits,
+    -1,
+    "block cache will be sharded into 2^num_shard_bits shards, default value is -1(auto)");
+
+// COMPATIBILITY ATTENTION:
+// Although old releases would see the new structure as corrupt filter data and read the
+// table as if there's no filter, we've decided only to enable the new Bloom filter with new
+// format_version=5. This provides a smooth path for automatic adoption over time, with an
+// option for early opt-in.
+// Reference from rocksdb commit:
+// https://github.com/facebook/rocksdb/commit/f059c7d9b96300091e07429a60f4ad55dac84859
+DSN_DEFINE_int32(pegasus.server,
+                 rocksdb_format_version,
+                 2,
+                 "block based table data format version, only 2 and 5 is supported in Pegasus. 2 "
+                 "is the old version, 5 is the new version supported since rocksdb v6.6.4");
+DSN_DEFINE_validator(rocksdb_format_version,
+                     [](int32_t value) -> bool { return value == 2 || value == 5; });
 
 DSN_DEFINE_bool(pegasus.server,
                 rocksdb_limiter_enable_auto_tune,
@@ -70,10 +121,8 @@ DSN_DEFINE_bool(pegasus.server,
 DSN_DEFINE_int32(pegasus.server,
                  read_amp_bytes_per_bit,
                  0,
-                 "config for using to calculate the "
-                 "read amplification, must be a power "
-                 "of 2, zero means disable count read "
-                 "amplification");
+                 "config for using to calculate the read amplification, must be a power of 2, zero "
+                 "means disable count read amplification");
 
 DSN_DEFINE_validator(read_amp_bytes_per_bit, [](const int64_t read_amp_bytes_per_bit) -> bool {
     return read_amp_bytes_per_bit == 0 ||
@@ -252,19 +301,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     _db_opts.listeners.emplace_back(new pegasus_event_listener(this));
 
-    // flush threads are shared among all rocksdb instances in one process.
-    _db_opts.max_background_flushes =
-        (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_max_background_flushes",
-                                        4,
-                                        "rocksdb options.max_background_flushes");
-
-    // compaction threads are shared among all rocksdb instances in one process.
-    _db_opts.max_background_compactions =
-        (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_max_background_compactions",
-                                        12,
-                                        "rocksdb options.max_background_compactions");
+    _db_opts.max_background_flushes = FLAGS_rocksdb_max_background_flushes;
+    _db_opts.max_background_compactions = FLAGS_rocksdb_max_background_compactions;
 
     // init rocksdb::ColumnFamilyOptions for data column family
     _data_cf_opts.write_buffer_size =
@@ -273,14 +311,8 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                             64 * 1024 * 1024,
                                             "rocksdb options.write_buffer_size");
 
-    _data_cf_opts.max_write_buffer_number =
-        (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_max_write_buffer_number",
-                                        3,
-                                        "rocksdb options.max_write_buffer_number");
-
-    _data_cf_opts.num_levels = (int)dsn_config_get_value_int64(
-        "pegasus.server", "rocksdb_num_levels", 6, "rocksdb options.num_levels");
+    _data_cf_opts.max_write_buffer_number = FLAGS_rocksdb_max_write_buffer_number;
+    _data_cf_opts.num_levels = FLAGS_rocksdb_num_levels;
 
     _data_cf_opts.target_file_size_base =
         dsn_config_get_value_uint64("pegasus.server",
@@ -288,11 +320,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                     64 * 1024 * 1024,
                                     "rocksdb options.target_file_size_base");
 
-    _data_cf_opts.target_file_size_multiplier =
-        (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_target_file_size_multiplier",
-                                        1,
-                                        "rocksdb options.target_file_size_multiplier");
+    _data_cf_opts.target_file_size_multiplier = FLAGS_rocksdb_target_file_size_multiplier;
 
     _data_cf_opts.max_bytes_for_level_base =
         dsn_config_get_value_uint64("pegasus.server",
@@ -308,24 +336,10 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
 
     // we need set max_compaction_bytes definitely because set_usage_scenario() depends on it.
     _data_cf_opts.max_compaction_bytes = _data_cf_opts.target_file_size_base * 25;
-
     _data_cf_opts.level0_file_num_compaction_trigger =
-        (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_level0_file_num_compaction_trigger",
-                                        4,
-                                        "rocksdb options.level0_file_num_compaction_trigger");
-
-    _data_cf_opts.level0_slowdown_writes_trigger = (int)dsn_config_get_value_int64(
-        "pegasus.server",
-        "rocksdb_level0_slowdown_writes_trigger",
-        30,
-        "rocksdb options.level0_slowdown_writes_trigger, default 30");
-
-    _data_cf_opts.level0_stop_writes_trigger =
-        (int)dsn_config_get_value_int64("pegasus.server",
-                                        "rocksdb_level0_stop_writes_trigger",
-                                        60,
-                                        "rocksdb options.level0_stop_writes_trigger");
+        FLAGS_rocksdb_level0_file_num_compaction_trigger;
+    _data_cf_opts.level0_slowdown_writes_trigger = FLAGS_rocksdb_level0_slowdown_writes_trigger;
+    _data_cf_opts.level0_stop_writes_trigger = FLAGS_rocksdb_level0_stop_writes_trigger;
 
     std::string compression_str = dsn_config_get_value_string(
         "pegasus.server",
@@ -366,15 +380,9 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                 10 * 1024 * 1024 * 1024ULL,
                 "block cache capacity for one pegasus server, shared by all rocksdb instances");
 
-            // block cache num shard bits, default -1(auto)
-            int num_shard_bits = (int)dsn_config_get_value_int64(
-                "pegasus.server",
-                "rocksdb_block_cache_num_shard_bits",
-                -1,
-                "block cache will be sharded into 2^num_shard_bits shards");
-
             // init block cache
-            _s_block_cache = rocksdb::NewLRUCache(capacity, num_shard_bits);
+            _s_block_cache =
+                rocksdb::NewLRUCache(capacity, FLAGS_rocksdb_block_cache_num_shard_bits);
         });
 
         // every replica has the same block cache
@@ -544,25 +552,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
                                         "rocksdb_bloom_filter_bits_per_key",
                                         10,
                                         "average bits allocated per key in bloom filter");
-        // COMPATIBILITY ATTENTION:
-        // Although old releases would see the new structure as corrupt filter data and read the
-        // table as if there's no filter, we've decided only to enable the new Bloom filter with new
-        // format_version=5. This provides a smooth path for automatic adoption over time, with an
-        // option for early opt-in.
-        // Reference from rocksdb commit:
-        // https://github.com/facebook/rocksdb/commit/f059c7d9b96300091e07429a60f4ad55dac84859
-        int format_version =
-            (int)dsn_config_get_value_int64("pegasus.server",
-                                            "rocksdb_format_version",
-                                            2,
-                                            "block based table data format version, "
-                                            "only 2 and 5 is supported in Pegasus. "
-                                            "2 is the old version, 5 is the new "
-                                            "version supported since rocksdb "
-                                            "v6.6.4");
-        CHECK(format_version == 2 || format_version == 5,
-              "[pegasus.server]rocksdb_format_version should be either '2' or '5'.");
-        tbl_opts.format_version = format_version;
+        tbl_opts.format_version = FLAGS_rocksdb_format_version;
         tbl_opts.filter_policy.reset(rocksdb::NewBloomFilterPolicy(bits_per_key, false));
 
         std::string filter_type =
