@@ -21,7 +21,7 @@
 let assert = require('assert');
 let pegasusClient = require('../');
 let PException = require('../src/errors').PException;
-let ErrorType = require('../src/dsn/base_types').error_type;
+let ErrorType = require('../src/dsn/dsn_types').error_type;
 let log4js = require('log4js');
 
 describe('test/client.test.js', function(){

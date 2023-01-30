@@ -19,8 +19,8 @@
 
 "use strict";
 
-const RpcAddress = require('./dsn/base_types').rpc_address;
-const ErrorType = require('./dsn/base_types').error_type;
+const RpcAddress = require('./dsn/dsn_types').rpc_address;
+const ErrorType = require('./dsn/dsn_types').error_type;
 const Connection = require('./connection');
 const util = require('util');
 const Exception = require('./errors');
