@@ -16,25 +16,46 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# complier require: thrift 0.10.0
- 
+set -e
+
 thrift=thrift
 
-if ! $thrift -version | grep '0.10.0' 
-then
-    echo "Should use thrift 0.10.0"
-    exit -1
-fi
+# TODO(yingchun): is it necessary to restrict the thrift version as 0.10.0?
+#if ! $thrift -version | grep '0.10.0'
+#then
+#    echo "Should use thrift 0.10.0"
+#    exit -1
+#fi
 
-TMP_DIR=./gen-nodejs
-rm -rf $TMP_DIR
+$thrift -v --gen js:node,with_ns -out src/dsn ../idl/dsn.layer2.thrift
+$thrift -v --gen js:node,with_ns -out src/dsn ../idl/rrdb.thrift
 
-mkdir -p $TMP_DIR
-$thrift --gen js:node rrdb.thrift
-$thrift --gen js:node replication.thrift 
-$thrift --gen js:node base.thrift
+# TODO(yingchun): There service helpers need to be exported to be used by src/operator.js,
+# I didn't find a better method except modifying them manually as follow.
+need_export_meta_structs=(
+  meta_query_cfg_args
+  meta_query_cfg_result
+)
 
-cp -v -r $TMP_DIR/* ../dsn
-rm -rf $TMP_DIR
+need_export_rrdb_structs=(
+  rrdb_put_args
+  rrdb_put_result
+  rrdb_multi_put_args
+  rrdb_multi_put_result
+  rrdb_remove_args
+  rrdb_remove_result
+  rrdb_get_args
+  rrdb_get_result
+  rrdb_multi_get_args
+  rrdb_multi_get_result
+)
+
+for n in ${need_export_meta_structs[*]}; do
+  sed -i "s/var ${n}/var ${n} = module.exports.${n}/g" src/dsn/meta.js
+done
+
+for n in ${need_export_rrdb_structs[*]}; do
+  sed -i "s/var ${n}/var ${n} = module.exports.${n}/g" src/dsn/rrdb.js
+done
 
 echo "done"
