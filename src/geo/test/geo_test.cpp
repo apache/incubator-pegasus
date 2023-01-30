@@ -30,9 +30,12 @@
 #include "common/replication_other_types.h"
 #include "client/replication_ddl_client.h"
 #include "base/pegasus_const.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace geo {
+
+DSN_DECLARE_int32(min_level);
 
 class geo_client_test : public ::testing::Test
 {
@@ -51,8 +54,6 @@ public:
 
     pegasus_client *common_data_client() { return _geo_client->_common_data_client; }
     pegasus::geo::geo_client *geo_client() { return _geo_client.get(); }
-
-    int min_level() { return _geo_client->_min_level; }
 
     bool generate_geo_keys(const std::string &hash_key,
                            const std::string &sort_key,
@@ -405,7 +406,7 @@ TEST_F(geo_client_test, generate_and_restore_geo_keys)
 
     ASSERT_TRUE(
         generate_geo_keys(test_hash_key, test_sort_key, test_value, geo_hash_key, geo_sort_key));
-    ASSERT_EQ(min_level() + 2, geo_hash_key.length());
+    ASSERT_EQ(FLAGS_min_level + 2, geo_hash_key.length());
     ASSERT_EQ(leaf_cell_id.substr(0, geo_hash_key.length()), geo_hash_key);
     ASSERT_EQ(leaf_cell_id.substr(geo_hash_key.length()),
               geo_sort_key.substr(0, leaf_cell_id.length() - geo_hash_key.length()));

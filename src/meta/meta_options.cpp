@@ -95,22 +95,11 @@ void meta_options::initialize()
         false,
         "whether to recover from replica server when no apps in remote storage");
 
-    hold_seconds_for_dropped_app =
-        dsn_config_get_value_uint64("meta_server",
-                                    "hold_seconds_for_dropped_app",
-                                    604800,
-                                    "how long to hold data for dropped apps");
-
     add_secondary_enable_flow_control =
         dsn_config_get_value_bool("meta_server",
                                   "add_secondary_enable_flow_control",
                                   false,
                                   "enable flow control for add secondary proposal");
-    add_secondary_max_count_for_one_node = dsn_config_get_value_uint64(
-        "meta_server",
-        "add_secondary_max_count_for_one_node",
-        10,
-        "add secondary max count for one node when flow control enabled");
 
     /// failure detector options
     _fd_opts.distributed_lock_service_type =
@@ -130,13 +119,6 @@ void meta_options::initialize()
                                     600,
                                     "min running seconds for a stable replica server");
 
-    _fd_opts.max_succssive_unstable_restart = dsn_config_get_value_uint64(
-        "meta_server",
-        "max_succssive_unstable_restart",
-        5,
-        "meta server will treat an rs unstable so as to reject it's beacons "
-        "if its succssively restarting count exceeds this value");
-
     /// load balancer options
     _lb_opts.server_load_balancer_type =
         dsn_config_get_value_string("meta_server",
@@ -148,9 +130,6 @@ void meta_options::initialize()
                                     "replica_assign_delay_ms_for_dropouts",
                                     300000,
                                     "replica_assign_delay_ms_for_dropouts, default is 300000");
-    _lb_opts.max_replicas_in_group = dsn_config_get_value_uint64(
-        "meta_server", "max_replicas_in_group", 4, "max replicas(alive & dead) in a group");
-
     _lb_opts.balancer_in_turn = dsn_config_get_value_bool(
         "meta_server", "balancer_in_turn", false, "balance the apps one-by-one/concurrently");
     _lb_opts.only_primary_balancer = dsn_config_get_value_bool(

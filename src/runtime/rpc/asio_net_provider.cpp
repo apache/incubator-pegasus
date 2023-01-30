@@ -322,12 +322,6 @@ void asio_udp_provider::do_receive()
 error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_only)
 {
     _is_client = client_only;
-    int io_service_worker_count =
-        (int)dsn_config_get_value_uint64("network",
-                                         "io_service_worker_count",
-                                         1,
-                                         "thread number for io service (timer and boost network)");
-
     CHECK_EQ(channel, RPC_CHANNEL_UDP);
 
     if (client_only) {
@@ -381,7 +375,7 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
         }
     }
 
-    for (int i = 0; i < io_service_worker_count; i++) {
+    for (int i = 0; i < FLAGS_io_service_worker_count; i++) {
         _workers.push_back(std::make_shared<std::thread>([this, i]() {
             task::set_tls_dsn_context(node(), nullptr);
 

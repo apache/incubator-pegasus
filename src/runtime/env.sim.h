@@ -44,11 +44,9 @@ class sim_env_provider : public env_provider
 {
 public:
     sim_env_provider(env_provider *inner_provider);
-    static int seed() { return _seed; }
 
 private:
     static void on_worker_start(task_worker *worker);
-    static int _seed;
 };
 }
 } // end namespace

@@ -137,7 +137,6 @@ protected:
     network_header_format _unknown_msg_header_format; // default is NET_HDR_INVALID
     int _message_buffer_block_size;
     int _max_buffer_block_count_per_send;
-    int _send_queue_threshold;
 
 private:
     friend class rpc_engine;

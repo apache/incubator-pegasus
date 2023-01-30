@@ -87,7 +87,6 @@ private:
 #ifdef PEGASUS_UNIT_TEST
     uint64_t _mock_now_timestamp = 0;
 #endif
-    int32_t _manual_compact_min_interval_seconds;
 
     // manual compact state
     std::atomic<bool> _disabled;

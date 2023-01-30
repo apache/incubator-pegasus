@@ -506,12 +506,6 @@ network::network(rpc_engine *srv, network *inner_provider)
 {
     _message_buffer_block_size = 1024 * 64;
     _max_buffer_block_count_per_send = 64; // TODO: windows, how about the other platforms?
-    _send_queue_threshold =
-        (int)dsn_config_get_value_uint64("network",
-                                         "send_queue_threshold",
-                                         4 * 1024,
-                                         "send queue size above which throttling is applied");
-
     _unknown_msg_header_format = network_header_format::from_string(
         dsn_config_get_value_string(
             "network",

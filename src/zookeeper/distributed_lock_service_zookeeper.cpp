@@ -46,9 +46,12 @@
 #include "lock_types.h"
 
 #include "zookeeper_error.h"
+#include "utils/flags.h"
 
 namespace dsn {
 namespace dist {
+
+DSN_DECLARE_int32(timeout_ms);
 
 std::string distributed_lock_service_zookeeper::LOCK_NODE_PREFIX = "LOCKNODE";
 
@@ -102,7 +105,7 @@ error_code distributed_lock_service_zookeeper::initialize(const std::vector<std:
                                             lock_srv_ptr(this),
                                             std::placeholders::_1));
     if (_zoo_state != ZOO_CONNECTED_STATE) {
-        _waiting_attach.wait_for(zookeeper_session_mgr::instance().timeout());
+        _waiting_attach.wait_for(FLAGS_timeout_ms);
         if (_zoo_state != ZOO_CONNECTED_STATE) {
             LOG_WARNING(
                 "attach to zookeeper session timeout, distributed lock service initialized failed");

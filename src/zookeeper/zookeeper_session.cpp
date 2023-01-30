@@ -52,6 +52,12 @@ DSN_DEFINE_string(security,
 
 namespace dsn {
 namespace dist {
+// TODO(yingchun): to keep compatibility, the global name is FLAGS_timeout_ms. The name is not very
+//  suitable, maybe improve the macro to us another global name.
+DSN_DEFINE_int32(zookeeper,
+                 timeout_ms,
+                 30000,
+                 "The timeout of accessing ZooKeeper, in milliseconds");
 
 zookeeper_session::zoo_atomic_packet::zoo_atomic_packet(unsigned int size)
 {
@@ -160,7 +166,7 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
             sasl_params.mechlist = "GSSAPI";
             _handle = zookeeper_init_sasl(zookeeper_session_mgr::instance().zoo_hosts(),
                                           global_watcher,
-                                          zookeeper_session_mgr::instance().timeout(),
+                                          FLAGS_timeout_ms,
                                           nullptr,
                                           this,
                                           0,
@@ -169,7 +175,7 @@ int zookeeper_session::attach(void *callback_owner, const state_callback &cb)
         } else {
             _handle = zookeeper_init(zookeeper_session_mgr::instance().zoo_hosts(),
                                      global_watcher,
-                                     zookeeper_session_mgr::instance().timeout(),
+                                     FLAGS_timeout_ms,
                                      nullptr,
                                      this,
                                      0);

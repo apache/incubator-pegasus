@@ -61,7 +61,6 @@ public:
     std::vector<std::string> distributed_lock_service_args;
 
     uint64_t stable_rs_min_running_seconds;
-    int32_t max_succssive_unstable_restart;
 };
 
 class lb_suboptions
@@ -69,7 +68,6 @@ class lb_suboptions
 public:
     std::string server_load_balancer_type;
     uint64_t replica_assign_delay_ms_for_dropouts;
-    int32_t max_replicas_in_group;
 
     bool balancer_in_turn;
     bool only_primary_balancer;
@@ -86,10 +84,8 @@ public:
     uint64_t node_live_percentage_threshold_for_update;
     meta_function_level::type meta_function_level_on_start;
     bool recover_from_replica_server;
-    int32_t hold_seconds_for_dropped_app;
 
     bool add_secondary_enable_flow_control;
-    int32_t add_secondary_max_count_for_one_node;
 
     fd_suboptions _fd_opts;
     lb_suboptions _lb_opts;

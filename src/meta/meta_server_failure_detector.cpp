@@ -37,6 +37,12 @@
 #include "utils/fmt_logging.h"
 #include "utils/string_conv.h"
 
+DSN_DEFINE_int32(meta_server,
+                 max_succssive_unstable_restart,
+                 5,
+                 "meta server will treat a rs unstable so as to reject it is beacons if "
+                 "its successively restarting count exceeds this value.");
+
 namespace dsn {
 namespace replication {
 
@@ -242,7 +248,7 @@ bool meta_server_failure_detector::update_stability_stat(const fd::beacon_msg &b
         } else {
             LOG_WARNING("{}: possible encounter a staled message, ignore it", beacon.from_addr);
         }
-        return w.unstable_restart_count < _fd_opts->max_succssive_unstable_restart;
+        return w.unstable_restart_count < FLAGS_max_succssive_unstable_restart;
     }
 }
 

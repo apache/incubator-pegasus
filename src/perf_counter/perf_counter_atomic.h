@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#pragma once
+
 #include <atomic>
 
 #include <boost/make_shared.hpp>
@@ -26,6 +28,7 @@
 #include "utils/shared_io_service.h"
 #include "utils/time_utils.h"
 #include "utils/utils.h"
+#include "utils/flags.h"
 
 namespace dsn {
 
@@ -214,31 +217,7 @@ public:
                                           const char *name,
                                           dsn_perf_counter_type_t type,
                                           const char *dsptr,
-                                          bool use_timer = true)
-        : perf_counter(app, section, name, type, dsptr), _tail(0)
-    {
-        _results[COUNTER_PERCENTILE_50] = 0;
-        _results[COUNTER_PERCENTILE_90] = 0;
-        _results[COUNTER_PERCENTILE_95] = 0;
-        _results[COUNTER_PERCENTILE_99] = 0;
-        _results[COUNTER_PERCENTILE_999] = 0;
-
-        if (!use_timer) {
-            return;
-        }
-
-        _counter_computation_interval_seconds = (int)dsn_config_get_value_uint64(
-            "components.pegasus_perf_counter_number_percentile_atomic",
-            "counter_computation_interval_seconds",
-            10,
-            "period (seconds) the system computes the percentiles of the "
-            "pegasus_perf_counter_number_percentile_atomic counters");
-        _timer.reset(new boost::asio::deadline_timer(tools::shared_io_service::instance().ios));
-        _timer->expires_from_now(
-            boost::posix_time::seconds(::rand() % _counter_computation_interval_seconds + 1));
-        _timer->async_wait(std::bind(
-            &perf_counter_number_percentile_atomic::on_timer, this, _timer, std::placeholders::_1));
-    }
+                                          bool use_timer = true);
 
     ~perf_counter_number_percentile_atomic(void)
     {
@@ -439,29 +418,12 @@ private:
     }
 
     void on_timer(std::shared_ptr<boost::asio::deadline_timer> timer,
-                  const boost::system::error_code &ec)
-    {
-        // as the callback is not in tls context, so the log system calls like LOG_INFO, CHECK
-        // will cause a lock
-        if (!ec) {
-            calc(boost::make_shared<compute_context>());
-
-            timer->expires_from_now(
-                boost::posix_time::seconds(_counter_computation_interval_seconds));
-            timer->async_wait(std::bind(&perf_counter_number_percentile_atomic::on_timer,
-                                        this,
-                                        timer,
-                                        std::placeholders::_1));
-        } else if (boost::system::errc::operation_canceled != ec) {
-            CHECK(false, "on_timer error!!!");
-        }
-    }
+                  const boost::system::error_code &ec);
 
     std::shared_ptr<boost::asio::deadline_timer> _timer;
     std::atomic<uint64_t> _tail; // should use unsigned int to avoid out of bound
     int64_t _samples[MAX_QUEUE_LENGTH];
     int64_t _results[COUNTER_PERCENTILE_COUNT];
-    int _counter_computation_interval_seconds;
 };
 
 #pragma pack(pop)
