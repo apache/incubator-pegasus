@@ -324,7 +324,6 @@ service rrdb
     oneway void clear_scanner(1:i64 context_id);
 }
 
-// ONLY FOR GO & JAVA & Python
 service meta
 {
     dsn.layer2.query_cfg_response query_cfg(1:dsn.layer2.query_cfg_request query);
