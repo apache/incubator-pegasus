@@ -20,7 +20,7 @@
 "use strict";
 
 const util = require('util');
-const ErrorType = require('./dsn/base_types').error_type;
+const ErrorType = require('./dsn/dsn_types').error_type;
 
 //Base Error
 function PException(msg) {
