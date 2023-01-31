@@ -67,7 +67,7 @@ void simple_kv_service_impl::on_read(const std::string &key, ::dsn::rpc_replier<
         }
     }
 
-    LOG_DEBUG("read %s", r.c_str());
+    LOG_DEBUG("read {}", r);
     reply(r);
 }
 
@@ -79,7 +79,7 @@ void simple_kv_service_impl::on_write(const kv_pair &pr, ::dsn::rpc_replier<int3
         _store[pr.key] = pr.value;
     }
 
-    LOG_DEBUG("write %s", pr.key.c_str());
+    LOG_DEBUG("write {}", pr.key);
     reply(0);
 }
 
@@ -95,7 +95,7 @@ void simple_kv_service_impl::on_append(const kv_pair &pr, ::dsn::rpc_replier<int
             _store[pr.key] = pr.value;
     }
 
-    LOG_DEBUG("append %s", pr.key.c_str());
+    LOG_DEBUG("append {}", pr.key);
     reply(0);
 }
 

@@ -168,10 +168,10 @@ void info_collector::on_app_stat()
     }
     get_app_counters(all_stats.row_name)->set(all_stats);
 
-    LOG_INFO_F("stat apps succeed, app_count = {}, total_read_qps = {}, total_write_qps = {}",
-               all_rows.size(),
-               all_stats.get_total_read_qps(),
-               all_stats.get_total_write_qps());
+    LOG_INFO("stat apps succeed, app_count = {}, total_read_qps = {}, total_write_qps = {}",
+             all_rows.size(),
+             all_stats.get_total_read_qps(),
+             all_stats.get_total_write_qps());
 }
 
 info_collector::app_stat_counters *info_collector::get_app_counters(const std::string &app_name)
@@ -257,12 +257,12 @@ info_collector::app_stat_counters *info_collector::get_app_counters(const std::s
 
 void info_collector::on_capacity_unit_stat(int remaining_retry_count)
 {
-    LOG_INFO("start to stat capacity unit, remaining_retry_count = %d", remaining_retry_count);
+    LOG_INFO("start to stat capacity unit, remaining_retry_count = {}", remaining_retry_count);
     std::vector<node_capacity_unit_stat> nodes_stat;
     if (!get_capacity_unit_stat(_shell_context.get(), nodes_stat)) {
         if (remaining_retry_count > 0) {
-            LOG_WARNING("get capacity unit stat failed, remaining_retry_count = %d, "
-                        "wait %u seconds to retry",
+            LOG_WARNING("get capacity unit stat failed, remaining_retry_count = {}, "
+                        "wait {} seconds to retry",
                         remaining_retry_count,
                         _capacity_unit_retry_wait_seconds);
             ::dsn::tasking::enqueue(LPC_PEGASUS_CAPACITY_UNIT_STAT_TIMER,
@@ -278,8 +278,8 @@ void info_collector::on_capacity_unit_stat(int remaining_retry_count)
     for (node_capacity_unit_stat &elem : nodes_stat) {
         if (elem.node_address.empty() || elem.timestamp.empty() ||
             !has_capacity_unit_updated(elem.node_address, elem.timestamp)) {
-            LOG_DEBUG("recent read/write capacity unit value of node %s has not updated",
-                      elem.node_address.c_str());
+            LOG_DEBUG("recent read/write capacity unit value of node {} has not updated",
+                      elem.node_address);
             continue;
         }
         _result_writer->set_result(elem.timestamp, "cu@" + elem.node_address, elem.dump_to_json());
@@ -304,12 +304,12 @@ bool info_collector::has_capacity_unit_updated(const std::string &node_address,
 
 void info_collector::on_storage_size_stat(int remaining_retry_count)
 {
-    LOG_INFO("start to stat storage size, remaining_retry_count = %d", remaining_retry_count);
+    LOG_INFO("start to stat storage size, remaining_retry_count = {}", remaining_retry_count);
     app_storage_size_stat st_stat;
     if (!get_storage_size_stat(_shell_context.get(), st_stat)) {
         if (remaining_retry_count > 0) {
-            LOG_WARNING("get storage size stat failed, remaining_retry_count = %d, "
-                        "wait %u seconds to retry",
+            LOG_WARNING("get storage size stat failed, remaining_retry_count = {}, wait {} "
+                        "seconds to retry",
                         remaining_retry_count,
                         _storage_size_retry_wait_seconds);
             ::dsn::tasking::enqueue(LPC_PEGASUS_STORAGE_SIZE_STAT_TIMER,

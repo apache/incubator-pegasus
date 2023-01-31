@@ -39,12 +39,22 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 checkpoint_interval_seconds,
+                 100,
+                 "every what period (seconds) we do checkpoints for replicated apps");
+
+DSN_DEFINE_int32(replication,
+                 log_private_file_size_mb,
+                 32,
+                 "private log maximum segment file size (MB)");
+
 error_code replica::initialize_on_new()
 {
     // if (dsn::utils::filesystem::directory_exists(_dir) &&
     //    !dsn::utils::filesystem::remove_path(_dir))
     //{
-    //    LOG_ERROR("cannot allocate new replica @ %s, as the dir is already exists", _dir.c_str());
+    //    LOG_ERROR("cannot allocate new replica @ {}, as the dir is already exists", _dir);
     //    return ERR_PATH_ALREADY_EXIST;
     //}
     //
@@ -53,7 +63,7 @@ error_code replica::initialize_on_new()
     // which is applied to restore from cold backup
     if (!dsn::utils::filesystem::directory_exists(_dir) &&
         !dsn::utils::filesystem::create_directory(_dir)) {
-        LOG_ERROR("cannot allocate new replica @ %s, because create dir failed", _dir.c_str());
+        LOG_ERROR("cannot allocate new replica @ {}, because create dir failed", _dir);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -83,25 +93,25 @@ error_code replica::initialize_on_new()
         new replica(stub, gpid, app, dir.c_str(), restore_if_necessary, is_duplication_follower);
     error_code err;
     if (restore_if_necessary && (err = rep->restore_checkpoint()) != dsn::ERR_OK) {
-        LOG_ERROR_F("{}: try to restore replica failed, error({})", rep->name(), err.to_string());
+        LOG_ERROR("{}: try to restore replica failed, error({})", rep->name(), err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 
     if (is_duplication_follower &&
         (err = rep->get_replica_follower()->duplicate_checkpoint()) != dsn::ERR_OK) {
-        LOG_ERROR_F("{}: try to duplicate replica checkpoint failed, error({}) and please check "
-                    "previous detail error log",
-                    rep->name(),
-                    err.to_string());
+        LOG_ERROR("{}: try to duplicate replica checkpoint failed, error({}) and please check "
+                  "previous detail error log",
+                  rep->name(),
+                  err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 
     err = rep->initialize_on_new();
     if (err == ERR_OK) {
-        LOG_DEBUG_F("{}: new replica succeed", rep->name());
+        LOG_DEBUG("{}: new replica succeed", rep->name());
         return rep;
     } else {
-        LOG_ERROR_F("{}: new replica failed, err = {}", rep->name(), err.to_string());
+        LOG_ERROR("{}: new replica failed, err = {}", rep->name(), err.to_string());
         return clear_on_failure(stub, rep, dir, gpid);
     }
 }
@@ -123,10 +133,10 @@ error_code replica::initialize_on_new()
 
 error_code replica::initialize_on_load()
 {
-    LOG_INFO("%s: initialize replica on load, dir = %s", name(), _dir.c_str());
+    LOG_INFO_PREFIX("initialize replica on load, dir = {}", _dir);
 
     if (!dsn::utils::filesystem::directory_exists(_dir)) {
-        LOG_ERROR("%s: cannot load replica, because dir %s is not exist", name(), _dir.c_str());
+        LOG_ERROR_PREFIX("cannot load replica, because dir {} is not exist", _dir);
         return ERR_PATH_NOT_FOUND;
     }
 
@@ -140,20 +150,20 @@ error_code replica::initialize_on_load()
     char splitters[] = {'\\', '/', 0};
     std::string name = utils::get_last_component(std::string(dir), splitters);
     if (name == "") {
-        LOG_ERROR("invalid replica dir %s", dir);
+        LOG_ERROR("invalid replica dir {}", dir);
         return nullptr;
     }
 
     char app_type[128];
     int32_t app_id, pidx;
     if (3 != sscanf(name.c_str(), "%d.%d.%s", &app_id, &pidx, app_type)) {
-        LOG_ERROR("invalid replica dir %s", dir);
+        LOG_ERROR("invalid replica dir {}", dir);
         return nullptr;
     }
 
     gpid pid(app_id, pidx);
     if (!utils::filesystem::directory_exists(dir)) {
-        LOG_ERROR("replica dir %s not exist", dir);
+        LOG_ERROR("replica dir {} not exist", dir);
         return nullptr;
     }
 
@@ -162,21 +172,20 @@ error_code replica::initialize_on_load()
     std::string path = utils::filesystem::path_combine(dir, kAppInfo);
     auto err = info2.load(path);
     if (ERR_OK != err) {
-        LOG_ERROR("load app-info from %s failed, err = %s", path.c_str(), err.to_string());
+        LOG_ERROR("load app-info from {} failed, err = {}", path, err);
         return nullptr;
     }
 
     if (info.app_type != app_type) {
-        LOG_ERROR("unmatched app type %s for %s", info.app_type.c_str(), path.c_str());
+        LOG_ERROR("unmatched app type {} for {}", info.app_type, path);
         return nullptr;
     }
 
     if (info.partition_count < pidx) {
-        LOG_ERROR_F(
-            "partition[{}], count={}, this replica may be partition split garbage partition, "
-            "ignore it",
-            pid,
-            info.partition_count);
+        LOG_ERROR("partition[{}], count={}, this replica may be partition split garbage partition, "
+                  "ignore it",
+                  pid,
+                  info.partition_count);
         return nullptr;
     }
 
@@ -184,10 +193,10 @@ error_code replica::initialize_on_load()
 
     err = rep->initialize_on_load();
     if (err == ERR_OK) {
-        LOG_INFO("%s: load replica succeed", rep->name());
+        LOG_INFO("{}: load replica succeed", rep->name());
         return rep;
     } else {
-        LOG_ERROR("%s: load replica failed, err = %s", rep->name(), err.to_string());
+        LOG_ERROR("{}: load replica failed, err = {}", rep->name(), err);
         rep->close();
         delete rep;
         rep = nullptr;
@@ -200,7 +209,7 @@ error_code replica::initialize_on_load()
                   "load_replica: failed to move directory '{}' to '{}'",
                   dir,
                   rename_dir);
-            LOG_WARNING("load_replica: {replica_dir_op} succeed to move directory '%s' to '%s'",
+            LOG_WARNING("load_replica: replica_dir_op succeed to move directory '{}' to '{}'",
                         dir,
                         rename_dir);
             stub->_counter_replicas_recent_replica_move_error_count->increment();
@@ -246,9 +255,9 @@ error_code replica::init_app_and_prepare_list(bool create_new)
             _config.ballot = _app->init_info().init_ballot;
             _prepare_list->reset(_app->last_committed_decree());
 
-            _private_log = new mutation_log_private(
-                log_dir, _options->log_private_file_size_mb, get_gpid(), this);
-            LOG_INFO("%s: plog_dir = %s", name(), log_dir.c_str());
+            _private_log =
+                new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
+            LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             // sync valid_start_offset between app and logs
             _stub->_log->set_valid_start_offset_on_open(
@@ -275,22 +284,18 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 uint64_t finish_time = dsn_now_ms();
 
                 if (err == ERR_OK) {
-                    LOG_INFO("%s: replay private log succeed, durable = %" PRId64
-                             ", committed = %" PRId64 ", "
-                             "max_prepared = %" PRId64 ", ballot = %" PRId64
-                             ", valid_offset_in_plog = %" PRId64 ", "
-                             "max_decree_in_plog = %" PRId64
-                             ", max_commit_on_disk_in_plog = %" PRId64 ", "
-                             "time_used = %" PRIu64 " ms",
-                             name(),
-                             _app->last_durable_decree(),
-                             _app->last_committed_decree(),
-                             max_prepared_decree(),
-                             get_ballot(),
-                             _app->init_info().init_offset_in_private_log,
-                             _private_log->max_decree(get_gpid()),
-                             _private_log->max_commit_on_disk(),
-                             finish_time - start_time);
+                    LOG_INFO_PREFIX("replay private log succeed, durable = {}, committed = {}, "
+                                    "max_prepared = {}, ballot = {}, valid_offset_in_plog = {}, "
+                                    "max_decree_in_plog = {}, max_commit_on_disk_in_plog = {}, "
+                                    "time_used = {} ms",
+                                    _app->last_durable_decree(),
+                                    _app->last_committed_decree(),
+                                    max_prepared_decree(),
+                                    get_ballot(),
+                                    _app->init_info().init_offset_in_private_log,
+                                    _private_log->max_decree(get_gpid()),
+                                    _private_log->max_commit_on_disk(),
+                                    finish_time - start_time);
 
                     _private_log->check_valid_start_offset(
                         get_gpid(), _app->init_info().init_offset_in_private_log);
@@ -299,19 +304,16 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                 }
                 /* in the beginning the prepare_list is reset to the durable_decree */
                 else {
-                    LOG_ERROR("%s: replay private log failed, err = %s, durable = %" PRId64
-                              ", committed = %" PRId64 ", "
-                              "maxpd = %" PRId64 ", ballot = %" PRId64
-                              ", valid_offset_in_plog = %" PRId64 ", "
-                              "time_used = %" PRIu64 " ms",
-                              name(),
-                              err.to_string(),
-                              _app->last_durable_decree(),
-                              _app->last_committed_decree(),
-                              max_prepared_decree(),
-                              get_ballot(),
-                              _app->init_info().init_offset_in_private_log,
-                              finish_time - start_time);
+                    LOG_ERROR_PREFIX("replay private log failed, err = {}, durable = {}, committed "
+                                     "= {}, maxpd = {}, ballot = {}, valid_offset_in_plog = {}, "
+                                     "time_used = {} ms",
+                                     err,
+                                     _app->last_durable_decree(),
+                                     _app->last_committed_decree(),
+                                     max_prepared_decree(),
+                                     get_ballot(),
+                                     _app->init_info().init_offset_in_private_log,
+                                     finish_time - start_time);
 
                     _private_log->close();
                     _private_log = nullptr;
@@ -323,7 +325,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
     }
 
     if (err != ERR_OK) {
-        LOG_ERROR("%s: open replica failed, err = %s", name(), err.to_string());
+        LOG_ERROR_PREFIX("open replica failed, err = {}", err);
         _app->close(false);
         _app = nullptr;
     } else {
@@ -331,7 +333,7 @@ error_code replica::init_app_and_prepare_list(bool create_new)
         _app->set_partition_version(_app_info.partition_count - 1);
 
         if (nullptr == _private_log) {
-            LOG_INFO("%s: clear private log, dir = %s", name(), log_dir.c_str());
+            LOG_INFO_PREFIX("clear private log, dir = {}", log_dir);
             CHECK(dsn::utils::filesystem::remove_path(log_dir),
                   "Fail to delete directory {}",
                   log_dir);
@@ -339,9 +341,9 @@ error_code replica::init_app_and_prepare_list(bool create_new)
                   "Fail to create directory {}",
                   log_dir);
 
-            _private_log = new mutation_log_private(
-                log_dir, _options->log_private_file_size_mb, get_gpid(), this);
-            LOG_INFO("%s: plog_dir = %s", name(), log_dir.c_str());
+            _private_log =
+                new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
+            LOG_INFO_PREFIX("plog_dir = {}", log_dir);
 
             err = _private_log->open(nullptr, [this](error_code err) {
                 tasking::enqueue(LPC_REPLICATION_ERROR,
@@ -353,12 +355,12 @@ error_code replica::init_app_and_prepare_list(bool create_new)
 
         if (err == ERR_OK) {
             if (_checkpoint_timer == nullptr && !_options->checkpoint_disabled) {
-                _checkpoint_timer = tasking::enqueue_timer(
-                    LPC_PER_REPLICA_CHECKPOINT_TIMER,
-                    &_tracker,
-                    [this] { on_checkpoint_timer(); },
-                    std::chrono::seconds(_options->checkpoint_interval_seconds),
-                    get_gpid().thread_hash());
+                _checkpoint_timer =
+                    tasking::enqueue_timer(LPC_PER_REPLICA_CHECKPOINT_TIMER,
+                                           &_tracker,
+                                           [this] { on_checkpoint_timer(); },
+                                           std::chrono::seconds(FLAGS_checkpoint_interval_seconds),
+                                           get_gpid().thread_hash());
             }
 
             _backup_mgr->start_collect_backup_info();
@@ -384,22 +386,19 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
     }
 
     if (is_private && offset < _app->init_info().init_offset_in_private_log) {
-        LOG_DEBUG(
-            "%s: replay mutation skipped1 as offset is invalid in private log, ballot = %" PRId64
-            ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
-            name(),
-            mu->data.header.ballot,
-            d,
-            mu->data.header.last_committed_decree,
-            offset);
+        LOG_DEBUG_PREFIX("replay mutation skipped1 as offset is invalid in private log, ballot = {}"
+                         ", decree = {}, last_committed_decree = {}, offset = {}",
+                         mu->data.header.ballot,
+                         d,
+                         mu->data.header.last_committed_decree,
+                         offset);
         return false;
     }
 
     if (!is_private && offset < _app->init_info().init_offset_in_shared_log) {
-        LOG_DEBUG(
-            "%s: replay mutation skipped2 as offset is invalid in shared log, ballot = %" PRId64
-            ", decree = %" PRId64 ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
-            name(),
+        LOG_DEBUG_PREFIX(
+            "replay mutation skipped2 as offset is invalid in shared log, ballot = {}, "
+            "decree = {}, last_committed_decree = {}, offset = {}",
             mu->data.header.ballot,
             d,
             mu->data.header.last_committed_decree,
@@ -413,39 +412,34 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
     }
 
     if (d <= last_committed_decree()) {
-        LOG_DEBUG("%s: replay mutation skipped3 as decree is outdated, ballot = %" PRId64
-                  ", decree = %" PRId64 "(vs app %" PRId64 "), last_committed_decree = %" PRId64
-                  ", offset = %" PRId64,
-                  name(),
-                  mu->data.header.ballot,
-                  d,
-                  last_committed_decree(),
-                  mu->data.header.last_committed_decree,
-                  offset);
+        LOG_DEBUG_PREFIX("replay mutation skipped3 as decree is outdated, ballot = {}, "
+                         "decree = {}(vs app {}), last_committed_decree = {}, offset = {}",
+                         mu->data.header.ballot,
+                         d,
+                         last_committed_decree(),
+                         mu->data.header.last_committed_decree,
+                         offset);
         return true;
     }
 
     auto old = _prepare_list->get_mutation_by_decree(d);
     if (old != nullptr && old->data.header.ballot >= mu->data.header.ballot) {
-        LOG_DEBUG("%s: replay mutation skipped4 as ballot is outdated, ballot = %" PRId64
-                  " (vs local-ballot=%" PRId64 "), decree = %" PRId64
-                  ", last_committed_decree = %" PRId64 ", offset = %" PRId64,
-                  name(),
-                  mu->data.header.ballot,
-                  old->data.header.ballot,
-                  d,
-                  mu->data.header.last_committed_decree,
-                  offset);
+        LOG_DEBUG_PREFIX(
+            "replay mutation skipped4 as ballot is outdated, ballot = {} (vs local-ballot={}), "
+            "decree = {}, last_committed_decree = {}, offset = {}",
+            mu->data.header.ballot,
+            old->data.header.ballot,
+            d,
+            mu->data.header.last_committed_decree,
+            offset);
 
         return true;
     }
 
-    LOG_DEBUG("%s: replay mutation ballot = %" PRId64 ", decree = %" PRId64
-              ", last_committed_decree = %" PRId64,
-              name(),
-              mu->data.header.ballot,
-              d,
-              mu->data.header.last_committed_decree);
+    LOG_DEBUG_PREFIX("replay mutation ballot = {}, decree = {}, last_committed_decree = {}",
+                     mu->data.header.ballot,
+                     d,
+                     mu->data.header.last_committed_decree);
 
     // prepare
     _uniq_timestamp_us.try_update(mu->data.header.timestamp);
@@ -458,10 +452,9 @@ bool replica::replay_mutation(mutation_ptr &mu, bool is_private)
 void replica::set_inactive_state_transient(bool t)
 {
     if (status() == partition_status::PS_INACTIVE) {
-        LOG_INFO("%s: set inactive_is_transient from %s to %s",
-                 name(),
-                 _inactive_is_transient ? "true" : "false",
-                 t ? "true" : "false");
+        LOG_INFO_PREFIX("set inactive_is_transient from {} to {}",
+                        _inactive_is_transient ? "true" : "false",
+                        t ? "true" : "false");
         _inactive_is_transient = t;
     }
 }

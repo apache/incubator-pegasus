@@ -32,19 +32,19 @@
 namespace dsn {
 namespace utils {
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 enable_latency_tracer,
                 false,
                 "whether enable the global latency tracer");
 DSN_TAG_VARIABLE(enable_latency_tracer, FT_MUTABLE);
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 enable_latency_tracer_report,
                 false,
                 "whether open the latency tracer report perf counter");
 DSN_TAG_VARIABLE(enable_latency_tracer_report, FT_MUTABLE);
 
-DSN_DEFINE_string("replication",
+DSN_DEFINE_string(replication,
                   latency_tracer_counter_name_prefix,
                   "trace_latency",
                   "perf counter common name prefix");
@@ -203,7 +203,7 @@ std::shared_ptr<latency_tracer> latency_tracer::sub_tracer(const std::string &na
     if (iter != _sub_tracers.end()) {
         return iter->second;
     }
-    LOG_WARNING_F("can't find the [{}] sub tracer of {}", name, _name);
+    LOG_WARNING("can't find the [{}] sub tracer of {}", name, _name);
     return nullptr;
 }
 
@@ -275,7 +275,7 @@ void latency_tracer::dump_trace_points(/*out*/ std::string &traces)
     }
 
     if (!_is_sub && total_time_used >= _threshold) {
-        LOG_WARNING_F("TRACE:the traces as fallow:\n{}", traces);
+        LOG_WARNING("TRACE:the traces as fallow:\n{}", traces);
         return;
     }
 }

@@ -32,7 +32,7 @@
 
 namespace dsn {
 
-DSN_DEFINE_bool("http", enable_http_server, true, "whether to enable the embedded HTTP server");
+DSN_DEFINE_bool(http, enable_http_server, true, "whether to enable the embedded HTTP server");
 
 namespace {
 error_s update_config(const http_request &req)
@@ -62,7 +62,7 @@ error_s update_config(const http_request &req)
     case http_status_code::internal_server_error:
         return "500 Internal Server Error";
     default:
-        LOG_FATAL("invalid code: %d", code);
+        LOG_FATAL("invalid code: {}", static_cast<int>(code));
         __builtin_unreachable();
     }
 }

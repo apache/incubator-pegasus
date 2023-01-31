@@ -258,7 +258,7 @@ void provider_recursively_create_delete_test(const service_creator_func &creator
         ->delete_node("/r",
                       true,
                       META_STATE_SERVICE_SIMPLE_TEST_CALLBACK,
-                      [](error_code ec) { LOG_INFO("result: %s", ec.to_string()); })
+                      [](error_code ec) { LOG_INFO("result: {}", ec); })
         ->wait();
     service->create_node(
         "/r",

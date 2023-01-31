@@ -352,7 +352,7 @@ int meta_service::check_leader(TRpcHolder rpc, rpc_address *forward_address)
             return -1;
         }
 
-        LOG_DEBUG("leader address: %s", leader.to_string());
+        LOG_DEBUG("leader address: {}", leader);
         if (!leader.is_invalid()) {
             rpc.forward(leader);
             return 0;
@@ -385,7 +385,7 @@ bool meta_service::check_status(TRpcHolder rpc, rpc_address *forward_address)
         } else {
             rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         }
-        LOG_INFO("reject request with %s", rpc.response().err.to_string());
+        LOG_INFO("reject request with {}", rpc.response().err);
         return false;
     }
 
@@ -414,7 +414,7 @@ bool meta_service::check_status_with_msg(message_ex *req, TRespType &response_st
         } else {
             response_struct.err = ERR_SERVICE_NOT_ACTIVE;
         }
-        LOG_INFO("reject request with %s", response_struct.err.to_string());
+        LOG_INFO("reject request with {}", response_struct.err);
         reply(req, response_struct);
         return false;
     }

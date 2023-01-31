@@ -216,7 +216,7 @@ bool change_dup_status(command_executor *e,
         operation = "removing duplication";
         break;
     default:
-        LOG_FATAL("can't change duplication under status %d", status);
+        LOG_FATAL("can't change duplication under status {}", status);
     }
 
     auto err_resp = sc->ddl_client->change_dup_status(app_name, dup_id, status);

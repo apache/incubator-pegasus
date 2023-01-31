@@ -236,9 +236,9 @@ void disk_engine::process_write(aio_task *aio, uint64_t sz)
 void disk_engine::complete_io(aio_task *aio, error_code err, uint64_t bytes)
 {
     if (err != ERR_OK) {
-        LOG_DEBUG("disk operation failure with code %s, err = %s, aio_task_id = %016" PRIx64,
-                  aio->spec().name.c_str(),
-                  err.to_string(),
+        LOG_DEBUG("disk operation failure with code {}, err = {}, aio_task_id = {:#018x}",
+                  aio->spec().name,
+                  err,
                   aio->id());
     }
 

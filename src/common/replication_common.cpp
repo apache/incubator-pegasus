@@ -37,16 +37,51 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_int32("replication",
+DSN_DEFINE_int32(replication,
                  max_concurrent_bulk_load_downloading_count,
                  5,
                  "concurrent bulk load downloading replica count");
+
+DSN_DEFINE_int32(replication,
+                 mutation_2pc_min_replica_count,
+                 2,
+                 "minimum number of alive replicas under which write is allowed. it's valid if "
+                 "larger than 0, otherwise, the final value is based on app_max_replica_count");
+DSN_DEFINE_int32(
+    replication,
+    gc_interval_ms,
+    30 * 1000,
+    "every what period (ms) we do garbage collection for dead replicas, on-disk state, log, etc.");
+DSN_DEFINE_int32(replication,
+                 fd_check_interval_seconds,
+                 2,
+                 "every this period(seconds) the FD will check healthness of remote peers");
+DSN_DEFINE_int32(replication,
+                 fd_beacon_interval_seconds,
+                 3,
+                 "every this period(seconds) the FD sends beacon message to remote peers");
+DSN_DEFINE_int32(replication, fd_lease_seconds, 9, "lease (seconds) get from remote FD master");
+DSN_DEFINE_int32(replication,
+                 fd_grace_seconds,
+                 10,
+                 "grace (seconds) assigned to remote FD slaves (grace > lease)");
+
+// TODO(yingchun): useless any more, remove it from all config files later.
+// DSN_DEFINE_int32(replication,
+//                     log_shared_batch_buffer_kb,
+//                     0,
+//                     "shared log buffer size (KB) for batching incoming logs");
+
+DSN_DEFINE_int32(replication,
+                 cold_backup_checkpoint_reserve_minutes,
+                 10,
+                 "reserve minutes of cold backup checkpoint");
 
 /**
  * Empty write is used for flushing WAL log entry which is submit asynchronously.
  * Make sure it can work well if you diable it.
  */
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 empty_write_disabled,
                 false,
                 "whether to disable empty write, default is false");
@@ -60,58 +95,24 @@ replication_options::replication_options()
     delay_for_fd_timeout_on_start = false;
     duplication_enabled = true;
 
-    prepare_timeout_ms_for_secondaries = 1000;
-    prepare_timeout_ms_for_potential_secondaries = 3000;
-    prepare_decree_gap_for_debug_logging = 10000;
-
     batch_write_disabled = false;
-    staleness_for_commit = 10;
-    max_mutation_count_in_prepare_list = 110;
-    mutation_2pc_min_replica_count = 2;
 
     group_check_disabled = false;
-    group_check_interval_ms = 10000;
 
     checkpoint_disabled = false;
-    checkpoint_interval_seconds = 100;
     checkpoint_min_decree_gap = 10000;
-    checkpoint_max_interval_hours = 2;
 
     gc_disabled = false;
-    gc_interval_ms = 30 * 1000;                     // 30 seconds
-    gc_memory_replica_interval_ms = 10 * 60 * 1000; // 10 minutes
 
     disk_stat_disabled = false;
-    disk_stat_interval_seconds = 600;
 
     fd_disabled = false;
-    fd_check_interval_seconds = 2;
-    fd_beacon_interval_seconds = 3;
-    fd_lease_seconds = 9;
-    fd_grace_seconds = 10;
 
-    log_private_file_size_mb = 32;
-    log_private_reserve_max_size_mb = 0;
-    log_private_reserve_max_time_seconds = 0;
-
-    log_shared_file_size_mb = 32;
-    log_shared_file_count_limit = 100;
-    log_shared_batch_buffer_kb = 0;
     log_shared_force_flush = false;
-    log_shared_pending_size_throttling_threshold_kb = 0;
-    log_shared_pending_size_throttling_delay_ms = 0;
 
     config_sync_disabled = false;
 
     mem_release_enabled = true;
-    mem_release_check_interval_ms = 3600000;
-    mem_release_max_reserved_mem_percentage = 10;
-
-    lb_interval_ms = 10000;
-
-    learn_app_max_concurrent_count = 5;
-
-    cold_backup_checkpoint_reserve_minutes = 10;
 }
 
 replication_options::~replication_options() {}
@@ -193,167 +194,41 @@ void replication_options::initialize()
     duplication_enabled = dsn_config_get_value_bool(
         "replication", "duplication_enabled", duplication_enabled, "is duplication enabled");
 
-    prepare_timeout_ms_for_secondaries = (int)dsn_config_get_value_uint64(
-        "replication",
-        "prepare_timeout_ms_for_secondaries",
-        prepare_timeout_ms_for_secondaries,
-        "timeout (ms) for prepare message to secondaries in two phase commit");
-    prepare_timeout_ms_for_potential_secondaries = (int)dsn_config_get_value_uint64(
-        "replication",
-        "prepare_timeout_ms_for_potential_secondaries",
-        prepare_timeout_ms_for_potential_secondaries,
-        "timeout (ms) for prepare message to potential secondaries in two phase commit");
-    prepare_decree_gap_for_debug_logging = (int)dsn_config_get_value_uint64(
-        "replication",
-        "prepare_decree_gap_for_debug_logging",
-        prepare_decree_gap_for_debug_logging,
-        "if greater than 0, then print debug log every decree gap of preparing");
-
     batch_write_disabled =
         dsn_config_get_value_bool("replication",
                                   "batch_write_disabled",
                                   batch_write_disabled,
                                   "whether to disable auto-batch of replicated write requests");
-    staleness_for_commit =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "staleness_for_commit",
-                                         staleness_for_commit,
-                                         "how many concurrent two phase commit rounds are allowed");
-    max_mutation_count_in_prepare_list =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "max_mutation_count_in_prepare_list",
-                                         max_mutation_count_in_prepare_list,
-                                         "maximum number of mutations in prepare list");
-    mutation_2pc_min_replica_count = (int)dsn_config_get_value_uint64(
-        "replication",
-        "mutation_2pc_min_replica_count",
-        mutation_2pc_min_replica_count,
-        "minimum number of alive replicas under which write is allowed. it's valid if larger than "
-        "0, otherwise, the final value is based on app_max_replica_count");
 
     group_check_disabled = dsn_config_get_value_bool("replication",
                                                      "group_check_disabled",
                                                      group_check_disabled,
                                                      "whether group check is disabled");
-    group_check_interval_ms =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "group_check_interval_ms",
-                                         group_check_interval_ms,
-                                         "every what period (ms) we check the replica healthness");
 
     checkpoint_disabled = dsn_config_get_value_bool("replication",
                                                     "checkpoint_disabled",
                                                     checkpoint_disabled,
                                                     "whether checkpoint is disabled");
-    checkpoint_interval_seconds = (int)dsn_config_get_value_uint64(
-        "replication",
-        "checkpoint_interval_seconds",
-        checkpoint_interval_seconds,
-        "every what period (seconds) we do checkpoints for replicated apps");
     checkpoint_min_decree_gap =
         (int64_t)dsn_config_get_value_uint64("replication",
                                              "checkpoint_min_decree_gap",
                                              checkpoint_min_decree_gap,
                                              "minimum decree gap that triggers checkpoint");
-    checkpoint_max_interval_hours = (int)dsn_config_get_value_uint64(
-        "replication",
-        "checkpoint_max_interval_hours",
-        checkpoint_max_interval_hours,
-        "maximum time interval (hours) where a new checkpoint must be created");
 
     gc_disabled = dsn_config_get_value_bool(
         "replication", "gc_disabled", gc_disabled, "whether to disable garbage collection");
-    gc_interval_ms = (int)dsn_config_get_value_uint64("replication",
-                                                      "gc_interval_ms",
-                                                      gc_interval_ms,
-                                                      "every what period (ms) we do garbage "
-                                                      "collection for dead replicas, on-disk "
-                                                      "state, log, etc.");
-    gc_memory_replica_interval_ms = (int)dsn_config_get_value_uint64(
-        "replication",
-        "gc_memory_replica_interval_ms",
-        gc_memory_replica_interval_ms,
-        "after closing a healthy replica (due to LB), the replica will remain in memory for this "
-        "long (ms) for quick recover");
 
     disk_stat_disabled = dsn_config_get_value_bool(
         "replication", "disk_stat_disabled", disk_stat_disabled, "whether to disable disk stat");
-    disk_stat_interval_seconds =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "disk_stat_interval_seconds",
-                                         disk_stat_interval_seconds,
-                                         "every what period (ms) we do disk stat");
 
     fd_disabled = dsn_config_get_value_bool(
         "replication", "fd_disabled", fd_disabled, "whether to disable failure detection");
-    fd_check_interval_seconds = (int)dsn_config_get_value_uint64(
-        "replication",
-        "fd_check_interval_seconds",
-        fd_check_interval_seconds,
-        "every this period(seconds) the FD will check healthness of remote peers");
-    fd_beacon_interval_seconds = (int)dsn_config_get_value_uint64(
-        "replication",
-        "fd_beacon_interval_seconds",
-        fd_beacon_interval_seconds,
-        "every this period(seconds) the FD sends beacon message to remote peers");
-    fd_lease_seconds =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "fd_lease_seconds",
-                                         fd_lease_seconds,
-                                         "lease (seconds) get from remote FD master");
-    fd_grace_seconds = (int)dsn_config_get_value_uint64(
-        "replication",
-        "fd_grace_seconds",
-        fd_grace_seconds,
-        "grace (seconds) assigned to remote FD slaves (grace > lease)");
 
-    log_private_file_size_mb =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_private_file_size_mb",
-                                         log_private_file_size_mb,
-                                         "private log maximum segment file size (MB)");
-    // ATTENTION: only when log_private_reserve_max_size_mb and log_private_reserve_max_time_seconds
-    // are both satisfied, the useless logs can be reserved.
-    log_private_reserve_max_size_mb =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_private_reserve_max_size_mb",
-                                         log_private_reserve_max_size_mb,
-                                         "max size of useless private log to be reserved");
-    log_private_reserve_max_time_seconds = (int)dsn_config_get_value_uint64(
-        "replication",
-        "log_private_reserve_max_time_seconds",
-        log_private_reserve_max_time_seconds,
-        "max time in seconds of useless private log to be reserved");
-
-    log_shared_file_size_mb =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_shared_file_size_mb",
-                                         log_shared_file_size_mb,
-                                         "shared log maximum segment file size (MB)");
-    log_shared_file_count_limit = (int)dsn_config_get_value_uint64("replication",
-                                                                   "log_shared_file_count_limit",
-                                                                   log_shared_file_count_limit,
-                                                                   "shared log maximum file count");
-    log_shared_batch_buffer_kb =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_shared_batch_buffer_kb",
-                                         log_shared_batch_buffer_kb,
-                                         "shared log buffer size (KB) for batching incoming logs");
     log_shared_force_flush =
         dsn_config_get_value_bool("replication",
                                   "log_shared_force_flush",
                                   log_shared_force_flush,
                                   "when write shared log, whether to flush file after write done");
-    log_shared_pending_size_throttling_threshold_kb =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_shared_pending_size_throttling_threshold_kb",
-                                         log_shared_pending_size_throttling_threshold_kb,
-                                         "log_shared_pending_size_throttling_threshold_kb");
-    log_shared_pending_size_throttling_delay_ms =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "log_shared_pending_size_throttling_delay_ms",
-                                         log_shared_pending_size_throttling_delay_ms,
-                                         "log_shared_pending_size_throttling_delay_ms");
 
     config_sync_disabled = dsn_config_get_value_bool(
         "replication",
@@ -366,57 +241,19 @@ void replication_options::initialize()
                                                     mem_release_enabled,
                                                     "whether to enable periodic memory release");
 
-    mem_release_check_interval_ms = (int)dsn_config_get_value_uint64(
-        "replication",
-        "mem_release_check_interval_ms",
-        mem_release_check_interval_ms,
-        "the replica check if should release memory to the system every this period of time(ms)");
-
-    mem_release_max_reserved_mem_percentage = (int)dsn_config_get_value_uint64(
-        "replication",
-        "mem_release_max_reserved_mem_percentage",
-        mem_release_max_reserved_mem_percentage,
-        "if tcmalloc reserved but not-used memory exceed this percentage of application allocated "
-        "memory, replica server will release the exceeding memory back to operating system");
-
-    lb_interval_ms = (int)dsn_config_get_value_uint64(
-        "replication",
-        "lb_interval_ms",
-        lb_interval_ms,
-        "every this period(ms) the meta server will do load balance");
-
-    learn_app_max_concurrent_count =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "learn_app_max_concurrent_count",
-                                         learn_app_max_concurrent_count,
-                                         "max count of learning app concurrently");
-
     cold_backup_root = dsn_config_get_value_string(
         "replication", "cold_backup_root", "", "cold backup remote storage path prefix");
-
-    cold_backup_checkpoint_reserve_minutes =
-        (int)dsn_config_get_value_uint64("replication",
-                                         "cold_backup_checkpoint_reserve_minutes",
-                                         cold_backup_checkpoint_reserve_minutes,
-                                         "reserve minutes of cold backup checkpoint");
 
     max_concurrent_bulk_load_downloading_count = FLAGS_max_concurrent_bulk_load_downloading_count;
 
     CHECK(replica_helper::load_meta_servers(meta_servers), "invalid meta server config");
-
-    sanity_check();
-}
-
-void replication_options::sanity_check()
-{
-    CHECK_GE(max_mutation_count_in_prepare_list, staleness_for_commit);
 }
 
 int32_t replication_options::app_mutation_2pc_min_replica_count(int32_t app_max_replica_count) const
 {
     CHECK_GT(app_max_replica_count, 0);
-    if (mutation_2pc_min_replica_count > 0) { //  >0 means use the user config
-        return mutation_2pc_min_replica_count;
+    if (FLAGS_mutation_2pc_min_replica_count > 0) { //  >0 means use the user config
+        return FLAGS_mutation_2pc_min_replica_count;
     } else { // otherwise, the value based on the table max_replica_count
         return app_max_replica_count <= 2 ? 1 : app_max_replica_count / 2 + 1;
     }
@@ -485,14 +322,14 @@ bool replica_helper::load_meta_servers(/*out*/ std::vector<dsn::rpc_address> &se
         if (0 != (ip = ::dsn::rpc_address::ipv4_from_host(hostname_port[0].c_str()))) {
             addr.assign_ipv4(ip, static_cast<uint16_t>(port_num));
         } else if (!addr.from_string_ipv4(s.c_str())) {
-            LOG_ERROR_F("invalid address '{}' specified in config [{}].{}", s, section, key);
+            LOG_ERROR("invalid address '{}' specified in config [{}].{}", s, section, key);
             return false;
         }
         // TODO(yingchun): check there is no duplicates
         servers.push_back(addr);
     }
     if (servers.empty()) {
-        LOG_ERROR_F("no meta server specified in config [{}].{}", section, key);
+        LOG_ERROR("no meta server specified in config [{}].{}", section, key);
         return false;
     }
     return true;
@@ -554,7 +391,7 @@ replication_options::get_data_dir_and_tag(const std::string &config_dirs_str,
 
     for (unsigned i = 0; i < dirs.size(); ++i) {
         const std::string &dir = dirs[i];
-        LOG_INFO_F("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
+        LOG_INFO("data_dirs[{}] = {}, tag = {}", i + 1, dir, dir_tags[i]);
         data_dirs.push_back(utils::filesystem::path_combine(dir, "reps"));
         data_dir_tags.push_back(dir_tags[i]);
     }
@@ -566,11 +403,11 @@ replication_options::get_data_dirs_in_black_list(const std::string &fname,
                                                  /*out*/ std::vector<std::string> &dirs)
 {
     if (fname.empty() || !utils::filesystem::file_exists(fname)) {
-        LOG_INFO_F("data_dirs_black_list_file[{}] not found, ignore it", fname);
+        LOG_INFO("data_dirs_black_list_file[{}] not found, ignore it", fname);
         return;
     }
 
-    LOG_INFO_F("data_dirs_black_list_file[{}] found, apply it", fname);
+    LOG_INFO("data_dirs_black_list_file[{}] found, apply it", fname);
     std::ifstream file(fname);
     CHECK(file, "open data_dirs_black_list_file failed: {}", fname);
 
@@ -586,7 +423,7 @@ replication_options::get_data_dirs_in_black_list(const std::string &fname,
         }
         dirs.push_back(str2);
         count++;
-        LOG_INFO_F("black_list[{}] = [{}]", count, str2);
+        LOG_INFO("black_list[{}] = [{}]", count, str2);
     }
 }
 

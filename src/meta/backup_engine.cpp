@@ -41,7 +41,7 @@ error_code backup_engine::init_backup(int32_t app_id)
         _backup_service->get_state()->lock_read(l);
         std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(app_id);
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-            LOG_ERROR_F("app {} is not available, couldn't do backup now.", app_id);
+            LOG_ERROR("app {} is not available, couldn't do backup now.", app_id);
             return ERR_INVALID_STATE;
         }
         app_name = app->app_name;
@@ -77,7 +77,7 @@ error_code backup_engine::set_backup_path(const std::string &path)
     if (_block_service && _block_service->is_root_path_set()) {
         return ERR_INVALID_PARAMETERS;
     }
-    LOG_INFO_F("backup path is set to {}.", path);
+    LOG_INFO("backup path is set to {}.", path);
     _backup_path = path;
     return ERR_OK;
 }
@@ -100,7 +100,7 @@ error_code backup_engine::write_backup_file(const std::string &file_name,
                       })
         ->wait();
     if (err != dsn::ERR_OK) {
-        LOG_INFO_F("create file {} failed", file_name);
+        LOG_INFO("create file {} failed", file_name);
         return err;
     }
     CHECK_NOTNULL(
@@ -121,7 +121,7 @@ error_code backup_engine::backup_app_meta()
         _backup_service->get_state()->lock_read(l);
         std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(_cur_backup.app_id);
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-            LOG_ERROR_F("app {} is not available, couldn't do backup now.", _cur_backup.app_id);
+            LOG_ERROR("app {} is not available, couldn't do backup now.", _cur_backup.app_id);
             return ERR_INVALID_STATE;
         }
         app_state tmp = *app;
@@ -146,7 +146,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
         _backup_service->get_state()->lock_read(l);
         std::shared_ptr<app_state> app = _backup_service->get_state()->get_app(pid.get_app_id());
         if (app == nullptr || app->status != app_status::AS_AVAILABLE) {
-            LOG_ERROR_F("app {} is not available, couldn't do backup now.", pid.get_app_id());
+            LOG_ERROR("app {} is not available, couldn't do backup now.", pid.get_app_id());
 
             zauto_lock lock(_lock);
             _is_backup_failed = true;
@@ -156,7 +156,7 @@ void backup_engine::backup_app_partition(const gpid &pid)
     }
 
     if (partition_primary.is_invalid()) {
-        LOG_WARNING_F(
+        LOG_WARNING(
             "backup_id({}): partition {} doesn't have a primary now, retry to backup it later.",
             _cur_backup.backup_id,
             pid.to_string());
@@ -180,10 +180,10 @@ void backup_engine::backup_app_partition(const gpid &pid)
         req->__set_backup_path(_backup_path);
     }
 
-    LOG_INFO_F("backup_id({}): send backup request to partition {}, target_addr = {}",
-               _cur_backup.backup_id,
-               pid.to_string(),
-               partition_primary.to_string());
+    LOG_INFO("backup_id({}): send backup request to partition {}, target_addr = {}",
+             _cur_backup.backup_id,
+             pid.to_string(),
+             partition_primary.to_string());
     backup_rpc rpc(std::move(req), RPC_COLD_BACKUP, 10000_ms, 0, pid.thread_hash());
     rpc.call(
         partition_primary, &_tracker, [this, rpc, pid, partition_primary](error_code err) mutable {
@@ -200,10 +200,10 @@ inline void backup_engine::handle_replica_backup_failed(const backup_response &r
     CHECK_EQ(response.pid, pid);
     CHECK_EQ(response.backup_id, _cur_backup.backup_id);
 
-    LOG_ERROR_F("backup_id({}): backup for partition {} failed, response.err: {}",
-                _cur_backup.backup_id,
-                pid.to_string(),
-                response.err.to_string());
+    LOG_ERROR("backup_id({}): backup for partition {} failed, response.err: {}",
+              _cur_backup.backup_id,
+              pid.to_string(),
+              response.err.to_string());
     zauto_lock l(_lock);
     // if one partition fail, the whole backup plan fail.
     _is_backup_failed = true;
@@ -246,11 +246,11 @@ void backup_engine::on_backup_reply(const error_code err,
     }
 
     if (rep_error != ERR_OK) {
-        LOG_ERROR_F("backup_id({}): backup request to server {} failed, error: {}, retry to "
-                    "send backup request.",
-                    _cur_backup.backup_id,
-                    primary.to_string(),
-                    rep_error.to_string());
+        LOG_ERROR("backup_id({}): backup request to server {} failed, error: {}, retry to "
+                  "send backup request.",
+                  _cur_backup.backup_id,
+                  primary.to_string(),
+                  rep_error.to_string());
         retry_backup(pid);
         return;
     };
@@ -258,9 +258,9 @@ void backup_engine::on_backup_reply(const error_code err,
     if (response.progress == cold_backup_constant::PROGRESS_FINISHED) {
         CHECK_EQ(response.pid, pid);
         CHECK_EQ(response.backup_id, _cur_backup.backup_id);
-        LOG_INFO_F("backup_id({}): backup for partition {} completed.",
-                   _cur_backup.backup_id,
-                   pid.to_string());
+        LOG_INFO("backup_id({}): backup for partition {} completed.",
+                 _cur_backup.backup_id,
+                 pid.to_string());
         {
             zauto_lock l(_lock);
             _backup_status[pid.get_partition_index()] = backup_status::COMPLETED;
@@ -270,12 +270,12 @@ void backup_engine::on_backup_reply(const error_code err,
     }
 
     // backup is not finished, meta polling to send request
-    LOG_INFO_F("backup_id({}): receive backup response for partition {} from server {}, now "
-               "progress {}, retry to send backup request.",
-               _cur_backup.backup_id,
-               pid.to_string(),
-               primary.to_string(),
-               response.progress);
+    LOG_INFO("backup_id({}): receive backup response for partition {} from server {}, now "
+             "progress {}, retry to send backup request.",
+             _cur_backup.backup_id,
+             pid.to_string(),
+             primary.to_string(),
+             response.progress);
 
     retry_backup(pid);
 }
@@ -288,7 +288,7 @@ void backup_engine::write_backup_info()
     blob buf = dsn::json::json_forwarder<app_backup_info>::encode(_cur_backup);
     error_code err = write_backup_file(file_name, buf);
     if (err == ERR_FS_INTERNAL) {
-        LOG_ERROR_F(
+        LOG_ERROR(
             "backup_id({}): write backup info failed, error {}, do not try again for this error.",
             _cur_backup.backup_id,
             err.to_string());
@@ -297,8 +297,8 @@ void backup_engine::write_backup_info()
         return;
     }
     if (err != ERR_OK) {
-        LOG_WARNING_F("backup_id({}): write backup info failed, retry it later.",
-                      _cur_backup.backup_id);
+        LOG_WARNING("backup_id({}): write backup info failed, retry it later.",
+                    _cur_backup.backup_id);
         tasking::enqueue(LPC_DEFAULT_CALLBACK,
                          &_tracker,
                          [this]() { write_backup_info(); },
@@ -306,9 +306,9 @@ void backup_engine::write_backup_info()
                          std::chrono::seconds(1));
         return;
     }
-    LOG_INFO_F("backup_id({}): successfully wrote backup info, backup for app {} completed.",
-               _cur_backup.backup_id,
-               _cur_backup.app_id);
+    LOG_INFO("backup_id({}): successfully wrote backup info, backup for app {} completed.",
+             _cur_backup.backup_id,
+             _cur_backup.app_id);
     zauto_lock l(_lock);
     _cur_backup.end_time_ms = dsn_now_ms();
 }
@@ -332,10 +332,10 @@ error_code backup_engine::start()
 {
     error_code err = backup_app_meta();
     if (err != ERR_OK) {
-        LOG_ERROR_F("backup_id({}): backup meta data for app {} failed, error {}",
-                    _cur_backup.backup_id,
-                    _cur_backup.app_id,
-                    err.to_string());
+        LOG_ERROR("backup_id({}): backup meta data for app {} failed, error {}",
+                  _cur_backup.backup_id,
+                  _cur_backup.app_id,
+                  err.to_string());
         return err;
     }
     for (int i = 0; i < _backup_status.size(); ++i) {

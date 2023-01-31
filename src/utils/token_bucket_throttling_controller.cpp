@@ -19,6 +19,7 @@
 
 #include "api_utilities.h"
 #include "string_conv.h"
+#include "utils/fmt_logging.h"
 
 namespace dsn {
 namespace utils {

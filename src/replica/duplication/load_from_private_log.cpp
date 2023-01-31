@@ -59,7 +59,7 @@ bool load_from_private_log::switch_to_next_log_file()
         start_from_log_file(file);
         return true;
     } else {
-        LOG_INFO_F("no next log file (log.{}) is found", _current->index() + 1);
+        LOG_INFO("no next log file (log.{}) is found", _current->index() + 1);
         _current = nullptr;
         return false;
     }

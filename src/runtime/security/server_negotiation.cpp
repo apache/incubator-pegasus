@@ -37,7 +37,7 @@ server_negotiation::server_negotiation(rpc_session_ptr session) : negotiation(se
 void server_negotiation::start()
 {
     _status = negotiation_status::type::SASL_LIST_MECHANISMS;
-    LOG_INFO_F("{}: start negotiation", _name);
+    LOG_INFO("{}: start negotiation", _name);
 }
 
 void server_negotiation::handle_request(negotiation_rpc rpc)
@@ -83,17 +83,17 @@ void server_negotiation::on_select_mechanism(negotiation_rpc rpc)
 
     _selected_mechanism = request.msg.to_string();
     if (supported_mechanisms.find(_selected_mechanism) == supported_mechanisms.end()) {
-        LOG_WARNING_F("the mechanism of {} is not supported", _selected_mechanism);
+        LOG_WARNING("the mechanism of {} is not supported", _selected_mechanism);
         fail_negotiation();
         return;
     }
 
     error_s err_s = _sasl->init();
     if (!err_s.is_ok()) {
-        LOG_WARNING_F("{}: server initialize sasl failed, error = {}, msg = {}",
-                      _name,
-                      err_s.code().to_string(),
-                      err_s.description());
+        LOG_WARNING("{}: server initialize sasl failed, error = {}, msg = {}",
+                    _name,
+                    err_s.code(),
+                    err_s.description());
         fail_negotiation();
         return;
     }
@@ -131,10 +131,10 @@ void server_negotiation::on_challenge_resp(negotiation_rpc rpc)
 void server_negotiation::do_challenge(negotiation_rpc rpc, error_s err_s, const blob &resp_msg)
 {
     if (!err_s.is_ok() && err_s.code() != ERR_SASL_INCOMPLETE) {
-        LOG_WARNING_F("{}: negotiation failed, with err = {}, msg = {}",
-                      _name,
-                      err_s.code().to_string(),
-                      err_s.description());
+        LOG_WARNING("{}: negotiation failed, with err = {}, msg = {}",
+                    _name,
+                    err_s.code().to_string(),
+                    err_s.description());
         fail_negotiation();
         return;
     }
@@ -145,10 +145,10 @@ void server_negotiation::do_challenge(negotiation_rpc rpc, error_s err_s, const 
         if (retrive_err.is_ok()) {
             succ_negotiation(rpc, user_name);
         } else {
-            LOG_WARNING_F("{}: retrive user name failed: with err = {}, msg = {}",
-                          _name,
-                          retrive_err.code().to_string(),
-                          retrive_err.description());
+            LOG_WARNING("{}: retrive user name failed: with err = {}, msg = {}",
+                        _name,
+                        retrive_err.code(),
+                        retrive_err.description());
             fail_negotiation();
         }
     } else {
@@ -164,7 +164,7 @@ void server_negotiation::succ_negotiation(negotiation_rpc rpc, const std::string
     _status = response.status = negotiation_status::type::SASL_SUCC;
     _session->set_client_username(user_name);
     _session->set_negotiation_succeed();
-    LOG_INFO_F("{}: negotiation succeed", _name);
+    LOG_INFO("{}: negotiation succeed", _name);
 }
 } // namespace security
 } // namespace dsn

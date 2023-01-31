@@ -36,7 +36,7 @@ client_negotiation::client_negotiation(rpc_session_ptr session) : negotiation(se
 
 void client_negotiation::start()
 {
-    LOG_INFO_F("{}: start negotiation", _name);
+    LOG_INFO("{}: start negotiation", _name);
     list_mechanisms();
 }
 
@@ -51,9 +51,9 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
     if (err != ERR_OK) {
         // ERR_HANDLER_NOT_FOUND means server is old version, which doesn't support authentication
         if (ERR_HANDLER_NOT_FOUND == err) {
-            LOG_INFO_F("{}: treat negotiation succeed because server is old version, which doesn't "
-                       "support authentication",
-                       _name);
+            LOG_INFO("{}: treat negotiation succeed because server is old version, which doesn't "
+                     "support authentication",
+                     _name);
             succ_negotiation();
         } else {
             fail_negotiation();
@@ -63,7 +63,7 @@ void client_negotiation::handle_response(error_code err, const negotiation_respo
 
     // make the negotiation succeed if server doesn't enable auth
     if (negotiation_status::type::SASL_AUTH_DISABLE == response.status) {
-        LOG_INFO_F("{}: treat negotiation succeed as server doesn't enable it", _name);
+        LOG_INFO("{}: treat negotiation succeed as server doesn't enable it", _name);
         succ_negotiation();
         return;
     }
@@ -104,9 +104,9 @@ void client_negotiation::on_recv_mechanisms(const negotiation_response &resp)
     }
 
     if (match_mechanism.empty()) {
-        LOG_WARNING_F("server only support mechanisms of ({}), can't find expected ({})",
-                      boost::join(supported_mechanisms, ","),
-                      resp_string);
+        LOG_WARNING("server only support mechanisms of ({}), can't find expected ({})",
+                    boost::join(supported_mechanisms, ","),
+                    resp_string);
         fail_negotiation();
         return;
     }
@@ -124,10 +124,10 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
     // init client sasl
     auto err_s = _sasl->init();
     if (!err_s.is_ok()) {
-        LOG_WARNING_F("{}: initialize sasl client failed, error = {}, reason = {}",
-                      _name,
-                      err_s.code().to_string(),
-                      err_s.description());
+        LOG_WARNING("{}: initialize sasl client failed, error = {}, reason = {}",
+                    _name,
+                    err_s.code(),
+                    err_s.description());
         fail_negotiation();
         return;
     }
@@ -139,10 +139,10 @@ void client_negotiation::on_mechanism_selected(const negotiation_response &resp)
         _status = negotiation_status::type::SASL_INITIATE;
         send(_status, std::move(start_output));
     } else {
-        LOG_WARNING_F("{}: start sasl client failed, error = {}, reason = {}",
-                      _name,
-                      err_s.code().to_string(),
-                      err_s.description());
+        LOG_WARNING("{}: start sasl client failed, error = {}, reason = {}",
+                    _name,
+                    err_s.code(),
+                    err_s.description());
         fail_negotiation();
     }
 }
@@ -153,7 +153,7 @@ void client_negotiation::on_challenge(const negotiation_response &challenge)
         blob response_msg;
         auto err = _sasl->step(challenge.msg, response_msg);
         if (!err.is_ok() && err.code() != ERR_SASL_INCOMPLETE) {
-            LOG_WARNING_F("{}: negotiation failed, reason = {}", _name, err.description());
+            LOG_WARNING("{}: negotiation failed, reason = {}", _name, err.description());
             fail_negotiation();
             return;
         }
@@ -168,8 +168,7 @@ void client_negotiation::on_challenge(const negotiation_response &challenge)
         return;
     }
 
-    LOG_WARNING_F(
-        "{}: recv wrong negotiation msg type: {}", _name, enum_to_string(challenge.status));
+    LOG_WARNING("{}: recv wrong negotiation msg type: {}", _name, enum_to_string(challenge.status));
     fail_negotiation();
 }
 
@@ -197,7 +196,7 @@ void client_negotiation::succ_negotiation()
 {
     _status = negotiation_status::type::SASL_SUCC;
     _session->set_negotiation_succeed();
-    LOG_INFO_F("{}: negotiation succeed", _name);
+    LOG_INFO("{}: negotiation succeed", _name);
 }
 } // namespace security
 } // namespace dsn

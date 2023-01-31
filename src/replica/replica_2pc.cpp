@@ -38,11 +38,35 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_bool("replication",
+DSN_DEFINE_bool(replication,
                 reject_write_when_disk_insufficient,
                 true,
                 "reject client write requests if disk status is space insufficient");
 DSN_TAG_VARIABLE(reject_write_when_disk_insufficient, FT_MUTABLE);
+
+DSN_DEFINE_int32(replication,
+                 prepare_timeout_ms_for_secondaries,
+                 1000,
+                 "timeout (ms) for prepare message to secondaries in two phase commit");
+DSN_DEFINE_int32(replication,
+                 prepare_timeout_ms_for_potential_secondaries,
+                 3000,
+                 "timeout (ms) for prepare message to potential secondaries in two phase commit");
+DSN_DEFINE_int32(replication,
+                 prepare_decree_gap_for_debug_logging,
+                 10000,
+                 "if greater than 0, then print debug log every decree gap of preparing");
+DSN_DEFINE_int32(replication,
+                 log_shared_pending_size_throttling_threshold_kb,
+                 0,
+                 "log_shared_pending_size_throttling_threshold_kb");
+DSN_DEFINE_int32(replication,
+                 log_shared_pending_size_throttling_delay_ms,
+                 0,
+                 "log_shared_pending_size_throttling_delay_ms");
+
+DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+DSN_DECLARE_int32(staleness_for_commit);
 
 void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 {
@@ -83,10 +107,10 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
 
     task_spec *spec = task_spec::get(request->rpc_code());
     if (dsn_unlikely(nullptr == spec || request->rpc_code() == TASK_CODE_INVALID)) {
-        LOG_ERROR_F("recv message with unhandled rpc name {} from {}, trace_id = {}",
-                    request->rpc_code().to_string(),
-                    request->header->from_address.to_string(),
-                    request->header->trace_id);
+        LOG_ERROR("recv message with unhandled rpc name {} from {}, trace_id = {}",
+                  request->rpc_code().to_string(),
+                  request->header->from_address.to_string(),
+                  request->header->trace_id);
         response_client_write(request, ERR_HANDLER_NOT_FOUND);
         return;
     }
@@ -154,7 +178,7 @@ void replica::on_client_write(dsn::message_ex *request, bool ignore_throttling)
         return;
     }
 
-    LOG_DEBUG("%s: got write request from %s", name(), request->header->from_address.to_string());
+    LOG_DEBUG_PREFIX("got write request from {}", request->header->from_address);
     auto mu = _primary_states.write_queue.add_work(request->rpc_code(), request, this);
     if (mu) {
         init_prepare(mu, false);
@@ -177,8 +201,8 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     if (mu->data.header.decree == invalid_decree) {
         mu->set_id(get_ballot(), _prepare_list->max_decree() + 1);
         // print a debug log if necessary
-        if (_options->prepare_decree_gap_for_debug_logging > 0 &&
-            mu->get_decree() % _options->prepare_decree_gap_for_debug_logging == 0)
+        if (FLAGS_prepare_decree_gap_for_debug_logging > 0 &&
+            mu->get_decree() % FLAGS_prepare_decree_gap_for_debug_logging == 0)
             level = LOG_LEVEL_INFO;
         mu->set_timestamp(_uniq_timestamp_us.next());
     } else {
@@ -196,7 +220,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
     mu->set_is_sync_to_child(_primary_states.sync_send_write_request);
 
     // check bounded staleness
-    if (mu->data.header.decree > last_committed_decree() + _options->staleness_for_commit) {
+    if (mu->data.header.decree > last_committed_decree() + FLAGS_staleness_for_commit) {
         err = ERR_CAPACITY_EXCEEDED;
         goto ErrOut;
     }
@@ -245,7 +269,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
         send_prepare_message(*it,
                              partition_status::PS_SECONDARY,
                              mu,
-                             _options->prepare_timeout_ms_for_secondaries,
+                             FLAGS_prepare_timeout_ms_for_secondaries,
                              pop_all_committed_mutations);
     }
 
@@ -256,7 +280,7 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
             send_prepare_message(it->first,
                                  partition_status::PS_POTENTIAL_SECONDARY,
                                  mu,
-                                 _options->prepare_timeout_ms_for_potential_secondaries,
+                                 FLAGS_prepare_timeout_ms_for_potential_secondaries,
                                  pop_all_committed_mutations,
                                  it->second.signature);
             count++;
@@ -285,16 +309,16 @@ void replica::init_prepare(mutation_ptr &mu, bool reconciliation, bool pop_all_c
                                               get_gpid().thread_hash(),
                                               &pending_size);
         CHECK_NOTNULL(mu->log_task(), "");
-        if (_options->log_shared_pending_size_throttling_threshold_kb > 0 &&
-            _options->log_shared_pending_size_throttling_delay_ms > 0 &&
-            pending_size >= _options->log_shared_pending_size_throttling_threshold_kb * 1024) {
-            int delay_ms = _options->log_shared_pending_size_throttling_delay_ms;
+        if (FLAGS_log_shared_pending_size_throttling_threshold_kb > 0 &&
+            FLAGS_log_shared_pending_size_throttling_delay_ms > 0 &&
+            pending_size >= FLAGS_log_shared_pending_size_throttling_threshold_kb * 1024) {
+            int delay_ms = FLAGS_log_shared_pending_size_throttling_delay_ms;
             for (dsn::message_ex *r : mu->client_requests) {
                 if (r && r->io_session->delay_recv(delay_ms)) {
-                    LOG_WARNING("too large pending shared log (%" PRId64 "), "
-                                "delay traffic from %s for %d milliseconds",
+                    LOG_WARNING("too large pending shared log ({}), delay traffic from {} for {} "
+                                "milliseconds",
                                 pending_size,
-                                r->header->from_address.to_string(),
+                                r->header->from_address,
                                 delay_ms);
                 }
             }
@@ -346,11 +370,10 @@ void replica::send_prepare_message(::dsn::rpc_address addr,
                   },
                   get_gpid().thread_hash());
 
-    LOG_DEBUG("%s: mutation %s send_prepare_message to %s as %s",
-              name(),
-              mu->name(),
-              addr.to_string(),
-              enum_to_string(rconfig.status));
+    LOG_DEBUG_PREFIX("mutation {} send_prepare_message to {} as {}",
+                     mu->name(),
+                     addr,
+                     enum_to_string(rconfig.status));
 }
 
 void replica::do_possible_commit_on_primary(mutation_ptr &mu)
@@ -383,7 +406,7 @@ void replica::on_prepare(dsn::message_ex *request)
 
     decree decree = mu->data.header.decree;
 
-    LOG_DEBUG("%s: mutation %s on_prepare", name(), mu->name());
+    LOG_DEBUG_PREFIX("mutation {} on_prepare", mu->name());
     mu->_tracer->set_name(fmt::format("mutation[{}]", mu->name()));
     mu->_tracer->set_description("secondary");
     ADD_POINT(mu->_tracer);
@@ -392,7 +415,7 @@ void replica::on_prepare(dsn::message_ex *request)
     CHECK_EQ(mu->data.header.ballot, rconfig.ballot);
 
     if (mu->data.header.ballot < get_ballot()) {
-        LOG_ERROR("%s: mutation %s on_prepare skipped due to old view", name(), mu->name());
+        LOG_ERROR_PREFIX("mutation {} on_prepare skipped due to old view", mu->name());
         // no need response because the rpc should have been cancelled on primary in this case
         return;
     }
@@ -400,10 +423,8 @@ void replica::on_prepare(dsn::message_ex *request)
     // update configuration when necessary
     else if (rconfig.ballot > get_ballot()) {
         if (!update_local_configuration(rconfig)) {
-            LOG_ERROR(
-                "%s: mutation %s on_prepare failed as update local configuration failed, state "
-                "= %s",
-                name(),
+            LOG_ERROR_PREFIX(
+                "mutation {} on_prepare failed as update local configuration failed, state = {}",
                 mu->name(),
                 enum_to_string(status()));
             ack_prepare_message(ERR_INVALID_STATE, mu);
@@ -412,10 +433,9 @@ void replica::on_prepare(dsn::message_ex *request)
     }
 
     if (partition_status::PS_INACTIVE == status() || partition_status::PS_ERROR == status()) {
-        LOG_ERROR("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()));
+        LOG_ERROR_PREFIX("mutation {} on_prepare failed as invalid replica state, state = {}",
+                         mu->name(),
+                         enum_to_string(status()));
         ack_prepare_message((partition_status::PS_INACTIVE == status() && _inactive_is_transient)
                                 ? ERR_INACTIVE_STATE
                                 : ERR_INVALID_STATE,
@@ -424,14 +444,12 @@ void replica::on_prepare(dsn::message_ex *request)
     } else if (partition_status::PS_POTENTIAL_SECONDARY == status()) {
         // new learning process
         if (rconfig.learner_signature != _potential_secondary_states.learning_version) {
-            LOG_ERROR(
-                "%s: mutation %s on_prepare failed as unmatched learning signature, state = %s"
-                ", old_signature[%016" PRIx64 "] vs new_signature[%016" PRIx64 "]",
-                name(),
-                mu->name(),
-                enum_to_string(status()),
-                _potential_secondary_states.learning_version,
-                rconfig.learner_signature);
+            LOG_ERROR_PREFIX("mutation {} on_prepare failed as unmatched learning signature, state "
+                             "= {}, old_signature[{:#018x}] vs new_signature[{:#018x}]",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _potential_secondary_states.learning_version,
+                             rconfig.learner_signature);
             handle_learning_error(ERR_INVALID_STATE, false);
             ack_prepare_message(ERR_INVALID_STATE, mu);
             return;
@@ -445,13 +463,13 @@ void replica::on_prepare(dsn::message_ex *request)
             error_code ack_code =
                 (learning_status == learner_status::LearningWithoutPrepare ? ERR_TRY_AGAIN
                                                                            : ERR_INVALID_STATE);
-            LOG_ERROR("%s: mutation %s on_prepare skipped as invalid learning status, state = %s, "
-                      "learning_status = %s, ack %s",
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      enum_to_string(learning_status),
-                      ack_code.to_string());
+            LOG_ERROR_PREFIX(
+                "mutation {} on_prepare skipped as invalid learning status, state = {}, "
+                "learning_status = {}, ack {}",
+                mu->name(),
+                enum_to_string(status()),
+                enum_to_string(learning_status),
+                ack_code);
             ack_prepare_message(ack_code, mu);
             return;
         }
@@ -483,15 +501,14 @@ void replica::on_prepare(dsn::message_ex *request)
     if (partition_status::PS_POTENTIAL_SECONDARY == status() ||
         partition_status::PS_SECONDARY == status()) {
         CHECK_LE_MSG(mu->data.header.decree,
-                     last_committed_decree() + _options->max_mutation_count_in_prepare_list,
-                     "last_committed_decree: {}, _options->max_mutation_count_in_prepare_list: {}",
+                     last_committed_decree() + FLAGS_max_mutation_count_in_prepare_list,
+                     "last_committed_decree: {}, FLAGS_max_mutation_count_in_prepare_list: {}",
                      last_committed_decree(),
-                     _options->max_mutation_count_in_prepare_list);
+                     FLAGS_max_mutation_count_in_prepare_list);
     } else {
-        LOG_ERROR("%s: mutation %s on_prepare failed as invalid replica state, state = %s",
-                  name(),
-                  mu->name(),
-                  enum_to_string(status()));
+        LOG_ERROR_PREFIX("mutation {} on_prepare failed as invalid replica state, state = {}",
+                         mu->name(),
+                         enum_to_string(status()));
         ack_prepare_message(ERR_INVALID_STATE, mu);
         return;
     }
@@ -517,21 +534,15 @@ void replica::on_append_log_completed(mutation_ptr &mu, error_code err, size_t s
 {
     _checker.only_one_thread_access();
 
-    LOG_DEBUG("%s: append shared log completed for mutation %s, size = %u, err = %s",
-              name(),
-              mu->name(),
-              size,
-              err.to_string());
+    LOG_DEBUG_PREFIX(
+        "append shared log completed for mutation {}, size = {}, err = {}", mu->name(), size, err);
 
     ADD_POINT(mu->_tracer);
 
     if (err == ERR_OK) {
         mu->set_logged();
     } else {
-        LOG_ERROR("%s: append shared log failed for mutation %s, err = %s",
-                  name(),
-                  mu->name(),
-                  err.to_string());
+        LOG_ERROR_PREFIX("append shared log failed for mutation {}, err = {}", mu->name(), err);
     }
 
     // skip old mutations
@@ -610,23 +621,21 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
     ADD_CUSTOM_POINT(send_prepare_tracer, resp.err.to_string());
 
     if (resp.err == ERR_OK) {
-        LOG_DEBUG("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
-                  "target_status = %s, err = %s",
-                  name(),
-                  mu->name(),
-                  node.to_string(),
-                  mu->appro_data_bytes(),
-                  enum_to_string(target_status),
-                  resp.err.to_string());
+        LOG_DEBUG_PREFIX("mutation {} on_prepare_reply from {}, appro_data_bytes = {}, "
+                         "target_status = {}, err = {}",
+                         mu->name(),
+                         node,
+                         mu->appro_data_bytes(),
+                         enum_to_string(target_status),
+                         resp.err);
     } else {
-        LOG_ERROR("%s: mutation %s on_prepare_reply from %s, appro_data_bytes = %d, "
-                  "target_status = %s, err = %s",
-                  name(),
-                  mu->name(),
-                  node.to_string(),
-                  mu->appro_data_bytes(),
-                  enum_to_string(target_status),
-                  resp.err.to_string());
+        LOG_ERROR_PREFIX("mutation {} on_prepare_reply from {}, appro_data_bytes = {}, "
+                         "target_status = {}, err = {}",
+                         mu->name(),
+                         node,
+                         mu->appro_data_bytes(),
+                         enum_to_string(target_status),
+                         resp.err);
     }
 
     if (resp.err == ERR_OK) {
@@ -650,9 +659,8 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
             }
             break;
         default:
-            LOG_WARNING("%s: mutation %s prepare ack skipped coz the node is now inactive",
-                        name(),
-                        mu->name());
+            LOG_WARNING_PREFIX("mutation {} prepare ack skipped coz the node is now inactive",
+                               mu->name());
             break;
         }
     }
@@ -662,24 +670,20 @@ void replica::on_prepare_reply(std::pair<mutation_ptr, partition_status::type> p
         // retry for INACTIVE or TRY_AGAIN if there is still time.
         if (resp.err == ERR_INACTIVE_STATE || resp.err == ERR_TRY_AGAIN) {
             int prepare_timeout_ms = (target_status == partition_status::PS_SECONDARY
-                                          ? _options->prepare_timeout_ms_for_secondaries
-                                          : _options->prepare_timeout_ms_for_potential_secondaries);
+                                          ? FLAGS_prepare_timeout_ms_for_secondaries
+                                          : FLAGS_prepare_timeout_ms_for_potential_secondaries);
             int delay_time_ms = 5; // delay some time before retry to avoid sending too frequently
             if (mu->is_prepare_close_to_timeout(delay_time_ms + 2, prepare_timeout_ms)) {
-                LOG_ERROR("%s: mutation %s do not retry prepare to %s for no enought time left, "
-                          "prepare_ts_ms = %" PRIu64 ", prepare_timeout_ms = %d, now_ms = %" PRIu64,
-                          name(),
-                          mu->name(),
-                          node.to_string(),
-                          mu->prepare_ts_ms(),
-                          prepare_timeout_ms,
-                          dsn_now_ms());
+                LOG_ERROR_PREFIX("mutation {} do not retry prepare to {} for no enought time left, "
+                                 "prepare_ts_ms = {}, prepare_timeout_ms = {}, now_ms = {}",
+                                 mu->name(),
+                                 node,
+                                 mu->prepare_ts_ms(),
+                                 prepare_timeout_ms,
+                                 dsn_now_ms());
             } else {
-                LOG_INFO("%s: mutation %s retry prepare to %s after %d ms",
-                         name(),
-                         mu->name(),
-                         node.to_string(),
-                         delay_time_ms);
+                LOG_INFO_PREFIX(
+                    "mutation {} retry prepare to {} after {} ms", mu->name(), node, delay_time_ms);
                 int64_t learn_signature = invalid_signature;
                 if (target_status == partition_status::PS_POTENTIAL_SECONDARY) {
                     auto it = _primary_states.learners.find(node);

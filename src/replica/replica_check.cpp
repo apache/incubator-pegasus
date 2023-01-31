@@ -47,6 +47,11 @@
 
 namespace dsn {
 namespace replication {
+DSN_DEFINE_int32(replication,
+                 group_check_interval_ms,
+                 10000,
+                 "every what period (ms) we check the replica healthness");
+
 DSN_DECLARE_bool(empty_write_disabled);
 
 void replica::init_group_check()
@@ -55,7 +60,7 @@ void replica::init_group_check()
 
     _checker.only_one_thread_access();
 
-    LOG_INFO("%s: init group check", name());
+    LOG_INFO_PREFIX("init group check");
 
     if (partition_status::PS_PRIMARY != status() || _options->group_check_disabled)
         return;
@@ -65,7 +70,7 @@ void replica::init_group_check()
         tasking::enqueue_timer(LPC_GROUP_CHECK,
                                &_tracker,
                                [this] { broadcast_group_check(); },
-                               std::chrono::milliseconds(_options->group_check_interval_ms),
+                               std::chrono::milliseconds(FLAGS_group_check_interval_ms),
                                get_gpid().thread_hash());
 }
 
@@ -75,14 +80,12 @@ void replica::broadcast_group_check()
 
     CHECK_NOTNULL(_primary_states.group_check_task, "");
 
-    LOG_INFO("%s: start to broadcast group check", name());
+    LOG_INFO_PREFIX("start to broadcast group check");
 
     if (_primary_states.group_check_pending_replies.size() > 0) {
-        LOG_WARNING(
-            "%s: %u group check replies are still pending when doing next round check, cancel "
-            "first",
-            name(),
-            static_cast<int>(_primary_states.group_check_pending_replies.size()));
+        LOG_WARNING_PREFIX(
+            "{} group check replies are still pending when doing next round check, cancel first",
+            _primary_states.group_check_pending_replies.size());
 
         for (auto it = _primary_states.group_check_pending_replies.begin();
              it != _primary_states.group_check_pending_replies.end();
@@ -119,10 +122,7 @@ void replica::broadcast_group_check()
             request->config.learner_signature = it->second.signature;
         }
 
-        LOG_INFO("%s: send group check to %s with state %s",
-                 name(),
-                 addr.to_string(),
-                 enum_to_string(it->second));
+        LOG_INFO_PREFIX("send group check to {} with state {}", addr, enum_to_string(it->second));
 
         dsn::task_ptr callback_task =
             rpc::call(addr,
@@ -141,7 +141,7 @@ void replica::broadcast_group_check()
 
     // send empty prepare when necessary
     if (!FLAGS_empty_write_disabled &&
-        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + _options->group_check_interval_ms) {
+        dsn_now_ms() >= _primary_states.last_prepare_ts_ms + FLAGS_group_check_interval_ms) {
         mutation_ptr mu = new_mutation(invalid_decree);
         mu->add_client_request(RPC_REPLICATION_WRITE_EMPTY, nullptr);
         init_prepare(mu, false);
@@ -163,12 +163,12 @@ void replica::on_group_check(const group_check_request &request,
 
     if (request.config.ballot < get_ballot()) {
         response.err = ERR_VERSION_OUTDATED;
-        LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
         return;
     } else if (request.config.ballot > get_ballot()) {
         if (!update_local_configuration(request.config)) {
             response.err = ERR_INVALID_STATE;
-            LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
+            LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
             return;
         }
     } else if (is_same_ballot_status_change_allowed(status(), request.config.status)) {
@@ -202,7 +202,7 @@ void replica::on_group_check(const group_check_request &request,
     response.err = ERR_OK;
     if (status() == partition_status::PS_ERROR) {
         response.err = ERR_INVALID_STATE;
-        LOG_WARNING("%s: on_group_check reply %s", name(), response.err.to_string());
+        LOG_WARNING_PREFIX("on_group_check reply {}", response.err);
     }
 
     response.last_committed_decree_in_app = _app->last_committed_decree();

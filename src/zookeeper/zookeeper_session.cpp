@@ -43,7 +43,7 @@
 namespace dsn {
 namespace security {
 DSN_DECLARE_bool(enable_zookeeper_kerberos);
-DSN_DEFINE_string("security",
+DSN_DEFINE_string(security,
                   zookeeper_kerberos_service_name,
                   "zookeeper",
                   "zookeeper kerberos service name");
@@ -318,9 +318,9 @@ void zookeeper_session::global_watcher(
     zookeeper_session *zoo_session = (zookeeper_session *)ctx;
     zoo_session->init_non_dsn_thread();
     LOG_INFO(
-        "global watcher, type(%s), state(%s)", string_zoo_event(type), string_zoo_state(state));
+        "global watcher, type({}), state({})", string_zoo_event(type), string_zoo_state(state));
     if (type != ZOO_SESSION_EVENT && path != nullptr)
-        LOG_INFO("watcher path: %s", path);
+        LOG_INFO("watcher path: {}", path);
 
     CHECK(zoo_session->_handle == handle, "");
     zoo_session->dispatch_event(type, state, type == ZOO_SESSION_EVENT ? "" : path);
@@ -335,9 +335,9 @@ void zookeeper_session::global_watcher(
 void zookeeper_session::global_string_completion(int rc, const char *name, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (ZOK == rc && name != nullptr)
-        LOG_DEBUG("created path:%s", name);
+        LOG_DEBUG("created path: {}", name);
     output.create_op._created_path = name;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
@@ -347,7 +347,7 @@ void zookeeper_session::global_data_completion(
     int rc, const char *value, int value_length, const Stat *, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     output.get_op.value_length = value_length;
     output.get_op.value = value;
     op_ctx->_callback_function(op_ctx);
@@ -357,7 +357,7 @@ void zookeeper_session::global_data_completion(
 void zookeeper_session::global_state_completion(int rc, const Stat *stat, const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (op_ctx->_optype == ZOO_EXISTS) {
         output.exists_op._node_stat = stat;
         op_ctx->_callback_function(op_ctx);
@@ -373,9 +373,9 @@ void zookeeper_session::global_strings_completion(int rc,
                                                   const void *data)
 {
     COMPLETION_INIT(rc, data);
-    LOG_DEBUG("rc(%s), input path(%s)", zerror(rc), op_ctx->_input._path.c_str());
+    LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     if (rc == ZOK && strings != nullptr)
-        LOG_DEBUG("child count: %d", strings->count);
+        LOG_DEBUG("child count: {}", strings->count);
     output.getchildren_op.strings = strings;
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
@@ -385,9 +385,9 @@ void zookeeper_session::global_void_completion(int rc, const void *data)
 {
     COMPLETION_INIT(rc, data);
     if (op_ctx->_optype == ZOO_DELETE)
-        LOG_DEBUG("rc(%s), input path( %s )", zerror(rc), op_ctx->_input._path.c_str());
+        LOG_DEBUG("rc({}), input path({})", zerror(rc), op_ctx->_input._path);
     else
-        LOG_DEBUG("rc(%s)", zerror(rc));
+        LOG_DEBUG("rc({})", zerror(rc));
     op_ctx->_callback_function(op_ctx);
     release_ref(op_ctx);
 }

@@ -46,40 +46,43 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 learn_app_max_concurrent_count,
+                 5,
+                 "max count of learning app concurrently");
+
+DSN_DECLARE_int32(max_mutation_count_in_prepare_list);
+
 void replica::init_learn(uint64_t signature)
 {
     _checker.only_one_thread_access();
 
     if (status() != partition_status::PS_POTENTIAL_SECONDARY) {
-        LOG_WARNING(
-            "%s: state is not potential secondary but %s, skip learning with signature[%016" PRIx64
-            "]",
-            name(),
+        LOG_WARNING_PREFIX(
+            "state is not potential secondary but {}, skip learning with signature[{:#018x}]",
             enum_to_string(status()),
             signature);
         return;
     }
 
     if (signature == invalid_signature) {
-        LOG_WARNING("%s: invalid learning signature, skip", name());
+        LOG_WARNING_PREFIX("invalid learning signature, skip");
         return;
     }
 
     // at most one learning task running
     if (_potential_secondary_states.learning_round_is_running) {
-        LOG_WARNING(
-            "%s: previous learning is still running, skip learning with signature [%016" PRIx64 "]",
-            name(),
+        LOG_WARNING_PREFIX(
+            "previous learning is still running, skip learning with signature [{:#018x}]",
             signature);
         return;
     }
 
     if (signature < _potential_secondary_states.learning_version) {
-        LOG_WARNING("%s: learning request is out-dated, therefore skipped: [%016" PRIx64
-                    "] vs [%016" PRIx64 "]",
-                    name(),
-                    signature,
-                    _potential_secondary_states.learning_version);
+        LOG_WARNING_PREFIX(
+            "learning request is out-dated, therefore skipped: [{:#018x}] vs [{:#018x}]",
+            signature,
+            _potential_secondary_states.learning_version);
         return;
     }
 
@@ -87,12 +90,11 @@ void replica::init_learn(uint64_t signature)
     // be cautious: primary should not issue signatures frequently to avoid learning abort
     if (signature != _potential_secondary_states.learning_version) {
         if (!_potential_secondary_states.cleanup(false)) {
-            LOG_WARNING("%s: previous learning with signature[%016" PRIx64
-                        "] is still in-process, skip init new learning with signature [%016" PRIx64
-                        "]",
-                        name(),
-                        _potential_secondary_states.learning_version,
-                        signature);
+            LOG_WARNING_PREFIX(
+                "previous learning with signature[{:#018x}] is still in-process, skip "
+                "init new learning with signature [{:#018x}]",
+                _potential_secondary_states.learning_version,
+                signature);
             return;
         }
 
@@ -177,16 +179,16 @@ void replica::init_learn(uint64_t signature)
     }
 
     if (_app->last_committed_decree() == 0 &&
-        _stub->_learn_app_concurrent_count.load() >= _options->learn_app_max_concurrent_count) {
-        LOG_WARNING("%s: init_learn[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-                    "ms, need to learn app because app_committed_decree = 0, but "
-                    "learn_app_concurrent_count(%d) >= learn_app_max_concurrent_count(%d), skip",
-                    name(),
-                    _potential_secondary_states.learning_version,
-                    _config.primary.to_string(),
-                    _potential_secondary_states.duration_ms(),
-                    _stub->_learn_app_concurrent_count.load(),
-                    _options->learn_app_max_concurrent_count);
+        _stub->_learn_app_concurrent_count.load() >= FLAGS_learn_app_max_concurrent_count) {
+        LOG_WARNING_PREFIX(
+            "init_learn[{:#018x}]: learnee = {}, learn_duration = {} ms, need to learn app "
+            "because app_committed_decree = 0, but learn_app_concurrent_count({}) >= "
+            "FLAGS_learn_app_max_concurrent_count({}), skip",
+            _potential_secondary_states.learning_version,
+            _config.primary,
+            _potential_secondary_states.duration_ms(),
+            _stub->_learn_app_concurrent_count,
+            FLAGS_learn_app_max_concurrent_count);
         return;
     }
 
@@ -202,23 +204,21 @@ void replica::init_learn(uint64_t signature)
     request.signature = _potential_secondary_states.learning_version;
     _app->prepare_get_checkpoint(request.app_specific_learn_request);
 
-    LOG_INFO("%s: init_learn[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-             " ms, max_gced_decree = %" PRId64 ", local_committed_decree = %" PRId64 ", "
-             "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64
-             ", current_learning_status = %s, total_copy_file_count = %" PRIu64
-             ", total_copy_file_size = %" PRIu64 ", total_copy_buffer_size = %" PRIu64,
-             name(),
-             request.signature,
-             _config.primary.to_string(),
-             _potential_secondary_states.duration_ms(),
-             request.max_gced_decree,
-             last_committed_decree(),
-             _app->last_committed_decree(),
-             _app->last_durable_decree(),
-             enum_to_string(_potential_secondary_states.learning_status),
-             _potential_secondary_states.learning_copy_file_count,
-             _potential_secondary_states.learning_copy_file_size,
-             _potential_secondary_states.learning_copy_buffer_size);
+    LOG_INFO_PREFIX("init_learn[{:#018x}]: learnee = {}, learn_duration = {} ms, max_gced_decree = "
+                    "{}, local_committed_decree = {}, app_committed_decree = {}, "
+                    "app_durable_decree = {}, current_learning_status = {}, total_copy_file_count "
+                    "= {}, total_copy_file_size = {}, total_copy_buffer_size = {}",
+                    request.signature,
+                    _config.primary,
+                    _potential_secondary_states.duration_ms(),
+                    request.max_gced_decree,
+                    last_committed_decree(),
+                    _app->last_committed_decree(),
+                    _app->last_durable_decree(),
+                    enum_to_string(_potential_secondary_states.learning_status),
+                    _potential_secondary_states.learning_copy_file_count,
+                    _potential_secondary_states.learning_copy_file_size,
+                    _potential_secondary_states.learning_copy_buffer_size);
 
     dsn::message_ex *msg = dsn::message_ex::create_request(RPC_LEARN, 0, get_gpid().thread_hash());
     dsn::marshall(msg, request);
@@ -360,15 +360,13 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     // TODO: learner machine has been down for a long time, and DDD MUST happened before
     // which leads to state lost. Now the lost state is back, what shall we do?
     if (request.last_committed_decree_in_app > last_prepared_decree()) {
-        LOG_ERROR("%s: on_learn[%016" PRIx64
-                  "]: learner = %s, learner state is newer than learnee, "
-                  "learner_app_committed_decree = %" PRId64 ", local_committed_decree = %" PRId64
-                  ", learn from scratch",
-                  name(),
-                  request.signature,
-                  request.learner.to_string(),
-                  request.last_committed_decree_in_app,
-                  local_committed_decree);
+        LOG_ERROR_PREFIX("on_learn[{:#018x}]: learner = {}, learner state is newer than learnee, "
+                         "learner_app_committed_decree = {}, local_committed_decree = {}, learn "
+                         "from scratch",
+                         request.signature,
+                         request.learner,
+                         request.last_committed_decree_in_app,
+                         local_committed_decree);
 
         *(decree *)&request.last_committed_decree_in_app = 0;
     }
@@ -377,29 +375,25 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     // this happens when the new primary does not commit the previously prepared mutations
     // yet, which it should do, so let's help it now.
     else if (request.last_committed_decree_in_app > local_committed_decree) {
-        LOG_ERROR("%s: on_learn[%016" PRIx64
-                  "]: learner = %s, learner's last_committed_decree_in_app is newer than learnee, "
-                  "learner_app_committed_decree = %" PRId64 ", local_committed_decree = %" PRId64
-                  ", commit local soft",
-                  name(),
-                  request.signature,
-                  request.learner.to_string(),
-                  request.last_committed_decree_in_app,
-                  local_committed_decree);
+        LOG_ERROR_PREFIX("on_learn[{:#018x}]: learner = {}, learner's last_committed_decree_in_app "
+                         "is newer than learnee, learner_app_committed_decree = {}, "
+                         "local_committed_decree = {}, commit local soft",
+                         request.signature,
+                         request.learner,
+                         request.last_committed_decree_in_app,
+                         local_committed_decree);
 
         // we shouldn't commit mutations hard coz these mutations may preparing on another learner
         _prepare_list->commit(request.last_committed_decree_in_app, COMMIT_TO_DECREE_SOFT);
         local_committed_decree = last_committed_decree();
 
         if (request.last_committed_decree_in_app > local_committed_decree) {
-            LOG_ERROR("%s: on_learn[%016" PRIx64 "]: try to commit primary to %" PRId64
-                      ", still less than learner(%s)'s committed decree(%" PRId64
-                      "), wait mutations to be commitable",
-                      name(),
-                      request.signature,
-                      local_committed_decree,
-                      request.learner.to_string(),
-                      request.last_committed_decree_in_app);
+            LOG_ERROR_PREFIX("on_learn[{:#018x}]: try to commit primary to {}, still less than "
+                             "learner({})'s committed decree({}), wait mutations to be commitable",
+                             request.signature,
+                             local_committed_decree,
+                             request.learner,
+                             request.last_committed_decree_in_app);
             response.err = ERR_INCONSISTENT_STATE;
             reply(msg, response);
             return;
@@ -412,22 +406,20 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
     response.state.__set_learn_start_decree(learn_start_decree);
     bool delayed_replay_prepare_list = false;
 
-    LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, remote_committed_decree = %" PRId64 ", "
-             "remote_app_committed_decree = %" PRId64 ", local_committed_decree = %" PRId64 ", "
-             "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64 ", "
-             "prepare_min_decree = %" PRId64
-             ", prepare_list_count = %d, learn_start_decree = %" PRId64,
-             name(),
-             request.signature,
-             request.learner.to_string(),
-             request.last_committed_decree_in_prepare_list,
-             request.last_committed_decree_in_app,
-             local_committed_decree,
-             _app->last_committed_decree(),
-             _app->last_durable_decree(),
-             _prepare_list->min_decree(),
-             _prepare_list->count(),
-             learn_start_decree);
+    LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, remote_committed_decree = {}, "
+                    "remote_app_committed_decree = {}, local_committed_decree = {}, "
+                    "app_committed_decree = {}, app_durable_decree = {}, "
+                    "prepare_min_decree = {}, prepare_list_count = {}, learn_start_decree = {}",
+                    request.signature,
+                    request.learner,
+                    request.last_committed_decree_in_prepare_list,
+                    request.last_committed_decree_in_app,
+                    local_committed_decree,
+                    _app->last_committed_decree(),
+                    _app->last_durable_decree(),
+                    _prepare_list->min_decree(),
+                    _prepare_list->count(),
+                    learn_start_decree);
 
     response.address = _stub->_primary_address;
     response.prepare_start_decree = invalid_decree;
@@ -443,40 +435,34 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
                                                          delayed_replay_prepare_list);
     if (!should_learn_cache) {
         if (learn_start_decree > _app->last_durable_decree()) {
-            LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn private logs, "
-                     "because learn_start_decree(%" PRId64 ") > _app->last_durable_decree(%" PRId64
-                     ")",
-                     name(),
-                     request.signature,
-                     request.learner.to_string(),
-                     learn_start_decree,
-                     _app->last_durable_decree());
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn private logs, "
+                            "because learn_start_decree({}) > _app->last_durable_decree({})",
+                            request.signature,
+                            request.learner,
+                            learn_start_decree,
+                            _app->last_durable_decree());
             _private_log->get_learn_state(get_gpid(), learn_start_decree, response.state);
             response.type = learn_type::LT_LOG;
         } else if (_private_log->get_learn_state(get_gpid(), learn_start_decree, response.state)) {
-            LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn private logs, "
-                     "because mutation_log::get_learn_state() returns true",
-                     name(),
-                     request.signature,
-                     request.learner.to_string());
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn private logs, "
+                            "because mutation_log::get_learn_state() returns true",
+                            request.signature,
+                            request.learner);
             response.type = learn_type::LT_LOG;
         } else if (learn_start_decree < request.last_committed_decree_in_app + 1) {
-            LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn private logs, "
-                     "because learn_start_decree steps back for duplication",
-                     name(),
-                     request.signature,
-                     request.learner.to_string());
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn private logs, "
+                            "because learn_start_decree steps back for duplication",
+                            request.signature,
+                            request.learner);
             response.type = learn_type::LT_LOG;
         } else {
-            LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, choose to learn app, "
-                     "beacuse learn_start_decree(%" PRId64 ") <= _app->last_durable_decree(%" PRId64
-                     "), "
-                     "and mutation_log::get_learn_state() returns false",
-                     name(),
-                     request.signature,
-                     request.learner.to_string(),
-                     learn_start_decree,
-                     _app->last_durable_decree());
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, choose to learn app, beacuse "
+                            "learn_start_decree({}) <= _app->last_durable_decree({}), and "
+                            "mutation_log::get_learn_state() returns false",
+                            request.signature,
+                            request.learner,
+                            learn_start_decree,
+                            _app->last_durable_decree());
             response.type = learn_type::LT_APP;
             response.state = learn_state();
         }
@@ -486,13 +472,11 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
             if (response.state.files.size() > 0) {
                 auto &last_file = response.state.files.back();
                 if (last_file == learner_state.last_learn_log_file) {
-                    LOG_INFO(
-                        "%s: on_learn[%016" PRIx64
-                        "]: learner = %s, learn the same file %s repeatedly, hint to switch file",
-                        name(),
-                        request.signature,
-                        request.learner.to_string(),
-                        last_file.c_str());
+                    LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, learn the same file {} "
+                                    "repeatedly, hint to switch file",
+                                    request.signature,
+                                    request.learner,
+                                    last_file);
                     _private_log->hint_switch_file();
                 } else {
                     learner_state.last_learn_log_file = last_file;
@@ -500,38 +484,35 @@ void replica::on_learn(dsn::message_ex *msg, const learn_request &request)
             }
             // it is safe to commit to last_committed_decree() now
             response.state.to_decree_included = last_committed_decree();
-            LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, learn private logs succeed, "
-                     "learned_meta_size = %u, learned_file_count = %u, "
-                     "to_decree_included = %" PRId64,
-                     name(),
-                     request.signature,
-                     request.learner.to_string(),
-                     response.state.meta.length(),
-                     static_cast<uint32_t>(response.state.files.size()),
-                     response.state.to_decree_included);
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, learn private logs succeed, "
+                            "learned_meta_size = {}, learned_file_count = {}, to_decree_included = "
+                            "{}",
+                            request.signature,
+                            request.learner,
+                            response.state.meta.length(),
+                            response.state.files.size(),
+                            response.state.to_decree_included);
         } else {
             ::dsn::error_code err = _app->get_checkpoint(
                 learn_start_decree, request.app_specific_learn_request, response.state);
 
             if (err != ERR_OK) {
                 response.err = ERR_GET_LEARN_STATE_FAILED;
-                LOG_ERROR("%s: on_learn[%016" PRIx64
-                          "]: learner = %s, get app checkpoint failed, error = %s",
-                          name(),
-                          request.signature,
-                          request.learner.to_string(),
-                          err.to_string());
+                LOG_ERROR_PREFIX(
+                    "on_learn[{:#018x}]: learner = {}, get app checkpoint failed, error = {}",
+                    request.signature,
+                    request.learner,
+                    err);
             } else {
                 response.base_local_dir = _app->data_dir();
                 response.__set_replica_disk_tag(get_replica_disk_tag());
-                LOG_INFO(
-                    "%s: on_learn[%016" PRIx64 "]: learner = %s, get app learn state succeed, "
-                    "learned_meta_size = %u, learned_file_count = %u, learned_to_decree = %" PRId64,
-                    name(),
+                LOG_INFO_PREFIX(
+                    "on_learn[{:#018x}]: learner = {}, get app learn state succeed, "
+                    "learned_meta_size = {}, learned_file_count = {}, learned_to_decree = {}",
                     request.signature,
-                    request.learner.to_string(),
+                    request.learner,
                     response.state.meta.length(),
-                    static_cast<uint32_t>(response.state.files.size()),
+                    response.state.files.size(),
                     response.state.to_decree_included);
             }
         }
@@ -586,13 +567,11 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE || resp.err == ERR_INCONSISTENT_STATE) {
-            LOG_WARNING(
-                "%s: on_learn_reply[%016" PRIx64
-                "]: learnee = %s, learnee is updating ballot(inactive state) or "
-                "reconciliation(inconsistent state), delay to start another round of learning",
-                name(),
-                req.signature,
-                resp.config.primary.to_string());
+            LOG_WARNING_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learnee is updating "
+                               "ballot(inactive state) or reconciliation(inconsistent state), "
+                               "delay to start another round of learning",
+                               req.signature,
+                               resp.config.primary);
             _potential_secondary_states.learning_round_is_running = false;
             _potential_secondary_states.delay_learning_task =
                 tasking::create_task(LPC_DELAY_LEARN,
@@ -607,46 +586,42 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     }
 
     if (resp.config.ballot > get_ballot()) {
-        LOG_INFO("%s: on_learn_reply[%016" PRIx64
-                 "]: learnee = %s, update configuration because ballot have changed",
-                 name(),
-                 req.signature,
-                 resp.config.primary.to_string());
+        LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, update configuration because "
+                        "ballot have changed",
+                        req.signature,
+                        resp.config.primary);
         CHECK(update_local_configuration(resp.config), "");
     }
 
     if (status() != partition_status::PS_POTENTIAL_SECONDARY) {
-        LOG_ERROR("%s: on_learn_reply[%016" PRIx64
-                  "]: learnee = %s, current_status = %s, stop learning",
-                  name(),
-                  req.signature,
-                  resp.config.primary.to_string(),
-                  enum_to_string(status()));
+        LOG_ERROR_PREFIX(
+            "on_learn_reply[{:#018x}]: learnee = {}, current_status = {}, stop learning",
+            req.signature,
+            resp.config.primary,
+            enum_to_string(status()));
         return;
     }
 
     // local state is newer than learnee
     if (resp.last_committed_decree < _app->last_committed_decree()) {
-        LOG_WARNING("%s: on_learn_reply[%016" PRIx64
-                    "]: learnee = %s, learner state is newer than learnee (primary): %" PRId64
-                    " vs %" PRId64 ", create new app",
-                    name(),
-                    req.signature,
-                    resp.config.primary.to_string(),
-                    _app->last_committed_decree(),
-                    resp.last_committed_decree);
+        LOG_WARNING_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learner state is newer than "
+                           "learnee (primary): {} vs {}, create new app",
+                           req.signature,
+                           resp.config.primary,
+                           _app->last_committed_decree(),
+                           resp.last_committed_decree);
 
         _stub->_counter_replicas_learning_recent_learn_reset_count->increment();
 
         // close app
         auto err = _app->close(true);
         if (err != ERR_OK) {
-            LOG_ERROR("%s: on_learn_reply[%016" PRIx64
-                      "]: learnee = %s, close app (with clear_state=true) failed, err = %s",
-                      name(),
-                      req.signature,
-                      resp.config.primary.to_string(),
-                      err.to_string());
+            LOG_ERROR_PREFIX(
+                "on_learn_reply[{:#018x}]: learnee = {}, close app (with clear_state=true) "
+                "failed, err = {}",
+                req.signature,
+                resp.config.primary,
+                err);
         }
 
         // backup old data dir
@@ -660,7 +635,7 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                       name(),
                       old_dir,
                       rename_dir);
-                LOG_WARNING_PREFIX("{replica_dir_op} succeed to move directory from '{}' to '{}'",
+                LOG_WARNING_PREFIX("replica_dir_op succeed to move directory from '{}' to '{}'",
                                    old_dir,
                                    rename_dir);
             }
@@ -672,12 +647,11 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                                           _private_log->on_partition_reset(get_gpid(), 0));
 
             if (err != ERR_OK) {
-                LOG_ERROR("%s: on_learn_reply[%016" PRIx64
-                          "]: learnee = %s, open app (with create_new=true) failed, err = %s",
-                          name(),
-                          req.signature,
-                          resp.config.primary.to_string(),
-                          err.to_string());
+                LOG_ERROR_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, open app (with "
+                                 "create_new=true) failed, err = {}",
+                                 req.signature,
+                                 resp.config.primary,
+                                 err);
             }
         }
 
@@ -707,26 +681,24 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
     }
 
     if (resp.type == learn_type::LT_APP) {
-        if (++_stub->_learn_app_concurrent_count > _options->learn_app_max_concurrent_count) {
+        if (++_stub->_learn_app_concurrent_count > FLAGS_learn_app_max_concurrent_count) {
             --_stub->_learn_app_concurrent_count;
-            LOG_WARNING("%s: on_learn_reply[%016" PRIx64
-                        "]: learnee = %s, learn_app_concurrent_count(%d) >= "
-                        "learn_app_max_concurrent_count(%d), skip this round",
-                        name(),
-                        _potential_secondary_states.learning_version,
-                        _config.primary.to_string(),
-                        _stub->_learn_app_concurrent_count.load(),
-                        _options->learn_app_max_concurrent_count);
+            LOG_WARNING_PREFIX(
+                "on_learn_reply[{:#018x}]: learnee = {}, learn_app_concurrent_count({}) >= "
+                "FLAGS_learn_app_max_concurrent_count({}), skip this round",
+                _potential_secondary_states.learning_version,
+                _config.primary,
+                _stub->_learn_app_concurrent_count,
+                FLAGS_learn_app_max_concurrent_count);
             _potential_secondary_states.learning_round_is_running = false;
             return;
         } else {
             _potential_secondary_states.learn_app_concurrent_count_increased = true;
-            LOG_INFO("%s: on_learn_reply[%016" PRIx64
-                     "]: learnee = %s, ++learn_app_concurrent_count = %d",
-                     name(),
-                     _potential_secondary_states.learning_version,
-                     _config.primary.to_string(),
-                     _stub->_learn_app_concurrent_count.load());
+            LOG_INFO_PREFIX(
+                "on_learn_reply[{:#018x}]: learnee = {}, ++learn_app_concurrent_count = {}",
+                _potential_secondary_states.learning_version,
+                _config.primary,
+                _stub->_learn_app_concurrent_count.load());
         }
     }
 
@@ -770,14 +742,12 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         // reset preparelist
         _potential_secondary_states.learning_start_prepare_decree = resp.prepare_start_decree;
         _prepare_list->truncate(_app->last_committed_decree());
-        LOG_INFO("%s: on_learn_reply[%016" PRIx64
-                 "]: learnee = %s, truncate prepare list, local_committed_decree = %" PRId64
-                 ", current_learning_status = %s",
-                 name(),
-                 req.signature,
-                 resp.config.primary.to_string(),
-                 _app->last_committed_decree(),
-                 enum_to_string(_potential_secondary_states.learning_status));
+        LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, truncate prepare list, "
+                        "local_committed_decree = {}, current_learning_status = {}",
+                        req.signature,
+                        resp.config.primary,
+                        _app->last_committed_decree(),
+                        enum_to_string(_potential_secondary_states.learning_status));
 
         // persist incoming mutations into private log and apply them to prepare-list
         std::pair<decree, decree> cache_range;
@@ -785,10 +755,9 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         while (!reader.is_eof()) {
             auto mu = mutation::read_from(reader, nullptr);
             if (mu->data.header.decree > last_committed_decree()) {
-                LOG_DEBUG("%s: on_learn_reply[%016" PRIx64 "]: apply learned mutation %s",
-                          name(),
-                          req.signature,
-                          mu->name());
+                LOG_DEBUG_PREFIX("on_learn_reply[{:#018x}]: apply learned mutation {}",
+                                 req.signature,
+                                 mu->name());
 
                 // write to private log with no callback, the later 2pc ensures that logs
                 // are written to the disk
@@ -804,13 +773,12 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
                     _prepare_list->get_mutation_by_decree(mu->data.header.decree);
                 if (existing_mutation != nullptr &&
                     existing_mutation->data.header.ballot > mu->data.header.ballot) {
-                    LOG_INFO("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, "
-                             "mutation(%s) exist on the learner with larger ballot %" PRId64 "",
-                             name(),
-                             req.signature,
-                             resp.config.primary.to_string(),
-                             mu->name(),
-                             existing_mutation->data.header.ballot);
+                    LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, mutation({}) exist on "
+                                    "the learner with larger ballot {}",
+                                    req.signature,
+                                    resp.config.primary,
+                                    mu->name(),
+                                    existing_mutation->data.header.ballot);
                 } else {
                     _prepare_list->prepare(mu, partition_status::PS_POTENTIAL_SECONDARY);
                 }
@@ -822,20 +790,17 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
             }
         }
 
-        LOG_INFO("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-                 " ms, "
-                 "apply cache done, prepare_cache_range = <%" PRId64 ", %" PRId64 ">, "
-                 "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64
-                 ", current_learning_status = %s",
-                 name(),
-                 req.signature,
-                 resp.config.primary.to_string(),
-                 _potential_secondary_states.duration_ms(),
-                 cache_range.first,
-                 cache_range.second,
-                 last_committed_decree(),
-                 _app->last_committed_decree(),
-                 enum_to_string(_potential_secondary_states.learning_status));
+        LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learn_duration = {} ms, apply "
+                        "cache done, prepare_cache_range = <{}, {}>, local_committed_decree = {}, "
+                        "app_committed_decree = {}, current_learning_status = {}",
+                        req.signature,
+                        resp.config.primary,
+                        _potential_secondary_states.duration_ms(),
+                        cache_range.first,
+                        cache_range.second,
+                        last_committed_decree(),
+                        _app->last_committed_decree(),
+                        enum_to_string(_potential_secondary_states.learning_status));
 
         // further states are synced using 2pc, and we must commit now as those later 2pc messages
         // thinks they should
@@ -870,12 +835,11 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         utils::filesystem::create_directory(learn_dir);
 
         if (!dsn::utils::filesystem::directory_exists(learn_dir)) {
-            LOG_ERROR("%s: on_learn_reply[%016" PRIx64
-                      "]: learnee = %s, create replica learn dir %s failed",
-                      name(),
-                      req.signature,
-                      resp.config.primary.to_string(),
-                      learn_dir.c_str());
+            LOG_ERROR_PREFIX(
+                "on_learn_reply[{:#018x}]: learnee = {}, create replica learn dir {} failed",
+                req.signature,
+                resp.config.primary,
+                learn_dir);
 
             _potential_secondary_states.learn_remote_files_task =
                 tasking::create_task(LPC_LEARN_REMOTE_DELTA_FILES, &_tracker, [
@@ -895,14 +859,13 @@ void replica::on_learn_reply(error_code err, learn_request &&req, learn_response
         }
 
         bool high_priority = (resp.type == learn_type::LT_APP ? false : true);
-        LOG_INFO("%s: on_learn_reply[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-                 " ms, start to copy remote files, copy_file_count = %d, priority = %s",
-                 name(),
-                 req.signature,
-                 resp.config.primary.to_string(),
-                 _potential_secondary_states.duration_ms(),
-                 static_cast<int>(resp.state.files.size()),
-                 high_priority ? "high" : "low");
+        LOG_INFO_PREFIX("on_learn_reply[{:#018x}]: learnee = {}, learn_duration = {} ms, start to "
+                        "copy remote files, copy_file_count = {}, priority = {}",
+                        req.signature,
+                        resp.config.primary,
+                        _potential_secondary_states.duration_ms(),
+                        resp.state.files.size(),
+                        high_priority ? "high" : "low");
 
         _potential_secondary_states.learn_remote_files_task = _stub->_nfs->copy_remote_files(
             resp.config.primary,
@@ -961,12 +924,10 @@ bool replica::prepare_cached_learn_state(const learn_request &request,
             // learning response msg.
             delayed_replay_prepare_list = true;
 
-            LOG_INFO("%s: on_learn[%016" PRIx64
-                     "]: learner = %s, set prepare_start_decree = %" PRId64,
-                     name(),
-                     request.signature,
-                     request.learner.to_string(),
-                     local_committed_decree + 1);
+            LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, set prepare_start_decree = {}",
+                            request.signature,
+                            request.learner,
+                            local_committed_decree + 1);
         }
 
         response.prepare_start_decree = learner_state.prepare_start_decree;
@@ -987,16 +948,15 @@ bool replica::prepare_cached_learn_state(const learn_request &request,
         }
         response.type = learn_type::LT_CACHE;
         response.state.meta = writer.get_buffer();
-        LOG_INFO("%s: on_learn[%016" PRIx64 "]: learner = %s, learn mutation cache succeed, "
-                 "learn_start_decree = %" PRId64 ", prepare_start_decree = %" PRId64 ", "
-                 "learn_mutation_count = %d, learn_data_size = %d",
-                 name(),
-                 request.signature,
-                 request.learner.to_string(),
-                 learn_start_decree,
-                 response.prepare_start_decree,
-                 count,
-                 response.state.meta.length());
+        LOG_INFO_PREFIX("on_learn[{:#018x}]: learner = {}, learn mutation cache succeed, "
+                        "learn_start_decree = {}, prepare_start_decree = {}, learn_mutation_count "
+                        "= {}, learn_data_size = {}",
+                        request.signature,
+                        request.learner,
+                        learn_start_decree,
+                        response.prepare_start_decree,
+                        count,
+                        response.state.meta.length());
         return true;
     }
     return false;
@@ -1013,36 +973,32 @@ void replica::on_copy_remote_state_completed(error_code err,
     decree old_app_committed = _app->last_committed_decree();
     decree old_app_durable = _app->last_durable_decree();
 
-    LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
-             "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-             "copy remote state done, err = %s, copy_file_count = %d, "
-             "copy_file_size = %" PRIu64 ", copy_time_used = %" PRIu64 " ms, "
-             "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64
-             ", app_durable_decree = %" PRId64 ", "
-             "prepare_start_decree = %" PRId64 ", current_learning_status = %s",
-             name(),
-             req.signature,
-             resp.config.primary.to_string(),
-             _potential_secondary_states.duration_ms(),
-             err.to_string(),
-             static_cast<int>(resp.state.files.size()),
-             static_cast<uint64_t>(size),
-             _potential_secondary_states.duration_ms() - copy_start_time,
-             last_committed_decree(),
-             _app->last_committed_decree(),
-             _app->last_durable_decree(),
-             resp.prepare_start_decree,
-             enum_to_string(_potential_secondary_states.learning_status));
+    LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, learn_duration = {} "
+                    "ms, copy remote state done, err = {}, copy_file_count = {}, copy_file_size = "
+                    "{}, copy_time_used = {} ms, local_committed_decree = {}, app_committed_decree "
+                    "= {}, app_durable_decree = {}, prepare_start_decree = {}, "
+                    "current_learning_status = {}",
+                    req.signature,
+                    resp.config.primary,
+                    _potential_secondary_states.duration_ms(),
+                    err,
+                    resp.state.files.size(),
+                    size,
+                    _potential_secondary_states.duration_ms() - copy_start_time,
+                    last_committed_decree(),
+                    _app->last_committed_decree(),
+                    _app->last_durable_decree(),
+                    resp.prepare_start_decree,
+                    enum_to_string(_potential_secondary_states.learning_status));
 
     if (resp.type == learn_type::LT_APP) {
         --_stub->_learn_app_concurrent_count;
         _potential_secondary_states.learn_app_concurrent_count_increased = false;
-        LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
-                 "]: learnee = %s, --learn_app_concurrent_count = %d",
-                 name(),
-                 _potential_secondary_states.learning_version,
-                 _config.primary.to_string(),
-                 _stub->_learn_app_concurrent_count.load());
+        LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, "
+                        "--learn_app_concurrent_count = {}",
+                        _potential_secondary_states.learning_version,
+                        _config.primary,
+                        _stub->_learn_app_concurrent_count.load());
     }
 
     if (err == ERR_OK) {
@@ -1085,26 +1041,23 @@ void replica::on_copy_remote_state_completed(error_code err,
                 // the learn_start_decree will be set to 0, which makes learner to learn from
                 // scratch
                 CHECK_LE(_app->last_committed_decree(), resp.last_committed_decree);
-                LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
-                         "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                         "checkpoint duration = %" PRIu64
-                         " ns, apply checkpoint succeed, app_committed_decree = %" PRId64,
-                         name(),
-                         req.signature,
-                         resp.config.primary.to_string(),
-                         _potential_secondary_states.duration_ms(),
-                         dsn_now_ns() - start_ts,
-                         _app->last_committed_decree());
+                LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, "
+                                "learn_duration = {} ms, checkpoint duration = {} ns, apply "
+                                "checkpoint succeed, app_committed_decree = {}",
+                                req.signature,
+                                resp.config.primary,
+                                _potential_secondary_states.duration_ms(),
+                                dsn_now_ns() - start_ts,
+                                _app->last_committed_decree());
             } else {
-                LOG_ERROR("%s: on_copy_remote_state_completed[%016" PRIx64
-                          "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                          "checkpoint duration = %" PRIu64 " ns, apply checkpoint failed, err = %s",
-                          name(),
-                          req.signature,
-                          resp.config.primary.to_string(),
-                          _potential_secondary_states.duration_ms(),
-                          dsn_now_ns() - start_ts,
-                          err.to_string());
+                LOG_ERROR_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, "
+                                 "learn_duration = {} ms, checkpoint duration = {} ns, apply "
+                                 "checkpoint failed, err = {}",
+                                 req.signature,
+                                 resp.config.primary,
+                                 _potential_secondary_states.duration_ms(),
+                                 dsn_now_ns() - start_ts,
+                                 err);
             }
         }
 
@@ -1113,60 +1066,49 @@ void replica::on_copy_remote_state_completed(error_code err,
             auto start_ts = dsn_now_ns();
             err = apply_learned_state_from_private_log(lstate);
             if (err == ERR_OK) {
-                LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
-                         "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                         "apply_log_duration = %" PRIu64
-                         " ns, apply learned state from private log "
-                         "succeed, app_committed_decree = %" PRId64,
-                         name(),
-                         req.signature,
-                         resp.config.primary.to_string(),
-                         _potential_secondary_states.duration_ms(),
-                         dsn_now_ns() - start_ts,
-                         _app->last_committed_decree());
+                LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, "
+                                "learn_duration = {} ms, apply_log_duration = {} ns, apply learned "
+                                "state from private log succeed, app_committed_decree = {}",
+                                req.signature,
+                                resp.config.primary,
+                                _potential_secondary_states.duration_ms(),
+                                dsn_now_ns() - start_ts,
+                                _app->last_committed_decree());
             } else {
-                LOG_ERROR("%s: on_copy_remote_state_completed[%016" PRIx64
-                          "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                          "apply_log_duration = %" PRIu64
-                          " ns, apply learned state from private log failed, err = %s",
-                          name(),
-                          req.signature,
-                          resp.config.primary.to_string(),
-                          _potential_secondary_states.duration_ms(),
-                          dsn_now_ns() - start_ts,
-                          err.to_string());
+                LOG_ERROR_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, "
+                                 "learn_duration = {} ms, apply_log_duration = {} ns, apply "
+                                 "learned state from private log failed, err = {}",
+                                 req.signature,
+                                 resp.config.primary,
+                                 _potential_secondary_states.duration_ms(),
+                                 dsn_now_ns() - start_ts,
+                                 err);
             }
         }
 
         // reset prepare list to make it catch with app
         _prepare_list->reset(_app->last_committed_decree());
 
-        LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
-                 "]: learnee = %s, learn_duration = %" PRIu64
-                 " ms, apply checkpoint/log done, err = %s, "
-                 "last_prepared_decree = (%" PRId64 " => %" PRId64 "), "
-                 "last_committed_decree = (%" PRId64 " => %" PRId64 "), "
-                 "app_committed_decree = (%" PRId64 " => %" PRId64 "), "
-                 "app_durable_decree = (%" PRId64 " => %" PRId64 "), "
-                 "remote_committed_decree = %" PRId64 ", "
-                 "prepare_start_decree = %" PRId64 ", "
-                 "current_learning_status = %s",
-                 name(),
-                 req.signature,
-                 resp.config.primary.to_string(),
-                 _potential_secondary_states.duration_ms(),
-                 err.to_string(),
-                 old_prepared,
-                 last_prepared_decree(),
-                 old_committed,
-                 last_committed_decree(),
-                 old_app_committed,
-                 _app->last_committed_decree(),
-                 old_app_durable,
-                 _app->last_durable_decree(),
-                 resp.last_committed_decree,
-                 resp.prepare_start_decree,
-                 enum_to_string(_potential_secondary_states.learning_status));
+        LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, learn_duration = "
+                        "{} ms, apply checkpoint/log done, err = {}, last_prepared_decree = ({} => "
+                        "{}), last_committed_decree = ({} => {}), app_committed_decree = ({} => "
+                        "{}), app_durable_decree = ({} => {}), remote_committed_decree = {}, "
+                        "prepare_start_decree = {}, current_learning_status = {}",
+                        req.signature,
+                        resp.config.primary,
+                        _potential_secondary_states.duration_ms(),
+                        err,
+                        old_prepared,
+                        last_prepared_decree(),
+                        old_committed,
+                        last_committed_decree(),
+                        old_app_committed,
+                        _app->last_committed_decree(),
+                        old_app_durable,
+                        _app->last_durable_decree(),
+                        resp.last_committed_decree,
+                        resp.prepare_start_decree,
+                        enum_to_string(_potential_secondary_states.learning_status));
     }
 
     // if catch-up done, do flush to enable all learned state is durable
@@ -1176,16 +1118,15 @@ void replica::on_copy_remote_state_completed(error_code err,
         _app->last_committed_decree() > _app->last_durable_decree()) {
         err = background_sync_checkpoint();
 
-        LOG_INFO("%s: on_copy_remote_state_completed[%016" PRIx64
-                 "]: learnee = %s, learn_duration = %" PRIu64 " ms, flush done, err = %s, "
-                 "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64 "",
-                 name(),
-                 req.signature,
-                 resp.config.primary.to_string(),
-                 _potential_secondary_states.duration_ms(),
-                 err.to_string(),
-                 _app->last_committed_decree(),
-                 _app->last_durable_decree());
+        LOG_INFO_PREFIX("on_copy_remote_state_completed[{:#018x}]: learnee = {}, learn_duration = "
+                        "{} ms, flush done, err = {}, app_committed_decree = {}, "
+                        "app_durable_decree = {}",
+                        req.signature,
+                        resp.config.primary,
+                        _potential_secondary_states.duration_ms(),
+                        err,
+                        _app->last_committed_decree(),
+                        _app->last_durable_decree());
 
         if (err == ERR_OK) {
             CHECK_EQ(_app->last_committed_decree(), _app->last_durable_decree());
@@ -1212,31 +1153,28 @@ void replica::on_learn_remote_state_completed(error_code err)
     _checker.only_one_thread_access();
 
     if (partition_status::PS_POTENTIAL_SECONDARY != status()) {
-        LOG_WARNING("%s: on_learn_remote_state_completed[%016" PRIx64
-                    "]: learnee = %s, learn_duration = %" PRIu64 " ms, err = %s, "
-                    "the learner status is not PS_POTENTIAL_SECONDARY, but %s, ignore",
-                    name(),
-                    _potential_secondary_states.learning_version,
-                    _config.primary.to_string(),
-                    _potential_secondary_states.duration_ms(),
-                    err.to_string(),
-                    enum_to_string(status()));
+        LOG_WARNING_PREFIX("on_learn_remote_state_completed[{:#018x}]: learnee = {}, "
+                           "learn_duration = {} ms, err = {}, the learner status is not "
+                           "PS_POTENTIAL_SECONDARY, but {}, ignore",
+                           _potential_secondary_states.learning_version,
+                           _config.primary,
+                           _potential_secondary_states.duration_ms(),
+                           err,
+                           enum_to_string(status()));
         return;
     }
 
-    LOG_INFO("%s: on_learn_remote_state_completed[%016" PRIx64
-             "]: learnee = %s, learn_duration = %" PRIu64 " ms, err = %s, "
-             "local_committed_decree = %" PRId64 ", app_committed_decree = %" PRId64
-             ", app_durable_decree = %" PRId64 ", current_learning_status = %s",
-             name(),
-             _potential_secondary_states.learning_version,
-             _config.primary.to_string(),
-             _potential_secondary_states.duration_ms(),
-             err.to_string(),
-             last_committed_decree(),
-             _app->last_committed_decree(),
-             _app->last_durable_decree(),
-             enum_to_string(_potential_secondary_states.learning_status));
+    LOG_INFO_PREFIX("on_learn_remote_state_completed[{:#018x}]: learnee = {}, learn_duration = {} "
+                    "ms, err = {}, local_committed_decree = {}, app_committed_decree = {}, "
+                    "app_durable_decree = {}, current_learning_status = {}",
+                    _potential_secondary_states.learning_version,
+                    _config.primary,
+                    _potential_secondary_states.duration_ms(),
+                    err,
+                    last_committed_decree(),
+                    _app->last_committed_decree(),
+                    _app->last_durable_decree(),
+                    enum_to_string(_potential_secondary_states.learning_status));
 
     _potential_secondary_states.learning_round_is_running = false;
 
@@ -1252,14 +1190,13 @@ void replica::handle_learning_error(error_code err, bool is_local_error)
 {
     _checker.only_one_thread_access();
 
-    LOG_ERROR("%s: handle_learning_error[%016" PRIx64 "]: learnee = %s, learn_duration = %" PRIu64
-              " ms, err = %s, %s",
-              name(),
-              _potential_secondary_states.learning_version,
-              _config.primary.to_string(),
-              _potential_secondary_states.duration_ms(),
-              err.to_string(),
-              is_local_error ? "local_error" : "remote error");
+    LOG_ERROR_PREFIX(
+        "handle_learning_error[{:#018x}]: learnee = {}, learn_duration = {} ms, err = {}, {}",
+        _potential_secondary_states.learning_version,
+        _config.primary,
+        _potential_secondary_states.duration_ms(),
+        err,
+        is_local_error ? "local_error" : "remote error");
 
     _stub->_counter_replicas_learning_recent_learn_fail_count->increment();
 
@@ -1272,22 +1209,20 @@ error_code replica::handle_learning_succeeded_on_primary(::dsn::rpc_address node
 {
     auto it = _primary_states.learners.find(node);
     if (it == _primary_states.learners.end()) {
-        LOG_ERROR("%s: handle_learning_succeeded_on_primary[%016" PRIx64 "]: learner = %s, "
-                  "learner not found on primary, return ERR_LEARNER_NOT_FOUND",
-                  name(),
-                  learn_signature,
-                  node.to_string());
+        LOG_ERROR_PREFIX("handle_learning_succeeded_on_primary[{:#018x}]: learner = {}, learner "
+                         "not found on primary, return ERR_LEARNER_NOT_FOUND",
+                         learn_signature,
+                         node);
         return ERR_LEARNER_NOT_FOUND;
     }
 
     if (it->second.signature != (int64_t)learn_signature) {
-        LOG_ERROR("%s: handle_learning_succeeded_on_primary[%016" PRIx64 "]: learner = %s, "
-                  "signature not matched, current signature on primary is [%016" PRIx64
-                  "], return ERR_INVALID_STATE",
-                  name(),
-                  learn_signature,
-                  node.to_string(),
-                  it->second.signature);
+        LOG_ERROR_PREFIX("handle_learning_succeeded_on_primary[{:#018x}]: learner = {}, signature "
+                         "not matched, current signature on primary is [{:#018x}], return "
+                         "ERR_INVALID_STATE",
+                         learn_signature,
+                         node,
+                         it->second.signature);
         return ERR_INVALID_STATE;
     }
 
@@ -1306,18 +1241,16 @@ void replica::notify_learn_completion()
     report.learner_status_ = _potential_secondary_states.learning_status;
     report.node = _stub->_primary_address;
 
-    LOG_INFO("%s: notify_learn_completion[%016" PRIx64 "]: learnee = %s, "
-             "learn_duration = %" PRIu64 " ms, local_committed_decree = %" PRId64 ", "
-             "app_committed_decree = %" PRId64 ", app_durable_decree = %" PRId64
-             ", current_learning_status = %s",
-             name(),
-             _potential_secondary_states.learning_version,
-             _config.primary.to_string(),
-             _potential_secondary_states.duration_ms(),
-             last_committed_decree(),
-             _app->last_committed_decree(),
-             _app->last_durable_decree(),
-             enum_to_string(_potential_secondary_states.learning_status));
+    LOG_INFO_PREFIX("notify_learn_completion[{:#018x}]: learnee = {}, learn_duration = {} ms, "
+                    "local_committed_decree = {}, app_committed_decree = {}, app_durable_decree = "
+                    "{}, current_learning_status = {}",
+                    _potential_secondary_states.learning_version,
+                    _config.primary,
+                    _potential_secondary_states.duration_ms(),
+                    last_committed_decree(),
+                    _app->last_committed_decree(),
+                    _app->last_durable_decree(),
+                    enum_to_string(_potential_secondary_states.learning_status));
 
     if (_potential_secondary_states.completion_notify_task != nullptr) {
         _potential_secondary_states.completion_notify_task->cancel(false);
@@ -1341,41 +1274,37 @@ void replica::on_learn_completion_notification(const group_check_response &repor
 {
     _checker.only_one_thread_access();
 
-    LOG_INFO("%s: on_learn_completion_notification[%016" PRIx64
-             "]: learner = %s, learning_status = %s",
-             name(),
-             report.learner_signature,
-             report.node.to_string(),
-             enum_to_string(report.learner_status_));
+    LOG_INFO_PREFIX(
+        "on_learn_completion_notification[{:#018x}]: learner = {}, learning_status = {}",
+        report.learner_signature,
+        report.node,
+        enum_to_string(report.learner_status_));
 
     if (status() != partition_status::PS_PRIMARY) {
         response.err = (partition_status::PS_INACTIVE == status() && _inactive_is_transient)
                            ? ERR_INACTIVE_STATE
                            : ERR_INVALID_STATE;
-        LOG_ERROR("%s: on_learn_completion_notification[%016" PRIx64
-                  "]: learner = %s, this replica is not primary, but %s, reply %s",
-                  name(),
-                  report.learner_signature,
-                  report.node.to_string(),
-                  enum_to_string(status()),
-                  response.err.to_string());
+        LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}, this replica "
+                         "is not primary, but {}, reply {}",
+                         report.learner_signature,
+                         report.node,
+                         enum_to_string(status()),
+                         response.err);
     } else if (report.learner_status_ != learner_status::LearningSucceeded) {
         response.err = ERR_INVALID_STATE;
-        LOG_ERROR("%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, "
-                  "learner_status is not LearningSucceeded, but %s, reply ERR_INVALID_STATE",
-                  name(),
-                  report.learner_signature,
-                  report.node.to_string(),
-                  enum_to_string(report.learner_status_));
+        LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}, learner_status "
+                         "is not LearningSucceeded, but {}, reply ERR_INVALID_STATE",
+                         report.learner_signature,
+                         report.node,
+                         enum_to_string(report.learner_status_));
     } else {
         response.err = handle_learning_succeeded_on_primary(report.node, report.learner_signature);
         if (response.err != ERR_OK) {
-            LOG_ERROR("%s: on_learn_completion_notification[%016" PRIx64 "]: learner = %s, "
-                      "handle learning succeeded on primary failed, reply %s",
-                      name(),
-                      report.learner_signature,
-                      report.node.to_string(),
-                      response.err.to_string());
+            LOG_ERROR_PREFIX("on_learn_completion_notification[{:#018x}]: learner = {}, handle "
+                             "learning succeeded on primary failed, reply {}",
+                             report.learner_signature,
+                             report.node,
+                             response.err);
         }
     }
 }
@@ -1396,35 +1325,32 @@ void replica::on_learn_completion_notification_reply(error_code err,
     }
 
     if (resp.signature != (int64_t)_potential_secondary_states.learning_version) {
-        LOG_ERROR("%s: on_learn_completion_notification_reply[%016" PRIx64
-                  "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                  "signature not matched, current signature on primary is [%016" PRIx64 "]",
-                  name(),
-                  report.learner_signature,
-                  _config.primary.to_string(),
-                  _potential_secondary_states.duration_ms(),
-                  resp.signature);
+        LOG_ERROR_PREFIX("on_learn_completion_notification_reply[{:#018x}]: learnee = {}, "
+                         "learn_duration = {} ms, signature not matched, current signature on "
+                         "primary is [{:#018x}]",
+                         report.learner_signature,
+                         _config.primary,
+                         _potential_secondary_states.duration_ms(),
+                         resp.signature);
         handle_learning_error(ERR_INVALID_STATE, false);
         return;
     }
 
-    LOG_INFO("%s: on_learn_completion_notification_reply[%016" PRIx64
-             "]: learnee = %s, learn_duration = %" PRIu64 " ms, response_err = %s",
-             name(),
-             report.learner_signature,
-             _config.primary.to_string(),
-             _potential_secondary_states.duration_ms(),
-             resp.err.to_string());
+    LOG_INFO_PREFIX("on_learn_completion_notification_reply[{:#018x}]: learnee = {}, "
+                    "learn_duration = {} ms, response_err = {}",
+                    report.learner_signature,
+                    _config.primary,
+                    _potential_secondary_states.duration_ms(),
+                    resp.err);
 
     if (resp.err != ERR_OK) {
         if (resp.err == ERR_INACTIVE_STATE) {
-            LOG_WARNING("%s: on_learn_completion_notification_reply[%016" PRIx64
-                        "]: learnee = %s, learn_duration = %" PRIu64 " ms, "
-                        "learnee is updating ballot, delay to start another round of learning",
-                        name(),
-                        report.learner_signature,
-                        _config.primary.to_string(),
-                        _potential_secondary_states.duration_ms());
+            LOG_WARNING_PREFIX("on_learn_completion_notification_reply[{:#018x}]: learnee = {}, "
+                               "learn_duration = {} ms, learnee is updating ballot, delay to start "
+                               "another round of learning",
+                               report.learner_signature,
+                               _config.primary,
+                               _potential_secondary_states.duration_ms());
             _potential_secondary_states.learning_round_is_running = false;
             _potential_secondary_states.delay_learning_task = tasking::create_task(
                 LPC_DELAY_LEARN,
@@ -1524,7 +1450,7 @@ error_code replica::apply_learned_state_from_private_log(learn_state &state)
     // temp prepare list for learning purpose
     prepare_list plist(this,
                        _app->last_committed_decree(),
-                       _options->max_mutation_count_in_prepare_list,
+                       FLAGS_max_mutation_count_in_prepare_list,
                        [this, duplicating, step_back](mutation_ptr &mu) {
                            if (mu->data.header.decree == _app->last_committed_decree() + 1) {
                                // TODO: assign the returned error_code to err and check it

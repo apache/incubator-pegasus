@@ -39,19 +39,19 @@ DSN_DECLARE_string(logging_start_level);
 namespace dsn {
 namespace tools {
 
-DSN_DEFINE_bool("tools.simple_logger", fast_flush, false, "whether to flush immediately");
+DSN_DEFINE_bool(tools.simple_logger, fast_flush, false, "whether to flush immediately");
 
-DSN_DEFINE_bool("tools.simple_logger",
+DSN_DEFINE_bool(tools.simple_logger,
                 short_header,
                 true,
                 "whether to use short header (excluding file/function etc.)");
 
-DSN_DEFINE_uint64("tools.simple_logger",
+DSN_DEFINE_uint64(tools.simple_logger,
                   max_number_of_log_files_on_disk,
                   20,
                   "max number of log files reserved on disk, older logs are auto deleted");
 
-DSN_DEFINE_string("tools.simple_logger",
+DSN_DEFINE_string(tools.simple_logger,
                   stderr_start_level,
                   "LOG_LEVEL_WARNING",
                   "copy log messages at or above this level to stderr in addition to logfiles");

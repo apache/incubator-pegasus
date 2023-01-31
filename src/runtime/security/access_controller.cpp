@@ -25,10 +25,10 @@
 
 namespace dsn {
 namespace security {
-DSN_DEFINE_bool("security", enable_acl, false, "whether enable access controller or not");
+DSN_DEFINE_bool(security, enable_acl, false, "whether enable access controller or not");
 DSN_TAG_VARIABLE(enable_acl, FT_MUTABLE);
 
-DSN_DEFINE_string("security", super_users, "", "super user for access controller");
+DSN_DEFINE_string(security, super_users, "", "super user for access controller");
 
 access_controller::access_controller() { utils::split_args(FLAGS_super_users, _super_users, ','); }
 

@@ -29,9 +29,8 @@ namespace replication {
                                            /*out*/ int64_t &end_offset)
 {
     end_offset = log->start_offset();
-    LOG_INFO("start to replay mutation log %s, offset = [%" PRId64 ", %" PRId64
-             "), size = %" PRId64,
-             log->path().c_str(),
+    LOG_INFO("start to replay mutation log {}, offset = [{}, {}), size = {}",
+             log->path(),
              log->start_offset(),
              log->end_offset(),
              log->end_offset() - log->start_offset());
@@ -50,9 +49,7 @@ namespace replication {
         start_offset = static_cast<size_t>(end_offset - log->start_offset());
     }
 
-    LOG_INFO("finish to replay mutation log (%s) [err: %s]",
-             log->path().c_str(),
-             err.description().c_str());
+    LOG_INFO("finish to replay mutation log ({}) [err: {}]", log->path(), err);
     return err.code();
 }
 
@@ -124,7 +121,7 @@ namespace replication {
         if (log == nullptr) {
             if (err == ERR_HANDLE_EOF || err == ERR_INCOMPLETE_DATA ||
                 err == ERR_INVALID_PARAMETERS) {
-                LOG_DEBUG("skip file %s during log replay", fpath.c_str());
+                LOG_DEBUG("skip file {} during log replay", fpath);
                 continue;
             } else {
                 return err;
@@ -154,7 +151,7 @@ namespace replication {
 
     error_s error = log_utils::check_log_files_continuity(logs);
     if (!error.is_ok()) {
-        LOG_ERROR_F("check_log_files_continuity failed: {}", error);
+        LOG_ERROR("check_log_files_continuity failed: {}", error);
         return error.code();
     }
 
@@ -164,8 +161,7 @@ namespace replication {
         log_file_ptr &log = kv.second;
 
         if (log->start_offset() != end_offset) {
-            LOG_ERROR("offset mismatch in log file offset and global offset %" PRId64
-                      " vs %" PRId64,
+            LOG_ERROR("offset mismatch in log file offset and global offset {} vs {}",
                       log->start_offset(),
                       end_offset);
             return ERR_INVALID_DATA;
@@ -181,7 +177,7 @@ namespace replication {
         } else if (err == ERR_INCOMPLETE_DATA) {
             // If the file is not corrupted, it may also return the value of ERR_INCOMPLETE_DATA.
             // In this case, the correctness is relying on the check of start_offset.
-            LOG_WARNING("delay handling error: %s", err.to_string());
+            LOG_WARNING("delay handling error: {}", err);
         } else {
             // for other errors, we should break
             break;
@@ -197,7 +193,7 @@ namespace replication {
         err = ERR_OK;
     } else {
         // bad error
-        LOG_ERROR("replay mutation log failed: %s", err.to_string());
+        LOG_ERROR("replay mutation log failed: {}", err);
     }
 
     return err;

@@ -197,7 +197,7 @@ bool dsn_mimic_app(const char *app_role, int index)
         if (cnode->spec().role_name == std::string(app_role) && cnode->spec().index == index) {
             return true;
         } else {
-            LOG_ERROR("current thread is already attached to another rDSN app %s", name.c_str());
+            LOG_ERROR("current thread is already attached to another rDSN app {}", name);
             return false;
         }
     }
@@ -211,7 +211,7 @@ bool dsn_mimic_app(const char *app_role, int index)
         }
     }
 
-    LOG_ERROR("cannot find host app %s with index %d", app_role, index);
+    LOG_ERROR("cannot find host app {} with index {}", app_role, index);
     return false;
 }
 
@@ -429,7 +429,7 @@ bool run(const char *config_file,
     // prepare minimum necessary
     ::dsn::service_engine::instance().init_before_toollets(spec);
 
-    LOG_INFO("process(%ld) start: %" PRIu64 ", date: %s",
+    LOG_INFO("process({}) start: {}, date: {}",
              getpid(),
              dsn::utils::process_start_millis(),
              dsn::utils::process_start_date_time_mills());

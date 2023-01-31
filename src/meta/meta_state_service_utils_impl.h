@@ -75,9 +75,9 @@ struct operation : pipeline::environment
     void on_error(T *this_instance, op_type::type type, error_code ec, const std::string &path)
     {
         if (ec == ERR_TIMEOUT) {
-            LOG_WARNING_F("request({}) on path({}) was timeout, retry after 1 second",
-                          op_type::to_string(type),
-                          path);
+            LOG_WARNING("request({}) on path({}) was timeout, retry after 1 second",
+                        op_type::to_string(type),
+                        path);
             pipeline::repeat(std::move(*this_instance), 1_s);
             return;
         }

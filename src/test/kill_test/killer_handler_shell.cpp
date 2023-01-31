@@ -28,6 +28,7 @@
 #include "utils/api_utilities.h"
 #include "utils/config_api.h"
 #include "utils/fmt_logging.h"
+#include "utils/safe_strerror_posix.h"
 
 namespace pegasus {
 namespace test {
@@ -78,9 +79,9 @@ bool killer_handler_shell::kill_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "stop");
     int res = system(cmd.c_str());
-    LOG_INFO("kill meta command: %s", cmd.c_str());
+    LOG_INFO("kill meta command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "stop");
@@ -90,9 +91,9 @@ bool killer_handler_shell::kill_replica(int index)
 {
     std::string cmd = generate_cmd(index, "replica", "stop");
     int res = system(cmd.c_str());
-    LOG_INFO("kill replica command: %s", cmd.c_str());
+    LOG_INFO("kill replica command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("replica", index, "stop");
@@ -108,9 +109,9 @@ bool killer_handler_shell::start_meta(int index)
 {
     std::string cmd = generate_cmd(index, "meta", "start");
     int res = system(cmd.c_str());
-    LOG_INFO("start meta command: %s", cmd.c_str());
+    LOG_INFO("start meta command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");
@@ -121,9 +122,9 @@ bool killer_handler_shell::start_replica(int index)
     std::string cmd = generate_cmd(index, "replica", "start");
 
     int res = system(cmd.c_str());
-    LOG_INFO("start replica command: %s", cmd.c_str());
+    LOG_INFO("start replica command: {}", cmd);
     if (res != 0) {
-        LOG_INFO("kill meta encounter error(%s)", strerror(errno));
+        LOG_INFO("kill meta encounter error({})", dsn::utils::safe_strerror(errno));
         return false;
     }
     return check("meta", index, "start");

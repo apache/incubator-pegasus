@@ -33,7 +33,7 @@ bool pegasus_client_factory_impl::initialize(const char *config_file)
         CHECK(is_initialized, "rdsn engine not started, please specify a valid config file");
     } else {
         if (is_initialized) {
-            LOG_WARNING("rdsn engine already started, ignore the config file '%s'", config_file);
+            LOG_WARNING("rdsn engine already started, ignore the config file '{}'", config_file);
         } else {
             // use config file to run
             char exe[] = "client";

@@ -71,9 +71,9 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
     block_filesystem *fs =
         utils::factory_store<block_filesystem>::create(provider_type, PROVIDER_TYPE_MAIN);
     if (fs == nullptr) {
-        LOG_ERROR_F("acquire block filesystem failed, provider = {}, provider_type = {}",
-                    provider,
-                    std::string(provider_type));
+        LOG_ERROR("acquire block filesystem failed, provider = {}, provider_type = {}",
+                  provider,
+                  std::string(provider_type));
         return nullptr;
     }
 
@@ -85,12 +85,12 @@ block_filesystem *block_service_manager::get_or_create_block_filesystem(const st
     dsn::error_code err = fs->initialize(args);
 
     if (dsn::ERR_OK == err) {
-        LOG_INFO_F("create block filesystem ok for provider {}", provider);
+        LOG_INFO("create block filesystem ok for provider {}", provider);
         _fs_map.emplace(provider, std::unique_ptr<block_filesystem>(fs));
     } else {
-        LOG_ERROR_F("create block file system err {} for provider {}",
-                    std::string(err.to_string()),
-                    provider);
+        LOG_ERROR("create block file system err {} for provider {}",
+                  std::string(err.to_string()),
+                  provider);
         delete fs;
         fs = nullptr;
     }
@@ -144,7 +144,7 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
     // local file exists
     const std::string local_file_name = utils::filesystem::path_combine(local_dir, file_name);
     if (utils::filesystem::file_exists(local_file_name)) {
-        LOG_INFO_F("local file({}) exists", local_file_name);
+        LOG_INFO("local file({}) exists", local_file_name);
         return ERR_PATH_ALREADY_EXIST;
     }
 
@@ -156,7 +156,7 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
         create_block_file_sync(remote_file_name, false /*ignore file meta*/, fs, &tracker);
     error_code err = create_resp.err;
     if (err != ERR_OK) {
-        LOG_ERROR_F("create file({}) failed with error({})", remote_file_name, err.to_string());
+        LOG_ERROR("create file({}) failed with error({})", remote_file_name, err.to_string());
         return err;
     }
     block_file_ptr bf = create_resp.file_handle;
@@ -167,17 +167,17 @@ error_code block_service_manager::download_file(const std::string &remote_dir,
         // error, however, if file damaged on remote file provider, bulk load should stop,
         // return ERR_CORRUPTION instead
         if (resp.err == ERR_OBJECT_NOT_FOUND) {
-            LOG_ERROR_F("download file({}) failed, file on remote file provider is damaged",
-                        local_file_name);
+            LOG_ERROR("download file({}) failed, file on remote file provider is damaged",
+                      local_file_name);
             return ERR_CORRUPTION;
         }
         return resp.err;
     }
 
-    LOG_INFO_F("download file({}) succeed, file_size = {}, md5 = {}",
-               local_file_name.c_str(),
-               resp.downloaded_size,
-               resp.file_md5);
+    LOG_INFO("download file({}) succeed, file_size = {}, md5 = {}",
+             local_file_name.c_str(),
+             resp.downloaded_size,
+             resp.file_md5);
     download_file_size = resp.downloaded_size;
     download_file_md5 = resp.file_md5;
     return ERR_OK;

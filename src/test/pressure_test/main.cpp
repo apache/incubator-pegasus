@@ -109,7 +109,7 @@ void test_set(int32_t qps)
     atomic_int qps_quota(qps);
     ::dsn::task_ptr quota_task = ::dsn::tasking::enqueue_timer(
         LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
-    LOG_INFO("start to test set, with qps(%d)", qps);
+    LOG_INFO("start to test set, with qps({})", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
             qps_quota.fetch_sub(10);
@@ -132,7 +132,7 @@ void test_get(int32_t qps)
     dsn::task_ptr quota_task = dsn::tasking::enqueue_timer(
         LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
 
-    LOG_INFO("start to test get, with qps(%d)", qps);
+    LOG_INFO("start to test get, with qps({})", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
             qps_quota.fetch_sub(10);
@@ -154,10 +154,8 @@ void test_get(int32_t qps)
                                   val);
                         } else if (ec == PERR_NOT_FOUND) {
                             // don't output info
-                            // LOG_WARNING("hashkey(%s) - sortkey(%s) doesn't exist in the server",
-                            //    hashkey.c_str(), sortkey.c_str());
                         } else if (ec == PERR_TIMEOUT) {
-                            LOG_WARNING("access server failed with err(%s)",
+                            LOG_WARNING("access server failed with err({})",
                                         pg_client->get_error_string(ec));
                         }
                     });
@@ -174,7 +172,7 @@ void test_del(int32_t qps)
     dsn::task_ptr quota_task = dsn::tasking::enqueue_timer(
         LPC_DEFAUT_TASK, nullptr, [&]() { qps_quota.store(qps); }, chrono::seconds(1));
 
-    LOG_INFO("start to test get, with qps(%d)", qps);
+    LOG_INFO("start to test get, with qps({})", qps);
     while (true) {
         if (qps_quota.load() >= 10) {
             qps_quota.fetch_sub(10);
@@ -252,14 +250,14 @@ int main(int argc, const char **argv)
     CHECK_GT(qps, 0);
     CHECK(!op_name.empty(), "must assign operation name");
 
-    LOG_INFO("pressureclient %s qps = %d", op_name.c_str(), qps);
+    LOG_INFO("pressureclient {} qps = {}", op_name, qps);
 
     pg_client = pegasus_client_factory::get_client(cluster_name.c_str(), app_name.c_str());
     CHECK_NOTNULL(pg_client, "initialize pg_client failed");
 
     auto it = _all_funcs.find(op_name);
     if (it != _all_funcs.end()) {
-        LOG_INFO("start pressureclient with %s qps(%d)", op_name.c_str(), qps);
+        LOG_INFO("start pressureclient with {} qps({})", op_name, qps);
         it->second(qps);
     } else {
         CHECK(false, "Unknown operation name({})", op_name);

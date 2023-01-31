@@ -25,7 +25,7 @@
 
 namespace dsn {
 namespace security {
-DSN_DEFINE_string("security",
+DSN_DEFINE_string(security,
                   meta_acl_rpc_allow_list,
                   "",
                   "allowed list of rpc codes for meta_access_controller");

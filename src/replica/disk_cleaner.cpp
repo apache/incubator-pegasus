@@ -28,27 +28,27 @@ namespace dsn {
 namespace replication {
 
 DSN_DEFINE_uint64(
-    "replication",
+    replication,
     gc_disk_error_replica_interval_seconds,
     7 * 24 * 3600 /*7day*/,
     "Duration of error replica being removed, which is in a directory with '.err' suffixed");
 DSN_TAG_VARIABLE(gc_disk_error_replica_interval_seconds, FT_MUTABLE);
 
 DSN_DEFINE_uint64(
-    "replication",
+    replication,
     gc_disk_garbage_replica_interval_seconds,
     24 * 3600 /*1day*/,
     "Duration of garbaged replica being removed, which is in a directory with '.gar' suffixed");
 DSN_TAG_VARIABLE(gc_disk_garbage_replica_interval_seconds, FT_MUTABLE);
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   gc_disk_migration_tmp_replica_interval_seconds,
                   24 * 3600 /*1day*/,
                   "Duration of disk-migration tmp replica being removed, which is in a directory "
                   "with '.tmp' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_tmp_replica_interval_seconds, FT_MUTABLE);
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   gc_disk_migration_origin_replica_interval_seconds,
                   7 * 24 * 3600 /*7day*/,
                   "Duration of disk-migration origin replica being removed, which is in a "
@@ -68,7 +68,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
     for (auto &dir : data_dirs) {
         std::vector<std::string> tmp_list;
         if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
-            LOG_WARNING_F("gc_disk: failed to get subdirectories in {}", dir);
+            LOG_WARNING("gc_disk: failed to get subdirectories in {}", dir);
             return error_s::make(ERR_OBJECT_NOT_FOUND, "failed to get subdirectories");
         }
         sub_list.insert(sub_list.end(), tmp_list.begin(), tmp_list.end());
@@ -82,7 +82,7 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 
         time_t mt;
         if (!dsn::utils::filesystem::last_write_time(fpath, mt)) {
-            LOG_WARNING_F("gc_disk: failed to get last write time of {}", fpath);
+            LOG_WARNING("gc_disk: failed to get last write time of {}", fpath);
             continue;
         }
 
@@ -107,20 +107,20 @@ error_s disk_remove_useless_dirs(const std::vector<std::string> &data_dirs,
 
         if (last_write_time + remove_interval_seconds <= current_time_ms / 1000) {
             if (!dsn::utils::filesystem::remove_path(fpath)) {
-                LOG_WARNING_F("gc_disk: failed to delete directory '{}', time_used_ms = {}",
-                              fpath,
-                              dsn_now_ms() - current_time_ms);
+                LOG_WARNING("gc_disk: failed to delete directory '{}', time_used_ms = {}",
+                            fpath,
+                            dsn_now_ms() - current_time_ms);
             } else {
-                LOG_WARNING_F("gc_disk: replica_dir_op succeed to delete directory '{}'"
-                              ", time_used_ms = {}",
-                              fpath,
-                              dsn_now_ms() - current_time_ms);
+                LOG_WARNING("gc_disk: replica_dir_op succeed to delete directory '{}'"
+                            ", time_used_ms = {}",
+                            fpath,
+                            dsn_now_ms() - current_time_ms);
                 report.remove_dir_count++;
             }
         } else {
-            LOG_INFO_F("gc_disk: reserve directory '{}', wait_seconds = {}",
-                       fpath,
-                       last_write_time + remove_interval_seconds - current_time_ms / 1000);
+            LOG_INFO("gc_disk: reserve directory '{}', wait_seconds = {}",
+                     fpath,
+                     last_write_time + remove_interval_seconds - current_time_ms / 1000);
         }
     }
     return error_s::ok();

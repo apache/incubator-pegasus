@@ -38,6 +38,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_int32(log_private_file_size_mb);
+
 class mock_replication_app_base : public replication_app_base
 {
 public:
@@ -139,7 +141,7 @@ public:
         utils::filesystem::remove_path(log_dir);
 
         _private_log =
-            new mutation_log_private(log_dir, _options->log_private_file_size_mb, get_gpid(), this);
+            new mutation_log_private(log_dir, FLAGS_log_private_file_size_mb, get_gpid(), this);
 
         error_code err =
             _private_log->open(nullptr, [this](error_code err) { CHECK_EQ_PREFIX(err, ERR_OK); });
@@ -204,7 +206,7 @@ public:
     void generate_backup_checkpoint(cold_backup_context_ptr backup_context) override
     {
         if (backup_context->status() != ColdBackupCheckpointing) {
-            LOG_INFO("%s: ignore generating backup checkpoint because backup_status = %s",
+            LOG_INFO("{}: ignore generating backup checkpoint because backup_status = {}",
                      backup_context->name,
                      cold_backup_status_to_string(backup_context->status()));
             backup_context->ignore_checkpoint();

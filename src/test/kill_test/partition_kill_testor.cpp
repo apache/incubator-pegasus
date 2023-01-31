@@ -45,7 +45,7 @@ void partition_kill_testor::Run()
         } else {
             run();
         }
-        LOG_INFO("sleep %d seconds before checking", kill_interval_seconds);
+        LOG_INFO("sleep {} seconds before checking", kill_interval_seconds);
         sleep(kill_interval_seconds);
     }
 }

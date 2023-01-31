@@ -51,6 +51,27 @@
 namespace dsn {
 namespace replication {
 
+DSN_DEFINE_int32(replication,
+                 staleness_for_commit,
+                 10,
+                 "how many concurrent two phase commit rounds are allowed");
+DSN_DEFINE_int32(replication,
+                 max_mutation_count_in_prepare_list,
+                 110,
+                 "maximum number of mutations in prepare list");
+DSN_DEFINE_group_validator(max_mutation_count_in_prepare_list, [](std::string &message) -> bool {
+    if (FLAGS_max_mutation_count_in_prepare_list < FLAGS_staleness_for_commit) {
+        message = fmt::format("replication.max_mutation_count_in_prepare_list({}) should be >= "
+                              "replication.staleness_for_commit({})",
+                              FLAGS_max_mutation_count_in_prepare_list,
+                              FLAGS_staleness_for_commit);
+        return false;
+    }
+    return true;
+});
+
+DSN_DECLARE_int32(checkpoint_max_interval_hours);
+
 const std::string replica::kAppInfo = ".app-info";
 
 replica::replica(replica_stub *stub,
@@ -62,8 +83,7 @@ replica::replica(replica_stub *stub,
     : serverlet<replica>("replica"),
       replica_base(gpid, fmt::format("{}@{}", gpid, stub->_primary_address_str), app.app_name),
       _app_info(app),
-      _primary_states(
-          gpid, stub->options().staleness_for_commit, stub->options().batch_write_disabled),
+      _primary_states(gpid, FLAGS_staleness_for_commit, stub->options().batch_write_disabled),
       _potential_secondary_states(this),
       _cold_backup_running_count(0),
       _cold_backup_max_duration_time_ms(0),
@@ -155,7 +175,7 @@ replica::replica(replica_stub *stub,
 void replica::update_last_checkpoint_generate_time()
 {
     _last_checkpoint_generate_time_ms = dsn_now_ms();
-    uint64_t max_interval_ms = _options->checkpoint_max_interval_hours * 3600000UL;
+    uint64_t max_interval_ms = FLAGS_checkpoint_max_interval_hours * 3600000UL;
     // use random trigger time to avoid flush peek
     _next_checkpoint_interval_trigger_time_ms =
         _last_checkpoint_generate_time_ms + rand::next_u64(max_interval_ms / 2, max_interval_ms);
@@ -177,7 +197,7 @@ void replica::init_state()
     _prepare_list = dsn::make_unique<prepare_list>(
         this,
         0,
-        _options->max_mutation_count_in_prepare_list,
+        FLAGS_max_mutation_count_in_prepare_list,
         std::bind(&replica::execute_mutation, this, std::placeholders::_1));
 
     _config.ballot = 0;
@@ -197,7 +217,7 @@ replica::~replica(void)
 {
     close();
     _prepare_list = nullptr;
-    LOG_DEBUG("%s: replica destroyed", name());
+    LOG_DEBUG_PREFIX("replica destroyed");
 }
 
 void replica::on_client_read(dsn::message_ex *request, bool ignore_throttling)
@@ -285,10 +305,8 @@ void replica::check_state_completeness()
 
 void replica::execute_mutation(mutation_ptr &mu)
 {
-    LOG_DEBUG("%s: execute mutation %s: request_count = %u",
-              name(),
-              mu->name(),
-              static_cast<int>(mu->client_requests.size()));
+    LOG_DEBUG_PREFIX(
+        "execute mutation {}: request_count = {}", mu->name(), mu->client_requests.size());
 
     error_code err = ERR_OK;
     decree d = mu->data.header.decree;
@@ -298,11 +316,10 @@ void replica::execute_mutation(mutation_ptr &mu)
         if (_app->last_committed_decree() + 1 == d) {
             err = _app->apply_mutation(mu);
         } else {
-            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      _app->last_committed_decree());
+            LOG_DEBUG_PREFIX("mutation {} commit to {} skipped, app.last_committed_decree = {}",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _app->last_committed_decree());
         }
         break;
     case partition_status::PS_PRIMARY: {
@@ -318,11 +335,10 @@ void replica::execute_mutation(mutation_ptr &mu)
             CHECK_EQ(_app->last_committed_decree() + 1, d);
             err = _app->apply_mutation(mu);
         } else {
-            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      _app->last_committed_decree());
+            LOG_DEBUG_PREFIX("mutation {} commit to {} skipped, app.last_committed_decree = {}",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _app->last_committed_decree());
 
             // make sure private log saves the state
             // catch-up will be done later after checkpoint task is fininished
@@ -336,11 +352,10 @@ void replica::execute_mutation(mutation_ptr &mu)
             CHECK_EQ(_app->last_committed_decree() + 1, d);
             err = _app->apply_mutation(mu);
         } else {
-            LOG_DEBUG("%s: mutation %s commit to %s skipped, app.last_committed_decree = %" PRId64,
-                      name(),
-                      mu->name(),
-                      enum_to_string(status()),
-                      _app->last_committed_decree());
+            LOG_DEBUG_PREFIX("mutation {} commit to {} skipped, app.last_committed_decree = {}",
+                             mu->name(),
+                             enum_to_string(status()),
+                             _app->last_committed_decree());
 
             // prepare also happens with learner_status::LearningWithPrepare, in this case
             // make sure private log saves the state,
@@ -360,8 +375,7 @@ void replica::execute_mutation(mutation_ptr &mu)
         CHECK(false, "invalid partition_status, status = {}", enum_to_string(status()));
     }
 
-    LOG_DEBUG(
-        "TwoPhaseCommit, %s: mutation %s committed, err = %s", name(), mu->name(), err.to_string());
+    LOG_DEBUG_PREFIX("TwoPhaseCommit, mutation {} committed, err = {}", mu->name(), err);
 
     if (err != ERR_OK) {
         handle_local_failure(err);
@@ -468,7 +482,7 @@ void replica::close()
         std::unique_ptr<replication_app_base> tmp_app = std::move(_app);
         error_code err = tmp_app->close(false);
         if (err != dsn::ERR_OK) {
-            LOG_WARNING("%s: close app failed, err = %s", name(), err.to_string());
+            LOG_WARNING_PREFIX("close app failed, err = {}", err);
         }
     }
 
@@ -491,7 +505,7 @@ void replica::close()
 
     _split_mgr.reset();
 
-    LOG_INFO("%s: replica closed, time_used = %" PRIu64 "ms", name(), dsn_now_ms() - start_time);
+    LOG_INFO_PREFIX("replica closed, time_used = {} ms", dsn_now_ms() - start_time);
 }
 
 std::string replica::query_manual_compact_state() const

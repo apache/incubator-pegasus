@@ -19,11 +19,11 @@
 
 "use strict";
 
-const Blob = require('./dsn/base_types').blob;
-const Gpid = require('./dsn/base_types').gpid;
-const ErrorType = require('./dsn/base_types').error_type;
+const Blob = require('./dsn/dsn_types').blob;
+const Gpid = require('./dsn/dsn_types').gpid;
+const ErrorType = require('./dsn/dsn_types').error_type;
 const RrdbType = require('./dsn/rrdb_types');
-const replica = require('./dsn/replication_types');
+const replica = require('./dsn/dsn.layer2_types');
 const Exception = require('./errors');
 const ReplicaSession = require('./session').ReplicaSession;
 const MetaRequestRound = require('./session').MetaRequestRound;

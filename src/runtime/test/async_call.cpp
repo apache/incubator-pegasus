@@ -165,12 +165,12 @@ class simple_task : public dsn::raw_task
 public:
     simple_task(dsn::task_code code, const task_handler &h) : dsn::raw_task(code, h, 0, nullptr)
     {
-        LOG_INFO("simple task %p created", this);
+        LOG_INFO("simple task {} created", fmt::ptr(this));
         allocate_count++;
     }
     virtual ~simple_task() override
     {
-        LOG_INFO("simple task %p is deallocated", this);
+        LOG_INFO("simple task {} is deallocated", fmt::ptr(this));
         allocate_count--;
     }
     static std::atomic_int allocate_count;
@@ -188,12 +188,12 @@ public:
     simple_rpc_response_task(dsn::message_ex *m, const rpc_response_handler &h)
         : dsn::rpc_response_task(m, h)
     {
-        LOG_INFO("simple rpc response task(%p) created", this);
+        LOG_INFO("simple rpc response task({}) created", fmt::ptr(this));
         allocate_count++;
     }
     virtual ~simple_rpc_response_task() override
     {
-        LOG_INFO("simple rpc repsonse task(%p) is dealloate", this);
+        LOG_INFO("simple rpc repsonse task({}) is dealloate", fmt::ptr(this));
         allocate_count--;
     }
     static std::atomic_int allocate_count;

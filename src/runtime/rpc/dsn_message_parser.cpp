@@ -71,12 +71,12 @@ message_ex *dsn_message_parser::get_message_on_receive(message_reader *reader,
             message_ex *msg = message_ex::create_receive_message(msg_bb);
             if (!is_right_body(msg)) {
                 message_header *header = (message_header *)buf_ptr;
-                LOG_ERROR("dsn message body check failed, id = %" PRIu64 ", trace_id = %016" PRIx64
-                          ", rpc_name = %s, from_addr = %s",
+                LOG_ERROR("dsn message body check failed, id = {}, trace_id = {:#018x}, rpc_name "
+                          "= {}, from_addr = {}",
                           header->id,
                           header->trace_id,
                           header->rpc_name,
-                          header->from_address.to_string());
+                          header->from_address);
                 read_next = -1;
                 delete msg;
                 return nullptr;

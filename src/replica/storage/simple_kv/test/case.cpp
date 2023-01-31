@@ -1029,7 +1029,7 @@ bool test_case::init(const std::string &case_input)
 
     forward();
 
-    LOG_INFO("=== init %s succeed", _name.c_str());
+    LOG_INFO("=== init {} succeed", _name);
 
     s_inited = true;
     return true;
@@ -1046,7 +1046,7 @@ void test_case::forward()
                 output(cl->to_string());
                 print(cl, "");
             }
-            LOG_INFO("=== on_case_forward:[%d]%s", cl->line_no(), cl->to_string().c_str());
+            LOG_INFO("=== on_case_forward:[{}]{}", cl->line_no(), cl->to_string());
         }
         _next++;
         if (_next >= _case_lines.size()) {
@@ -1081,7 +1081,7 @@ void test_case::fail(const std::string &other)
     case_line *cl = _case_lines[_next];
     output(other);
     print(cl, other);
-    LOG_ERROR("=== on_case_failure:line=%d,case=%s", cl->line_no(), cl->to_string().c_str());
+    LOG_ERROR("=== on_case_failure:line={},case={}", cl->line_no(), cl->to_string());
     g_fail = true;
     g_done = true;
     notify_check_client();
@@ -1128,7 +1128,7 @@ bool test_case::check_skip(bool consume_one)
     skip_case_line *cl = static_cast<skip_case_line *>(c);
     if (consume_one) {
         cl->skip_one();
-        LOG_INFO("=== on_skip_one:skipped=%d/%d", cl->skipped(), cl->count());
+        LOG_INFO("=== on_skip_one:skipped={}/{}", cl->skipped(), cl->count());
     }
     if (cl->is_skip_done()) {
         forward();
@@ -1205,7 +1205,7 @@ void test_case::on_end_write(int id, ::dsn::error_code err, int32_t resp)
                err.to_string(),
                resp);
 
-    LOG_INFO("=== on_end_write:id=%d,err=%s,resp=%d", id, err.to_string(), resp);
+    LOG_INFO("=== on_end_write:id={}, err={}, resp={}", id, err, resp);
 
     if (check_skip(true)) {
         output(buf);
@@ -1247,7 +1247,7 @@ void test_case::on_end_read(int id, ::dsn::error_code err, const std::string &re
                err.to_string(),
                resp.c_str());
 
-    LOG_INFO("=== on_end_read:id=%d,err=%s,resp=%s", id, err.to_string(), resp.c_str());
+    LOG_INFO("=== on_end_read:id={}, err={}, resp={}", id, err, resp);
 
     if (check_skip(true)) {
         output(buf);
@@ -1280,7 +1280,7 @@ bool test_case::on_event(const event *ev)
     if (g_done)
         return true;
 
-    LOG_INFO("=== %s", ev->to_string().c_str());
+    LOG_INFO("=== {}", *ev);
 
     if (check_skip(false))
         return true;
@@ -1328,7 +1328,7 @@ void test_case::on_config_change(const parti_config &last, const parti_config &c
     _null_loop_count = 0; // reset null loop count
 
     std::string buf = std::string(config_case_line::NAME()) + ":" + cur.to_string();
-    LOG_INFO("=== on_config_change:%s", cur.to_string().c_str());
+    LOG_INFO("=== on_config_change: {}", cur);
 
     if (check_skip(true)) {
         output(buf);
@@ -1364,7 +1364,7 @@ void test_case::on_state_change(const state_snapshot &last, const state_snapshot
     _null_loop_count = 0; // reset null loop count
 
     std::string buf = std::string(state_case_line::NAME()) + ":" + cur.to_string();
-    LOG_INFO("=== on_state_change:%s\n%s", cur.to_string().c_str(), cur.diff_string(last).c_str());
+    LOG_INFO("=== on_state_change: {}\n{}", cur, cur.diff_string(last));
 
     if (check_skip(true)) {
         output(buf);

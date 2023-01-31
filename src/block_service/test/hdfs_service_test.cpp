@@ -34,14 +34,14 @@ static std::string example_name_node = "<hdfs_name_none>";
 static std::string example_backup_path = "<hdfs_path>";
 // Please modify following paras in 'config-test.ini' to enable hdfs_service_test,
 // or hdfs_service_test will be skipped and return true.
-DSN_DEFINE_string("hdfs_test", test_name_node, "<hdfs_name_none>", "hdfs name node");
-DSN_DEFINE_string("hdfs_test",
+DSN_DEFINE_string(hdfs_test, test_name_node, "<hdfs_name_none>", "hdfs name node");
+DSN_DEFINE_string(hdfs_test,
                   test_backup_path,
                   "<hdfs_path>",
                   "path for uploading and downloading test files");
 
-DSN_DEFINE_uint32("hdfs_test", num_test_file_lines, 4096, "number of lines in test file");
-DSN_DEFINE_uint32("hdfs_test",
+DSN_DEFINE_uint32(hdfs_test, num_test_file_lines, 4096, "number of lines in test file");
+DSN_DEFINE_uint32(hdfs_test,
                   num_total_files_for_hdfs_concurrent_test,
                   64,
                   "number of total files for hdfs concurrent test");

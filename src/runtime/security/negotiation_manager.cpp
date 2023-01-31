@@ -132,9 +132,9 @@ std::shared_ptr<negotiation> negotiation_manager::get_negotiation(negotiation_rp
     utils::auto_read_lock l(_lock);
     auto it = _negotiations.find(rpc.dsn_request()->io_session);
     if (it == _negotiations.end()) {
-        LOG_INFO_F("negotiation was removed for msg: {}, {}",
-                   rpc.dsn_request()->rpc_code().to_string(),
-                   rpc.remote_address().to_string());
+        LOG_INFO("negotiation was removed for msg: {}, {}",
+                 rpc.dsn_request()->rpc_code().to_string(),
+                 rpc.remote_address().to_string());
         return nullptr;
     }
 

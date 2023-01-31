@@ -69,7 +69,7 @@ replication_ddl_client::replication_ddl_client(const std::vector<dsn::rpc_addres
     _meta_server.assign_group("meta-servers");
     for (const auto &m : meta_servers) {
         if (!_meta_server.group_address()->add(m)) {
-            LOG_WARNING_F("duplicate adress {}", m);
+            LOG_WARNING("duplicate adress {}", m);
         }
     }
 }
@@ -393,7 +393,7 @@ dsn::error_code replication_ddl_client::list_apps(const dsn::app_status::type st
             std::vector<partition_configuration> partitions;
             r = list_app(info.app_name, app_id, partition_count, partitions);
             if (r != dsn::ERR_OK) {
-                LOG_ERROR("list app(%s) failed, err = %s", info.app_name.c_str(), r.to_string());
+                LOG_ERROR("list app({}) failed, err = {}", info.app_name, r);
                 return r;
             }
             CHECK_EQ(info.app_id, app_id);

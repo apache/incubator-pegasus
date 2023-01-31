@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,25 +16,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# complier require: thrift 0.10.0
- 
-thrift=thrift
+set -e
 
-if ! $thrift -version | grep '0.10.0' 
-then
-    echo "Should use thrift 0.10.0"
-    exit -1
+NODEJS_CLIENT_DIR=`pwd`
+PEGASUS_PKG="pegasus-tools-2.0.0-5d969e8-glibc2.12-release"
+PEGASUS_PKG_URL="https://github.com/apache/incubator-pegasus/releases/download/v2.0.0/pegasus-tools-2.0.0-5d969e8-glibc2.12-release.tar.gz"
+
+# start pegasus onebox environment
+if [ ! -f ${PEGASUS_PKG}.tar.gz ]; then
+    wget --quiet ${PEGASUS_PKG_URL}
+    tar xf ${PEGASUS_PKG}.tar.gz
 fi
+cd ${PEGASUS_PKG}
+./run.sh clear_onebox
+./run.sh start_onebox -m 3 -r 3 -w
 
-TMP_DIR=./gen-nodejs
-rm -rf $TMP_DIR
-
-mkdir -p $TMP_DIR
-$thrift --gen js:node rrdb.thrift
-$thrift --gen js:node replication.thrift 
-$thrift --gen js:node base.thrift
-
-cp -v -r $TMP_DIR/* ../dsn
-rm -rf $TMP_DIR
-
-echo "done"
+cd "${NODEJS_CLIENT_DIR}"
+npm test

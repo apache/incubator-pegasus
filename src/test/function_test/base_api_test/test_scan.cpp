@@ -137,7 +137,7 @@ public:
         }
         // 1000 + 5000 + 5000 kvs
 
-        LOG_INFO_F("Database filled with kv count {}.", i);
+        LOG_INFO("Database filled with kv count {}.", i);
     }
 
 protected:
@@ -175,7 +175,7 @@ TEST_F(scan_test, OVERALL_COUNT_ONLY)
                                            << client_->get_error_string(ret);
         delete scanner;
     }
-    LOG_INFO_F("scan count {}", i);
+    LOG_INFO("scan count {}", i);
     int base_data_count = 0;
     for (auto &m : expect_kvs_) {
         base_data_count += m.second.size();

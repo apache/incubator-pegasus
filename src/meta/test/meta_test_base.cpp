@@ -128,9 +128,9 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
                      min_node_count,
                      node_count);
 
-        LOG_DEBUG_F("already exists {} alive nodes: ", nodes.size());
+        LOG_DEBUG("already exists {} alive nodes: ", nodes.size());
         for (const auto &node : nodes) {
-            LOG_DEBUG_F("    {}", node.to_string());
+            LOG_DEBUG("    {}", node.to_string());
         }
 
         // ensure that _ms->_alive_set is identical with _ss->_nodes
@@ -152,9 +152,9 @@ std::vector<rpc_address> meta_test_base::ensure_enough_alive_nodes(int min_node_
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
-    LOG_DEBUG_F("created {} alive nodes: ", nodes.size());
+    LOG_DEBUG("created {} alive nodes: ", nodes.size());
     for (const auto &node : nodes) {
-        LOG_DEBUG_F("    {}", node.to_string());
+        LOG_DEBUG("    {}", node.to_string());
     }
     return nodes;
 }

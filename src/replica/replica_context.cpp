@@ -182,9 +182,9 @@ bool primary_context::secondary_disk_space_insufficient() const
 {
     for (const auto &kv : secondary_disk_status) {
         if (kv.second == disk_status::SPACE_INSUFFICIENT) {
-            LOG_INFO_F("partition[{}] secondary[{}] disk space is insufficient",
-                       membership.pid,
-                       kv.first.to_string());
+            LOG_INFO("partition[{}] secondary[{}] disk space is insufficient",
+                     membership.pid,
+                     kv.first.to_string());
             return true;
         }
     }

@@ -42,7 +42,7 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint64("replication",
+DSN_DEFINE_uint64(replication,
                   abnormal_write_trace_latency_threshold,
                   1000 * 1000 * 1000, // 1s
                   "latency trace will be logged when exceed the write latency threshold");
@@ -363,8 +363,7 @@ mutation_ptr mutation_queue::add_work(task_code code, dsn::message_ex *request, 
         _pending_mutation = r->new_mutation(invalid_decree);
     }
 
-    LOG_DEBUG("add request with trace_id = %016" PRIx64
-              " into mutation with mutation_tid = %" PRIu64,
+    LOG_DEBUG("add request with trace_id = {:#018x} into mutation with mutation_tid = {}",
               request->header->trace_id,
               _pending_mutation->tid());
 

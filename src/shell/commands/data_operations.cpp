@@ -20,6 +20,12 @@
 #include "shell/commands.h"
 #include <fmt/printf.h>
 #include "idl_utils.h"
+#include "utils/flags.h"
+
+DSN_DEFINE_int32(threadpool.THREAD_POOL_DEFAULT,
+                 worker_count,
+                 0,
+                 "get THREAD_POOL_DEFAULT worker_count.");
 
 static void
 print_current_scan_state(const std::vector<std::unique_ptr<scan_data_context>> &contexts,
@@ -1818,13 +1824,10 @@ bool copy_data(command_executor *e, shell_context *sc, arguments args)
                 "WARN: used multi_set will lose accurate ttl time per value! "
                 "ttl time will be assign the max value of this batch data.\n");
         op = SCAN_AND_MULTI_SET;
+
+        fprintf(stderr, "INFO: THREAD_POOL_DEFAULT worker_count = %d\n", FLAGS_worker_count);
         // threadpool worker_count should greater than source app scanner count
-        int worker_count = dsn_config_get_value_int64("threadpool.THREAD_POOL_DEFAULT",
-                                                      "worker_count",
-                                                      0,
-                                                      "get THREAD_POOL_DEFAULT worker_count.");
-        fprintf(stderr, "INFO: THREAD_POOL_DEFAULT worker_count = %d\n", worker_count);
-        if (worker_count <= split_count) {
+        if (FLAGS_worker_count <= split_count) {
             fprintf(stderr,
                     "INFO: THREAD_POOL_DEFAULT worker_count should greater than source app scanner "
                     "count %d",

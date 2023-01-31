@@ -17,11 +17,22 @@
  * under the License.
  */
 
-#include "utils/config_api.h"
 #include "config.h"
+
+#include "utils/config_api.h"
+#include "utils/flags.h"
 
 namespace pegasus {
 namespace test {
+
+DSN_DEFINE_int32(pegasus.benchmark,
+                 pegasus_timeout_ms,
+                 1000,
+                 "pegasus read/write timeout in milliseconds");
+DSN_DEFINE_int32(pegasus.benchmark, threads, 1, "Number of concurrent threads to run");
+DSN_DEFINE_int32(pegasus.benchmark, hashkey_size, 16, "size of each hashkey");
+DSN_DEFINE_int32(pegasus.benchmark, sortkey_size, 16, "size of each sortkey");
+DSN_DEFINE_int32(pegasus.benchmark, value_size, 100, "Size of each value");
 
 config::config()
 {
@@ -29,11 +40,6 @@ config::config()
         "pegasus.benchmark", "pegasus_cluster_name", "onebox", "pegasus cluster name");
     pegasus_app_name = dsn_config_get_value_string(
         "pegasus.benchmark", "pegasus_app_name", "temp", "pegasus app name");
-    pegasus_timeout_ms =
-        (int32_t)dsn_config_get_value_uint64("pegasus.benchmark",
-                                             "pegasus_timeout_ms",
-                                             1000,
-                                             "pegasus read/write timeout in milliseconds");
     benchmarks = dsn_config_get_value_string(
         "pegasus.benchmark",
         "benchmarks",
@@ -44,14 +50,6 @@ config::config()
         "\tdeleterandom_pegasus     -- pegasus delete N keys in random order\n");
     num = dsn_config_get_value_uint64(
         "pegasus.benchmark", "num", 10000, "Number of key/values to place in database");
-    threads = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "threads", 1, "Number of concurrent threads to run");
-    hashkey_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "hashkey_size", 16, "size of each hashkey");
-    sortkey_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "sortkey_size", 16, "size of each sortkey");
-    value_size = (int32_t)dsn_config_get_value_uint64(
-        "pegasus.benchmark", "value_size", 100, "Size of each value");
     seed = dsn_config_get_value_uint64(
         "pegasus.benchmark",
         "seed",

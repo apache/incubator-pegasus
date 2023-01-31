@@ -93,10 +93,10 @@ void proxy_stub::remove_session(dsn::rpc_address remote_address)
         ::dsn::zauto_write_lock l(_lock);
         auto iter = _sessions.find(remote_address);
         if (iter == _sessions.end()) {
-            LOG_WARNING("%s has been removed from proxy stub", remote_address.to_string());
+            LOG_WARNING("{} has been removed from proxy stub", remote_address);
             return;
         }
-        LOG_INFO("remove %s from proxy stub", remote_address.to_string());
+        LOG_INFO("remove {} from proxy stub", remote_address);
         session = std::move(iter->second);
         _sessions.erase(iter);
     }
@@ -116,7 +116,7 @@ proxy_session::proxy_session(proxy_stub *op, dsn::message_ex *first_msg)
 proxy_session::~proxy_session()
 {
     _backup_one_request->release_ref();
-    LOG_INFO("proxy session %s destroyed", _remote_address.to_string());
+    LOG_INFO("proxy session {} destroyed", _remote_address);
 }
 
 void proxy_session::on_recv_request(dsn::message_ex *msg)
@@ -130,11 +130,11 @@ void proxy_session::on_recv_request(dsn::message_ex *msg)
     // 2. as "on_recv_request" won't be called concurrently, it's not necessary to call
     //    "parse" with a lock. a subclass may implement a lock inside parse if necessary
     if (!parse(msg)) {
-        LOG_ERROR("%s: got invalid message, try to remove proxy session from proxy stub",
-                  _remote_address.to_string());
+        LOG_ERROR("{}: got invalid message, try to remove proxy session from proxy stub",
+                  _remote_address);
         _stub->remove_session(_remote_address);
 
-        LOG_ERROR("close the rpc session %s", _remote_address.to_string());
+        LOG_ERROR("close the rpc session {}", _remote_address);
         ((dsn::message_ex *)_backup_one_request)->io_session->close();
     }
 }

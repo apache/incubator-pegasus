@@ -218,7 +218,7 @@ perf_counter_ptr perf_counters::get_global_counter(const char *app,
     }
 }
 
-bool perf_counters::remove_counter(const char *full_name)
+bool perf_counters::remove_counter(const std::string &full_name)
 {
     int remain_ref;
     {
@@ -235,7 +235,7 @@ bool perf_counters::remove_counter(const char *full_name)
         }
     }
 
-    LOG_DEBUG("performance counter %s is removed, remaining reference (%d)", full_name, remain_ref);
+    LOG_DEBUG("performance counter {} is removed, remaining reference ({})", full_name, remain_ref);
     return true;
 }
 

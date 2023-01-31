@@ -79,9 +79,9 @@ static bool is_zookeeper_timeout(int zookeeper_error)
 #define __execute(cb, _this) tasking::enqueue(TASK_CODE_DLOCK, nullptr, cb, _this->hash())
 
 #define __add_ref_and_delay_call(op, _this)                                                        \
-    LOG_WARNING("operation %s on %s encounter error, retry later",                                 \
+    LOG_WARNING("operation {} on {} encounter error, retry later",                                 \
                 zookeeper_session::string_zoo_operation(op->_optype),                              \
-                op->_input._path.c_str());                                                         \
+                op->_input._path);                                                                 \
     zookeeper_session::add_ref(op);                                                                \
     tasking::enqueue(TASK_CODE_DLOCK,                                                              \
                      nullptr,                                                                      \
@@ -167,7 +167,7 @@ int64_t lock_struct::parse_seq_path(const std::string &path)
     for (; i >= 0 && j >= 0 && path[i] == match[j]; --i, --j)
         ;
     if (power == 1 || j >= 0) {
-        LOG_WARNING("invalid path: %s", path.c_str());
+        LOG_WARNING("invalid path: {}", path);
         return -1;
     }
     return ans;
@@ -196,7 +196,7 @@ void lock_struct::owner_change(lock_struct_ptr _this, int zoo_event)
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::uninitialized) {
-        LOG_WARNING("this is mainly due to a timeout happens before, just ignore the event %s",
+        LOG_WARNING("this is mainly due to a timeout happens before, just ignore the event {}",
                     zookeeper_session::string_zoo_event(zoo_event));
         return;
     }
@@ -243,13 +243,13 @@ void lock_struct::after_remove_duplicated_locknode(lock_struct_ptr _this,
     }
 
     if (ZOK == ec || ZNONODE == ec) {
-        LOG_INFO("lock(%s) remove duplicated node(%s), rely on delete watcher to be actived",
-                 _this->_lock_id.c_str(),
-                 path->c_str());
+        LOG_INFO("lock({}) remove duplicated node({}), rely on delete watcher to be actived",
+                 _this->_lock_id,
+                 *path);
     } else {
-        LOG_ERROR("lock struct(%s), myself(%s) got session expire",
-                  _this->_lock_dir.c_str(),
-                  _this->_myself._node_seq_name.c_str());
+        LOG_ERROR("lock struct({}), myself({}) got session expire",
+                  _this->_lock_dir,
+                  _this->_myself._node_seq_name);
         _this->on_expire();
     }
 }
@@ -258,10 +258,10 @@ void lock_struct::remove_duplicated_locknode(std::string &&znode_path)
 {
     lock_struct_ptr _this = this;
     LOG_WARNING(
-        "duplicated value(%s) ephe/seq node(%s and %s) create on zookeeper, remove the smaller one",
-        _myself._node_value.c_str(),
-        _owner._node_seq_name.c_str(),
-        _myself._node_seq_name.c_str());
+        "duplicated value({}) ephe/seq node({} and {}) create on zookeeper, remove the smaller one",
+        _myself._node_value,
+        _owner._node_seq_name,
+        _myself._node_seq_name);
 
     auto delete_callback_wrapper = [_this](zookeeper_session::zoo_opcontext *op) {
         if (is_zookeeper_timeout(op->_output.error)) {
@@ -302,13 +302,13 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this,
     }
     if (ZNONODE == ec) {
         // lock owner removed
-        LOG_INFO("the lock(%s) old owner(%s:%s) has removed, myself(%s:%s) try to get the lock for "
-                 "another turn",
-                 _this->_lock_id.c_str(),
-                 _this->_owner._node_seq_name.c_str(),
-                 _this->_owner._node_value.c_str(),
-                 _this->_myself._node_seq_name.c_str(),
-                 _this->_myself._node_value.c_str());
+        LOG_INFO("the lock({}) old owner({}:{}) has removed, myself({}:{}) try to get the lock "
+                 "for another turn",
+                 _this->_lock_id,
+                 _this->_owner._node_seq_name,
+                 _this->_owner._node_value,
+                 _this->_myself._node_seq_name,
+                 _this->_myself._node_value);
         _this->_owner._sequence_id = -1;
         _this->_owner._node_seq_name.clear();
         _this->get_lockdir_nodes();
@@ -322,17 +322,17 @@ void lock_struct::after_get_lock_owner(lock_struct_ptr _this,
         else {
             _this->_dist_lock_service->refresh_lock_cache(
                 _this->_lock_id, _this->_owner._node_value, _this->_owner._sequence_id);
-            LOG_INFO("wait the lock(%s) owner(%s:%s) to remove, myself(%s:%s)",
-                     _this->_lock_id.c_str(),
-                     _this->_owner._node_seq_name.c_str(),
-                     _this->_owner._node_value.c_str(),
-                     _this->_myself._node_seq_name.c_str(),
-                     _this->_myself._node_value.c_str());
+            LOG_INFO("wait the lock({}) owner({}:{}) to remove, myself({}:{})",
+                     _this->_lock_id,
+                     _this->_owner._node_seq_name,
+                     _this->_owner._node_value,
+                     _this->_myself._node_seq_name,
+                     _this->_myself._node_value);
         }
     } else {
-        LOG_ERROR("lock_dir(%s), myself(%s), sessin expired",
-                  _this->_lock_dir.c_str(),
-                  _this->_myself._node_seq_name.c_str());
+        LOG_ERROR("lock_dir({}), myself({}), sessin expired",
+                  _this->_lock_dir,
+                  _this->_myself._node_seq_name);
         _this->on_expire();
     }
 }
@@ -353,18 +353,18 @@ void lock_struct::after_self_check(lock_struct_ptr _this,
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::unlocking || _this->_state == lock_state::expired) {
-        LOG_INFO("skip lock(%s) owner self check, do nothing, myself(%s:%s)",
-                 _this->_lock_id.c_str(),
-                 _this->_myself._node_seq_name.c_str(),
-                 _this->_myself._node_value.c_str());
+        LOG_INFO("skip lock({}) owner self check, do nothing, myself({}:{})",
+                 _this->_lock_id,
+                 _this->_myself._node_seq_name,
+                 _this->_myself._node_value);
         return;
     }
     if (ZNONODE == ec || ZINVALIDSTATE == ec) {
-        LOG_INFO("lock(%s) session expired, error reason(%s), myself(%s:%s)",
-                 _this->_lock_id.c_str(),
+        LOG_INFO("lock({}) session expired, error reason({}), myself({}:{})",
+                 _this->_lock_id,
                  zerror(ec),
-                 _this->_myself._node_seq_name.c_str(),
-                 _this->_myself._node_value.c_str());
+                 _this->_myself._node_seq_name,
+                 _this->_myself._node_value);
         _this->on_expire();
         return;
     }
@@ -380,7 +380,7 @@ void lock_struct::get_lock_owner(bool watch_myself)
 {
     lock_struct_ptr _this = this;
     auto watcher_callback_wrapper = [_this, watch_myself](int event) {
-        LOG_INFO("get watcher callback, event type(%s)",
+        LOG_INFO("get watcher callback, event type({})",
                  zookeeper_session::string_zoo_event(event));
         if (watch_myself)
             __execute(std::bind(&lock_struct::my_lock_removed, _this, event), _this);
@@ -446,7 +446,7 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
         return;
     }
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("get lockdir(%s) children got session expired", _this->_lock_dir.c_str());
+        LOG_ERROR("get lockdir({}) children got session expired", _this->_lock_dir);
         _this->on_expire();
         return;
     }
@@ -458,9 +458,7 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
         std::string &child = (*children)[i];
         int64_t seq = parse_seq_path(child);
         if (seq == -1) {
-            LOG_WARNING("an invalid node(%s) in lockdir(%s), ignore",
-                        child.c_str(),
-                        _this->_lock_dir.c_str());
+            LOG_WARNING("an invalid node({}) in lockdir({}), ignore", child, _this->_lock_dir);
             continue;
         }
         if (min_pos == -1 || min_seq > seq)
@@ -469,14 +467,13 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
             my_pos = i;
     }
 
-    LOG_INFO("min sequece number(%lld) in lockdir(%s)", min_seq, _this->_lock_dir.c_str());
+    LOG_INFO("min sequece number({}) in lockdir({})", min_seq, _this->_lock_dir);
     if (my_pos == -1) {
         // znode removed on zookeeper, may timeout or removed by other procedure
-        LOG_WARNING(
-            "sequence and ephemeral node(%s/%s) removed when get_children, this is abnormal, "
-            "try to reaquire the lock",
-            _this->_lock_dir.c_str(),
-            _this->_myself._node_seq_name.c_str());
+        LOG_WARNING("sequence and ephemeral node({}/{}) removed when get_children, this is "
+                    "abnormal, try to reaquire the lock",
+                    _this->_lock_dir,
+                    _this->_myself._node_seq_name);
         _this->_myself._node_seq_name.clear();
         _this->_myself._sequence_id = -1;
         _this->create_locknode();
@@ -498,10 +495,10 @@ void lock_struct::after_get_lockdir_nodes(lock_struct_ptr _this,
                 _this->_lock_id, _this->_owner._node_value, _this->_owner._sequence_id);
 
             watch_myself = true;
-            LOG_INFO("got the lock(%s), myself(%s:%s)",
-                     _this->_lock_id.c_str(),
-                     _this->_myself._node_seq_name.c_str(),
-                     _this->_myself._node_value.c_str());
+            LOG_INFO("got the lock({}), myself({}:{})",
+                     _this->_lock_id,
+                     _this->_myself._node_seq_name,
+                     _this->_myself._node_value);
             _this->_lock_callback->enqueue_with(
                 ERR_OK, _this->_myself._node_value, _this->_myself._sequence_id);
         }
@@ -556,18 +553,20 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
     __check_code(ec, allow_ec, 2, zerror(ec));
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
-    LOG_DEBUG("after create seq and ephe node, error(%s), path(%s)", zerror(ec), path->c_str());
+    LOG_DEBUG("after create seq and ephe node, error({}), path({})", zerror(ec), *path);
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
-        LOG_INFO("current state(%s), ignore event create lockdir(%s)", _this->_lock_dir.c_str());
+        LOG_INFO("current state({}), ignore event create lockdir({})",
+                 string_state(_this->_state),
+                 _this->_lock_dir);
         if (ZOK == ec && _this->_state == lock_state::cancelled) {
             _this->remove_my_locknode(std::move(*path), IGNORE_CALLBACK, REMOVE_FOR_CANCEL);
         }
         return;
     }
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("create seq/ephe node (%s) in dir(%s) got session expired",
-                  distributed_lock_service_zookeeper::LOCK_NODE_PREFIX.c_str(),
-                  _this->_lock_dir.c_str());
+        LOG_ERROR("create seq/ephe node ({}) in dir({}) got session expired",
+                  distributed_lock_service_zookeeper::LOCK_NODE_PREFIX,
+                  _this->_lock_dir);
         _this->on_expire();
         return;
     }
@@ -576,8 +575,8 @@ void lock_struct::after_create_locknode(lock_struct_ptr _this,
     _this->_myself._node_seq_name = utils::get_last_component(*path, splitter);
     _this->_myself._sequence_id = parse_seq_path(_this->_myself._node_seq_name);
     CHECK_NE_MSG(_this->_myself._sequence_id, -1, "invalid seq path created");
-    LOG_INFO("create seq/ephe node in dir(%s) ok, my_sequence_id(%d)",
-             _this->_lock_dir.c_str(),
+    LOG_INFO("create seq/ephe node in dir({}) ok, my_sequence_id({})",
+             _this->_lock_dir,
              _this->_myself._sequence_id);
     _this->get_lockdir_nodes();
 }
@@ -624,13 +623,13 @@ void lock_struct::after_create_lockdir(lock_struct_ptr _this, int ec)
     __check_code(_this->_state, allow_state, 3, string_state(_this->_state));
 
     if (_this->_state == lock_state::cancelled || _this->_state == lock_state::expired) {
-        LOG_INFO("current state(%s), ignore event create lockdir(%s)",
+        LOG_INFO("current state({}), ignore event create lockdir({})",
                  string_state(_this->_state),
-                 _this->_lock_dir.c_str());
+                 _this->_lock_dir);
         return;
     }
     if (ZINVALIDSTATE == ec) {
-        LOG_ERROR("create lock dir failed got session expire, _path(%s)", _this->_lock_dir.c_str());
+        LOG_ERROR("create lock dir failed got session expire, _path({})", _this->_lock_dir);
         _this->_lock_dir.clear();
         _this->on_expire();
         return;
@@ -691,12 +690,12 @@ void lock_struct::after_remove_my_locknode(lock_struct_ptr _this, int ec, bool r
 
     error_code dsn_ec;
     if (lock_state::expired == _this->_state) {
-        LOG_INFO("during unlock/cancel lock(%s), encountered expire, owner(%s:%s), myself(%s:%s)",
-                 _this->_lock_id.c_str(),
-                 _this->_owner._node_seq_name.c_str(),
-                 _this->_owner._node_value.c_str(),
-                 _this->_myself._node_seq_name.c_str(),
-                 _this->_myself._node_value.c_str());
+        LOG_INFO("during unlock/cancel lock({}), encountered expire, owner({}:{}), myself({}:{})",
+                 _this->_lock_id,
+                 _this->_owner._node_seq_name,
+                 _this->_owner._node_value,
+                 _this->_myself._node_seq_name,
+                 _this->_myself._node_value);
         dsn_ec = ERR_INVALID_STATE;
     } else {
         if (ZINVALIDSTATE == ec) {
@@ -727,22 +726,22 @@ void lock_struct::remove_my_locknode(std::string &&znode_path,
                                      bool remove_for_unlock)
 {
     lock_struct_ptr _this = this;
-    auto result_wrapper = [_this, ignore_callback, remove_for_unlock](
-        zookeeper_session::zoo_opcontext *op) {
-        LOG_INFO("delete node %s, result(%s)", op->_input._path.c_str(), zerror(op->_output.error));
-        if (is_zookeeper_timeout(op->_output.error)) {
-            __add_ref_and_delay_call(op, _this);
-            return;
-        }
+    auto result_wrapper =
+        [_this, ignore_callback, remove_for_unlock](zookeeper_session::zoo_opcontext *op) {
+            LOG_INFO("delete node {}, result({})", op->_input._path, zerror(op->_output.error));
+            if (is_zookeeper_timeout(op->_output.error)) {
+                __add_ref_and_delay_call(op, _this);
+                return;
+            }
 
-        if (IGNORE_CALLBACK != ignore_callback) {
-            __execute(std::bind(&lock_struct::after_remove_my_locknode,
-                                _this,
-                                op->_output.error,
-                                remove_for_unlock),
-                      _this);
-        }
-    };
+            if (IGNORE_CALLBACK != ignore_callback) {
+                __execute(std::bind(&lock_struct::after_remove_my_locknode,
+                                    _this,
+                                    op->_output.error,
+                                    remove_for_unlock),
+                          _this);
+            }
+        };
     zookeeper_session::zoo_opcontext *op = zookeeper_session::create_context();
     op->_optype = zookeeper_session::ZOO_DELETE;
     op->_input._path = std::move(znode_path);
@@ -779,9 +778,9 @@ void lock_struct::unlock(lock_struct_ptr _this, error_code_future_ptr unlock_cal
 {
     _this->_checker.only_one_thread_access();
     if (_this->_state != lock_state::locked && _this->_state != lock_state::unlocking) {
-        LOG_INFO("lock(%s) myself(%s) seqid(%lld) state(%s), just return",
-                 _this->_lock_id.c_str(),
-                 _this->_myself._node_value.c_str(),
+        LOG_INFO("lock({}) myself({}) seqid({}) state({}), just return",
+                 _this->_lock_id,
+                 _this->_myself._node_value,
                  _this->_owner._sequence_id,
                  string_state(_this->_state));
         unlock_callback->enqueue_with(ERR_INVALID_PARAMETERS);

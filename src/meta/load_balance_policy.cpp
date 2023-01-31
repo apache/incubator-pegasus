@@ -42,7 +42,7 @@ void dump_disk_load(app_id id, const rpc_address &node, bool only_primary, const
         load_string << kv.first << ": " << kv.second << std::endl;
     }
     load_string << ">>>>>>>>>>";
-    LOG_DEBUG("%s", load_string.str().c_str());
+    LOG_DEBUG("{}", load_string.str());
 }
 
 bool calc_disk_load(node_mapper &nodes,
@@ -57,17 +57,12 @@ bool calc_disk_load(node_mapper &nodes,
     CHECK_NOTNULL(ns, "can't find node({}) from node_state", node.to_string());
 
     auto add_one_replica_to_disk_load = [&](const gpid &pid) {
-        LOG_DEBUG("add gpid(%d.%d) to node(%s) disk load",
-                  pid.get_app_id(),
-                  pid.get_partition_index(),
-                  node.to_string());
+        LOG_DEBUG("add gpid({}) to node({}) disk load", pid, node);
         const config_context &cc = *get_config_context(apps, pid);
         auto iter = cc.find_from_serving(node);
         if (iter == cc.serving.end()) {
-            LOG_WARNING("can't collect gpid(%d.%d)'s info from %s, which should be primary",
-                        pid.get_app_id(),
-                        pid.get_partition_index(),
-                        node.to_string());
+            LOG_WARNING(
+                "can't collect gpid({})'s info from {}, which should be primary", pid, node);
             return false;
         } else {
             load[iter->disk_tag]++;
@@ -96,7 +91,7 @@ get_node_loads(const std::shared_ptr<app_state> &app,
     for (auto iter = nodes.begin(); iter != nodes.end(); ++iter) {
         if (!calc_disk_load(
                 nodes, apps, app->app_id, iter->first, only_primary, node_loads[iter->first])) {
-            LOG_WARNING_F(
+            LOG_WARNING(
                 "stop the balancer as some replica infos aren't collected, node({}), app({})",
                 iter->first.to_string(),
                 app->get_logname());
@@ -158,13 +153,12 @@ generate_balancer_request(const app_mapper &apps,
     default:
         CHECK(false, "");
     }
-    LOG_INFO("generate balancer: %d.%d %s from %s of disk_tag(%s) to %s",
-             pc.pid.get_app_id(),
-             pc.pid.get_partition_index(),
-             ans.c_str(),
-             from.to_string(),
-             get_disk_tag(apps, from, pc.pid).c_str(),
-             to.to_string());
+    LOG_INFO("generate balancer: {} {} from {} of disk_tag({}) to {}",
+             pc.pid,
+             ans,
+             from,
+             get_disk_tag(apps, from, pc.pid),
+             to);
     return std::make_shared<configuration_balancer_request>(std::move(result));
 }
 
@@ -200,25 +194,24 @@ bool load_balance_policy::primary_balance(const std::shared_ptr<app_state> &app,
     CHECK_GE_MSG(_alive_nodes,
                  FLAGS_min_live_node_count_for_unfreeze,
                  "too few alive nodes will lead to freeze");
-    LOG_INFO_F("primary balancer for app({}:{})", app->app_name, app->app_id);
+    LOG_INFO("primary balancer for app({}:{})", app->app_name, app->app_id);
 
     auto graph = ford_fulkerson::builder(app, *_global_view->nodes, address_id).build();
     if (nullptr == graph) {
-        LOG_DEBUG_F("the primaries are balanced for app({}:{})", app->app_name, app->app_id);
+        LOG_DEBUG("the primaries are balanced for app({}:{})", app->app_name, app->app_id);
         return true;
     }
 
     auto path = graph->find_shortest_path();
     if (path != nullptr) {
-        LOG_DEBUG_F("{} primaries are flew", path->_flow.back());
+        LOG_DEBUG("{} primaries are flew", path->_flow.back());
         return move_primary(std::move(path));
     } else {
-        LOG_INFO_F(
-            "we can't make the server load more balanced by moving primaries to secondaries");
+        LOG_INFO("we can't make the server load more balanced by moving primaries to secondaries");
         if (!only_move_primary) {
             return copy_primary(app, graph->have_less_than_average());
         } else {
-            LOG_INFO_F("stop to copy primary for app({}) coz it is disabled", app->get_logname());
+            LOG_INFO("stop to copy primary for app({}) coz it is disabled", app->get_logname());
             return true;
         }
     }
@@ -250,9 +243,9 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
     int current = path->_prev.back();
     if (!calc_disk_load(
             nodes, apps, path->_app->app_id, address_vec[current], true, *current_load)) {
-        LOG_WARNING_F("stop move primary as some replica infos aren't collected, node({}), app({})",
-                      address_vec[current].to_string(),
-                      path->_app->get_logname());
+        LOG_WARNING("stop move primary as some replica infos aren't collected, node({}), app({})",
+                    address_vec[current].to_string(),
+                    path->_app->get_logname());
         return false;
     }
 
@@ -261,7 +254,7 @@ bool load_balance_policy::move_primary(std::unique_ptr<flow_path> path)
         rpc_address from = address_vec[path->_prev[current]];
         rpc_address to = address_vec[current];
         if (!calc_disk_load(nodes, apps, path->_app->app_id, from, true, *prev_load)) {
-            LOG_WARNING_F(
+            LOG_WARNING(
                 "stop move primary as some replica infos aren't collected, node({}), app({})",
                 from.to_string(),
                 path->_app->get_logname());
@@ -357,7 +350,7 @@ bool load_balance_policy::execute_balance(
     for (const auto &kv : apps) {
         const std::shared_ptr<app_state> &app = kv.second;
         if (is_ignored_app(kv.first)) {
-            LOG_INFO_F("skip to do balance for the ignored app[{}]", app->get_logname());
+            LOG_INFO("skip to do balance for the ignored app[{}]", app->get_logname());
             continue;
         }
         if (app->status != app_status::AS_AVAILABLE || app->is_bulk_loading || app->splitting())
@@ -373,7 +366,7 @@ bool load_balance_policy::execute_balance(
         if (!balance_checker) {
             if (!_migration_result->empty()) {
                 if (balance_in_turn) {
-                    LOG_INFO("stop to handle more apps after we found some actions for %s",
+                    LOG_INFO("stop to handle more apps after we found some actions for {}",
                              app->get_logname());
                     return false;
                 }
@@ -757,15 +750,15 @@ bool copy_primary_operation::can_continue()
 {
     int id_min = *_ordered_address_ids.begin();
     if (_have_lower_than_average && _partition_counts[id_min] >= _replicas_low) {
-        LOG_INFO_F("{}: stop the copy due to primaries on all nodes will reach low later.",
-                   _app->get_logname());
+        LOG_INFO("{}: stop the copy due to primaries on all nodes will reach low later.",
+                 _app->get_logname());
         return false;
     }
 
     int id_max = *_ordered_address_ids.rbegin();
     if (!_have_lower_than_average && _partition_counts[id_max] - _partition_counts[id_min] <= 1) {
-        LOG_INFO_F("{}: stop the copy due to the primary will be balanced later.",
-                   _app->get_logname());
+        LOG_INFO("{}: stop the copy due to the primary will be balanced later.",
+                 _app->get_logname());
         return false;
     }
     return true;

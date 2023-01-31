@@ -41,6 +41,8 @@
 namespace dsn {
 namespace replication {
 
+DSN_DECLARE_int32(cold_backup_checkpoint_reserve_minutes);
+
 struct method_record
 {
     dsn::utils::notify_event event;
@@ -76,7 +78,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name()                                                                             \
     {                                                                                              \
-        LOG_INFO("%s is called", #method_name);                                                    \
+        LOG_INFO("{} is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -92,7 +94,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name(type1 arg1)                                                                   \
     {                                                                                              \
-        LOG_INFO("%s is called", #method_name);                                                    \
+        LOG_INFO("{} is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -108,7 +110,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name(type1 arg1, type2 arg2)                                                       \
     {                                                                                              \
-        LOG_INFO("%s is called", #method_name);                                                    \
+        LOG_INFO("{} is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -124,7 +126,7 @@ protected:
     MOCK_HELPER_FUNCS(method_name)                                                                 \
     void method_name(type1 arg1, type2 arg2, type3, arg3)                                          \
     {                                                                                              \
-        LOG_INFO("%s is called", #method_name);                                                    \
+        LOG_INFO("{} is called", #method_name);                                                    \
         int &c = counter_##method_name();                                                          \
         ++c;                                                                                       \
         int max_call = maxcall_##method_name();                                                    \
@@ -793,8 +795,8 @@ TEST_F(meta_backup_service_test, test_add_backup_policy)
         fake_wait_rpc(r, resp);
 
         std::string hint_message = fmt::format(
-            "backup interval must be greater than cold_backup_checkpoint_reserve_minutes={}",
-            _meta_svc->get_options().cold_backup_checkpoint_reserve_minutes);
+            "backup interval must be greater than FLAGS_cold_backup_checkpoint_reserve_minutes={}",
+            FLAGS_cold_backup_checkpoint_reserve_minutes);
         ASSERT_EQ(ERR_INVALID_PARAMETERS, resp.err);
         ASSERT_EQ(hint_message, resp.hint_message);
         req.backup_interval_seconds = old_backup_interval_seconds;

@@ -19,7 +19,7 @@
 
 "use strict";
 
-const type = require('./dsn/base_types');
+const type = require('./dsn/dsn_types');
 const tools = require('./tools');
 const Int64 = require('node-int64');
 const Long = require('long');

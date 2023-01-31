@@ -47,7 +47,7 @@ bool string_pattern_match(dsn::string_view value,
                                    filter_pattern.data(),
                                    filter_pattern.length());
     default:
-        LOG_ERROR_F("invalid match type {}", type);
+        LOG_ERROR("invalid match type {}", type);
         return false;
     }
 }

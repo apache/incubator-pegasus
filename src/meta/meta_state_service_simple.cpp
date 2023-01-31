@@ -284,7 +284,7 @@ error_code meta_state_service_simple::initialize(const std::vector<std::string> 
 
     _log = file::open(log_path.c_str(), O_RDWR | O_CREAT | O_BINARY, 0666);
     if (!_log) {
-        LOG_ERROR("open file failed: %s", log_path.c_str());
+        LOG_ERROR("open file failed: {}", log_path);
         return ERR_FILE_OPERATION_FAILED;
     }
     return ERR_OK;

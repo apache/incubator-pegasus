@@ -42,7 +42,7 @@ void server_state::sync_app_from_backup_media(
         _meta_svc->get_block_service_manager().get_or_create_block_filesystem(
             request.backup_provider_name);
     if (blk_fs == nullptr) {
-        LOG_ERROR("acquire block_filesystem(%s) failed", request.backup_provider_name.c_str());
+        LOG_ERROR("acquire block_filesystem({}) failed", request.backup_provider_name);
         callback_tsk->enqueue_with(ERR_INVALID_PARAMETERS, dsn::blob());
         return;
     }
@@ -59,7 +59,7 @@ void server_state::sync_app_from_backup_media(
 
     error_code err = ERR_OK;
     block_file_ptr file_handle = nullptr;
-    LOG_INFO_F("start to create metadata file {}", app_metadata);
+    LOG_INFO("start to create metadata file {}", app_metadata);
     blk_fs
         ->create_file(create_file_request{app_metadata, true},
                       TASK_CODE_EXEC_INLINED,
@@ -70,7 +70,7 @@ void server_state::sync_app_from_backup_media(
         ->wait();
 
     if (err != ERR_OK) {
-        LOG_ERROR_F("create metadata file {} failed.", app_metadata);
+        LOG_ERROR("create metadata file {} failed.", app_metadata);
         callback_tsk->enqueue_with(err, dsn::blob());
         return;
     }
@@ -89,7 +89,7 @@ std::pair<dsn::error_code, std::shared_ptr<app_state>> server_state::restore_app
     dsn::app_info info;
     if (!::dsn::json::json_forwarder<dsn::app_info>::decode(app_info, info)) {
         std::string b_str(app_info.data(), app_info.length());
-        LOG_ERROR_F("decode app_info '{}' failed", b_str);
+        LOG_ERROR("decode app_info '{}' failed", b_str);
         // NOTICE : maybe find a better error_code to replace err_corruption
         res.first = ERR_CORRUPTION;
         return res;
@@ -148,8 +148,7 @@ void server_state::restore_app(dsn::message_ex *msg)
             dsn::error_code ec = ERR_OK;
             // if err != ERR_OK, then sync_app_from_backup_media ecounter some error
             if (err != ERR_OK) {
-                LOG_ERROR("sync app_info_data from backup media failed with err(%s)",
-                          err.to_string());
+                LOG_ERROR("sync app_info_data from backup media failed with err({})", err);
                 ec = err;
             } else {
                 auto pair = restore_app_info(msg, request, app_info_data);
@@ -197,10 +196,9 @@ void server_state::on_recv_restore_report(configuration_report_restore_status_rp
         if (request.__isset.reason) {
             r_state.reason = request.reason;
         }
-        LOG_INFO("%d.%d restore report: restore_status(%s), progress(%d)",
-                 request.pid.get_app_id(),
-                 request.pid.get_partition_index(),
-                 request.restore_status.to_string(),
+        LOG_INFO("{} restore report: restore_status({}), progress({})",
+                 request.pid,
+                 request.restore_status,
                  request.progress);
     }
 }

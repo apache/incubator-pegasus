@@ -163,7 +163,7 @@ void generate_apps(/*out*/ dsn::replication::app_mapper &mapper,
         if (generate_serving_info) {
             generate_app_serving_replica_info(the_app, disks_per_node);
         }
-        LOG_DEBUG("generated app, partitions(%d)", info.partition_count);
+        LOG_DEBUG("generated app, partitions({})", info.partition_count);
         mapper.emplace(the_app->app_id, the_app);
     }
 }
@@ -201,7 +201,7 @@ void generate_node_fs_manager(const app_mapper &apps,
                      cc.find_from_serving(ns.addr())->disk_tag.c_str(),
                      pid.get_app_id(),
                      pid.get_partition_index());
-            LOG_DEBUG("concat pid_dir(%s) of node(%s)", pid_dir, ns.addr().to_string());
+            LOG_DEBUG("concat pid_dir({}) of node({})", pid_dir, ns.addr());
             manager.add_replica(pid, pid_dir);
             return true;
         });
@@ -356,10 +356,7 @@ void migration_check_and_apply(app_mapper &apps,
     int i = 0;
     for (auto kv = ml.begin(); kv != ml.end(); ++kv) {
         std::shared_ptr<configuration_balancer_request> &proposal = kv->second;
-        LOG_DEBUG("the %dth round of proposal, gpid(%d.%d)",
-                  i++,
-                  proposal->gpid.get_app_id(),
-                  proposal->gpid.get_partition_index());
+        LOG_DEBUG("the {}th round of proposal, gpid({})", i++, proposal->gpid);
         std::shared_ptr<app_state> &the_app = apps.find(proposal->gpid.get_app_id())->second;
 
         CHECK_EQ(proposal->gpid.get_app_id(), the_app->app_id);
@@ -376,11 +373,11 @@ void migration_check_and_apply(app_mapper &apps,
 
         for (unsigned int j = 0; j < proposal->action_list.size(); ++j) {
             configuration_proposal_action &act = proposal->action_list[j];
-            LOG_DEBUG("the %dth round of action, type: %s, node: %s, target: %s",
+            LOG_DEBUG("the {}th round of action, type: {}, node: {}, target: {}",
                       j,
                       dsn::enum_to_string(act.type),
-                      act.node.to_string(),
-                      act.target.to_string());
+                      act.node,
+                      act.target);
             proposal_action_check_and_apply(act, proposal->gpid, apps, nodes, manager);
         }
     }

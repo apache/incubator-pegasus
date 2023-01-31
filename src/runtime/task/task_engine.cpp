@@ -91,7 +91,7 @@ void task_worker_pool::start()
         wk->start();
     }
 
-    LOG_INFO_F(
+    LOG_INFO(
         "[{}]: thread pool [{}] started, pool_code = {}, worker_count = {}, worker_share_core = "
         "{}, partitioned = {}, ...",
         _node->full_name(),
@@ -117,7 +117,7 @@ void task_worker_pool::stop()
         wk->stop();
     }
     _is_running = false;
-    LOG_INFO_F("[{}]: thread pool {} stopped", _node->full_name(), _spec.name);
+    LOG_INFO("[{}]: thread pool {} stopped", _node->full_name(), _spec.name);
 }
 
 void task_worker_pool::add_timer(task *t)
@@ -241,7 +241,7 @@ void task_engine::start()
             pl->start();
     }
     _is_running = true;
-    LOG_INFO_F("[{}]: task engine started", _node->full_name());
+    LOG_INFO("[{}]: task engine started", _node->full_name());
 }
 
 void task_engine::stop()
@@ -255,7 +255,7 @@ void task_engine::stop()
             pl->stop();
     }
     _is_running = false;
-    LOG_INFO_F("[{}]: task engine stopped", _node->full_name());
+    LOG_INFO("[{}]: task engine stopped", _node->full_name());
 }
 
 volatile int *task_engine::get_task_queue_virtual_length_ptr(dsn::task_code code, int hash)

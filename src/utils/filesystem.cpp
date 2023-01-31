@@ -335,7 +335,7 @@ static bool remove_directory(const std::string &npath)
     boost::filesystem::remove_all(npath, ec);
     // TODO(wutao1): return the specific error to caller
     if (dsn_unlikely(bool(ec))) {
-        LOG_WARNING("remove %s failed, err = %s", npath.c_str(), ec.message().c_str());
+        LOG_WARNING("remove {} failed, err = {}", npath, ec.message());
         return false;
     }
     return true;
@@ -358,8 +358,7 @@ bool remove_path(const std::string &path)
     if (dsn::utils::filesystem::path_exists_internal(npath, FTW_F)) {
         bool ret = (::remove(npath.c_str()) == 0);
         if (!ret) {
-            LOG_WARNING(
-                "remove file %s failed, err = %s", path.c_str(), safe_strerror(errno).c_str());
+            LOG_WARNING("remove file {} failed, err = {}", path, safe_strerror(errno));
         }
         return ret;
     } else if (dsn::utils::filesystem::path_exists_internal(npath, FTW_D)) {
@@ -375,10 +374,8 @@ bool rename_path(const std::string &path1, const std::string &path2)
 
     ret = (::rename(path1.c_str(), path2.c_str()) == 0);
     if (!ret) {
-        LOG_WARNING("rename from '%s' to '%s' failed, err = %s",
-                    path1.c_str(),
-                    path2.c_str(),
-                    safe_strerror(errno).c_str());
+        LOG_WARNING(
+            "rename from '{}' to '{}' failed, err = {}", path1, path2, safe_strerror(errno));
     }
 
     return ret;
@@ -483,10 +480,10 @@ bool create_directory(const std::string &path)
     return true;
 
 out_error:
-    LOG_WARNING("create_directory %s failed due to cannot create the component: %s, err = %s",
-                path.c_str(),
-                cpath.c_str(),
-                safe_strerror(err).c_str());
+    LOG_WARNING("create_directory {} failed due to cannot create the component: {}, err = {}",
+                path,
+                cpath,
+                safe_strerror(err));
     return false;
 }
 
@@ -531,12 +528,12 @@ bool create_file(const std::string &path)
     fd = ::creat(npath.c_str(), mode);
     if (fd == -1) {
         err = errno;
-        LOG_WARNING("create_file %s failed, err = %s", path.c_str(), safe_strerror(err).c_str());
+        LOG_WARNING("create_file {} failed, err = {}", path, safe_strerror(err));
         return false;
     }
 
     if (::close_(fd) != 0) {
-        LOG_WARNING("create_file %s, failed to close the file handle.", path.c_str());
+        LOG_WARNING("create_file {}, failed to close the file handle.", path);
     }
 
     return true;
@@ -699,8 +696,7 @@ bool get_disk_space_info(const std::string &path, disk_space_info &info)
     boost::system::error_code ec;
     boost::filesystem::space_info in = boost::filesystem::space(path, ec);
     if (ec) {
-        LOG_ERROR(
-            "get disk space info failed: path = %s, err = %s", path.c_str(), ec.message().c_str());
+        LOG_ERROR("get disk space info failed: path = {}, err = {}", path, ec.message());
         return false;
     } else {
         info.capacity = in.capacity;
@@ -725,13 +721,13 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
     result.clear();
     // if file not exist, we return ERR_OBJECT_NOT_FOUND
     if (!::dsn::utils::filesystem::file_exists(file_path)) {
-        LOG_ERROR("md5sum error: file %s not exist", file_path.c_str());
+        LOG_ERROR("md5sum error: file {} not exist", file_path);
         return ERR_OBJECT_NOT_FOUND;
     }
 
     FILE *fp = fopen(file_path.c_str(), "rb");
     if (fp == nullptr) {
-        LOG_ERROR("md5sum error: open file %s failed", file_path.c_str());
+        LOG_ERROR("md5sum error: open file {} failed", file_path);
         return ERR_FILE_OPERATION_FAILED;
     }
 
@@ -750,10 +746,10 @@ error_code md5sum(const std::string &file_path, /*out*/ std::string &result)
                 break;
             } else {
                 int err = ferror(fp);
-                LOG_ERROR("md5sum error: read file %s failed: errno = %d (%s)",
-                          file_path.c_str(),
+                LOG_ERROR("md5sum error: read file {} failed: errno = {} ({})",
+                          file_path,
                           err,
-                          safe_strerror(err).c_str());
+                          safe_strerror(err));
                 fclose(fp);
                 MD5_Final(out, &c);
                 return ERR_FILE_OPERATION_FAILED;
@@ -789,20 +785,20 @@ std::pair<error_code, bool> is_directory_empty(const std::string &dirname)
 error_code read_file(const std::string &fname, std::string &buf)
 {
     if (!file_exists(fname)) {
-        LOG_ERROR_F("file({}) doesn't exist", fname);
+        LOG_ERROR("file({}) doesn't exist", fname);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     int64_t file_sz = 0;
     if (!file_size(fname, file_sz)) {
-        LOG_ERROR_F("get file({}) size failed", fname);
+        LOG_ERROR("get file({}) size failed", fname);
         return ERR_FILE_OPERATION_FAILED;
     }
 
     buf.resize(file_sz);
     std::ifstream fin(fname, std::ifstream::in);
     if (!fin.is_open()) {
-        LOG_ERROR_F("open file({}) failed", fname);
+        LOG_ERROR("open file({}) failed", fname);
         return ERR_FILE_OPERATION_FAILED;
     }
     fin.read(&buf[0], file_sz);
@@ -821,26 +817,26 @@ bool verify_file(const std::string &fname,
                  const int64_t &expected_fsize)
 {
     if (!file_exists(fname)) {
-        LOG_ERROR_F("file({}) is not existed", fname);
+        LOG_ERROR("file({}) is not existed", fname);
         return false;
     }
     int64_t f_size = 0;
     if (!file_size(fname, f_size)) {
-        LOG_ERROR_F("verify file({}) failed, becaused failed to get file size", fname);
+        LOG_ERROR("verify file({}) failed, becaused failed to get file size", fname);
         return false;
     }
     std::string md5;
     if (md5sum(fname, md5) != ERR_OK) {
-        LOG_ERROR_F("verify file({}) failed, becaused failed to get file md5", fname);
+        LOG_ERROR("verify file({}) failed, becaused failed to get file md5", fname);
         return false;
     }
     if (f_size != expected_fsize || md5 != expected_md5) {
-        LOG_ERROR_F("verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
-                    fname,
-                    f_size,
-                    expected_fsize,
-                    md5,
-                    expected_md5);
+        LOG_ERROR("verify file({}) failed, because file damaged, size: {} VS {}, md5: {} VS {}",
+                  fname,
+                  f_size,
+                  expected_fsize,
+                  md5,
+                  expected_md5);
         return false;
     }
     return true;
@@ -849,19 +845,19 @@ bool verify_file(const std::string &fname,
 bool verify_file_size(const std::string &fname, const int64_t &expected_fsize)
 {
     if (!file_exists(fname)) {
-        LOG_ERROR_F("file({}) is not existed", fname);
+        LOG_ERROR("file({}) is not existed", fname);
         return false;
     }
     int64_t f_size = 0;
     if (!file_size(fname, f_size)) {
-        LOG_ERROR_F("verify file({}) size failed, becaused failed to get file size", fname);
+        LOG_ERROR("verify file({}) size failed, becaused failed to get file size", fname);
         return false;
     }
     if (f_size != expected_fsize) {
-        LOG_ERROR_F("verify file({}) size failed, because file damaged, size: {} VS {}",
-                    fname,
-                    f_size,
-                    expected_fsize);
+        LOG_ERROR("verify file({}) size failed, because file damaged, size: {} VS {}",
+                  fname,
+                  f_size,
+                  expected_fsize);
         return false;
     }
     return true;
@@ -874,10 +870,10 @@ bool verify_data_md5(const std::string &fname,
 {
     std::string md5 = string_md5(data, data_size);
     if (md5 != expected_md5) {
-        LOG_ERROR_F("verify data({}) failed, because data damaged, size: md5: {} VS {}",
-                    fname,
-                    md5,
-                    expected_md5);
+        LOG_ERROR("verify data({}) failed, because data damaged, size: md5: {} VS {}",
+                  fname,
+                  md5,
+                  expected_md5);
         return false;
     }
     return true;
@@ -907,7 +903,7 @@ bool create_directory(const std::string &path, std::string &absolute_path, std::
 bool write_file(const std::string &fname, std::string &buf)
 {
     if (!file_exists(fname)) {
-        LOG_ERROR_F("file({}) doesn't exist", fname);
+        LOG_ERROR("file({}) doesn't exist", fname);
         return false;
     }
 

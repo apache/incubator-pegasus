@@ -28,7 +28,7 @@
 namespace pegasus {
 namespace server {
 
-DSN_DEFINE_int64("pegasus.collector",
+DSN_DEFINE_int64(pegasus.collector,
                  max_hotspot_store_size,
                  100,
                  "the max count of historical data "
@@ -37,20 +37,20 @@ DSN_DEFINE_int64("pegasus.collector",
                  "eliminate outdated historical "
                  "data");
 
-DSN_DEFINE_bool("pegasus.collector",
+DSN_DEFINE_bool(pegasus.collector,
                 enable_detect_hotkey,
                 false,
                 "auto detect hot key in the hot paritition");
 DSN_TAG_VARIABLE(enable_detect_hotkey, FT_MUTABLE);
 
-DSN_DEFINE_uint32("pegasus.collector",
+DSN_DEFINE_uint32(pegasus.collector,
                   hot_partition_threshold,
                   3,
                   "threshold of hotspot partition value, if app.stat.hotspots >= "
                   "FLAGS_hotpartition_threshold, this partition is a hot partition");
 DSN_TAG_VARIABLE(hot_partition_threshold, FT_MUTABLE);
 
-DSN_DEFINE_uint32("pegasus.collector",
+DSN_DEFINE_uint32(pegasus.collector,
                   occurrence_threshold,
                   3,
                   "hot paritiotion occurrence times' threshold to send rpc to detect hotkey");
@@ -176,10 +176,10 @@ void hotspot_partition_calculator::detect_hotkey_in_hotpartition(int data_type)
     for (int index = 0; index < _hot_points.size(); index++) {
         if (_hot_points[index][data_type].get()->get_value() >= now_hot_partition_threshold) {
             if (++_hotpartition_counter[index][data_type] >= now_occurrence_threshold) {
-                LOG_ERROR_F("Find a {} hot partition {}.{}",
-                            (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
-                            _app_name,
-                            index);
+                LOG_ERROR("Find a {} hot partition {}.{}",
+                          (data_type == partition_qps_type::READ_HOTSPOT_DATA ? "read" : "write"),
+                          _app_name,
+                          index);
                 send_detect_hotkey_request(_app_name,
                                            index,
                                            (data_type == dsn::replication::hotkey_type::type::READ)
@@ -215,26 +215,26 @@ void hotspot_partition_calculator::send_detect_hotkey_request(
     req.pid = dsn::gpid(app_id, partition_index);
     auto error = _shell_context->ddl_client->detect_hotkey(target_address, req, resp);
 
-    LOG_INFO_F("{} {} hotkey detection in {}.{}, server address: {}",
-               (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
-               (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
-               app_name,
-               partition_index,
-               target_address.to_string());
+    LOG_INFO("{} {} hotkey detection in {}.{}, server address: {}",
+             (action == dsn::replication::detect_action::STOP) ? "Stop" : "Start",
+             (hotkey_type == dsn::replication::hotkey_type::WRITE) ? "write" : "read",
+             app_name,
+             partition_index,
+             target_address.to_string());
 
     if (error != dsn::ERR_OK) {
-        LOG_ERROR_F("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
-                    app_name,
-                    partition_index,
-                    error.to_string());
+        LOG_ERROR("Hotkey detect rpc sending failed, in {}.{}, error_hint:{}",
+                  app_name,
+                  partition_index,
+                  error.to_string());
     }
 
     if (resp.err != dsn::ERR_OK) {
-        LOG_ERROR_F("Hotkey detect rpc executing failed, in {}.{}, error_hint:{} {}",
-                    app_name,
-                    partition_index,
-                    resp.err,
-                    resp.err_hint);
+        LOG_ERROR("Hotkey detect rpc executing failed, in {}.{}, error_hint:{} {}",
+                  app_name,
+                  partition_index,
+                  resp.err,
+                  resp.err_hint);
     }
 }
 

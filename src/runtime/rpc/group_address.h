@@ -48,7 +48,7 @@ public:
         for (const auto &addr : addrs) {
             // TODO(yingchun): add LOG_WARNING_IF/LOG_ERROR_IF
             if (!add(addr)) {
-                LOG_WARNING_F("duplicate adress {}", addr);
+                LOG_WARNING("duplicate adress {}", addr);
             }
         }
     }

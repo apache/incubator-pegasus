@@ -288,7 +288,7 @@ public:
 
         _ms->get_meta_storage()->create_node(
             std::move(path), blob(lock_state, 0, strlen(lock_state)), [&app_root]() {
-                LOG_INFO_F("create app root {}", app_root);
+                LOG_INFO("create app root {}", app_root);
             });
         wait_all();
 
@@ -308,7 +308,7 @@ public:
             app_root + "/" + boost::lexical_cast<std::string>(ainfo.app_id),
             std::move(value),
             [this, &app_root, &ainfo]() {
-                LOG_INFO_F("create app({}) app_id={}, dir succeed", ainfo.app_name, ainfo.app_id);
+                LOG_INFO("create app({}) app_id={}, dir succeed", ainfo.app_name, ainfo.app_id);
                 for (int i = 0; i < ainfo.init_partition_count; ++i) {
                     create_partition_configuration_on_remote_storage(app_root, ainfo.app_id, i);
                 }
@@ -337,7 +337,7 @@ public:
                 boost::lexical_cast<std::string>(pidx),
             std::move(value),
             [app_id, pidx, this]() {
-                LOG_INFO_F("create app({}), partition({}.{}) dir succeed", NAME, app_id, pidx);
+                LOG_INFO("create app({}), partition({}.{}) dir succeed", NAME, app_id, pidx);
             });
     }
 

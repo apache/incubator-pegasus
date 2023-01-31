@@ -52,14 +52,14 @@ bool init(bool is_server)
 {
     error_s err = init_kerberos(is_server);
     if (!err.is_ok()) {
-        LOG_ERROR_F("initialize kerberos failed, with err = {}", err.description());
+        LOG_ERROR("initialize kerberos failed, with err = {}", err.description());
         return false;
     }
     LOG_INFO("initialize kerberos succeed");
 
     err = init_sasl(is_server);
     if (!err.is_ok()) {
-        LOG_ERROR_F("initialize sasl failed, with err = {}", err.description());
+        LOG_ERROR("initialize sasl failed, with err = {}", err.description());
         return false;
     }
     LOG_INFO("initialize sasl succeed");
@@ -72,14 +72,14 @@ bool init_for_zookeeper_client()
 {
     error_s err = run_kinit();
     if (!err.is_ok()) {
-        LOG_ERROR_F("initialize kerberos failed, with err = {}", err.description());
+        LOG_ERROR("initialize kerberos failed, with err = {}", err.description());
         return false;
     }
     LOG_INFO("initialize kerberos for zookeeper client succeed");
 
     err = init_sasl(false);
     if (!err.is_ok()) {
-        LOG_ERROR_F("initialize sasl failed, with err = {}", err.description());
+        LOG_ERROR("initialize sasl failed, with err = {}", err.description());
         return false;
     }
     LOG_INFO("initialize sasl for zookeeper client succeed");

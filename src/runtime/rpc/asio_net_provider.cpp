@@ -35,7 +35,7 @@
 namespace dsn {
 namespace tools {
 
-DSN_DEFINE_uint32("network",
+DSN_DEFINE_uint32(network,
                   io_service_worker_count,
                   1,
                   "thread number for io service (timer and boost network)");
@@ -107,23 +107,23 @@ error_code asio_network_provider::start(rpc_channel channel, int port, bool clie
         _acceptor.reset(new boost::asio::ip::tcp::acceptor(get_io_service()));
         _acceptor->open(endpoint.protocol(), ec);
         if (ec) {
-            LOG_ERROR("asio tcp acceptor open failed, error = %s", ec.message().c_str());
+            LOG_ERROR("asio tcp acceptor open failed, error = {}", ec.message());
             _acceptor.reset();
             return ERR_NETWORK_INIT_FAILED;
         }
         _acceptor->set_option(boost::asio::socket_base::reuse_address(true));
         _acceptor->bind(endpoint, ec);
         if (ec) {
-            LOG_ERROR("asio tcp acceptor bind failed, error = %s", ec.message().c_str());
+            LOG_ERROR("asio tcp acceptor bind failed, error = {}", ec.message());
             _acceptor.reset();
             return ERR_NETWORK_INIT_FAILED;
         }
         int backlog = boost::asio::socket_base::max_connections;
         _acceptor->listen(backlog, ec);
         if (ec) {
-            LOG_ERROR("asio tcp acceptor listen failed, port = %u, error = %s",
+            LOG_ERROR("asio tcp acceptor listen failed, port = {}, error = {}",
                       _address.port(),
-                      ec.message().c_str());
+                      ec.message());
             _acceptor.reset();
             return ERR_NETWORK_INIT_FAILED;
         }
@@ -148,7 +148,7 @@ void asio_network_provider::do_accept()
         if (!ec) {
             auto remote = socket->remote_endpoint(ec);
             if (ec) {
-                LOG_ERROR("failed to get the remote endpoint: %s", ec.message().data());
+                LOG_ERROR("failed to get the remote endpoint: {}", ec.message());
             } else {
                 auto ip = remote.address().to_v4().to_ulong();
                 auto port = remote.port();
@@ -164,10 +164,10 @@ void asio_network_provider::do_accept()
 
                 // when server connection threshold is hit, close the session, otherwise accept it
                 if (check_if_conn_threshold_exceeded(s->remote_address())) {
-                    LOG_WARNING("close rpc connection from %s to %s due to hitting server "
+                    LOG_WARNING("close rpc connection from {} to {} due to hitting server "
                                 "connection threshold per ip",
-                                s->remote_address().to_string(),
-                                address().to_string());
+                                s->remote_address(),
+                                address());
                     s->close();
                 } else {
                     on_server_session_accepted(s);
@@ -210,10 +210,10 @@ void asio_udp_provider::send_message(message_ex *request)
         ep,
         [=](const boost::system::error_code &error, std::size_t bytes_transferred) {
             if (error) {
-                LOG_WARNING("send udp packet to ep %s:%d failed, message = %s",
-                            ep.address().to_string().c_str(),
+                LOG_WARNING("send udp packet to ep {}:{} failed, message = {}",
+                            ep.address(),
                             ep.port(),
-                            error.message().c_str());
+                            error.message());
                 // we do not handle failure here, rpc matcher would handle timeouts
             }
         });
@@ -274,23 +274,22 @@ void asio_udp_provider::do_receive()
         [this, send_endpoint](const boost::system::error_code &error,
                               std::size_t bytes_transferred) {
             if (!!error) {
-                LOG_ERROR(
-                    "%s: asio udp read failed: %s", _address.to_string(), error.message().c_str());
+                LOG_ERROR("{}: asio udp read failed: {}", _address, error.message());
                 do_receive();
                 return;
             }
 
             if (bytes_transferred < sizeof(uint32_t)) {
-                LOG_ERROR("%s: asio udp read failed: too short message", _address.to_string());
+                LOG_ERROR("{}: asio udp read failed: too short message", _address);
                 do_receive();
                 return;
             }
 
             auto hdr_format = message_parser::get_header_type(_recv_reader._buffer.data());
             if (NET_HDR_INVALID == hdr_format) {
-                LOG_ERROR("%s: asio udp read failed: invalid header type '%s'",
-                          _address.to_string(),
-                          message_parser::get_debug_string(_recv_reader._buffer.data()).c_str());
+                LOG_ERROR("{}: asio udp read failed: invalid header type '{}'",
+                          _address,
+                          message_parser::get_debug_string(_recv_reader._buffer.data()));
                 do_receive();
                 return;
             }
@@ -304,7 +303,7 @@ void asio_udp_provider::do_receive()
 
             message_ex *msg = parser->get_message_on_receive(&_recv_reader, read_next);
             if (msg == nullptr) {
-                LOG_ERROR("%s: asio udp read failed: invalid udp packet", _address.to_string());
+                LOG_ERROR("{}: asio udp read failed: invalid udp packet", _address);
                 do_receive();
                 return;
             }
@@ -346,15 +345,15 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
             _socket.reset(new ::boost::asio::ip::udp::socket(_io_service));
             _socket->open(endpoint.protocol(), ec);
             if (ec) {
-                LOG_ERROR("asio udp socket open failed, error = %s", ec.message().c_str());
+                LOG_ERROR("asio udp socket open failed, error = {}", ec.message());
                 _socket.reset();
                 continue;
             }
             _socket->bind(endpoint, ec);
             if (ec) {
-                LOG_ERROR("asio udp socket bind failed, port = %u, error = %s",
+                LOG_ERROR("asio udp socket bind failed, port = {}, error = {}",
                           _address.port(),
-                          ec.message().c_str());
+                          ec.message());
                 _socket.reset();
                 continue;
             }
@@ -368,15 +367,15 @@ error_code asio_udp_provider::start(rpc_channel channel, int port, bool client_o
         _socket.reset(new ::boost::asio::ip::udp::socket(_io_service));
         _socket->open(endpoint.protocol(), ec);
         if (ec) {
-            LOG_ERROR("asio udp socket open failed, error = %s", ec.message().c_str());
+            LOG_ERROR("asio udp socket open failed, error = {}", ec.message());
             _socket.reset();
             return ERR_NETWORK_INIT_FAILED;
         }
         _socket->bind(endpoint, ec);
         if (ec) {
-            LOG_ERROR("asio udp socket bind failed, port = %u, error = %s",
+            LOG_ERROR("asio udp socket bind failed, port = {}, error = {}",
                       _address.port(),
-                      ec.message().c_str());
+                      ec.message());
             _socket.reset();
             return ERR_NETWORK_INIT_FAILED;
         }

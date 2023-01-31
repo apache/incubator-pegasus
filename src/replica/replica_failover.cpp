@@ -43,10 +43,7 @@ namespace replication {
 
 void replica::handle_local_failure(error_code error)
 {
-    LOG_INFO("%s: handle local failure error %s, status = %s",
-             name(),
-             error.to_string(),
-             enum_to_string(status()));
+    LOG_INFO_PREFIX("handle local failure error {}, status = {}", error, enum_to_string(status()));
 
     if (status() == partition_status::PS_PRIMARY) {
         _stub->remove_replica_on_meta_server(_app_info, _primary_states.membership);
@@ -60,12 +57,11 @@ void replica::handle_remote_failure(partition_status::type st,
                                     error_code error,
                                     const std::string &caused_by)
 {
-    LOG_ERROR("%s: handle remote failure caused by %s, error = %s, status = %s, node = %s",
-              name(),
-              caused_by.c_str(),
-              error.to_string(),
-              enum_to_string(st),
-              node.to_string());
+    LOG_ERROR_PREFIX("handle remote failure caused by {}, error = {}, status = {}, node = {}",
+                     caused_by,
+                     error,
+                     enum_to_string(st),
+                     node);
 
     CHECK_EQ(status(), partition_status::PS_PRIMARY);
     CHECK_NE(node, _stub->_primary_address);
@@ -85,7 +81,7 @@ void replica::handle_remote_failure(partition_status::type st,
         }
         break;
     case partition_status::PS_POTENTIAL_SECONDARY: {
-        LOG_INFO("%s: remove learner %s for remote failure", name(), node.to_string());
+        LOG_INFO_PREFIX("remove learner {} for remote failure", node);
         // potential secondary failure does not lead to ballot change
         // therefore, it is possible to have multiple exec here
         _primary_states.learners.erase(node);
@@ -102,7 +98,7 @@ void replica::handle_remote_failure(partition_status::type st,
 
 void replica::on_meta_server_disconnected()
 {
-    LOG_INFO("%s: meta server disconnected", name());
+    LOG_INFO_PREFIX("meta server disconnected");
 
     auto old_status = status();
     update_local_configuration_with_no_ballot_change(partition_status::PS_INACTIVE);

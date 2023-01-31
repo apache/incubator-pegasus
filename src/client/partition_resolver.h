@@ -73,6 +73,8 @@ public:
 
     dsn::rpc_address get_meta_server() const { return _meta_server; }
 
+    const char *log_prefix() const { return _app_name.c_str(); }
+
 protected:
     partition_resolver(rpc_address meta_server, const char *app_name)
         : _app_name(app_name), _meta_server(meta_server)

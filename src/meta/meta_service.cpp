@@ -50,13 +50,23 @@
 namespace dsn {
 namespace replication {
 
-DSN_DEFINE_uint64("meta_server",
+DSN_DEFINE_uint64(meta_server,
                   min_live_node_count_for_unfreeze,
                   3,
                   "minimum live node count without which the state is freezed");
 DSN_TAG_VARIABLE(min_live_node_count_for_unfreeze, FT_MUTABLE);
 DSN_DEFINE_validator(min_live_node_count_for_unfreeze,
                      [](uint64_t min_live_node_count) -> bool { return min_live_node_count > 0; });
+
+DSN_DEFINE_int32(replication,
+                 lb_interval_ms,
+                 10000,
+                 "every this period(ms) the meta server will do load balance");
+
+DSN_DECLARE_int32(fd_beacon_interval_seconds);
+DSN_DECLARE_int32(fd_check_interval_seconds);
+DSN_DECLARE_int32(fd_grace_seconds);
+DSN_DECLARE_int32(fd_lease_seconds);
 
 meta_service::meta_service()
     : serverlet("meta_service"), _failure_detector(nullptr), _started(false), _recovering(false)
@@ -124,7 +134,7 @@ error_code meta_service::remote_storage_initialize()
             _meta_opts.meta_state_service_type.c_str(), PROVIDER_TYPE_MAIN);
     error_code err = storage->initialize(_meta_opts.meta_state_service_args);
     if (err != ERR_OK) {
-        LOG_ERROR("init meta_state_service failed, err = %s", err.to_string());
+        LOG_ERROR("init meta_state_service failed, err = {}", err);
         return err;
     }
     _storage.reset(storage);
@@ -139,14 +149,13 @@ error_code meta_service::remote_storage_initialize()
             _storage->create_node(current, LPC_META_CALLBACK, [&err](error_code ec) { err = ec; });
         tsk->wait();
         if (err != ERR_OK && err != ERR_NODE_ALREADY_EXIST) {
-            LOG_ERROR(
-                "create node failed, node_path = %s, err = %s", current.c_str(), err.to_string());
+            LOG_ERROR("create node failed, node_path = {}, err = {}", current, err);
             return err;
         }
     }
     _cluster_root = current.empty() ? "/" : current;
 
-    LOG_INFO("init meta_state_service succeed, cluster_root = %s", _cluster_root.c_str());
+    LOG_INFO("init meta_state_service succeed, cluster_root = {}", _cluster_root);
     return ERR_OK;
 }
 
@@ -194,19 +203,19 @@ bool meta_service::try_lock_meta_op_status(meta_op_status op_status)
 {
     meta_op_status expected = meta_op_status::FREE;
     if (!_meta_op_status.compare_exchange_strong(expected, op_status)) {
-        LOG_ERROR_F("LOCK meta op status failed, meta "
-                    "server is busy, current op status is {}",
-                    enum_to_string(expected));
+        LOG_ERROR("LOCK meta op status failed, meta "
+                  "server is busy, current op status is {}",
+                  enum_to_string(expected));
         return false;
     }
 
-    LOG_INFO_F("LOCK meta op status to {}", enum_to_string(op_status));
+    LOG_INFO("LOCK meta op status to {}", enum_to_string(op_status));
     return true;
 }
 
 void meta_service::unlock_meta_op_status()
 {
-    LOG_INFO_F("UNLOCK meta op status from {}", enum_to_string(_meta_op_status.load()));
+    LOG_INFO("UNLOCK meta op status from {}", enum_to_string(_meta_op_status.load()));
     _meta_op_status.store(meta_op_status::FREE);
 }
 
@@ -273,9 +282,9 @@ void meta_service::start_service()
     tasking::enqueue_timer(LPC_META_STATE_NORMAL,
                            nullptr,
                            std::bind(&meta_service::balancer_run, this),
-                           std::chrono::milliseconds(_opts.lb_interval_ms),
+                           std::chrono::milliseconds(FLAGS_lb_interval_ms),
                            server_state::sStateHash,
-                           std::chrono::milliseconds(_opts.lb_interval_ms));
+                           std::chrono::milliseconds(FLAGS_lb_interval_ms));
 
     if (!_meta_opts.cold_backup_disabled) {
         LOG_INFO("start backup service");
@@ -301,7 +310,7 @@ error_code meta_service::start()
     error_code err;
 
     err = remote_storage_initialize();
-    dreturn_not_ok_logged(err, "init remote storage failed, err = %s", err.to_string());
+    dreturn_not_ok_logged(err, "init remote storage failed, err = {}", err);
     LOG_INFO("remote storage is successfully initialized");
 
     // start failure detector, and try to acquire the leader lock
@@ -310,14 +319,14 @@ error_code meta_service::start()
         _failure_detector->set_allow_list(_meta_opts.replica_white_list);
     _failure_detector->register_ctrl_commands();
 
-    err = _failure_detector->start(_opts.fd_check_interval_seconds,
-                                   _opts.fd_beacon_interval_seconds,
-                                   _opts.fd_lease_seconds,
-                                   _opts.fd_grace_seconds,
+    err = _failure_detector->start(FLAGS_fd_check_interval_seconds,
+                                   FLAGS_fd_beacon_interval_seconds,
+                                   FLAGS_fd_lease_seconds,
+                                   FLAGS_fd_grace_seconds,
                                    _meta_opts.enable_white_list);
 
-    dreturn_not_ok_logged(err, "start failure_detector failed, err = %s", err.to_string());
-    LOG_INFO("meta service failure detector is successfully started %s",
+    dreturn_not_ok_logged(err, "start failure_detector failed, err = {}", err);
+    LOG_INFO("meta service failure detector is successfully started {}",
              _meta_opts.enable_white_list ? "with whitelist enabled" : "");
 
     // should register rpc handlers before acquiring leader lock, so that this meta service
@@ -330,8 +339,8 @@ error_code meta_service::start()
 
     _failure_detector->acquire_leader_lock();
     CHECK(_failure_detector->get_leader(nullptr), "must be primary at this point");
-    LOG_INFO("%s got the primary lock, start to recover server state from remote storage",
-             dsn_primary_address().to_string());
+    LOG_INFO("{} got the primary lock, start to recover server state from remote storage",
+             dsn_primary_address());
 
     // initialize the load balancer
     server_load_balancer *balancer = utils::factory_store<server_load_balancer>::create(
@@ -368,8 +377,7 @@ error_code meta_service::start()
                      "administrator should recover this cluster manually later");
             return dsn::ERR_OK;
         }
-        LOG_ERROR("initialize server state from remote storage failed, err = %s, retry ...",
-                  err.to_string());
+        LOG_ERROR("initialize server state from remote storage failed, err = {}, retry ...", err);
     }
 
     _state->recover_from_max_replica_count_env();
@@ -487,7 +495,7 @@ int meta_service::check_leader(dsn::message_ex *req, dsn::rpc_address *forward_a
             return -1;
         }
 
-        LOG_DEBUG("leader address: %s", leader.to_string());
+        LOG_DEBUG("leader address: {}", leader);
         if (!leader.is_invalid()) {
             dsn_rpc_forward(req, leader);
             return 0;
@@ -653,10 +661,10 @@ void meta_service::on_query_configuration_by_index(configuration_query_by_index_
 
     _state->query_configuration_by_index(rpc.request(), response);
     if (ERR_OK == response.err) {
-        LOG_INFO_F("client {} queried an available app {} with appid {}",
-                   rpc.dsn_request()->header->from_address.to_string(),
-                   rpc.request().app_name,
-                   response.app_id);
+        LOG_INFO("client {} queried an available app {} with appid {}",
+                 rpc.dsn_request()->header->from_address.to_string(),
+                 rpc.request().app_name,
+                 response.app_id);
     }
 }
 
@@ -701,8 +709,8 @@ void meta_service::on_update_configuration(dsn::message_ex *req)
         _state->query_configuration_by_gpid(request->config.pid, response.config);
         reply(req, response);
 
-        LOG_INFO("refuse request %s coz meta function level is %s",
-                 boost::lexical_cast<std::string>(*request).c_str(),
+        LOG_INFO("refuse request {} coz meta function level is {}",
+                 boost::lexical_cast<std::string>(*request),
                  _meta_function_level_VALUES_TO_NAMES.find(level)->second);
         return;
     }
@@ -745,9 +753,7 @@ void meta_service::on_propose_balancer(configuration_balancer_rpc rpc)
     }
 
     const configuration_balancer_request &request = rpc.request();
-    LOG_INFO("get proposal balancer request, gpid(%d.%d)",
-             request.gpid.get_app_id(),
-             request.gpid.get_partition_index());
+    LOG_INFO("get proposal balancer request, gpid({})", request.gpid);
     _state->on_propose_balancer(request, rpc.response());
 }
 
@@ -766,8 +772,8 @@ void meta_service::on_start_recovery(configuration_recovery_rpc rpc)
     } else {
         zauto_write_lock l(_meta_lock);
         if (_started.load()) {
-            LOG_INFO("service(%s) is already started, ignore the recovery request",
-                     dsn_primary_address().to_string());
+            LOG_INFO("service({}) is already started, ignore the recovery request",
+                     dsn_primary_address());
             response.err = ERR_SERVICE_ALREADY_RUNNING;
         } else {
             _state->on_start_recovery(rpc.request(), response);
@@ -1007,7 +1013,7 @@ void meta_service::on_start_partition_split(start_split_rpc rpc)
         return;
     }
     if (_split_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support partition split");
+        LOG_ERROR("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1024,7 +1030,7 @@ void meta_service::on_control_partition_split(control_split_rpc rpc)
     }
 
     if (_split_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support partition split");
+        LOG_ERROR("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1041,7 +1047,7 @@ void meta_service::on_query_partition_split(query_split_rpc rpc)
     }
 
     if (_split_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support partition split");
+        LOG_ERROR("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1066,7 +1072,7 @@ void meta_service::on_notify_stop_split(notify_stop_split_rpc rpc)
         return;
     }
     if (_split_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support partition split");
+        LOG_ERROR("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1082,7 +1088,7 @@ void meta_service::on_query_child_state(query_child_state_rpc rpc)
         return;
     }
     if (_split_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support partition split");
+        LOG_ERROR("meta doesn't support partition split");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1096,7 +1102,7 @@ void meta_service::on_start_bulk_load(start_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support bulk load");
+        LOG_ERROR("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1110,7 +1116,7 @@ void meta_service::on_control_bulk_load(control_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support bulk load");
+        LOG_ERROR("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1127,7 +1133,7 @@ void meta_service::on_query_bulk_load_status(query_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support bulk load");
+        LOG_ERROR("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1141,7 +1147,7 @@ void meta_service::on_clear_bulk_load(clear_bulk_load_rpc rpc)
     }
 
     if (_bulk_load_svc == nullptr) {
-        LOG_ERROR_F("meta doesn't support bulk load");
+        LOG_ERROR("meta doesn't support bulk load");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1157,7 +1163,7 @@ void meta_service::on_start_backup_app(start_backup_app_rpc rpc)
         return;
     }
     if (_backup_handler == nullptr) {
-        LOG_ERROR_F("meta doesn't enable backup service");
+        LOG_ERROR("meta doesn't enable backup service");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }
@@ -1170,7 +1176,7 @@ void meta_service::on_query_backup_status(query_backup_status_rpc rpc)
         return;
     }
     if (_backup_handler == nullptr) {
-        LOG_ERROR_F("meta doesn't enable backup service");
+        LOG_ERROR("meta doesn't enable backup service");
         rpc.response().err = ERR_SERVICE_NOT_ACTIVE;
         return;
     }

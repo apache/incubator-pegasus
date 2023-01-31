@@ -136,7 +136,7 @@ http_message_parser::http_message_parser()
             header->hdr_type = http_method::HTTP_METHOD_POST;
             header->context.u.is_request = 1;
         } else {
-            LOG_ERROR("invalid http type %d and method %d", parser->type, parser->method);
+            LOG_ERROR("invalid http type {} and method {}", parser->type, parser->method);
             return 1;
         }
         return 0;
@@ -179,7 +179,7 @@ message_ex *http_message_parser::get_message_on_receive(message_reader *reader,
         // error handling
         if (_parser.http_errno != HPE_OK) {
             auto err = HTTP_PARSER_ERRNO(&_parser);
-            LOG_ERROR("failed on stage %s [%s]",
+            LOG_ERROR("failed on stage {} [{}]",
                       http_parser_stage_to_string(_stage),
                       http_errno_description(err));
 

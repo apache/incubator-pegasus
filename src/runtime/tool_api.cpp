@@ -60,7 +60,7 @@ public:
             err = _node->start_app();
             CHECK_EQ_MSG(err, ERR_OK, "start app failed");
         } else {
-            LOG_INFO("stop app result(%s)", _node->stop_app(_cleanup).to_string());
+            LOG_INFO("stop app result({})", _node->stop_app(_cleanup));
         }
     }
 

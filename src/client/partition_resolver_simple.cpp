@@ -83,16 +83,16 @@ void partition_resolver_simple::on_access_failure(int partition_index, error_cod
 
     zauto_write_lock l(_config_lock);
     if (err == ERR_PARENT_PARTITION_MISUSED) {
-        LOG_INFO_F("clear all partition configuration cache due to access failure {} at {}.{}",
-                   err,
-                   _app_id,
-                   partition_index);
+        LOG_INFO("clear all partition configuration cache due to access failure {} at {}.{}",
+                 err,
+                 _app_id,
+                 partition_index);
         _app_partition_count = -1;
     } else {
-        LOG_INFO_F("clear partition configuration cache {}.{} due to access failure {}",
-                   _app_id,
-                   partition_index,
-                   err);
+        LOG_INFO("clear partition configuration cache {}.{} due to access failure {}",
+                 _app_id,
+                 partition_index,
+                 err);
         _config_cache.erase(partition_index);
     }
 }
@@ -105,7 +105,7 @@ partition_resolver_simple::~partition_resolver_simple()
 
 void partition_resolver_simple::clear_all_pending_requests()
 {
-    LOG_DEBUG("%s.client: clear all pending tasks", _app_name.c_str());
+    LOG_DEBUG_PREFIX("clear all pending tasks");
     zauto_lock l(_requests_lock);
     // clear _pending_requests
     for (auto &pc : _pending_requests) {
@@ -230,11 +230,8 @@ DEFINE_TASK_CODE_RPC(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX,
 
 task_ptr partition_resolver_simple::query_config(int partition_index, int timeout_ms)
 {
-    LOG_DEBUG("%s.client: start query config, gpid = %d.%d, timeout_ms = %d",
-              _app_name.c_str(),
-              _app_id,
-              partition_index,
-              timeout_ms);
+    LOG_DEBUG_PREFIX(
+        "start query config, gpid = {}.{}, timeout_ms = {}", _app_id, partition_index, timeout_ms);
     task_spec *sp = task_spec::get(RPC_CM_QUERY_PARTITION_CONFIG_BY_INDEX);
     if (timeout_ms >= sp->rpc_timeout_milliseconds)
         timeout_ms = 0;
@@ -270,20 +267,19 @@ void partition_resolver_simple::query_config_reply(error_code err,
             zauto_write_lock l(_config_lock);
 
             if (_app_id != -1 && _app_id != resp.app_id) {
-                LOG_WARNING_F(
+                LOG_WARNING(
                     "app id is changed (mostly the app was removed and created with the same "
-                    "name), local Vs remote: {} vs {} ",
+                    "name), local vs remote: {} vs {} ",
                     _app_id,
                     resp.app_id);
             }
             if (_app_partition_count != -1 && _app_partition_count != resp.partition_count &&
                 _app_partition_count * 2 != resp.partition_count &&
                 _app_partition_count != resp.partition_count * 2) {
-                LOG_WARNING_F(
-                    "partition count is changed (mostly the app was removed and created with "
-                    "the same name), local Vs remote: %u vs %u ",
-                    _app_partition_count,
-                    resp.partition_count);
+                LOG_WARNING("partition count is changed (mostly the app was removed and created "
+                            "with the same name), local vs remote: {} vs {} ",
+                            _app_partition_count,
+                            resp.partition_count);
             }
             _app_id = resp.app_id;
             _app_partition_count = resp.partition_count;
@@ -292,13 +288,10 @@ void partition_resolver_simple::query_config_reply(error_code err,
             for (auto it = resp.partitions.begin(); it != resp.partitions.end(); ++it) {
                 auto &new_config = *it;
 
-                LOG_DEBUG("%s.client: query config reply, gpid = %d.%d, ballot = %" PRId64
-                          ", primary = %s",
-                          _app_name.c_str(),
-                          new_config.pid.get_app_id(),
-                          new_config.pid.get_partition_index(),
-                          new_config.ballot,
-                          new_config.primary.to_string());
+                LOG_DEBUG_PREFIX("query config reply, gpid = {}, ballot = {}, primary = {}",
+                                 new_config.pid,
+                                 new_config.ballot,
+                                 new_config.primary);
 
                 auto it2 = _config_cache.find(new_config.pid.get_partition_index());
                 if (it2 == _config_cache.end()) {
@@ -317,28 +310,19 @@ void partition_resolver_simple::query_config_reply(error_code err,
                 }
             }
         } else if (resp.err == ERR_OBJECT_NOT_FOUND) {
-            LOG_ERROR("%s.client: query config reply, gpid = %d.%d, err = %s",
-                      _app_name.c_str(),
-                      _app_id,
-                      partition_index,
-                      resp.err.to_string());
+            LOG_ERROR_PREFIX(
+                "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, resp.err);
 
             client_err = ERR_APP_NOT_EXIST;
         } else {
-            LOG_ERROR("%s.client: query config reply, gpid = %d.%d, err = %s",
-                      _app_name.c_str(),
-                      _app_id,
-                      partition_index,
-                      resp.err.to_string());
+            LOG_ERROR_PREFIX(
+                "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, resp.err);
 
             client_err = resp.err;
         }
     } else {
-        LOG_ERROR("%s.client: query config reply, gpid = %d.%d, err = %s",
-                  _app_name.c_str(),
-                  _app_id,
-                  partition_index,
-                  err.to_string());
+        LOG_ERROR_PREFIX(
+            "query config reply, gpid = {}.{}, err = {}", _app_id, partition_index, err);
     }
 
     // get specific or all partition update

@@ -26,10 +26,10 @@
 
 include "dsn.thrift"
 
-# TODO(yingchun): reuse the idls for server and all client libs
 namespace cpp dsn
 namespace go replication
 namespace java org.apache.pegasus.replication
+namespace py pypegasus.replication
 
 struct partition_configuration
 {

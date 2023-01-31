@@ -97,7 +97,7 @@ error_code replica_init_info::load(const std::string &dir)
     CHECK(utils::filesystem::path_exists(info_path), "file({}) not exist", info_path);
     ERR_LOG_AND_RETURN_NOT_OK(
         load_json(info_path), "load replica_init_info from {} failed", info_path);
-    LOG_INFO_F("load replica_init_info from {} succeed: {}", info_path, to_string());
+    LOG_INFO("load replica_init_info from {} succeed: {}", info_path, to_string());
     return ERR_OK;
 }
 
@@ -109,10 +109,10 @@ error_code replica_init_info::store(const std::string &dir)
                               "store replica_init_info to {} failed, time_used_ns = {}",
                               info_path,
                               dsn_now_ns() - start);
-    LOG_INFO_F("store replica_init_info to {} succeed, time_used_ns = {}: {}",
-               info_path,
-               dsn_now_ns() - start,
-               to_string());
+    LOG_INFO("store replica_init_info to {} succeed, time_used_ns = {}: {}",
+             info_path,
+             dsn_now_ns() - start,
+             to_string());
     return ERR_OK;
 }
 

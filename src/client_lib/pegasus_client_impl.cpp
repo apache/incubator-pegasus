@@ -92,8 +92,8 @@ void pegasus_client_impl::async_set(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, internal_info());
         return;
@@ -167,8 +167,8 @@ void pegasus_client_impl::async_multi_set(const std::string &hash_key,
         return;
     }
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, internal_info());
         return;
@@ -249,8 +249,8 @@ void pegasus_client_impl::async_get(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, std::string(), internal_info());
         return;
@@ -329,8 +329,8 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
         return;
     }
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, std::map<std::string, std::string>(), internal_info());
         return;
@@ -425,8 +425,8 @@ void pegasus_client_impl::async_multi_get(const std::string &hash_key,
         return;
     }
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, std::map<std::string, std::string>(), internal_info());
         return;
@@ -512,8 +512,8 @@ void pegasus_client_impl::async_multi_get_sortkeys(const std::string &hash_key,
         return;
     }
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, std::set<std::string>(), internal_info());
         return;
@@ -574,8 +574,8 @@ int pegasus_client_impl::sortkey_count(const std::string &hash_key,
         return PERR_INVALID_HASH_KEY;
     }
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         return PERR_INVALID_HASH_KEY;
     }
 
@@ -629,8 +629,8 @@ void pegasus_client_impl::async_del(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, internal_info());
         return;
@@ -698,8 +698,8 @@ void pegasus_client_impl::async_multi_del(const std::string &hash_key,
         return;
     }
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, 0, internal_info());
         return;
@@ -780,14 +780,14 @@ void pegasus_client_impl::async_incr(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, 0, internal_info());
         return;
     }
     if (ttl_seconds < -1) {
-        LOG_ERROR("invalid ttl seconds: should be no less than -1, but %d", ttl_seconds);
+        LOG_ERROR("invalid ttl seconds: should be no less than -1, but {}", ttl_seconds);
         if (callback != nullptr)
             callback(PERR_INVALID_ARGUMENT, 0, internal_info());
         return;
@@ -872,8 +872,8 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, check_and_set_results(), internal_info());
         return;
@@ -881,7 +881,7 @@ void pegasus_client_impl::async_check_and_set(const std::string &hash_key,
 
     if (dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(check_type) ==
         dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
-        LOG_ERROR("invalid check type: %d", (int)check_type);
+        LOG_ERROR("invalid check type: {}", check_type);
         if (callback != nullptr)
             callback(PERR_INVALID_ARGUMENT, check_and_set_results(), internal_info());
         return;
@@ -990,8 +990,8 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         if (callback != nullptr)
             callback(PERR_INVALID_HASH_KEY, check_and_mutate_results(), internal_info());
         return;
@@ -999,7 +999,7 @@ void pegasus_client_impl::async_check_and_mutate(const std::string &hash_key,
 
     if (dsn::apps::_cas_check_type_VALUES_TO_NAMES.find(check_type) ==
         dsn::apps::_cas_check_type_VALUES_TO_NAMES.end()) {
-        LOG_ERROR("invalid check type: %d", (int)check_type);
+        LOG_ERROR("invalid check type: {}", check_type);
         if (callback != nullptr)
             callback(PERR_INVALID_ARGUMENT, check_and_mutate_results(), internal_info());
         return;
@@ -1086,8 +1086,8 @@ int pegasus_client_impl::ttl(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         return PERR_INVALID_HASH_KEY;
     }
 
@@ -1136,8 +1136,8 @@ int pegasus_client_impl::get_scanner(const std::string &hash_key,
 {
     // check params
     if (hash_key.size() >= UINT16_MAX) {
-        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but %d",
-                  (int)hash_key.size());
+        LOG_ERROR("invalid hash key: hash key length should be less than UINT16_MAX, but {}",
+                  hash_key.size());
         return PERR_INVALID_HASH_KEY;
     }
     if (hash_key.empty()) {
@@ -1201,7 +1201,7 @@ void pegasus_client_impl::async_get_unordered_scanners(
 
     // check params
     if (max_split_count <= 0) {
-        LOG_ERROR("invalid max_split_count: which should be greater than 0, but %d",
+        LOG_ERROR("invalid max_split_count: which should be greater than 0, but {}",
                   max_split_count);
         callback(PERR_INVALID_SPLIT_COUNT, std::vector<pegasus_scanner *>());
         return;
@@ -1313,9 +1313,9 @@ const char *pegasus_client_impl::get_error_string(int error_code) const
     auto it = _server_error_to_client.find(server_error);
     if (it != _server_error_to_client.end())
         return it->second;
-    LOG_ERROR("can't find corresponding client error definition, server error:[%d:%s]",
+    LOG_ERROR("can't find corresponding client error definition, server error:[{}:{}]",
               server_error,
-              ::dsn::error_code(server_error).to_string());
+              ::dsn::error_code(server_error));
     return PERR_UNKNOWN;
 }
 

@@ -22,7 +22,7 @@
 
 namespace dsn {
 namespace replication {
-DSN_DEFINE_uint32("meta_server",
+DSN_DEFINE_uint32(meta_server,
                   balance_op_count_per_round,
                   10,
                   "balance operation count per round for cluster balancer");
@@ -120,7 +120,7 @@ bool cluster_balance_policy::cluster_replica_balance(const meta_view *global_vie
         return false;
     }
     if (!list.empty()) {
-        LOG_INFO_F("migration count of {} = {}", enum_to_string(type), list.size());
+        LOG_INFO("migration count of {} = {}", enum_to_string(type), list.size());
         return false;
     }
     return true;
@@ -165,11 +165,11 @@ bool cluster_balance_policy::get_cluster_migration_info(
         const std::shared_ptr<app_state> &app = kv.second;
         auto ignored = is_ignored_app(app->app_id);
         if (ignored || app->is_bulk_loading || app->splitting()) {
-            LOG_INFO_F("skip to balance app({}), ignored={}, bulk loading={}, splitting={}",
-                       app->app_name,
-                       ignored,
-                       app->is_bulk_loading,
-                       app->splitting());
+            LOG_INFO("skip to balance app({}), ignored={}, bulk loading={}, splitting={}",
+                     app->app_name,
+                     ignored,
+                     app->is_bulk_loading,
+                     app->splitting());
             continue;
         }
         if (app->status == app_status::AS_AVAILABLE) {
@@ -263,13 +263,13 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
     std::multimap<uint32_t, int32_t> app_skew_multimap = utils::flip_map(cluster_info.apps_skew);
     auto max_app_skew = app_skew_multimap.rbegin()->first;
     if (max_app_skew == 0) {
-        LOG_INFO_F("every app is balanced and any move will unbalance a app");
+        LOG_INFO("every app is balanced and any move will unbalance a app");
         return false;
     }
 
     auto server_skew = get_skew(cluster_info.replicas_count);
     if (max_app_skew <= 1 && server_skew <= 1) {
-        LOG_INFO_F("every app is balanced and the cluster as a whole is balanced");
+        LOG_INFO("every app is balanced and the cluster as a whole is balanced");
         return false;
     }
 
@@ -314,10 +314,10 @@ bool cluster_balance_policy::get_next_move(const cluster_migration_info &cluster
         std::multimap<uint32_t, rpc_address> app_count_multimap = utils::flip_map(app_map);
         if (app_count_multimap.rbegin()->first <= app_count_multimap.begin()->first + 1 &&
             (app_cluster_min_set.empty() || app_cluster_max_set.empty())) {
-            LOG_INFO_F("do not move replicas of a balanced app({}) if the least (most) loaded "
-                       "servers overall do not intersect the servers hosting the least (most) "
-                       "replicas of the app",
-                       app_id);
+            LOG_INFO("do not move replicas of a balanced app({}) if the least (most) loaded "
+                     "servers overall do not intersect the servers hosting the least (most) "
+                     "replicas of the app",
+                     app_id);
             continue;
         }
 
@@ -357,10 +357,10 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
     }
     auto index = rand() % max_load_disk_set.size();
     auto max_load_disk = *select_random(max_load_disk_set, index);
-    LOG_INFO_F("most load disk({}) on node({}) is picked, has {} partition",
-               max_load_disk.node.to_string(),
-               max_load_disk.disk_tag,
-               max_load_disk.partitions.size());
+    LOG_INFO("most load disk({}) on node({}) is picked, has {} partition",
+             max_load_disk.node.to_string(),
+             max_load_disk.disk_tag,
+             max_load_disk.partitions.size());
     for (const auto &node_addr : min_nodes) {
         gpid picked_pid;
         if (pick_up_partition(
@@ -370,17 +370,17 @@ bool cluster_balance_policy::pick_up_move(const cluster_migration_info &cluster_
             move_info.source_disk_tag = max_load_disk.disk_tag;
             move_info.target_node = node_addr;
             move_info.type = cluster_info.type;
-            LOG_INFO_F("partition[{}] will migrate from {} to {}",
-                       picked_pid,
-                       max_load_disk.node.to_string(),
-                       node_addr.to_string());
+            LOG_INFO("partition[{}] will migrate from {} to {}",
+                     picked_pid,
+                     max_load_disk.node.to_string(),
+                     node_addr.to_string());
             return true;
         }
     }
-    LOG_INFO_F("can not find a partition(app_id={}) from random max load disk(node={}, disk={})",
-               app_id,
-               max_load_disk.node.to_string(),
-               max_load_disk.disk_tag);
+    LOG_INFO("can not find a partition(app_id={}) from random max load disk(node={}, disk={})",
+             app_id,
+             max_load_disk.node.to_string(),
+             max_load_disk.disk_tag);
     return false;
 }
 

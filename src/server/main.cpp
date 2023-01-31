@@ -82,8 +82,7 @@ int main(int argc, char **argv)
             dsn_exit(0);
         }
     }
-    LOG_INFO(
-        "pegasus server starting, pid(%d), version(%s)", (int)getpid(), pegasus_server_rcsid());
+    LOG_INFO("pegasus server starting, pid({}), version({})", getpid(), pegasus_server_rcsid());
     dsn_app_registration_pegasus();
 
     std::unique_ptr<command_deregister> server_info_cmd =
