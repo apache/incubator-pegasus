@@ -2905,7 +2905,6 @@ private:
 
         // Extend the lifetime of the metric since it's marked as "surviving".
         m = temp_m;
-        _expected_surviving_metrics.emplace(&prototype, m.get());
     }
 
     surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const;
@@ -2949,6 +2948,7 @@ scoped_entity::scoped_entity(const std::string &entity_id,
     if (is_entity_surviving) {
         // Extend the lifetime of the entity since it's marked as "surviving".
         _my_entity = my_entity;
+        _expected_surviving_metrics = _expected_all_metrics;
     }
 
     test_survival_immediately_after_initialization();
