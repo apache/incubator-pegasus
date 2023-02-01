@@ -27,7 +27,7 @@
 
 namespace dsn {
 
-DSN_DEFINE_uint64("metrics",
+DSN_DEFINE_uint64(metrics,
                   metrics_retirement_delay_ms,
                   10 * 60 * 1000,
                   "The minimum number of milliseconds a metric will be kept for after it is "
@@ -36,7 +36,7 @@ DSN_DEFINE_uint64("metrics",
 metric_entity::metric_entity(const metric_entity_prototype *prototype,
                              const std::string &id,
                              const attr_map &attrs)
-    : _prototype(prototype), _id(id), _attrs(attrs)
+    : _prototype(prototype), _id(id), _attrs(attrs), _retire_time_ms(0)
 {
 }
 
@@ -51,9 +51,9 @@ metric_entity::~metric_entity()
 
 namespace {
 
-// Before destructing or retiring a metric, close it first. For example, stop the timer of
-// percentile. Generally close operations in this function are asynchronous, wait_metric()
-// can be used to wait until all close operations are finished.
+// Before destructing a metric, close it first. For example, stop the timer of percentile.
+// Generally close operations in this function are asynchronous, wait_metric() can be used
+// to wait until all close operations are finished.
 void close_metric(const dsn::metric_ptr &m)
 {
     if (m->prototype()->type() == dsn::metric_type::kPercentile) {
@@ -209,101 +209,9 @@ bool metric_entity::is_stale() const
     // at least.
     CHECK_GE(get_count(), 1);
 
-    // Once this entity did not have any metric, and had only one reference kept in the
-    // registry, this entity would be considered useless.
-    return _metrics.empty() && get_count() == 1;
-}
-
-metric_entity::collected_stale_metrics_info metric_entity::collect_stale_metrics() const
-{
-    collected_stale_metrics_info collected_info;
-
-    auto now = dsn_now_ms();
-
-    utils::auto_read_lock l(_lock);
-
-    for (const auto &m : _metrics) {
-        if (!m.second->is_stale()) {
-            if (m.second->_retire_time_ms > 0) {
-                // Previously this metric must have been scheduled to be retired. However,
-                // since this metric is reemployed now, its scheduled time for retirement
-                // should be reset to 0.
-                collected_info.stale_metrics.insert(m.first);
-            }
-            continue;
-        }
-
-        if (m.second->_retire_time_ms > now) {
-            // This metric has been scheduled to be retired, however it is still within
-            // the retention interval. Thus do not collect it.
-            ++collected_info.num_scheduled_metrics;
-            continue;
-        }
-
-        collected_info.stale_metrics.insert(m.first);
-    }
-
-    collected_info.num_all_metrics = _metrics.size();
-    return collected_info;
-}
-
-metric_entity::retired_metrics_stat
-metric_entity::retire_stale_metrics(const stale_metric_list &stale_metrics)
-{
-    if (stale_metrics.empty()) {
-        // Do not lock for empty list.
-        return retired_metrics_stat();
-    }
-
-    retired_metrics_stat retired_stat;
-
-    auto now = dsn_now_ms();
-
-    utils::auto_write_lock l(_lock);
-
-    for (const auto &m : stale_metrics) {
-        auto iter = _metrics.find(m);
-        if (dsn_unlikely(iter == _metrics.end())) {
-            // This metric has been removed from the entity for some reason.
-            continue;
-        }
-
-        if (!iter->second->is_stale()) {
-            if (iter->second->_retire_time_ms > 0) {
-                // For those metrics which are still in use, their scheduled time for
-                // retirement should be reset to 0 though previously they could have
-                // been scheduled to be retired.
-                iter->second->_retire_time_ms = 0;
-                ++retired_stat.num_reemployed_metrics;
-            }
-            continue;
-        }
-
-        if (dsn_unlikely(iter->second->_retire_time_ms > now)) {
-            // Since in collect_stale_metrics() we've filtered the metrics which have been
-            // outside the retention interval, this is unlikely to happen. However, we
-            // still check here for some special cases.
-            continue;
-        }
-
-        if (iter->second->_retire_time_ms == 0) {
-            // This metric has already not been in use, thus should be marked with a
-            // scheduled time for retirement.
-            iter->second->_retire_time_ms = now + FLAGS_metrics_retirement_delay_ms;
-            ++retired_stat.num_recently_scheduled_metrics;
-            continue;
-        }
-
-        // Once this metric is outside the retention interval, close it synchronously first.
-        close_metric(iter->second);
-        wait_metric(iter->second);
-
-        // Then retire it from the entity.
-        _metrics.erase(iter);
-        ++retired_stat.num_retired_metrics;
-    }
-
-    return retired_stat;
+    // This entity is considered stale once there is only one reference for it kept in the
+    // registry.
+    return get_count() == 1;
 }
 
 void metric_filters::extract_entity_metrics(const metric_entity::metric_map &candidates,
@@ -484,7 +392,7 @@ void metric_registry::start_timer()
     // the interval of the timer is also set to FLAGS_metrics_retirement_delay_ms, in
     // the next round, it's just about time to retire this metric.
     _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
-                                  std::bind(&metric_registry::process_stale_metrics, this),
+                                  std::bind(&metric_registry::process_stale_entities, this),
                                   std::bind(&metric_registry::on_close, this)));
 }
 
@@ -547,131 +455,116 @@ metric_entity_ptr metric_registry::find_or_create_entity(const metric_entity_pro
     return entity;
 }
 
-metric_registry::collected_stale_entities_info metric_registry::collect_stale_metrics() const
+metric_registry::collected_stale_entities_info metric_registry::collect_stale_entities() const
 {
-    collected_stale_entities_info entities_info;
+    collected_stale_entities_info collected_info;
+
+    auto now = dsn_now_ms();
 
     utils::auto_read_lock l(_lock);
 
     for (const auto &entity : _entities) {
-        const auto &metrics_info = entity.second->collect_stale_metrics();
-
-        entities_info.num_all_metrics += metrics_info.num_all_metrics;
-        entities_info.num_scheduled_metrics += metrics_info.num_scheduled_metrics;
-        if (!metrics_info.stale_metrics.empty()) {
-            // Those entities which have metrics that should be retired will be collected.
-            entities_info.stale_entities.emplace(entity.first,
-                                                 std::move(metrics_info.stale_metrics));
-            continue;
-        }
-
         if (!entity.second->is_stale()) {
+            if (entity.second->_retire_time_ms > 0) {
+                // This entity had been scheduled to be retired. However, it was reemployed
+                // after that. It has been in use since then, therefore its scheduled time
+                // for retirement should be reset to 0.
+                collected_info.stale_entities.insert(entity.first);
+            }
             continue;
         }
 
-        // Since this entity itself should be retired, it will be collected without any
-        // metric. Actually it has already not had any metric itself.
-        (void)entities_info.stale_entities[entity.first];
+        if (entity.second->_retire_time_ms > now) {
+            // This entity has been scheduled to be retired, however it is still within
+            // the retention interval. Thus do not collect it.
+            ++collected_info.num_scheduled_entities;
+            continue;
+        }
+
+        collected_info.stale_entities.insert(entity.first);
     }
 
-    entities_info.num_all_entities = _entities.size();
-    return entities_info;
+    collected_info.num_all_entities = _entities.size();
+    return collected_info;
 }
 
 metric_registry::retired_entities_stat
-metric_registry::retire_stale_metrics(const stale_entity_map &stale_entities)
+metric_registry::retire_stale_entities(const stale_entity_list &stale_entities)
 {
     if (stale_entities.empty()) {
         // Do not lock for empty list.
         return retired_entities_stat();
     }
 
-    retired_entities_stat entities_stat;
+    retired_entities_stat retired_stat;
+
+    auto now = dsn_now_ms();
 
     utils::auto_write_lock l(_lock);
 
     for (const auto &stale_entity : stale_entities) {
-        auto iter = _entities.find(stale_entity.first);
+        auto iter = _entities.find(stale_entity);
         if (dsn_unlikely(iter == _entities.end())) {
-            // This entity has been removed from the registry for some reason.
+            // The entity has been removed from the registry for some unusual reason.
             continue;
         }
-
-        // Try to retire metrics from this entity. Note that since the entities that should
-        // be retired wouldn't have any metric, they will never get locked in
-        // metric_entity::retire_stale_metrics().
-        const auto &metrics_stat = iter->second->retire_stale_metrics(stale_entity.second);
-
-        entities_stat.num_retired_metrics += metrics_stat.num_retired_metrics;
-        entities_stat.num_recently_scheduled_metrics += metrics_stat.num_recently_scheduled_metrics;
-        entities_stat.num_reemployed_metrics += metrics_stat.num_reemployed_metrics;
 
         if (!iter->second->is_stale()) {
+            if (iter->second->_retire_time_ms > 0) {
+                // For those entities which are reemployed, their scheduled time for retirement
+                // should be reset to 0 though previously they could have been scheduled to be
+                // retired.
+                iter->second->_retire_time_ms = 0;
+                ++retired_stat.num_reemployed_entities;
+            }
             continue;
         }
 
-        // Once the entity itself should be retired, it will be retired immediately without
-        // waiting for any retention interval, for the reason that each metric in it has
-        // been delayed for a long enough time before retirement.
+        if (dsn_unlikely(iter->second->_retire_time_ms > now)) {
+            // Since in collect_stale_entities() we've filtered the metrics which have been
+            // outside the retention interval, this is unlikely to happen. However, we still
+            // check here.
+            continue;
+        }
+
+        if (iter->second->_retire_time_ms == 0) {
+            // The entity should be marked with a scheduled time for retirement, since it has
+            // already been considered stale.
+            iter->second->_retire_time_ms = now + FLAGS_metrics_retirement_delay_ms;
+            ++retired_stat.num_recently_scheduled_entities;
+            continue;
+        }
+
+        // Once the entity is outside the retention interval, retire it from the registry.
         _entities.erase(iter);
-        ++entities_stat.num_retired_entities;
+        ++retired_stat.num_retired_entities;
     }
 
-    return entities_stat;
+    return retired_stat;
 }
 
-void metric_registry::process_stale_metrics()
+void metric_registry::process_stale_entities()
 {
-    LOG_INFO_F("begin to process stale metrics");
+    LOG_INFO("begin to process stale metric entities");
 
-    size_t num_collected_metrics = 0;
-    const auto &collected_info = collect_stale_metrics();
-    for (const auto &stale_entity : collected_info.stale_entities) {
-        num_collected_metrics += stale_entity.second.size();
-    }
+    const auto &collected_info = collect_stale_entities();
+    const auto &retired_stat = retire_stale_entities(collected_info.stale_entities);
 
-    // Try to process the collected metrics.
-    const auto &retired_stat = retire_stale_metrics(collected_info.stale_entities);
-
-    LOG_INFO_F("stat for metrics: total={}, collected={}, retired={}, scheduled={}, "
-               "recently_scheduled={}, reemployed={}",
-               collected_info.num_all_metrics,
-               num_collected_metrics,
-               retired_stat.num_retired_metrics,
-               collected_info.num_scheduled_metrics,
-               retired_stat.num_recently_scheduled_metrics,
-               retired_stat.num_reemployed_metrics);
-
-    LOG_INFO_F("stat for entities: total={}, collected={}, retired={}",
-               collected_info.num_all_entities,
-               collected_info.stale_entities.size(),
-               retired_stat.num_retired_entities);
+    LOG_INFO("stat for metric entities: total={}, collected={}, retired={}, scheduled={}, "
+             "recently_scheduled={}, reemployed={}",
+             collected_info.num_all_entities,
+             collected_info.stale_entities.size(),
+             retired_stat.num_retired_entities,
+             collected_info.num_scheduled_entities,
+             retired_stat.num_recently_scheduled_entities,
+             retired_stat.num_reemployed_entities);
 }
 
 metric_prototype::metric_prototype(const ctor_args &args) : _args(args) {}
 
 metric_prototype::~metric_prototype() {}
 
-metric::metric(const metric_prototype *prototype) : _prototype(prototype), _retire_time_ms(0) {}
-
-bool metric::is_stale() const
-{
-    // Since this metric itself is still being accessed, its reference count should be 1
-    // at least.
-    CHECK_GE(get_count(), 1);
-
-    // Each metric (any type of metric) will be referenced by its entity. For a percentile,
-    // it will also be referenced by its timer. Thus the reference count for a percentile
-    // will be at least 2. However, once a percentile has only 2 references, it will be
-    // considered useless since it is not used by any other class.
-    if (_prototype->type() == metric_type::kPercentile && get_count() == 2) {
-        return true;
-    }
-
-    // There's only one reference for this metric that is kept in the entity. Thus this
-    // metric is considered useless.
-    return get_count() == 1;
-}
+metric::metric(const metric_prototype *prototype) : _prototype(prototype) {}
 
 closeable_metric::closeable_metric(const metric_prototype *prototype) : metric(prototype) {}
 

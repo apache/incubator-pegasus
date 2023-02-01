@@ -153,41 +153,6 @@ class metric_entity : public ref_counter
 public:
     using attr_map = std::unordered_map<std::string, std::string>;
     using metric_map = std::unordered_map<const metric_prototype *, metric_ptr>;
-    using stale_metric_list = std::unordered_set<const metric_prototype *>;
-
-    struct collected_stale_metrics_info
-    {
-        // The collected metrics that are considered stale now, or were previously considered
-        // stale. Both metrics will be processed by retire_stale_metrics(): if a metric is
-        // considered stale now, it will be either retired immediately or scheduled to be
-        // retired; otherwise, if it was previously considered stale which means it has become
-        // useful now, its retirement will be cancelled.
-        stale_metric_list stale_metrics;
-
-        // The number of all metrics in this entity.
-        size_t num_all_metrics = 0;
-
-        // The number of the metrics that have been scheduled to be retired for this entity.
-        size_t num_scheduled_metrics = 0;
-
-        collected_stale_metrics_info() = default;
-    };
-
-    struct retired_metrics_stat
-    {
-        // The number of retired metrics for this entity.
-        size_t num_retired_metrics = 0;
-
-        // The number of the metrics that were just considered useless and scheduled to
-        // be retired in this round for this entity.
-        size_t num_recently_scheduled_metrics = 0;
-
-        // The number of the metrics that had previously been scheduled to be retired and
-        // were recently reemployed for this entity.
-        size_t num_reemployed_metrics = 0;
-
-        retired_metrics_stat() = default;
-    };
 
     const metric_entity_prototype *prototype() const { return _prototype; }
 
@@ -233,23 +198,17 @@ private:
 
     void encode_id(metric_json_writer &writer) const;
 
-    // Similar with what has been done by metric::is_stale(), this function is used to decide
-    // if an entity is stale. Like the definition for a stale metric, an entity becomes stale
-    // if it does not has any metric, and is no longer used by any other class.
+    // Decide if an entity is stale. An entity becomes stale if it is no longer used by any other
+    // object.
     //
-    // For example, once a replica is removed, its metrics will be retired after a configurable
-    // retention interval. After that, the entity for this replica will not has any metric itself,
-    // and it is no longer used by any other class. Then it will be retired.
+    // An entity could be bound to one or multiple objects. Once all of these objects are
+    // destroyed, this entity will become stale, which means all of the metrics held by this
+    // entity are also stale.
     //
-    // Unlike metric, once an entity is considered stale, it will be retired immediately for the
-    // reason that each metric in it has been delayed for a long enough time before retirement.
+    // For example, once a replica is removed, the replica entity (and all metrics it holds) will
+    // become stale; then, this entity is scheduled to be retired after a configurable retention
+    // interval; finally, this entity will be removed from the registry with all metrics it holds.
     bool is_stale() const;
-
-    // The whole retirement process is divided two phases "collect" and "retire", please see
-    // metric_registry::collect_stale_metrics() and metric_registry::retire_stale_metrics()
-    // for details.
-    collected_stale_metrics_info collect_stale_metrics() const;
-    retired_metrics_stat retire_stale_metrics(const stale_metric_list &stale_metrics);
 
     const metric_entity_prototype *const _prototype;
     const std::string _id;
@@ -257,6 +216,12 @@ private:
     mutable utils::rw_lock_nr _lock;
     attr_map _attrs;
     metric_map _metrics;
+
+    // The timestamp when this entity should be retired:
+    // * default value is 0, which means this entity has not been scheduled to be retired;
+    // * otherwise, non-zero value means this entity has been scheduled to be retired, and will
+    // be retired at any time once current time has reached or exceeded this timestamp.
+    uint64_t _retire_time_ms;
 
     DISALLOW_COPY_AND_ASSIGN(metric_entity);
 };
@@ -462,42 +427,39 @@ class metric_registry : public utils::singleton<metric_registry>
 {
 public:
     using entity_map = std::unordered_map<std::string, metric_entity_ptr>;
-    using stale_entity_map = std::unordered_map<std::string, metric_entity::stale_metric_list>;
+    using stale_entity_list = std::unordered_set<std::string>;
 
     struct collected_stale_entities_info
     {
-        // Like collected_stale_metrics_info::stale_metrics, stale_entities collect the metrics
-        // that are considered stale now, or were previously considered stale. In addition to
-        // these, stale_entities also collect the entities that are ready to be retired.
-        stale_entity_map stale_entities;
+        // The stale entities are collected to be processed by retire_stale_entities(). Following
+        // kinds of stale entities will be collected:
+        // * entities that should be retired immediately. The entities that are still within
+        // the retention interval will not be collected.
+        // * entities that were previously considered stale however have already been reemployed,
+        // which means its retirement should be cancelled by retire_stale_entities().
+        stale_entity_list stale_entities;
 
         // The number of all entities in the registry.
         size_t num_all_entities = 0;
 
-        // The number of all metrics in the registry.
-        size_t num_all_metrics = 0;
-
-        // The number of the metrics that have been scheduled to be retired for the registry.
-        size_t num_scheduled_metrics = 0;
+        // The number of the entities that have been scheduled to be retired.
+        size_t num_scheduled_entities = 0;
 
         collected_stale_entities_info() = default;
     };
 
     struct retired_entities_stat
     {
-        // The number of retired entities for the registry.
+        // The number of retired entities.
         size_t num_retired_entities = 0;
 
-        // The number of retired metrics for the registry.
-        size_t num_retired_metrics = 0;
+        // The number of entities that were recently considered stale and scheduled to be
+        // retired.
+        size_t num_recently_scheduled_entities = 0;
 
-        // The number of the metrics that were just considered useless and scheduled to
-        // be retired in this round for the registry.
-        size_t num_recently_scheduled_metrics = 0;
-
-        // The number of the metrics that had previously been scheduled to be retired and
-        // were recently reemployed for the registry.
-        size_t num_reemployed_metrics = 0;
+        // The number of the entities that had previously been scheduled to be retired and
+        // were recently reemployed.
+        size_t num_reemployed_entities = 0;
 
         retired_entities_stat() = default;
     };
@@ -526,23 +488,28 @@ private:
                                             const std::string &id,
                                             const metric_entity::attr_map &attrs);
 
-    // These functions are used to retire stale metrics and entities.
+    // These functions are used to retire stale entities.
     //
-    // A metric is retired if it is removed from its entity. An entity is retired if it is
-    // removed from the registry.
+    // Since retirement is infrequent, there tend to be no entity that should be retired.
+    // Therefore, the whole retirement process is divided into two phases: "collect" and
+    // "retire".
     //
-    // Since retirements do not happen frequently, while we traverse over the registry there
-    // tend to be no metric and entity that should be retired. Therefore, we divide the whole
-    // retirement process into two phases: "collect" and "retire".
+    // At the first phase "collect", we just check if there are entities that:
+    // * has become stale, but has not been scheduled to be retired, or
+    // * should be retired immediately, or
+    // * previously were scheduled to be retired, now has been reemployed.
     //
-    // In the first phase "collect", we just read and check which metrics and entitie should
-    // be retired, thus it just needs read lock that is lightweight.
+    // The "check" operation just needs read lock which is lightweight. If some entities were
+    // found following above conditions, albeit infrequenly, they would be collected to be
+    // processed at the next phase.
     //
-    // Once some metrics and entities are collected to be retired, in the second phase "retire",
-    // they will be removed according to the specific rules.
-    collected_stale_entities_info collect_stale_metrics() const;
-    retired_entities_stat retire_stale_metrics(const stale_entity_map &stale_entities);
-    void process_stale_metrics();
+    // Collected entities, if any, will be processed at the second phase "retire":
+    // * stale entities will be schedule to be retired;
+    // * the expired entities will be retired;
+    // * reset the retirement timestamp to 0 for reemployed entities.
+    collected_stale_entities_info collect_stale_entities() const;
+    retired_entities_stat retire_stale_entities(const stale_entity_list &stale_entities);
+    void process_stale_entities();
 
     mutable utils::rw_lock_nr _lock;
     entity_map _entities;
@@ -764,21 +731,6 @@ protected:
 
 private:
     friend class metric_entity;
-
-    // This function is used to decide if a metric is stale. A metric becomes stale if it is no
-    // longer used by any other class. Typically a metric is referenced by a class. For example,
-    // a metric is created to measure latency for reading or writing a replica.
-    //
-    // However, once the replica is removed, this metric will no longer be used; then the framework
-    // of metrics will find this metric and mark it stale. After a configurable retention interval,
-    // this metric will finally be removed from the repository of metrics.
-    bool is_stale() const;
-
-    // The timestamp when this metric should be retired. It is 0 if this metric has not been
-    // scheduled to be retired; otherwise, it is non-zero if this metric is scheduled to be
-    // retired. Once `_retire_time_ms` is non-zero, this metric will be retired at any time if
-    // current time has reached or exceeded `_retire_time_ms`.
-    uint64_t _retire_time_ms;
 
     DISALLOW_COPY_AND_ASSIGN(metric);
 };
