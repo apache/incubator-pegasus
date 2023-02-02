@@ -32,7 +32,7 @@
 
 namespace dsn {
 
-DSN_DECLARE_uint64(metrics_retirement_delay_ms);
+DSN_DECLARE_uint64(entity_retirement_delay_ms);
 
 class my_gauge : public metric
 {
@@ -2840,35 +2840,35 @@ public:
     static void SetUpTestCase()
     {
         // Restart the timer of registry with shorter interval to reduce the test time.
-        _reserved_metrics_retirement_delay_ms = FLAGS_metrics_retirement_delay_ms;
-        restart_metric_registry_timer(kMetricsRetirementDelayMsForTest);
+        _reserved_entity_retirement_delay_ms = FLAGS_entity_retirement_delay_ms;
+        restart_metric_registry_timer(kEntityRetirementDelayMsForTest);
     }
 
     // For higher version of googletest, use `static void TearDownTestSuite()` instead.
     static void TearDownTestCase()
     {
         // Recover the timer of registry with the original interval.
-        restart_metric_registry_timer(_reserved_metrics_retirement_delay_ms);
+        restart_metric_registry_timer(_reserved_entity_retirement_delay_ms);
     }
 
-    static const uint64_t kMetricsRetirementDelayMsForTest;
+    static const uint64_t kEntityRetirementDelayMsForTest;
 
 private:
     static void restart_metric_registry_timer(uint64_t interval_ms)
     {
         metric_registry::instance().stop_timer();
-        FLAGS_metrics_retirement_delay_ms = interval_ms;
+        FLAGS_entity_retirement_delay_ms = interval_ms;
         metric_registry::instance().start_timer();
 
         std::cout << "restart the timer of metric registry at interval " << interval_ms << " ms."
                   << std::endl;
     }
 
-    static uint64_t _reserved_metrics_retirement_delay_ms;
+    static uint64_t _reserved_entity_retirement_delay_ms;
 };
 
-const uint64_t MetricsRetirementTest::kMetricsRetirementDelayMsForTest = 100;
-uint64_t MetricsRetirementTest::_reserved_metrics_retirement_delay_ms;
+const uint64_t MetricsRetirementTest::kEntityRetirementDelayMsForTest = 100;
+uint64_t MetricsRetirementTest::_reserved_entity_retirement_delay_ms;
 
 // This class helps to test retirement of metrics and entities, by creating temporary
 // variables or reference them as members of this class to control their lifetime.
@@ -2884,8 +2884,8 @@ public:
                   bool is_counter_surviving,
                   bool is_percentile_surviving);
 
-    // After a long enough time, check if temporary metrics and entities are retired while
-    // long-life ones still survive.
+    // After a long enough time, check if temporary entity is retired with its own metrics while
+    // long-life one still survive.
     void test_survival_after_retirement() const;
 
 private:
@@ -2909,8 +2909,8 @@ private:
 
     surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const;
 
-    // Check if all metrics and entities still survive no matter whether they are temporary or
-    // long-life.
+    // Check if the entity still survive with its own metrics no matter whether they are temporary
+    // or long-life.
     void test_survival_immediately_after_initialization() const;
 
     std::string _my_entity_id;
@@ -2988,7 +2988,7 @@ void scoped_entity::test_survival_immediately_after_initialization() const
 void scoped_entity::test_survival_after_retirement() const
 {
     std::this_thread::sleep_for(
-        std::chrono::milliseconds(MetricsRetirementTest::kMetricsRetirementDelayMsForTest * 2));
+        std::chrono::milliseconds(MetricsRetirementTest::kEntityRetirementDelayMsForTest * 2));
 
     utils::auto_read_lock l(metric_registry::instance()._lock);
 
@@ -2997,6 +2997,7 @@ void scoped_entity::test_survival_after_retirement() const
     const auto &entities = metric_registry::instance()._entities;
     const auto &iter = entities.find(_my_entity_id);
     if (_my_entity == nullptr) {
+        // The entity has been retired.
         ASSERT_EQ(entities.end(), iter);
         ASSERT_TRUE(_expected_surviving_metrics.empty());
         return;

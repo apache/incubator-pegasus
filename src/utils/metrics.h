@@ -373,14 +373,12 @@ private:
     DISALLOW_COPY_AND_ASSIGN(metrics_http_service);
 };
 
-// `metric_timer` is a timer class that encapsulates the details how each percentile is
-// computed periodically.
+// `metric_timer` is a timer class that runs metric-related computations periodically, such as
+// calculating percentile, checking if there are stale entities. It accepts `on_exec` and
+// `on_close` as the callbacks for execution and close.
 //
-// To be instantiated, it requires `interval_ms` at which a percentile is computed and `exec`
-// which is used to compute percentile.
-//
-// In case that all percentiles are computed at the same time and lead to very high load,
-// first computation for percentile will be delayed at a random interval.
+// In case that all metrics (such as percentiles) are computed at the same time and lead to very
+// high load, first calculation will be delayed at a random interval.
 class metric_timer
 {
 public:

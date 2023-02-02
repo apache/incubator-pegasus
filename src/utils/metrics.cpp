@@ -28,10 +28,9 @@
 namespace dsn {
 
 DSN_DEFINE_uint64(metrics,
-                  metrics_retirement_delay_ms,
+                  entity_retirement_delay_ms,
                   10 * 60 * 1000,
-                  "The minimum number of milliseconds a metric will be kept for after it is "
-                  "no longer active.");
+                  "The retention internal (milliseconds) for an entity after it becomes stale.");
 
 metric_entity::metric_entity(const metric_entity_prototype *prototype,
                              const std::string &id,
@@ -49,43 +48,20 @@ metric_entity::~metric_entity()
     close(close_option::kWait);
 }
 
-namespace {
-
-// Before destructing a metric, close it first. For example, stop the timer of percentile.
-// Generally close operations in this function are asynchronous, wait_metric() can be used
-// to wait until all close operations are finished.
-void close_metric(const dsn::metric_ptr &m)
-{
-    if (m->prototype()->type() == dsn::metric_type::kPercentile) {
-        auto p = dsn::down_cast<dsn::closeable_metric *>(m.get());
-        p->close();
-    }
-}
-
-// Wait until all operations in close_metric() are finished.
-void wait_metric(const dsn::metric_ptr &m)
-{
-    if (m->prototype()->type() == dsn::metric_type::kPercentile) {
-        auto p = dsn::down_cast<dsn::closeable_metric *>(m.get());
-        p->wait();
-    }
-}
-
-} // anonymous namespace
-
 void metric_entity::close(close_option option) const
 {
     utils::auto_write_lock l(_lock);
 
-    // The reason why each metric is closed in the entity rather than in the destructor of each
-    // metric is that close() for the metric will return immediately without waiting for any close
-    // operation to be finished.
-    //
-    // Thus, to close all metrics owned by an entity, it's more efficient to firstly issue a close
-    // request for all metrics; then, just wait for all of the close operations to be finished.
-    // It's inefficient to wait for each metric to be closed one by one.
+    // To close all metrics owned by an entity, it's more efficient to firstly issue an asynchronous
+    // close request to each metric; then, just wait for all of the close operations to be finished.
+    // It's inefficient to wait for each metric to be closed one by one. Therefore, the metric is
+    // not
+    // closed in its destructor.
     for (auto &m : _metrics) {
-        close_metric(m.second);
+        if (m.second->prototype()->type() == metric_type::kPercentile) {
+            auto p = down_cast<closeable_metric *>(m.second.get());
+            p->close();
+        }
     }
 
     if (option == close_option::kNoWait) {
@@ -94,7 +70,10 @@ void metric_entity::close(close_option option) const
 
     // Wait for all of the close operations to be finished.
     for (auto &m : _metrics) {
-        wait_metric(m.second);
+        if (m.second->prototype()->type() == metric_type::kPercentile) {
+            auto p = down_cast<closeable_metric *>(m.second.get());
+            p->wait();
+        }
     }
 }
 
@@ -387,11 +366,11 @@ void metric_registry::start_timer()
         return;
     }
 
-    // Once a metric is considered useless, it will retire formally after the retention
-    // interval, namely FLAGS_metrics_retirement_delay_ms milliseconds. Therefore, if
-    // the interval of the timer is also set to FLAGS_metrics_retirement_delay_ms, in
-    // the next round, it's just about time to retire this metric.
-    _timer.reset(new metric_timer(FLAGS_metrics_retirement_delay_ms,
+    // Once an entity is considered stale, it will be retired after the retention interval,
+    // namely FLAGS_entity_retirement_delay_ms milliseconds. Therefore, if the interval of
+    // the timer is also set to FLAGS_entity_retirement_delay_ms, in the next round, it's
+    // just about time to retire this entity.
+    _timer.reset(new metric_timer(FLAGS_entity_retirement_delay_ms,
                                   std::bind(&metric_registry::process_stale_entities, this),
                                   std::bind(&metric_registry::on_close, this)));
 }
@@ -530,7 +509,7 @@ metric_registry::retire_stale_entities(const stale_entity_list &stale_entities)
         if (iter->second->_retire_time_ms == 0) {
             // The entity should be marked with a scheduled time for retirement, since it has
             // already been considered stale.
-            iter->second->_retire_time_ms = now + FLAGS_metrics_retirement_delay_ms;
+            iter->second->_retire_time_ms = now + FLAGS_entity_retirement_delay_ms;
             ++retired_stat.num_recently_scheduled_entities;
             continue;
         }
