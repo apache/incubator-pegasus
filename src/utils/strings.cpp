@@ -417,5 +417,14 @@ std::string string_md5(const char *buffer, unsigned length)
 
     return result;
 }
+
+std::string find_string_prefix(const std::string &input, char separator)
+{
+    std::size_t current = input.find(separator);
+    if (current == 0 || current == std::string::npos) {
+        return "";
+    }
+    return input.substr(0, current);
+}
 } // namespace utils
 } // namespace dsn

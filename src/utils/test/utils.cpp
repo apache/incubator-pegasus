@@ -443,6 +443,26 @@ TEST(core, dlink)
     EXPECT_TRUE(count == 0);
 }
 
+TEST(core, find_string_prefix)
+{
+    struct test_case
+    {
+        std::string input;
+        char separator;
+        std::string expected_prefix;
+    } tests[] = {{"", ' ', ""},
+                 {"abc.def", ' ', ""},
+                 {"abc.def", '.', "abc"},
+                 {"ab.cd.ef", '.', "ab"},
+                 {"abc...def", '.', "abc"},
+                 {".abc.def", '.', ""}};
+    std::string actual_output;
+    for (const auto &test : tests) {
+        actual_output = find_string_prefix(test.input, test.separator);
+        EXPECT_EQ(actual_output, test.expected_prefix);
+    }
+}
+
 class foo : public ::dsn::ref_counter
 {
 public:
