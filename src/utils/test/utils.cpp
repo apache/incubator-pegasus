@@ -455,10 +455,12 @@ TEST(core, find_string_prefix)
                  {"abc.def", '.', "abc"},
                  {"ab.cd.ef", '.', "ab"},
                  {"abc...def", '.', "abc"},
-                 {".abc.def", '.', ""}};
-    std::string actual_output;
+                 {".abc.def", '.', ""},
+                 {" ", ' ', ""},
+                 {"..", '.', ""},
+                 {". ", ' ', "."}};
     for (const auto &test : tests) {
-        actual_output = find_string_prefix(test.input, test.separator);
+        auto actual_output = find_string_prefix(test.input, test.separator);
         EXPECT_EQ(actual_output, test.expected_prefix);
     }
 }
