@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -30,6 +31,8 @@
 #include "utils/rand.h"
 
 namespace dsn {
+
+DSN_DECLARE_uint64(entity_retirement_delay_ms);
 
 class my_gauge : public metric
 {
@@ -2827,5 +2830,217 @@ TEST(metrics_test, http_get_metrics)
                               test.expected_metric_fields);
     }
 }
+
+using surviving_metrics_case = std::tuple<std::string, bool, bool, bool, bool>;
+
+class MetricsRetirementTest : public testing::TestWithParam<surviving_metrics_case>
+{
+public:
+    // For higher version of googletest, use `static void SetUpTestSuite()` instead.
+    static void SetUpTestCase()
+    {
+        // Restart the timer of registry with shorter interval to reduce the test time.
+        _reserved_entity_retirement_delay_ms = FLAGS_entity_retirement_delay_ms;
+        restart_metric_registry_timer(kEntityRetirementDelayMsForTest);
+    }
+
+    // For higher version of googletest, use `static void TearDownTestSuite()` instead.
+    static void TearDownTestCase()
+    {
+        // Recover the timer of registry with the original interval.
+        restart_metric_registry_timer(_reserved_entity_retirement_delay_ms);
+    }
+
+    static const uint64_t kEntityRetirementDelayMsForTest;
+
+private:
+    static void restart_metric_registry_timer(uint64_t interval_ms)
+    {
+        metric_registry::instance().stop_timer();
+        FLAGS_entity_retirement_delay_ms = interval_ms;
+        metric_registry::instance().start_timer();
+
+        std::cout << "restart the timer of metric registry at interval " << interval_ms << " ms."
+                  << std::endl;
+    }
+
+    static uint64_t _reserved_entity_retirement_delay_ms;
+};
+
+const uint64_t MetricsRetirementTest::kEntityRetirementDelayMsForTest = 100;
+uint64_t MetricsRetirementTest::_reserved_entity_retirement_delay_ms;
+
+// This class helps to test retirement of metrics and entities, by creating temporary
+// variables or reference them as members of this class to control their lifetime.
+class scoped_entity
+{
+public:
+    // Use the raw pointer to hold metric without any reference which may affect the test results.
+    using surviving_metric_map = std::unordered_map<const metric_prototype *, const metric *>;
+
+    scoped_entity(const std::string &entity_id,
+                  bool is_entity_surviving,
+                  bool is_gauge_surviving,
+                  bool is_counter_surviving,
+                  bool is_percentile_surviving);
+
+    // After a long enough time, check if temporary entity is retired with its own metrics while
+    // long-life one still survive.
+    void test_survival_after_retirement() const;
+
+private:
+    template <typename MetricPrototype, typename MetricPtr>
+    void instantiate_metric(const metric_entity_ptr &my_entity,
+                            bool is_surviving,
+                            const MetricPrototype &prototype,
+                            MetricPtr &m)
+    {
+        // Create a temporary variable for the metric.
+        auto temp_m = prototype.instantiate(my_entity);
+        _expected_all_metrics.emplace(&prototype, temp_m.get());
+
+        if (!is_surviving) {
+            return;
+        }
+
+        // Extend the lifetime of the metric since it's marked as "surviving".
+        m = temp_m;
+    }
+
+    surviving_metric_map get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const;
+
+    // Check if the entity still survive with its own metrics no matter whether they are temporary
+    // or long-life.
+    void test_survival_immediately_after_initialization() const;
+
+    std::string _my_entity_id;
+    metric_entity *_expected_my_entity_raw_ptr;
+    metric_entity_ptr _my_entity;
+
+    gauge_ptr<int64_t> _my_gauge_int64;
+    counter_ptr<> _my_counter;
+    percentile_ptr<int64_t> _my_percentile_int64;
+
+    surviving_metric_map _expected_all_metrics;
+    surviving_metric_map _expected_surviving_metrics;
+};
+
+scoped_entity::scoped_entity(const std::string &entity_id,
+                             bool is_entity_surviving,
+                             bool is_gauge_surviving,
+                             bool is_counter_surviving,
+                             bool is_percentile_surviving)
+    : _my_entity_id(entity_id)
+{
+    // Create a temporary variabl for the entity.
+    auto my_entity = METRIC_ENTITY_my_server.instantiate(entity_id);
+    _expected_my_entity_raw_ptr = my_entity.get();
+
+    // Create temporary or long-life variables for metrics, depending on what is_*_surviving is.
+    instantiate_metric(
+        my_entity, is_gauge_surviving, METRIC_test_server_gauge_int64, _my_gauge_int64);
+    instantiate_metric(my_entity, is_counter_surviving, METRIC_test_server_counter, _my_counter);
+    instantiate_metric(my_entity,
+                       is_percentile_surviving,
+                       METRIC_test_server_percentile_int64,
+                       _my_percentile_int64);
+
+    if (is_entity_surviving) {
+        // Extend the lifetime of the entity since it's marked as "surviving".
+        _my_entity = my_entity;
+        _expected_surviving_metrics = _expected_all_metrics;
+    }
+
+    test_survival_immediately_after_initialization();
+}
+
+scoped_entity::surviving_metric_map
+scoped_entity::get_actual_surviving_metrics(const metric_entity_ptr &my_entity) const
+{
+    surviving_metric_map actual_surviving_metrics;
+
+    utils::auto_read_lock l(my_entity->_lock);
+
+    // Use internal member directly instead of calling metrics(). We don't want to have
+    // any reference which may affect the test results.
+    for (const auto &m : my_entity->_metrics) {
+        actual_surviving_metrics.emplace(m.first, m.second.get());
+    }
+
+    return actual_surviving_metrics;
+}
+
+void scoped_entity::test_survival_immediately_after_initialization() const
+{
+    utils::auto_read_lock l(metric_registry::instance()._lock);
+
+    // Use internal member directly instead of calling entities(). We don't want to have
+    // any reference which may affect the test results.
+    const auto &entities = metric_registry::instance()._entities;
+    const auto &iter = entities.find(_my_entity_id);
+    ASSERT_NE(entities.end(), iter);
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
+
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
+    ASSERT_EQ(_expected_all_metrics, actual_surviving_metrics);
+}
+
+void scoped_entity::test_survival_after_retirement() const
+{
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(MetricsRetirementTest::kEntityRetirementDelayMsForTest * 2));
+
+    utils::auto_read_lock l(metric_registry::instance()._lock);
+
+    // Use internal member directly instead of calling entities(). We don't want to have
+    // any reference which may affect the test results.
+    const auto &entities = metric_registry::instance()._entities;
+    const auto &iter = entities.find(_my_entity_id);
+    if (_my_entity == nullptr) {
+        // The entity has been retired.
+        ASSERT_EQ(entities.end(), iter);
+        ASSERT_TRUE(_expected_surviving_metrics.empty());
+        return;
+    }
+
+    ASSERT_NE(entities.end(), iter);
+    ASSERT_EQ(_expected_my_entity_raw_ptr, iter->second.get());
+
+    const auto &actual_surviving_metrics = get_actual_surviving_metrics(iter->second);
+    ASSERT_EQ(_expected_surviving_metrics, actual_surviving_metrics);
+}
+
+TEST_P(MetricsRetirementTest, RetireOldMetrics)
+{
+    std::string entity_id;
+    bool is_entity_surviving;
+    bool is_gauge_surviving;
+    bool is_counter_surviving;
+    bool is_percentile_surviving;
+    std::tie(entity_id,
+             is_entity_surviving,
+             is_gauge_surviving,
+             is_counter_surviving,
+             is_percentile_surviving) = GetParam();
+
+    scoped_entity entity(entity_id,
+                         is_entity_surviving,
+                         is_gauge_surviving,
+                         is_counter_surviving,
+                         is_percentile_surviving);
+    entity.test_survival_after_retirement();
+}
+
+const std::vector<surviving_metrics_case> metrics_retirement_tests = {
+    {"server_117", true, true, true, true},
+    {"server_118", true, true, true, false},
+    {"server_119", true, true, false, false},
+    {"server_120", true, false, false, false},
+    {"server_121", false, false, false, false},
+};
+
+INSTANTIATE_TEST_CASE_P(MetricsTest,
+                        MetricsRetirementTest,
+                        testing::ValuesIn(metrics_retirement_tests));
 
 } // namespace dsn
